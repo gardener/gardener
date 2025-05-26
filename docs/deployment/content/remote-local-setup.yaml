@@ -533,47 +533,47 @@ spec:
             watch -c "k get garden local -o yaml | yq -P -C '[.status.conditions[] | del(.lastTransitionTime, .lastUpdateTime)]' | grep --color=Always -E '\"False\"| Unknown| Progressing|$'"
           EOF
           new_window "seed&shoots" "seed&shoots" Enter <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             watch k get -A seeds,shoots
           EOF
           new_pane "last operations" <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             k -n garden-local get shoot local -o json -w | jq -r --unbuffered '.status.lastOperation.description' | awk '{if (prev!=$0) print; fflush(); prev=$0}' | sed --unbuffered 's/,/, \n/g; s/$/\n/' | ts
           EOF
           new_pane "seed conditions" Enter <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             watch -c "k get seed local -o yaml | yq -P -C '[.status.conditions[] | del(.lastTransitionTime, .lastUpdateTime)]' | grep --color=Always -E '\"False\"| Unknown| Progressing|$'"
           EOF
           new_horizontal_pane "shoot conditions" Enter <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             watch -c "k get -n garden-local shoot local -o yaml | yq -P -C '[.status.conditions[] | del(.lastTransitionTime, .lastUpdateTime)]' | grep --color=Always -E '\"False\"| Unknown| Progressing|$'"
           EOF
           new_window "shoot lifecycle" "Create" <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             k apply -f example/provider-local/shoot.yaml
           EOF
           new_pane "Reconcile" <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             k annotate shoot local -n garden-local 'gardener.cloud/operation=reconcile'
           EOF
           new_pane "Delete" <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             k annotate shoot local -n garden-local 'confirmation.gardener.cloud/deletion=true' && k delete shoot local -n garden-local
           EOF
           new_window "managed seed" "managed seed" <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             watch k get -A seeds,shoots,managedseeds
           EOF
           new_pane "create shoot" Enter <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             k apply -f example/provider-local/managedseeds/shoot-managedseed.yaml
           EOF
           new_pane "create managed seed" Enter <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             k apply -f example/provider-local/managedseeds/managedseed.yaml
           EOF
           new_pane "managed seed pods" <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             generate-admin-kubeconf.sh --namespace garden --shoot-name managedseed > /tmp/shoot.kubeconfig && while true; do clear; k --kubeconfig /tmp/shoot.kubeconfig get pods -A -o wide; sleep 10s; done
           EOF
           new_window "runtime&seed pods" "pods" Enter <<"EOF"
@@ -584,15 +584,15 @@ spec:
             watch "k get pods -A -o wide | awk '{split(\$3, a, \"/\"); if (a[1]!=a[2] || \$4 != \"Running\") {print}}'"
           EOF
           new_window "shoot pods" "pods" <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             generate-admin-kubeconf.sh > /tmp/shoot.kubeconfig && watch k --kubeconfig /tmp/shoot.kubeconfig get pods -A
           EOF
           new_pane "not ready pods" <<"EOF"
-            export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             generate-admin-kubeconf.sh > /tmp/shoot.kubeconfig && watch "k --kubeconfig /tmp/shoot.kubeconfig get pods -A -o wide | awk '{split(\$3, a, \"/\"); if (a[1]!=a[2] || \$4 != \"Running\") {print}}'"
           EOF
           new_window "gardenctl" "gardenctl" <<"EOF"
-            gardenctl config set-garden local --kubeconfig $PWD/example/operator/virtual-garden/kubeconfig
+            gardenctl config set-garden local --kubeconfig $PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             eval $(gardenctl kubectl-env bash)
             g target --garden local --shoot local
           EOF
