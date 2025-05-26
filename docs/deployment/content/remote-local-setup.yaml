@@ -34,7 +34,7 @@ spec:
                wget -N "https://go.dev/dl/$VERSION.linux-amd64.tar.gz"
                tar -C /usr/local -xzf "$VERSION.linux-amd64.tar.gz"
                ln -s /usr/local/go/bin/go /usr/local/bin/go
-               ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt  
+               ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
           echo gardenlogin
                VERSION=$(curl -sL https://raw.githubusercontent.com/gardener/gardenlogin/master/LATEST)
                wget -N "https://github.com/gardener/gardenlogin/releases/download/$VERSION/gardenlogin_linux_amd64"
@@ -125,8 +125,6 @@ spec:
           that can be prepared in a tmux session for convenience:
 
           - '${g}prepare-gardener.sh${n}'          A basic 'make kind-up gardener-up' setup
-          - '${g}prepare-gardener-ha.sh${n}'       (${y}default${n}) A 'make kind-ha-multi-zone-up gardener-ha-multi-zone-up' setup
-             ${g}                      ${n}        with several tmux windows
           - '${g}prepare-operator.sh${n}'          A 'make kind-operator-up operator-up' setup
              ${g}                   ${n}           with several tmux windows
           - '${g}prepare-operator-complete.sh${n}' A 'make kind-operator-up operator-up operator-seed-up' setup,
@@ -332,7 +330,7 @@ spec:
           cat > /usr/local/bin/prepare-gardener.sh <<"SCRIPT_EOF"
           tmux kill-session 2>/dev/null || true
           cd ~/go/src/github.com/gardener/gardener
-          make kind-down kind-ha-multi-zone-down kind-operator-down >/dev/null 2>&1
+          make kind-down kind-operator-down >/dev/null 2>&1
           cd - >/dev/null
           mkdir -p ~/.kube
           echo '{"current-context": "kind-gardener-local"}' > ~/.kube/config
@@ -364,88 +362,10 @@ spec:
           tmux select-pane -t 1
           SCRIPT_EOF
 
-          cat > /usr/local/bin/prepare-gardener-ha.sh <<"SCRIPT_EOF"
-          tmux kill-session 2>/dev/null || true
-          cd ~/go/src/github.com/gardener/gardener
-          make kind-down kind-ha-multi-zone-down kind-operator-down >/dev/null 2>&1
-          cd - >/dev/null
-          mkdir -p ~/.kube
-          echo '{"current-context": "kind-gardener-local-ha-multi-zone"}' > ~/.kube/config
-          source /usr/local/bin/tmux_functions.sh
-          tmux new -d -s gardener-ha -n make -x 2000 -y 2000
-          tmux select-pane -T top; rm -f ~/.config/procps/toprc
-          for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
-          new_pane "make kind-up" <<"EOF"
-            sync_kubeconfig example/gardener-local/kind/ha-multi-zone & sleep 1
-            nice make kind-ha-multi-zone-down kind-ha-multi-zone-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
-          EOF
-          new_pane "make gardener-up" <<"EOF"
-            export KUBECONFIG=$PWD/example/gardener-local/kind/ha-multi-zone/kubeconfig
-            nice make gardener-ha-multi-zone-up
-          EOF
-          new_window "shoot lifecycle" "Create" <<"EOF"
-            k apply -f <(yq '.spec.controlPlane.highAvailability.failureTolerance.type="zone"' example/provider-local/shoot.yaml)
-          EOF
-          new_pane "Reconcile" <<"EOF"
-            k annotate shoot local -n garden-local 'gardener.cloud/operation=reconcile'
-          EOF
-          new_pane "Delete" <<"EOF"
-            k annotate shoot local -n garden-local 'confirmation.gardener.cloud/deletion=true' && k delete shoot local -n garden-local
-          EOF
-          new_window "seed&shoots" "seed&shoots" Enter <<"EOF"
-            watch k -n garden-local get seeds,shoots
-          EOF
-          new_pane "last operations" <<"EOF"
-            k -n garden-local get shoot local -o json -w | jq -r --unbuffered '.status.lastOperation.description' | awk '{if (prev!=$0) print; fflush(); prev=$0}' | sed --unbuffered 's/,/, \n/g; s/$/\n/' | ts
-          EOF
-          new_pane "seed conditions" Enter <<"EOF"
-            watch -c "k get seed local-ha-multi-zone -o yaml | yq -P -C '[.status.conditions[] | del(.lastTransitionTime, .lastUpdateTime)]' | grep --color=Always -E '\"False\"| Unknown| Progressing|$'"
-          EOF
-          new_horizontal_pane "shoot conditions" Enter <<"EOF"
-            watch -c "k get -n garden-local shoot local -o yaml | yq -P -C '[.status.conditions[] | del(.lastTransitionTime, .lastUpdateTime)]' | grep --color=Always -E '\"False\"| Unknown| Progressing|$'"
-          EOF
-          new_window "seed pods" "pods" Enter <<"EOF"
-            # the while loop is used instead of watch to allow for scrolling a longer list in the tmux pane
-            while true; do clear; k get pods -A -o wide; sleep 10s; done
-          EOF
-          new_pane "not ready pods" Enter <<"EOF"
-            watch "k get pods -A -o wide | awk '{split(\$3, a, \"/\"); if (a[1]!=a[2] || \$4 != \"Running\") {print}}'"
-          EOF
-          new_window "shoot pods" "pods" <<"EOF"
-            generate-admin-kubeconf.sh > /tmp/shoot.kubeconfig && watch k --kubeconfig /tmp/shoot.kubeconfig get pods -A
-          EOF
-          new_pane "not ready pods" <<"EOF"
-            generate-admin-kubeconf.sh > /tmp/shoot.kubeconfig && watch "k --kubeconfig /tmp/shoot.kubeconfig get pods -A -o wide | awk '{split(\$3, a, \"/\"); if (a[1]!=a[2] || \$4 != \"Running\") {print}}'"
-          EOF
-          new_window "logs" "gardenlet logs" <<"EOF"
-            stern --color=always -n garden deployments/gardenlet > gardenlet.logs
-          EOF
-          new_pane "less" <<"EOF"
-            less -NSR +F gardenlet.logs
-          EOF
-          new_window "gardenctl" "gardenctl" <<"EOF"
-            gardenctl config set-garden local --kubeconfig ~/.kube/config
-            eval $(gardenctl kubectl-env bash)
-            g target --garden local --shoot local
-          EOF
-          new_window "git" "git" Enter <<"EOF"
-            # Use 'pr' or 'pr_base' to checkout the head or base commit of a PR
-            git log --oneline -1
-          EOF
-          new_window "make generate" "make generate" <<"EOF"
-            nice make generate check test test-integration
-          EOF
-          new_window "ad-hoc" "ad-hoc" Enter <<"EOF"
-            # Use this pane for ad-hoc commands
-          EOF
-          tmux select-window -t 0
-          tmux select-pane -t 1
-          SCRIPT_EOF
-
           cat > /usr/local/bin/prepare-operator.sh <<"SCRIPT_EOF"
           tmux kill-session 2>/dev/null || true
           cd ~/go/src/github.com/gardener/gardener
-          make kind-down kind-ha-multi-zone-down kind-operator-down >/dev/null 2>&1
+          make kind-down kind-operator-down >/dev/null 2>&1
           cd - >/dev/null
           mkdir -p ~/.kube
           echo '{"current-context": "kind-gardener-operator-local"}' > ~/.kube/config
@@ -503,7 +423,7 @@ spec:
           cat > /usr/local/bin/prepare-operator-complete.sh <<"SCRIPT_EOF"
           tmux kill-session 2>/dev/null || true
           cd ~/go/src/github.com/gardener/gardener
-          make kind-down kind-ha-multi-zone-down kind-operator-down >/dev/null 2>&1
+          make kind-down kind-operator-down >/dev/null 2>&1
           cd - >/dev/null
           mkdir -p ~/.kube
           echo '{"current-context": "kind-gardener-operator-local"}' > ~/.kube/config
@@ -611,7 +531,6 @@ spec:
           SCRIPT_EOF
 
           chmod +x /usr/local/bin/prepare-*.sh
-          /usr/local/bin/prepare-gardener-ha.sh
 
           touch /tmp/ready
           wait
