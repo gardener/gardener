@@ -9,10 +9,12 @@ source $(dirname "${0}")/lockfile.sh
 acquire_lockfile "/tmp/generate-kustomize-patch-provider-local-gardenadm.sh.lock"
 
 dir="$(dirname $0)/../example/provider-local/gardenadm"
-patch_file="$dir/patch-controllerdeployment-provider-local.yaml"
-ref="$SKAFFOLD_IMAGE"
 
-cat <<EOF > "$patch_file"
+for scenario in "high-touch" "medium-touch"; do
+  patch_file="$dir/$scenario/patch-controllerdeployment-provider-local.yaml"
+  ref="$SKAFFOLD_IMAGE"
+
+  cat <<EOF > "$patch_file"
 apiVersion: core.gardener.cloud/v1
 kind: ControllerDeployment
 metadata:
@@ -21,3 +23,4 @@ helm:
   ociRepository:
     ref: $ref
 EOF
+done

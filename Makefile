@@ -425,13 +425,13 @@ operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/operator-seed-down.sh --path-kind-kubeconfig $(KUBECONFIG) --path-garden-kubeconfig $(VIRTUAL_GARDEN_KUBECONFIG)
 
 gardenadm-high-touch-up: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
+	SCENARIO=high-touch $(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
 gardenadm-high-touch-down: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) delete -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
+	SCENARIO=high-touch $(SKAFFOLD) delete -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
 gardenadm-medium-touch-up: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) build -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,provider-local -q | $(SKAFFOLD) render -f=skaffold-gardenadm.yaml -m provider-local-node,provider-local -o ./example/gardenadm-local/medium-touch/config.yaml --build-artifacts -
+	SCENARIO=medium-touch $(SKAFFOLD) build -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,provider-local -q | SCENARIO=medium-touch $(SKAFFOLD) render -f=skaffold-gardenadm.yaml -m provider-local-node,provider-local --build-artifacts -
 gardenadm-medium-touch-down: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) delete -n gardenadm-medium-touch -f=skaffold-gardenadm.yaml
+	SCENARIO=medium-touch $(SKAFFOLD) delete -n gardenadm-medium-touch -f=skaffold-gardenadm.yaml
 
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...
