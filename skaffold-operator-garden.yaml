@@ -44,14 +44,9 @@ build:
   insecureRegistries:
     - garden.local.gardener.cloud:5001
 manifests:
-  rawYaml:
-    - example/00-namespace-garden.yaml
-    - example/gardener-local/controlplane/domain-secrets.yaml
-    - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
   kustomize:
     paths:
-      - example/provider-local/garden/skaffold-operator
-      - example/provider-local/seed-operator/skaffold
+      - dev-setup/gardenconfig/overlays/operator
 deploy:
   kubectl: {}
 resourceSelector:
