@@ -3,8 +3,9 @@ kind: Config
 metadata:
   name: garden
 manifests:
-  rawYaml:
-    - example/operator/20-garden.yaml
+  kustomize:
+    paths:
+      - dev-setup/garden/overlays/multi-zone
 deploy:
   kubectl:
     hooks:
