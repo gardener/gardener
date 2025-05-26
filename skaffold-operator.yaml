@@ -1345,13 +1345,13 @@ build:
 manifests:
   kustomize:
     paths:
-      - dev-setup/extensions/provider-local
+      - dev-setup/extensions/provider-local/overlays/operator
   hooks:
     before:
       - host:
           command:
             - bash
-            - dev-setup/extensions/provider-local/generate-patch-extension-prow.sh
+            - dev-setup/extensions/provider-local/components/extension/generate-patch-extension-prow.sh
 deploy:
   kubectl: {}
 resourceSelector:

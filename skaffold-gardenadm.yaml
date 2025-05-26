@@ -834,7 +834,7 @@ manifests:
       - host:
           command:
             - bash
-            - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
+            - dev-setup/extensions/provider-local/components/controllerregistration/generate-patch-controllerdeployment-prow.sh
 resourceSelector:
   # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
   allow:

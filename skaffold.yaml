@@ -876,7 +876,7 @@ manifests:
       - host:
           command:
             - bash
-            - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
+            - dev-setup/extensions/provider-local/components/controllerregistration/generate-patch-controllerdeployment-prow.sh
 deploy:
   kubectl:
     flags:
