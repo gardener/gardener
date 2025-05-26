@@ -6,7 +6,6 @@ package nodeagent
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -79,7 +78,10 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		Path:        PathBinary,
 		Permissions: ptr.To[uint32](0755),
 		Content: extensionsv1alpha1.FileContent{
-			ImageRef: fileContentImageRef(ctx.Images[imagevector.ContainerImageNameGardenerNodeAgent].String()),
+			ImageRef: &extensionsv1alpha1.FileContentImageRef{
+				Image:           ctx.Images[imagevector.ContainerImageNameGardenerNodeAgent].String(),
+				FilePathInImage: "/gardener-node-agent",
+			},
 		},
 	})
 
@@ -159,22 +161,4 @@ func Files(config *nodeagentconfigv1alpha1.NodeAgentConfiguration) ([]extensions
 		Permissions: ptr.To[uint32](0600),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(configRaw)}},
 	}}, nil
-}
-
-func fileContentImageRef(image string) *extensionsv1alpha1.FileContentImageRef {
-	return &extensionsv1alpha1.FileContentImageRef{
-		Image:           image,
-		FilePathInImage: FilePathInImage(image),
-	}
-}
-
-// FilePathInImage returns the path of the gardener-node-agent binary file in its container image.
-func FilePathInImage(image string) string {
-	// TODO(timebertt): drop this workaround after https://github.com/gardener/gardener/pull/12021 has been released
-	var prefix string
-	if strings.HasPrefix(image, "garden.local.gardener.cloud:5001") {
-		prefix = "/ko-app"
-	}
-
-	return prefix + "/gardener-node-agent"
 }

@@ -87,23 +87,6 @@ WantedBy=multi-user.target`),
 				},
 			})))
 		})
-
-		It("should return the expected binary prefix when image is from local registry", func() {
-			_, files, err := component.Config(components.Context{
-				Images: map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: ptr.To("garden.local.gardener.cloud:5001/gardener-node-agent"), Tag: ptr.To("v1")}},
-			})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(files).To(ContainElement(extensionsv1alpha1.File{
-				Path:        "/opt/bin/gardener-node-agent",
-				Permissions: ptr.To[uint32](0755),
-				Content: extensionsv1alpha1.FileContent{
-					ImageRef: &extensionsv1alpha1.FileContentImageRef{
-						Image:           "garden.local.gardener.cloud:5001/gardener-node-agent:v1",
-						FilePathInImage: "/ko-app/gardener-node-agent",
-					},
-				},
-			}))
-		})
 	})
 
 	Describe("#UnitContent", func() {
@@ -252,16 +235,6 @@ logLevel: ""
 server: {}
 `))}},
 			}))
-		})
-	})
-
-	Describe("#FilePathInImage", func() {
-		It("should return the path when registry is not local", func() {
-			Expect(FilePathInImage("some-registry/gna:v1.0")).To(Equal("/gardener-node-agent"))
-		})
-
-		It("should return the path when registry is local", func() {
-			Expect(FilePathInImage("garden.local.gardener.cloud:5001/gna:v1.0")).To(Equal("/ko-app/gardener-node-agent"))
 		})
 	})
 })
