@@ -7,6 +7,7 @@ resources:
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.41.2/example/controller-registration.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.48.1/example/controller-registration.yaml
 - ../../../../dev-setup/gardenconfig/overlays/gardenadm
+- ../../../../dev-setup/extensions/provider-local/overlays/gardenadm
 
 patches:
 - path: patch-controllerdeployment-provider-local-disable-coredns.yaml
