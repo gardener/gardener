@@ -6,7 +6,7 @@ set -e
 set -o pipefail
 set -o nounset
 
-source "$(dirname "$0")/../../../hack/lockfile.sh"
+source "$(dirname "$0")/../../../../../hack/lockfile.sh"
 acquire_lockfile "/tmp/generate-patch-extension-prow.sh.lock"
 
 patch_file="$(dirname "$0")/patch-extension-prow.yaml"
