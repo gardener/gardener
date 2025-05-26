@@ -1363,3 +1363,15 @@ resourceSelector:
         - .spec.deployment.extension.values.imageVectorOverwrite.images.*.ref
         - .spec.deployment.admission.runtimeCluster.helm.ociRepository.ref
         - .spec.deployment.admission.virtualCluster.helm.ociRepository.ref
+---
+apiVersion: skaffold/v4beta12
+kind: Config
+metadata:
+  name: extensions
+manifests:
+  kustomize:
+    paths:
+      - dev-setup/extensions/networking-calico
+      - dev-setup/extensions/networking-cilium
+deploy:
+  kubectl: {}
