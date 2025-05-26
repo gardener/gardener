@@ -187,7 +187,7 @@ func WorkerPoolHashV2(nodeAgentSecretName string, additionalData ...string) (str
 	return utils.ComputeSHA256Hex([]byte(result))[:5], nil
 }
 
-// WorkerPoolHashInPlace return hash value for a give worker pool with update strategy in-place.
+// WorkerPoolHashInPlace returns the hash value for a worker pool with an in-place update strategy.
 func WorkerPoolHashInPlace(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
 	data := []string{}
 

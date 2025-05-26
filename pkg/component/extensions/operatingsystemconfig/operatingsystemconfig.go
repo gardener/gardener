@@ -422,8 +422,8 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 	return nil
 }
 
-func (o *operatingSystemConfig) hashVersion(worker gardencorev1beta1.Worker) (int, error) {
-	if v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+func (o *operatingSystemConfig) hashVersion(workerPool gardencorev1beta1.Worker) (int, error) {
+	if v1beta1helper.IsUpdateStrategyInPlace(workerPool.UpdateStrategy) {
 		return 0, nil
 	}
 	// updateHashVersioningSecret() is currently always called before this method
@@ -432,10 +432,10 @@ func (o *operatingSystemConfig) hashVersion(worker gardencorev1beta1.Worker) (in
 		return 0, fmt.Errorf("hash version not yet synced")
 	}
 
-	if version, ok := o.workerPoolNameToHashVersion[worker.Name]; ok {
+	if version, ok := o.workerPoolNameToHashVersion[workerPool.Name]; ok {
 		return version, nil
 	}
-	return 0, fmt.Errorf("no version available for %v", worker.Name)
+	return 0, fmt.Errorf("no version available for %v", workerPool.Name)
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret
