@@ -86,8 +86,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 		extension.Status.Conditions = v1beta1helper.BuildConditions(extension.Status.Conditions, updatedConditions, ConditionTypes())
 
 		if err := r.RuntimeClient.Status().Patch(reconcileCtx, extension, patch); err != nil {
-			log.Error(err, "Could not update extension status")
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("could not update extension status: %w", err)
 		}
 	}
 
