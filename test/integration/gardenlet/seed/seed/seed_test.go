@@ -677,7 +677,6 @@ var _ = Describe("Seed controller tests", func() {
 						"cluster-autoscaler",
 						"dependency-watchdog-weeder",
 						"dependency-watchdog-prober",
-						"machine-controller-manager",
 						"system",
 						"prometheus-cache",
 						"prometheus-seed",
