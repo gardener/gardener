@@ -1345,13 +1345,13 @@ build:
 manifests:
   kustomize:
     paths:
-      - example/provider-local/garden/operator
+      - dev-setup/extensions/provider-local
   hooks:
     before:
       - host:
           command:
             - bash
-            - hack/generate-kustomize-patch-extension-provider-local-prow.sh
+            - dev-setup/extensions/provider-local/generate-patch-extension-prow.sh
 deploy:
   kubectl: {}
 resourceSelector:
