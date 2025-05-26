@@ -51,7 +51,7 @@ webhooks:
     externalLabels: {}
 
 disableControllers: []
-disableWebhooks: []
+disableWebhooks: ["rollout-speedup"]
 ignoreResources: false
 
 imageVectorOverwrite: {}
