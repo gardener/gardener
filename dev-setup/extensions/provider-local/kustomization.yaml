@@ -7,12 +7,10 @@ resources:
 patches:
 - path: extension-patch.yaml
 - path: patch-extension-prow.yaml
-- target:
-    version: v1alpha1
-    group: operator.gardener.cloud
-    kind: Extension
-    name: provider-local
-  patch: |
+# The extension-generator (responsible for generating the `extension.yaml`) is not customizable to full extent. It
+# always generates the `resources` section with a relatively fixed set of resources. This patch removes the support for
+# Bastions (not yet implemented), and adds support for some specific `Extension` types.
+- patch: |
     - op: remove
       path: /spec/resources/2
     - op: add
@@ -32,10 +30,7 @@ patches:
       value: {
         "kind": "Extension",
         "type": "local-ext-shoot",
-        "clusterCompatibility": [
-          "shoot",
-          "garden"
-        ],
+        "clusterCompatibility": ["shoot", "garden"],
         "workerlessSupported": true,
       }
     - op: add
@@ -47,3 +42,8 @@ patches:
         },
         "type": "local-ext-shoot-after-worker"
       }
+  target:
+    version: v1alpha1
+    group: operator.gardener.cloud
+    kind: Extension
+    name: provider-local
