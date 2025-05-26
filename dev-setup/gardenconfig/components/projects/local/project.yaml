@@ -1,0 +1,6 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: Project
+metadata:
+  name: local
+spec:
+  namespace: garden-local
