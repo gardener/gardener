@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+  - patch: |
+      - op: add
+        path: /spec/runtimeCluster/provider/zones/-
+        value: "0"
+    target:
+      group: operator.gardener.cloud
+      kind: Garden
+      name: local
