@@ -1,18 +1,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-sortOptions:
-  order: fifo
-
 resources:
-- ../../garden/cloudprofile
-- ../../garden/local
-- project.yaml
-- secret-backup.yaml
 - shoot.yaml
 - cloudprovider.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.41.2/example/controller-registration.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.48.1/example/controller-registration.yaml
+- ../../../../dev-setup/gardenconfig/overlays/gardenadm
 
 patches:
 - path: patch-controllerdeployment-provider-local-disable-coredns.yaml
