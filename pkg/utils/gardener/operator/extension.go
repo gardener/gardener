@@ -5,7 +5,6 @@
 package operator
 
 import (
-	"fmt"
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -52,9 +51,12 @@ func ExtensionForManagedResourceName(managedResourceName string) (string, bool) 
 	return "", false
 }
 
+// ExtensionRuntimeNamespacePrefix is the prefix for the namespace hosting resources for the Garden runtime cluster.
+const ExtensionRuntimeNamespacePrefix = "runtime-extension-"
+
 // ExtensionRuntimeNamespaceName returns the name of the namespace hosting resources for the Garden runtime cluster.
 func ExtensionRuntimeNamespaceName(extensionName string) string {
-	return fmt.Sprintf("runtime-extension-%s", extensionName)
+	return ExtensionRuntimeNamespacePrefix + extensionName
 }
 
 // IsControllerInstallationInVirtualRequired returns true if the extension requires a controller installation in the virtual cluster.
