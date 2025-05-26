@@ -20,6 +20,7 @@ spec:
     -cloud-profile-name=$CLOUDPROFILE
     -seed=$SEED
     -secret-binding=$SECRET_BINDING
+    -credentials-binding=$CREDENTIALS_BINDING
     -provider-type=$PROVIDER_TYPE
     -k8s-version=$K8S_VERSION
     -region=$REGION

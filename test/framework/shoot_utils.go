@@ -244,6 +244,10 @@ func setShootGeneralSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationC
 		shoot.Spec.SecretBindingName = ptr.To(cfg.secretBinding)
 	}
 
+	if StringSet(cfg.credentialsBinding) {
+		shoot.Spec.CredentialsBindingName = ptr.To(cfg.credentialsBinding)
+	}
+
 	if StringSet(cfg.shootProviderType) {
 		shoot.Spec.Provider.Type = cfg.shootProviderType
 	}
