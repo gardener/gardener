@@ -24,8 +24,8 @@ function copy_kubeconfig_from_kubeconfig_env_var() {
     cp $KUBECONFIG example/gardener-local/kind/ha-single-zone/kubeconfig
     ;;
   zone)
-    cp $KUBECONFIG example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
-    cp $KUBECONFIG example/gardener-local/kind/ha-multi-zone/kubeconfig
+    cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
+    cp $KIND_KUBECONFIG example/gardener-local/kind/operator/kubeconfig
     ;;
   *)
     cp $KUBECONFIG example/provider-local/seed-kind/base/kubeconfig
@@ -40,7 +40,7 @@ function gardener_up() {
     make gardener-ha-single-zone-up
     ;;
   zone)
-    make gardener-ha-multi-zone-up
+    make operator-seed-up
     ;;
   *)
     make gardener-up
@@ -54,7 +54,7 @@ function gardener_down() {
     make gardener-ha-single-zone-down
     ;;
   zone)
-    make gardener-ha-multi-zone-down
+    make operator-seed-down
     ;;
   *)
     make gardener-down
@@ -68,7 +68,7 @@ function kind_up() {
     make kind-ha-single-zone-up
     ;;
   zone)
-    make kind-ha-multi-zone-up
+    make kind-operator-up
     ;;
   *)
     make kind-up
@@ -82,7 +82,7 @@ function kind_down() {
     make kind-ha-single-zone-down
     ;;
   zone)
-    make kind-ha-multi-zone-down
+    make kind-operator-down
     ;;
   *)
     make kind-down
@@ -150,7 +150,7 @@ function set_cluster_name() {
     CLUSTER_NAME="gardener-local-ha-single-zone"
     ;;
   zone)
-    CLUSTER_NAME="gardener-local-ha-multi-zone"
+    CLUSTER_NAME="gardener-operator-local"
     ;;
   *)
     CLUSTER_NAME="gardener-local"
@@ -162,9 +162,6 @@ function set_seed_name() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
     SEED_NAME="local-ha-single-zone"
-    ;;
-  zone)
-    SEED_NAME="local-ha-multi-zone"
     ;;
   *)
     SEED_NAME="local"
@@ -195,6 +192,15 @@ function run_post_upgrade_test() {
 
   make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
 }
+
+# TODO(rfranzke): Remove this after v1.121 has been released.
+if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]]; then
+  echo "WARNING: The Gardener upgrade tests for the zone failure tolerance type are not executed in this release because the dev/e2e test setup is currently reworked."
+  echo "See https://github.com/gardener/gardener/issues/11958 for more information."
+  echo "Skipping the tests."
+  echo "After v1.121 has been released, this early exit can be removed again (TODO(rfranzke))."
+  exit 0
+fi
 
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables

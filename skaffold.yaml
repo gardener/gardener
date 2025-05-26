@@ -916,12 +916,6 @@ profiles:
         paths:
           - example/provider-local/garden/skaffold
           - example/provider-local/seed-kind-ha-single-zone/skaffold
-  - name: ha-multi-zone
-    manifests:
-      kustomize:
-        paths:
-          - example/provider-local/garden/skaffold
-          - example/provider-local/seed-kind-ha-multi-zone/skaffold
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
@@ -1678,17 +1672,6 @@ profiles:
           - bash
           - -ec
           - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2-ha-single-zone GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
-  - name: ha-multi-zone
-    patches:
-      - op: add
-        path: /deploy/helm/releases/0/valuesFiles/-
-        value: example/gardener-local/gardenlet/values-kind-ha-multi-zone.yaml
-      - op: replace
-        path: /deploy/helm/hooks/after/0/host/command
-        value:
-          - bash
-          - -ec
-          - TIMEOUT=1200 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
   - name: ipv6
     activation:
       - env: IPFAMILY=ipv6
