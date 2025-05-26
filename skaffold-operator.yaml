@@ -434,7 +434,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-kustomize-patch-gardenlet.sh
+              - dev-setup/gardenlet/base/generate-patch-gardenlet.sh
               - image
               - gardener-resource-manager
     - image: local-skaffold/gardener-apiserver

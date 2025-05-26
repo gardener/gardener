@@ -5,11 +5,33 @@ metadata:
   name: local
   namespace: garden
 spec:
+  deployment:
+    replicaCount: 1
   config:
     apiVersion: gardenlet.config.gardener.cloud/v1alpha1
     kind: GardenletConfiguration
     gardenClientConnection:
       gardenClusterAddress: https://api.virtual-garden.local.gardener.cloud
+    featureGates:
+      DefaultSeccompProfile: true
+      NewWorkerPoolHash: true
+      IstioTLSTermination: true
+    controllers:
+      shoot:
+        reconcileInMaintenanceOnly: true
+        respectSyncPeriodOverwrite: true
+      shootState:
+        concurrentSyncs: 0 # we don't need the shootstate controller locally, and enabling it would even distort the results of CPM e2e tests
+    logging:
+      enabled: true
+      vali:
+        enabled: true
+      shootNodeLogging:
+        shootPurposes:
+          - infrastructure
+          - production
+          - development
+          - evaluation
     seedConfig:
       spec:
         backup:
@@ -25,14 +47,15 @@ spec:
           region: local
           zones:
             - "0"
-            - "1"
-            - "2"
         dns:
           provider:
             type: local
             secretRef:
               name: internal-domain-internal-local-gardener-cloud
               namespace: garden
+      # TODO(timuthy): Enable extension after Gardener v1.120 was released.
+      # extensions:
+      # - type: local-ext-seed
         ingress:
           domain: ingress.local.seed.local.gardener.cloud
           controller:

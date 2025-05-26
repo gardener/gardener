@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+  - patch: |
+      - op: add
+        path: /spec/config/seedConfig/spec/provider/zones/-
+        value: "2"
+    target:
+      group: seedmanagement.gardener.cloud
+      kind: Gardenlet
+      name: local
+      namespace: garden

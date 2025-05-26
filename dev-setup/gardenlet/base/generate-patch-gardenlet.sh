@@ -5,10 +5,10 @@
 set -e
 set -o pipefail
 
-source $(dirname "${0}")/lockfile.sh
-acquire_lockfile "/tmp/generate-kustomize-patch-gardenlet.sh.lock"
+source "$(dirname "$0")/../../../hack/lockfile.sh"
+acquire_lockfile "/tmp/generate-patch-gardenlet.sh.lock"
 
-dir="$(dirname $0)/../example/gardener-local/gardenlet/operator"
+dir="$(dirname $0)"
 type="${1:-image}"
 ref="$SKAFFOLD_IMAGE"
 

@@ -416,7 +416,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-kustomize-patch-gardenlet.sh
+              - dev-setup/gardenlet/base/generate-patch-gardenlet.sh
               - image
               - gardenlet
     - image: local-skaffold/gardenlet/chart
@@ -433,7 +433,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-kustomize-patch-gardenlet.sh
+              - dev-setup/gardenlet/base/generate-patch-gardenlet.sh
               - helm
     - image: local-skaffold/gardener-resource-manager
       ko:
@@ -550,7 +550,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-kustomize-patch-gardenlet.sh
+              - dev-setup/gardenlet/base/generate-patch-gardenlet.sh
               - image
               - gardener-resource-manager
     - image: local-skaffold/gardener-node-agent
@@ -670,7 +670,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-kustomize-patch-gardenlet.sh
+              - dev-setup/gardenlet/base/generate-patch-gardenlet.sh
               - image
               - gardener-node-agent
   insecureRegistries:
@@ -688,7 +688,7 @@ build:
 manifests:
   kustomize:
     paths:
-      - example/gardener-local/gardenlet/operator
+      - dev-setup/gardenlet/overlays/multi-zone
 deploy:
   kubectl:
     hooks:

@@ -285,7 +285,7 @@ kind2-up kind2-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-loca
 kind-ha-single-zone-up kind-ha-single-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
 kind2-ha-single-zone-up kind2-ha-single-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind2-ha-single-zone/base/kubeconfig
 kind-ha-multi-zone-up kind-ha-multi-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
-kind-operator-up kind-operator-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-operator/base/kubeconfig
+kind-operator-up kind-operator-down: export KIND_KUBECONFIG = $(REPO_ROOT)/dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
 # CLUSTER_VALUES
 kind-up kind-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
 kind2-up kind2-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local2/values.yaml
