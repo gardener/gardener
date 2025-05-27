@@ -9,5 +9,4 @@ resources:
 
 patches:
 - path: patch-controllerdeployment-provider-local.yaml
-- path: patch-controllerdeployment-provider-local-disable-coredns.yaml
 - path: patch-shoot-medium-touch.yaml

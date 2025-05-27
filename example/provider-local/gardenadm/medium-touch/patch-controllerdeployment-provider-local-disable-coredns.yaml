@@ -1,8 +1,0 @@
-apiVersion: core.gardener.cloud/v1
-kind: ControllerDeployment
-metadata:
-  name: provider-local
-helm:
-  values:
-    coredns:
-      enabled: false

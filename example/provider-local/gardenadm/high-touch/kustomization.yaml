@@ -9,4 +9,3 @@ resources:
 
 patches:
 - path: patch-controllerdeployment-provider-local.yaml
-- path: patch-controllerdeployment-provider-local-disable-coredns.yaml
