@@ -1,0 +1,7 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  name: root
+  namespace: garden
+spec:
+  secretBindingName: provider-account

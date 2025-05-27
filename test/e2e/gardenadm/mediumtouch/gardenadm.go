@@ -12,6 +12,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
@@ -38,8 +39,13 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		It("should start the bootstrap flow", func() {
 			// Start the gardenadm process but don't wait for it to complete so that we can asynchronously perform assertions
 			// on individual steps in the test specs below.
-			session = Run("bootstrap", "-d", "../../../example/gardenadm-local/medium-touch")
+			session = Run("bootstrap", "-d", "../../../example/gardenadm-local/resources/medium-touch")
 		})
+
+		It("should find the cloud provider secret", func(ctx SpecContext) {
+			cloudProviderSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloudprovider", Namespace: technicalID}}
+			Eventually(ctx, Object(cloudProviderSecret)).Should(HaveField("ObjectMeta.Labels", HaveKeyWithValue("gardener.cloud/purpose", "cloudprovider")))
+		}, SpecTimeout(time.Minute))
 
 		It("should deploy gardener-resource-manager", func(ctx SpecContext) {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: technicalID}}
@@ -67,7 +73,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		}, SpecTimeout(time.Minute))
 
 		It("should run successfully a second time (should be idempotent)", func(ctx SpecContext) {
-			RunAndWait(ctx, "bootstrap", "-d", "../../../example/gardenadm-local/medium-touch")
+			RunAndWait(ctx, "bootstrap", "-d", "../../../example/gardenadm-local/resources/medium-touch")
 		}, SpecTimeout(2*time.Minute))
 	})
 })

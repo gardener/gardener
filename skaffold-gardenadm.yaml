@@ -791,11 +791,6 @@ build:
       requires:
         - image: local-skaffold/gardener-extension-provider-local
           alias: IMG
-      hooks:
-        after:
-          - command:
-              - bash
-              - hack/generate-kustomize-patch-controllerdeployment-provider-local-gardenadm.sh
   insecureRegistries:
     - garden.local.gardener.cloud:5001
   tagPolicy:
@@ -808,23 +803,12 @@ build:
         - name: sha
           inputDigest: {}
 manifests:
-  kustomize:
-    paths:
-      - example/provider-local/gardenadm
   hooks:
     before:
       - host:
           command:
             - bash
             - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
-    after:
-      - host:
-          command:
-            - bash
-            - -ec
-            - |
-              mkdir -p example/gardenadm-local/resources
-              kubectl kustomize example/provider-local/gardenadm > example/gardenadm-local/resources/manifests.yaml
 resourceSelector:
   # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
   allow:
@@ -835,6 +819,17 @@ resourceSelector:
     - groupKind: CloudProfile.core.gardener.cloud
       image:
         - .*
+profiles:
+  - name: high-touch
+    manifests:
+      kustomize:
+        paths:
+          - example/provider-local/gardenadm/high-touch
+  - name: medium-touch
+    manifests:
+      kustomize:
+        paths:
+          - example/provider-local/gardenadm/medium-touch
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
@@ -861,8 +856,8 @@ deploy:
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.skaffold-image machine-1:/tmp/.skaffold-image
                 kubectl -n $SKAFFOLD_NAMESPACES exec machine-0 -- /bin/sh -c 'rm -rf /gardenadm/resources'
                 kubectl -n $SKAFFOLD_NAMESPACES exec machine-1 -- /bin/sh -c 'rm -rf /gardenadm/resources'
-                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources machine-0:/gardenadm/resources
-                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources machine-1:/gardenadm/resources
+                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources/high-touch machine-0:/gardenadm/resources
+                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources/high-touch machine-1:/gardenadm/resources
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.imagevector-overwrite.yaml machine-0:/gardenadm/imagevector-overwrite.yaml
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.imagevector-overwrite.yaml machine-1:/gardenadm/imagevector-overwrite.yaml
         - container:

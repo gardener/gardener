@@ -20,27 +20,36 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
-// ReadManifests reads Kubernetes and Gardener manifests in YAML or JSON format.
-// It returns a CloudProfile, Project, and Shoot resource if found, or an error if any issues occur during reading or
-// decoding.
-func ReadManifests(
-	log logr.Logger,
-	fsys fs.FS,
-) (
-	cloudProfile *gardencorev1beta1.CloudProfile,
-	project *gardencorev1beta1.Project,
-	shoot *gardencorev1beta1.Shoot,
-	controllerRegistrations []*gardencorev1beta1.ControllerRegistration,
-	controllerDeployments []*gardencorev1.ControllerDeployment,
-	secrets []*corev1.Secret,
-	err error,
-) {
-	decoder := serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder(gardencorev1.SchemeGroupVersion, gardencorev1beta1.SchemeGroupVersion, corev1.SchemeGroupVersion)
+// Resources contains the Kubernetes and Gardener resources read from the manifests.
+type Resources struct {
+	CloudProfile            *gardencorev1beta1.CloudProfile
+	Project                 *gardencorev1beta1.Project
+	Seed                    *gardencorev1beta1.Seed
+	Shoot                   *gardencorev1beta1.Shoot
+	ControllerRegistrations []*gardencorev1beta1.ControllerRegistration
+	ControllerDeployments   []*gardencorev1.ControllerDeployment
+	Secrets                 []*corev1.Secret
+	SecretBinding           *gardencorev1beta1.SecretBinding
+	CredentialsBinding      *securityv1alpha1.CredentialsBinding
+}
 
-	if err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+// ReadManifests reads Kubernetes and Gardener manifests in YAML or JSON format.
+// It returns among others a CloudProfile, Project, and Shoot resource if found, or an error if any issues occur during
+// reading or decoding.
+func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
+	resources := Resources{Seed: &gardencorev1beta1.Seed{}}
+	decoder := serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder(
+		gardencorev1.SchemeGroupVersion,
+		gardencorev1beta1.SchemeGroupVersion,
+		securityv1alpha1.SchemeGroupVersion,
+		corev1.SchemeGroupVersion,
+	)
+
+	if err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("failed walking directory: %w", err)
 		}
@@ -80,48 +89,60 @@ func ReadManifests(
 
 			switch typedObj := obj.(type) {
 			case *gardencorev1beta1.CloudProfile:
-				if cloudProfile != nil {
+				if resources.CloudProfile != nil {
 					return fmt.Errorf("found more than one *gardencorev1beta1.CloudProfile resource, but only one is allowed")
 				}
-				cloudProfile = typedObj
+				resources.CloudProfile = typedObj
 
 			case *gardencorev1beta1.Project:
-				if project != nil {
+				if resources.Project != nil {
 					return fmt.Errorf("found more than one *gardencorev1beta1.Project resource, but only one is allowed")
 				}
-				project = typedObj
+				resources.Project = typedObj
 
 			case *gardencorev1beta1.Shoot:
-				if shoot != nil {
+				if resources.Shoot != nil {
 					return fmt.Errorf("found more than one *gardencorev1beta1.Shoot resource, but only one is allowed")
 				}
-				shoot = typedObj
+				resources.Shoot = typedObj
 
 			case *gardencorev1beta1.ControllerRegistration:
-				controllerRegistrations = append(controllerRegistrations, typedObj)
+				resources.ControllerRegistrations = append(resources.ControllerRegistrations, typedObj)
 
 			case *gardencorev1.ControllerDeployment:
-				controllerDeployments = append(controllerDeployments, typedObj)
+				resources.ControllerDeployments = append(resources.ControllerDeployments, typedObj)
 
 			case *corev1.Secret:
-				secrets = append(secrets, typedObj)
+				resources.Secrets = append(resources.Secrets, typedObj)
+
+			case *gardencorev1beta1.SecretBinding:
+				if resources.SecretBinding != nil {
+					return fmt.Errorf("found more than one *gardencorev1beta1.SecretBinding resource, but only one is allowed")
+				}
+				resources.SecretBinding = typedObj
+
+			case *securityv1alpha1.CredentialsBinding:
+				if resources.CredentialsBinding != nil {
+					return fmt.Errorf("found more than one *securityv1alpha1.CredentialsBinding resource, but only one is allowed")
+				}
+				resources.CredentialsBinding = typedObj
 			}
 		}
 
 		return nil
 	}); err != nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("failed reading Kubernetes resources from config directory: %w", err)
+		return Resources{}, fmt.Errorf("failed reading Kubernetes resources from config directory: %w", err)
 	}
 
-	if cloudProfile == nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")
+	if resources.CloudProfile == nil {
+		return Resources{}, fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")
 	}
-	if project == nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Project resource, but did not find any")
+	if resources.Project == nil {
+		return Resources{}, fmt.Errorf("must provide a *gardencorev1beta1.Project resource, but did not find any")
 	}
-	if shoot == nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource, but did not find any")
+	if resources.Shoot == nil {
+		return Resources{}, fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource, but did not find any")
 	}
 
-	return
+	return resources, nil
 }
