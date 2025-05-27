@@ -80,6 +80,7 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 					Main: &operatorv1alpha1.ETCDMain{
 						Backup: &operatorv1alpha1.Backup{
 							Provider:   "local",
+							Region:     ptr.To("local"),
 							BucketName: bucketName,
 							SecretRef: corev1.LocalObjectReference{
 								Name: backupSecret.Name,

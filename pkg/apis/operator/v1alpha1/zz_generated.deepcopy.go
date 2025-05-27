@@ -136,6 +136,11 @@ func (in *Backup) DeepCopyInto(out *Backup) {
 		*out = new(runtime.RawExtension)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Region != nil {
+		in, out := &in.Region, &out.Region
+		*out = new(string)
+		**out = **in
+	}
 	out.SecretRef = in.SecretRef
 	return
 }

@@ -692,8 +692,14 @@ func (r *Reconciler) deployEtcdMainBackupBucket(ctx context.Context, garden *ope
 	if backup == nil {
 		return fmt.Errorf("no ETCD main backup configuration found in Garden resource")
 	}
-	if garden.Spec.RuntimeCluster.Provider.Region == nil {
-		return fmt.Errorf("no region found in spec.runtimeCluster.provider.region in Garden resource")
+
+	var bucketRegion string
+	if backup.Region != nil {
+		bucketRegion = *backup.Region
+	} else if garden.Spec.RuntimeCluster.Provider.Region != nil {
+		bucketRegion = *garden.Spec.RuntimeCluster.Provider.Region
+	} else {
+		return fmt.Errorf("no region found in spec.virtualCluster.etcd.main.backup.region of spec.runtimeCluster.provider.region in Garden resource")
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), backupBucket, func() error {
@@ -706,7 +712,7 @@ func (r *Reconciler) deployEtcdMainBackupBucket(ctx context.Context, garden *ope
 				ProviderConfig: backup.ProviderConfig,
 				Class:          ptr.To(extensionsv1alpha1.ExtensionClassGarden),
 			},
-			Region: *garden.Spec.RuntimeCluster.Provider.Region,
+			Region: bucketRegion,
 			SecretRef: corev1.SecretReference{
 				Name:      backup.SecretRef.Name,
 				Namespace: r.GardenNamespace,

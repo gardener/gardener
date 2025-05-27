@@ -290,6 +290,10 @@ type Backup struct {
 	// ProviderConfig is the provider-specific configuration passed to BackupBucket resource.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
+	// Region is a region name. If undefined, the provider region is used. This field is immutable.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Region is immutable"
+	// +optional
+	Region *string `json:"region,omitempty"`
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
 	// backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`

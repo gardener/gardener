@@ -438,6 +438,13 @@ spec:
                                   configuration passed to BackupBucket resource.
                                 type: object
                                 x-kubernetes-preserve-unknown-fields: true
+                              region:
+                                description: Region is a region name. If undefined,
+                                  the provider region is used. This field is immutable.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: Region is immutable
+                                  rule: self == oldSelf
                               secretRef:
                                 description: |-
                                   SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
