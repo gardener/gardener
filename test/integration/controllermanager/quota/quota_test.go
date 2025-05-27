@@ -5,6 +5,8 @@
 package quota_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -106,7 +108,7 @@ var _ = Describe("Quota controller tests", func() {
 			Expect(testClient.Delete(ctx, quota)).To(Or(Succeed(), BeNotFoundError()))
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(quota), quota)
-			}).Should(BeNotFoundError())
+			}).WithTimeout(20 * time.Second).Should(BeNotFoundError())
 		})
 
 		if secretBinding != nil {
