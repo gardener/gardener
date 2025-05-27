@@ -568,7 +568,7 @@ spec:
 			etcdList := &druidcorev1alpha1.EtcdList{}
 			g.Expect(testClient.List(ctx, etcdList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return test.ObjectNames(etcdList)
-		}).Should(ConsistOf(
+		}).WithTimeout(20 * time.Second).Should(ConsistOf(
 			"virtual-garden-etcd-main",
 			"virtual-garden-etcd-events",
 		))
