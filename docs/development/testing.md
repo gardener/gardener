@@ -185,6 +185,31 @@ stress -p 16 ./pkg/resourcemanager/controller/garbagecollector/garbagecollector.
   - Keep in mind the maintenance implications of using mocks:
     - Can you make a valid non-behavioral change in the code without breaking the test or dependent tests?
   - It's valid to mix fakes and mocks in the same test or between test cases.
+- When using mocks, prefer `Return` over `DoAndReturn` whenever possible, e.g., prefer:
+  ```go
+  c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(corev1.Resource("secret"), name))
+  ```
+  over
+  ```go
+  c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+      func(_ context.Context, _ client.ObjectKey, _obj_ *corev1.Secret, _ ...client.GetOption) error {
+          return apierrors.NewNotFound(corev1.Resource("secret"), name)
+      },
+  )
+  ```
+- When using mocks, prefer `SetArgs` over `DoAndReturn` whenever possible, e.g., prefer:
+  ```go
+  c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).SetArg(2, *secret).Return(nil)
+  ```
+  over
+  ```go
+  c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+      func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
+          *s = *secret
+          return nil
+      },
+  )
+  ```
 - Generally, use the go test package, i.e., declare `package <production_package>_test`:
   - Helps in avoiding cyclic dependencies between production, test and helper packages
   - Also forces you to distinguish between the public (exported) API surface of your code and internal state that might not be of interest to tests
