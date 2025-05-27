@@ -158,6 +158,7 @@ global:
       CredentialsRotationWithoutWorkersRollout: true
       CloudProfileCapabilities: true
       InPlaceNodeUpdates: true
+      DoNotCopyBackupCredentials: true
     resources: {}
     podLabels:
       networking.resources.gardener.cloud/to-all-webhook-targets: allowed

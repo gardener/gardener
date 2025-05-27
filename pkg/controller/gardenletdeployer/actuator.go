@@ -508,12 +508,8 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 				return ref.Name == obj.GetName() && ref.UID == obj.GetUID()
 			})
 
-			if secret.Labels == nil {
-				secret.Labels = map[string]string{}
-			}
-
 			// Label such secrets as it would be easier for operators to clean them up afterwards
-			secret.Labels[secretStatusLabel] = "previously-managed"
+			metav1.SetMetaDataLabel(&secret.ObjectMeta, secretStatusLabel, "previously-managed")
 
 			return nil
 		}); err != nil {
