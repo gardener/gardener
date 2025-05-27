@@ -51,19 +51,18 @@ func updateEtcdVPATargetRefs(ctx context.Context, c client.Client, role string) 
 			(vpa.Spec.TargetRef.APIVersion == druidcorev1alpha1.SchemeGroupVersion.String() && vpa.Spec.TargetRef.Kind == "Etcd") {
 			continue
 		}
-		vpaObject := vpa.DeepCopy()
 
 		fns = append(fns, func(ctx context.Context) error {
-			original := vpaObject.DeepCopy()
+			original := vpa.DeepCopy()
 
-			vpaObject.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
+			vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: druidcorev1alpha1.SchemeGroupVersion.String(),
 				Kind:       "Etcd",
-				Name:       vpaObject.Spec.TargetRef.Name,
+				Name:       vpa.Spec.TargetRef.Name,
 			}
 
-			if err := c.Patch(ctx, vpaObject, client.MergeFrom(original)); err != nil {
-				return fmt.Errorf("failed to patch VPA %s: %w", client.ObjectKeyFromObject(vpaObject), err)
+			if err := c.Patch(ctx, &vpa, client.MergeFrom(original)); err != nil {
+				return fmt.Errorf("failed to patch VPA %s: %w", client.ObjectKeyFromObject(&vpa), err)
 			}
 			return nil
 		})
