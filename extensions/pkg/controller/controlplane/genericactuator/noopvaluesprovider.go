@@ -43,6 +43,9 @@ func (vp NoopValuesProvider) GetStorageClassesChartValues(context.Context, *exte
 }
 
 // GetControlPlaneExposureChartValues returns the values for the control plane exposure chart applied by this actuator.
+//
+// Deprecated: Control plane with purpose `exposure` is being deprecated and will be removed in gardener v1.123.0.
+// TODO(theoddora): Remove this function in v1.123.0 when the Purpose field is removed.
 func (vp NoopValuesProvider) GetControlPlaneExposureChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, secretsmanager.Reader, map[string]string) (map[string]any, error) {
 	return nil, nil
 }

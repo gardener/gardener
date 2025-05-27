@@ -49,6 +49,9 @@ type ValuesProvider interface {
 	// GetStorageClassesChartValues returns the values for the storage classes chart applied by this actuator.
 	GetStorageClassesChartValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (map[string]any, error)
 	// GetControlPlaneExposureChartValues returns the values for the control plane exposure chart applied by this actuator.
+	//
+	// Deprecated: Control plane with purpose `exposure` is being deprecated and will be removed in gardener v1.123.0.
+	// TODO(theoddora): Remove this function in v1.123.0 when the Purpose field is removed.
 	GetControlPlaneExposureChartValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster, secretsReader secretsmanager.Reader, checksums map[string]string) (map[string]any, error)
 }
 

@@ -727,9 +727,10 @@ Purpose
 <td>
 <em>(Optional)</em>
 <p>Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.
-This field is immutable.
-Deprecated: This field will be removed in a future release.
-The value &ldquo;exposure&rdquo; is no longer used since the enablement of SNI, and the value &ldquo;normal&rdquo; is redundant.</p>
+This field is immutable.</p>
+<p>Deprecated: This field will be removed in gardener v1.123.0.
+The value &ldquo;exposure&rdquo; is no longer used since the enablement of SNI, and the value &ldquo;normal&rdquo; is redundant.
+TODO(theoddora): Remove this field in v1.123.0.</p>
 </td>
 </tr>
 <tr>
@@ -2550,9 +2551,10 @@ Purpose
 <td>
 <em>(Optional)</em>
 <p>Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.
-This field is immutable.
-Deprecated: This field will be removed in a future release.
-The value &ldquo;exposure&rdquo; is no longer used since the enablement of SNI, and the value &ldquo;normal&rdquo; is redundant.</p>
+This field is immutable.</p>
+<p>Deprecated: This field will be removed in gardener v1.123.0.
+The value &ldquo;exposure&rdquo; is no longer used since the enablement of SNI, and the value &ldquo;normal&rdquo; is redundant.
+TODO(theoddora): Remove this field in v1.123.0.</p>
 </td>
 </tr>
 <tr>
@@ -4429,6 +4431,9 @@ k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
 </p>
 <p>
 <p>Purpose is a string alias.</p>
+<p>Deprecated: This type will be removed in gardener v1.123.0.
+The value &ldquo;exposure&rdquo; is no longer used since the enablement of SNI, and the value &ldquo;normal&rdquo; is redundant.
+TODO(theoddora): Remove this type.</p>
 </p>
 <h3 id="extensions.gardener.cloud/v1alpha1.RegistryCapability">RegistryCapability
 (<code>string</code> alias)</p></h3>

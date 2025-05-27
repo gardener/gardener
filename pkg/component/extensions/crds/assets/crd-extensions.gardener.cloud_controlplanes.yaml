@@ -83,7 +83,8 @@ spec:
                 description: |-
                   Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.
                   This field is immutable.
-                  Deprecated: This field will be removed in a future release.
+
+                  Deprecated: This field will be removed in gardener v1.123.0.
                   The value "exposure" is no longer used since the enablement of SNI, and the value "normal" is redundant.
                 type: string
               region:

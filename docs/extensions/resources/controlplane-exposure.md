@@ -2,7 +2,8 @@
 title: ControlPlane Exposure
 ---
 
-> **⚠️ Disclaimer:** The `ControlPlane` resource with purpose `exposure` is deprecated and will be removed in a future Gardener release. Since the enablement of SNI, the `exposure` purpose is no longer used.
+> [!WARNING]
+> The `ControlPlane` resource with purpose `exposure` is deprecated and will be removed in Gardener v1.123. Since the enablement of SNI, the `exposure` purpose is no longer used.
 
 # Contract: `ControlPlane` Resource with Purpose `exposure`
 
