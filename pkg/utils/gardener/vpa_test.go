@@ -23,7 +23,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("VPAForGardenerComponent", func() {
+var _ = Describe("VPA", func() {
 	var (
 		ctx        context.Context
 		fakeClient client.Client

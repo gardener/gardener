@@ -21,8 +21,8 @@ import (
 // TODO(shreyas-s-rao): Remove this function and `updateEtcdVPATargetRefs()` in v1.123.0.
 func updateAllEtcdVPATargetRefs(ctx context.Context, c client.Client) error {
 	roles := []string{
-		v1beta1constants.ETCDRoleMain,
 		v1beta1constants.ETCDRoleEvents,
+		v1beta1constants.ETCDRoleMain,
 	}
 
 	for _, role := range roles {
@@ -62,9 +62,8 @@ func updateEtcdVPATargetRefs(ctx context.Context, c client.Client, role string) 
 				Name:       vpaObject.Spec.TargetRef.Name,
 			}
 
-			patch := client.MergeFrom(original)
-			if err := c.Patch(ctx, vpaObject, patch); err != nil {
-				return fmt.Errorf("failed to patch VPA %s: %w", vpaObject.Name, err)
+			if err := c.Patch(ctx, vpaObject, client.MergeFrom(original)); err != nil {
+				return fmt.Errorf("failed to patch VPA %s: %w", client.ObjectKeyFromObject(vpaObject), err)
 			}
 			return nil
 		})
