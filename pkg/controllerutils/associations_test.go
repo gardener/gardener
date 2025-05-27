@@ -95,7 +95,7 @@ var _ = Describe("Associations", func() {
 				s.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: obj.GetName()}
 			}, BeNil()),
 		Entry("should return shoots associated to namespacedcloudprofile by cloudprofile reference",
-			&gardencorev1beta1.NamespacedCloudProfile{ObjectMeta: metav1.ObjectMeta{Name: "namespacedcloudprofile"}, Spec: gardencorev1beta1.NamespacedCloudProfileSpec{Parent: gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: "cloudprofile"}}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
+			&gardencorev1beta1.NamespacedCloudProfile{ObjectMeta: metav1.ObjectMeta{Name: "namespacedcloudprofile", Namespace: namespace}, Spec: gardencorev1beta1.NamespacedCloudProfileSpec{Parent: gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: "cloudprofile"}}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
 				s.Spec.CloudProfileName = nil
 				s.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: obj.GetName()}
 			}, BeNil()),
