@@ -6,6 +6,7 @@ package machinecontrollermanager_test
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -40,7 +41,7 @@ import (
 var _ = Describe("MachineControllerManager", func() {
 	var (
 		ctx       = context.Background()
-		namespace = "shoot--foo--bar"
+		namespace string
 
 		image        = "mcm-image:tag"
 		namespaceUID = types.UID("uid")
@@ -69,13 +70,17 @@ var _ = Describe("MachineControllerManager", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 	)
 
-	JustBeforeEach(func() {
+	BeforeEach(func() {
+		namespace = "shoot--foo--bar"
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		sm = fakesecretsmanager.New(fakeClient, namespace)
 		values = Values{
 			Image:    image,
 			Replicas: replicas,
 		}
+	})
+
+	JustBeforeEach(func() {
+		sm = fakesecretsmanager.New(fakeClient, namespace)
 		mcm = New(fakeClient, namespace, sm, values)
 		mcm.SetNamespaceUID(namespaceUID)
 
@@ -252,7 +257,6 @@ var _ = Describe("MachineControllerManager", func() {
 				},
 			},
 		}
-		Expect(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", shootAccessSecret.Name)).To(Succeed())
 
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
@@ -516,43 +520,38 @@ subjects:
 	})
 
 	Describe("#Deploy", func() {
-		It("should successfully deploy all resources", func() {
+		test := func() {
 			Expect(mcm.Deploy(ctx)).To(Succeed())
 
 			actualServiceAccount := &corev1.ServiceAccount{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), actualServiceAccount)).To(Succeed())
 			serviceAccount.ResourceVersion = "1"
-			Expect(actualServiceAccount).To(Equal(serviceAccount))
+			Expect(actualServiceAccount).To(DeepEqual(serviceAccount))
 
 			actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(Succeed())
 			clusterRoleBinding.ResourceVersion = "1"
-			Expect(actualClusterRoleBinding).To(Equal(clusterRoleBinding))
+			Expect(actualClusterRoleBinding).To(DeepEqual(clusterRoleBinding))
 
 			actualService := &corev1.Service{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), actualService)).To(Succeed())
 			service.ResourceVersion = "1"
-			Expect(actualService).To(Equal(service))
-
-			actualShootAccessSecret := &corev1.Secret{}
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), actualShootAccessSecret)).To(Succeed())
-			shootAccessSecret.ResourceVersion = "1"
-			Expect(actualShootAccessSecret).To(Equal(shootAccessSecret))
+			Expect(actualService).To(DeepEqual(service))
 
 			actualDeployment := &appsv1.Deployment{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), actualDeployment)).To(Succeed())
 			deployment.ResourceVersion = "1"
-			Expect(actualDeployment).To(Equal(deployment))
+			Expect(actualDeployment).To(DeepEqual(deployment))
 
 			actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), actualVPA)).To(Succeed())
 			vpa.ResourceVersion = "1"
-			Expect(actualVPA).To(Equal(vpa))
+			Expect(actualVPA).To(DeepEqual(vpa))
 
 			actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), actualPodDisruptionBudget)).To(Succeed())
 			podDisruptionBudget.ResourceVersion = "1"
-			Expect(actualPodDisruptionBudget).To(Equal(podDisruptionBudget))
+			Expect(actualPodDisruptionBudget).To(DeepEqual(podDisruptionBudget))
 
 			actualPrometheusRule := &monitoringv1.PrometheusRule{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
@@ -569,7 +568,7 @@ subjects:
 			managedResource.ResourceVersion = "1"
 			managedResource.Spec.SecretRefs[0] = actualManagedResource.Spec.SecretRefs[0]
 			utilruntime.Must(references.InjectAnnotations(managedResource))
-			Expect(actualManagedResource).To(Equal(managedResource))
+			Expect(actualManagedResource).To(DeepEqual(managedResource))
 
 			actualManagedResourceSecret := &corev1.Secret{}
 			managedResourceSecret.Name = actualManagedResource.Spec.SecretRefs[0].Name
@@ -586,6 +585,62 @@ subjects:
 				roleYAML,
 				roleBindingYAML,
 			))
+		}
+
+		When("the shoot is not autonomous", func() {
+			JustBeforeEach(func() {
+				Expect(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", shootAccessSecret.Name)).To(Succeed())
+			})
+
+			It("should successfully deploy all resources", func() {
+				test()
+
+				actualShootAccessSecret := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), actualShootAccessSecret)).To(Succeed())
+				shootAccessSecret.ResourceVersion = "1"
+				Expect(actualShootAccessSecret).To(Equal(shootAccessSecret))
+			})
+		})
+
+		When("the shoot is autonomous", func() {
+			BeforeEach(func() {
+				values.AutonomousShoot = true
+			})
+
+			JustBeforeEach(func() {
+				shootAccessSecret = nil
+
+				for i, s := range deployment.Spec.Template.Spec.Containers[0].Command {
+					if strings.HasPrefix(s, "--target-kubeconfig=") {
+						deployment.Spec.Template.Spec.Containers[0].Command[i] = "--target-kubeconfig="
+					}
+				}
+			})
+
+			When("running the control plane (gardenadm init)", func() {
+				BeforeEach(func() {
+					namespace = "kube-system"
+				})
+
+				It("should successfully deploy all resources", func() {
+					test()
+				})
+			})
+
+			When("not running the control plane (gardenadm bootstrap)", func() {
+				JustBeforeEach(func() {
+					managedResource.Labels = nil
+					managedResource.Spec.InjectLabels = nil
+					managedResource.Spec.Class = ptr.To("seed")
+
+					clusterRoleBindingYAML = strings.ReplaceAll(clusterRoleBindingYAML, "name: machine-controller-manager\n  namespace: kube-system", "name: machine-controller-manager\n  namespace: "+namespace)
+					roleBindingYAML = strings.ReplaceAll(roleBindingYAML, "name: machine-controller-manager\n  namespace: kube-system", "name: machine-controller-manager\n  namespace: "+namespace)
+				})
+
+				It("should successfully deploy all resources", func() {
+					test()
+				})
+			})
 		})
 	})
 

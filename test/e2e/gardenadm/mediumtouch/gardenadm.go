@@ -56,6 +56,11 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			Eventually(ctx, Object(infra)).Should(BeHealthy(health.CheckExtensionObject))
 		}, SpecTimeout(time.Minute))
 
+		It("should deploy machine-controller-manager", func(ctx SpecContext) {
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: technicalID}}
+			Eventually(ctx, Object(deployment)).Should(BeHealthy(health.CheckDeployment))
+		}, SpecTimeout(time.Minute))
+
 		It("should finish successfully", func(ctx SpecContext) {
 			Wait(ctx, session)
 			Eventually(ctx, session.Err).Should(gbytes.Say("work in progress"))

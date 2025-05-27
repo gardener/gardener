@@ -10,7 +10,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,54 +60,77 @@ var _ = Describe("CustomResourceDefinitions", func() {
 	})
 
 	Describe("#ReconcileCustomResourceDefinitions", func() {
-		It("should reconcile all expected CRDs", func() {
-			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
-			Expect(fakeClient.List(ctx, crdList)).To(Succeed())
+		When("running the control plane", func() {
+			BeforeEach(func() {
+				b.Shoot.ControlPlaneNamespace = metav1.NamespaceSystem
+			})
 
-			Expect(b.ReconcileCustomResourceDefinitions(ctx)).To(Succeed())
+			It("should reconcile all expected CRDs", func() {
+				Expect(b.ReconcileCustomResourceDefinitions(ctx)).To(Succeed())
 
-			Expect(fakeClient.List(ctx, crdList)).To(Succeed())
-			Expect(crdList.Items).To(ConsistOf(
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("alertmanagerconfigs.monitoring.coreos.com")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("alertmanagers.monitoring.coreos.com")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("backupbuckets.extensions.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("backupentries.extensions.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("bastions.extensions.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfilters.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfluentbitconfigs.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterinputs.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clustermultilineparsers.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusteroutputs.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterparsers.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusters.extensions.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("collectors.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("containerruntimes.extensions.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("controlplanes.extensions.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dnsrecords.extensions.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcdcopybackupstasks.druid.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcds.druid.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("extensions.extensions.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("filters.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbitconfigs.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbits.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("infrastructures.extensions.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("multilineparsers.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("networks.extensions.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("operatingsystemconfigs.extensions.gardener.cloud")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("outputs.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("parsers.fluentbit.fluent.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("podmonitors.monitoring.coreos.com")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("probes.monitoring.coreos.com")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheusagents.monitoring.coreos.com")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheuses.monitoring.coreos.com")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheusrules.monitoring.coreos.com")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("scrapeconfigs.monitoring.coreos.com")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("servicemonitors.monitoring.coreos.com")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("thanosrulers.monitoring.coreos.com")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("verticalpodautoscalercheckpoints.autoscaling.k8s.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("verticalpodautoscalers.autoscaling.k8s.io")})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("workers.extensions.gardener.cloud")})}),
-			))
+				crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+				Expect(fakeClient.List(ctx, crdList)).To(Succeed())
+				Expect(crdList.Items).To(ConsistOf(
+					HaveField("ObjectMeta.Name", "alertmanagerconfigs.monitoring.coreos.com"),
+					HaveField("ObjectMeta.Name", "alertmanagers.monitoring.coreos.com"),
+					HaveField("ObjectMeta.Name", "backupbuckets.extensions.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "backupentries.extensions.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "bastions.extensions.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "clusterfilters.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "clusterfluentbitconfigs.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "clusterinputs.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "clustermultilineparsers.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "clusteroutputs.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "clusterparsers.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "clusters.extensions.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "collectors.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "containerruntimes.extensions.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "controlplanes.extensions.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "dnsrecords.extensions.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "etcdcopybackupstasks.druid.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "etcds.druid.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "extensions.extensions.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "filters.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "fluentbitconfigs.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "fluentbits.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "infrastructures.extensions.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "multilineparsers.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "networks.extensions.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "operatingsystemconfigs.extensions.gardener.cloud"),
+					HaveField("ObjectMeta.Name", "outputs.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "parsers.fluentbit.fluent.io"),
+					HaveField("ObjectMeta.Name", "podmonitors.monitoring.coreos.com"),
+					HaveField("ObjectMeta.Name", "probes.monitoring.coreos.com"),
+					HaveField("ObjectMeta.Name", "prometheusagents.monitoring.coreos.com"),
+					HaveField("ObjectMeta.Name", "prometheuses.monitoring.coreos.com"),
+					HaveField("ObjectMeta.Name", "prometheusrules.monitoring.coreos.com"),
+					HaveField("ObjectMeta.Name", "scrapeconfigs.monitoring.coreos.com"),
+					HaveField("ObjectMeta.Name", "servicemonitors.monitoring.coreos.com"),
+					HaveField("ObjectMeta.Name", "thanosrulers.monitoring.coreos.com"),
+					HaveField("ObjectMeta.Name", "verticalpodautoscalercheckpoints.autoscaling.k8s.io"),
+					HaveField("ObjectMeta.Name", "verticalpodautoscalers.autoscaling.k8s.io"),
+					HaveField("ObjectMeta.Name", "workers.extensions.gardener.cloud"),
+				))
+			})
+		})
+
+		When("not running the control plane", func() {
+			BeforeEach(func() {
+				b.Shoot.ControlPlaneNamespace = "shoot--foo--bar"
+			})
+
+			It("should deploy the additional CRDs for the medium-touch scenario", func() {
+				Expect(b.ReconcileCustomResourceDefinitions(ctx)).To(Succeed())
+
+				crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+				Expect(fakeClient.List(ctx, crdList)).To(Succeed())
+				Expect(crdList.Items).To(ContainElements(
+					HaveField("ObjectMeta.Name", "machineclasses.machine.sapcloud.io"),
+					HaveField("ObjectMeta.Name", "machinedeployments.machine.sapcloud.io"),
+					HaveField("ObjectMeta.Name", "machinesets.machine.sapcloud.io"),
+					HaveField("ObjectMeta.Name", "machines.machine.sapcloud.io"),
+				))
+			})
 		})
 	})
 

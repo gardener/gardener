@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -159,7 +160,19 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
 
+		deployMachineControllerManager = g.Add(flow.Task{
+			Name: "Deploying machine-controller-manager",
+			Fn: flow.Sequential(
+				func(ctx context.Context) error {
+					return machinecontrollermanager.NewBootstrapper(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace).Deploy(ctx)
+				},
+				b.DeployMachineControllerManager,
+			),
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+		})
+
 		_ = waitUntilInfrastructureReady
+		_ = deployMachineControllerManager
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
