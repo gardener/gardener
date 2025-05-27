@@ -278,7 +278,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Region is a region name. If undefined the provider region is used. This field is immutable.</p>
+<p>Region is a region name. If undefined, the provider region is used. This field is immutable.</p>
 </td>
 </tr>
 <tr>

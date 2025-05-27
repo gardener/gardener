@@ -290,7 +290,7 @@ type Backup struct {
 	// ProviderConfig is the provider-specific configuration passed to BackupBucket resource.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
-	// Region is a region name. If undefined the provider region is used. This field is immutable.
+	// Region is a region name. If undefined, the provider region is used. This field is immutable.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Region is immutable"
 	// +optional
 	Region *string `json:"region,omitempty"`
