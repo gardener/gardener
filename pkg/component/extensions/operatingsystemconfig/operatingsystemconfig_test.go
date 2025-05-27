@@ -41,7 +41,6 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -184,7 +183,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				key := KeyV1(worker.Name, k8sVersion, worker.CRI)
 				if inPlaceUpdate {
-					key = fmt.Sprintf("gardener-node-agent-%s-%s", worker.Name, utils.ComputeSHA256Hex([]byte(worker.Name))[:16])
+					key = fmt.Sprintf("gardener-node-agent-%s", worker.Name)
 				}
 
 				imagesCopy := make(map[string]*imagevector.Image, len(images))

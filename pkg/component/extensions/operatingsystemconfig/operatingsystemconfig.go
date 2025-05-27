@@ -423,6 +423,8 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 }
 
 func (o *operatingSystemConfig) hashVersion(workerPool gardencorev1beta1.Worker) (int, error) {
+	// The hash for in-place updates worker is not dependent on the WorkerPoolHash feature gate
+	// and is always static; therefore, it is not tracked in the WorkerPoolHashesSecretName.
 	if v1beta1helper.IsUpdateStrategyInPlace(workerPool.UpdateStrategy) {
 		return 0, nil
 	}
@@ -986,7 +988,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 
 func (o *operatingSystemConfig) calculateKey(version int, worker *gardencorev1beta1.Worker) (string, error) {
 	if v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
-		return fmt.Sprintf("gardener-node-agent-%s-%s", worker.Name, utils.ComputeSHA256Hex([]byte(worker.Name))[:16]), nil
+		return fmt.Sprintf("gardener-node-agent-%s", worker.Name), nil
 	}
 
 	return o.calculateKeyForVersion(version, worker)
