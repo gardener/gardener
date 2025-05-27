@@ -6,6 +6,3 @@ sortOptions:
 
 resources:
 - ../base
-
-patches:
-- path: patch-controllerdeployment-provider-local.yaml

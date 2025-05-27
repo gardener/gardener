@@ -791,11 +791,6 @@ build:
       requires:
         - image: local-skaffold/gardener-extension-provider-local
           alias: IMG
-      hooks:
-        after:
-          - command:
-              - bash
-              - hack/generate-kustomize-patch-controllerdeployment-provider-local-gardenadm.sh
   insecureRegistries:
     - garden.local.gardener.cloud:5001
   tagPolicy:

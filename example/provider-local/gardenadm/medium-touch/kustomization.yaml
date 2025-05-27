@@ -8,5 +8,4 @@ resources:
 - ../base
 
 patches:
-- path: patch-controllerdeployment-provider-local.yaml
 - path: patch-shoot-medium-touch.yaml
