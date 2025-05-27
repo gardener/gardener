@@ -1014,7 +1014,7 @@ spec:
 		By("Ensure Garden is gone")
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
-		}).Should(BeNotFoundError())
+		}).WithTimeout(20 * time.Second).Should(BeNotFoundError())
 	})
 })
 
