@@ -67,6 +67,10 @@ type ControlPlaneSpec struct {
 	DefaultSpec `json:",inline"`
 	// Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.
 	// This field is immutable.
+	//
+	// Deprecated: This field will be removed in gardener v1.123.0.
+	// The value "exposure" is no longer used since the enablement of SNI, and the value "normal" is redundant.
+	// TODO(theoddora): Remove this field in v1.123.0.
 	// +optional
 	Purpose *Purpose `json:"purpose,omitempty"`
 	// InfrastructureProviderStatus contains the provider status that has
@@ -88,11 +92,20 @@ type ControlPlaneStatus struct {
 }
 
 // Purpose is a string alias.
+//
+// Deprecated: This type will be removed in gardener v1.123.0.
+// The value "exposure" is no longer used since the enablement of SNI, and the value "normal" is redundant.
+// TODO(theoddora): Remove this type.
 type Purpose string
 
 const (
 	// Normal triggers the ControlPlane controllers for the shoot provider.
+	//
+	// Deprecated: This value is no longer necessary and will be removed in gardener v1.123.0.
 	Normal Purpose = "normal"
 	// Exposure triggers the ControlPlane controllers for the exposure settings.
+	//
+	// Deprecated: ControlPlane with purpose "exposure" has not been deployed since the enablement of SNI.
+	// The value will be removed in gardener v1.123.0.
 	Exposure Purpose = "exposure"
 )

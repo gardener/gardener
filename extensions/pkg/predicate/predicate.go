@@ -80,6 +80,10 @@ func HasClass(extensionClasses ...extensionsv1alpha1.ExtensionClass) predicate.P
 }
 
 // HasPurpose filters the incoming ControlPlanes for the given spec.purpose.
+//
+// Deprecated: Purpose field is being deprecated and will be removed in gardener v1.123.0.
+// The value "exposure" is no longer used since the enablement of SNI, and the value "normal" is redundant.
+// TODO(theoddora): Remove this function in v1.123.0 when the Purpose field is removed.
 func HasPurpose(purpose extensionsv1alpha1.Purpose) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		controlPlane, ok := obj.(*extensionsv1alpha1.ControlPlane)
