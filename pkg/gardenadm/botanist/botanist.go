@@ -268,13 +268,20 @@ func newShootObject(
 	*shootpkg.Shoot,
 	error,
 ) {
-	obj, err := withOptionalCredentials(gardenClient, resources.Shoot, shootpkg.
+	b := shootpkg.
 		NewBuilder().
 		WithProjectName(resources.Project.Name).
 		WithCloudProfileObject(resources.CloudProfile).
 		WithShootObject(resources.Shoot).
-		WithInternalDomain(&gardenerutils.Domain{Domain: "gardenadm.local"})).
-		Build(ctx, nil)
+		WithInternalDomain(&gardenerutils.Domain{Domain: "gardenadm.local"})
+
+	if resources.Shoot.Spec.SecretBindingName != nil || resources.Shoot.Spec.CredentialsBindingName != nil {
+		b = b.WithShootCredentialsFrom(gardenClient)
+	} else {
+		b = b.WithoutShootCredentials()
+	}
+
+	obj, err := b.Build(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed building shoot object: %w", err)
 	}
@@ -375,11 +382,4 @@ func shootUID(fs afero.Afero) (types.UID, error) {
 	}
 
 	return types.UID(content), nil
-}
-
-func withOptionalCredentials(gardenClient client.Client, shoot *gardencorev1beta1.Shoot, builder *shootpkg.Builder) *shootpkg.Builder {
-	if shoot.Spec.SecretBindingName != nil || shoot.Spec.CredentialsBindingName != nil {
-		return builder.WithShootCredentialsFrom(gardenClient)
-	}
-	return builder.WithoutShootCredentials()
 }
