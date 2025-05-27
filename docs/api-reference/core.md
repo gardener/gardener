@@ -7876,20 +7876,6 @@ VerticalPodAutoscaler
 </tr>
 <tr>
 <td>
-<code>enableStaticTokenKubeconfig</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
-Setting this field to true is not supported.</p>
-<p>Deprecated: This field is deprecated and will be removed in gardener v1.120</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>etcd</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.ETCD">

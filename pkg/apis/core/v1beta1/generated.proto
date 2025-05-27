@@ -1761,13 +1761,6 @@ message Kubernetes {
   // +optional
   optional VerticalPodAutoscaler verticalPodAutoscaler = 9;
 
-  // EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
-  // Setting this field to true is not supported.
-  // +optional
-  //
-  // Deprecated: This field is deprecated and will be removed in gardener v1.120
-  optional bool enableStaticTokenKubeconfig = 10;
-
   // ETCD contains configuration for etcds of the shoot cluster.
   // +optional
   optional ETCD etcd = 11;
