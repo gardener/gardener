@@ -80,10 +80,7 @@ func setTaskAnnotations(annotations map[string]string, tasks []string) {
 // GetMainReconciliationContext returns a context with timeout for the controller's main client. The resulting context has a timeout equal to the timeout passed in the argument but
 // not more than DefaultReconciliationTimeout.
 func GetMainReconciliationContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
-	t := timeout
-	if timeout > DefaultReconciliationTimeout {
-		t = DefaultReconciliationTimeout
-	}
+	t := min(timeout, DefaultReconciliationTimeout)
 
 	return context.WithTimeout(ctx, t)
 }
@@ -91,10 +88,7 @@ func GetMainReconciliationContext(ctx context.Context, timeout time.Duration) (c
 // GetChildReconciliationContext returns context with timeout for the controller's secondary client. The resulting context has a timeout equal to half of the timeout
 // for the controller's main client.
 func GetChildReconciliationContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
-	t := timeout
-	if timeout > DefaultReconciliationTimeout {
-		t = DefaultReconciliationTimeout
-	}
+	t := min(timeout, DefaultReconciliationTimeout)
 
 	return context.WithTimeout(ctx, t/2)
 }

@@ -59,8 +59,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 			log.Info("SeedNamespace for shoot not found. Avoiding etcd backup secret deployment")
 			return nil
 		}
-		log.Error(err, "Failed to get seed namespace")
-		return err
+		return fmt.Errorf("failed to get seed namespace: %w", err)
 	}
 	if namespace.DeletionTimestamp != nil {
 		log.Info("SeedNamespace for shoot is being terminated. Avoiding etcd backup secret deployment")
