@@ -95,9 +95,9 @@ const (
 	// alpha: v1.117.0
 	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
 
-	// DoNotCopyBackupCredentials disables the copying of Shoot credentials as backup credentials when the Shoot is used as a ManagedSeed.
+	// DoNotCopyBackupCredentials disables the copying of Shoot infrastructure credentials as backup credentials when the Shoot is used as a ManagedSeed.
 	// Operators are responsible for providing the credentials for backup explicitly.
-	// Credentials that were already copied will be labeled with "gardener.cloud/secret-status=previously-managed" and would have to be cleaned up by operators.
+	// Credentials that were already copied will be labeled with "secret.backup.gardener.cloud/status=previously-managed" and would have to be cleaned up by operators.
 	// owner: @dimityrmirchev
 	// alpha: v1.120.0
 	DoNotCopyBackupCredentials featuregate.Feature = "DoNotCopyBackupCredentials"

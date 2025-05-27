@@ -436,28 +436,33 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 		return nil
 	}
 
-	// If backup is specified and DoNotCopyBackupCredentials feature gate is enabled,
+	// If backup is specified and DoNotCopyBackupCredentials feature gate is disabled,
 	// create or update the backup secret if it doesn't exist or is owned by the object.
 	// TODO(vpnachev): Add support for WorkloadIdentity
 	var (
-		checksum string
-		copy     = !utilfeature.DefaultFeatureGate.Enabled(features.DoNotCopyBackupCredentials)
+		checksum     string
+		allowCopying = !utilfeature.DefaultFeatureGate.Enabled(features.DoNotCopyBackupCredentials)
 	)
 
 	// Get backup secret
 	backupSecret, originalErr := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
-	if originalErr == nil {
-		checksum = utils.ComputeSecretChecksum(backupSecret.Data)[:8]
-	} else if apierrors.IsNotFound(originalErr) && !copy {
-		return fmt.Errorf("feature gate DoNotCopyBackupCredentials is enabled, but backup secret does not exist: %w", originalErr)
-	} else if client.IgnoreNotFound(originalErr) != nil {
+
+	if client.IgnoreNotFound(originalErr) != nil {
 		return originalErr
 	}
 
-	const secretStatusLabel = "gardener.cloud/secret-status"
+	if apierrors.IsNotFound(originalErr) && !allowCopying {
+		return fmt.Errorf("the configured backup secret does not exist, however the feature gate DoNotCopyBackupCredentials is enabled and shoot infrastructure credentials will not be reused: %w", originalErr)
+	}
 
-	// Create or update backup secret if it doesn't exist or is owned by the object
-	if copy && (apierrors.IsNotFound(originalErr) || metav1.IsControlledBy(backupSecret, obj) || backupSecret.Labels[secretStatusLabel] == "previously-managed") {
+	if originalErr == nil {
+		checksum = utils.ComputeSecretChecksum(backupSecret.Data)[:8]
+	}
+
+	const secretStatusLabel = "secret.backup.gardener.cloud/status"
+
+	// Create or update backup secret if it doesn't exist, or is owned by the object, or was previously managed by this controller
+	if allowCopying && (apierrors.IsNotFound(originalErr) || metav1.IsControlledBy(backupSecret, obj) || backupSecret.Labels[secretStatusLabel] == "previously-managed") {
 		gvk, err := apiutil.GVKForObject(obj, a.GardenClient.Scheme())
 		if err != nil {
 			return fmt.Errorf("could not get GroupVersionKind from object %v: %w", obj, err)
@@ -491,7 +496,7 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 		} else if apierrors.IsNotFound(originalErr) {
 			return errors.New("backup is configured to reference a secret, but there is no infrastructure secret to copy")
 		}
-	} else if !copy && metav1.IsControlledBy(backupSecret, obj) {
+	} else if !allowCopying && metav1.IsControlledBy(backupSecret, obj) {
 		// backup secret was copied at an earlier stage
 		// remove the ownerReference as the controller is no longer responsible for it
 		secret := &corev1.Secret{
@@ -503,7 +508,7 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 				return ref.Name == obj.GetName() && ref.UID == obj.GetUID()
 			})
 
-			if len(secret.Labels) == 0 {
+			if secret.Labels == nil {
 				secret.Labels = map[string]string{}
 			}
 

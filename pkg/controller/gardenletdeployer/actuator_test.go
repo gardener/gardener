@@ -551,7 +551,7 @@ var _ = Describe("Interface", func() {
 
 				_, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("could not reconcile seed test secrets: feature gate DoNotCopyBackupCredentials is enabled, but backup secret does not exist"))
+				Expect(err.Error()).To(ContainSubstring("could not reconcile seed test secrets: the configured backup secret does not exist, however the feature gate DoNotCopyBackupCredentials is enabled and shoot infrastructure credentials will not be reused"))
 			})
 
 			It("should remove owner reference from backup secret when DoNotCopyBackupCredentials feature gate is enabled", func() {
@@ -579,7 +579,7 @@ var _ = Describe("Interface", func() {
 				)
 
 				gardenClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"labels":{"gardener.cloud/secret-status":"previously-managed"},"ownerReferences":null}}`))
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"labels":{"secret.backup.gardener.cloud/status":"previously-managed"},"ownerReferences":null}}`))
 					return nil
 				})
 
