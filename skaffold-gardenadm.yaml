@@ -808,24 +808,12 @@ build:
         - name: sha
           inputDigest: {}
 manifests:
-  kustomize:
-    paths:
-      - example/provider-local/gardenadm/high-touch
-      - example/provider-local/gardenadm/medium-touch
   hooks:
     before:
       - host:
           command:
             - bash
             - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
-    after:
-      - host:
-          command:
-            - bash
-            - -ec
-            - |
-              mkdir -p example/gardenadm-local/resources/$SCENARIO
-              kubectl kustomize example/provider-local/gardenadm/$SCENARIO > example/gardenadm-local/resources/$SCENARIO/manifests.yaml
 resourceSelector:
   # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
   allow:
@@ -836,6 +824,17 @@ resourceSelector:
     - groupKind: CloudProfile.core.gardener.cloud
       image:
         - .*
+profiles:
+  - name: high-touch
+    manifests:
+      kustomize:
+        paths:
+          - example/provider-local/gardenadm/high-touch
+  - name: medium-touch
+    manifests:
+      kustomize:
+        paths:
+          - example/provider-local/gardenadm/medium-touch
 ---
 apiVersion: skaffold/v4beta12
 kind: Config

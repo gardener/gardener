@@ -424,14 +424,19 @@ operator-seed-up operator-seed-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up
 operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/operator-seed-down.sh --path-kind-kubeconfig $(KUBECONFIG) --path-garden-kubeconfig $(VIRTUAL_GARDEN_KUBECONFIG)
 
+# Prepare the gardenadm manifests in example/gardenadm-local/resources/$(SCENARIO): `make gardenadm-up SCENARIO=<high-touch|medium-touch>`
+# The manifests are copied to the high-touch machine pods in `make gardenadm-high-touch-up` or can be passed to the `--config-dir` flag of `gardenadm bootstrap`
+gardenadm-prepare-resources: $(SKAFFOLD) $(KUBECTL)
+	$(SKAFFOLD) build -f=skaffold-gardenadm.yaml -p $(SCENARIO) -m gardenadm,provider-local-node,provider-local -q | $(SKAFFOLD) render -f=skaffold-gardenadm.yaml -p $(SCENARIO) -m provider-local-node,provider-local -o example/gardenadm-local/resources/$(SCENARIO)/manifests.yaml --build-artifacts -
 gardenadm-high-touch-up: $(SKAFFOLD) $(KUBECTL)
-	SCENARIO=high-touch $(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
+	$(MAKE) gardenadm-prepare-resources SCENARIO=high-touch
+	$(SKAFFOLD) run -f=skaffold-gardenadm.yaml -n gardenadm-high-touch -m provider-local-node,machine
 gardenadm-high-touch-down: $(SKAFFOLD) $(KUBECTL)
-	SCENARIO=high-touch $(SKAFFOLD) delete -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
-gardenadm-medium-touch-up: $(SKAFFOLD) $(KUBECTL)
-	SCENARIO=medium-touch $(SKAFFOLD) build -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,provider-local -q | SCENARIO=medium-touch $(SKAFFOLD) render -f=skaffold-gardenadm.yaml -m provider-local-node,provider-local --build-artifacts -
+	$(SKAFFOLD) delete -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
+gardenadm-medium-touch-up:
+	$(MAKE) gardenadm-prepare-resources SCENARIO=medium-touch
 gardenadm-medium-touch-down: $(SKAFFOLD) $(KUBECTL)
-	SCENARIO=medium-touch $(SKAFFOLD) delete -n gardenadm-medium-touch -f=skaffold-gardenadm.yaml
+	$(SKAFFOLD) delete -n gardenadm-medium-touch -f=skaffold-gardenadm.yaml
 
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...
