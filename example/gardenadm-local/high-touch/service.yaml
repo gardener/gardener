@@ -8,7 +8,7 @@ spec:
     protocol: TCP
     targetPort: 443
   selector:
-    app: high-touch-machine
+    app: machine
     apps.kubernetes.io/pod-index: "0"
   sessionAffinity: None
   type: ClusterIP
