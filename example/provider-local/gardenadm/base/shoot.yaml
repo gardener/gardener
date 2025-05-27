@@ -22,11 +22,17 @@ spec:
             namespace: kube-system
       machine:
         type: local
+        image:
+          name: local
+          version: 1.0.0
       minimum: 1
       maximum: 1
     - name: worker
       machine:
         type: local
+        image:
+          name: local
+          version: 1.0.0
       minimum: 1
       maximum: 1
   kubernetes:
