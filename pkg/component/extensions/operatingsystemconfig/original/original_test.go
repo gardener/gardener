@@ -37,7 +37,7 @@ var _ = Describe("Original", func() {
 
 	Describe("#Config", func() {
 		var (
-			caBundle                = ptr.To("cabundle")
+			caBundle                = "cabundle"
 			criName                 = extensionsv1alpha1.CRIName("foo")
 			images                  = map[string]*imagevector.Image{}
 			kubeletCABundle         = []byte("kubelet-ca-bundle")

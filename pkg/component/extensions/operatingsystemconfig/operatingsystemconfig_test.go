@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -55,7 +56,12 @@ import (
 
 var _ = Describe("OperatingSystemConfig", func() {
 	Describe("> Interface", func() {
-		const namespace = "test-namespace"
+		const (
+			namespace = "test-namespace"
+
+			worker1Name = "worker1"
+			worker2Name = "worker2"
+		)
 
 		var (
 			ctrl             *gomock.Controller
@@ -74,7 +80,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			poolHashesSecret    *corev1.Secret
 			apiServerURL        = "https://url-to-apiserver"
-			caBundle            = ptr.To("ca-bundle")
+			caBundle            = "ca-bundle"
 			clusterDNSAddresses = []string{"cluster-dns", "backup-cluster-dns"}
 			clusterDomain       = "cluster-domain"
 			images              = map[string]*imagevector.Image{
@@ -114,7 +120,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			originalConfigFn = func(cctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
 						{Name: cctx.Key},
-						{Name: *cctx.CABundle},
+						{Name: cctx.CABundle},
 						{Name: strings.Join(cctx.ClusterDNSAddresses, "-")},
 						{Name: cctx.ClusterDomain},
 						{Name: string(cctx.CRIName)},
@@ -133,93 +139,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 					nil
 			}
 
-			worker1Name = "worker1"
-			worker2Name = "worker2"
-			workers     = []gardencorev1beta1.Worker{
-				{
-					Name: worker1Name,
-					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
-						Image: &gardencorev1beta1.ShootMachineImage{
-							Name:           "type1",
-							Version:        ptr.To("12.34"),
-							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
-						},
-					},
-					KubeletDataVolumeName: &kubeletDataVolumeName,
-					ControlPlane:          &gardencorev1beta1.WorkerControlPlane{},
-				},
-				{
-					Name: worker2Name,
-					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
-						Image: &gardencorev1beta1.ShootMachineImage{
-							Name:    "type2",
-							Version: ptr.To("12.34"),
-						},
-					},
-					CRI: &gardencorev1beta1.CRI{
-						Name: gardencorev1beta1.CRINameContainerD,
-					},
-					KubeletDataVolumeName: &kubeletDataVolumeName,
-					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-						Version: &workerKubernetesVersion,
-					},
-				},
-			}
+			workers              []gardencorev1beta1.Worker
+			inPlaceUpdateWorkers []gardencorev1beta1.Worker
 
-			inPlaceUpdateWorkers = []gardencorev1beta1.Worker{
-				{
-					Name: worker1Name + "-in-place",
-					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
-						Image: &gardencorev1beta1.ShootMachineImage{
-							Name:           "type1",
-							Version:        ptr.To("12.34"),
-							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
-						},
-					},
-					KubeletDataVolumeName: &kubeletDataVolumeName,
-					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-						Kubelet: &gardencorev1beta1.KubeletConfig{
-							KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
-								CPU:    ptr.To(resource.MustParse("100m")),
-								Memory: ptr.To(resource.MustParse("100Mi")),
-							},
-						},
-					},
-
-					UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
-				},
-				{
-					Name: worker2Name + "-in-place",
-					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
-						Image: &gardencorev1beta1.ShootMachineImage{
-							Name:    "type2",
-							Version: ptr.To("12.34"),
-						},
-					},
-					CRI: &gardencorev1beta1.CRI{
-						Name: gardencorev1beta1.CRINameContainerD,
-					},
-					KubeletDataVolumeName: &kubeletDataVolumeName,
-					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-						Version: &workerKubernetesVersion,
-						Kubelet: &gardencorev1beta1.KubeletConfig{},
-					},
-					UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
-				},
-			}
 			empty    *extensionsv1alpha1.OperatingSystemConfig
 			expected []*extensionsv1alpha1.OperatingSystemConfig
 		)
 
-		computeExpectedOperatingSystemConfigs := func(sshAccessEnabled, inPlaceUpdate bool) []*extensionsv1alpha1.OperatingSystemConfig {
+		computeExpectedOperatingSystemConfigs := func(sshAccessEnabled bool, workers []gardencorev1beta1.Worker, inPlaceUpdate bool) []*extensionsv1alpha1.OperatingSystemConfig {
 			w := workers
-			if inPlaceUpdate {
-				w = inPlaceUpdateWorkers
-			}
 
 			expected := make([]*extensionsv1alpha1.OperatingSystemConfig, 0, 2*len(w))
 			for _, worker := range w {
@@ -251,6 +179,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 					}
 				}
 
+				if worker.CABundle != nil {
+					caBundle = fmt.Sprintf("%s\n%s", caBundle, *worker.CABundle)
+				}
+
 				key := KeyV1(worker.Name, v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), k8sVersion, worker.CRI)
 
 				imagesCopy := make(map[string]*imagevector.Image, len(images))
@@ -264,7 +196,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					imagesCopy["gardener-node-agent"].String(),
 					&nodeagentconfigv1alpha1.NodeAgentConfiguration{APIServer: nodeagentconfigv1alpha1.APIServer{
 						Server:   apiServerURL,
-						CABundle: []byte(*caBundle),
+						CABundle: []byte(caBundle),
 					}},
 				)
 				componentsContext := components.Context{
@@ -410,6 +342,82 @@ var _ = Describe("OperatingSystemConfig", func() {
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-kubelet", Namespace: namespace}})).To(Succeed())
 
+			workers = []gardencorev1beta1.Worker{
+				{
+					Name: worker1Name,
+					Machine: gardencorev1beta1.Machine{
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Image: &gardencorev1beta1.ShootMachineImage{
+							Name:           "type1",
+							Version:        ptr.To("12.34"),
+							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
+						},
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					ControlPlane:          &gardencorev1beta1.WorkerControlPlane{},
+				},
+				{
+					Name: worker2Name,
+					Machine: gardencorev1beta1.Machine{
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Image: &gardencorev1beta1.ShootMachineImage{
+							Name:    "type2",
+							Version: ptr.To("12.34"),
+						},
+					},
+					CRI: &gardencorev1beta1.CRI{
+						Name: gardencorev1beta1.CRINameContainerD,
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+						Version: &workerKubernetesVersion,
+					},
+				},
+			}
+			inPlaceUpdateWorkers = []gardencorev1beta1.Worker{
+				{
+					Name: worker1Name + "-in-place",
+					Machine: gardencorev1beta1.Machine{
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Image: &gardencorev1beta1.ShootMachineImage{
+							Name:           "type1",
+							Version:        ptr.To("12.34"),
+							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
+						},
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+						Kubelet: &gardencorev1beta1.KubeletConfig{
+							KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
+								CPU:    ptr.To(resource.MustParse("100m")),
+								Memory: ptr.To(resource.MustParse("100Mi")),
+							},
+						},
+					},
+
+					UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+				},
+				{
+					Name: worker2Name + "-in-place",
+					Machine: gardencorev1beta1.Machine{
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Image: &gardencorev1beta1.ShootMachineImage{
+							Name:    "type2",
+							Version: ptr.To("12.34"),
+						},
+					},
+					CRI: &gardencorev1beta1.CRI{
+						Name: gardencorev1beta1.CRINameContainerD,
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+						Version: &workerKubernetesVersion,
+						Kubelet: &gardencorev1beta1.KubeletConfig{},
+					},
+					UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+				},
+			}
+
 			values = &Values{
 				Namespace:         namespace,
 				Workers:           workers,
@@ -457,7 +465,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 `)},
 			}
 
-			expected = computeExpectedOperatingSystemConfigs(false, false)
+			expected = computeExpectedOperatingSystemConfigs(false, workers, false)
 			defaultDepWaiter = New(log, c, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 		})
 
@@ -653,7 +661,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-				for _, e := range computeExpectedOperatingSystemConfigs(false, false) {
+				for _, e := range computeExpectedOperatingSystemConfigs(false, workers, false) {
 					actual := &extensionsv1alpha1.OperatingSystemConfig{}
 					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
 
@@ -676,7 +684,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-				for _, e := range computeExpectedOperatingSystemConfigs(true, false) {
+				for _, e := range computeExpectedOperatingSystemConfigs(true, workers, false) {
 					actual := &extensionsv1alpha1.OperatingSystemConfig{}
 					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
 
@@ -732,7 +740,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 					Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-					for _, e := range computeExpectedOperatingSystemConfigs(true, true) {
+					for _, e := range computeExpectedOperatingSystemConfigs(true, inPlaceUpdateWorkers, true) {
 						actual := &extensionsv1alpha1.OperatingSystemConfig{}
 						Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
 
@@ -781,6 +789,67 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 					Expect(actual).To(Equal(obj))
 				}
+			})
+
+			Context("CA bundle computation", func() {
+				var getROOTcertsFileContent = func(osc *extensionsv1alpha1.OperatingSystemConfig) *string {
+					for _, f := range osc.Spec.Files {
+						if f.Path == "/var/lib/ca-certificates-local/ROOTcerts.crt" {
+							content, err := utils.DecodeBase64(f.Content.Inline.Data)
+							ExpectWithOffset(1, err).ToNot(HaveOccurred())
+							return ptr.To(string(content))
+						}
+					}
+					return nil
+				}
+
+				JustBeforeEach(func() {
+					Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+				})
+
+				When("worker CA bundle is not set", func() {
+					It("should contain only the provided CA bundle", func() {
+						for _, e := range expected {
+							if e.Spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+								continue
+							}
+
+							actual := &extensionsv1alpha1.OperatingSystemConfig{}
+							Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
+
+							content := getROOTcertsFileContent(actual)
+							Expect(content).NotTo(BeNil())
+							Expect(*content).To(Equal(caBundle))
+						}
+					})
+				})
+
+				When("worker CA bundle is set", func() {
+					BeforeEach(func() {
+						values.Workers[0].CABundle = ptr.To("foo")
+						values.Workers[1].CABundle = ptr.To("bar")
+					})
+
+					It("should append worker CA bundle to the CA bundle", func() {
+						for _, e := range expected {
+							if e.Spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+								continue
+							}
+
+							actual := &extensionsv1alpha1.OperatingSystemConfig{}
+							Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
+							worker := actual.Labels["worker.gardener.cloud/pool"]
+
+							content := getROOTcertsFileContent(actual)
+							Expect(content).NotTo(BeNil())
+							if worker == "worker1" {
+								Expect(*content).To(Equal(fmt.Sprintf("%s\n%s", caBundle, "foo")))
+							} else {
+								Expect(*content).To(Equal(fmt.Sprintf("%s\n%s", caBundle, "bar")))
+							}
+						}
+					})
+				})
 			})
 		})
 

@@ -56,10 +56,7 @@ func (component) Name() string {
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	var caBundle []byte
-	if ctx.CABundle != nil {
-		caBundle = []byte(*ctx.CABundle)
-	}
+	caBundle := []byte(ctx.CABundle)
 
 	var additionalTokenSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig
 	if ctx.ValitailEnabled {

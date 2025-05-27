@@ -92,9 +92,13 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
+	clusterCABundle, found := clusterCASecret.Data[secretsutils.DataKeyCertificateBundle]
+	if !found {
+		return fmt.Errorf("key %q not found in secret %q", secretsutils.DataKeyCertificateBundle, v1beta1constants.SecretNameCACluster)
+	}
 
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetAPIServerURL(fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(true)))
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle(clusterCASecret.Data[secretsutils.DataKeyCertificateBundle]))
+	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle(clusterCABundle))
 
 	shoot := b.Shoot.GetInfo()
 	if shoot.Status.Credentials != nil {
@@ -140,22 +144,14 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	return b.Shoot.Components.Extensions.OperatingSystemConfig.Deploy(ctx)
 }
 
-func (b *Botanist) getOperatingSystemConfigCABundle(clusterCABundle []byte) *string {
-	var caBundle string
+func (b *Botanist) getOperatingSystemConfigCABundle(clusterCABundle []byte) string {
+	caBundle := string(clusterCABundle)
 
 	if cloudProfileCaBundle := b.Shoot.CloudProfile.Spec.CABundle; cloudProfileCaBundle != nil {
-		caBundle = *cloudProfileCaBundle
+		caBundle = fmt.Sprintf("%s\n%s", *cloudProfileCaBundle, caBundle)
 	}
 
-	if len(clusterCABundle) != 0 {
-		caBundle = fmt.Sprintf("%s\n%s", caBundle, clusterCABundle)
-	}
-
-	if caBundle == "" {
-		return nil
-	}
-
-	return &caBundle
+	return caBundle
 }
 
 // exposed for testing
