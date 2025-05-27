@@ -281,6 +281,7 @@ build:
             - pkg/nodeagent/files
             - pkg/nodeagent/registry
             - pkg/operator/client
+            - pkg/provider-local/local
             - pkg/resourcemanager/apis/config/v1alpha1
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/resourcemanager/webhook/crddeletionprotection

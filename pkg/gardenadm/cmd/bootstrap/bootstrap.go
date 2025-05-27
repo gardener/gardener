@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -20,7 +21,9 @@ import (
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -186,9 +189,43 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
 
-		_ = waitUntilInfrastructureReady
-		_ = deployMachineControllerManager
-		_ = deployOperatingSystemConfig
+		deployWorker = g.Add(flow.Task{
+			Name:         "Deploying control plane machines",
+			Fn:           b.DeployWorker,
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady, deployOperatingSystemConfig, deployMachineControllerManager),
+		})
+		waitUntilWorkerReady = g.Add(flow.Task{
+			Name: "Waiting until control plane machines are running",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				// The Machine objects won't get ready yet because there will not be any Node objects.
+				// If using provider-local, check if the machine pods are running instead to continue the flow.
+				// TODO(timebertt): replace this with b.Shoot.Components.Extensions.Worker.Wait for all cases
+				//  when https://github.com/gardener/machine-controller-manager/issues/994 has been implemented
+				if b.Shoot.GetInfo().Spec.Provider.Type != local.Type {
+					return b.Shoot.Components.Extensions.Worker.Wait(ctx)
+				}
+
+				podList := &corev1.PodList{}
+				if err := b.SeedClientSet.Client().List(ctx, podList, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels{"app": "machine"}); err != nil {
+					return fmt.Errorf("error listing machine pods: %w", err)
+				}
+
+				expectedMachineCount := int(v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo()).Minimum)
+				if actualMachineCount := len(podList.Items); actualMachineCount != expectedMachineCount {
+					return fmt.Errorf("expected %d machines, but got %d", expectedMachineCount, actualMachineCount)
+				}
+
+				for _, pod := range podList.Items {
+					if err := health.CheckPod(&pod); err != nil {
+						return fmt.Errorf("pod %s is not ready: %w", client.ObjectKeyFromObject(&pod), err)
+					}
+				}
+				return nil
+			}).RetryUntilTimeout(5*time.Second, 5*time.Minute),
+			Dependencies: flow.NewTaskIDs(deployWorker),
+		})
+
+		_ = waitUntilWorkerReady
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{

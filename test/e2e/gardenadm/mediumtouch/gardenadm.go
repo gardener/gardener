@@ -14,6 +14,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -65,6 +66,12 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		It("should deploy machine-controller-manager", func(ctx SpecContext) {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: technicalID}}
 			Eventually(ctx, Object(deployment)).Should(BeHealthy(health.CheckDeployment))
+		}, SpecTimeout(time.Minute))
+
+		It("should deploy a control plane machine", func(ctx SpecContext) {
+			podList := &corev1.PodList{}
+			Eventually(ctx, ObjectList(podList, client.InNamespace(technicalID), client.MatchingLabels{"app": "machine"})).
+				Should(HaveField("Items", ConsistOf(HaveField("Status.Phase", corev1.PodRunning))))
 		}, SpecTimeout(time.Minute))
 
 		It("should finish successfully", func(ctx SpecContext) {
