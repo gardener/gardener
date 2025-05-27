@@ -346,8 +346,8 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 
 		var pools poolHash
 		for _, worker := range o.values.Workers {
-			// we don't need to track the hash version for in-place updates
-			// as the hash version is always 0
+			// The hash for in-place updates worker is not dependent on the WorkerPoolHash feature gate
+			// and is always static; therefore, there is no need to track the hash version.
 			if v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
 				continue
 			}
@@ -986,7 +986,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 
 func (o *operatingSystemConfig) calculateKey(version int, worker *gardencorev1beta1.Worker) (string, error) {
 	if v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
-		return KeyForInPlaceUpdates(worker, o.values.NodeLocalDNSEnabled), nil
+		return fmt.Sprintf("gardener-node-agent-%s-%s", worker.Name, utils.ComputeSHA256Hex([]byte(worker.Name))[:16]), nil
 	}
 
 	return o.calculateKeyForVersion(version, worker)
@@ -1097,43 +1097,6 @@ func KeyV2(
 	}
 
 	data = append(data, gardenerutils.CalculateDataStringForKubeletConfiguration(kubeletConfiguration)...)
-
-	var result string
-	for _, v := range data {
-		result += utils.ComputeSHA256Hex([]byte(v))
-	}
-
-	return fmt.Sprintf("gardener-node-agent-%s-%s", worker.Name, utils.ComputeSHA256Hex([]byte(result))[:16])
-}
-
-// KeyForInPlaceUpdates returns the key that can be used as secret name for worker with in-place updates.
-//
-// WARNING: Modifying fields in this function will change the node agent secret name,
-// causing the running GNA to lose access to its secret. This will result in the GNA entering a broken state.
-// Therefore, changes to these fields should be denied during validation.
-func KeyForInPlaceUpdates(worker *gardencorev1beta1.Worker, nodeLocalDNSEnabled bool) string {
-	data := []string{
-		worker.Machine.Type,
-	}
-
-	if worker.Machine.Image != nil {
-		data = append(data, worker.Machine.Image.Name)
-	}
-
-	if worker.Volume != nil {
-		data = append(data, worker.Volume.VolumeSize)
-		if worker.Volume.Type != nil {
-			data = append(data, *worker.Volume.Type)
-		}
-	}
-
-	if worker.CRI != nil {
-		data = append(data, string(worker.CRI.Name))
-	}
-
-	if nodeLocalDNSEnabled {
-		data = append(data, "node-local-dns")
-	}
 
 	var result string
 	for _, v := range data {
