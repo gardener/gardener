@@ -2496,20 +2496,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
-		Context("kubernetes.enableStaticTokenKubeconfig field validation", func() {
-			It("should deny creating shoots with this field set to true", func() {
-				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
-
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("spec.kubernetes.enableStaticTokenKubeconfig"),
-					"BadValue": Equal(true),
-					"Detail":   ContainSubstring("setting this field to true is not supported"),
-				}))))
-			})
-		})
-
 		Context("KubeControllerManager validation", func() {
 			Context("for workerless shoots", func() {
 				BeforeEach(func() {

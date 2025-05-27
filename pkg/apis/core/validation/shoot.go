@@ -847,10 +847,6 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		return allErrs
 	}
 
-	if ptr.Deref(kubernetes.EnableStaticTokenKubeconfig, false) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), *kubernetes.EnableStaticTokenKubeconfig, "setting this field to true is not supported"))
-	}
-
 	allErrs = append(allErrs, validateETCD(kubernetes.ETCD, fldPath.Child("etcd"))...)
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)

@@ -706,21 +706,6 @@ var _ = Describe("Strategy", func() {
 				}))
 			})
 		})
-
-		Context("enableStaticTokenKubeconfig", func() {
-			It("should set spec.kubernetes.enableStaticTokenKubeconfig to nil", func() {
-				shoot := &core.Shoot{}
-				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
-
-				strategy.Canonicalize(shoot)
-				Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(BeNil())
-
-				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
-
-				strategy.Canonicalize(shoot)
-				Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(BeNil())
-			})
-		})
 	})
 
 	Context("BindingStrategy", func() {
