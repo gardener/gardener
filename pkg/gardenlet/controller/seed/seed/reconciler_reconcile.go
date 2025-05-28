@@ -235,7 +235,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployPrometheusCRD,
 		)
 
-		// TODO(shreyas-s-rao): Remove this in in v1.123.0.
+		// TODO(shreyas-s-rao): Remove this in v1.123.0.
 		_ = g.Add(flow.Task{
 			Name: "Updating etcd VPA target references",
 			Fn: func(ctx context.Context) error {
