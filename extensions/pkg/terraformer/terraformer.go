@@ -376,10 +376,6 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 						corev1.ResourceCPU:    resource.MustParse("100m"),
 						corev1.ResourceMemory: resource.MustParse("200Mi"),
 					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("500m"),
-						corev1.ResourceMemory: resource.MustParse("1.5Gi"),
-					},
 				},
 				Env:                    t.envVars,
 				TerminationMessagePath: "/terraform-termination-log",
