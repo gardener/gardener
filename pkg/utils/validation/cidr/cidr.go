@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net"
 
-	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -145,9 +144,13 @@ func (c *cidrPath) ValidateIPFamily(ipFamily string) field.ErrorList {
 
 	switch ipFamily {
 	case IPFamilyIPv4:
-		allErrs = append(allErrs, validation.IsValidIPv4Address(c.fieldPath, c.net.IP.String())...)
+		if c.net.IP.To4() == nil {
+			allErrs = append(allErrs, field.Invalid(c.fieldPath, c.net.IP.String(), "must be a valid IPv4 address"))
+		}
 	case IPFamilyIPv6:
-		allErrs = append(allErrs, validation.IsValidIPv6Address(c.fieldPath, c.net.IP.String())...)
+		if c.net.IP.To4() != nil {
+			allErrs = append(allErrs, field.Invalid(c.fieldPath, c.net.IP.String(), "must be a valid IPv6 address"))
+		}
 	}
 
 	return allErrs
