@@ -8,6 +8,7 @@ RUN echo "Installing Packages ..." \
 			unzip \
 			jq \
 			parallel \
+			zip \
 		&& rm -rf /var/lib/apt/lists/*
 
 # builder
