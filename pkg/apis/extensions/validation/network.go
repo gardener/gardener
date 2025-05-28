@@ -87,7 +87,7 @@ func ValidateNetworkSpecUpdate(new, old *extensionsv1alpha1.NetworkSpec, deletio
 
 	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
 		diff := deep.Equal(new, old)
-		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update shoot spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
+		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update network spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
 	allErrs = append(allErrs, ValidateIPFamiliesUpdate(new.IPFamilies, old.IPFamilies, fldPath.Child("ipFamilies"))...)

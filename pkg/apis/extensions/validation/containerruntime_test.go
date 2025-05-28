@@ -77,7 +77,7 @@ var _ = Describe("ContainerRuntime validation tests", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec"),
-				"Detail": Equal("cannot update shoot spec if deletion timestamp is set. Requested changes: BinaryPath: changed-binaryPath != /test/path"),
+				"Detail": Equal("cannot update container runtime spec if deletion timestamp is set. Requested changes: BinaryPath: changed-binaryPath != /test/path"),
 			}))))
 		})
 
