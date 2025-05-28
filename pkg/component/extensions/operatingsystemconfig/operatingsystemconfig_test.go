@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
