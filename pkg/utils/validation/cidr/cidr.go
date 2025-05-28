@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"net"
 
-	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	netutils "k8s.io/utils/net"
 )
 
 const (
@@ -145,9 +145,9 @@ func (c *cidrPath) ValidateIPFamily(ipFamily string) field.ErrorList {
 
 	switch ipFamily {
 	case IPFamilyIPv4:
-		allErrs = append(allErrs, validation.IsValidIPv4Address(c.fieldPath, c.net.IP.String())...)
+		allErrs = append(allErrs, c.isValidIPv4Address()...)
 	case IPFamilyIPv6:
-		allErrs = append(allErrs, validation.IsValidIPv6Address(c.fieldPath, c.net.IP.String())...)
+		allErrs = append(allErrs, c.isValidIPv6Address()...)
 	}
 
 	return allErrs
@@ -211,4 +211,22 @@ func (c *cidrPath) IsIPv6() bool {
 		return true
 	}
 	return false
+}
+
+func (c *cidrPath) isValidIPv4Address() field.ErrorList {
+	var allErrors field.ErrorList
+	ip := netutils.ParseIPSloppy(c.net.IP.String())
+	if ip == nil || ip.To4() == nil {
+		allErrors = append(allErrors, field.Invalid(c.fieldPath, c.net.IP.String(), "must be a valid IPv4 address"))
+	}
+	return allErrors
+}
+
+func (c *cidrPath) isValidIPv6Address() field.ErrorList {
+	var allErrors field.ErrorList
+	ip := netutils.ParseIPSloppy(c.net.IP.String())
+	if ip == nil || ip.To4() != nil {
+		allErrors = append(allErrors, field.Invalid(c.fieldPath, c.net.IP.String(), "must be a valid IPv6 address"))
+	}
+	return allErrors
 }
