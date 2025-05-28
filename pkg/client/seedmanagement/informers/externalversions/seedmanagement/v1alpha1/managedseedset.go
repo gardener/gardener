@@ -50,13 +50,25 @@ func NewFilteredManagedSeedSetInformer(client versioned.Interface, namespace str
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SeedmanagementV1alpha1().ManagedSeedSets(namespace).List(context.TODO(), options)
+				return client.SeedmanagementV1alpha1().ManagedSeedSets(namespace).List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SeedmanagementV1alpha1().ManagedSeedSets(namespace).Watch(context.TODO(), options)
+				return client.SeedmanagementV1alpha1().ManagedSeedSets(namespace).Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.SeedmanagementV1alpha1().ManagedSeedSets(namespace).List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.SeedmanagementV1alpha1().ManagedSeedSets(namespace).Watch(ctx, options)
 			},
 		},
 		&apisseedmanagementv1alpha1.ManagedSeedSet{},
