@@ -48,7 +48,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 	var (
 		structAuthGateEnabled, structAuthGateSet  = k.values.FeatureGates["StructuredAuthenticationConfiguration"]
 		anonymousGateEnabled, anonymousGateSet    = k.values.FeatureGates["AnonymousAuthConfigurableEndpoints"]
-		shouldConfigureAnonymousViaStructuredAuth = (!anonymousGateSet || (anonymousGateSet && anonymousGateEnabled)) && versionutils.ConstraintK8sGreaterEqual132.Check(k.values.Version)
+		shouldConfigureAnonymousViaStructuredAuth = (!anonymousGateSet || anonymousGateEnabled) && versionutils.ConstraintK8sGreaterEqual132.Check(k.values.Version)
 	)
 
 	if (structAuthGateSet && !structAuthGateEnabled) ||
@@ -141,16 +141,18 @@ func ConfigureJWTAuthenticators(oidc *gardencorev1beta1.OIDCConfig) []apiserverv
 }
 
 func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, configMapAuthenticationConfig *corev1.ConfigMap, secretOIDCCABundle *corev1.Secret) {
-	if value, ok := k.values.FeatureGates["StructuredAuthenticationConfiguration"]; versionutils.ConstraintK8sLess130.Check(k.values.Version) || (ok && !value) {
+	var (
+		structAuthGateEnabled, structAuthGateSet  = k.values.FeatureGates["StructuredAuthenticationConfiguration"]
+		structAuthIsDisabled                      = (structAuthGateSet && !structAuthGateEnabled)
+		anonymousGateEnabled, anonymousGateSet    = k.values.FeatureGates["AnonymousAuthConfigurableEndpoints"]
+		shouldConfigureAnonymousViaStructuredAuth = (!anonymousGateSet || anonymousGateEnabled) && versionutils.ConstraintK8sGreaterEqual132.Check(k.values.Version)
+	)
+
+	if versionutils.ConstraintK8sLess130.Check(k.values.Version) || structAuthIsDisabled {
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 	}
 
-	var (
-		anonymousGateEnabled, anonymousGateSet    = k.values.FeatureGates["AnonymousAuthConfigurableEndpoints"]
-		shouldConfigureAnonymousViaStructuredAuth = (!anonymousGateSet || (anonymousGateSet && anonymousGateEnabled)) && versionutils.ConstraintK8sGreaterEqual132.Check(k.values.Version)
-	)
-
-	if !shouldConfigureAnonymousViaStructuredAuth {
+	if !shouldConfigureAnonymousViaStructuredAuth || structAuthIsDisabled {
 		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--anonymous-auth="+strconv.FormatBool(ptr.Deref(k.values.AnonymousAuthenticationEnabled, false)))
 	}
 
