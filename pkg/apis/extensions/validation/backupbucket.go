@@ -61,7 +61,7 @@ func ValidateBackupBucketSpecUpdate(new, old *extensionsv1alpha1.BackupBucketSpe
 
 	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
 		diff := deep.Equal(new, old)
-		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update shoot spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
+		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update backup bucket spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)

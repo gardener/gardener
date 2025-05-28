@@ -151,7 +151,7 @@ func ValidateControllerRegistrationSpecUpdate(new, old *core.ControllerRegistrat
 
 	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
 		diff := deep.Equal(new, old)
-		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update shoot spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
+		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update controller registration spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
 	allErrs = append(allErrs, ValidateControllerResourceUpdate(new.Resources, old.Resources, fldPath.Child("resources"))...)
