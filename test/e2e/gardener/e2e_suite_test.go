@@ -21,7 +21,6 @@ import (
 	_ "github.com/gardener/gardener/test/e2e/gardener/seed"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot"
 	_ "github.com/gardener/gardener/test/e2e/gardener/shoot/gardenerupgrade"
-	_ "github.com/gardener/gardener/test/e2e/gardener/shoot/observability"
 )
 
 func TestMain(m *testing.M) {
