@@ -526,6 +526,7 @@ var _ = Describe("Seed", func() {
 					Entry("list", "list"),
 					Entry("watch", "watch"),
 					Entry("create", "create"),
+					Entry("patch", "patch"),
 				)
 
 				It("should allow the request when the request is for 'token' subresource and path exists", func() {
@@ -549,10 +550,9 @@ var _ = Describe("Seed", func() {
 
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
-						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch create]"))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch create patch]"))
 					},
 
-					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
