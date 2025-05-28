@@ -64,24 +64,24 @@ For all other spec changes like Kubernetes patch version update, the upgrade is 
 ### Rolling Updates
 
 The upgrade is performed in a "rolling update" manner, during which nodes in the worker pool are replaced. Similar to how pods in Kubernetes are updated when backed by a `Deployment`.
-Worker nodes are terminated one after another and replaced by new machines.
+Worker nodes are terminated one after another and replaced by new nodes.
 The existing workload is gracefully drained and evicted from the old worker nodes to new worker nodes, respecting the configured `PodDisruptionBudget`s (see [Specifying a Disruption Budget for your Application](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)).
 
 #### Automatic Rolling Updates
 
-When the auto rolling update strategy is selected, the update process is fully orchestrated by the Gardener and the machine-controller-manager. The machine-controller-manager sequentially terminates the worker nodes and replaces them with new nodes.
+When the auto rolling update strategy is selected, the update process is fully orchestrated by the Gardener and the `machine-controller-manager`. The `machine-controller-manager` sequentially terminates the worker nodes and replaces them with new nodes.
 >ℹ️  This is the `default` update strategy.
 
-To create workers with `AutoRollingUpdate`, either omit the `workers.updateStrategy` field (it will default to `AutoRollingUpdate`) or explicitly set the field to `AutoRollingUpdate` for each worker.
+To create workers with `AutoRollingUpdate`, either omit the `Shoot'`s `.spec.provider.workers[].updateStrategy` field (it will default to `AutoRollingUpdate`) or explicitly set the field to `AutoRollingUpdate`.
 
 ```yaml
 spec:
   provider:
     workers:
-      - name: cpu-worker
-        maxSurge: 0
-        maxUnavailable: 2
-        updateStrategy: AutoRollingUpdate
+    - name: cpu-worker
+      maxSurge: 0
+      maxUnavailable: 2
+      updateStrategy: AutoRollingUpdate
 ```
 
 #### Customize Rolling Update Behaviour of Shoot Worker Nodes
@@ -138,7 +138,7 @@ The existing workload is gracefully drained and evicted from the worker nodes, r
 
 > ℹ️ Currently, `in-place` updates are controlled by the `InPlaceNodeUpdates` feature gate in the `gardener-apiserver`.
 
-For in-place updates, the first requirement is that the operating system must support them. For a specific machine image version, the configuration for in-place updates must be defined in the `CloudProfile` under spec.machineImages[].inPlaceUpdates:
+For in-place updates, the first requirement is that the operating system must support them. For a specific machine image version, the configuration for in-place updates must be defined in the `CloudProfile` under `spec.machineImages[].versions[].inPlaceUpdates`:
 - The `inPlaceUpdates.supported` field must be set to `true`.
 - The `inPlaceUpdates.minVersionForUpdate` field specifies the minimum version from which an in-place update to the target machine image version can be performed.
 
@@ -163,7 +163,7 @@ In addition to customisable fields mentioned in [](#customize-rolling-update-beh
 
 #### In-Place Update Triggers
 
-An in-place update of the shoot worker nodes is triggered for rolling update triggers listed under [Rolling Update Triggers](#rolling-update-triggers) except the following:
+An in-place update of the shoot worker nodes is triggered for rolling update triggers listed under [Rolling Update Triggers](#rolling-update-triggers) except for the following:
 * `.spec.provider.workers[].machine.image.name`
 * `.spec.provider.workers[].machine.type`
 * `.spec.provider.workers[].volume.type`
@@ -180,20 +180,20 @@ If an in-place update fails and nodes are left in a problematic state, user inte
 
 #### Automatic In-Place Updates
 
-In case of AutoInPlaceUpdate update strategy, the update process is fully orchestrated by Gardener and the machine-controller-manager. No user intervention is required.
+In case of AutoInPlaceUpdate update strategy, the update process is fully orchestrated by Gardener and the `machine-controller-manager`. No user intervention is required.
 Set `.spec.provider.workers[].updateStrategy` field in the `Shoot` spec to `AutoInPlaceUpdate`.
 
 ```yaml
 spec:
   provider:
     workers:
-      - name: cpu-worker
-        maxSurge: 0
-        maxUnavailable: 2
-        updateStrategy: AutoInPlaceUpdate
+    - name: cpu-worker
+      maxSurge: 0
+      maxUnavailable: 2
+      updateStrategy: AutoInPlaceUpdate
 ```
 
-During the automatic in-place updates, `machine-controller-manager` can create new nodes when `max-surge` value is set to value `>0`. In such cases new nodes are created with the updated configuration and the old ones are terminated.
+During automatic in-place updates, if the `maxSurge` value is set to greater than 0, the `machine-controller-manager` creates new nodes equal to the `maxSurge` value. All old nodes, except for those equal to the `maxSurge` value, are updated in place, and the old nodes corresponding to the `maxSurge` value are terminated. If `maxSurge` is set to `0`, no new nodes are created and all old nodes are updated in-place.
 
 The `inPlaceUpdates.pendingWorkerUpdates.autoInPlaceUpdate` field in the Shoot status lists the names of worker pools that are pending updates with this strategy.
 
@@ -206,13 +206,13 @@ Set `.spec.provider.workers[].updateStrategy` field in the `Shoot` spec to `Manu
 spec:
   provider:
     workers:
-      - name: cpu-worker
-        maxSurge: 0
-        maxUnavailable: 2
-        updateStrategy: ManualInPlaceUpdate
+    - name: cpu-worker
+      maxSurge: 0
+      maxUnavailable: 2
+      updateStrategy: ManualInPlaceUpdate
 ```
 
-Once machine-controller-manager labels nodes with `node.machine.sapcloud.io/candidate-for-update`, user can select the candidate nodes for update by labeling them with `node.machine.sapcloud.io/selected-for-update=true`: 
+Once `machine-controller-manager` labels nodes with `node.machine.sapcloud.io/candidate-for-update`, user can select the candidate nodes for update by labeling them with `node.machine.sapcloud.io/selected-for-update=true`:
 ```
 kubectl label node <node-name> node.machine.sapcloud.io/selected-for-update=true
 ```
