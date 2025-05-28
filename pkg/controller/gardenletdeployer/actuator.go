@@ -459,10 +459,13 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 		checksum = utils.ComputeSecretChecksum(backupSecret.Data)[:8]
 	}
 
-	const secretStatusLabel = "secret.backup.gardener.cloud/status"
+	const (
+		secretStatusLabelKey = "secret.backup.gardener.cloud/status"
+		secretStatusLabelVal = "previously-managed"
+	)
 
 	// Create or update backup secret if it doesn't exist, or is owned by the object, or was previously managed by this controller
-	if allowCopying && (apierrors.IsNotFound(originalErr) || metav1.IsControlledBy(backupSecret, obj) || backupSecret.Labels[secretStatusLabel] == "previously-managed") {
+	if allowCopying && (apierrors.IsNotFound(originalErr) || metav1.IsControlledBy(backupSecret, obj) || backupSecret.Labels[secretStatusLabelKey] == secretStatusLabelVal) {
 		gvk, err := apiutil.GVKForObject(obj, a.GardenClient.Scheme())
 		if err != nil {
 			return fmt.Errorf("could not get GroupVersionKind from object %v: %w", obj, err)
@@ -486,7 +489,7 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 				}
 				secret.Type = corev1.SecretTypeOpaque
 				secret.Data = infrastructureSecret.Data
-				delete(secret.Labels, secretStatusLabel)
+				delete(secret.Labels, secretStatusLabelKey)
 				return nil
 			}); err != nil {
 				return err
@@ -509,7 +512,7 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 			})
 
 			// Label such secrets as it would be easier for operators to clean them up afterwards
-			metav1.SetMetaDataLabel(&secret.ObjectMeta, secretStatusLabel, "previously-managed")
+			metav1.SetMetaDataLabel(&secret.ObjectMeta, secretStatusLabelKey, secretStatusLabelVal)
 
 			return nil
 		}); err != nil {
