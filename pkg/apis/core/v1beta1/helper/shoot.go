@@ -360,17 +360,6 @@ func GetShootAuthorizationConfiguration(apiServerConfig *gardencorev1beta1.KubeA
 	return nil
 }
 
-// AnonymousAuthenticationEnabled returns true if anonymous authentication is set explicitly to 'true' and false otherwise.
-func AnonymousAuthenticationEnabled(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig) bool {
-	if kubeAPIServerConfig == nil {
-		return false
-	}
-	if kubeAPIServerConfig.EnableAnonymousAuthentication == nil {
-		return false
-	}
-	return *kubeAPIServerConfig.EnableAnonymousAuthentication
-}
-
 // KubeAPIServerFeatureGateDisabled returns whether the given feature gate is explicitly disabled for the kube-apiserver for the given Shoot spec.
 func KubeAPIServerFeatureGateDisabled(shoot *gardencorev1beta1.Shoot, featureGate string) bool {
 	kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer
