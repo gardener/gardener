@@ -201,13 +201,13 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	if err := retry.UntilTimeout(ctx, IntervalWaitServiceGardenerApiserver, TimeoutWaitServiceGardenerApiserver, func(ctx context.Context) (bool, error) {
 		if err := g.client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: g.namespace}, serviceRuntime); err != nil {
 			if apierrors.IsNotFound(err) {
-				return retry.MinorError(fmt.Errorf("service gardener-apiserver was not yet created"))
+				return retry.MinorError(fmt.Errorf("service %s was not yet created", client.ObjectKeyFromObject(serviceRuntime)))
 			}
-			return retry.SevereError(fmt.Errorf("unexpected error while retrieving gardener-apiserver service: %w", err))
+			return retry.SevereError(fmt.Errorf("unexpected error while retrieving service %s: %w", client.ObjectKeyFromObject(serviceRuntime), err))
 		}
 		return retry.Ok()
 	}); err != nil {
-		return fmt.Errorf("failed waiting for service gardener-apiserver to get created by gardener-resource-manager: %w", err)
+		return fmt.Errorf("failed waiting for service %s to get created by gardener-resource-manager: %w", client.ObjectKeyFromObject(serviceRuntime), err)
 	}
 
 	virtualResources, err := virtualRegistry.AddAllAndSerialize(
