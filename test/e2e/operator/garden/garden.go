@@ -70,6 +70,7 @@ var gardenManagedResourceList = []string{
 	"extension-registration-provider-local",
 	"extension-provider-local-garden",
 	"local-ext-shoot",
+	"opentelemetry-operator",
 }
 
 var istioManagedResourceList = []string{
