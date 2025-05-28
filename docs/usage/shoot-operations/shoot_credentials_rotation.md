@@ -142,6 +142,14 @@ You can check which worker pools still need to be rolled by reading `.status.cre
 Once this list is empty, the `phase` transitions to `Prepared`.
 Now you can just complete the rotation as usual (see above).
 
+#### Worker Node with ManualInPlaceUpdate Update Strategy
+
+In case of manual in-place update, shoot CA rotation phase will be at `Preparing` until all the worker pools are successfully in-place updated and there are no pending worker pools with strategy ManualInPlaceUpdate.
+
+You can check which worker pools still need to be updated by reading `.status.inPlaceUpdates.pendingWorkerUpdates.manualInPlaceUpdate`.
+Once this list is empty, the `phase` transitions to `Prepared`.
+After this rotation will be completed as usual (see above).
+
 ### Observability Password(s) For Plutono and Prometheus
 
 For `Shoot`s with `.spec.purpose!=testing`, Gardener deploys an observability stack with Prometheus for monitoring, Alertmanager for alerting (optional), Vali for logging, and Plutono for visualization.
@@ -271,6 +279,11 @@ After it is completed, the `.status.credentials.rotation.serviceAccountKey.phase
 Similar to the rotation of the certificate authorities, you can control the worker node rollout individually.
 Please read [this section](#triggering-worker-node-rollout-individually) to get more information.
 It works the same way for the `ServiceAccount` token signing key (using `rotate-serviceaccount-key-start-without-workers-rollout`).
+
+#### Worker Node with ManualInPlaceUpdate Update Strategy
+
+Similar to the rotation of the certificate authorities, in case of manual in-place update, `ServiceAccount` token signing key rotation phase will be at `Preparing` until all the worker pools are successfully in-place updated and there are no pending worker pools with strategy ManualInPlaceUpdate.
+Please read [this section](#worker-node-with-manualinplaceupdate-update-strategy) for more information.
 
 ### OpenVPN TLS Auth Keys
 
