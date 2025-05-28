@@ -11,6 +11,8 @@ import (
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
+	opentelemetryv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
+	opentelemetryv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -111,6 +113,8 @@ var (
 		monitoringv1beta1.AddToScheme,
 		monitoringv1alpha1.AddToScheme,
 		persesv1alpha1.AddToScheme,
+		opentelemetryv1alpha1.AddToScheme,
+		opentelemetryv1beta1.AddToScheme,
 	)
 
 	shootSchemeBuilder = runtime.NewSchemeBuilder(
