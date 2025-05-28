@@ -8,7 +8,7 @@ This document describes the steps needed to perform in order to confidently add 
 - Ensure Gardener and extensions are updated to support the new Kubernetes version ([example](https://github.com/gardener/gardener/issues/11020))
 - Bump Golang dependencies for `k8s.io/*` and `sigs.k8s.io/controller-runtime` ([example](https://github.com/gardener/gardener/issues/11186)) [[ref](#bump-golang-dependencies-for-k8sio-and-sigsk8siocontroller-runtime)]
 - Prepare a short (~30-60 min) session for a special edition of Gardener's Review Meeting on new key features and changes in the release
-- Check whether old versions can be dropped, and if yes, drive the needed adaptations ([example](https://github.com/gardener/gardener/pull/10664))
+- Drop support for all but the greatest/latest 5 Kubernetes minor versions (the newly added plus four prior). Drop all lower/older versions and adapt accordingly ([example](https://github.com/gardener/gardener/pull/10664))
 
 Version | Expected Release Date | Release Responsibles                                                                         |
 --------|-----------------------|----------------------------------------------------------------------------------------------|
@@ -119,7 +119,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
     - **Removed Feature Gates:**
       - Open: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates-removed/#feature-gates-that-are-removed
       - Search the page for the **current** Kubernetes version, e.g. if the new version is "1.32", search for "1.31".
-      - Set `RemovedInVersion` to the **new** Kubernetes version for feature gates that have been removed after the **current** Kubernetes version according to the "To" column. 
+      - Set `RemovedInVersion` to the **new** Kubernetes version for feature gates that have been removed after the **current** Kubernetes version according to the "To" column.
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/97923b0604300ff805def8eae981ed388d5e4a83) example commit.
 - Maintain the Kubernetes `kube-apiserver` admission plugins used for validation of `Shoot` resources:
   - The admission plugins are maintained in [this](../../pkg/utils/validation/admissionplugins/admissionplugins.go) file.
