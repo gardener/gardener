@@ -22,20 +22,11 @@ spec:
             namespace: kube-system
       machine:
         type: local
-        image:
-          name: local
-          version: 1.0.0
       minimum: 1
       maximum: 1
-      machineControllerManager:
-        # TODO(timebertt): remove this once machine-controller-manager no longer waits for the Node object to be created
-        machineCreationTimeout: 24h
     - name: worker
       machine:
         type: local
-        image:
-          name: local
-          version: 1.0.0
       minimum: 1
       maximum: 1
   kubernetes:
