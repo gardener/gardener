@@ -11,6 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
 // GetSecretByReference returns the secret referenced by the given secret reference.
@@ -76,4 +78,22 @@ func DeleteSecretByObjectReference(ctx context.Context, c client.Client, ref *co
 		},
 	}
 	return client.IgnoreNotFound(c.Delete(ctx, secret))
+}
+
+// GetCredentialsByObjectReference returns the credentials, being Secret or WorkloadIdentity, referenced by the given object reference.
+func GetCredentialsByObjectReference(ctx context.Context, c client.Client, ref corev1.ObjectReference) (client.Object, error) {
+	var obj client.Object
+	switch ref.GroupVersionKind() {
+	case corev1.SchemeGroupVersion.WithKind("Secret"):
+		obj = &corev1.Secret{}
+	case securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity"):
+		obj = &securityv1alpha1.WorkloadIdentity{}
+	default:
+		return nil, fmt.Errorf("unsupported credentials reference: %s, %s", ref.Namespace+"/"+ref.Name, ref.GroupVersionKind().String())
+	}
+
+	if err := c.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, obj); err != nil {
+		return nil, err
+	}
+	return obj, nil
 }
