@@ -40,4 +40,5 @@ extend-exclude = [
     "generated.pb.go",
     "openapi_generated.go",
     "crd-all.gen.yaml",
+    "crd-opentelemetry.io*.yaml",
 ]
