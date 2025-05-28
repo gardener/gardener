@@ -2195,7 +2195,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Entry("invalid (default<0)", &core.WatchCacheSizes{
 						Default: ptr.To(negativeSize),
 					}, ConsistOf(
-						field.Invalid(field.NewPath("default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+						field.Invalid(field.NewPath("default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
 
 					// APIGroup unset (core group)
@@ -2217,7 +2217,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CacheSize: negativeSize,
 						}},
 					}, ConsistOf(
-						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
 					Entry("invalid (core/resource empty)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
@@ -2250,7 +2250,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CacheSize: negativeSize,
 						}},
 					}, ConsistOf(
-						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
 					Entry("invalid (apps/resource empty)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
@@ -2288,12 +2288,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Entry("invalid (verbosity<0)", &core.APIServerLogging{
 						Verbosity: ptr.To(negativeSize),
 					}, ConsistOf(
-						field.Invalid(field.NewPath("verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+						field.Invalid(field.NewPath("verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
 					Entry("invalid (httpAccessVerbosity<0)", &core.APIServerLogging{
 						HTTPAccessVerbosity: ptr.To(negativeSize),
 					}, ConsistOf(
-						field.Invalid(field.NewPath("httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+						field.Invalid(field.NewPath("httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
 				)
 			})
@@ -3138,7 +3138,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					field.Invalid(field.NewPath("cpuHistogramDecayHalfLife"), negativeDuration.Duration.String(), "must be non-negative"),
 					field.Invalid(field.NewPath("memoryHistogramDecayHalfLife"), negativeDuration.Duration.String(), "must be non-negative"),
 					field.Invalid(field.NewPath("memoryAggregationInterval"), negativeDuration.Duration.String(), "must be non-negative"),
-					field.Invalid(field.NewPath("memoryAggregationIntervalCount"), int64(-1), "must be greater than or equal to 0"),
+					field.Invalid(field.NewPath("memoryAggregationIntervalCount"), int64(-1), "must be greater than or equal to 0").WithOrigin("minimum"),
 				)),
 			)
 		})
