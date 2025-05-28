@@ -76,8 +76,6 @@ func UpdateGardenKubeconfigSecret(ctx context.Context, certClientConfig *rest.Co
 	return kubeconfig, nil
 }
 
-const kubeRootCAConfigMapName = "kube-root-ca.crt"
-
 // UpdateGardenKubeconfigCAIfChanged checks if the garden cluster CA given in the gardenClientConnection differs from the CA in the kubeconfig secret
 // and updates the secret to contain the new CA if that's the case.
 func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, log logr.Logger, gardenAPIReader client.Reader, seedClient client.Client, kubeconfig []byte, gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection) ([]byte, error) {
@@ -108,9 +106,9 @@ func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, log logr.Logger, gar
 	gardenClusterCACert := gardenClientConnection.GardenClusterCACert
 	if len(gardenClusterCACert) == 0 && gardenAPIReader != nil {
 		log.Info("Getting CA from the garden cluster")
-		var kubeRootCA corev1.ConfigMap
-		if err := gardenAPIReader.Get(ctx, client.ObjectKey{Namespace: core.GardenerSystemPublicNamespace, Name: kubeRootCAConfigMapName}, &kubeRootCA); err != nil {
-			return nil, fmt.Errorf("unable to get %q configmap: %w", kubeRootCAConfigMapName, err)
+		kubeRootCA := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: core.GardenerSystemPublicNamespace, Name: "kube-root-ca.crt"}}
+		if err := gardenAPIReader.Get(ctx, client.ObjectKeyFromObject(kubeRootCA), kubeRootCA); err != nil {
+			return nil, fmt.Errorf("unable to get %q configmap: %w", kubeRootCA.Name, err)
 		}
 
 		gardenClusterCACert = []byte(kubeRootCA.Data["ca.crt"])
