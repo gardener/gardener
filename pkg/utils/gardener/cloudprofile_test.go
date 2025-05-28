@@ -184,11 +184,10 @@ var _ = Describe("CloudProfile", func() {
 			}
 		})
 		Describe("#GetCloudProfile", func() {
-			It("returns an error if CloudProfile is not found", func() {
-				shoot.Spec.CloudProfileName = &cloudProfileName
+			It("returns nil if CloudProfile is not found", func() {
 				res, err := gardenerutils.GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
 				Expect(res).To(BeNil())
-				Expect(err).To(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("returns CloudProfile if present, derived from cloudProfileName", func() {

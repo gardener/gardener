@@ -409,6 +409,9 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
+	if cloudProfileSpec == nil {
+		return nil, fmt.Errorf("no cloudprofile reference has been provided")
+	}
 
 	var (
 		countLB      int64 = 1
