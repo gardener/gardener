@@ -117,7 +117,7 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed initializing shoot resource: %w", err)
 	}
 
-	initializeSeedResource(resources.Seed, resources.Shoot.Name)
+	initializeSeedResource(resources.Seed, resources.Shoot.Name, runsControlPlane)
 
 	gardenClient := newFakeGardenClient()
 	if err := initializeFakeGardenResources(ctx, gardenClient, resources, extensions); err != nil {
@@ -350,12 +350,18 @@ func initializeShootResource(shoot *gardencorev1beta1.Shoot, fs afero.Afero, pro
 	return nil
 }
 
-func initializeSeedResource(seed *gardencorev1beta1.Seed, shootName string) {
-	seed.ObjectMeta = metav1.ObjectMeta{
-		Name:   shootName,
-		Labels: map[string]string{v1beta1constants.LabelAutonomousShootCluster: "true"},
-	}
+func initializeSeedResource(seed *gardencorev1beta1.Seed, shootName string, runsControlPlane bool) {
+	seed.Name = shootName
 	seed.Status = gardencorev1beta1.SeedStatus{ClusterIdentity: ptr.To(shootName)}
+
+	if runsControlPlane {
+		// When running the control plane (`gardenadm init`), mark the seed as an autonomous shoot cluster.
+		// Otherwise (`gardenadm bootstrap`), the bootstrap cluster should behave like a standard seed cluster.
+		// If the seed is marked as an autonomous shoot cluster, extensions are configured differently, e.g., they merge the
+		// shoot webhooks into the seed webhooks.
+		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelAutonomousShootCluster, "true")
+	}
+
 	kubernetes.GardenScheme.Default(seed)
 }
 

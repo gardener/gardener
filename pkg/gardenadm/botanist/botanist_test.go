@@ -65,6 +65,7 @@ var _ = Describe("AutonomousBotanist", func() {
 					HaveField("ControllerRegistration.Name", "provider-stackit"),
 					HaveField("ControllerRegistration.Name", "networking-cilium"),
 				))
+				Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", HaveKeyWithValue("seed.gardener.cloud/autonomous-shoot-cluster", "true")))
 			})
 
 			It("should use kube-system as the control plane namespace", func() {
@@ -112,6 +113,7 @@ var _ = Describe("AutonomousBotanist", func() {
 				Expect(b.Extensions).To(ConsistOf(
 					HaveField("ControllerRegistration.Name", "provider-stackit"),
 				))
+				Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", Not(HaveKeyWithValue("seed.gardener.cloud/autonomous-shoot-cluster", "true"))))
 			})
 
 			It("should use the technical ID as the control plane namespace", func() {
