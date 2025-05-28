@@ -49,13 +49,25 @@ func NewFilteredCloudProfileInformer(client versioned.Interface, resyncPeriod ti
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1beta1().CloudProfiles().List(context.TODO(), options)
+				return client.CoreV1beta1().CloudProfiles().List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1beta1().CloudProfiles().Watch(context.TODO(), options)
+				return client.CoreV1beta1().CloudProfiles().Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.CoreV1beta1().CloudProfiles().List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.CoreV1beta1().CloudProfiles().Watch(ctx, options)
 			},
 		},
 		&apiscorev1beta1.CloudProfile{},
