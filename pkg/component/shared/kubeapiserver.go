@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -115,6 +114,7 @@ func NewKubeAPIServer(
 		runtimeConfig                            map[string]bool
 		watchCacheSizes                          *gardencorev1beta1.WatchCacheSizes
 		logging                                  *gardencorev1beta1.APIServerLogging
+		enableAnonymousAuthentication            *bool
 	)
 
 	if apiServerConfig != nil {
@@ -157,6 +157,7 @@ func NewKubeAPIServer(
 		requests = apiServerConfig.Requests
 		runtimeConfig = apiServerConfig.RuntimeConfig
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
+		enableAnonymousAuthentication = apiServerConfig.EnableAnonymousAuthentication
 	}
 
 	enabledAdmissionPluginConfigs, err := convertToAdmissionPluginConfigs(ctx, resourceConfigClient, objectMeta.Namespace, enabledAdmissionPlugins)
@@ -180,7 +181,7 @@ func NewKubeAPIServer(
 				RuntimeVersion:           runtimeVersion,
 				WatchCacheSizes:          watchCacheSizes,
 			},
-			AnonymousAuthenticationEnabled:      v1beta1helper.AnonymousAuthenticationEnabled(apiServerConfig),
+			AnonymousAuthenticationEnabled:      enableAnonymousAuthentication,
 			APIAudiences:                        apiAudiences,
 			AuthenticationConfiguration:         authenticationConfigurationFromConfigMap,
 			AuthenticationWebhook:               authenticationWebhookConfig,

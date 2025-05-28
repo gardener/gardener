@@ -389,8 +389,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 	var out []string
 
-	out = append(out, "--anonymous-auth="+strconv.FormatBool(k.values.AnonymousAuthenticationEnabled))
-
 	if len(k.values.APIAudiences) > 0 {
 		out = append(out, "--api-audiences="+strings.Join(k.values.APIAudiences, ","))
 	}
