@@ -9,3 +9,21 @@ resources:
 
 patches:
 - path: patch-shoot-medium-touch.yaml
+- target:
+    kind: Shoot
+  patch: |
+    - op: add
+      path: /spec/provider/workers/0/machine/image
+      value:
+        name: local
+        version: 1.0.0
+    - op: add
+      path: /spec/provider/workers/1/machine/image
+      value:
+        name: local
+        version: 1.0.0
+    # TODO(timebertt): remove this once machine-controller-manager no longer waits for the Node object to be created
+    - op: add
+      path: /spec/provider/workers/0/machineControllerManager
+      value:
+        machineCreationTimeout: 24h
