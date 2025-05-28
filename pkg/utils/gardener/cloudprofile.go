@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
@@ -36,12 +35,12 @@ func GetCloudProfile(ctx context.Context, reader client.Reader, shoot *gardencor
 	}
 	var cloudProfile *gardencorev1beta1.CloudProfile
 	switch cloudProfileReference.Kind {
-	case constants.CloudProfileReferenceKindCloudProfile:
+	case v1beta1constants.CloudProfileReferenceKindCloudProfile:
 		cloudProfile = &gardencorev1beta1.CloudProfile{}
 		if err := reader.Get(ctx, client.ObjectKey{Name: cloudProfileReference.Name}, cloudProfile); err != nil {
 			return nil, err
 		}
-	case constants.CloudProfileReferenceKindNamespacedCloudProfile:
+	case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
 		namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
 		if err := reader.Get(ctx, client.ObjectKey{Name: cloudProfileReference.Name, Namespace: shoot.Namespace}, namespacedCloudProfile); err != nil {
 			return nil, err
@@ -66,14 +65,14 @@ func BuildCloudProfileReference_v1beta1(shoot *gardencorev1beta1.Shoot) *gardenc
 	if shoot.Spec.CloudProfile != nil {
 		cloudProfileReference := shoot.Spec.CloudProfile.DeepCopy()
 		if len(cloudProfileReference.Kind) == 0 {
-			cloudProfileReference.Kind = constants.CloudProfileReferenceKindCloudProfile
+			cloudProfileReference.Kind = v1beta1constants.CloudProfileReferenceKindCloudProfile
 		}
 		return cloudProfileReference
 	}
 	if len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 {
 		return &gardencorev1beta1.CloudProfileReference{
 			Name: *shoot.Spec.CloudProfileName,
-			Kind: constants.CloudProfileReferenceKindCloudProfile,
+			Kind: v1beta1constants.CloudProfileReferenceKindCloudProfile,
 		}
 	}
 	return nil

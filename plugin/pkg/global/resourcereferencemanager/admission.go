@@ -55,7 +55,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
-	pluginutils "github.com/gardener/gardener/plugin/pkg/utils"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 // Register registers a plugin.
@@ -320,7 +320,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into SecretBinding object")
 		}
-		if pluginutils.SkipVerification(operation, binding.ObjectMeta) {
+		if admissionutils.SkipVerification(operation, binding.ObjectMeta) {
 			return nil
 		}
 		err = r.ensureBindingReferences(ctx, a, binding)
@@ -330,7 +330,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into CredentialsBinding object")
 		}
-		if pluginutils.SkipVerification(operation, binding.ObjectMeta) {
+		if admissionutils.SkipVerification(operation, binding.ObjectMeta) {
 			return nil
 		}
 		err = r.ensureBindingReferences(ctx, a, binding)
@@ -345,7 +345,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Shoot object")
 		}
-		if pluginutils.SkipVerification(operation, shoot.ObjectMeta) {
+		if admissionutils.SkipVerification(operation, shoot.ObjectMeta) {
 			return nil
 		}
 
@@ -375,7 +375,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Seed object")
 		}
-		if pluginutils.SkipVerification(operation, seed.ObjectMeta) {
+		if admissionutils.SkipVerification(operation, seed.ObjectMeta) {
 			return nil
 		}
 
@@ -398,7 +398,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Project object")
 		}
-		if pluginutils.SkipVerification(operation, project.ObjectMeta) {
+		if admissionutils.SkipVerification(operation, project.ObjectMeta) {
 			return nil
 		}
 
@@ -469,7 +469,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into CloudProfile object")
 		}
-		if pluginutils.SkipVerification(operation, cloudProfile.ObjectMeta) {
+		if admissionutils.SkipVerification(operation, cloudProfile.ObjectMeta) {
 			return nil
 		}
 		if a.GetOperation() == admission.Update {
@@ -596,7 +596,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into NamespacedCloudProfile object")
 		}
-		if pluginutils.SkipVerification(operation, namespacedCloudProfile.ObjectMeta) {
+		if admissionutils.SkipVerification(operation, namespacedCloudProfile.ObjectMeta) {
 			return nil
 		}
 		if a.GetOperation() == admission.Update {
@@ -677,7 +677,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Gardenlet object")
 		}
-		if pluginutils.SkipVerification(operation, gardenlet.ObjectMeta) {
+		if admissionutils.SkipVerification(operation, gardenlet.ObjectMeta) {
 			return nil
 		}
 		if _, err := r.managedSeedLister.ManagedSeeds(gardenlet.Namespace).Get(gardenlet.Name); err != nil && !apierrors.IsNotFound(err) {
@@ -691,7 +691,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into ManagedSeed object")
 		}
-		if pluginutils.SkipVerification(operation, managedSeed.ObjectMeta) {
+		if admissionutils.SkipVerification(operation, managedSeed.ObjectMeta) {
 			return nil
 		}
 		if _, err := r.gardenletLister.Gardenlets(managedSeed.Namespace).Get(managedSeed.Name); err != nil && !apierrors.IsNotFound(err) {
@@ -1071,7 +1071,7 @@ func (r *ReferenceManager) validateBackupBucketDeleteCollection(ctx context.Cont
 	}
 
 	for _, backupBucket := range backupBucketList.Items {
-		if err := r.validateBackupBucketDeletion(ctx, pluginutils.NewAttributesWithName(a, backupBucket.Name)); err != nil {
+		if err := r.validateBackupBucketDeletion(ctx, admissionutils.NewAttributesWithName(a, backupBucket.Name)); err != nil {
 			return err
 		}
 	}
