@@ -835,8 +835,10 @@ const (
 	ReservedShootServiceNetworkMappedRange = "243.0.0.0/8"
 	// ReservedShootPodNetworkMappedRange is the IPv4 network range for the shoot pod network used in the VPN between seed and shoot cluster.
 	ReservedShootPodNetworkMappedRange = "244.0.0.0/8"
+	// EnvoyNonRootUserId is the user ID for the non-root user in the envoy container.
+	EnvoyNonRootUserId = 65532
 	// DistrolessNonRootUserId is the user ID for the 'nonroot' user in the github.com/GoogleContainerTools/distroless image.
-	DistrolessNonRootUserId = 65532
+	DistrolessNonRootUserId = EnvoyNonRootUserId
 	// EnvoyVPNGroupId is the group ID used for the envoy process in VPN. It is used for mapping of seed/shoot ranges to 240/4.
 	EnvoyVPNGroupId = 31415
 
