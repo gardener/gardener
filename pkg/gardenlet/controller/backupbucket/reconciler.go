@@ -34,8 +34,13 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// finalizerName is the backupbucket controller finalizer.
-const finalizerName = "core.gardener.cloud/backupbucket"
+const (
+	// finalizerName is the backupbucket controller finalizer.
+	finalizerName = "core.gardener.cloud/backupbucket"
+	// RenewKeyTimeStampAnnotation is the annotation used to store the timestamp when the storage account key should be renewed next.
+	// Used only in case of BackupBuckets which use generated secrets.
+	RenewKeyTimeStampAnnotation = "backupbucket.gardener.cloud/renew-key-timestamp"
+)
 
 // RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeuing when owned resources are still in
 // the process of being deleted when deleting a BackupBucket.
