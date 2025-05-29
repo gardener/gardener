@@ -5,6 +5,7 @@
 package validation
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -65,10 +66,8 @@ func ValidateControlPlaneSpecUpdate(new, old *extensionsv1alpha1.ControlPlaneSpe
 	allErrs := field.ErrorList{}
 
 	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		if diff := deep.Equal(new, old); diff != nil {
-			return field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
-		}
-		return apivalidation.ValidateImmutableField(new, old, fldPath)
+		diff := deep.Equal(new, old)
+		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update control plane spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)

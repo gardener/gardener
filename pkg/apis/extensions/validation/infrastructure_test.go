@@ -83,7 +83,7 @@ var _ = Describe("Infrastructure validation tests", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec"),
-				"Detail": Equal("SecretRef.Name: changed-secretref-name != test"),
+				"Detail": Equal("cannot update infrastructure spec if deletion timestamp is set. Requested changes: SecretRef.Name: changed-secretref-name != test"),
 			}))))
 		})
 

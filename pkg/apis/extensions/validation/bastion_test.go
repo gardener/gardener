@@ -84,7 +84,7 @@ var _ = Describe("Bastion validation tests", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec"),
-				"Detail": Equal("Ingress.slice[0].IPBlock.CIDR: 8.8.8.8/8 != 1.2.3.4/8"),
+				"Detail": Equal("cannot update bastion spec if deletion timestamp is set. Requested changes: Ingress.slice[0].IPBlock.CIDR: 8.8.8.8/8 != 1.2.3.4/8"),
 			}))))
 		})
 

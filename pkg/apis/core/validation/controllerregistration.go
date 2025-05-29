@@ -203,10 +203,8 @@ func ValidateControllerRegistrationSpecUpdate(new, old *core.ControllerRegistrat
 	allErrs := field.ErrorList{}
 
 	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		if diff := deep.Equal(new, old); diff != nil {
-			return field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
-		}
-		return apivalidation.ValidateImmutableField(new, old, fldPath)
+		diff := deep.Equal(new, old)
+		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update controller registration spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
 	allErrs = append(allErrs, ValidateControllerResourcesUpdate(new.Resources, old.Resources, fldPath.Child("resources"))...)

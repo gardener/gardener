@@ -579,7 +579,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec"),
-				"Detail": Equal("DefaultSpec.Type: changed-type != provider"),
+				"Detail": Equal("cannot update operatingsystemconfig spec if deletion timestamp is set. Requested changes: DefaultSpec.Type: changed-type != provider"),
 			}))))
 		})
 
