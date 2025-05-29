@@ -59,8 +59,13 @@ func ItShouldWaitForLogsWithLabelToBeInVali(s *ShootContext, valiLabels map[stri
 func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[string]string, key, value string) {
 	GinkgoHelper()
 
+	// We need to ensure that logs for the pod are not found in Vali.
+	// The only way we can guarantee that is to wait and then naively check Vali.
+	// The `Consistently` check is used for this reason. It waits for a
+	// certain period of time and check whether the condition is true on
+	// every specified interval.
 	It("Ensure logs do not exist", func(ctx SpecContext) {
-		Eventually(ctx, func() error {
+		Consistently(ctx, func() error {
 			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, s.ControlPlaneNamespace, key, value, s.SeedClientSet)
 			if err != nil {
 				return err
@@ -71,6 +76,6 @@ func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[s
 			}
 
 			return nil
-		}).WithTimeout(10 * time.Second).Should(Succeed())
+		}, 10*time.Second, 5*time.Second).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
