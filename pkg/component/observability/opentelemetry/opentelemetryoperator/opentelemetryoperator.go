@@ -33,8 +33,8 @@ const (
 	OperatorManagedResourceName = name
 
 	name               = "opentelemetry-operator"
-	roleName           = "gardener.cloud:opentelemetry:" + name
 	serviceAccountName = name
+	roleName           = name
 	clusterRoleName    = name
 )
 
@@ -138,7 +138,7 @@ func (otel *openTelemetryOperator) serviceAccount() *corev1.ServiceAccount {
 func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   roleName,
+			Name:   clusterRoleName,
 			Labels: getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -234,7 +234,7 @@ func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 func (otel *openTelemetryOperator) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
+			Name:   clusterRoleName,
 			Labels: getLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
