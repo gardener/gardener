@@ -81,7 +81,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   "gardener.cloud:opentelemetry:opentelemetry-operator",
+				Name:   name,
 				Labels: getLabels(),
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -190,7 +190,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 		}
 		role = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:opentelemetry:opentelemetry-operator",
+				Name:      name,
 				Namespace: namespace,
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -213,7 +213,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 		}
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:opentelemetry:opentelemetry-operator",
+				Name:      name,
 				Namespace: namespace,
 			},
 			Subjects: []rbacv1.Subject{
