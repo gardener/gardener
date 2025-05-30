@@ -21,7 +21,7 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	Describe("Create and Delete Unprivileged Shoot", Ordered, Label("unprivileged", "basic"), func() {
+	Describe("Create and Delete Unprivileged Shoot. Test expected shoot logs", Ordered, Label("unprivileged", "basic", "observability"), func() {
 		var s *ShootContext
 
 		BeforeTestSetup(func() {
@@ -48,6 +48,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		ItShouldCreateShoot(s)
 		ItShouldWaitForShootToBeReconciledAndHealthy(s)
 		ItShouldInitializeShootClient(s)
+
+		Describe("Shoot Logging Tests", Label("observability"), func() {
+			ShootLogging(s)
+		})
 
 		It("should allow creating pod in the kube-system namespace", func(ctx SpecContext) {
 			pod := newPodForNamespace(metav1.NamespaceSystem)
