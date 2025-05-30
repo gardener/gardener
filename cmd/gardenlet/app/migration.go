@@ -12,7 +12,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -181,7 +180,7 @@ func syncBackupSecretRefAndCredentialsRef(backup *gardencorev1beta1.Backup) {
 func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
-		return err
+		return fmt.Errorf("failed listing namespaces with '%s: %s' label: %w", v1beta1constants.GardenRole, v1beta1constants.GardenRoleShoot, err)
 	}
 
 	var tasks []flow.TaskFn
@@ -194,13 +193,10 @@ func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 			clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
 			if err := seedClient.Get(ctx, client.ObjectKey{Name: "machine-controller-manager-" + namespace.Name}, clusterRoleBinding); err != nil {
 				//If MCM clusterRoleBinding does not exist, nothing to do
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
-				return err
+				return client.IgnoreNotFound(err)
 			}
 
-			return machinecontrollermanager.New(seedClient, namespace.Name, nil, machinecontrollermanager.Values{}).DeployMigrate(ctx)
+			return machinecontrollermanager.New(seedClient, namespace.Name, nil, machinecontrollermanager.Values{}).MigrateRBAC(ctx)
 		})
 	}
 

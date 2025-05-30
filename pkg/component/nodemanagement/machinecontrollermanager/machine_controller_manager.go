@@ -61,7 +61,7 @@ type Interface interface {
 	SetReplicas(int32)
 	//TODO(@aaronfern): Remove this after v1.122 is released.
 	// DeployMigrate migrates RBAC permissions from clusterrole/clusterrolebinding to role/rolebinding
-	DeployMigrate(ctx context.Context) error
+	MigrateRBAC(ctx context.Context) error
 }
 
 // New creates a new instance of DeployWaiter for the machine-controller-manager.
@@ -97,7 +97,7 @@ type Values struct {
 }
 
 // TODO(@aaronfern): Remove this after v1.122 is released.
-func (m *machineControllerManager) DeployMigrate(ctx context.Context) error {
+func (m *machineControllerManager) MigrateRBAC(ctx context.Context) error {
 	var (
 		roleBinding    = m.emptyRoleBindingRuntime()
 		role           = m.emptyRole()
@@ -158,7 +158,7 @@ func (m *machineControllerManager) DeployMigrate(ctx context.Context) error {
 		return err
 	}
 
-	return kubernetesutils.DeleteObjects(ctx, m.client, m.emptyClusterRoleBindingRuntime())
+	return kubernetesutils.DeleteObject(ctx, m.client, m.emptyClusterRoleBindingRuntime())
 }
 
 func (m *machineControllerManager) Deploy(ctx context.Context) error {

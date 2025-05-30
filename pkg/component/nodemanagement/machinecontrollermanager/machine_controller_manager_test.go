@@ -589,7 +589,7 @@ subjects:
 
 			//TODO(@aaronfern): Remove this after v1.122 is released
 			actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).ToNot(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(BeNotFoundError())
 
 			actualRoleBinding := &rbacv1.RoleBinding{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), actualRoleBinding)).To(Succeed())
@@ -712,13 +712,17 @@ subjects:
 		})
 	})
 
-	Describe("#DeployMigrate", func() {
-		It("should successfully delete existing clusterRoleBinding when deployMigrate is called", func() {
+	Describe("#MigrateRBAC", func() {
+		It("should successfully delete existing clusterRoleBinding and create a role/roleBinding when MigrateRBAC is called", func() {
 			Expect(fakeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), &rbacv1.Role{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), &rbacv1.RoleBinding{})).To(BeNotFoundError())
 
-			Expect(mcm.DeployMigrate(ctx)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).ToNot(Succeed())
+			Expect(mcm.MigrateRBAC(ctx)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), &rbacv1.Role{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), &rbacv1.RoleBinding{})).To(Succeed())
 		})
 	})
 
