@@ -226,8 +226,13 @@ func (r *Reconciler) runReconcileSeedFlow(
 			SkipIf: seedIsGarden,
 		})
 		deployPrometheusCRD = g.Add(flow.Task{
-			Name:   "Deploying monitoring-related custom resource definitions",
+			Name:   "Deploying Prometheus-related custom resource definitions",
 			Fn:     component.OpWait(c.prometheusCRD).Deploy,
+			SkipIf: seedIsGarden,
+		})
+		deployPersesCRD = g.Add(flow.Task{
+			Name:   "Deploying Perses-related custom resource definitions",
+			Fn:     component.OpWait(c.persesCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		syncPointCRDs = flow.NewTaskIDs(
@@ -238,6 +243,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployVPACRD,
 			deployFluentCRD,
 			deployPrometheusCRD,
+			deployPersesCRD,
 		)
 
 		// TODO(shreyas-s-rao): Remove this in v1.123.0.
@@ -482,6 +488,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name:         "Deploying Alertmanager",
 			Fn:           c.alertManager.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Perses Operator",
+			Fn:           c.persesOperator.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+			SkipIf:       seedIsGarden,
 		})
 		deleteStaleExtensionResources = g.Add(flow.Task{
 			Name:         "Deleting stale extension resources",

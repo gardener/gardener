@@ -600,6 +600,10 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying Plutono",
 			Fn:   c.plutono.Deploy,
 		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying perses-operator",
+			Fn:   c.persesOperator.Deploy,
+		})
 	)
 
 	gardenCopy := garden.DeepCopy()
@@ -635,6 +639,10 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		_ = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for prometheus-operator",
 			Fn:   component.OpWait(c.prometheusCRD).Deploy,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying custom resource definitions for perses-operator",
+			Fn:   component.OpWait(c.persesCRD).Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for extensions",

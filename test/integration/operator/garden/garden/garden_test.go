@@ -474,6 +474,10 @@ spec:
 			"backupbuckets.extensions.gardener.cloud",
 			"dnsrecords.extensions.gardener.cloud",
 			"extensions.extensions.gardener.cloud",
+			// perses-operator
+			"perses.perses.dev",
+			"persesdashboards.perses.dev",
+			"persesdatasources.perses.dev",
 		))
 
 		// The garden controller waits for the gardener-resource-manager Deployment to be healthy, so let's fake this here.
@@ -549,6 +553,7 @@ spec:
 			"plutono",
 			"prometheus-operator",
 			"alertmanager-garden",
+			"perses-operator",
 		))
 
 		// The garden controller waits for the Istio ManagedResources to be healthy, but Istio is not really running in

@@ -376,6 +376,40 @@ images:
         value:
           - type: 'githubTeam'
             teamname: 'gardener/monitoring-maintainers'
+  - name: perses
+    sourceRepository: github.com/perses/perses
+    repository: quay.io/persesdev/perses
+    tag: "v0.50.3"
+    labels:
+      - name: gardener.cloud/cve-categorisation
+        value:
+          network_exposure: public
+          authentication_enforced: true
+          user_interaction: end-user
+          confidentiality_requirement: high
+          integrity_requirement: high
+          availability_requirement: low
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/monitoring-maintainers'
+  - name: perses-operator
+    sourceRepository: github.com/perses/perses-operator
+    repository: quay.io/persesdev/perses-operator
+    tag: v0.1.10
+    labels:
+      - name: 'gardener.cloud/cve-categorisation'
+        value:
+          network_exposure: 'private'
+          authentication_enforced: false
+          user_interaction: 'gardener-operator'
+          confidentiality_requirement: 'low'
+          integrity_requirement: 'low'
+          availability_requirement: 'low'
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/monitoring-maintainers'
   # Shoot core addons
   - name: vpn-client
     sourceRepository: github.com/gardener/vpn2
