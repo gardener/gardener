@@ -497,7 +497,7 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 
 			checksum = utils.ComputeSecretChecksum(secret.Data)[:8]
 		} else if apierrors.IsNotFound(originalErr) {
-			return errors.New("backup is configured to reference a secret, but there is no infrastructure secret to copy")
+			return errors.New("backup is configured to reference a credential, but there is no infrastructure credential to copy")
 		}
 	} else if !allowCopying && metav1.IsControlledBy(backupSecret, obj) {
 		// backup secret was copied at an earlier stage
