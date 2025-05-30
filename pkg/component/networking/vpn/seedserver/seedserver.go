@@ -28,7 +28,6 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
@@ -110,8 +109,6 @@ type Interface interface {
 	SetNodeNetworkCIDRs(nodes []net.IPNet)
 	SetServiceNetworkCIDRs(services []net.IPNet)
 	SetPodNetworkCIDRs(pods []net.IPNet)
-	// SetSeedNamespaceObjectUID sets UID for the namespace
-	SetSeedNamespaceObjectUID(namespaceUID types.UID)
 
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
@@ -174,7 +171,6 @@ type vpnSeedServer struct {
 	client             client.Client
 	namespace          string
 	secretsManager     secretsmanager.Interface
-	namespaceUID       types.UID
 	values             Values
 	istioNamespaceFunc func() string
 }
@@ -985,10 +981,6 @@ func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 
 func (v *vpnSeedServer) Wait(_ context.Context) error        { return nil }
 func (v *vpnSeedServer) WaitCleanup(_ context.Context) error { return nil }
-
-func (v *vpnSeedServer) SetSeedNamespaceObjectUID(namespaceUID types.UID) {
-	v.namespaceUID = namespaceUID
-}
 
 func (v *vpnSeedServer) SetNodeNetworkCIDRs(nodes []net.IPNet) {
 	v.values.Network.NodeCIDRs = nodes

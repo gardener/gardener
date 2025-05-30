@@ -16,7 +16,6 @@ import (
 
 	seedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	gomock "go.uber.org/mock/gomock"
-	types "k8s.io/apimachinery/pkg/types"
 )
 
 // MockInterface is a mock of Interface interface.
@@ -107,18 +106,6 @@ func (m *MockInterface) SetPodNetworkCIDRs(pods []net.IPNet) {
 func (mr *MockInterfaceMockRecorder) SetPodNetworkCIDRs(pods any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPodNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetPodNetworkCIDRs), pods)
-}
-
-// SetSeedNamespaceObjectUID mocks base method.
-func (m *MockInterface) SetSeedNamespaceObjectUID(namespaceUID types.UID) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSeedNamespaceObjectUID", namespaceUID)
-}
-
-// SetSeedNamespaceObjectUID indicates an expected call of SetSeedNamespaceObjectUID.
-func (mr *MockInterfaceMockRecorder) SetSeedNamespaceObjectUID(namespaceUID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSeedNamespaceObjectUID", reflect.TypeOf((*MockInterface)(nil).SetSeedNamespaceObjectUID), namespaceUID)
 }
 
 // SetServiceNetworkCIDRs mocks base method.
