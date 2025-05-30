@@ -49,13 +49,25 @@ func NewFilteredClusterOpenIDConnectPresetInformer(client versioned.Interface, r
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SettingsV1alpha1().ClusterOpenIDConnectPresets().List(context.TODO(), options)
+				return client.SettingsV1alpha1().ClusterOpenIDConnectPresets().List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SettingsV1alpha1().ClusterOpenIDConnectPresets().Watch(context.TODO(), options)
+				return client.SettingsV1alpha1().ClusterOpenIDConnectPresets().Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.SettingsV1alpha1().ClusterOpenIDConnectPresets().List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.SettingsV1alpha1().ClusterOpenIDConnectPresets().Watch(ctx, options)
 			},
 		},
 		&apissettingsv1alpha1.ClusterOpenIDConnectPreset{},
