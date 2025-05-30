@@ -718,7 +718,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			"persistentvolume-expander",
 			"pv-protection",
 			"ttl",
-			"device-taint-eviction-controller",
 		)
 	}
 
