@@ -228,7 +228,7 @@ var _ = Describe("Validation", func() {
 				))
 			})
 
-			Context("kubelet csr approver", func() {
+			Context("csr approver", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
 					conf.Controllers.CSRApprover.Enabled = true
 					conf.Controllers.CSRApprover.ConcurrentSyncs = ptr.To(0)
@@ -239,6 +239,26 @@ var _ = Describe("Validation", func() {
 							"Field": Equal("controllers.csrApprover.concurrentSyncs"),
 						})),
 					))
+				})
+
+				It("should return errors when machine namespace is empty", func() {
+					conf.Controllers.CSRApprover.Enabled = true
+					conf.Controllers.CSRApprover.ConcurrentSyncs = ptr.To(1)
+					conf.Controllers.CSRApprover.MachineNamespace = ptr.To("")
+
+					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("controllers.csrApprover.machineNamespace"),
+						})),
+					))
+				})
+
+				It("should return succeed when machine namespace is nil", func() {
+					conf.Controllers.CSRApprover.Enabled = true
+					conf.Controllers.CSRApprover.ConcurrentSyncs = ptr.To(1)
+
+					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
 				})
 			})
 
@@ -482,14 +502,20 @@ var _ = Describe("Validation", func() {
 			Context("node agent authorizer", func() {
 				It("should succeed with a valid machine namespace", func() {
 					conf.Webhooks.NodeAgentAuthorizer.Enabled = true
-					conf.Webhooks.NodeAgentAuthorizer.MachineNamespace = "foo-namespace"
+					conf.Webhooks.NodeAgentAuthorizer.MachineNamespace = ptr.To("foo-namespace")
+
+					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
+				})
+
+				It("should succeed when machine namespace is nil", func() {
+					conf.Webhooks.NodeAgentAuthorizer.Enabled = true
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
 				})
 
 				It("should return errors when machine namespace is empty", func() {
 					conf.Webhooks.NodeAgentAuthorizer.Enabled = true
-					conf.Webhooks.NodeAgentAuthorizer.MachineNamespace = ""
+					conf.Webhooks.NodeAgentAuthorizer.MachineNamespace = ptr.To("")
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{

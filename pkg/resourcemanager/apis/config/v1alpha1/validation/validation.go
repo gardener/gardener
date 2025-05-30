@@ -87,7 +87,11 @@ func validateResourceManagerControllerConfiguration(conf resourcemanagerconfigv1
 	}
 
 	if conf.CSRApprover.Enabled {
-		allErrs = append(allErrs, validateConcurrentSyncs(conf.CSRApprover.ConcurrentSyncs, fldPath.Child("csrApprover"))...)
+		fldPathCSRApprover := fldPath.Child("csrApprover")
+		allErrs = append(allErrs, validateConcurrentSyncs(conf.CSRApprover.ConcurrentSyncs, fldPathCSRApprover)...)
+		if conf.CSRApprover.MachineNamespace != nil && *conf.CSRApprover.MachineNamespace == "" {
+			allErrs = append(allErrs, field.Required(fldPathCSRApprover.Child("machineNamespace"), "machine namespace must be nil or not empty"))
+		}
 	}
 
 	if conf.GarbageCollector.Enabled {
@@ -175,8 +179,8 @@ func validateProjectedTokenMountWebhookConfiguration(conf resourcemanagerconfigv
 func validateNodeAgentAuthorizerWebhookConfiguration(conf resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if conf.Enabled && conf.MachineNamespace == "" {
-		allErrs = append(allErrs, field.Required(fldPath.Child("machineNamespace"), "machine namespace must not be empty"))
+	if conf.Enabled && conf.MachineNamespace != nil && *conf.MachineNamespace == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("machineNamespace"), "machine namespace must be nil or not empty"))
 	}
 
 	return allErrs

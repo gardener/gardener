@@ -8,13 +8,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
-	"slices"
 	"time"
 
 	"github.com/spf13/afero"
-	certificatesv1 "k8s.io/api/certificates/v1"
-	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
@@ -23,6 +19,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/bootstrappers"
@@ -117,46 +114,17 @@ func (b *AutonomousBotanist) BootstrapKubelet(ctx context.Context) error {
 		return fmt.Errorf("failed writing bootstrap token: %w", err)
 	}
 
+	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		// gardener-node-agent is using the bootstrap token to create its own client certificate. We have to request it
+		// before kubelet restarts because the token will be invalidated when kubelet was bootstrapped successfully.
+		if err := b.WriteNodeAgentKubeconfig(ctx); err != nil {
+			return fmt.Errorf("failed writing gardener-node-agent kubeconfig: %w", err)
+		}
+	}
+
 	if err := b.WriteKubeletBootstrapKubeconfig(ctx); err != nil {
 		return fmt.Errorf("failed writing kubelet bootstrap kubeconfig: %w", err)
 	}
 
 	return b.DBus.Restart(ctx, nil, nil, kubelet.UnitName)
-}
-
-// ApproveKubeletServerCertificateSigningRequest approves the kubelet server certificate signing request.
-func (b *AutonomousBotanist) ApproveKubeletServerCertificateSigningRequest(ctx context.Context) error {
-	serverCertificateExists, err := b.FS.Exists(filepath.Join(kubelet.PathKubeletDirectory, "pki", "kubelet-server-current.pem"))
-	if err != nil {
-		return fmt.Errorf("failed checking if kubelet server certificate exists: %w", err)
-	}
-	if serverCertificateExists {
-		return nil
-	}
-
-	csrList := &certificatesv1.CertificateSigningRequestList{}
-	if err := b.SeedClientSet.Client().List(ctx, csrList); err != nil {
-		return fmt.Errorf("failed listing certificate signing requests: %w", err)
-	}
-
-	for _, csr := range csrList.Items {
-		if csr.Spec.Username == "system:node:"+b.HostName {
-			if !slices.ContainsFunc(csr.Status.Conditions, func(condition certificatesv1.CertificateSigningRequestCondition) bool {
-				return condition.Type == certificatesv1.CertificateApproved && condition.Status == corev1.ConditionTrue
-			}) {
-				b.Logger.Info("Approving kubelet server certificate signing request", "csrName", csr.Name, "hostName", b.HostName)
-				csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
-					Type:    certificatesv1.CertificateApproved,
-					Status:  corev1.ConditionTrue,
-					Reason:  "RequestApproved",
-					Message: "Approving kubelet server certificate signing request via gardenadm",
-				})
-				return b.SeedClientSet.Client().SubResource("approval").Update(ctx, &csr)
-			}
-
-			return nil
-		}
-	}
-
-	return fmt.Errorf("no certificate signing request found for node %q", b.HostName)
 }
