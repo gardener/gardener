@@ -7,7 +7,7 @@ package apiserver_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -15,12 +15,11 @@ import (
 )
 
 var _ = Describe("Authentication", func() {
-	Describe("#ComputeAuthenticationConfigRawConfig", func() {
-		DescribeTable("should compute correct AuthenticationConfiguration",
-			func(oidc *gardencorev1beta1.OIDCConfig, expectetedResult string, errorMatcher gomegatypes.GomegaMatcher) {
-				res, err := ComputeAuthenticationConfigRawConfig(oidc)
+	Describe("#ConfigureJWTAuthenticators", func() {
+		DescribeTable("should compute correct slice of JWTAuthenticators",
+			func(oidc *gardencorev1beta1.OIDCConfig, expectetedResult []apiserverv1beta1.JWTAuthenticator) {
+				res := ConfigureJWTAuthenticators(oidc)
 
-				Expect(err).To(errorMatcher)
 				Expect(res).To(Equal(expectetedResult))
 			},
 			Entry("should return correct configuration when all values are present", &gardencorev1beta1.OIDCConfig{
@@ -34,102 +33,113 @@ var _ = Describe("Authentication", func() {
 				},
 				UsernameClaim:  ptr.To("some-user-claim"),
 				UsernamePrefix: ptr.To("some-user-prefix"),
-			}, `apiVersion: apiserver.config.k8s.io/v1beta1
-jwt:
-- claimMappings:
-    groups:
-      claim: some-groups-claim
-      prefix: some-groups-prefix
-    uid: {}
-    username:
-      claim: some-user-claim
-      prefix: some-user-prefix
-  claimValidationRules:
-  - claim: claim1
-    requiredValue: value1
-  issuer:
-    audiences:
-    - some-client-id
-    certificateAuthority: some-ca-bundle
-    url: https://issuer.url.com
-kind: AuthenticationConfiguration
-`, BeNil()),
+			},
+				[]apiserverv1beta1.JWTAuthenticator{
+					{
+						ClaimMappings: apiserverv1beta1.ClaimMappings{
+							Groups: apiserverv1beta1.PrefixedClaimOrExpression{
+								Claim:  "some-groups-claim",
+								Prefix: ptr.To("some-groups-prefix"),
+							},
+							Username: apiserverv1beta1.PrefixedClaimOrExpression{
+								Claim:  "some-user-claim",
+								Prefix: ptr.To("some-user-prefix"),
+							},
+						},
+						ClaimValidationRules: []apiserverv1beta1.ClaimValidationRule{
+							{
+								Claim:         "claim1",
+								RequiredValue: "value1",
+							},
+						},
+						Issuer: apiserverv1beta1.Issuer{
+							Audiences:            []string{"some-client-id"},
+							CertificateAuthority: "some-ca-bundle",
+							URL:                  "https://issuer.url.com",
+						},
+					},
+				}),
 			Entry("should return configuration with defaulted username values", &gardencorev1beta1.OIDCConfig{
 				ClientID:  ptr.To("some-client-id"),
 				IssuerURL: ptr.To("https://issuer.url.com"),
-			}, `apiVersion: apiserver.config.k8s.io/v1beta1
-jwt:
-- claimMappings:
-    groups: {}
-    uid: {}
-    username:
-      claim: sub
-      prefix: https://issuer.url.com#
-  issuer:
-    audiences:
-    - some-client-id
-    url: https://issuer.url.com
-kind: AuthenticationConfiguration
-`, BeNil()),
+			},
+				[]apiserverv1beta1.JWTAuthenticator{
+					{
+						ClaimMappings: apiserverv1beta1.ClaimMappings{
+							Username: apiserverv1beta1.PrefixedClaimOrExpression{
+								Claim:  "sub",
+								Prefix: ptr.To("https://issuer.url.com#"),
+							},
+						},
+						Issuer: apiserverv1beta1.Issuer{
+							Audiences: []string{"some-client-id"},
+							URL:       "https://issuer.url.com",
+						},
+					},
+				}),
 			Entry("should return correct configuration when usernamePrefix is '-'", &gardencorev1beta1.OIDCConfig{
 				ClientID:       ptr.To("some-client-id"),
 				IssuerURL:      ptr.To("https://issuer.url.com"),
 				UsernameClaim:  ptr.To("claim"),
 				UsernamePrefix: ptr.To("-"),
-			}, `apiVersion: apiserver.config.k8s.io/v1beta1
-jwt:
-- claimMappings:
-    groups: {}
-    uid: {}
-    username:
-      claim: claim
-      prefix: ""
-  issuer:
-    audiences:
-    - some-client-id
-    url: https://issuer.url.com
-kind: AuthenticationConfiguration
-`, BeNil()),
+			},
+				[]apiserverv1beta1.JWTAuthenticator{
+					{
+						ClaimMappings: apiserverv1beta1.ClaimMappings{
+							Username: apiserverv1beta1.PrefixedClaimOrExpression{
+								Claim:  "claim",
+								Prefix: ptr.To(""),
+							},
+						},
+						Issuer: apiserverv1beta1.Issuer{
+							Audiences: []string{"some-client-id"},
+							URL:       "https://issuer.url.com",
+						},
+					},
+				}),
 			Entry("should return correct configuration when usernameClaim is 'email' and prefix not specified", &gardencorev1beta1.OIDCConfig{
 				ClientID:       ptr.To("some-client-id"),
 				IssuerURL:      ptr.To("https://issuer.url.com"),
 				UsernameClaim:  ptr.To("email"),
 				UsernamePrefix: ptr.To(""),
-			}, `apiVersion: apiserver.config.k8s.io/v1beta1
-jwt:
-- claimMappings:
-    groups: {}
-    uid: {}
-    username:
-      claim: email
-      prefix: ""
-  issuer:
-    audiences:
-    - some-client-id
-    url: https://issuer.url.com
-kind: AuthenticationConfiguration
-`, BeNil()),
+			},
+				[]apiserverv1beta1.JWTAuthenticator{
+					{
+						ClaimMappings: apiserverv1beta1.ClaimMappings{
+							Username: apiserverv1beta1.PrefixedClaimOrExpression{
+								Claim:  "email",
+								Prefix: ptr.To(""),
+							},
+						},
+						Issuer: apiserverv1beta1.Issuer{
+							Audiences: []string{"some-client-id"},
+							URL:       "https://issuer.url.com",
+						},
+					},
+				}),
 			Entry("should return correct configuration when groupsClaim is set but prefix is not", &gardencorev1beta1.OIDCConfig{
 				ClientID:    ptr.To("some-client-id"),
 				IssuerURL:   ptr.To("https://issuer.url.com"),
 				GroupsClaim: ptr.To("some-groups-claim"),
-			}, `apiVersion: apiserver.config.k8s.io/v1beta1
-jwt:
-- claimMappings:
-    groups:
-      claim: some-groups-claim
-      prefix: ""
-    uid: {}
-    username:
-      claim: sub
-      prefix: https://issuer.url.com#
-  issuer:
-    audiences:
-    - some-client-id
-    url: https://issuer.url.com
-kind: AuthenticationConfiguration
-`, BeNil()),
+			},
+				[]apiserverv1beta1.JWTAuthenticator{
+					{
+						ClaimMappings: apiserverv1beta1.ClaimMappings{
+							Groups: apiserverv1beta1.PrefixedClaimOrExpression{
+								Claim:  "some-groups-claim",
+								Prefix: ptr.To(""),
+							},
+							Username: apiserverv1beta1.PrefixedClaimOrExpression{
+								Claim:  "sub",
+								Prefix: ptr.To("https://issuer.url.com#"),
+							},
+						},
+						Issuer: apiserverv1beta1.Issuer{
+							Audiences: []string{"some-client-id"},
+							URL:       "https://issuer.url.com",
+						},
+					},
+				}),
 		)
 	})
-
 })
