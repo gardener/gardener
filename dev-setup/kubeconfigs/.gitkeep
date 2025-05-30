@@ -1,0 +1,2 @@
+TODO(rfranzke,oliver-goetz): In the future, we also want a folder 'kind' which contains the kind cluster kubeconfig,
+and a folder 'kind2' which contains the kubeconfig for a potential second kind cluster.

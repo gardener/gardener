@@ -1,0 +1,77 @@
+---
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: Gardenlet
+metadata:
+  name: local
+  namespace: garden
+spec:
+  deployment:
+    replicaCount: 1
+  config:
+    apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+    kind: GardenletConfiguration
+    gardenClientConnection:
+      gardenClusterAddress: https://api.virtual-garden.local.gardener.cloud
+    featureGates:
+      DefaultSeccompProfile: true
+      NewWorkerPoolHash: true
+      IstioTLSTermination: true
+    controllers:
+      shoot:
+        reconcileInMaintenanceOnly: true
+        respectSyncPeriodOverwrite: true
+      shootState:
+        concurrentSyncs: 0 # we don't need the shootstate controller locally, and enabling it would even distort the results of CPM e2e tests
+    logging:
+      enabled: true
+      vali:
+        enabled: true
+      shootNodeLogging:
+        shootPurposes:
+          - infrastructure
+          - production
+          - development
+          - evaluation
+    seedConfig:
+      spec:
+        backup:
+          provider: local
+          region: local
+          credentialsRef:
+            apiVersion: v1
+            kind: Secret
+            name: backup-local
+            namespace: garden
+        provider:
+          type: local
+          region: local
+          zones:
+            - "0"
+        dns:
+          provider:
+            type: local
+            secretRef:
+              name: internal-domain-internal-local-gardener-cloud
+              namespace: garden
+      # TODO(timuthy): Enable extension after Gardener v1.120 was released.
+      # extensions:
+      # - type: local-ext-seed
+        ingress:
+          domain: ingress.local.seed.local.gardener.cloud
+          controller:
+            kind: nginx
+        networks:
+          nodes: 172.18.0.0/16
+          # Those CIDRs must match those specified in the kind Cluster configuration.
+          pods: 10.1.0.0/16
+          services: 10.2.0.0/16
+          shootDefaults:
+            pods: 10.3.0.0/16
+            services: 10.4.0.0/16
+        settings:
+          excessCapacityReservation:
+            enabled: false
+          scheduling:
+            visible: true
+          verticalPodAutoscaler:
+            enabled: false

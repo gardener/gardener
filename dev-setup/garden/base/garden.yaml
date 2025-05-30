@@ -1,0 +1,70 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Garden
+metadata:
+  name: local
+spec:
+  dns:
+    providers:
+    - name: primary
+      type: local
+      secretRef:
+        name: garden-dns-local
+  runtimeCluster:
+    ingress:
+      domains:
+      - name: ingress.runtime-garden.local.gardener.cloud
+        provider: primary
+      controller:
+        kind: nginx
+    networking:
+      nodes:
+      - 172.18.0.0/16
+      pods:
+      - 10.1.0.0/16
+      services:
+      - 10.2.0.0/16
+    provider:
+      region: local
+      zones:
+      - "0"
+    settings:
+      verticalPodAutoscaler:
+        enabled: true
+      topologyAwareRouting:
+        enabled: false
+  virtualCluster:
+    dns:
+      domains:
+      - name: virtual-garden.local.gardener.cloud
+        provider: primary
+    etcd:
+      main:
+        backup:
+          provider: local
+          secretRef:
+            name: virtual-garden-etcd-main-backup-local
+        storage:
+          capacity: 25Gi
+      events:
+        storage:
+          capacity: 10Gi
+    kubernetes:
+      version: 1.32.0
+    gardener:
+      clusterIdentity: gardener-local
+      gardenerAPIServer:
+        admissionPlugins:
+        - name: ShootVPAEnabledByDefault
+        featureGates:
+          CredentialsRotationWithoutWorkersRollout: true
+          CloudProfileCapabilities: true
+          InPlaceNodeUpdates: true
+      gardenerDashboard: {}
+      gardenerDiscoveryServer: {}
+    maintenance:
+      timeWindow:
+        begin: 220000+0100
+        end: 230000+0100
+    networking:
+      services:
+      - 100.64.0.0/13
