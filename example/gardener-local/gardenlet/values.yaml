@@ -39,6 +39,7 @@ config:
     DefaultSeccompProfile: true
     NewWorkerPoolHash: true
     IstioTLSTermination: true
+    DoNotCopyBackupCredentials: true
   logging:
     enabled: true
     vali:

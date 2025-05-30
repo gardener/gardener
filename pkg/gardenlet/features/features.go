@@ -25,5 +25,6 @@ func GetFeatures() []featuregate.Feature {
 		features.NodeAgentAuthorizer,
 		features.RemoveAPIServerProxyLegacyPort,
 		features.IstioTLSTermination,
+		features.DoNotCopyBackupCredentials,
 	}
 }
