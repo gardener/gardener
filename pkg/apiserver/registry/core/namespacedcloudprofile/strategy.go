@@ -14,11 +14,11 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 type namespacedCloudProfileStrategy struct {
@@ -131,7 +131,7 @@ func dropExpiredMachineImageVersions(newProfile, oldProfile *core.NamespacedClou
 	if oldProfile != nil {
 		existingMachineImages = oldProfile.Spec.MachineImages
 	}
-	existingMachineImageVersions := util.NewCoreImagesContext(existingMachineImages)
+	existingMachineImageVersions := gardenerutils.NewCoreImagesContext(existingMachineImages)
 	var validMachineImages []core.MachineImage
 	for i, machineImage := range newProfile.Spec.MachineImages {
 		var validMachineImageVersions []core.MachineImageVersion

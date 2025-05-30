@@ -15,6 +15,7 @@ import (
 
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 const (
@@ -45,7 +46,7 @@ type AddArgs struct {
 
 // Add adds an operatingsystemconfig controller to the given manager using the given AddArgs.
 func Add(mgr manager.Manager, args AddArgs) error {
-	predicates := extensionspredicate.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClass, args.Types...)
+	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClass, args.Types...)
 
 	return builder.
 		ControllerManagedBy(mgr).

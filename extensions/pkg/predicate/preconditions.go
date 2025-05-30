@@ -9,6 +9,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -17,10 +18,13 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-// IsInGardenNamespacePredicate is a predicate which returns true when the provided object is in the 'garden' namespace.
-var IsInGardenNamespacePredicate = predicate.NewPredicateFuncs(func(obj client.Object) bool {
-	return obj != nil && obj.GetNamespace() == v1beta1constants.GardenNamespace
-})
+var (
+	logger = log.Log.WithName("predicate")
+	// IsInGardenNamespacePredicate is a predicate which returns true when the provided object is in the 'garden' namespace.
+	IsInGardenNamespacePredicate = predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj != nil && obj.GetNamespace() == v1beta1constants.GardenNamespace
+	})
+)
 
 // ShootNotFailedPredicate returns a predicate which returns true when the Shoot's `.status.lastOperation.state` is not
 // equals 'Failed'.

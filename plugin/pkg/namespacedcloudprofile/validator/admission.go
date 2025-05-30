@@ -17,7 +17,6 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -28,6 +27,7 @@ import (
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -227,14 +227,14 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 	var (
 		allErrs      = field.ErrorList{}
 		now          = ptr.To(metav1.Now())
-		parentImages = util.NewV1beta1ImagesContext(c.parentCloudProfile.Spec.MachineImages)
+		parentImages = gardenerutils.NewV1beta1ImagesContext(c.parentCloudProfile.Spec.MachineImages)
 
-		oldVersionsSpec, oldVersionsMerged *util.ImagesContext[gardencore.MachineImage, gardencore.MachineImageVersion]
+		oldVersionsSpec, oldVersionsMerged *gardenerutils.ImagesContext[gardencore.MachineImage, gardencore.MachineImageVersion]
 	)
 
 	if attr.GetOperation() == admission.Update {
-		oldVersionsSpec = util.NewCoreImagesContext(c.oldNamespacedCloudProfile.Spec.MachineImages)
-		oldVersionsMerged = util.NewCoreImagesContext(c.oldNamespacedCloudProfile.Status.CloudProfileSpec.MachineImages)
+		oldVersionsSpec = gardenerutils.NewCoreImagesContext(c.oldNamespacedCloudProfile.Spec.MachineImages)
+		oldVersionsMerged = gardenerutils.NewCoreImagesContext(c.oldNamespacedCloudProfile.Status.CloudProfileSpec.MachineImages)
 	}
 
 	for imageIndex, image := range c.namespacedCloudProfile.Spec.MachineImages {

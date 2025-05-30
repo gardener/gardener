@@ -19,11 +19,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	extensionsconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -182,7 +182,7 @@ func add(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error 
 	controllerName := fmt.Sprintf("%s-%s-%s-%s-%s", ControllerName, args.registeredExtension.groupVersionKind.Kind, args.registeredExtension.groupVersionKind.Group, args.registeredExtension.groupVersionKind.Version, str)
 
 	// add type predicate to only watch registered resource (e.g. ControlPlane) with a certain type (e.g. aws)
-	predicates := extensionspredicate.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClass, args.Type)
+	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClass, args.Type)
 
 	log.Log.Info("Registering health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "conditionTypes", args.registeredExtension.healthConditionTypes, "syncPeriod", args.SyncPeriod.Duration.String())
 
