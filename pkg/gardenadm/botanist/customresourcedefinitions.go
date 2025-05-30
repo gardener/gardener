@@ -17,6 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/opentelemetryoperator"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -47,12 +48,18 @@ func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Cont
 		return fmt.Errorf("failed creating etcd CRD deployer: %w", err)
 	}
 
+	openTelemetryCRDDeployer, err := opentelemetryoperator.NewCRDs(b.SeedClientSet.Client(), b.SeedClientSet.Applier())
+	if err != nil {
+		return fmt.Errorf("failed creating opentelemetry CRD deployer: %w", err)
+	}
+
 	deployers := map[string]component.Deployer{
-		"VPA":        vpaCRDDeployer,
-		"Prometheus": prometheusCRDDeployer,
-		"Fluent":     fluentCRDDeployer,
-		"Extension":  extensionCRDDeployer,
-		"ETCD":       etcdCRDDeployer,
+		"VPA":           vpaCRDDeployer,
+		"Prometheus":    prometheusCRDDeployer,
+		"Fluent":        fluentCRDDeployer,
+		"Extension":     extensionCRDDeployer,
+		"ETCD":          etcdCRDDeployer,
+		"OpenTelemetry": openTelemetryCRDDeployer,
 	}
 
 	// For now, we only deploy the machine CRDs in `gardenadm bootstrap`.

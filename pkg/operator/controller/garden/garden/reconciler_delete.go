@@ -313,6 +313,11 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(c.prometheusOperator).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyAlertmanager, destroyPrometheusGarden, destroyPrometheusLongTerm),
 		})
+		destroyOpenTelemetryOperator = g.Add(flow.Task{
+			Name:         "Destroying OpenTelemetry Operator",
+			Fn:           component.OpDestroyAndWait(c.openTelemetryOperator).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
 		destroyFluentOperatorCustomResources = g.Add(flow.Task{
 			Name:         "Destroying fluent-operator custom resources",
 			Fn:           component.OpDestroyAndWait(c.fluentOperatorCustomResources).Destroy,
@@ -346,6 +351,7 @@ func (r *Reconciler) delete(
 			destroyFluentOperator,
 			destroyVali,
 			destroyPrometheusOperator,
+			destroyOpenTelemetryOperator,
 			destroyBlackboxExporter,
 			destroyGardenerOperatorVPA,
 		)
@@ -373,6 +379,11 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for prometheus-operator",
 			Fn:           component.OpWait(c.prometheusCRD).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying custom resource definition for opentelemetry-operator",
+			Fn:           c.openTelemetryCRD.Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{

@@ -259,6 +259,7 @@ The reconciler also manages a few observability-related components (more planned
 - `plutono`
 - `vali`
 - `prometheus-operator`
+- `opentelemetry-operator`
 - `alertmanager-garden` (read more [here](#alertmanager))
 - `prometheus-garden` (read more [here](#garden-prometheus))
 - `prometheus-longterm` (read more [here](#long-term-prometheus))
@@ -706,6 +707,7 @@ In addition, there are a few observability components:
 - `plutono`
 - `kube-state-metrics`
 - `prometheus-operator`
+- `opentelemetry-operator`
 
 As all of these components are managed by `gardener-operator` in this scenario, the `gardenlet` just skips them.
 
