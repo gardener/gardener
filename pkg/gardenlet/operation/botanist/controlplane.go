@@ -136,28 +136,18 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 }
 
 // DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
-func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) extensionscontrolplane.Interface {
-	values := &extensionscontrolplane.Values{
-		Name:      b.Shoot.GetInfo().Name,
-		Namespace: b.Shoot.ControlPlaneNamespace,
-		Purpose:   purpose,
-	}
-
-	switch purpose {
-	case extensionsv1alpha1.Normal:
-		values.Type = b.Shoot.GetInfo().Spec.Provider.Type
-		values.ProviderConfig = b.Shoot.GetInfo().Spec.Provider.ControlPlaneConfig
-		values.Region = b.Shoot.GetInfo().Spec.Region
-
-	case extensionsv1alpha1.Exposure:
-		values.Type = b.Seed.GetInfo().Spec.Provider.Type
-		values.Region = b.Seed.GetInfo().Spec.Provider.Region
-	}
-
+func (b *Botanist) DefaultControlPlane() extensionscontrolplane.Interface {
 	return extensionscontrolplane.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
-		values,
+		&extensionscontrolplane.Values{
+			Name:           b.Shoot.GetInfo().Name,
+			Namespace:      b.Shoot.ControlPlaneNamespace,
+			Purpose:        extensionsv1alpha1.Normal,
+			Type:           b.Shoot.GetInfo().Spec.Provider.Type,
+			ProviderConfig: b.Shoot.GetInfo().Spec.Provider.ControlPlaneConfig,
+			Region:         b.Shoot.GetInfo().Spec.Region,
+		},
 		extensionscontrolplane.DefaultInterval,
 		extensionscontrolplane.DefaultSevereThreshold,
 		extensionscontrolplane.DefaultTimeout,
@@ -168,11 +158,6 @@ func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) exten
 func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 	b.Shoot.Components.Extensions.ControlPlane.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
 	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlane)
-}
-
-// DeployControlPlaneExposure deploys or restores the ControlPlane custom resource (purpose exposure).
-func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
-	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlaneExposure)
 }
 
 func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane extensionscontrolplane.Interface) error {
