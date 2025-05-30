@@ -1178,8 +1178,29 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("newPodScaleUpDelay"), *newPodScaleUpDelay, "can not be negative"))
 	}
 
-	if maxEmptyBulkDelete := autoScaler.MaxEmptyBulkDelete; maxEmptyBulkDelete != nil && *maxEmptyBulkDelete < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxEmptyBulkDelete"), *maxEmptyBulkDelete, "can not be negative"))
+	if maxEmptyBulkDelete := autoScaler.MaxEmptyBulkDelete; maxEmptyBulkDelete != nil {
+		if unsupportedVersion, _ := versionutils.CompareVersions(version, ">=", "1.33"); unsupportedVersion {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("maxEmptyBulkDelete"), "is not supported for kubernetes v1.33 and above, use maxScaleDownParallelism instead"))
+		}
+		if *maxEmptyBulkDelete < 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxEmptyBulkDelete"), *maxEmptyBulkDelete, "can not be negative"))
+		}
+	}
+
+	if maxScaleDownParallelism := autoScaler.MaxScaleDownParallelism; maxScaleDownParallelism != nil && *maxScaleDownParallelism < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxScaleDownParallelism"), *maxScaleDownParallelism, "can not be negative"))
+	}
+
+	if autoScaler.MaxScaleDownParallelism != nil && autoScaler.MaxEmptyBulkDelete != nil && *autoScaler.MaxScaleDownParallelism != *autoScaler.MaxEmptyBulkDelete {
+		allErrs = append(allErrs, field.Invalid(
+			fldPath.Child("maxEmptyBulkDelete"),
+			*autoScaler.MaxEmptyBulkDelete,
+			fmt.Sprintf("must equal maxScaleDownParallelism %d", *autoScaler.MaxScaleDownParallelism),
+		))
+	}
+
+	if maxDrainParallelism := autoScaler.MaxDrainParallelism; maxDrainParallelism != nil && *maxDrainParallelism < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxDrainParallelism"), *maxDrainParallelism, "can not be negative"))
 	}
 
 	return allErrs

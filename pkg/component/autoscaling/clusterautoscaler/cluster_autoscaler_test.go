@@ -131,6 +131,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configIgnoreDaemonsetsUtilization         = true
 		configVerbosity                     int32 = 4
 		configMaxEmptyBulkDelete                  = ptr.To[int32](20)
+		configMaxScaleDownParallelism             = ptr.To[int32](20)
+		configMaxDrainParallelism                 = ptr.To[int32](2)
 		configNewPodScaleUpDelay                  = &metav1.Duration{Duration: time.Second}
 		configTaints                              = []string{"taint-1", "taint-2"}
 		configFull                                = &gardencorev1beta1.ClusterAutoscaler{
@@ -149,6 +151,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 			IgnoreDaemonsetsUtilization:   &configIgnoreDaemonsetsUtilization,
 			Verbosity:                     &configVerbosity,
 			MaxEmptyBulkDelete:            configMaxEmptyBulkDelete,
+			MaxScaleDownParallelism:       configMaxScaleDownParallelism,
+			MaxDrainParallelism:           configMaxDrainParallelism,
 			NewPodScaleUpDelay:            configNewPodScaleUpDelay,
 		}
 
@@ -301,7 +305,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"--scan-interval=10s",
 					"--ignore-daemonsets-utilization=false",
 					"--v=2",
-					"--max-empty-bulk-delete=10",
+					"--max-scale-down-parallelism=10",
+					"--max-drain-parallelism=1",
 					"--new-pod-scale-up-delay=0s",
 					"--max-nodes-total=0",
 				)
@@ -318,7 +323,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					fmt.Sprintf("--scan-interval=%s", configScanInterval.Duration),
 					fmt.Sprintf("--ignore-daemonsets-utilization=%t", configIgnoreDaemonsetsUtilization),
 					fmt.Sprintf("--v=%d", configVerbosity),
-					fmt.Sprintf("--max-empty-bulk-delete=%d", *configMaxEmptyBulkDelete),
+					fmt.Sprintf("--max-scale-down-parallelism=%d", *configMaxScaleDownParallelism),
+					fmt.Sprintf("--max-drain-parallelism=%d", *configMaxDrainParallelism),
 					fmt.Sprintf("--new-pod-scale-up-delay=%s", configNewPodScaleUpDelay.Duration),
 					"--max-nodes-total=0",
 					fmt.Sprintf("--startup-taint=%s", configTaints[0]),

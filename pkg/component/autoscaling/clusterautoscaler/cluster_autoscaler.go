@@ -482,7 +482,8 @@ func (c *clusterAutoscaler) computeCommand(workersHavePriorityConfigured bool) [
 		fmt.Sprintf("--scan-interval=%s", c.config.ScanInterval.Duration),
 		fmt.Sprintf("--ignore-daemonsets-utilization=%t", *c.config.IgnoreDaemonsetsUtilization),
 		fmt.Sprintf("--v=%d", *c.config.Verbosity),
-		fmt.Sprintf("--max-empty-bulk-delete=%d", *c.config.MaxEmptyBulkDelete),
+		fmt.Sprintf("--max-scale-down-parallelism=%d", *c.config.MaxScaleDownParallelism),
+		fmt.Sprintf("--max-drain-parallelism=%d", *c.config.MaxDrainParallelism),
 		fmt.Sprintf("--new-pod-scale-up-delay=%s", c.config.NewPodScaleUpDelay.Duration),
 		fmt.Sprintf("--max-nodes-total=%d", c.maxNodesTotal),
 	)
