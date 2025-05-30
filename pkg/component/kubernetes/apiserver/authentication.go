@@ -140,24 +140,38 @@ func ConfigureJWTAuthenticators(oidc *gardencorev1beta1.OIDCConfig) []apiserverv
 	return jwts
 }
 
-func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, configMapAuthenticationConfig *corev1.ConfigMap, secretOIDCCABundle *corev1.Secret) {
+func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, configMapAuthenticationConfig *corev1.ConfigMap, secretOIDCCABundle *corev1.Secret) error {
 	var (
-		structAuthGateEnabled, structAuthGateSet  = k.values.FeatureGates["StructuredAuthenticationConfiguration"]
-		structAuthIsDisabled                      = (structAuthGateSet && !structAuthGateEnabled)
-		anonymousGateEnabled, anonymousGateSet    = k.values.FeatureGates["AnonymousAuthConfigurableEndpoints"]
-		shouldConfigureAnonymousViaStructuredAuth = (!anonymousGateSet || anonymousGateEnabled) && versionutils.ConstraintK8sGreaterEqual132.Check(k.values.Version)
+		structAuthGateEnabled, structAuthGateSet    = k.values.FeatureGates["StructuredAuthenticationConfiguration"]
+		structAuthIsDisabled                        = (structAuthGateSet && !structAuthGateEnabled)
+		structAuthConfiguresAnonymousAuthentication bool
 	)
 
 	if versionutils.ConstraintK8sLess130.Check(k.values.Version) || structAuthIsDisabled {
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 	}
 
-	if !shouldConfigureAnonymousViaStructuredAuth || structAuthIsDisabled {
+	if config, ok := configMapAuthenticationConfig.Data[DataKeyConfigMapAuthenticationConfig]; ok {
+		authenticationConfiguration := &apiserverv1beta1.AuthenticationConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: apiserverv1beta1.ConfigSchemeGroupVersion.String(),
+				Kind:       "AuthenticationConfiguration",
+			},
+		}
+
+		if err := runtime.DecodeInto(ConfigCodec, []byte(config), authenticationConfiguration); err != nil {
+			return err
+		}
+
+		structAuthConfiguresAnonymousAuthentication = authenticationConfiguration.Anonymous != nil
+	}
+
+	if structAuthIsDisabled || !structAuthConfiguresAnonymousAuthentication {
 		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--anonymous-auth="+strconv.FormatBool(ptr.Deref(k.values.AnonymousAuthenticationEnabled, false)))
 	}
 
 	if _, ok := configMapAuthenticationConfig.Data[DataKeyConfigMapAuthenticationConfig]; !ok {
-		return
+		return nil
 	}
 
 	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authentication-config=%s/%s", volumeMountPathStructuredAuthenticationConfig, DataKeyConfigMapAuthenticationConfig))
@@ -175,6 +189,8 @@ func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployme
 			},
 		},
 	})
+
+	return nil
 }
 
 // TODO(AleksandarSavchev): Remove this functionality as soon as v1.32 is the least supported Kubernetes version in Gardener.

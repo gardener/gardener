@@ -370,7 +370,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleSNISettings(deployment)
 		k.handleTLSSNISettings(deployment, tlsSNISecrets)
 		k.handleServiceAccountSigningKeySettings(deployment)
-		k.handleAuthenticationSettings(deployment, configMapAuthenticationConfig, secretOIDCCABundle)
+		if err := k.handleAuthenticationSettings(deployment, configMapAuthenticationConfig, secretOIDCCABundle); err != nil {
+			return err
+		}
 		k.handleAuthenticationWebhookSettings(deployment, secretAuthenticationWebhookKubeconfig)
 		k.handleAuthorizationSettings(deployment, configMapAuthorizationConfig, secretAuthorizationWebhooksKubeconfigs)
 		if err := k.handleVPNSettings(deployment, serviceAccount, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
