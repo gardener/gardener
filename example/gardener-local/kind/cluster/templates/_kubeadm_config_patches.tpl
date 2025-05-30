@@ -5,10 +5,16 @@
   apiVersion: kubeadm.k8s.io/v1beta3
   kind: ClusterConfiguration
   apiServer:
-{{- if .Values.gardener.apiserverRelay.deployed }}
+{{- if or .Values.gardener.controlPlane.kindIsGardenCluster .Values.gardener.apiserverRelay.deployed }}
     certSANs:
+    - garden.local.gardener.cloud
     - localhost
     - 127.0.0.1
+{{- end }}
+{{- if and .Values.gardener.controlPlane.kindIsGardenCluster (ne .Values.networking.ipFamily "ipv4") }}
+    - ::1
+{{- end }}
+{{- if .Values.gardener.apiserverRelay.deployed }}
     - gardener-apiserver.relay.svc.cluster.local
 {{- end }}
     extraArgs:
