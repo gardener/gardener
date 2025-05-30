@@ -3686,6 +3686,66 @@ kind: AuthorizationConfiguration
 					)))
 				})
 
+				It("should not set the anonymous auth flag if structured authentication configures anonymous auth", func() {
+					authenticationConfig := `
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+anonymous:
+  enabled: true
+`
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Images:                      images,
+						Version:                     semver.MustParse("1.31.0"),
+						AuthenticationConfiguration: ptr.To(authenticationConfig),
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElement(ContainSubstring(
+						"--anonymous-auth",
+					)))
+				})
+
+				It("should set the anonymous auth flag if structured authentication configures anonymous auth", func() {
+					authenticationConfig := `
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+anonymous: null
+`
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Images:                      images,
+						Version:                     semver.MustParse("1.31.0"),
+						AuthenticationConfiguration: ptr.To(authenticationConfig),
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(ContainSubstring(
+						"--anonymous-auth=false",
+					)))
+				})
+
+				It("should not set the anonymous auth flag if cluster is >= 1.32.0", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Images:  images,
+						Version: semver.MustParse("1.32.0"),
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElement(ContainSubstring(
+						"--anonymous-auth",
+					)))
+				})
+
 				It("should configure the advertise address if SNI is enabled", func() {
 					advertiseAddress := "1.2.3.4"
 
