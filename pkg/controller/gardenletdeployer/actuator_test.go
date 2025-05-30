@@ -563,13 +563,7 @@ var _ = Describe("Interface", func() {
 					recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 
 					gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).SetArg(2, *backupSecret).Return(nil)
-
-					gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-						func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
-							*s = *backupSecret
-							return nil
-						},
-					)
+					gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).SetArg(2, *backupSecret).Return(nil)
 
 					gardenClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
 						Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"labels":{"secret.backup.gardener.cloud/status":"previously-managed"},"ownerReferences":null}}`))
