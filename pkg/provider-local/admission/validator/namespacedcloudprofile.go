@@ -14,13 +14,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // NewNamespacedCloudProfileValidator returns a new instance of a NamespacedCloudProfile validator.
@@ -69,8 +69,8 @@ func (p *namespacedCloudProfile) Validate(ctx context.Context, new, _ client.Obj
 func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfig(providerConfig *api.CloudProfileConfig, machineImages []core.MachineImage, parentProfile *gardencorev1beta1.CloudProfile) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	profileImages := util.NewCoreImagesContext(machineImages)
-	parentImages := util.NewV1beta1ImagesContext(parentProfile.Spec.MachineImages)
+	profileImages := gardenerutils.NewCoreImagesContext(machineImages)
+	parentImages := gardenerutils.NewV1beta1ImagesContext(parentProfile.Spec.MachineImages)
 	providerImages := newProviderImagesContext(providerConfig.MachineImages)
 
 	for _, machineImage := range profileImages.Images {
@@ -128,8 +128,8 @@ func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfig(pr
 	return allErrs
 }
 
-func newProviderImagesContext(providerImages []api.MachineImages) *util.ImagesContext[api.MachineImages, api.MachineImageVersion] {
-	return util.NewImagesContext(
+func newProviderImagesContext(providerImages []api.MachineImages) *gardenerutils.ImagesContext[api.MachineImages, api.MachineImageVersion] {
+	return gardenerutils.NewImagesContext(
 		utils.CreateMapFromSlice(providerImages, func(mi api.MachineImages) string { return mi.Name }),
 		func(mi api.MachineImages) map[string]api.MachineImageVersion {
 			return utils.CreateMapFromSlice(mi.Versions, func(v api.MachineImageVersion) string { return v.Version })

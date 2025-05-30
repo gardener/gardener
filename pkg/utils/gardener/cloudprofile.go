@@ -16,7 +16,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -24,8 +23,17 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
-	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils"
 )
+
+// ImagesContext is a helper struct to consume cloud profile images and their versions.
+type ImagesContext[A any, B any] struct {
+	Images map[string]A
+
+	createVersionsMap func(A) map[string]B
+	// imageVersions will be calculated lazily on first access of each key.
+	imageVersions map[string]map[string]B
+}
 
 // GetCloudProfile determines whether the given shoot references a CloudProfile or a NamespacedCloudProfile and returns the appropriate object.
 func GetCloudProfile(ctx context.Context, reader client.Reader, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.CloudProfile, error) {
@@ -156,8 +164,8 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 		// Check that the target cloud profile still supports the currently used machine types, machine images and volume types.
 		// No need to check for Kubernetes versions, as the NamespacedCloudProfile could have only extended a version so with the next maintenance the Shoot will be updated to a supported version.
 		_, removedMachineImageVersions, _, _ := gardencorehelper.GetMachineImageDiff(oldCloudProfileSpecCore.MachineImages, newCloudProfileSpecCore.MachineImages)
-		machineTypes := gardenerutils.CreateMapFromSlice(newCloudProfileSpec.MachineTypes, func(mt gardencorev1beta1.MachineType) string { return mt.Name })
-		volumeTypes := gardenerutils.CreateMapFromSlice(newCloudProfileSpec.VolumeTypes, func(vt gardencorev1beta1.VolumeType) string { return vt.Name })
+		machineTypes := utils.CreateMapFromSlice(newCloudProfileSpec.MachineTypes, func(mt gardencorev1beta1.MachineType) string { return mt.Name })
+		volumeTypes := utils.CreateMapFromSlice(newCloudProfileSpec.VolumeTypes, func(vt gardencorev1beta1.VolumeType) string { return vt.Name })
 
 		for _, w := range newShoot.Spec.Provider.Workers {
 			if len(removedMachineImageVersions) > 0 && w.Machine.Image != nil {
@@ -282,7 +290,7 @@ func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec,
 }
 
 func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages []core.MachineImage, isInitialMigration bool) {
-	oldMachineImagesMap := util.NewCoreImagesContext(oldMachineImages)
+	oldMachineImagesMap := NewCoreImagesContext(oldMachineImages)
 
 	for imageIdx, image := range newMachineImages {
 		for versionIdx, version := range newMachineImages[imageIdx].Versions {
@@ -321,7 +329,7 @@ func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages
 }
 
 func syncMachineTypeArchitectureCapabilities(newMachineTypes, oldMachineTypes []core.MachineType, isInitialMigration bool) {
-	oldMachineTypesMap := gardenerutils.CreateMapFromSlice(oldMachineTypes, func(machineType core.MachineType) string { return machineType.Name })
+	oldMachineTypesMap := utils.CreateMapFromSlice(oldMachineTypes, func(machineType core.MachineType) string { return machineType.Name })
 
 	for i, machineType := range newMachineTypes {
 		oldMachineType, oldMachineTypeExists := oldMachineTypesMap[machineType.Name]
@@ -354,4 +362,53 @@ func syncMachineTypeArchitectureCapabilities(newMachineTypes, oldMachineTypes []
 			newMachineTypes[i].Architecture = ptr.To(capabilityArchitectures[0])
 		}
 	}
+}
+
+// GetImage returns the image with the given name.
+func (vc *ImagesContext[A, B]) GetImage(imageName string) (A, bool) {
+	o, exists := vc.Images[imageName]
+	return o, exists
+}
+
+// GetImageVersion returns the image version with the given name and version.
+func (vc *ImagesContext[A, B]) GetImageVersion(imageName string, version string) (B, bool) {
+	o, exists := vc.getImageVersions(imageName)[version]
+	return o, exists
+}
+
+func (vc *ImagesContext[A, B]) getImageVersions(imageName string) map[string]B {
+	if versions, exists := vc.imageVersions[imageName]; exists {
+		return versions
+	}
+	vc.imageVersions[imageName] = vc.createVersionsMap(vc.Images[imageName])
+	return vc.imageVersions[imageName]
+}
+
+// NewImagesContext creates a new generic ImagesContext.
+func NewImagesContext[A any, B any](images map[string]A, createVersionsMap func(A) map[string]B) *ImagesContext[A, B] {
+	return &ImagesContext[A, B]{
+		Images:            images,
+		createVersionsMap: createVersionsMap,
+		imageVersions:     make(map[string]map[string]B),
+	}
+}
+
+// NewCoreImagesContext creates a new ImagesContext for core.MachineImage.
+func NewCoreImagesContext(profileImages []core.MachineImage) *ImagesContext[core.MachineImage, core.MachineImageVersion] {
+	return NewImagesContext(
+		utils.CreateMapFromSlice(profileImages, func(mi core.MachineImage) string { return mi.Name }),
+		func(mi core.MachineImage) map[string]core.MachineImageVersion {
+			return utils.CreateMapFromSlice(mi.Versions, func(v core.MachineImageVersion) string { return v.Version })
+		},
+	)
+}
+
+// NewV1beta1ImagesContext creates a new ImagesContext for gardencorev1beta1.MachineImage.
+func NewV1beta1ImagesContext(parentImages []gardencorev1beta1.MachineImage) *ImagesContext[gardencorev1beta1.MachineImage, gardencorev1beta1.MachineImageVersion] {
+	return NewImagesContext(
+		utils.CreateMapFromSlice(parentImages, func(mi gardencorev1beta1.MachineImage) string { return mi.Name }),
+		func(mi gardencorev1beta1.MachineImage) map[string]gardencorev1beta1.MachineImageVersion {
+			return utils.CreateMapFromSlice(mi.Versions, func(v gardencorev1beta1.MachineImageVersion) string { return v.Version })
+		},
+	)
 }
