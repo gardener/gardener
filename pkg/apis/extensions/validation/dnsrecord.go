@@ -111,10 +111,8 @@ func validateValue(recordType extensionsv1alpha1.DNSRecordType, value string, fl
 	allErrs := field.ErrorList{}
 
 	switch recordType {
-	case extensionsv1alpha1.DNSRecordTypeA:
-		allErrs = append(allErrs, validation.IsValidIPv4Address(fldPath, value)...)
-	case extensionsv1alpha1.DNSRecordTypeAAAA:
-		allErrs = append(allErrs, validation.IsValidIPv6Address(fldPath, value)...)
+	case extensionsv1alpha1.DNSRecordTypeA, extensionsv1alpha1.DNSRecordTypeAAAA:
+		allErrs = append(allErrs, validation.IsValidIP(fldPath, value)...)
 	case extensionsv1alpha1.DNSRecordTypeCNAME:
 		allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(fldPath, value)...)
 	}
