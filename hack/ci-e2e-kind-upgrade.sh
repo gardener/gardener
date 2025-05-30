@@ -94,7 +94,37 @@ function install_previous_release() {
   pushd $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE >/dev/null
   copy_kubeconfig_from_kubeconfig_env_var
   gardener_up
+  migrate_secretbinding_secret_ref_namespace
   popd >/dev/null
+}
+
+# TODO(rfranzke): Remove this after v1.121 has been released.
+# See https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/12213/pull-gardener-e2e-kind-ha-single-zone-upgrade/1928362346820931584
+# and https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/12213/pull-gardener-e2e-kind-upgrade/1928362357759676416#1:build-log.txt%3A1255.
+function migrate_secretbinding_secret_ref_namespace() {
+  if [[ ! -f "example/provider-local/garden/base/secretbinding.yaml" ]]; then
+    return
+  fi
+
+  kubectl -n garden-local delete secretbinding local --ignore-not-found
+  cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: local
+  namespace: garden-local
+type: Opaque
+---
+apiVersion: core.gardener.cloud/v1beta1
+kind: SecretBinding
+metadata:
+  name: local
+  namespace: garden-local
+provider:
+  type: local
+secretRef:
+  name: local
+EOF
 }
 
 function upgrade_to_next_release() {
