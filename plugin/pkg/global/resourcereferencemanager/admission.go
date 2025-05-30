@@ -901,7 +901,7 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 }
 
 func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes admission.Attributes, oldShoot, shoot *core.Shoot) error {
-	if gardenerutils.BuildCloudProfileReference_core(shoot) != gardenerutils.BuildCloudProfileReference_core(oldShoot) {
+	if gardenerutils.BuildCoreCloudProfileReference(shoot) != gardenerutils.BuildCoreCloudProfileReference(oldShoot) {
 		if _, err := gardenerutils.GetCloudProfileSpec(r.cloudProfileLister, r.namespacedCloudProfileLister, shoot); err != nil {
 			return fmt.Errorf("could not find cloudProfileSpec from the shoot cloudProfile reference: %s", err.Error())
 		}
@@ -1100,7 +1100,7 @@ func (r *ReferenceManager) validateBackupBucketDeletion(ctx context.Context, a a
 }
 
 func isShootRelatedToCloudProfile(shoot *gardencorev1beta1.Shoot, cloudProfile *core.CloudProfile, relevantNamespacedCloudProfiles map[string]*gardencorev1beta1.NamespacedCloudProfile) bool {
-	shootCloudProfile := gardenerutils.BuildCloudProfileReference_v1beta1(shoot)
+	shootCloudProfile := gardenerutils.BuildV1beta1CloudProfileReference(shoot)
 	if shootCloudProfile == nil || cloudProfile == nil {
 		return false
 	}

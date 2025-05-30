@@ -406,11 +406,11 @@ var _ = Describe("CloudProfile", func() {
 
 		Describe("#BuildCloudProfileReference", func() {
 			It("should return nil for nil shoot", func() {
-				Expect(gardenerutils.BuildCloudProfileReference_core(nil)).To(BeNil())
+				Expect(gardenerutils.BuildCoreCloudProfileReference(nil)).To(BeNil())
 			})
 
 			It("should build and return cloud profile reference from an existing cloudProfileName", func() {
-				Expect(gardenerutils.BuildCloudProfileReference_core(&core.Shoot{Spec: core.ShootSpec{
+				Expect(gardenerutils.BuildCoreCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
 					CloudProfileName: ptr.To("profile-name"),
 				}})).To(Equal(&gardencorev1beta1.CloudProfileReference{
 					Kind: "CloudProfile",
@@ -419,7 +419,7 @@ var _ = Describe("CloudProfile", func() {
 			})
 
 			It("should return an existing cloud profile reference", func() {
-				Expect(gardenerutils.BuildCloudProfileReference_core(&core.Shoot{Spec: core.ShootSpec{
+				Expect(gardenerutils.BuildCoreCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
 					CloudProfileName: ptr.To("ignore-me"),
 					CloudProfile: &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
@@ -432,7 +432,7 @@ var _ = Describe("CloudProfile", func() {
 			})
 
 			It("should return an existing cloud profile reference and default the kind to CloudProfile", func() {
-				Expect(gardenerutils.BuildCloudProfileReference_core(&core.Shoot{Spec: core.ShootSpec{
+				Expect(gardenerutils.BuildCoreCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
 					CloudProfileName: ptr.To("ignore-me"),
 					CloudProfile: &core.CloudProfileReference{
 						Name: "profile-1",

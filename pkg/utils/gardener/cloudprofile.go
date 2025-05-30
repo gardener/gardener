@@ -37,7 +37,7 @@ type ImagesContext[A any, B any] struct {
 
 // GetCloudProfile determines whether the given shoot references a CloudProfile or a NamespacedCloudProfile and returns the appropriate object.
 func GetCloudProfile(ctx context.Context, reader client.Reader, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.CloudProfile, error) {
-	cloudProfileReference := BuildCloudProfileReference_v1beta1(shoot)
+	cloudProfileReference := BuildV1beta1CloudProfileReference(shoot)
 	if cloudProfileReference == nil {
 		return nil, fmt.Errorf("could not determine cloudprofile from shoot")
 	}
@@ -64,9 +64,9 @@ func GetCloudProfile(ctx context.Context, reader client.Reader, shoot *gardencor
 	return cloudProfile, nil
 }
 
-// BuildCloudProfileReference_v1beta1 determines and returns the CloudProfile reference of the given shoot,
+// BuildV1beta1CloudProfileReference determines and returns the CloudProfile reference of the given shoot,
 // depending on the availability of cloudProfileName and cloudProfile.
-func BuildCloudProfileReference_v1beta1(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.CloudProfileReference {
+func BuildV1beta1CloudProfileReference(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.CloudProfileReference {
 	if shoot == nil {
 		return nil
 	}
@@ -88,7 +88,7 @@ func BuildCloudProfileReference_v1beta1(shoot *gardencorev1beta1.Shoot) *gardenc
 
 // GetCloudProfileSpec determines whether the given shoot references a CloudProfile or a NamespacedCloudProfile and returns the appropriate CloudProfileSpec.
 func GetCloudProfileSpec(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, shoot *core.Shoot) (*gardencorev1beta1.CloudProfileSpec, error) {
-	cloudProfileReference := BuildCloudProfileReference_core(shoot)
+	cloudProfileReference := BuildCoreCloudProfileReference(shoot)
 	if cloudProfileReference == nil {
 		return nil, fmt.Errorf("no cloudprofile reference has been provided")
 	}
@@ -113,11 +113,11 @@ func GetCloudProfileSpec(cloudProfileLister gardencorev1beta1listers.CloudProfil
 // (i.e. between the parent CloudProfile and the descendant NamespacedCloudProfiles) and that upon changing the profile all
 // current configurations still stay valid.
 func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, newShoot, oldShoot *core.Shoot) error {
-	oldCloudProfileReference := BuildCloudProfileReference_core(oldShoot)
+	oldCloudProfileReference := BuildCoreCloudProfileReference(oldShoot)
 	if oldCloudProfileReference == nil {
 		return nil
 	}
-	newCloudProfileReference := BuildCloudProfileReference_core(newShoot)
+	newCloudProfileReference := BuildCoreCloudProfileReference(newShoot)
 	if apiequality.Semantic.DeepEqual(oldCloudProfileReference, newCloudProfileReference) {
 		return nil
 	}
@@ -208,9 +208,9 @@ func getRootCloudProfile(namespacedCloudProfileLister gardencorev1beta1listers.N
 	return nil, fmt.Errorf("unexpected cloudprofile kind %s", cloudProfile.Kind)
 }
 
-// BuildCloudProfileReference_core determines and returns the CloudProfile reference of the given shoot,
+// BuildCoreCloudProfileReference determines and returns the CloudProfile reference of the given shoot,
 // depending on the availability of cloudProfileName and cloudProfile.
-func BuildCloudProfileReference_core(shoot *core.Shoot) *gardencorev1beta1.CloudProfileReference {
+func BuildCoreCloudProfileReference(shoot *core.Shoot) *gardencorev1beta1.CloudProfileReference {
 	if shoot == nil {
 		return nil
 	}

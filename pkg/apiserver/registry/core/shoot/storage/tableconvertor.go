@@ -78,7 +78,7 @@ func (c *convertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runt
 
 		cells = append(cells, shoot.Name)
 
-		cloudProfileReference := gardenerutils.BuildCloudProfileReference_core(shoot)
+		cloudProfileReference := gardenerutils.BuildCoreCloudProfileReference(shoot)
 		switch cloudProfileReference.Kind {
 		case v1beta1constants.CloudProfileReferenceKindCloudProfile:
 			cells = append(cells, cloudProfileReference.Name)
