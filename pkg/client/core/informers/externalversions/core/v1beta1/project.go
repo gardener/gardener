@@ -49,13 +49,25 @@ func NewFilteredProjectInformer(client versioned.Interface, resyncPeriod time.Du
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1beta1().Projects().List(context.TODO(), options)
+				return client.CoreV1beta1().Projects().List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1beta1().Projects().Watch(context.TODO(), options)
+				return client.CoreV1beta1().Projects().Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.CoreV1beta1().Projects().List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.CoreV1beta1().Projects().Watch(ctx, options)
 			},
 		},
 		&apiscorev1beta1.Project{},
