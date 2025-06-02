@@ -13,7 +13,7 @@ require (
 	github.com/docker/cli v28.2.2+incompatible
 	github.com/fluent/fluent-operator/v3 v3.3.0
 	github.com/gardener/cert-management v0.17.5
-	github.com/gardener/dependency-watchdog v1.4.0
+	github.com/gardener/dependency-watchdog v1.5.0
 	github.com/gardener/etcd-druid/api v0.30.1
 	github.com/gardener/machine-controller-manager v0.58.0
 	github.com/gardener/terminal-controller-manager v0.34.0
@@ -74,7 +74,7 @@ require (
 	k8s.io/component-helpers v0.32.5
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-aggregator v0.32.5
-	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7
+	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
 	k8s.io/kube-proxy v0.32.5
 	k8s.io/kube-state-metrics/v2 v2.13.0
 	k8s.io/kubelet v0.32.5
@@ -274,4 +274,5 @@ require (
 	oras.land/oras-go v1.2.6 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
+	sigs.k8s.io/randfill v1.0.0 // indirect
 )
