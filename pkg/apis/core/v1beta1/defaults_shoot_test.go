@@ -935,7 +935,8 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.IgnoreDaemonsetsUtilization).To(PointTo(Equal(false)))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Verbosity).To(PointTo(Equal(int32(2))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NewPodScaleUpDelay).To(PointTo(Equal(metav1.Duration{Duration: 0})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(PointTo(Equal(int32(10))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxScaleDownParallelism).To(PointTo(Equal(int32(10))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxDrainParallelism).To(PointTo(Equal(int32(1))))
 		})
 
 		It("should not overwrite the already set values for ClusterAutoscaler field", func() {
@@ -953,6 +954,8 @@ var _ = Describe("Shoot defaulting", func() {
 				Verbosity:                     ptr.To[int32](4),
 				NewPodScaleUpDelay:            &metav1.Duration{Duration: 1},
 				MaxEmptyBulkDelete:            ptr.To[int32](20),
+				MaxScaleDownParallelism:       ptr.To[int32](15),
+				MaxDrainParallelism:           ptr.To[int32](5),
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -970,6 +973,45 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Verbosity).To(PointTo(Equal(int32(4))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NewPodScaleUpDelay).To(PointTo(Equal(metav1.Duration{Duration: 1})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(PointTo(Equal(int32(20))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxScaleDownParallelism).To(PointTo(Equal(int32(15))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxDrainParallelism).To(PointTo(Equal(int32(5))))
+		})
+
+		It("should sync MaxScaleDownParallelism value with MaxEmptyBulkDelete when the latter is set and the former is not", func() {
+			obj.Spec.Kubernetes.ClusterAutoscaler = &ClusterAutoscaler{
+				ScaleDownDelayAfterAdd:        &metav1.Duration{Duration: 1 * time.Hour},
+				ScaleDownDelayAfterDelete:     &metav1.Duration{Duration: 2 * time.Hour},
+				ScaleDownDelayAfterFailure:    &metav1.Duration{Duration: 3 * time.Hour},
+				ScaleDownUnneededTime:         &metav1.Duration{Duration: 4 * time.Hour},
+				ScaleDownUtilizationThreshold: ptr.To(0.8),
+				ScanInterval:                  &metav1.Duration{Duration: 5 * time.Hour},
+				Expander:                      &expanderRandom,
+				MaxNodeProvisionTime:          &metav1.Duration{Duration: 6 * time.Hour},
+				MaxGracefulTerminationSeconds: ptr.To(int32(60 * 60 * 24)),
+				IgnoreDaemonsetsUtilization:   ptr.To(true),
+				Verbosity:                     ptr.To[int32](4),
+				NewPodScaleUpDelay:            &metav1.Duration{Duration: 1},
+				MaxEmptyBulkDelete:            ptr.To[int32](17),
+				MaxDrainParallelism:           ptr.To[int32](5),
+			}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterDelete).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterFailure).To(PointTo(Equal(metav1.Duration{Duration: 3 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime).To(PointTo(Equal(metav1.Duration{Duration: 4 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUtilizationThreshold).To(PointTo(Equal(0.8)))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScanInterval).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeProvisionTime).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Expander).To(PointTo(Equal(ClusterAutoscalerExpanderRandom)))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxGracefulTerminationSeconds).To(PointTo(Equal(int32(60 * 60 * 24))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.IgnoreDaemonsetsUtilization).To(PointTo(Equal(true)))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Verbosity).To(PointTo(Equal(int32(4))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NewPodScaleUpDelay).To(PointTo(Equal(metav1.Duration{Duration: 1})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(PointTo(Equal(int32(17))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxScaleDownParallelism).To(PointTo(Equal(int32(17))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxDrainParallelism).To(PointTo(Equal(int32(5))))
 		})
 	})
 
