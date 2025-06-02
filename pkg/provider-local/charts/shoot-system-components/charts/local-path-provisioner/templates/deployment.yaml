@@ -18,7 +18,8 @@ spec:
     metadata:
       labels:
         app: local-path-provisioner
-        networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.gardener.cloud/to-apiserver: allowed
+        networking.gardener.cloud/to-dns: allowed
     spec:
       priorityClassName: system-cluster-critical
       serviceAccountName: local-path-provisioner-service-account
