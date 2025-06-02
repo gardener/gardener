@@ -176,7 +176,7 @@ func syncBackupSecretRefAndCredentialsRef(backup *gardencorev1beta1.Backup) {
 	// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
 }
 
-// TODO(@aaronfern): Remove this after v1.122 is released
+// TODO(@aaronfern): Remove this after v1.123 is released
 func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {

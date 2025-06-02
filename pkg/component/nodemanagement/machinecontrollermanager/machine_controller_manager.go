@@ -59,8 +59,8 @@ type Interface interface {
 	component.DeployWaiter
 	// SetReplicas sets the replicas.
 	SetReplicas(int32)
-	//TODO(@aaronfern): Remove this after v1.122 is released.
-	// DeployMigrate migrates RBAC permissions from clusterrole/clusterrolebinding to role/rolebinding
+	//TODO(@aaronfern): Remove this after v1.123 is released.
+	// MigrateRBAC migrates RBAC permissions from clusterrole/clusterrolebinding to role/rolebinding
 	MigrateRBAC(ctx context.Context) error
 }
 
@@ -96,7 +96,7 @@ type Values struct {
 	AutonomousShoot bool
 }
 
-// TODO(@aaronfern): Remove this after v1.122 is released.
+// TODO(@aaronfern): Remove this after v1.123 is released.
 func (m *machineControllerManager) MigrateRBAC(ctx context.Context) error {
 	var (
 		roleBinding    = m.emptyRoleBindingRuntime()
@@ -734,7 +734,7 @@ func (m *machineControllerManager) emptyRoleBindingRuntime() *rbacv1.RoleBinding
 	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
 }
 
-// TODO(@aaronfern): Remove this after v1.122 is released.
+// TODO(@aaronfern): Remove this after v1.123 is released.
 func (m *machineControllerManager) emptyClusterRoleBindingRuntime() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-" + m.namespace}}
 }

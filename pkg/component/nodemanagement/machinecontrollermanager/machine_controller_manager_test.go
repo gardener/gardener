@@ -587,7 +587,7 @@ subjects:
 			serviceAccount.ResourceVersion = "1"
 			Expect(actualServiceAccount).To(DeepEqual(serviceAccount))
 
-			//TODO(@aaronfern): Remove this after v1.122 is released
+			//TODO(@aaronfern): Remove this after v1.123 is released
 			actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(BeNotFoundError())
 
