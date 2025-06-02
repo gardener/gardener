@@ -95,9 +95,11 @@ var _ = Describe("ShootState", func() {
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret3", seedNamespace, true, false))).To(Succeed())
 
 				By("Creating extensions data")
+				purposeNormal := extensionsv1alpha1.Normal
+
 				createExtensionObject(ctx, fakeSeedClient, "backupentry", seedNamespace, &extensionsv1alpha1.BackupEntry{}, &runtime.RawExtension{Raw: []byte(`{"name":"backupentry"}`)})
 				createExtensionObject(ctx, fakeSeedClient, "containerruntime", seedNamespace, &extensionsv1alpha1.ContainerRuntime{}, &runtime.RawExtension{Raw: []byte(`{"name":"containerruntime"}`)})
-				createExtensionObject(ctx, fakeSeedClient, "controlplane", seedNamespace, &extensionsv1alpha1.ControlPlane{}, &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)})
+				createExtensionObject(ctx, fakeSeedClient, "controlplane", seedNamespace, &extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{Purpose: &purposeNormal}}, &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)})
 				createExtensionObject(ctx, fakeSeedClient, "dnsrecord", seedNamespace, &extensionsv1alpha1.DNSRecord{}, &runtime.RawExtension{Raw: []byte(`{"name":"dnsrecord"}`)})
 				createExtensionObject(ctx, fakeSeedClient, "extension", seedNamespace, &extensionsv1alpha1.Extension{}, &runtime.RawExtension{Raw: []byte(`{"name":"extension"}`)}, gardencorev1beta1.NamedResourceReference{Name: "resource-ref1", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", APIVersion: "v1", Name: "extension-configmap"}})
 				Expect(fakeSeedClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "extension-configmap", Namespace: seedNamespace}, Data: map[string]string{"some-data": "for-extension"}})).To(Succeed())
@@ -143,9 +145,10 @@ var _ = Describe("ShootState", func() {
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"containerruntime"}`)},
 						},
 						{
-							Kind:  "ControlPlane",
-							Name:  ptr.To("controlplane"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)},
+							Kind:    "ControlPlane",
+							Name:    ptr.To("controlplane"),
+							Purpose: ptr.To("normal"),
+							State:   &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)},
 						},
 						{
 							Kind:  "DNSRecord",

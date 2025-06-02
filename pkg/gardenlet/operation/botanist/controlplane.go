@@ -136,18 +136,29 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 }
 
 // DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
-func (b *Botanist) DefaultControlPlane() extensionscontrolplane.Interface {
+func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) extensionscontrolplane.Interface {
+	values := &extensionscontrolplane.Values{
+		Name:      b.Shoot.GetInfo().Name,
+		Namespace: b.Shoot.ControlPlaneNamespace,
+		Purpose:   purpose,
+	}
+
+	// TODO(theoddora): Remove this in v1.123.0 when the Purpose field (exposure/normal) is removed.
+	switch purpose {
+	case extensionsv1alpha1.Normal:
+		values.Type = b.Shoot.GetInfo().Spec.Provider.Type
+		values.ProviderConfig = b.Shoot.GetInfo().Spec.Provider.ControlPlaneConfig
+		values.Region = b.Shoot.GetInfo().Spec.Region
+
+	case extensionsv1alpha1.Exposure:
+		values.Type = b.Seed.GetInfo().Spec.Provider.Type
+		values.Region = b.Seed.GetInfo().Spec.Provider.Region
+	}
+
 	return extensionscontrolplane.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
-		&extensionscontrolplane.Values{
-			Name:           b.Shoot.GetInfo().Name,
-			Namespace:      b.Shoot.ControlPlaneNamespace,
-			Purpose:        extensionsv1alpha1.Normal,
-			Type:           b.Shoot.GetInfo().Spec.Provider.Type,
-			ProviderConfig: b.Shoot.GetInfo().Spec.Provider.ControlPlaneConfig,
-			Region:         b.Shoot.GetInfo().Spec.Region,
-		},
+		values,
 		extensionscontrolplane.DefaultInterval,
 		extensionscontrolplane.DefaultSevereThreshold,
 		extensionscontrolplane.DefaultTimeout,
