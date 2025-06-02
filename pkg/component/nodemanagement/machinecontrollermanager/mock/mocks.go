@@ -14,7 +14,6 @@ import (
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
-	types "k8s.io/apimachinery/pkg/types"
 )
 
 // MockInterface is a mock of Interface interface.
@@ -69,16 +68,18 @@ func (mr *MockInterfaceMockRecorder) Destroy(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), ctx)
 }
 
-// SetNamespaceUID mocks base method.
-func (m *MockInterface) SetNamespaceUID(arg0 types.UID) {
+// MigrateRBAC mocks base method.
+func (m *MockInterface) MigrateRBAC(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetNamespaceUID", arg0)
+	ret := m.ctrl.Call(m, "MigrateRBAC", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// SetNamespaceUID indicates an expected call of SetNamespaceUID.
-func (mr *MockInterfaceMockRecorder) SetNamespaceUID(arg0 any) *gomock.Call {
+// MigrateRBAC indicates an expected call of MigrateRBAC.
+func (mr *MockInterfaceMockRecorder) MigrateRBAC(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNamespaceUID", reflect.TypeOf((*MockInterface)(nil).SetNamespaceUID), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MigrateRBAC", reflect.TypeOf((*MockInterface)(nil).MigrateRBAC), ctx)
 }
 
 // SetReplicas mocks base method.

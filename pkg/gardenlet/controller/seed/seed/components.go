@@ -86,21 +86,20 @@ type components struct {
 	prometheusCRD component.DeployWaiter
 	persesCRD     component.DeployWaiter
 
-	backupBucket             component.DeployWaiter
-	clusterIdentity          component.DeployWaiter
-	gardenerResourceManager  component.DeployWaiter
-	system                   component.DeployWaiter
-	extension                extension.Interface
-	istio                    component.DeployWaiter
-	istioDefaultLabels       map[string]string
-	istioDefaultNamespace    string
-	nginxIngressController   component.DeployWaiter
-	verticalPodAutoscaler    component.DeployWaiter
-	etcdDruid                component.DeployWaiter
-	clusterAutoscaler        component.DeployWaiter
-	machineControllerManager component.DeployWaiter
-	dwdWeeder                component.DeployWaiter
-	dwdProber                component.DeployWaiter
+	backupBucket            component.DeployWaiter
+	clusterIdentity         component.DeployWaiter
+	gardenerResourceManager component.DeployWaiter
+	system                  component.DeployWaiter
+	extension               extension.Interface
+	istio                   component.DeployWaiter
+	istioDefaultLabels      map[string]string
+	istioDefaultNamespace   string
+	nginxIngressController  component.DeployWaiter
+	verticalPodAutoscaler   component.DeployWaiter
+	etcdDruid               component.DeployWaiter
+	clusterAutoscaler       component.DeployWaiter
+	dwdWeeder               component.DeployWaiter
+	dwdProber               component.DeployWaiter
 
 	kubeAPIServerService component.Deployer
 	kubeAPIServerIngress component.Deployer
@@ -200,7 +199,6 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.clusterAutoscaler = r.newClusterAutoscaler()
-	c.machineControllerManager = r.newMachineControllerManager()
 	c.dwdWeeder, c.dwdProber, err = r.newDependencyWatchdogs(seed.GetInfo().Spec.Settings)
 	if err != nil {
 		return
@@ -785,10 +783,6 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 
 func (r *Reconciler) newClusterAutoscaler() component.DeployWaiter {
 	return clusterautoscaler.NewBootstrapper(r.SeedClientSet.Client(), r.GardenNamespace)
-}
-
-func (r *Reconciler) newMachineControllerManager() component.DeployWaiter {
-	return machinecontrollermanager.NewBootstrapper(r.SeedClientSet.Client(), r.GardenNamespace)
 }
 
 func (r *Reconciler) newClusterIdentity(seed *gardencorev1beta1.Seed) component.DeployWaiter {
