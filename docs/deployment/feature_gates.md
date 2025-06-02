@@ -29,6 +29,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | NodeAgentAuthorizer                      | `false` | `Alpha` | `1.109` | `1.115` |
 | NodeAgentAuthorizer                      | `true`  | `Beta`  | `1.116` |         |
 | CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` |         |
+| CredentialsRotationWithoutWorkersRollout | `true`  | `Beta`  | `1.121` |         |
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
 | RemoveAPIServerProxyLegacyPort           | `false` | `Alpha` | `1.113` | `1.118` |
 | RemoveAPIServerProxyLegacyPort           | `true`  | `Beta`  | `1.119` |         |
