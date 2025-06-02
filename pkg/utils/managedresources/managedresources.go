@@ -410,6 +410,17 @@ func RenderChartAndCreate(ctx context.Context, namespace string, name string, se
 	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, "", map[string][]byte{chartName: data}, ptr.To(false), injectedLabels, &forceOverwriteAnnotations)
 }
 
+// RenderChartAndCreateForSeed renders a chart and creates a ManagedResource for the gardener-resource-manager
+// out of the results using the seed class.
+func RenderChartAndCreateForSeed(ctx context.Context, namespace string, name string, client client.Client, chartRenderer chartrenderer.Interface, chart chart.Interface, values map[string]any, imageVector imagevector.ImageVector, chartNamespace string, runtimeVersion, targetVersion string) error {
+	chartName, data, err := chart.Render(chartRenderer, chartNamespace, imageVector, runtimeVersion, targetVersion, values)
+	if err != nil {
+		return fmt.Errorf("could not render chart: %w", err)
+	}
+
+	return Create(ctx, client, namespace, name, nil, false, v1beta1constants.SeedResourceManagerClass, map[string][]byte{chartName: data}, nil, nil, nil)
+}
+
 // configurationProblemRegex is used to check if an error is caused by a bad managed resource configuration.
 var configurationProblemRegex = regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
 
