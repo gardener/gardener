@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -259,5 +260,46 @@ func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
 		Eventually(ctx, func() error {
 			return s.GardenClient.Patch(ctx, s.Shoot, patch)
 		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldFindAllMachinePodsBefore finds all machine pods before running the required tests and returns their names.
+func ItShouldFindAllMachinePodsBefore(s *ShootContext) sets.Set[string] {
+	GinkgoHelper()
+
+	machinePodNamesBeforeTest := sets.New[string]()
+
+	It("Find all machine pods to ensure later that they weren't rolled out", func(ctx SpecContext) {
+		beforeStartMachinePodList := &corev1.PodList{}
+		Eventually(ctx, s.SeedKomega.List(beforeStartMachinePodList, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
+			"app":              "machine",
+			"machine-provider": "local",
+		})).Should(Succeed())
+
+		for _, item := range beforeStartMachinePodList.Items {
+			machinePodNamesBeforeTest.Insert(item.Name)
+		}
+	}, SpecTimeout(time.Minute))
+
+	return machinePodNamesBeforeTest
+}
+
+// ItShouldCompareMachinePodNamesAfter compares the machine pod names before and after running the required tests.
+func ItShouldCompareMachinePodNamesAfter(s *ShootContext, machinePodNamesBeforeTest sets.Set[string]) {
+	GinkgoHelper()
+
+	It("Compare machine pod names", func(ctx SpecContext) {
+		machinePodListAfterTest := &corev1.PodList{}
+		Eventually(ctx, s.SeedKomega.List(machinePodListAfterTest, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
+			"app":              "machine",
+			"machine-provider": "local",
+		})).Should(Succeed())
+
+		machinePodNamesAfterTest := sets.New[string]()
+		for _, item := range machinePodListAfterTest.Items {
+			machinePodNamesAfterTest.Insert(item.Name)
+		}
+
+		Expect(machinePodNamesBeforeTest.UnsortedList()).To(ConsistOf(machinePodNamesAfterTest.UnsortedList()))
 	}, SpecTimeout(time.Minute))
 }
