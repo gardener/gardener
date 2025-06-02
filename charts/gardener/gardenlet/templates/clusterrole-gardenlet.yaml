@@ -174,6 +174,9 @@ rules:
   - machinesets.machine.sapcloud.io
   - machines.machine.sapcloud.io
   - multilineparsers.fluentbit.fluent.io
+  - perses.perses.dev
+  - persesdashboards.perses.dev
+  - persesdatasources.perses.dev
   verbs:
   - delete
 - apiGroups:

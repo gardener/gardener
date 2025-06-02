@@ -57,6 +57,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/metricsserver"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/persesoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	aggregateprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	cacheprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
@@ -83,6 +84,7 @@ type components struct {
 	vpaCRD        component.DeployWaiter
 	fluentCRD     component.DeployWaiter
 	prometheusCRD component.DeployWaiter
+	persesCRD     component.DeployWaiter
 
 	backupBucket             component.DeployWaiter
 	clusterIdentity          component.DeployWaiter
@@ -115,6 +117,7 @@ type components struct {
 	seedPrometheus                component.DeployWaiter
 	aggregatePrometheus           component.DeployWaiter
 	alertManager                  component.DeployWaiter
+	persesOperator                component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -157,6 +160,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	if err != nil {
+		return
+	}
+	c.persesCRD, err = persesoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if err != nil {
 		return
 	}
@@ -248,6 +255,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed, seedIsGarden, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, alertingSMTPSecret)
+	if err != nil {
+		return
+	}
+	c.persesOperator, err = r.newPersesOperator()
 	if err != nil {
 		return
 	}
@@ -739,6 +750,14 @@ func (r *Reconciler) newKubeStateMetrics() (component.DeployWaiter, error) {
 
 func (r *Reconciler) newPrometheusOperator() (component.DeployWaiter, error) {
 	return sharedcomponent.NewPrometheusOperator(
+		r.SeedClientSet.Client(),
+		r.GardenNamespace,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+	)
+}
+
+func (r *Reconciler) newPersesOperator() (component.DeployWaiter, error) {
+	return sharedcomponent.NewPersesOperator(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		v1beta1constants.PriorityClassNameSeedSystem600,

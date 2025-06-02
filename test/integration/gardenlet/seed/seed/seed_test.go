@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/persesoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -591,6 +592,10 @@ var _ = Describe("Seed controller tests", func() {
 							"scrapeconfigs.monitoring.coreos.com",
 							"servicemonitors.monitoring.coreos.com",
 							"thanosrulers.monitoring.coreos.com",
+							// perses-operator
+							"perses.perses.dev",
+							"persesdashboards.perses.dev",
+							"persesdatasources.perses.dev",
 						}
 					)
 
@@ -649,7 +654,9 @@ var _ = Describe("Seed controller tests", func() {
 						Expect(err).NotTo(HaveOccurred())
 						fluentCRD, err := fluentoperator.NewCRDs(testClient, applier)
 						Expect(err).NotTo(HaveOccurred())
-						monitoringCRD, err := prometheusoperator.NewCRDs(testClient, applier)
+						prometheusCRD, err := prometheusoperator.NewCRDs(testClient, applier)
+						Expect(err).NotTo(HaveOccurred())
+						persesCRD, err := persesoperator.NewCRDs(testClient, applier)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
@@ -657,7 +664,8 @@ var _ = Describe("Seed controller tests", func() {
 						Expect(istioCRDs.Deploy(ctx)).To(Succeed())
 						Expect(vpaCRD.Deploy(ctx)).To(Succeed())
 						Expect(fluentCRD.Deploy(ctx)).To(Succeed())
-						Expect(monitoringCRD.Deploy(ctx)).To(Succeed())
+						Expect(prometheusCRD.Deploy(ctx)).To(Succeed())
+						Expect(persesCRD.Deploy(ctx)).To(Succeed())
 
 						DeferCleanup(func() {
 							Expect(applier.DeleteManifest(ctx, managedResourceCRDReader)).To(Succeed())
@@ -668,7 +676,8 @@ var _ = Describe("Seed controller tests", func() {
 							Expect(istioCRDs.Destroy(ctx)).To(Succeed())
 							Expect(vpaCRD.Destroy(ctx)).To(Succeed())
 							Expect(fluentCRD.Destroy(ctx)).To(Succeed())
-							Expect(monitoringCRD.Destroy(ctx)).To(Succeed())
+							Expect(prometheusCRD.Destroy(ctx)).To(Succeed())
+							Expect(persesCRD.Destroy(ctx)).To(Succeed())
 						})
 					}
 
@@ -697,6 +706,7 @@ var _ = Describe("Seed controller tests", func() {
 							"fluent-operator",
 							"fluent-operator-custom-resources",
 							"prometheus-operator",
+							"perses-operator",
 						)
 					}
 

@@ -230,6 +230,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 				return gardenerutils.DeleteVPAForGardenerComponent(ctx, r.SeedClientSet.Client(), v1beta1constants.DeploymentNameGardenlet, r.GardenNamespace)
 			},
 		})
+		destroyPersesOperator = g.Add(flow.Task{
+			Name:   "Destroy Perses Operator",
+			Fn:     component.OpDestroyAndWait(c.persesOperator).Destroy,
+			SkipIf: seedIsGarden,
+		})
 		destroyExtensionResources = g.Add(flow.Task{
 			Name: "Deleting extension resources",
 			Fn:   c.extension.Destroy,
@@ -265,6 +270,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyFluentOperator,
 			destroyVali,
 			destroyGardenletVPA,
+			destroyPersesOperator,
 			waitUntilExtensionResourcesDeleted,
 		)
 
@@ -304,12 +310,19 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
 			SkipIf:       seedIsGarden,
 		})
+		destroyPersesCRDs = g.Add(flow.Task{
+			Name:         "Destroy Perses Operator CRDs",
+			Fn:           component.OpDestroyAndWait(c.persesCRD).Destroy,
+			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
+			SkipIf:       seedIsGarden,
+		})
 
 		destroyCRDs = flow.NewTaskIDs(
 			destroyIstioCRDs,
 			destroyMachineControllerManagerCRDs,
 			destroyEtcdCRD,
 			destroyFluentOperatorCRDs,
+			destroyPersesCRDs,
 		)
 
 		destroySystemResources = g.Add(flow.Task{

@@ -1141,6 +1141,10 @@ build:
             - pkg/component/observability/monitoring/kubestatemetrics
             - pkg/component/observability/monitoring/metricsserver
             - pkg/component/observability/monitoring/nodeexporter
+            - pkg/component/observability/monitoring/persesoperator
+            - pkg/component/observability/monitoring/persesoperator/templates/crd-perses.dev_perses.yaml
+            - pkg/component/observability/monitoring/persesoperator/templates/crd-perses.dev_persesdashboards.yaml
+            - pkg/component/observability/monitoring/persesoperator/templates/crd-perses.dev_persesdatasources.yaml
             - pkg/component/observability/monitoring/prometheus
             - pkg/component/observability/monitoring/prometheus/aggregate
             - pkg/component/observability/monitoring/prometheus/aggregate/assets/prometheusrules/metering.rules.stateful.yaml
