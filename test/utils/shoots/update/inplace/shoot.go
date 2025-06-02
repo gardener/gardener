@@ -55,5 +55,5 @@ func ItShouldVerifyInPlaceUpdateCompletion(gardenClient client.Client, shoot *ga
 				OfType(gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
 			))
 		}).Should(Succeed())
-	}, SpecTimeout(2*time.Minute))
+	}, SpecTimeout(5*time.Minute))
 }

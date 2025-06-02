@@ -94,6 +94,7 @@ case $TYPE in
       e2e-rotate-wl.local
       e2e-rot-noroll.local
       e2e-rot-ip.local
+      e2e-rot-nr-ip.local
       e2e-default.local
       e2e-default-wl.local
       e2e-default-ip.local
