@@ -99,7 +99,7 @@ const (
 	// Operators are responsible for providing the credentials for backup explicitly.
 	// Credentials that were already copied will be labeled with "secret.backup.gardener.cloud/status=previously-managed" and would have to be cleaned up by operators.
 	// owner: @dimityrmirchev
-	// alpha: v1.120.1
+	// alpha: v1.121.0
 	DoNotCopyBackupCredentials featuregate.Feature = "DoNotCopyBackupCredentials"
 )
 
