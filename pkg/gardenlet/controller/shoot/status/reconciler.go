@@ -150,19 +150,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	log.Info("Updating Shoot status with manual in-place pending workers", "shoot", shoot.Name, "manualInPlacePendingWorkers", sets.List(manualInPlacePendingWorkers))
+	log.Info("Updating Shoot status with manual in-place pending workers", "manualInPlacePendingWorkers", sets.List(manualInPlacePendingWorkers))
 	if err := r.GardenClient.Status().Patch(ctx, shoot, patch); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to patch Shoot status: %w", err)
 	}
 
 	// The credentials rotation phases are not set to Prepared in the Shoot reconciliation flow if there are manual in-place pending workers. So we need to trigger a reconciliation after they are all updated.
 	if noManualInPlacePendingWorkers {
-		shootNeedsReconcile = (v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials) == gardencorev1beta1.RotationPreparing || v1beta1helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials) == gardencorev1beta1.RotationPreparing)
+		shootNeedsReconcile = needsReconcile(shoot)
 	}
 
 	if shootNeedsReconcile || (noInPlacePendingWorkers && kubernetesutils.HasMetaDataAnnotation(shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate)) {
 		patch := client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
 		if shootNeedsReconcile {
+			log.Info("Triggering a Shoot reconciliation after credential rotations for manual in-place workers are prepared")
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		} else {
 			delete(shoot.Annotations, v1beta1constants.GardenerOperation)
@@ -174,4 +175,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func needsReconcile(shoot *gardencorev1beta1.Shoot) bool {
+	caRotationPhase := v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials)
+	serviceAccountKeyRotationPhase := v1beta1helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials)
+
+	if caRotationPhase == gardencorev1beta1.RotationPreparing || serviceAccountKeyRotationPhase == gardencorev1beta1.RotationPreparing {
+		return true
+	}
+
+	// If there are no pending workers rollouts for either CA or ServiceAccountKey rotation, then we need to reconcile the Shoot.
+	if caRotationPhase == gardencorev1beta1.RotationWaitingForWorkersRollout && len(shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts) == 0 {
+		return true
+	}
+
+	return serviceAccountKeyRotationPhase == gardencorev1beta1.RotationWaitingForWorkersRollout && len(shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts) == 0
 }
