@@ -26,7 +26,7 @@ require (
 	github.com/google/go-containerregistry v0.20.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/ironcore-dev/vgopath v0.1.5
-	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
+	github.com/kubernetes-csi/external-snapshotter/client/v8 v8.2.0
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.37.0
@@ -85,6 +85,8 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0
 	sigs.k8s.io/yaml v1.4.0
 )
+
+require github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
 
 require (
 	cel.dev/expr v0.19.0 // indirect
