@@ -130,7 +130,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}, SpecTimeout(5*time.Minute))
 	}
 
-	nodesOfInPlaceWorkersBeforeTest := inplace.ItShouldFindNodesOfInPlaceWorkers(s)
+	machinePodNamesBeforeTest := ItShouldFindAllMachinePodsBefore(s)
 
 	ItShouldAnnotateShoot(s, map[string]string{
 		v1beta1constants.GardenerOperation: v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
@@ -154,8 +154,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
-	nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindNodesOfInPlaceWorkers(s)
-	Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
+	ItShouldCompareMachinePodNamesAfter(s, machinePodNamesBeforeTest)
 
 	It("Ensure all worker pools are marked as 'pending for roll out'", func() {
 		for _, worker := range s.Shoot.Spec.Provider.Workers {
