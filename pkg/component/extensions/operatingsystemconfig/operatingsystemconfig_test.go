@@ -55,7 +55,15 @@ import (
 
 var _ = Describe("OperatingSystemConfig", func() {
 	Describe("> Interface", func() {
-		const namespace = "test-namespace"
+		const (
+			namespace = "test-namespace"
+
+			worker1Name = "worker1"
+			worker2Name = "worker2"
+
+			inPlaceWorkerName1 = worker1Name + "-in-place"
+			inPlaceWorkerName2 = worker2Name + "-in-place"
+		)
 
 		var (
 			ctrl             *gomock.Controller
@@ -133,9 +141,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					nil
 			}
 
-			worker1Name = "worker1"
-			worker2Name = "worker2"
-			workers     = []gardencorev1beta1.Worker{
+			workers = []gardencorev1beta1.Worker{
 				{
 					Name: worker1Name,
 					Machine: gardencorev1beta1.Machine{
@@ -213,6 +219,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 			}
 			empty    *extensionsv1alpha1.OperatingSystemConfig
 			expected []*extensionsv1alpha1.OperatingSystemConfig
+
+			globalLastInitiationTime = &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)}
 		)
 
 		computeExpectedOperatingSystemConfigs := func(sshAccessEnabled, inPlaceUpdate bool) []*extensionsv1alpha1.OperatingSystemConfig {
@@ -371,15 +379,25 @@ var _ = Describe("OperatingSystemConfig", func() {
 					oscOriginal.Spec.Units = originalUnits
 					oscOriginal.Spec.Files = originalFiles
 
+					caRotationLastInitiationTime := globalLastInitiationTime
+					if worker.Name == inPlaceWorkerName1 {
+						caRotationLastInitiationTime = &metav1.Time{Time: time.Date(2020, 12, 2, 1, 0, 0, 0, time.UTC)}
+					}
+
+					serviceAccountKeyRotationLastInitiationTime := globalLastInitiationTime
+					if worker.Name == inPlaceWorkerName2 {
+						serviceAccountKeyRotationLastInitiationTime = &metav1.Time{Time: time.Date(2020, 12, 2, 2, 0, 0, 0, time.UTC)}
+					}
+
 					oscOriginal.Spec.InPlaceUpdates = &extensionsv1alpha1.InPlaceUpdates{
 						OperatingSystemVersion: *worker.Machine.Image.Version,
 						KubeletVersion:         k8sVersion.String(),
 						CredentialsRotation: &extensionsv1alpha1.CredentialsRotation{
 							CertificateAuthorities: &extensionsv1alpha1.CARotation{
-								LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)},
+								LastInitiationTime: caRotationLastInitiationTime,
 							},
 							ServiceAccountKey: &extensionsv1alpha1.ServiceAccountKeyRotation{
-								LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)},
+								LastInitiationTime: serviceAccountKeyRotationLastInitiationTime,
 							},
 						},
 					}
@@ -409,6 +427,82 @@ var _ = Describe("OperatingSystemConfig", func() {
 			By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-kubelet", Namespace: namespace}})).To(Succeed())
+
+			workers = []gardencorev1beta1.Worker{
+				{
+					Name: worker1Name,
+					Machine: gardencorev1beta1.Machine{
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Image: &gardencorev1beta1.ShootMachineImage{
+							Name:           "type1",
+							Version:        ptr.To("12.34"),
+							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
+						},
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					ControlPlane:          &gardencorev1beta1.WorkerControlPlane{},
+				},
+				{
+					Name: worker2Name,
+					Machine: gardencorev1beta1.Machine{
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Image: &gardencorev1beta1.ShootMachineImage{
+							Name:    "type2",
+							Version: ptr.To("12.34"),
+						},
+					},
+					CRI: &gardencorev1beta1.CRI{
+						Name: gardencorev1beta1.CRINameContainerD,
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+						Version: &workerKubernetesVersion,
+					},
+				},
+			}
+			inPlaceUpdateWorkers = []gardencorev1beta1.Worker{
+				{
+					Name: inPlaceWorkerName1,
+					Machine: gardencorev1beta1.Machine{
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Image: &gardencorev1beta1.ShootMachineImage{
+							Name:           "type1",
+							Version:        ptr.To("12.34"),
+							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
+						},
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+						Kubelet: &gardencorev1beta1.KubeletConfig{
+							KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
+								CPU:    ptr.To(resource.MustParse("100m")),
+								Memory: ptr.To(resource.MustParse("100Mi")),
+							},
+						},
+					},
+
+					UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+				},
+				{
+					Name: inPlaceWorkerName2,
+					Machine: gardencorev1beta1.Machine{
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Image: &gardencorev1beta1.ShootMachineImage{
+							Name:    "type2",
+							Version: ptr.To("12.34"),
+						},
+					},
+					CRI: &gardencorev1beta1.CRI{
+						Name: gardencorev1beta1.CRINameContainerD,
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+						Version: &workerKubernetesVersion,
+						Kubelet: &gardencorev1beta1.KubeletConfig{},
+					},
+					UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+				},
+			}
 
 			values = &Values{
 				Namespace:         namespace,
@@ -708,10 +802,22 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						CredentialsRotationStatus: &gardencorev1beta1.ShootCredentialsRotation{
 							CertificateAuthorities: &gardencorev1beta1.CARotation{
-								LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)},
+								LastInitiationTime: globalLastInitiationTime,
+								PendingWorkersRollouts: []gardencorev1beta1.PendingWorkersRollout{
+									{
+										Name:               inPlaceWorkerName1,
+										LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 1, 0, 0, 0, time.UTC)},
+									},
+								},
 							},
 							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
-								LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)},
+								LastInitiationTime: globalLastInitiationTime,
+								PendingWorkersRollouts: []gardencorev1beta1.PendingWorkersRollout{
+									{
+										Name:               inPlaceWorkerName2,
+										LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 2, 0, 0, 0, time.UTC)},
+									},
+								},
 							},
 						},
 					}
