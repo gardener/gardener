@@ -147,6 +147,7 @@ type ControlPlane struct {
 type Extensions struct {
 	ContainerRuntime      containerruntime.Interface
 	ControlPlane          controlplane.Interface
+	ControlPlaneExposure  controlplane.Interface
 	ExternalDNSRecord     dnsrecord.Interface
 	InternalDNSRecord     dnsrecord.Interface
 	IngressDNSRecord      dnsrecord.Interface

@@ -625,6 +625,24 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 
+		// TODO(theoddora): Remove this step in v1.123.0 when the Purpose field (exposure/normal) is removed.
+		destroyControlPlaneExposure = g.Add(flow.Task{
+			Name: "Destroying shoot control plane exposure",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.Destroy(ctx)
+			}),
+			SkipIf:       botanist.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
+		})
+		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
+			Name: "Waiting until shoot control plane exposure has been destroyed",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.WaitCleanup(ctx)
+			}),
+			SkipIf:       botanist.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(destroyControlPlaneExposure),
+		})
+
 		destroyIngressDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying nginx ingress DNS record",
 			Fn:           botanist.DestroyIngressDNSRecord,
@@ -672,6 +690,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			destroySeedLogging,
 			waitUntilKubeAPIServerDeleted,
 			waitUntilControlPlaneDeleted,
+			waitUntilControlPlaneExposureDeleted,
 			waitUntilExtensionResourcesAfterKubeAPIServerDeleted,
 			waitUntilExtensionResourcesDeleted,
 			destroyIngressDomainDNSRecord,
