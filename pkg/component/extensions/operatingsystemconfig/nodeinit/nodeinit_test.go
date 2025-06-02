@@ -53,6 +53,8 @@ var _ = Describe("Init", func() {
 					Enable:  ptr.To(true),
 					Content: ptr.To(`[Unit]
 Description=Downloads the gardener-node-agent binary from the container registry and bootstraps it.
+Requires=containerd.service
+After=containerd.service
 After=network-online.target
 Wants=network-online.target
 [Service]
