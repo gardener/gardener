@@ -60,6 +60,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			worker1Name = "worker1"
 			worker2Name = "worker2"
+
+			inPlaceWorkerName1 = worker1Name + "-in-place"
+			inPlaceWorkerName2 = worker2Name + "-in-place"
 		)
 
 		var (
@@ -143,6 +146,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			empty    *extensionsv1alpha1.OperatingSystemConfig
 			expected []*extensionsv1alpha1.OperatingSystemConfig
+
+			globalLastInitiationTime = &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)}
 		)
 
 		computeExpectedOperatingSystemConfigs := func(sshAccessEnabled bool, workers []gardencorev1beta1.Worker, inPlaceUpdate bool) []*extensionsv1alpha1.OperatingSystemConfig {
@@ -315,15 +320,25 @@ var _ = Describe("OperatingSystemConfig", func() {
 					oscOriginal.Spec.Units = originalUnits
 					oscOriginal.Spec.Files = originalFiles
 
+					caRotationLastInitiationTime := globalLastInitiationTime
+					if worker.Name == inPlaceWorkerName1 {
+						caRotationLastInitiationTime = &metav1.Time{Time: time.Date(2020, 12, 2, 1, 0, 0, 0, time.UTC)}
+					}
+
+					serviceAccountKeyRotationLastInitiationTime := globalLastInitiationTime
+					if worker.Name == inPlaceWorkerName2 {
+						serviceAccountKeyRotationLastInitiationTime = &metav1.Time{Time: time.Date(2020, 12, 2, 2, 0, 0, 0, time.UTC)}
+					}
+
 					oscOriginal.Spec.InPlaceUpdates = &extensionsv1alpha1.InPlaceUpdates{
 						OperatingSystemVersion: *worker.Machine.Image.Version,
 						KubeletVersion:         k8sVersion.String(),
 						CredentialsRotation: &extensionsv1alpha1.CredentialsRotation{
 							CertificateAuthorities: &extensionsv1alpha1.CARotation{
-								LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)},
+								LastInitiationTime: caRotationLastInitiationTime,
 							},
 							ServiceAccountKey: &extensionsv1alpha1.ServiceAccountKeyRotation{
-								LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)},
+								LastInitiationTime: serviceAccountKeyRotationLastInitiationTime,
 							},
 						},
 					}
@@ -388,7 +403,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			}
 			inPlaceUpdateWorkers = []gardencorev1beta1.Worker{
 				{
-					Name: worker1Name + "-in-place",
+					Name: inPlaceWorkerName1,
 					Machine: gardencorev1beta1.Machine{
 						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
@@ -410,7 +425,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
 				},
 				{
-					Name: worker2Name + "-in-place",
+					Name: inPlaceWorkerName2,
 					Machine: gardencorev1beta1.Machine{
 						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
@@ -728,10 +743,22 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						CredentialsRotationStatus: &gardencorev1beta1.ShootCredentialsRotation{
 							CertificateAuthorities: &gardencorev1beta1.CARotation{
-								LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)},
+								LastInitiationTime: globalLastInitiationTime,
+								PendingWorkersRollouts: []gardencorev1beta1.PendingWorkersRollout{
+									{
+										Name:               inPlaceWorkerName1,
+										LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 1, 0, 0, 0, time.UTC)},
+									},
+								},
 							},
 							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
-								LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)},
+								LastInitiationTime: globalLastInitiationTime,
+								PendingWorkersRollouts: []gardencorev1beta1.PendingWorkersRollout{
+									{
+										Name:               inPlaceWorkerName2,
+										LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 2, 0, 0, 0, time.UTC)},
+									},
+								},
 							},
 						},
 					}
