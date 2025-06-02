@@ -4,5 +4,10 @@ metadata:
   name: provider-local
 helm:
   values:
+    # Disable the DNS handling of provider-local as we don't need it in gardenadm for now.
+    # I.e., don't deploy a custom CoreDNS for resolving local DNSRecords and don't inject
+    # its IP into the dnsConfig of pods.
     coredns:
       enabled: false
+    disableWebhooks:
+    - dnsconfig

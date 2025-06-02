@@ -28,6 +28,13 @@ import (
 
 // DefaultWorker creates the default deployer for the Worker custom resource.
 func (b *Botanist) DefaultWorker() worker.Interface {
+	workers := b.Shoot.GetInfo().Spec.Provider.Workers
+	// In `gardenadm bootstrap` we only deploy the control plane worker pool. When running `gardenadm init` on the
+	// medium-touch control plane, the full `Worker` with all pools will be deployed.
+	if b.Shoot.IsAutonomous() && !b.Shoot.RunsControlPlane() {
+		workers = []gardencorev1beta1.Worker{*v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().DeepCopy())}
+	}
+
 	return worker.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -36,7 +43,7 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 			Name:                b.Shoot.GetInfo().Name,
 			Type:                b.Shoot.GetInfo().Spec.Provider.Type,
 			Region:              b.Shoot.GetInfo().Spec.Region,
-			Workers:             b.Shoot.GetInfo().Spec.Provider.Workers,
+			Workers:             workers,
 			KubernetesVersion:   b.Shoot.KubernetesVersion,
 			KubeletConfig:       b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
 			MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,

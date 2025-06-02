@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -73,6 +74,14 @@ func run(ctx context.Context, opts *Options) error {
 	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, false)
 	if err != nil {
 		return err
+	}
+
+	// Overwrite the OSC component to initialize the control plane machines with a static dummy user data secret.
+	// TODO(timebertt): replace this with a proper OperatingSystemConfig component implementation
+	b.Shoot.Components.Extensions.OperatingSystemConfig = &botanist.FakeOSC{
+		Client:                 b.SeedClientSet.Client(),
+		ControlPlaneWorkerPool: v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo()).Name,
+		ControlPlaneNamespace:  b.Shoot.ControlPlaneNamespace,
 	}
 
 	var (
@@ -165,14 +174,28 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
 
+		deployOperatingSystemConfig = g.Add(flow.Task{
+			Name:         "Deploying OperatingSystemConfig for control plane machines",
+			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+		})
+
 		deployMachineControllerManager = g.Add(flow.Task{
 			Name:         "Deploying machine-controller-manager",
 			Fn:           b.DeployMachineControllerManager,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
 
-		_ = waitUntilInfrastructureReady
-		_ = deployMachineControllerManager
+		deployWorker = g.Add(flow.Task{
+			Name:         "Deploying control plane machines",
+			Fn:           b.DeployWorker,
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady, deployOperatingSystemConfig, deployMachineControllerManager),
+		})
+		// The Machine objects won't get ready yet because there will not be any Node objects.
+		// TODO(timebertt): add b.Shoot.Components.Extensions.Worker.Wait when
+		//  https://github.com/gardener/machine-controller-manager/issues/994 has been implemented
+
+		_ = deployWorker
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
