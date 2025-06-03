@@ -9,6 +9,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"strings"
 	"text/template"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podkubeapiserverloadbalancing"
 	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -298,6 +300,17 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 			filename := fmt.Sprintf("envoyfilter__%s__%s.yaml", envoyFilter.Namespace, envoyFilter.Name)
 			registry.AddSerialized(filename, envoyFilterIstioTLSTermination.Bytes())
+		}
+
+		configMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Namespace: s.namespace, Name: podkubeapiserverloadbalancing.IstioInternalLoadBalancingConfigMapName},
+			Data: map[string]string{
+				podkubeapiserverloadbalancing.HostsConfigMapKey:          strings.Join(s.valuesFunc().Hosts, ","),
+				podkubeapiserverloadbalancing.IstioNamespaceConfigMapKey: s.valuesFunc().IstioIngressGateway.Namespace,
+			},
+		}
+		if err := registry.Add(configMap); err != nil {
+			return fmt.Errorf("failed to add istio-internal-load-balancing configmap to managed resource: %w", err)
 		}
 	}
 

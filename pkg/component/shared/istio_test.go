@@ -7,6 +7,7 @@ package shared_test
 import (
 	"context"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -44,6 +45,7 @@ type istioTestValues struct {
 	zones                              []string
 	dualStack                          bool
 	enforceSpreadAcrossHosts           bool
+	kubernetesVersion                  *semver.Version
 }
 
 func createIstio(testValues istioTestValues) istio.Interface {
@@ -74,6 +76,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.vpnEnabled,
 		testValues.zones,
 		testValues.dualStack,
+		testValues.kubernetesVersion,
 	)
 
 	Expect(err).To(Not(HaveOccurred()))
@@ -130,6 +133,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 				TerminateLoadBalancerProxyProtocol: testValues.terminateLoadBalancerProxyProtocol,
 				VPNEnabled:                         testValues.vpnEnabled,
 				EnforceSpreadAcrossHosts:           testValues.enforceSpreadAcrossHosts,
+				KubernetesVersion:                  testValues.kubernetesVersion.String(),
 			},
 		},
 		NamePrefix: testValues.prefix,
@@ -185,6 +189,7 @@ func checkAdditionalIstioGateway(cl client.Client,
 		Zones:                              zones,
 		DualStack:                          dualstack,
 		EnforceSpreadAcrossHosts:           enforceSpreadAcrossHosts,
+		KubernetesVersion:                  ingressValues[0].KubernetesVersion,
 	}))
 }
 
@@ -223,6 +228,7 @@ var _ = Describe("Istio", func() {
 			vpnEnabled:                         vpnEnabled,
 			zones:                              zones,
 			enforceSpreadAcrossHosts:           false,
+			kubernetesVersion:                  semver.MustParse("1.31.0"),
 		}
 
 		istioDeploy = createIstio(testValues)
@@ -344,7 +350,8 @@ var _ = Describe("Istio", func() {
 				serviceExternalIP,
 				zone,
 				false,
-				&proxyProtocolLB)).To(MatchError("at least one ingress gateway must be present before adding further ones"))
+				&proxyProtocolLB,
+				semver.MustParse("1.31.0"))).To(MatchError("at least one ingress gateway must be present before adding further ones"))
 		})
 
 		Context("without zone", func() {
@@ -364,7 +371,8 @@ var _ = Describe("Istio", func() {
 					serviceExternalIP,
 					zone,
 					false,
-					&proxyProtocolLB)).To(Succeed())
+					&proxyProtocolLB,
+					semver.MustParse("1.31.0"))).To(Succeed())
 
 				checkAdditionalIstioGateway(
 					testValues.client,
@@ -397,7 +405,8 @@ var _ = Describe("Istio", func() {
 					serviceExternalIP,
 					zone,
 					false,
-					&proxyProtocolLB)).To(Succeed())
+					&proxyProtocolLB,
+					semver.MustParse("1.31.0"))).To(Succeed())
 
 				checkAdditionalIstioGateway(
 					testValues.client,
@@ -433,7 +442,8 @@ var _ = Describe("Istio", func() {
 						serviceExternalIP,
 						zone,
 						false,
-						&proxyProtocolLB)).To(Succeed())
+						&proxyProtocolLB,
+						semver.MustParse("1.31.0"))).To(Succeed())
 
 					checkAdditionalIstioGateway(
 						testValues.client,
@@ -467,7 +477,8 @@ var _ = Describe("Istio", func() {
 					serviceExternalIP,
 					zone,
 					true,
-					&proxyProtocolLB)).To(Succeed())
+					&proxyProtocolLB,
+					semver.MustParse("1.31.0"))).To(Succeed())
 
 				checkAdditionalIstioGateway(
 					testValues.client,

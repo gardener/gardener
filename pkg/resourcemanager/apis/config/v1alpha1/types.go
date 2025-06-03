@@ -239,6 +239,8 @@ type ResourceManagerWebhookConfiguration struct {
 	KubernetesServiceHost KubernetesServiceHostWebhookConfig `json:"kubernetesServiceHost"`
 	// SystemComponentsConfig is the configuration for the system-components-config webhook.
 	SystemComponentsConfig SystemComponentsConfigWebhookConfig `json:"systemComponentsConfig"`
+	// PodKubeAPIServerLoadBalancing is the configuration for the pod-kube-apiserver-load-balancing webhook.
+	PodKubeAPIServerLoadBalancing PodKubeAPIServerLoadBalancingWebhookConfig `json:"podKubeAPIServerLoadBalancing"`
 	// PodSchedulerName is the configuration for the pod-scheduler-name webhook.
 	PodSchedulerName PodSchedulerNameWebhookConfig `json:"podSchedulerName"`
 	// PodTopologySpreadConstraints is the configuration for the pod-topology-spread-constraints webhook.
@@ -304,6 +306,12 @@ type SystemComponentsConfigWebhookConfig struct {
 	// PodTolerations are the tolerations that should be added to pods.
 	// +optional
 	PodTolerations []corev1.Toleration `json:"podTolerations,omitempty"`
+}
+
+// PodKubeAPIServerLoadBalancingWebhookConfig is the configuration for the pod-kube-apiserver-load-balancing webhook.
+type PodKubeAPIServerLoadBalancingWebhookConfig struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool `json:"enabled"`
 }
 
 // PodSchedulerNameWebhookConfig is the configuration for the pod-scheduler-name webhook.

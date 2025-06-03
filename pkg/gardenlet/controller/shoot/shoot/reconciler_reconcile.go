@@ -345,7 +345,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
-		_ = g.Add(flow.Task{
+		deployKubeAPIServerSNI = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service SNI settings in the Seed cluster",
 			Fn:           flow.TaskFn(botanist.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
@@ -365,7 +365,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
 			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, deployKubeAPIServerSNI),
 		})
 		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
 			Name:         "Waiting until gardener-resource-manager reports readiness",

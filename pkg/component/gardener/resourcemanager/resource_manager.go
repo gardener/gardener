@@ -61,6 +61,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/kubernetesservicehost"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podkubeapiserverloadbalancing"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
@@ -328,6 +329,8 @@ type Values struct {
 	NodeAgentAuthorizerEnabled bool
 	// NodeAgentAuthorizerAuthorizeWithSelectors specifies if node-agent-authorizer should allow authorization to use field selectors.
 	NodeAgentAuthorizerAuthorizeWithSelectors *bool
+	// PodKubeAPIServerLoadBalancingWebhookEnabled specifies if the pod-kube-apiserver-load-balancing webhook should be enabled.
+	PodKubeAPIServerLoadBalancingWebhookEnabled bool
 }
 
 // ResponsibilityMode is a string alias.
@@ -582,6 +585,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 				Enabled:                             !r.values.BootstrapControlPlaneNode,
 				DefaultNotReadyTolerationSeconds:    r.values.DefaultNotReadyToleration,
 				DefaultUnreachableTolerationSeconds: r.values.DefaultUnreachableToleration,
+			},
+			PodKubeAPIServerLoadBalancing: resourcemanagerconfigv1alpha1.PodKubeAPIServerLoadBalancingWebhookConfig{
+				Enabled: r.values.PodKubeAPIServerLoadBalancingWebhookEnabled,
 			},
 			PodTopologySpreadConstraints: resourcemanagerconfigv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
 				Enabled: r.values.PodTopologySpreadConstraintsEnabled,
@@ -1356,6 +1362,10 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, GetKubernetesServiceHostMutatingWebhook(nil, secretServerCA, buildClientConfigFn))
 	}
 
+	if r.values.PodKubeAPIServerLoadBalancingWebhookEnabled {
+		webhooks = append(webhooks, GetPodKubeAPIServerLoadBalancingMutatingWebhook(&metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}}, secretServerCA, buildClientConfigFn))
+	}
+
 	if r.values.ResponsibilityMode == ForTarget || r.values.ResponsibilityMode == ForSourceAndTarget {
 		webhooks = append(webhooks, GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
@@ -1633,6 +1643,36 @@ func (r *resourceManager) getProjectedTokenMountMutatingWebhook(namespaceSelecto
 			},
 		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, projectedtokenmount.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          ptr.To[int32](10),
+	}
+}
+
+// GetPodKubeAPIServerLoadBalancingMutatingWebhook returns the pod-kube-apiserver-load-balancing mutating webhook for
+// the resourcemanager component for reuse between the component and integration tests.
+func GetPodKubeAPIServerLoadBalancingMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "pod-kube-apiserver-load-balancing.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{corev1.GroupName},
+				APIVersions: []string{corev1.SchemeGroupVersion.Version},
+				Resources:   []string{"pods"},
+			},
+			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+		}},
+		NamespaceSelector:       namespaceSelector,
+		ObjectSelector:          &metav1.LabelSelector{},
+		ClientConfig:            buildClientConfigFn(secretServerCA, podkubeapiserverloadbalancing.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,

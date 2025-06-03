@@ -176,6 +176,11 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
+		istioIngressServiceInternal = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_service_internal.yaml")
+			return string(data)
+		}
+
 		istioIngressServiceDualStack = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_service_dualstack.yaml")
 			return string(data)
@@ -387,6 +392,7 @@ var _ = Describe("istiod", func() {
 				istioIngressRole(),
 				istioIngressRoleBinding(),
 				istioIngressService(),
+				istioIngressServiceInternal(),
 				istioIngressServiceAccount(),
 				istioIngressDeployment(minReplicas),
 				istioIngressServiceMonitor(),
@@ -1017,6 +1023,7 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string,
 			ProxyProtocolEnabled:               true,
 			TerminateLoadBalancerProxyProtocol: false,
 			VPNEnabled:                         true,
+			KubernetesVersion:                  "1.30.0",
 		},
 	}
 }

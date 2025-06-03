@@ -855,6 +855,7 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		false,
 		garden.Spec.RuntimeCluster.Provider.Zones,
 		false,
+		r.RuntimeVersion,
 	)
 }
 
