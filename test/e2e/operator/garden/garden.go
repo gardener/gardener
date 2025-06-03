@@ -70,6 +70,12 @@ var gardenManagedResourceList = []string{
 	"extension-admission-virtual-provider-local",
 	"extension-registration-provider-local",
 	"extension-provider-local-garden",
+	"extension-admission-runtime-networking-calico",
+	"extension-admission-virtual-networking-calico",
+	"extension-registration-networking-calico",
+	"extension-admission-runtime-networking-cilium",
+	"extension-admission-virtual-networking-cilium",
+	"extension-registration-networking-cilium",
 	"local-ext-shoot",
 }
 

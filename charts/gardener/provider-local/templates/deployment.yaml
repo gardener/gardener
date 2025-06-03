@@ -86,7 +86,6 @@ spec:
         - --disable-controllers={{ .Values.disableControllers | join "," }}
         - --disable-webhooks={{ .Values.disableWebhooks | join "," }}
         {{- end }}
-        - --webhook-config-namespace={{ .Release.Namespace }}
         - --webhook-config-service-port={{ .Values.webhookConfig.servicePort }}
         - --webhook-config-server-port={{ tpl .Values.webhookConfig.serverPort . }}
         - --metrics-bind-address=:{{ tpl .Values.metricsPort . }}
@@ -104,6 +103,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: WEBHOOK_CONFIG_NAMESPACE
+          value: {{ .Release.Namespace }}
         {{- if .Values.imageVectorOverwrite }}
         - name: IMAGEVECTOR_OVERWRITE
           value: /imagevector_overwrite/images_overwrite.yaml

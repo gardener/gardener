@@ -1,0 +1,49 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+- extension.yaml
+
+patches:
+- path: extension-patch.yaml
+- path: patch-extension-prow.yaml
+# The extension-generator (responsible for generating the `extension.yaml`) is not customizable to full extent. It
+# always generates the `resources` section with a relatively fixed set of resources. This patch removes the support for
+# Bastions (not yet implemented), and adds support for some specific `Extension` types.
+- patch: |
+    - op: remove
+      path: /spec/resources/2
+    - op: add
+      path: /spec/resources/-
+      value: {
+        "kind": "Extension",
+        "lifecycle": {
+          "delete": "AfterKubeAPIServer",
+          "migrate": "AfterKubeAPIServer",
+          "reconcile": "BeforeKubeAPIServer"
+        },
+        "type": "local-ext-seed",
+        "workerlessSupported": true
+      }
+    - op: add
+      path: /spec/resources/-
+      value: {
+        "kind": "Extension",
+        "type": "local-ext-shoot",
+        "clusterCompatibility": ["shoot", "garden"],
+        "workerlessSupported": true,
+      }
+    - op: add
+      path: /spec/resources/-
+      value: {
+        "kind": "Extension",
+        "lifecycle": {
+          "reconcile": "AfterWorker"
+        },
+        "type": "local-ext-shoot-after-worker"
+      }
+  target:
+    version: v1alpha1
+    group: operator.gardener.cloud
+    kind: Extension
+    name: provider-local

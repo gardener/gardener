@@ -37,7 +37,7 @@ kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" delete \
   --timeout 5m
 
 kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" annotate project local garden confirmation.gardener.cloud/deletion=true
-skaffold -f=skaffold.yaml --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m gardenlet -p operator
+skaffold -f=skaffold-operator-garden.yaml --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m gardenlet
 
 # workaround for https://github.com/gardener/gardener/issues/5164
 kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete ns \

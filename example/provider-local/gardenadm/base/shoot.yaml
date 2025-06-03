@@ -13,13 +13,13 @@ spec:
         backup:
           provider: local
           secretRef:
-            name: etcd-backup-local
-            namespace: kube-system
+            name: backup-local
+            namespace: garden
           credentialsRef:
             apiVersion: v1
             kind: Secret
-            name: etcd-backup-local
-            namespace: kube-system
+            name: backup-local
+            namespace: garden
       machine:
         type: local
       minimum: 1
