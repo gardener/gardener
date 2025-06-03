@@ -391,10 +391,11 @@ spec:
   config:
     seedConfig:
       spec:
-        scheduling:
-          visible: false
         taints:
           - key: seed.gardener.cloud/protected
+        settings:
+          scheduling:
+            visible: false
 ```
 
 Reference documentation:
