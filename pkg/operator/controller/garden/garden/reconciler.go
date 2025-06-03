@@ -24,11 +24,13 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/features"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
@@ -356,7 +358,12 @@ func (r *Reconciler) updateStatusOperationError(ctx context.Context, garden *ope
 }
 
 func (r *Reconciler) generateGenericTokenKubeconfig(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) error {
-	genericTokenKubeconfigSecret, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, secretsManager, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
+	kubeAPIServerAddress := namePrefix + v1beta1constants.DeploymentNameKubeAPIServer
+	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+		kubeAPIServerAddress = v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name)
+	}
+
+	genericTokenKubeconfigSecret, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, secretsManager, r.GardenNamespace, kubeAPIServerAddress)
 	if err != nil {
 		return err
 	}

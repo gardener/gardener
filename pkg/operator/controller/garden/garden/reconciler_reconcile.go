@@ -297,7 +297,7 @@ func (r *Reconciler) reconcile(
 			Fn:           c.kubeAPIServer.Wait,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
-		_ = g.Add(flow.Task{
+		deployKubeAPIServerSNI = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service SNI",
 			Fn:           c.kubeAPIServerSNI.Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
@@ -318,12 +318,12 @@ func (r *Reconciler) reconcile(
 				c.kubeControllerManager.SetServiceNetworks(services)
 				return component.OpWait(c.kubeControllerManager).Deploy(ctx)
 			},
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, deployKubeAPIServerSNI),
 		})
 		deployVirtualGardenGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager for virtual garden",
 			Fn:           r.deployVirtualGardenGardenerResourceManager(secretsManager, c.virtualGardenGardenerResourceManager),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, deployKubeAPIServerSNI),
 		})
 		waitUntilVirtualGardenGardenerResourceManagerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until gardener-resource-manager for virtual garden rolled out",
@@ -334,7 +334,7 @@ func (r *Reconciler) reconcile(
 		deployGardenerAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Gardener API Server",
 			Fn:           r.deployGardenerAPIServerFunc(garden, c.gardenerAPIServer),
-			Dependencies: flow.NewTaskIDs(waitUntilEtcdsReady, waitUntilKubeAPIServerIsReady, waitUntilVirtualGardenGardenerResourceManagerIsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdsReady, waitUntilKubeAPIServerIsReady, deployKubeAPIServerSNI, waitUntilVirtualGardenGardenerResourceManagerIsReady),
 		})
 		waitUntilGardenerAPIServerReady = g.Add(flow.Task{
 			Name:         "Waiting until Gardener API server rolled out",

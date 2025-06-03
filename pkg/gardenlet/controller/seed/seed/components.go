@@ -301,7 +301,15 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 		PriorityClassName:                         v1beta1constants.PriorityClassNameSeedSystemCritical,
 		SecretNameServerCA:                        v1beta1constants.SecretNameCASeed,
 		Zones:                                     seed.Spec.Provider.Zones,
-		PodKubeAPIServerLoadBalancingWebhookEnabled: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
+		PodKubeAPIServerLoadBalancingWebhook: resourcemanager.PodKubeAPIServerLoadBalancingWebhook{
+			Enabled: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
+			Configs: []resourcemanager.PodKubeAPIServerLoadBalancingWebhookConfig{
+				{
+					KubeAPIServerNamePrefix: "",
+					NamespaceSelector:       map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
+				},
+			},
+		},
 	})
 }
 
