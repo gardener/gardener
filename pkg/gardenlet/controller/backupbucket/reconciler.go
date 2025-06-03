@@ -190,7 +190,7 @@ func (r *Reconciler) reconcileBackupBucket(
 			mustReconcileExtensionBackupBucket = true
 		}
 	} else {
-		// check for errors, and if none are present, sync generated Secret to garden
+		// check for errors, and if none are present and extension doesn't need reconcile, sync generated Secret to garden
 		lastOperationState := extensionBackupBucket.Status.LastOperation.State
 		if extensionBackupBucket.Status.LastError != nil ||
 			lastOperationState == gardencorev1beta1.LastOperationStateError ||
@@ -204,8 +204,11 @@ func (r *Reconciler) reconcileBackupBucket(
 				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupBucket.Status.LastError.Description), extensionBackupBucket.Status.LastError.Codes...)
 			}
 		} else if lastOperationState == gardencorev1beta1.LastOperationStateSucceeded {
-			if err := r.syncGeneratedSecretToGarden(gardenCtx, seedCtx, backupBucket, extensionBackupBucket); err != nil {
-				return err
+			// If it has been 12 hours since the last reconciliation of the BackupBucket, reconcile it
+			if r.Clock.Since(extensionBackupBucket.Status.LastOperation.LastUpdateTime.Time) > 12*time.Hour {
+				mustReconcileExtensionBackupBucket = true
+			} else if err := r.syncGeneratedSecretToGarden(gardenCtx, seedCtx, backupBucket, extensionBackupBucket); err != nil {
+				return fmt.Errorf("failed to sync generated secret to garden: %w", err)
 			}
 		}
 	}

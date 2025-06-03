@@ -244,6 +244,23 @@ var _ = Describe("Controller", func() {
 		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
 		Expect(extensionBackupBucket.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 	})
+
+	It("should reconcile the extension BackupBucket if it's been 12hrs after the extension's last reconciliation", func() {
+		Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
+		extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{
+			State:          gardencorev1beta1.LastOperationStateSucceeded,
+			Type:           gardencorev1beta1.LastOperationTypeReconcile,
+			LastUpdateTime: metav1.NewTime(fakeClock.Now().Add(-13 * time.Hour)),
+		}
+		Expect(seedClient.Create(ctx, extensionBackupBucket)).To(Succeed())
+
+		result, err := reconciler.Reconcile(ctx, request)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(reconcile.Result{}))
+
+		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
+		Expect(extensionBackupBucket.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
+	})
 })
 
 func generateBackupBucketSecretName(backupBucketName string) string {
