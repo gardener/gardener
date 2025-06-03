@@ -186,69 +186,6 @@ func validateRuntimeCluster(dns *operatorv1alpha1.DNSManagement, runtimeCluster 
 
 	allErrs = append(allErrs, validateRuntimeClusterNetworking(runtimeCluster.Networking, fldPath.Child("networking"))...)
 
-	allErrs = append(allErrs, validateRuntimeClusterMonitoring(runtimeCluster.Monitoring, fldPath.Child("monitoring"))...)
-
-	return allErrs
-}
-
-func validateRuntimeClusterMonitoring(monitoring *operatorv1alpha1.Monitoring, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if monitoring == nil {
-		return allErrs
-	}
-
-	if monitoring.PrometheusGarden != nil {
-		allErrs = append(allErrs, validatePrometheusConfig(monitoring.PrometheusGarden, fldPath.Child("prometheusGarden"))...)
-	}
-
-	if monitoring.PrometheusLongterm != nil {
-		allErrs = append(allErrs, validatePrometheusConfig(monitoring.PrometheusLongterm, fldPath.Child("prometheusLongterm"))...)
-	}
-
-	return allErrs
-}
-
-func validatePrometheusConfig(config *operatorv1alpha1.PrometheusConfig, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if config == nil {
-		return allErrs
-	}
-
-	if config.Replicas < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("replicas"), config.Replicas, "must be a non-negative integer"))
-	}
-
-	if !config.Retention.IsZero() {
-		if config.Retention.Sign() <= 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("retention"), config.Retention.String(), "must be a positive quantity"))
-		}
-	}
-
-	if config.Storage != nil {
-		allErrs = append(allErrs, validatePrometheusStorage(config.Storage, config.Retention, fldPath.Child("storage"))...)
-	}
-
-	return allErrs
-}
-
-func validatePrometheusStorage(storage *operatorv1alpha1.Storage, retention resource.Quantity, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if storage.Capacity != nil && !storage.Capacity.IsZero() {
-		if storage.Capacity.Sign() <= 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("capacity"), storage.Capacity.String(), "must be a positive quantity"))
-		}
-		if retention.Sign() > 0 && storage.Capacity.Cmp(retention) < 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("capacity"), storage.Capacity.String(), "must be greater than or equal to the retention period"))
-		}
-	}
-
-	if storage.ClassName != nil {
-		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*storage.ClassName, fldPath.Child("className"))...)
-	}
-
 	return allErrs
 }
 

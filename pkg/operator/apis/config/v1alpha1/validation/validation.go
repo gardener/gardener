@@ -7,6 +7,7 @@ package validation
 import (
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
+	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	validationutils "github.com/gardener/gardener/pkg/utils/validation"
@@ -52,11 +54,69 @@ func validateControllerConfiguration(conf operatorconfigv1alpha1.ControllerConfi
 	return allErrs
 }
 
+func validateRuntimeClusterMonitoring(monitoring *operatorconfigv1alpha1.Monitoring, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if monitoring == nil {
+		return allErrs
+	}
+
+	if monitoring.PrometheusGarden != nil {
+		allErrs = append(allErrs, validatePrometheusConfig(monitoring.PrometheusGarden, fldPath.Child("prometheusGarden"))...)
+	}
+
+	if monitoring.PrometheusLongterm != nil {
+		allErrs = append(allErrs, validatePrometheusConfig(monitoring.PrometheusLongterm, fldPath.Child("prometheusLongterm"))...)
+	}
+
+	return allErrs
+}
+
+func validatePrometheusConfig(config *operatorconfigv1alpha1.PrometheusConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	if !config.Retention.IsZero() {
+		if config.Retention.Sign() <= 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("retention"), config.Retention.String(), "must be a positive quantity"))
+		}
+	}
+
+	if config.Storage != nil {
+		allErrs = append(allErrs, validatePrometheusStorage(config.Storage, config.Retention, fldPath.Child("storage"))...)
+	}
+
+	return allErrs
+}
+
+func validatePrometheusStorage(storage *operatorconfigv1alpha1.Storage, retention resource.Quantity, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if storage.Capacity != nil && !storage.Capacity.IsZero() {
+		if storage.Capacity.Sign() <= 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("capacity"), storage.Capacity.String(), "must be a positive quantity"))
+		}
+		if retention.Sign() > 0 && storage.Capacity.Cmp(retention) < 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("capacity"), storage.Capacity.String(), "must be greater than or equal to the retention period"))
+		}
+	}
+
+	if storage.ClassName != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*storage.ClassName, fldPath.Child("className"))...)
+	}
+
+	return allErrs
+}
+
 func validateGardenControllerConfiguration(conf operatorconfigv1alpha1.GardenControllerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateConcurrentSyncs(conf.ConcurrentSyncs, fldPath)...)
 	allErrs = append(allErrs, validateSyncPeriod(conf.SyncPeriod, fldPath)...)
+	allErrs = append(allErrs, validateRuntimeClusterMonitoring(conf.Monitoring, fldPath.Child("monitoring"))...)
 
 	return allErrs
 }
