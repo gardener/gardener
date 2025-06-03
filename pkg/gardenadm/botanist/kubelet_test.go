@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,8 +27,6 @@ import (
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	"github.com/gardener/gardener/pkg/utils/test"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Kubelet", func() {
@@ -114,34 +111,5 @@ var _ = Describe("Kubelet", func() {
 			Entry("with creation of token file", true),
 			Entry("with existing token file", false),
 		)
-	})
-
-	Describe("#BootstrapKubelet", func() {
-		BeforeEach(func() {
-			DeferCleanup(test.WithVar(&RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, _ afero.Afero, _ *rest.Config, _ string) error { return nil }))
-		})
-
-		It("should do nothing when the node was already found", func() {
-			Expect(fakeSeedClient.Create(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "foo", Labels: map[string]string{"kubernetes.io/hostname": hostName}}})).To(Succeed())
-
-			Expect(b.BootstrapKubelet(ctx)).To(Succeed())
-
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:node-bootstrapper"}, &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:certificates.k8s.io:certificatesigningrequests:nodeclient"}, &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient"}, &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
-
-			Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeFalse())
-		})
-
-		It("should write a bootstrap token and restart the kubelet unit", func() {
-			Expect(b.BootstrapKubelet(ctx)).To(Succeed())
-
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:node-bootstrapper"}, &rbacv1.ClusterRoleBinding{})).To(Succeed())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:certificates.k8s.io:certificatesigningrequests:nodeclient"}, &rbacv1.ClusterRoleBinding{})).To(Succeed())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient"}, &rbacv1.ClusterRoleBinding{})).To(Succeed())
-
-			Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeTrue())
-			Expect(fakeDBus.Actions).To(HaveExactElements(fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"kubelet.service"}}))
-		})
 	})
 })
