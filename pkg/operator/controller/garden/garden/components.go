@@ -1353,13 +1353,27 @@ func (r *Reconciler) newAlertmanager(log logr.Logger, garden *operatorv1alpha1.G
 }
 
 func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (prometheus.Interface, error) {
+	replicas := int32(2)
+	capacity := "200Gi"
+	retentionSize := "190GB"
+	var storageClassName *string
+	if monitoring := garden.Spec.RuntimeCluster.Monitoring; monitoring != nil && monitoring.PrometheusGarden != nil {
+		replicas = monitoring.PrometheusGarden.Replicas
+		retentionSize = monitoring.PrometheusGarden.Retention.String()
+		if monitoring.PrometheusGarden.Storage != nil {
+			capacity = monitoring.PrometheusGarden.Storage.Capacity.String()
+			storageClassName = monitoring.PrometheusGarden.Storage.ClassName
+		}
+	}
+
 	return sharedcomponent.NewPrometheus(log, r.RuntimeClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "garden",
 		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
-		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, "200Gi")),
-		Replicas:          2,
+		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, capacity)),
+		StorageClassName:  storageClassName,
+		Replicas:          replicas,
 		Retention:         ptr.To(monitoringv1.Duration("10d")),
-		RetentionSize:     "190GB",
+		RetentionSize:     monitoringv1.ByteSize(retentionSize),
 		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
 		RuntimeVersion:    r.RuntimeVersion,
 		ExternalLabels:    map[string]string{"landscape": garden.Spec.VirtualCluster.Gardener.ClusterIdentity},
@@ -1407,12 +1421,27 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 		return nil, err
 	}
 
+	replicas := int32(2)
+	capacity := "100Gi"
+	retentionSize := "80GB"
+	var storageClassName *string
+
+	if monitoring := garden.Spec.RuntimeCluster.Monitoring; monitoring != nil && monitoring.PrometheusLongterm != nil {
+		replicas = monitoring.PrometheusLongterm.Replicas
+		retentionSize = monitoring.PrometheusLongterm.Retention.String()
+		if monitoring.PrometheusLongterm.Storage != nil {
+			capacity = monitoring.PrometheusLongterm.Storage.Capacity.String()
+			storageClassName = monitoring.PrometheusLongterm.Storage.ClassName
+		}
+	}
+
 	return sharedcomponent.NewPrometheus(log, r.RuntimeClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "longterm",
 		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
-		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, "100Gi")),
-		Replicas:          2,
-		RetentionSize:     "80GB",
+		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, capacity)),
+		StorageClassName:  storageClassName,
+		Replicas:          replicas,
+		RetentionSize:     monitoringv1.ByteSize(retentionSize),
 		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
 		RuntimeVersion:    r.RuntimeVersion,
 		AdditionalPodLabels: map[string]string{
