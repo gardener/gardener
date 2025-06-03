@@ -7,9 +7,12 @@ package managedresources
 import (
 	"bytes"
 	"context"
+	"crypto/sha512"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -47,6 +50,14 @@ const (
 	LabelValueGardener = "gardener"
 	// LabelValueOperator is a value for an origin label on a managed resource with the value 'gardener-operator'.
 	LabelValueOperator = "gardener-operator"
+	// SigningSaltSecretNamespace is the namespace in which the signing secret is located.
+	SigningSaltSecretNamespace = v1beta1constants.GardenNamespace
+	// SigningSaltSecretName is the name of the secret containing the salt used for signing managed resources secrets.
+	SigningSaltSecretName = "gardener-resource-manager-signing-secret-salt"
+	// SigningSaltSecretKey is the key in the signing secret containing the salt used for signing managed resources secrets.
+	SigningSaltSecretKey = "salt"
+	// SignatureAnnotationKey is the key for the annotation on the secret containing the signature of managed resource secrets.
+	SignatureAnnotationKey = "gardener.cloud/managed-resource-signature"
 )
 
 // New initiates a new ManagedResource object which can be reconciled.
@@ -159,7 +170,7 @@ func Update(
 // Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
 func Create(
 	ctx context.Context,
-	client client.Client,
+	c client.Client,
 	namespace, name string,
 	labels map[string]string,
 	secretNameWithPrefix bool,
@@ -170,30 +181,56 @@ func Create(
 	forceOverwriteAnnotations *bool,
 ) error {
 	var (
-		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
-		managedResource    = New(client, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName)
+		signature, err     = calculateSignature(ctx, c, data)
+		secretName, secret = NewSecret(c, namespace, name, data, secretNameWithPrefix)
+		managedResource    = New(c, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName)
 	)
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
+
+	// we should fetch the signing secret here and calculate the signature before deploying the managed resources
 
 	return deployManagedResource(ctx, secret, managedResource)
 }
 
 // CreateForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
-func CreateForSeed(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
+func CreateForSeed(ctx context.Context, c client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
 	var (
-		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForSeed(client, namespace, name, keepObjects).WithSecretRef(secretName)
+		signature, err     = calculateSignature(ctx, c, data)
+		secretName, secret = NewSecret(c, namespace, name, data, true)
+		managedResource    = NewForSeed(c, namespace, name, keepObjects).WithSecretRef(secretName)
 	)
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
 
 	return deployManagedResource(ctx, secret, managedResource)
 }
 
 // CreateForSeedWithLabels deploys a ManagedResource CR for the seed's gardener-resource-manager and allows providing
 // additional labels.
-func CreateForSeedWithLabels(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
+func CreateForSeedWithLabels(ctx context.Context, c client.Client, namespace, name string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
 	var (
-		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForSeed(client, namespace, name, keepObjects).WithSecretRef(secretName).WithLabels(labels)
+		signature, err     = calculateSignature(ctx, c, data)
+		secretName, secret = NewSecret(c, namespace, name, data, true)
+		managedResource    = NewForSeed(c, namespace, name, keepObjects).WithSecretRef(secretName).WithLabels(labels)
 	)
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
 
 	return deployManagedResource(ctx, secret, managedResource)
 }
@@ -202,11 +239,19 @@ func CreateForSeedWithLabels(ctx context.Context, client client.Client, namespac
 // The origin is used to identify the creator of the managed resource. Gardener acts on resources
 // with "origin=gardener" label. External callers (extension controllers or other components)
 // of this function should provide their own unique origin value.
-func CreateForShoot(ctx context.Context, client client.Client, namespace, name, origin string, keepObjects bool, data map[string][]byte) error {
+func CreateForShoot(ctx context.Context, c client.Client, namespace, name, origin string, keepObjects bool, data map[string][]byte) error {
 	var (
-		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForShoot(client, namespace, name, origin, keepObjects).WithSecretRef(secretName)
+		signature, err     = calculateSignature(ctx, c, data)
+		secretName, secret = NewSecret(c, namespace, name, data, true)
+		managedResource    = NewForShoot(c, namespace, name, origin, keepObjects).WithSecretRef(secretName)
 	)
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
 
 	return deployManagedResource(ctx, secret, managedResource)
 }
@@ -215,13 +260,71 @@ func CreateForShoot(ctx context.Context, client client.Client, namespace, name, 
 // to identify the creator of the managed resource. Gardener acts on resources with "origin=gardener" label. External
 // callers (extension controllers or other components) of this function should provide their own unique origin value.
 // This function allows providing additional labels.
-func CreateForShootWithLabels(ctx context.Context, client client.Client, namespace, name, origin string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
+func CreateForShootWithLabels(ctx context.Context, c client.Client, namespace, name, origin string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
 	var (
-		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForShoot(client, namespace, name, origin, keepObjects).WithSecretRef(secretName).WithLabels(labels)
+		signature, err     = calculateSignature(ctx, c, data)
+		secretName, secret = NewSecret(c, namespace, name, data, true)
+		managedResource    = NewForShoot(c, namespace, name, origin, keepObjects).WithSecretRef(secretName).WithLabels(labels)
 	)
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
 
 	return deployManagedResource(ctx, secret, managedResource)
+}
+
+func VerifySignature(ctx context.Context, c client.Client, secret *corev1.Secret) error {
+	want, err := calculateSignature(ctx, c, secret.Data)
+	if err != nil {
+		return err
+	}
+	got, ok := secret.Annotations[SignatureAnnotationKey]
+	if !ok {
+		return fmt.Errorf("missing signature annotation %q in secret %q", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String())
+	}
+
+	if want != got {
+		return fmt.Errorf("invalid signature annotation %q for secret %q", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String())
+	}
+
+	return nil
+}
+
+func calculateSignature(ctx context.Context, c client.Client, data map[string][]byte) (string, error) {
+	saltSecret := &corev1.Secret{}
+	err := c.Get(ctx, client.ObjectKey{
+		Name:      SigningSaltSecretName,
+		Namespace: SigningSaltSecretNamespace,
+	}, saltSecret)
+	if err != nil {
+		return "", err
+	}
+
+	rawSalt, ok := saltSecret.Data[SigningSaltSecretKey]
+	if !ok {
+		return "", fmt.Errorf("could not find %q key in secret %q", SigningSaltSecretKey, client.ObjectKeyFromObject(saltSecret).String())
+	}
+
+	hash := sha512.New()
+	hash.Write(rawSalt)
+
+	secretKeys := make([]string, 0, len(data))
+	for secretKey := range data {
+		secretKeys = append(secretKeys, secretKey)
+	}
+	slices.Sort(secretKeys)
+
+	for _, secretKey := range secretKeys {
+		hash.Write([]byte(secretKey))
+		hash.Write(data[secretKey])
+	}
+
+	signature := hex.EncodeToString(hash.Sum(nil))
+	return signature, nil
 }
 
 func deployManagedResource(ctx context.Context, secret *builder.Secret, managedResource *builder.ManagedResource) error {

@@ -6,6 +6,7 @@ package resourcemanager
 
 import (
 	"context"
+	"crypto/rand"
 	_ "embed"
 	"fmt"
 	"slices"
@@ -28,6 +29,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -367,6 +369,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 
 	fns := []flow.TaskFn{
 		r.ensureServiceAccount,
+		r.ensureSigningSecret,
 		func(ctx context.Context) error {
 			return r.ensureConfigMap(ctx, configMap)
 		},
@@ -1102,6 +1105,30 @@ func (r *resourceManager) ensureServiceAccount(ctx context.Context) error {
 		return nil
 	})
 	return err
+}
+
+func (r *resourceManager) ensureSigningSecret(ctx context.Context) error {
+	saltSecret := &corev1.Secret{}
+	err := r.client.Get(ctx, client.ObjectKey{
+		Name:      managedresources.SigningSaltSecretName,
+		Namespace: managedresources.SigningSaltSecretNamespace,
+	}, saltSecret)
+
+	if !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	saltSecret = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      managedresources.SigningSaltSecretName,
+			Namespace: managedresources.SigningSaltSecretNamespace,
+		},
+		Data: map[string][]byte{
+			managedresources.SigningSaltSecretKey: []byte(rand.Text()),
+		},
+	}
+
+	return r.client.Create(ctx, saltSecret)
 }
 
 func (r *resourceManager) emptyServiceAccount() *corev1.ServiceAccount {
