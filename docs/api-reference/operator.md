@@ -2681,6 +2681,53 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.Monitoring">Monitoring
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.RuntimeCluster">RuntimeCluster</a>)
+</p>
+<p>
+<p>Monitoring contains the configuration for the monitoring components of the runtime cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>prometheusGarden</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.PrometheusConfig">
+PrometheusConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PrometheusGarden contains the configuration for the Prometheus components in the Garden cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>prometheusLongterm</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.PrometheusConfig">
+PrometheusConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PrometheusLongterm contains the configuration for the long-term Prometheus components in the Garden cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.Networking">Networking
 </h3>
 <p>
@@ -2754,6 +2801,60 @@ Kubernetes meta/v1.LabelSelector
 <em>(Optional)</em>
 <p>ProjectSelector is an optional setting to select the projects considered for quotas.
 Defaults to empty LabelSelector, which matches all projects.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.PrometheusConfig">PrometheusConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Monitoring">Monitoring</a>)
+</p>
+<p>
+<p>PrometheusConfig contains configuration for Prometheus components in the Garden cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>replicas</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>Replicas is the number of Prometheus replicas to run.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>retention</code></br>
+<em>
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</em>
+</td>
+<td>
+<p>Retention is the retention size for the Prometheus data.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>storage</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Storage">
+Storage
+</a>
+</em>
+</td>
+<td>
+<p>Storage is the storage configuration for Prometheus.</p>
 </td>
 </tr>
 </tbody>
@@ -3017,6 +3118,19 @@ Volume
 <td>
 <em>(Optional)</em>
 <p>Volume contains settings for persistent volumes created in the runtime cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>monitoring</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Monitoring">
+Monitoring
+</a>
+</em>
+</td>
+<td>
+<p>Monitoring contains the configuration for the monitoring components of the runtime cluster.</p>
 </td>
 </tr>
 </tbody>
@@ -3303,7 +3417,8 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/operations/to
 <p>
 (<em>Appears on:</em>
 <a href="#operator.gardener.cloud/v1alpha1.ETCDEvents">ETCDEvents</a>, 
-<a href="#operator.gardener.cloud/v1alpha1.ETCDMain">ETCDMain</a>)
+<a href="#operator.gardener.cloud/v1alpha1.ETCDMain">ETCDMain</a>, 
+<a href="#operator.gardener.cloud/v1alpha1.PrometheusConfig">PrometheusConfig</a>)
 </p>
 <p>
 <p>Storage contains storage configuration.</p>

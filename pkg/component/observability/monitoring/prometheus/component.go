@@ -66,6 +66,8 @@ type Values struct {
 	PriorityClassName string
 	// StorageCapacity is the storage capacity of Prometheus.
 	StorageCapacity resource.Quantity
+	// StorageClassName is the name of the storage class for the persistent volume claim.
+	StorageClassName *string
 	// Replicas is the number of replicas.
 	Replicas int32
 	// Retention is the duration for the data retention.

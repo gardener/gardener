@@ -87,6 +87,27 @@ type DNSProvider struct {
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
+// PrometheusConfig contains configuration for Prometheus components in the Garden cluster.
+type PrometheusConfig struct {
+	// Replicas is the number of Prometheus replicas to run.
+	// +kubebuilder:default=2
+	Replicas int32 `json:"replicas"`
+	// Retention is the retention size for the Prometheus data.
+	Retention resource.Quantity `json:"retention,omitempty"`
+	// Storage is the storage configuration for Prometheus.
+	Storage *Storage `json:"storage,omitempty"`
+}
+
+// Monitoring contains the configuration for the monitoring components of the runtime cluster.
+type Monitoring struct {
+	// PrometheusGarden contains the configuration for the Prometheus components in the Garden cluster.
+	// +optional
+	PrometheusGarden *PrometheusConfig `json:"prometheusGarden,omitempty"`
+	// PrometheusLongterm contains the configuration for the long-term Prometheus components in the Garden cluster.
+	// +optional
+	PrometheusLongterm *PrometheusConfig `json:"prometheusLongterm,omitempty"`
+}
+
 // RuntimeCluster contains configuration for the runtime cluster.
 type RuntimeCluster struct {
 	// Ingress configures Ingress specific settings for the Garden cluster.
@@ -101,6 +122,8 @@ type RuntimeCluster struct {
 	// Volume contains settings for persistent volumes created in the runtime cluster.
 	// +optional
 	Volume *Volume `json:"volume,omitempty"`
+	// Monitoring contains the configuration for the monitoring components of the runtime cluster.
+	Monitoring *Monitoring `json:"monitoring,omitempty"`
 }
 
 // Ingress configures the Ingress specific settings of the runtime cluster.
