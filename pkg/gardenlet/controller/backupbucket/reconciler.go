@@ -190,7 +190,7 @@ func (r *Reconciler) reconcileBackupBucket(
 			mustReconcileExtensionBackupBucket = true
 		}
 	} else {
-		// check for errors, and if none are present and renewal of storage key is not required, sync generated Secret to garden
+		// check for errors, and if none are present, sync generated Secret to garden
 		lastOperationState := extensionBackupBucket.Status.LastOperation.State
 		if extensionBackupBucket.Status.LastError != nil ||
 			lastOperationState == gardencorev1beta1.LastOperationStateError ||
@@ -204,14 +204,8 @@ func (r *Reconciler) reconcileBackupBucket(
 				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupBucket.Status.LastError.Description), extensionBackupBucket.Status.LastError.Codes...)
 			}
 		} else if lastOperationState == gardencorev1beta1.LastOperationStateSucceeded {
-			if renew, err := r.shouldRenewStorageKey(seedCtx, extensionBackupBucket.Status.GeneratedSecretRef); err != nil {
-				return fmt.Errorf("failed to check if storage key renewal is required: %w", err)
-			} else if renew {
-				// if the storage key renewal is required, reconcile the extension and wait for the updated secret before syncing it to garden
-				log.Info("Storage key renewal is required, will reconcile the extension BackupBucket", "extensionBackupBucket", client.ObjectKeyFromObject(extensionBackupBucket))
-				mustReconcileExtensionBackupBucket = true
-			} else if err := r.syncGeneratedSecretToGarden(gardenCtx, seedCtx, backupBucket, extensionBackupBucket); err != nil {
-				return fmt.Errorf("failed to sync generated secret to garden: %w", err)
+			if err := r.syncGeneratedSecretToGarden(gardenCtx, seedCtx, backupBucket, extensionBackupBucket); err != nil {
+				return err
 			}
 		}
 	}
@@ -403,35 +397,6 @@ func (r *Reconciler) syncGeneratedSecretToGarden(gardenCtx context.Context, seed
 	}
 
 	return nil
-}
-
-// shouldRenewStorageKey checks the generated secret for the BackupBucket to determine if the storage key should be renewed.
-// It is no-op if the BackupBucket does not use a generated secret.
-func (r *Reconciler) shouldRenewStorageKey(seedCtx context.Context, secretRef *corev1.SecretReference) (bool, error) {
-	if secretRef == nil {
-		return false, nil
-	}
-
-	generatedSecret, err := kubernetesutils.GetSecretByReference(seedCtx, r.SeedClient, secretRef)
-	if err != nil {
-		return false, fmt.Errorf("failed to get generated secret %s/%s: %w", secretRef.Namespace, secretRef.Name, err)
-	}
-
-	if generatedSecret == nil {
-		return false, nil
-	}
-
-	renewTimestamp, ok := generatedSecret.Annotations[RenewKeyTimeStampAnnotation]
-	if !ok {
-		return false, nil
-	}
-
-	renewTime, err := time.Parse(time.RFC3339Nano, renewTimestamp)
-	if err != nil {
-		return false, fmt.Errorf("failed to parse renew timestamp %s: %w", renewTimestamp, err)
-	}
-
-	return r.Clock.Now().UTC().After(renewTime), nil
 }
 
 func (r *Reconciler) deleteGeneratedBackupBucketSecretInGarden(ctx context.Context, log logr.Logger, backupBucket *gardencorev1beta1.BackupBucket) error {
