@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/kubernetesservicehost"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentauthorizer"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podkubeapiserverloadbalancing"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
@@ -80,6 +81,15 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			PodTolerations:  cfg.Webhooks.SystemComponentsConfig.PodTolerations,
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", systemcomponentsconfig.HandlerName, err)
+		}
+	}
+
+	if cfg.Webhooks.PodKubeAPIServerLoadBalancing.Enabled {
+		if err := (&podkubeapiserverloadbalancing.Handler{
+			Logger:       mgr.GetLogger().WithName("webhook").WithName(podkubeapiserverloadbalancing.HandlerName),
+			TargetClient: targetCluster.GetClient(),
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handler: %w", podkubeapiserverloadbalancing.HandlerName, err)
 		}
 	}
 
