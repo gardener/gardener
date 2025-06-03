@@ -44,7 +44,7 @@ spec:
 
 ## Migration Process
 
-The migration process should usually take place during the corresponding shoot maintenance time window. If you wish to run the migration process earlier, then you need to roll the nodes yourself and then trigger a reconcile so that the status of the `DualStackNodesMigrationReady` constraint is set to `true`. Once this is the case a new reconciles needs to be triggered to update the final components as described in step 5.  
+The migration process should usually take place during the corresponding shoot maintenance time window. If you wish to run the migration process earlier, then you need to roll the nodes yourself and then trigger a reconcile so that the status of the `DualStackNodesMigrationReady` constraint is set to `true`. Once this is the case a new reconcile needs to be triggered to update the final components as described in step 5.  
 
 ### Step 1: Update Networking Configuration
 
