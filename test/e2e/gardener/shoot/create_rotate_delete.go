@@ -75,6 +75,11 @@ func testCredentialRotation(s *ShootContext, shootVerifiers, utilsverifiers rota
 		}
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(s)
+
+		if inPlaceUpdate {
+			inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
+		}
+
 		shootVerifiers.AfterPrepared(context.TODO())
 		for _, k := range utilsverifiers {
 			It(fmt.Sprintf("Verify after prepared for %T", k), func(ctx SpecContext) {
@@ -122,7 +127,7 @@ func testCredentialRotationComplete(s *ShootContext, shootVerifiers, utilsverifi
 	}
 }
 
-func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers rotationutils.Verifiers, utilsverifiers rotationutils.Verifiers) {
+func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers rotationutils.Verifiers, utilsverifiers rotationutils.Verifiers, inPlaceUpdate bool) {
 	shootVerifiers.Before(context.TODO())
 	for _, k := range utilsverifiers {
 		It(fmt.Sprintf("Verify before for %T", k), func(ctx SpecContext) {
@@ -130,7 +135,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}, SpecTimeout(5*time.Minute))
 	}
 
-	nodesOfInPlaceWorkersBeforeTest := inplace.ItShouldFindNodesOfInPlaceWorkers(s)
+	machinePodNamesBeforeTest := ItShouldFindAllMachinePodsBefore(s)
 
 	ItShouldAnnotateShoot(s, map[string]string{
 		v1beta1constants.GardenerOperation: v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
@@ -154,8 +159,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
-	nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindNodesOfInPlaceWorkers(s)
-	Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
+	ItShouldCompareMachinePodNamesAfter(s, machinePodNamesBeforeTest)
 
 	It("Ensure all worker pools are marked as 'pending for roll out'", func() {
 		for _, worker := range s.Shoot.Spec.Provider.Workers {
@@ -207,7 +211,16 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		})).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
+	// In case of rotation without workers rollout, the in-place update status in only populated when the rollout for that worker pool is triggered
+	if inPlaceUpdate {
+		inplace.ItShouldVerifyInPlaceUpdateStart(s.GardenClient, s.Shoot, true, true)
+	}
+
 	ItShouldWaitForShootToBeReconciledAndHealthy(s)
+
+	if inPlaceUpdate {
+		inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
+	}
 
 	It("Credential rotation in status prepared", func() {
 		Expect(s.Shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationPrepared))
@@ -323,7 +336,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				// test rotation for every rotation type
 				testCredentialRotation(s, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, inPlaceUpdate)
 			} else {
-				testCredentialRotationWithoutWorkersRollout(s, shootVerifiers, utilsVerifiers)
+				testCredentialRotationWithoutWorkersRollout(s, shootVerifiers, utilsVerifiers, inPlaceUpdate)
 			}
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
@@ -334,7 +347,6 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				if inPlaceUpdate {
 					nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindNodesOfInPlaceWorkers(s)
 					Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
-					inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
 				}
 			}
 
@@ -391,6 +403,38 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				test(s, true, false)
 			})
 
+			Context("without workers rollout, in-place update strategy", Label("without-workers-rollout", "in-place"), Ordered, func() {
+				var s *ShootContext
+				BeforeTestSetup(func() {
+					shoot := DefaultShoot("e2e-rot-nr-ip")
+
+					worker1 := DefaultWorker("auto", ptr.To(gardencorev1beta1.AutoInPlaceUpdate))
+					worker1.Minimum = 2
+					worker1.Maximum = 2
+					worker1.MaxUnavailable = ptr.To(intstr.FromInt(1))
+					worker1.MaxSurge = ptr.To(intstr.FromInt(0))
+
+					worker2 := DefaultWorker("manual", ptr.To(gardencorev1beta1.ManualInPlaceUpdate))
+
+					// Add a third worker pool when worker rollout should not be performed such that we can make proper
+					// assertions of the shoot status
+					worker3 := DefaultWorker("rolling", nil)
+
+					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{worker1, worker2, worker3}
+
+					s = NewTestContext().ForShoot(shoot)
+				})
+
+				// Skip the test for IPv6 single-stack Shoot as it is extremely flaky (success rate < 30%).
+				//
+				// TODO(shafeeqes, acumino, ary1992): Debug and fix the flaky test for ipv6.
+				if os.Getenv("IPFAMILY") == "ipv6" {
+					s.Log.Info("Skip the flaky credentials rotation with in-place update strategy e2e test for ipv6")
+					return
+				}
+
+				test(s, true, true)
+			})
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {

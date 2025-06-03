@@ -731,12 +731,13 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 
 	var caRotationLastInitiationTime, serviceAccountKeyRotationLastInitiationTime *metav1.Time
 
-	if o.values.CredentialsRotationStatus != nil {
-		if o.values.CredentialsRotationStatus.CertificateAuthorities != nil {
-			caRotationLastInitiationTime = o.values.CredentialsRotationStatus.CertificateAuthorities.LastInitiationTime
+	if credentialsRotation := o.values.CredentialsRotationStatus; credentialsRotation != nil {
+		if caRotation := credentialsRotation.CertificateAuthorities; caRotation != nil {
+			caRotationLastInitiationTime = v1beta1helper.LastInitiationTimeForWorkerPool(worker.Name, caRotation.PendingWorkersRollouts, caRotation.LastInitiationTime)
 		}
-		if o.values.CredentialsRotationStatus.ServiceAccountKey != nil {
-			serviceAccountKeyRotationLastInitiationTime = o.values.CredentialsRotationStatus.ServiceAccountKey.LastInitiationTime
+
+		if serviceAccountKeyRotation := credentialsRotation.ServiceAccountKey; serviceAccountKeyRotation != nil {
+			serviceAccountKeyRotationLastInitiationTime = v1beta1helper.LastInitiationTimeForWorkerPool(worker.Name, serviceAccountKeyRotation.PendingWorkersRollouts, serviceAccountKeyRotation.LastInitiationTime)
 		}
 	}
 
