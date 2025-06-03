@@ -19,6 +19,7 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 const (
@@ -68,7 +69,7 @@ func Add(mgr manager.Manager, args AddArgs) error {
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, args AddArgs) error {
-	predicates := extensionspredicate.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClass, args.Type)
+	predicates := predicateutils.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClass, args.Type)
 
 	c, err := builder.
 		ControllerManagedBy(mgr).

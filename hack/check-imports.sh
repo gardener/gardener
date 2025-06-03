@@ -24,13 +24,9 @@ this_module=$(go list -m)
 # setup virtual GOPATH
 source $(dirname $0)/vgopath-setup.sh
 
-# We need to explicitly pass GO111MODULE=off to import-boss as it is significantly slower otherwise,
-# see https://github.com/kubernetes/code-generator/issues/100.
-export GO111MODULE=off
-
 packages=()
 for p in "$@"; do
   packages+=("$this_module/${p#./}")
 done
 
-import-boss -v 1 "$(IFS=, ; echo "${packages[*]}")" 2>&1 | grep -Ev "Ignoring child directory"
+import-boss -v 1 ${packages[*]} 2>&1 | grep -Ev "Ignoring child directory"

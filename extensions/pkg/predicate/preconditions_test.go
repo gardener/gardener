@@ -6,12 +6,14 @@ package predicate_test
 
 import (
 	"context"
+	"encoding/json"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -172,3 +174,39 @@ var _ = Describe("Preconditions", func() {
 		})
 	})
 })
+
+func computeClusterWithShoot(
+	name string,
+	shootMeta *metav1.ObjectMeta,
+	shootSpec *gardencorev1beta1.ShootSpec,
+	shootStatus *gardencorev1beta1.ShootStatus,
+) *extensionsv1alpha1.Cluster {
+	shoot := &gardencorev1beta1.Shoot{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+			Kind:       "Shoot",
+		},
+	}
+
+	if shootMeta != nil {
+		shoot.ObjectMeta = *shootMeta
+	}
+	if shootSpec != nil {
+		shoot.Spec = *shootSpec
+	}
+	if shootStatus != nil {
+		shoot.Status = *shootStatus
+	}
+
+	shootJSON, err := json.Marshal(shoot)
+	Expect(err).To(Succeed())
+
+	return &extensionsv1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: extensionsv1alpha1.ClusterSpec{
+			Shoot: runtime.RawExtension{Raw: shootJSON},
+		},
+	}
+}

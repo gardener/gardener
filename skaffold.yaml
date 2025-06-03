@@ -27,8 +27,6 @@ build:
             - cmd/gardener-apiserver
             - cmd/gardener-apiserver/app
             - cmd/utils
-            - extensions/pkg/apis/config/v1alpha1
-            - extensions/pkg/util
             - pkg/api
             - pkg/api/core/shoot
             - pkg/api/extensions
@@ -46,6 +44,7 @@ build:
             - pkg/apis/core/validation
             - pkg/apis/extensions
             - pkg/apis/extensions/v1alpha1
+            - pkg/apis/extensions/v1alpha1/helper
             - pkg/apis/operations
             - pkg/apis/operations/install
             - pkg/apis/operations/v1alpha1
@@ -250,8 +249,6 @@ build:
             - cmd/gardener-controller-manager/app
             - cmd/utils
             - cmd/utils/initrun
-            - extensions/pkg/apis/config/v1alpha1
-            - extensions/pkg/util
             - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
@@ -267,6 +264,7 @@ build:
             - pkg/apis/core/v1beta1/helper
             - pkg/apis/extensions
             - pkg/apis/extensions/v1alpha1
+            - pkg/apis/extensions/v1alpha1/helper
             - pkg/apis/operations
             - pkg/apis/operations/install
             - pkg/apis/operations/v1alpha1
@@ -289,9 +287,6 @@ build:
             - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
-            - pkg/client/seedmanagement/clientset/versioned
-            - pkg/client/seedmanagement/clientset/versioned/scheme
-            - pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1
             - pkg/component
             - pkg/component/garden/projectrbac
             - pkg/controller/reference
@@ -367,7 +362,6 @@ build:
             - pkg/utils/validation/features
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
-            - plugin/pkg/utils
             - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:
@@ -381,8 +375,13 @@ build:
             - cmd/gardener-scheduler/app
             - cmd/utils
             - cmd/utils/initrun
+            - pkg/api
             - pkg/api/extensions
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
+            - pkg/apis/core/helper
             - pkg/apis/core/install
             - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
@@ -390,6 +389,7 @@ build:
             - pkg/apis/core/v1beta1/helper
             - pkg/apis/extensions
             - pkg/apis/extensions/v1alpha1
+            - pkg/apis/extensions/v1alpha1/helper
             - pkg/apis/operations
             - pkg/apis/operations/install
             - pkg/apis/operations/v1alpha1
@@ -408,6 +408,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/controllerutils
@@ -471,6 +472,10 @@ build:
             - pkg/admissioncontroller/webhook/admission/updaterestriction
             - pkg/admissioncontroller/webhook/auth/seed
             - pkg/admissioncontroller/webhook/auth/seed/graph
+            - pkg/api
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -499,10 +504,12 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/controllerutils
             - pkg/controllerutils/routes
+            - pkg/features
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/bootstrap/util
             - pkg/healthz
@@ -680,8 +687,13 @@ build:
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
+            - pkg/api
             - pkg/api/extensions
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
+            - pkg/apis/core/helper
             - pkg/apis/core/install
             - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
@@ -708,6 +720,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
@@ -746,6 +759,7 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/extensions
+            - pkg/features
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
@@ -966,13 +980,15 @@ build:
             - cmd/gardenlet/app
             - cmd/utils
             - cmd/utils/initrun
-            - extensions/pkg/controller
-            - extensions/pkg/predicate
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
+            - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -1005,6 +1021,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/client/kubernetes/clientmap
@@ -1335,9 +1352,14 @@ build:
             - cmd/gardener-resource-manager/app
             - cmd/utils
             - cmd/utils/initrun
+            - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
+            - pkg/apis/core/helper
             - pkg/apis/core/install
             - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
@@ -1366,6 +1388,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/controller/tokenrequestor
@@ -1373,6 +1396,7 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/controllerutils/routes
+            - pkg/features
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
@@ -1446,15 +1470,17 @@ build:
             - cmd/gardener-node-agent/app
             - cmd/utils
             - cmd/utils/initrun
-            - extensions/pkg/apis/config/v1alpha1
-            - extensions/pkg/util
-            - extensions/pkg/webhook
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
+            - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
+            - pkg/apis/core/helper
             - pkg/apis/core/install
             - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
@@ -1481,6 +1507,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component

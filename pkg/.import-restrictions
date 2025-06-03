@@ -4,6 +4,9 @@ rules:
   - ''
   forbiddenPrefixes:
   - github.com/gardener/gardener/cmd # envtest overrides this
-  - github.com/gardener/gardener/extensions # provider-local overrides this
+  # extensions/ can import pkg/ but not the other way around as it can lead to cyclic dependencies.
+  # The extensions library might import more dependencies than the gardener core library needs or should have.
+  # See also: https://github.com/gardener/gardener/pull/12026#issuecomment-2865621229
+  - github.com/gardener/gardener/extensions # provider-local and OSC node init override this
   - github.com/gardener/gardener/plugin # apiserver and envtest override this
   - github.com/gardener/gardener/test

@@ -29,9 +29,9 @@ import (
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	timeutils "github.com/gardener/gardener/pkg/utils/time"
 	plugin "github.com/gardener/gardener/plugin/pkg"
-	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 var (
@@ -405,7 +405,7 @@ func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.Re
 }
 
 func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceList, error) {
-	cloudProfileSpec, err := utils.GetCloudProfileSpec(q.cloudProfileLister, q.namespacedCloudProfileLister, &shoot)
+	cloudProfileSpec, err := gardenerutils.GetCloudProfileSpec(q.cloudProfileLister, q.namespacedCloudProfileLister, &shoot)
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}

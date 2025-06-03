@@ -22,8 +22,8 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
-	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 const (
@@ -153,7 +153,7 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 		return nil
 	}
 
-	cloudProfileSpec, err := utils.GetCloudProfileSpec(c.cloudProfileLister, c.namespacedCloudProfileLister, shoot)
+	cloudProfileSpec, err := gardenerutils.GetCloudProfileSpec(c.cloudProfileLister, c.namespacedCloudProfileLister, shoot)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
