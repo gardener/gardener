@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: istio-ingressgateway-internal
+  namespace: test-ingress
+  annotations:
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"port":8132,"protocol":"TCP"},{"port":8443,"protocol":"TCP"},{"port":9443,"protocol":"TCP"}]'
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"extension"}},{"matchLabels":{"gardener.cloud/role":"shoot"}},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
+    networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-istio-ingresses
+    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":15020,"protocol":"TCP"}]'
+    service.kubernetes.io/topology-mode: "auto"
+    foo: bar
+  labels:
+    app.kubernetes.io/version: 1.25.1
+    endpoint-slice-hints.resources.gardener.cloud/consider: "true"
+    app: istio-ingressgateway
+    foo: bar
+spec:
+  type: ClusterIP
+  selector:
+    app: istio-ingressgateway
+    foo: bar
+  ports:
+  - name: foo
+    port: 999
+    targetPort: 999
