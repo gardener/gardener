@@ -56,10 +56,11 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 	return osc, secret.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig], nil
 }
 
-func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig, newOSCChecksum string, currentOSVersion *string) (*operatingSystemConfigChanges, error) {
+func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig, newOSCChecksum string, currentOSVersion *string, skipPersist bool) (*operatingSystemConfigChanges, error) {
 	changes := &operatingSystemConfigChanges{
 		fs:                            fs,
 		OperatingSystemConfigChecksum: newOSCChecksum,
+		skipPersist:                   skipPersist,
 	}
 
 	oldChanges, err := loadOSCChanges(fs)
@@ -68,7 +69,9 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 			return nil, fmt.Errorf("failed to load old osc changes file: %w", err)
 		}
 		// there is no file (yet), set to an empty file, the hashes will mismatch
-		oldChanges = &operatingSystemConfigChanges{}
+		oldChanges = &operatingSystemConfigChanges{
+			skipPersist: skipPersist,
+		}
 	}
 
 	if oldChanges.OperatingSystemConfigChecksum == changes.OperatingSystemConfigChecksum {

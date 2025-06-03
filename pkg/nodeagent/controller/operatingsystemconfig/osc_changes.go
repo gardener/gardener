@@ -16,8 +16,9 @@ import (
 )
 
 type operatingSystemConfigChanges struct {
-	lock sync.Mutex
-	fs   afero.Afero
+	lock        sync.Mutex
+	fs          afero.Afero
+	skipPersist bool
 
 	OperatingSystemConfigChecksum string     `json:"operatingSystemConfigChecksum"`
 	Units                         units      `json:"units"`
@@ -89,6 +90,10 @@ type certificateAuthoritiesRotation struct {
 // persist the operatingSystemConfigChanges to disk. persist() requires the caller to ensure no concurrent actions are
 // taking place by holding the lock.
 func (o *operatingSystemConfigChanges) persist() error {
+	if o.skipPersist {
+		return nil
+	}
+
 	out, err := yaml.Marshal(o)
 	if err != nil {
 		return fmt.Errorf("failed marshalling the changes into YAML: %w", err)

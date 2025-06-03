@@ -34,10 +34,9 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
-var _ = Describe("Nodeagent", func() {
+var _ = Describe("NodeAgent", func() {
 	var (
 		ctx         context.Context
 		namespace   string
@@ -91,39 +90,6 @@ var _ = Describe("Nodeagent", func() {
 		})
 
 		Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
-	})
-
-	Describe("#WriteNodeAgentKubeconfig", func() {
-		var kubeconfigRequested bool
-
-		BeforeEach(func() {
-			kubeconfigRequested = false
-
-			DeferCleanup(test.WithVar(&RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, _ afero.Afero, _ *rest.Config, _ string) error {
-				kubeconfigRequested = true
-				return nil
-			}))
-		})
-
-		It("should do nothing when bootstrap token file does not exist", func() {
-			Expect(b.WriteNodeAgentKubeconfig(ctx)).To(Succeed())
-			Expect(kubeconfigRequested).To(BeFalse())
-		})
-
-		It("should request a kubeconfig when bootstrap token file exists", func() {
-			Expect(b.FS.WriteFile("/var/lib/gardener-node-agent/credentials/bootstrap-token", []byte(fooToken), 0o600)).To(Succeed())
-
-			Expect(b.WriteNodeAgentKubeconfig(ctx)).To(Succeed())
-			Expect(kubeconfigRequested).To(BeTrue())
-		})
-
-		It("should do nothing when kubeconfig and bootstrap token file exist", func() {
-			Expect(b.FS.WriteFile("/var/lib/gardener-node-agent/credentials/bootstrap-token", []byte(fooToken), 0o600)).To(Succeed())
-			Expect(b.FS.WriteFile("/var/lib/gardener-node-agent/credentials/kubeconfig", []byte("fooconfig"), 0o600)).To(Succeed())
-
-			Expect(b.WriteNodeAgentKubeconfig(ctx)).To(Succeed())
-			Expect(kubeconfigRequested).To(BeFalse())
-		})
 	})
 
 	Describe("#ApproveNodeAgentCertificateSigningRequest", func() {

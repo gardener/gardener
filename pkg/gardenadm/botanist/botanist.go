@@ -48,10 +48,7 @@ type AutonomousBotanist struct {
 	FS         afero.Afero
 	Extensions []Extension
 
-	operatingSystemConfigSecret *corev1.Secret
-	isInitOperatingSystemConfig bool
-
-	enableNodeAgentAuthorizer         bool
+	operatingSystemConfigSecret       *corev1.Secret
 	gardenerResourceManagerServiceIPs []string
 }
 

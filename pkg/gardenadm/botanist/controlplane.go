@@ -31,7 +31,9 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -63,7 +65,25 @@ func (b *AutonomousBotanist) deployETCD(role string) func(context.Context) error
 func (b *AutonomousBotanist) deployKubeAPIServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(ptr.To[int32](0))
-	return b.DeployKubeAPIServer(ctx, b.enableNodeAgentAuthorizer)
+
+	var enableNodeAgentAuthorizer bool
+	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		// kube-apiserver must be able to resolve the gardener-resource-manager service IP to access the
+		// node-agent-authorizer webhook. Thus, we fetch the service IP. It is used to create a host alias in the
+		// kube-apiserver pod spec later. If the service does not exist yet, then kube-apiserver is bootstrapped for the
+		// first time - in this case, we don't activate the authorizer webhook.
+		service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: resourcemanagerconstants.ServiceName, Namespace: b.Shoot.ControlPlaneNamespace}}
+		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(service), service); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("failed getting service %s: %w", client.ObjectKeyFromObject(service), err)
+			}
+		}
+
+		b.gardenerResourceManagerServiceIPs = service.Spec.ClusterIPs
+		enableNodeAgentAuthorizer = len(b.gardenerResourceManagerServiceIPs) > 0
+	}
+
+	return b.DeployKubeAPIServer(ctx, enableNodeAgentAuthorizer)
 }
 
 type staticControlPlaneComponent struct {
@@ -92,23 +112,26 @@ func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlane
 	}
 }
 
-// EnableNodeAgentAuthorizer enables node-agent-authorizer for the botanist.
-func (b *AutonomousBotanist) EnableNodeAgentAuthorizer(ctx context.Context) error {
-	b.enableNodeAgentAuthorizer = features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)
-
-	// Kube-apiserver must be able to resolve the gardener-resource-manager service IP to access the node-agent-authorizer webhook.
-	// Thus, we fetch the service IP. It is used to create a host alias in the kube-apiserver pod spec later.
-	gardenerResourceManagerService := &corev1.Service{}
-	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: resourcemanagerconstants.ServiceName, Namespace: b.Shoot.ControlPlaneNamespace}, gardenerResourceManagerService); err != nil {
-		return fmt.Errorf("failed getting service %q: %w", resourcemanagerconstants.ServiceName, err)
+// DeployControlPlaneDeployments deploys the deployments for the static control plane components. It also updates the
+// OperatingSystemConfig and deploys the ManagedResource containing the Secret with OperatingSystemConfig for
+// gardener-node-agent.
+func (b *AutonomousBotanist) DeployControlPlaneDeployments(ctx context.Context) error {
+	if err := b.deployControlPlaneDeployments(ctx); err != nil {
+		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
-	b.gardenerResourceManagerServiceIPs = gardenerResourceManagerService.Spec.ClusterIPs
 
-	return nil
+	if _, _, err := b.deployOperatingSystemConfig(ctx); err != nil {
+		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
+	}
+
+	if err := b.DeployManagedResourceForGardenerNodeAgent(ctx); err != nil {
+		return fmt.Errorf("failed deploying ManagedResource containing Secret with OperatingSystemConfig for gardener-node-agent: %w", err)
+	}
+
+	return managedresources.WaitUntilHealthyAndNotProgressing(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, botanist.GardenerNodeAgentManagedResourceName)
 }
 
-// DeployControlPlaneDeployments deploys the deployments for the static control plane components.
-func (b *AutonomousBotanist) DeployControlPlaneDeployments(ctx context.Context) error {
+func (b *AutonomousBotanist) deployControlPlaneDeployments(ctx context.Context) error {
 	for _, component := range b.staticControlPlaneComponents() {
 		if err := b.deployControlPlaneComponent(ctx, component.deploy, component.targetObject, component.name); err != nil {
 			return fmt.Errorf("failed deploying %q: %w", component.name, err)
