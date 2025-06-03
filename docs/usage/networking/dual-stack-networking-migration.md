@@ -44,6 +44,8 @@ spec:
 
 ## Migration Process
 
+The migration process is configured to take place during the corresponding shoot maintenance time window. That implies that steps 2-5 will happen automatically during the maintenance time window. If you wish to run the migration process earlier, then you need to trigger yourself reconciliation for **Step 2** and **Step 5** below. 
+
 ### Step 1: Update Networking Configuration
 
 Modify the `spec.networking.ipFamilies` field to include the desired dual-stack configuration. For example, change `[IPv4]` to `[IPv4, IPv6]`.
