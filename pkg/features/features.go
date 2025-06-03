@@ -62,6 +62,7 @@ const (
 	// later point in time of their convenience.
 	// owner: @rfranzke
 	// alpha: v1.112.0
+	// beta: v1.121.0
 	CredentialsRotationWithoutWorkersRollout featuregate.Feature = "CredentialsRotationWithoutWorkersRollout"
 
 	// InPlaceNodeUpdates enables setting the update strategy of worker pools to `AutoInPlaceUpdate` or `ManualInPlaceUpdate` in the Shoot API.
@@ -134,7 +135,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	NewWorkerPoolHash:                        {Default: false, PreRelease: featuregate.Alpha},
 	NewVPN:                                   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	NodeAgentAuthorizer:                      {Default: true, PreRelease: featuregate.Beta},
-	CredentialsRotationWithoutWorkersRollout: {Default: false, PreRelease: featuregate.Alpha},
+	CredentialsRotationWithoutWorkersRollout: {Default: true, PreRelease: featuregate.Beta},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
 	RemoveAPIServerProxyLegacyPort:           {Default: true, PreRelease: featuregate.Beta},
 	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},
