@@ -82,6 +82,18 @@ func (mr *MockInterfaceMockRecorder) SetAPIResourceList(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAPIResourceList", reflect.TypeOf((*MockInterface)(nil).SetAPIResourceList), arg0)
 }
 
+// SetEgressCIDRs mocks base method.
+func (m *MockInterface) SetEgressCIDRs(arg0 []net.IPNet) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetEgressCIDRs", arg0)
+}
+
+// SetEgressCIDRs indicates an expected call of SetEgressCIDRs.
+func (mr *MockInterfaceMockRecorder) SetEgressCIDRs(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetEgressCIDRs", reflect.TypeOf((*MockInterface)(nil).SetEgressCIDRs), arg0)
+}
+
 // SetNodeNetworkCIDRs mocks base method.
 func (m *MockInterface) SetNodeNetworkCIDRs(arg0 []net.IPNet) {
 	m.ctrl.T.Helper()

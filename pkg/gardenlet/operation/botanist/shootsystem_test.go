@@ -31,6 +31,8 @@ var _ = Describe("ShootSystem", func() {
 		serviceCIDR = "2001:db8:1::/64"
 		podCIDR1    = "2001:db8:2::/64"
 		podCIDR2    = "2001:db8:3::/64"
+		egressCIDR1 = "100.64.0.1/32"
+		egressCIDR2 = "100.64.0.2/32"
 	)
 
 	BeforeEach(func() {
@@ -82,6 +84,10 @@ var _ = Describe("ShootSystem", func() {
 			Expect(err).ToNot(HaveOccurred())
 			_, pods2, err := net.ParseCIDR(podCIDR2)
 			Expect(err).ToNot(HaveOccurred())
+			_, egress1, err := net.ParseCIDR(egressCIDR1)
+			Expect(err).ToNot(HaveOccurred())
+			_, egress2, err := net.ParseCIDR(egressCIDR2)
+			Expect(err).ToNot(HaveOccurred())
 
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
@@ -90,9 +96,10 @@ var _ = Describe("ShootSystem", func() {
 					},
 				},
 				Networks: &shootpkg.Networks{
-					Nodes:    []net.IPNet{*nodes},
-					Pods:     []net.IPNet{*pods1, *pods2},
-					Services: []net.IPNet{*services},
+					Nodes:       []net.IPNet{*nodes},
+					Pods:        []net.IPNet{*pods1, *pods2},
+					Services:    []net.IPNet{*services},
+					EgressCIDRs: []net.IPNet{*egress1, *egress2},
 				},
 			}
 
@@ -100,6 +107,7 @@ var _ = Describe("ShootSystem", func() {
 			shootSystem.EXPECT().SetNodeNetworkCIDRs(botanist.Shoot.Networks.Nodes)
 			shootSystem.EXPECT().SetServiceNetworkCIDRs(botanist.Shoot.Networks.Services)
 			shootSystem.EXPECT().SetPodNetworkCIDRs(botanist.Shoot.Networks.Pods)
+			shootSystem.EXPECT().SetEgressCIDRs(botanist.Shoot.Networks.EgressCIDRs)
 		})
 
 		It("should discover the API and deploy", func() {

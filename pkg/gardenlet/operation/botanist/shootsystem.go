@@ -56,5 +56,6 @@ func (b *Botanist) DeployShootSystem(ctx context.Context) error {
 	b.Shoot.Components.SystemComponents.Resources.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
 	b.Shoot.Components.SystemComponents.Resources.SetServiceNetworkCIDRs(b.Shoot.Networks.Services)
 	b.Shoot.Components.SystemComponents.Resources.SetNodeNetworkCIDRs(b.Shoot.Networks.Nodes)
+	b.Shoot.Components.SystemComponents.Resources.SetEgressCIDRs(b.Shoot.Networks.EgressCIDRs)
 	return b.Shoot.Components.SystemComponents.Resources.Deploy(ctx)
 }

@@ -44,6 +44,7 @@ type Interface interface {
 	SetPodNetworkCIDRs([]net.IPNet)
 	SetServiceNetworkCIDRs([]net.IPNet)
 	SetNodeNetworkCIDRs([]net.IPNet)
+	SetEgressCIDRs([]net.IPNet)
 }
 
 // Values is a set of configuration values for the system resources.
@@ -70,6 +71,8 @@ type Values struct {
 	ServiceNetworkCIDRs []net.IPNet
 	// NodeNetworkCIDRs are the CIDRs of the node network.
 	NodeNetworkCIDRs []net.IPNet
+	// EgressCIDRs are the egress CIDRs of the cluster, actual presence of this field depends on the implementation of the provider extension.
+	EgressCIDRs []net.IPNet
 }
 
 // New creates a new instance of DeployWaiter for shoot system resources.
@@ -118,6 +121,10 @@ func (s *shootSystem) SetServiceNetworkCIDRs(services []net.IPNet) {
 
 func (s *shootSystem) SetNodeNetworkCIDRs(nodes []net.IPNet) {
 	s.values.NodeNetworkCIDRs = nodes
+}
+
+func (s *shootSystem) SetEgressCIDRs(cidrs []net.IPNet) {
+	s.values.EgressCIDRs = cidrs
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -370,6 +377,7 @@ func (s *shootSystem) shootInfoData() map[string]string {
 	addNetworkToMap("podNetworks", s.values.PodNetworkCIDRs, data)
 	addNetworkToMap("serviceNetworks", s.values.ServiceNetworkCIDRs, data)
 	addNetworkToMap("nodeNetworks", s.values.NodeNetworkCIDRs, data)
+	addNetworkToMap("egressCIDRs", s.values.EgressCIDRs, data)
 
 	return data
 }
