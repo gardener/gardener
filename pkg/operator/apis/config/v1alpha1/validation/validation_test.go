@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
@@ -190,6 +191,108 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("controllers.garden.syncPeriod"),
+					})),
+				))
+			})
+
+			It("should complain about invalid Garden prometheus retention", func() {
+				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.Monitoring{
+					PrometheusGarden: &operatorconfigv1alpha1.PrometheusConfig{
+						Retention: resource.MustParse("-1Gi"),
+					},
+					PrometheusLongterm: &operatorconfigv1alpha1.PrometheusConfig{
+						Retention: resource.MustParse("-1Gi"),
+					},
+				}
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.garden.monitoring.prometheusGarden.retention"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.garden.monitoring.prometheusLongterm.retention"),
+					})),
+				))
+			})
+
+			It("should complain about invalid Garden prometheus storage size", func() {
+				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.Monitoring{
+					PrometheusGarden: &operatorconfigv1alpha1.PrometheusConfig{
+						Storage: &operatorconfigv1alpha1.Storage{
+							Capacity: ptr.To(resource.MustParse("-1Gi")),
+						},
+					},
+					PrometheusLongterm: &operatorconfigv1alpha1.PrometheusConfig{
+						Storage: &operatorconfigv1alpha1.Storage{
+							Capacity: ptr.To(resource.MustParse("-1Gi")),
+						},
+					},
+				}
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.garden.monitoring.prometheusGarden.storage.capacity"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.garden.monitoring.prometheusLongterm.storage.capacity"),
+					})),
+				))
+			})
+
+			It("should complain if Garden prometheus retention is greater than storage size", func() {
+				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.Monitoring{
+					PrometheusGarden: &operatorconfigv1alpha1.PrometheusConfig{
+						Retention: resource.MustParse("10Gi"),
+						Storage: &operatorconfigv1alpha1.Storage{
+							Capacity: ptr.To(resource.MustParse("1Gi")),
+						},
+					},
+					PrometheusLongterm: &operatorconfigv1alpha1.PrometheusConfig{
+						Retention: resource.MustParse("10Gi"),
+						Storage: &operatorconfigv1alpha1.Storage{
+							Capacity: ptr.To(resource.MustParse("1Gi")),
+						},
+					},
+				}
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.garden.monitoring.prometheusGarden.storage.capacity"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.garden.monitoring.prometheusLongterm.storage.capacity"),
+					})),
+				))
+			})
+
+			It("should complain if Garden prometheus className is invalid", func() {
+				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.Monitoring{
+					PrometheusGarden: &operatorconfigv1alpha1.PrometheusConfig{
+						Storage: &operatorconfigv1alpha1.Storage{
+							ClassName: ptr.To("foo%"),
+						},
+					},
+					PrometheusLongterm: &operatorconfigv1alpha1.PrometheusConfig{
+						Storage: &operatorconfigv1alpha1.Storage{
+							ClassName: ptr.To("foo%"),
+						},
+					},
+				}
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.garden.monitoring.prometheusGarden.storage.className"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.garden.monitoring.prometheusLongterm.storage.className"),
 					})),
 				))
 			})
