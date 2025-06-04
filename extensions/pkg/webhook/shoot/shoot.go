@@ -47,16 +47,6 @@ type Args struct {
 func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger.Info("Creating webhook", "name", WebhookName)
 
-	wh := &extensionswebhook.Webhook{
-		Name:              WebhookName,
-		Types:             args.Types,
-		Path:              WebhookName,
-		Target:            extensionswebhook.TargetShoot,
-		NamespaceSelector: buildNamespaceSelector(),
-		ObjectSelector:    args.ObjectSelector,
-		FailurePolicy:     args.FailurePolicy,
-	}
-
 	if args.Mutator == nil {
 		return nil, fmt.Errorf("no mutator is set")
 	}
@@ -66,22 +56,20 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		return nil, err
 	}
 
-	wh.Webhook = &admission.Webhook{
-		Handler:      handler,
-		RecoverPanic: ptr.To(true),
-	}
-
-	wantsShootClient, ok := args.Mutator.(extensionswebhook.WantsShootClient)
-	if ok && wantsShootClient.WantsShootClient() {
-		wh.Webhook.WithContextFunc = func(ctx context.Context, request *http.Request) context.Context {
-			if request != nil {
-				ctx = context.WithValue(ctx, extensionswebhook.RemoteAddrContextKey{}, request.RemoteAddr) //nolint:staticcheck
-			}
-			return ctx
-		}
-	}
-
-	return wh, nil
+	return &extensionswebhook.Webhook{
+		Name:              WebhookName,
+		Types:             args.Types,
+		Path:              WebhookName,
+		Target:            extensionswebhook.TargetShoot,
+		NamespaceSelector: buildNamespaceSelector(),
+		ObjectSelector:    args.ObjectSelector,
+		FailurePolicy:     args.FailurePolicy,
+		Webhook: &admission.Webhook{
+			Handler:         handler,
+			RecoverPanic:    ptr.To(true),
+			WithContextFunc: injectRemoteAddrIntoContextFunc(args.Mutator),
+		},
+	}, nil
 }
 
 // buildNamespaceSelector creates and returns a LabelSelector for the given webhook kind and provider.
@@ -92,4 +80,23 @@ func buildNamespaceSelector() *metav1.LabelSelector {
 			{Key: v1beta1constants.GardenerPurpose, Operator: metav1.LabelSelectorOpIn, Values: []string{metav1.NamespaceSystem}},
 		},
 	}
+}
+
+func injectRemoteAddrIntoContextFunc(mutator extensionswebhook.Mutator) func(context.Context, *http.Request) context.Context {
+	wantsShootClient, ok1 := mutator.(extensionswebhook.WantsShootClient)
+	wantsClusterObject, ok2 := mutator.(extensionswebhook.WantsClusterObject)
+
+	if (ok1 && wantsShootClient.WantsShootClient()) ||
+		(ok2 && wantsClusterObject.WantsClusterObject()) {
+		logger.Info("Setting function for injecting the remote address into context for shoot webhook since it either wants a shoot client or a Cluster object")
+
+		return func(ctx context.Context, request *http.Request) context.Context {
+			if request != nil {
+				ctx = context.WithValue(ctx, extensionswebhook.RemoteAddrContextKey{}, request.RemoteAddr) //nolint:staticcheck
+			}
+			return ctx
+		}
+	}
+
+	return nil
 }

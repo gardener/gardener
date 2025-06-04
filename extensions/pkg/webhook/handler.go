@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	extensionsconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
@@ -173,13 +174,20 @@ func (h *handler) handle(ctx context.Context, req admission.Request, m handlerAc
 		return admission.ValidationResponse(true, "")
 	}
 
-	wantsShootClient, ok := m.(WantsShootClient)
-	if ok && wantsShootClient.WantsShootClient() {
+	if wantsShootClient, ok := m.(WantsShootClient); ok && wantsShootClient.WantsShootClient() {
 		shootClient, err := h.constructShootClient(ctx)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed building shoot client: %w", err))
 		}
 		ctx = context.WithValue(ctx, ShootClientContextKey{}, shootClient) //nolint:staticcheck
+	}
+
+	if wantsClusterObject, ok := m.(WantsClusterObject); ok && wantsClusterObject.WantsClusterObject() {
+		cluster, err := h.constructClusterObject(ctx)
+		if err != nil {
+			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed building Cluster object: %w", err))
+		}
+		ctx = context.WithValue(ctx, ClusterObjectContextKey{}, cluster) //nolint:staticcheck
 	}
 
 	// Process the resource
@@ -237,37 +245,49 @@ type (
 	// value.
 	// The associated value will be of type string.
 	RemoteAddrContextKey struct{}
-	// ShootClientContextKey is a context key. It will be filled with an uncached Shoot client in case the
-	// WantsShootClient interface is implemented.
+	// ShootClientContextKey is a context key. In case the WantsShootClient interface is implemented, it will be filled
+	// with an uncached Shoot client.
 	// The associated value will be of type client.Client.
 	ShootClientContextKey struct{}
+	// ClusterObjectContextKey is a context key. In case the WantsClusterObject interface is implemented, it will be
+	// filled with a Cluster object containing the Shoot object for the request, as well as the corresponding Seed and
+	// CloudProfile objects.
+	// The associated value will be of type extensions.Cluster.
+	ClusterObjectContextKey struct{}
 )
 
-// WantsShootClient can be implemented if a mutator needs a client for the shoot cluster. The client will always be
+// WantsShootClient can be implemented if a mutator wants a client for the shoot cluster. The client will always be
 // an uncached client.
 type WantsShootClient interface {
 	// WantsShootClient returns true if the mutator wants a shoot client to be injected into the context.
 	WantsShootClient() bool
 }
 
-func (h *handler) constructShootClient(ctx context.Context) (client.Client, error) {
+// WantsClusterObject can be implemented if a mutator wants a Cluster object for the shoot cluster. It can be used to
+// read information about the Shoot, e.g., the specification, or information about the CloudProfile or Seed.
+type WantsClusterObject interface {
+	// WantsClusterObject returns true if the mutator wants a Cluster object to be injected into the context.
+	WantsClusterObject() bool
+}
+
+func (h *handler) determineShootNamespaceInSeed(ctx context.Context) (string, error) {
 	// TODO: replace this logic with a proper authentication mechanism
 	// see https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
 	// API servers should authenticate against webhooks servers using TLS client certs, from which the webhook
 	// can identify from which shoot cluster the webhook call is coming
 	remoteAddrValue := ctx.Value(RemoteAddrContextKey{})
 	if remoteAddrValue == nil {
-		return nil, fmt.Errorf("didn't receive remote address")
+		return "", fmt.Errorf("didn't receive remote address")
 	}
 
 	remoteAddr, ok := remoteAddrValue.(string)
 	if !ok {
-		return nil, fmt.Errorf("remote address expected to be string, got %T", remoteAddrValue)
+		return "", fmt.Errorf("remote address expected to be string, got %T", remoteAddrValue)
 	}
 
 	ipPort := strings.Split(remoteAddr, ":")
 	if len(ipPort) < 1 {
-		return nil, fmt.Errorf("remote address not parseable: %s", remoteAddr)
+		return "", fmt.Errorf("remote address not parseable: %s", remoteAddr)
 	}
 	ip := ipPort[0]
 
@@ -276,7 +296,7 @@ func (h *handler) constructShootClient(ctx context.Context) (client.Client, erro
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
 	}); err != nil {
-		return nil, fmt.Errorf("error while listing all kube-apiserver pods: %w", err)
+		return "", fmt.Errorf("error while listing all kube-apiserver pods: %w", err)
 	}
 
 	var shootNamespace string
@@ -288,7 +308,16 @@ func (h *handler) constructShootClient(ctx context.Context) (client.Client, erro
 	}
 
 	if len(shootNamespace) == 0 {
-		return nil, fmt.Errorf("could not find shoot namespace for webhook request from remote address %s", remoteAddr)
+		return "", fmt.Errorf("could not find shoot namespace for webhook request from remote address %s", remoteAddr)
+	}
+
+	return shootNamespace, nil
+}
+
+func (h *handler) constructShootClient(ctx context.Context) (client.Client, error) {
+	shootNamespace, err := h.determineShootNamespaceInSeed(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed determining shoot namespace for shoot client creation: %w", err)
 	}
 
 	_, shootClient, err := util.NewClientForShoot(ctx, h.client, shootNamespace, client.Options{}, extensionsconfigv1alpha1.RESTOptions{})
@@ -297,4 +326,13 @@ func (h *handler) constructShootClient(ctx context.Context) (client.Client, erro
 	}
 
 	return shootClient, nil
+}
+
+func (h *handler) constructClusterObject(ctx context.Context) (*extensionscontroller.Cluster, error) {
+	shootNamespace, err := h.determineShootNamespaceInSeed(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed determining shoot namespace for shoot client creation: %w", err)
+	}
+
+	return extensionscontroller.GetCluster(ctx, h.client, shootNamespace)
 }
