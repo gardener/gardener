@@ -114,7 +114,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	var (
 		allowBackup                    = o.Seed.GetInfo().Spec.Backup != nil
 		hasNodesCIDR                   = o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil && (o.Shoot.GetInfo().Status.Networking != nil || skipReadiness)
-		useDNS                         = botanist.ShootUsesDNS()
 		generation                     = o.Shoot.GetInfo().Generation
 		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
 		kubeProxyEnabled               = v1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
@@ -448,26 +447,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployNamespace, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
-		deployControlPlaneExposure = g.Add(flow.Task{
-			Name:         "Deploying shoot control plane exposure components",
-			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       o.Shoot.IsWorkerless || useDNS,
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
-		})
-		waitUntilControlPlaneExposureReady = g.Add(flow.Task{
-			Name: "Waiting until Shoot control plane exposure has been reconciled",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.Wait(ctx)
-			}),
-			SkipIf:       o.Shoot.IsWorkerless || useDNS || skipReadiness,
-			Dependencies: flow.NewTaskIDs(deployControlPlaneExposure),
-		})
+		// TODO(theoddora): Remove this step after v1.123 was released when the Purpose field (exposure/normal) is removed.
 		destroyControlPlaneExposure = g.Add(flow.Task{
 			Name: "Destroying shoot control plane exposure",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.Destroy(ctx)
 			}),
-			SkipIf:       o.Shoot.IsWorkerless || !useDNS,
+			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
 		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
@@ -475,7 +461,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.WaitCleanup(ctx)
 			}),
-			SkipIf:       o.Shoot.IsWorkerless || !useDNS,
+			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(destroyControlPlaneExposure),
 		})
 		deployGardenerAccess = g.Add(flow.Task{
@@ -486,7 +472,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady, waitUntilControlPlaneExposureReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord, deployGardenerAccess),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord, deployGardenerAccess),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Sync public service account signing keys to Garden cluster",
@@ -1045,7 +1031,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskRestartControlPlanePods)
 			}),
 			SkipIf:       !requestControlPlanePodsRestart,
-			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane, deployControlPlaneExposure),
+			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane),
 		})
 	)
 

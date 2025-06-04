@@ -44,7 +44,6 @@ var _ = Describe("migration", func() {
 
 		containerRuntime      *mockcontainerruntime.MockInterface
 		controlPlane          *mockcontrolplane.MockInterface
-		controlPlaneExposure  *mockcontrolplane.MockInterface
 		infrastructure        *mockinfrastructure.MockInterface
 		network               *mocknetwork.MockInterface
 		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
@@ -63,7 +62,6 @@ var _ = Describe("migration", func() {
 
 		containerRuntime = mockcontainerruntime.NewMockInterface(ctrl)
 		controlPlane = mockcontrolplane.NewMockInterface(ctrl)
-		controlPlaneExposure = mockcontrolplane.NewMockInterface(ctrl)
 		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
 		network = mocknetwork.NewMockInterface(ctrl)
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
@@ -79,7 +77,6 @@ var _ = Describe("migration", func() {
 					Extensions: &shootpkg.Extensions{
 						ContainerRuntime:      containerRuntime,
 						ControlPlane:          controlPlane,
-						ControlPlaneExposure:  controlPlaneExposure,
 						Infrastructure:        infrastructure,
 						Network:               network,
 						OperatingSystemConfig: operatingSystemConfig,
@@ -97,7 +94,6 @@ var _ = Describe("migration", func() {
 	Describe("#MigrateAllExtensionResources", func() {
 		It("should call the Migrate() func of all extension components", func() {
 			containerRuntime.EXPECT().Migrate(ctx)
-			controlPlaneExposure.EXPECT().Migrate(ctx)
 			network.EXPECT().Migrate(ctx)
 			operatingSystemConfig.EXPECT().Migrate(ctx)
 			worker.EXPECT().Migrate(ctx)
@@ -107,7 +103,6 @@ var _ = Describe("migration", func() {
 
 		It("should return an error if not all the Migrate() func of all extension components succeed", func() {
 			containerRuntime.EXPECT().Migrate(ctx)
-			controlPlaneExposure.EXPECT().Migrate(ctx)
 			network.EXPECT().Migrate(ctx).Return(fakeErr)
 			operatingSystemConfig.EXPECT().Migrate(ctx)
 			worker.EXPECT().Migrate(ctx)
@@ -121,7 +116,6 @@ var _ = Describe("migration", func() {
 	Describe("#WaitUntilAllExtensionResourcesMigrated", func() {
 		It("should call the Migrate() func of all extension components", func() {
 			containerRuntime.EXPECT().WaitMigrate(ctx)
-			controlPlaneExposure.EXPECT().WaitMigrate(ctx)
 			network.EXPECT().WaitMigrate(ctx)
 			operatingSystemConfig.EXPECT().WaitMigrate(ctx)
 			worker.EXPECT().WaitMigrate(ctx)
@@ -137,7 +131,6 @@ var _ = Describe("migration", func() {
 
 		It("should return an error if not all the WaitMigrate() func of all extension components succeed", func() {
 			containerRuntime.EXPECT().WaitMigrate(ctx)
-			controlPlaneExposure.EXPECT().WaitMigrate(ctx)
 			network.EXPECT().WaitMigrate(ctx).Return(fakeErr)
 			operatingSystemConfig.EXPECT().WaitMigrate(ctx)
 			worker.EXPECT().WaitMigrate(ctx).Return(fakeErr)
@@ -151,7 +144,6 @@ var _ = Describe("migration", func() {
 	Describe("#DestroyAllExtensionResources", func() {
 		It("should call the Destroy() func of all extension components", func() {
 			containerRuntime.EXPECT().Destroy(ctx)
-			controlPlaneExposure.EXPECT().Destroy(ctx)
 			network.EXPECT().Destroy(ctx)
 			operatingSystemConfig.EXPECT().Destroy(ctx)
 			worker.EXPECT().Destroy(ctx)
@@ -167,14 +159,13 @@ var _ = Describe("migration", func() {
 
 		It("should return an error if not all the Destroy() func of all extension components succeed", func() {
 			containerRuntime.EXPECT().Destroy(ctx).Return(fakeErr)
-			controlPlaneExposure.EXPECT().Destroy(ctx).Return(fakeErr)
 			network.EXPECT().Destroy(ctx)
 			operatingSystemConfig.EXPECT().Destroy(ctx)
 			worker.EXPECT().Destroy(ctx)
 
 			err := botanist.DestroyExtensionResourcesInParallel(ctx)
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
-			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr), Equal(fakeErr)))
+			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr)))
 		})
 	})
 

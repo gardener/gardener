@@ -143,6 +143,7 @@ func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) exten
 		Purpose:   purpose,
 	}
 
+	// TODO(theoddora): Remove this after v1.123.0 was released when the Purpose field (exposure/normal) is removed.
 	switch purpose {
 	case extensionsv1alpha1.Normal:
 		values.Type = b.Shoot.GetInfo().Spec.Provider.Type
@@ -168,11 +169,6 @@ func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) exten
 func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 	b.Shoot.Components.Extensions.ControlPlane.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
 	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlane)
-}
-
-// DeployControlPlaneExposure deploys or restores the ControlPlane custom resource (purpose exposure).
-func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
-	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlaneExposure)
 }
 
 func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane extensionscontrolplane.Interface) error {
