@@ -98,7 +98,7 @@ var _ = BeforeSuite(func() {
 	By("Create garden Namespace")
 	gardenNs := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: managedresourcesutils.SigningSaltSecretNamespace,
+			Name: managedresourcesutils.SignatureSecretNamespace,
 		},
 	}
 	Expect(testClient.Create(ctx, gardenNs)).To(Or(Succeed(), BeAlreadyExistsError()))

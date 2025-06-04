@@ -139,24 +139,14 @@ var _ = Describe("Certificates tests", func() {
 		By("Create garden Namespace")
 		gardenNamespace := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: managedresources.SigningSaltSecretNamespace,
+				Name: managedresources.SignatureSecretNamespace,
 			},
 		}
 		err := testClient.Create(ctx, gardenNamespace)
 		Expect(err).To(Or(Succeed(), BeAlreadyExistsError()), "Failed to create garden Namespace")
 
 		By("Create resource manager signing secret")
-		signingSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      managedresources.SigningSaltSecretName,
-				Namespace: managedresources.SigningSaltSecretNamespace,
-			},
-			Data: map[string][]byte{
-				managedresources.SigningSaltSecretKey: []byte("test-salt"),
-			},
-		}
-		err = testClient.Create(ctx, signingSecret)
-		Expect(err).To(Or(Succeed(), BeAlreadyExistsError()), "Failed to create resource manager signing secret")
+		Expect(managedresources.EnsureSigningKeys(ctx, testClient)).To(Succeed())
 
 		// use unique extension name for each test,for unique webhook config name
 		extensionName = "provider-test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]

@@ -48,25 +48,11 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 	BeforeEach(func() {
 		gardenNs := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: managedresources.SigningSaltSecretNamespace,
+				Name: managedresources.SignatureSecretNamespace,
 			},
 		}
 		Expect(testClient.Create(ctx, gardenNs)).To(Or(Succeed(), BeAlreadyExistsError()))
-
-		signingSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      managedresources.SigningSaltSecretName,
-				Namespace: managedresources.SigningSaltSecretNamespace,
-			},
-			Data: map[string][]byte{
-				managedresources.SigningSaltSecretKey: []byte("test-salt"),
-			},
-		}
-		err := testClient.Create(ctx, signingSecret)
-		Expect(err).To(Or(BeNil(), BeAlreadyExistsError()))
-		DeferCleanup(func() {
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, signingSecret))).To(Succeed())
-		})
+		Expect(managedresources.EnsureSigningKeys(ctx, testClient)).To(Succeed())
 	})
 
 	BeforeEach(func() {

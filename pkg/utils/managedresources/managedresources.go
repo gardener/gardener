@@ -7,8 +7,14 @@ package managedresources
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha512"
+	"crypto/x509"
 	"encoding/hex"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -50,12 +56,16 @@ const (
 	LabelValueGardener = "gardener"
 	// LabelValueOperator is a value for an origin label on a managed resource with the value 'gardener-operator'.
 	LabelValueOperator = "gardener-operator"
-	// SigningSaltSecretNamespace is the namespace in which the signing secret is located.
-	SigningSaltSecretNamespace = v1beta1constants.GardenNamespace
-	// SigningSaltSecretName is the name of the secret containing the salt used for signing managed resources secrets.
-	SigningSaltSecretName = "gardener-resource-manager-signing-secret-salt"
-	// SigningSaltSecretKey is the key in the signing secret containing the salt used for signing managed resources secrets.
-	SigningSaltSecretKey = "salt"
+	// SignatureSecretNamespace is the namespace in which the signing secret is located.
+	SignatureSecretNamespace = v1beta1constants.GardenNamespace
+	// SignatureVerificationSecretName is the name of the secret containing the salt used for verifying managed resource secret signatures.
+	SignatureVerificationSecretName = "gardener-resource-manager-signing-secret-verify"
+	// SignatureSigningSecretName is the name of the secret containing the salt used for signing managed resources secrets.
+	SignatureSigningSecretName = "gardener-resource-manager-signing-secret-sign"
+	// SignaturePublicSecretKey is the key for the public key in the secret used for verifying managed resource secret signatures.
+	SignaturePublicSecretKey = "public-key"
+	// SignaturePrivateSecretKey is the key for the private key in the secret used for signing managed resource secrets.
+	SignaturePrivateSecretKey = "private-key"
 	// SignatureAnnotationKey is the key for the annotation on the secret containing the signature of managed resource secrets.
 	SignatureAnnotationKey = "gardener.cloud/managed-resource-signature"
 )
@@ -160,7 +170,7 @@ func Update(
 	forceOverwriteAnnotations *bool,
 ) error {
 	var (
-		signature, err     = CalculateSignature(ctx, client, data)
+		signature, err     = SignSecret(ctx, client, data)
 		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
 		managedResource    = New(client, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName).CreateIfNotExists(false)
 	)
@@ -190,7 +200,7 @@ func Create(
 	forceOverwriteAnnotations *bool,
 ) error {
 	var (
-		signature, err     = CalculateSignature(ctx, c, data)
+		signature, err     = SignSecret(ctx, c, data)
 		secretName, secret = NewSecret(c, namespace, name, data, secretNameWithPrefix)
 		managedResource    = New(c, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName)
 	)
@@ -210,7 +220,7 @@ func Create(
 // CreateForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
 func CreateForSeed(ctx context.Context, c client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
 	var (
-		signature, err     = CalculateSignature(ctx, c, data)
+		signature, err     = SignSecret(ctx, c, data)
 		secretName, secret = NewSecret(c, namespace, name, data, true)
 		managedResource    = NewForSeed(c, namespace, name, keepObjects).WithSecretRef(secretName)
 	)
@@ -229,7 +239,7 @@ func CreateForSeed(ctx context.Context, c client.Client, namespace, name string,
 // additional labels.
 func CreateForSeedWithLabels(ctx context.Context, c client.Client, namespace, name string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
 	var (
-		signature, err     = CalculateSignature(ctx, c, data)
+		signature, err     = SignSecret(ctx, c, data)
 		secretName, secret = NewSecret(c, namespace, name, data, true)
 		managedResource    = NewForSeed(c, namespace, name, keepObjects).WithSecretRef(secretName).WithLabels(labels)
 	)
@@ -250,7 +260,7 @@ func CreateForSeedWithLabels(ctx context.Context, c client.Client, namespace, na
 // of this function should provide their own unique origin value.
 func CreateForShoot(ctx context.Context, c client.Client, namespace, name, origin string, keepObjects bool, data map[string][]byte) error {
 	var (
-		signature, err     = CalculateSignature(ctx, c, data)
+		signature, err     = SignSecret(ctx, c, data)
 		secretName, secret = NewSecret(c, namespace, name, data, true)
 		managedResource    = NewForShoot(c, namespace, name, origin, keepObjects).WithSecretRef(secretName)
 	)
@@ -271,7 +281,7 @@ func CreateForShoot(ctx context.Context, c client.Client, namespace, name, origi
 // This function allows providing additional labels.
 func CreateForShootWithLabels(ctx context.Context, c client.Client, namespace, name, origin string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
 	var (
-		signature, err     = CalculateSignature(ctx, c, data)
+		signature, err     = SignSecret(ctx, c, data)
 		secretName, secret = NewSecret(c, namespace, name, data, true)
 		managedResource    = NewForShoot(c, namespace, name, origin, keepObjects).WithSecretRef(secretName).WithLabels(labels)
 	)
@@ -286,41 +296,142 @@ func CreateForShootWithLabels(ctx context.Context, c client.Client, namespace, n
 	return deployManagedResource(ctx, secret, managedResource)
 }
 
-func VerifySignature(ctx context.Context, c client.Client, secret *corev1.Secret) error {
-	got, ok := secret.Annotations[SignatureAnnotationKey]
-	if !ok {
-		return fmt.Errorf("missing signature annotation %q in secret %q", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String())
+func EnsureSigningKeys(ctx context.Context, c client.Client) error {
+	var (
+		privateErr    error
+		privateSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      SignatureSigningSecretName,
+				Namespace: SignatureSecretNamespace,
+			},
+		}
+		publicErr    error
+		publicSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      SignatureVerificationSecretName,
+				Namespace: SignatureSecretNamespace,
+			},
+		}
+	)
+	privateErr = c.Get(ctx, client.ObjectKeyFromObject(privateSecret), privateSecret)
+	publicErr = c.Get(ctx, client.ObjectKeyFromObject(publicSecret), publicSecret)
+
+	if privateErr == nil && publicErr == nil {
+		return nil
 	}
 
-	want, err := CalculateSignature(ctx, c, secret.Data)
+	if apierrors.IsNotFound(privateErr) != apierrors.IsNotFound(publicErr) {
+		return fmt.Errorf("one of the signing secrets is missing, was one manipulated? %w", errors.Join(privateErr, publicErr))
+	}
+
+	if !apierrors.IsNotFound(privateErr) || !apierrors.IsNotFound(publicErr) {
+		return errors.Join(privateErr, publicErr)
+	}
+
+	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not generate private key: %w", err)
 	}
 
-	if want != got {
-		return fmt.Errorf("invalid signature annotation %q for secret %q: Want %q, Got: %q", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String(), want, got)
+	privatePEM, err := encodePrivateKeyToPEM(privateKey)
+	if err != nil {
+		return fmt.Errorf("could not encode private key to PEM: %w", err)
+	}
+	privateSecret.Data = map[string][]byte{
+		SignaturePrivateSecretKey: privatePEM,
+	}
+
+	publicPEM, err := encodePublicKeyToPEM(&privateKey.PublicKey)
+	if err != nil {
+		return fmt.Errorf("could not encode public key to PEM: %w", err)
+	}
+	publicSecret.Data = map[string][]byte{
+		SignaturePublicSecretKey: publicPEM,
+	}
+
+	privateErr = c.Create(ctx, privateSecret)
+	publicErr = c.Create(ctx, publicSecret)
+
+	err = errors.Join(privateErr, publicErr)
+	if err != nil {
+		return fmt.Errorf("failed to create matching signing secrets, manual intervention needed: %w", err)
+
 	}
 
 	return nil
 }
 
-func CalculateSignature(ctx context.Context, c client.Client, data map[string][]byte) (string, error) {
-	saltSecret := &corev1.Secret{}
+func SignSecret(ctx context.Context, c client.Client, data map[string][]byte) (string, error) {
+	privateSecret := &corev1.Secret{}
 	err := c.Get(ctx, client.ObjectKey{
-		Name:      SigningSaltSecretName,
-		Namespace: SigningSaltSecretNamespace,
-	}, saltSecret)
+		Name:      SignatureSigningSecretName,
+		Namespace: SignatureSecretNamespace,
+	}, privateSecret)
 	if err != nil {
 		return "", err
 	}
 
-	rawSalt, ok := saltSecret.Data[SigningSaltSecretKey]
+	rawPEM, ok := privateSecret.Data[SignaturePrivateSecretKey]
 	if !ok {
-		return "", fmt.Errorf("could not find %q key in secret %q", SigningSaltSecretKey, client.ObjectKeyFromObject(saltSecret).String())
+		return "", fmt.Errorf("could not find %q key in secret %q", SignaturePrivateSecretKey, client.ObjectKeyFromObject(privateSecret).String())
+	}
+	privateKey, err := decodePrivateKeyFromPEM(rawPEM)
+	if err != nil {
+		return "", err
 	}
 
+	rawSignature, err := ecdsa.SignASN1(rand.Reader, privateKey, calculateHash(data))
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(rawSignature), nil
+}
+
+func VerifySecretSignature(ctx context.Context, c client.Client, secret *corev1.Secret) error {
+	if secret.Annotations == nil {
+		return fmt.Errorf("missing %q annotation in secret %q", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String())
+	}
+
+	signature, ok := secret.Annotations[SignatureAnnotationKey]
+	if !ok {
+		return fmt.Errorf("missing %q annotation in secret %q", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String())
+	}
+	rawSignature, err := hex.DecodeString(signature)
+	if err != nil {
+		return fmt.Errorf("invalid %q annotation in secret %q: %w", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String(), err)
+	}
+
+	publicSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      SignatureVerificationSecretName,
+			Namespace: SignatureSecretNamespace,
+		},
+	}
+	err = c.Get(ctx, client.ObjectKeyFromObject(publicSecret), publicSecret)
+	if err != nil {
+		return err
+	}
+
+	rawPEM, ok := publicSecret.Data[SignaturePublicSecretKey]
+	if !ok {
+		return fmt.Errorf("could not find %q key in secret %q", SignaturePublicSecretKey, client.ObjectKeyFromObject(publicSecret).String())
+	}
+	publicKey, err := decodePublicKeyFromPEM(rawPEM)
+	if err != nil {
+		return err
+	}
+
+	ok = ecdsa.VerifyASN1(publicKey, calculateHash(secret.Data), rawSignature)
+	if !ok {
+		return fmt.Errorf("signature verification failed for secret %q", client.ObjectKeyFromObject(secret).String())
+	}
+
+	return nil
+}
+
+func calculateHash(data map[string][]byte) []byte {
 	hash := sha512.New()
-	hash.Write(rawSalt)
 
 	secretKeys := make([]string, 0, len(data))
 	for secretKey := range data {
@@ -333,8 +444,55 @@ func CalculateSignature(ctx context.Context, c client.Client, data map[string][]
 		hash.Write(data[secretKey])
 	}
 
-	signature := hex.EncodeToString(hash.Sum(nil))
-	return signature, nil
+	return hash.Sum(nil)
+}
+
+func encodePrivateKeyToPEM(key *ecdsa.PrivateKey) ([]byte, error) {
+	der, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return nil, err
+	}
+	block := &pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: der,
+	}
+	return pem.EncodeToMemory(block), nil
+}
+
+func encodePublicKeyToPEM(pub *ecdsa.PublicKey) ([]byte, error) {
+	der, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		return nil, err
+	}
+	block := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: der,
+	}
+	return pem.EncodeToMemory(block), nil
+}
+
+func decodePrivateKeyFromPEM(pemBytes []byte) (*ecdsa.PrivateKey, error) {
+	block, _ := pem.Decode(pemBytes)
+	if block == nil || block.Type != "EC PRIVATE KEY" {
+		return nil, fmt.Errorf("failed to decode PEM block containing private key")
+	}
+	return x509.ParseECPrivateKey(block.Bytes)
+}
+
+func decodePublicKeyFromPEM(pemBytes []byte) (*ecdsa.PublicKey, error) {
+	block, _ := pem.Decode(pemBytes)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, fmt.Errorf("failed to decode PEM block containing public key")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	ecdsaPub, ok := pub.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("not ECDSA public key")
+	}
+	return ecdsaPub, nil
 }
 
 func deployManagedResource(ctx context.Context, secret *builder.Secret, managedResource *builder.ManagedResource) error {

@@ -45,7 +45,7 @@ var _ = Describe("Extension controller tests", func() {
 
 		gardenNs := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: managedresources.SigningSaltSecretNamespace,
+				Name: managedresources.SignatureSecretNamespace,
 			},
 		}
 		Expect(testClient.Create(ctx, gardenNs)).To(Succeed())
@@ -53,19 +53,23 @@ var _ = Describe("Extension controller tests", func() {
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, gardenNs))).To(Succeed())
 		})
 
-		signingSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      managedresources.SigningSaltSecretName,
-				Namespace: managedresources.SigningSaltSecretNamespace,
-			},
-			Data: map[string][]byte{
-				managedresources.SigningSaltSecretKey: []byte("test-salt"),
-			},
-		}
-		err := testClient.Create(ctx, signingSecret)
-		Expect(err).To(Or(BeNil(), BeAlreadyExistsError()))
+		Expect(managedresources.EnsureSigningKeys(ctx, testClient)).To(Succeed())
 		DeferCleanup(func() {
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, signingSecret))).To(Succeed())
+			publicSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedresources.SignatureVerificationSecretName,
+					Namespace: managedresources.SignatureSecretNamespace,
+				},
+			}
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, publicSecret))).To(Succeed())
+
+			privateSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedresources.SignatureSigningSecretName,
+					Namespace: managedresources.SignatureSecretNamespace,
+				},
+			}
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, privateSecret))).To(Succeed())
 		})
 
 		garden = &operatorv1alpha1.Garden{

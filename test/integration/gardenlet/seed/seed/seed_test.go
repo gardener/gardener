@@ -70,25 +70,11 @@ var _ = Describe("Seed controller tests", func() {
 		By("Prepare managed resources")
 		gardenNs := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: managedresources.SigningSaltSecretNamespace,
+				Name: managedresources.SignatureSecretNamespace,
 			},
 		}
 		Expect(testClient.Create(ctx, gardenNs)).To(Or(Succeed(), BeAlreadyExistsError()))
-
-		signingSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      managedresources.SigningSaltSecretName,
-				Namespace: managedresources.SigningSaltSecretNamespace,
-			},
-			Data: map[string][]byte{
-				managedresources.SigningSaltSecretKey: []byte("test-salt"),
-			},
-		}
-		err := testClient.Create(ctx, signingSecret)
-		Expect(err).To(Or(BeNil(), BeAlreadyExistsError()))
-		DeferCleanup(func() {
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, signingSecret))).To(Succeed())
-		})
+		Expect(managedresources.EnsureSigningKeys(ctx, testClient)).To(Succeed())
 
 		By("Create test Namespace")
 		testNamespace = &corev1.Namespace{

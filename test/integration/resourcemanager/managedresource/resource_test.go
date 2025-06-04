@@ -73,16 +73,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			Data: map[string]string{"abc": "xyz"},
 		}
 
-		signatureSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      managedresourcesutils.SigningSaltSecretName,
-				Namespace: managedresourcesutils.SigningSaltSecretNamespace,
-			},
-			Data: map[string][]byte{
-				managedresourcesutils.SigningSaltSecretKey: []byte("test-salt"),
-			},
-		}
-		Expect(testClient.Create(ctx, signatureSecret)).To(Succeed())
+		Expect(managedresourcesutils.EnsureSigningKeys(ctx, testClient)).To(Succeed())
 
 		secretForManagedResource = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -110,7 +101,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 		if secretForManagedResource != nil {
 			By("Create Secret for test")
 			log.Info("Create Secret for test", "secret", objectKey)
-			signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+			signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 			Expect(err).ToNot(HaveOccurred())
 			secretForManagedResource.Annotations = map[string]string{
 				managedresourcesutils.SignatureAnnotationKey: signature,
@@ -207,7 +198,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				newConfigMap := &corev1.ConfigMap{}
 				secretForManagedResource.Data = secretDataForObject(newConfigMap, dataKey)
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -292,7 +283,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				secretForManagedResource.Data = secretDataForObject(newConfigMap, dataKey)
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -322,7 +313,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				configMap.Data = map[string]string{"foo": "bar"}
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -354,7 +345,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				secretForManagedResource.Data[newDataKey] = secretDataForObject(newResource, newDataKey)[newDataKey]
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -384,7 +375,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				secretForManagedResource.Data[newDataKey] = secretDataForObject(newResource, newDataKey)[newDataKey]
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -414,7 +405,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 					Data: secretDataForObject(newResource, dataKey),
 				}
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, newSecretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, newSecretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				newSecretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -552,7 +543,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -572,7 +563,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -593,7 +584,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.KeepObject: "true"})
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -651,7 +642,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				configMap.Finalizers = []string{"some.finalizer.to/make-the-deletion-stuck"}
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -718,7 +709,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				}
 				secretForManagedResource.Data["node.yaml"] = jsonDataForObject(node)
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -779,7 +770,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.Ignore: "true"})
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -887,7 +878,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 				secretForManagedResource.Data = secretDataForObject(deployment, "deployment.yaml")
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -1026,7 +1017,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 				secretForManagedResource.Data = secretDataForObject(deployment, "deployment.yaml")
 
-				signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+				signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 				Expect(err).To(BeNil())
 				secretForManagedResource.Annotations = map[string]string{
 					managedresourcesutils.SignatureAnnotationKey: signature,
@@ -1084,7 +1075,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						deployment.SetAnnotations(map[string]string{resourcesv1alpha1.PreserveReplicas: "true"})
 						secretForManagedResource.Data = secretDataForObject(deployment, "deployment.yaml")
 
-						signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+						signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 						Expect(err).To(BeNil())
 						secretForManagedResource.Annotations = map[string]string{
 							managedresourcesutils.SignatureAnnotationKey: signature,
@@ -1158,7 +1149,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						deployment.SetAnnotations(map[string]string{resourcesv1alpha1.PreserveResources: "true"})
 						secretForManagedResource.Data = secretDataForObject(deployment, "deployment.yaml")
 
-						signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+						signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 						Expect(err).To(BeNil())
 						secretForManagedResource.Annotations = map[string]string{
 							managedresourcesutils.SignatureAnnotationKey: signature,
@@ -1198,7 +1189,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Data: secretDataForObject(configMap, dataKey),
 			}
 
-			signature, err := managedresourcesutils.CalculateSignature(ctx, testClient, secretForManagedResource.Data)
+			signature, err := managedresourcesutils.SignSecret(ctx, testClient, secretForManagedResource.Data)
 			Expect(err).ToNot(HaveOccurred())
 			secretForManagedResource.Annotations = map[string]string{
 				managedresourcesutils.SignatureAnnotationKey: signature,

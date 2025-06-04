@@ -7,7 +7,6 @@ package managedresource
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -116,7 +115,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{Requeue: true}, nil
 	}
 
-	if err := r.ensureSigningSecret(ctx); err != nil {
+	if err := managedresourcesutils.EnsureSigningKeys(ctx, r.SourceClient); err != nil {
 		log.Error(err, "Could not ensure signing secret")
 		return reconcile.Result{}, fmt.Errorf("could not ensure signing secret: %w", err)
 	}
@@ -182,7 +181,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		}
 		slices.Sort(secretKeys)
 
-		err := managedresourcesutils.VerifySignature(ctx, r.SourceClient, secret)
+		err := managedresourcesutils.VerifySecretSignature(ctx, r.SourceClient, secret)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not verify signature of secret '%s': %w", secret.Name, err)
 		}
@@ -476,30 +475,6 @@ func (r *Reconciler) updateConditionsForDeletion(ctx context.Context, mr *resour
 	conditionResourcesProgressing := v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
 	conditionResourcesProgressing = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesProgressing, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionDeletionPending, "The resources are currently being deleted.")
 	return updateConditions(ctx, r.SourceClient, mr, conditionResourcesHealthy, conditionResourcesProgressing)
-}
-
-func (r *Reconciler) ensureSigningSecret(ctx context.Context) error {
-	saltSecret := &corev1.Secret{}
-	err := r.SourceClient.Get(ctx, client.ObjectKey{
-		Name:      managedresourcesutils.SigningSaltSecretName,
-		Namespace: managedresourcesutils.SigningSaltSecretNamespace,
-	}, saltSecret)
-
-	if !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	saltSecret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      managedresourcesutils.SigningSaltSecretName,
-			Namespace: managedresourcesutils.SigningSaltSecretNamespace,
-		},
-		Data: map[string][]byte{
-			managedresourcesutils.SigningSaltSecretKey: []byte(rand.Text()),
-		},
-	}
-
-	return r.SourceClient.Create(ctx, saltSecret)
 }
 
 func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, origin string, newResourcesObjects []object, labelsToInject map[string]string, equivalences Equivalences) error {
