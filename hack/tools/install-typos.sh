@@ -8,19 +8,21 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+echo "> Installing typos"
+
 TOOLS_BIN_DIR=${TOOLS_BIN_DIR:-$(dirname "$0")/bin}
 
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
-arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+arch=$(uname -m | sed 's/amd64/x86_64/;s/arm64/aarch64/')
 typos_tar=typos-"$TYPOS_VERSION"-"$os"-"$arch".zip
 
 if [[ $os == "darwin" ]]; then
-  url="https://github.com/crate-ci/typos/releases/download/${TYPOS_VERSION}/typos-${TYPOS_VERSION}-aarch64-apple-darwin.tar.gz"
-elif [[ $os == "linux" && $arch == "amd64" ]]; then
-  url="https://github.com/crate-ci/typos/releases/download/${TYPOS_VERSION}/typos-${TYPOS_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+  url="https://github.com/crate-ci/typos/releases/download/${TYPOS_VERSION}/typos-${TYPOS_VERSION}-${arch}-apple-darwin.tar.gz"
+elif [[ $os == "linux" ]]; then
+  url="https://github.com/crate-ci/typos/releases/download/${TYPOS_VERSION}/typos-${TYPOS_VERSION}-${arch}-unknown-linux-musl.tar.gz"
 else
   if ! command -v typos &>/dev/null; then
-    echo "Unable to automatically install typos for ${os}/${arch}. Please install it yourself and retry."
+    echo "Unable to automatically install typos(https://github.com/crate-ci/typos) for ${os}/${arch}. Please install it yourself and retry."
     exit 1
   fi
 fi

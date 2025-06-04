@@ -8,6 +8,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+echo "> Installing protoc"
+
 TOOLS_BIN_DIR=${TOOLS_BIN_DIR:-$(dirname "$0")/bin}
 
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
