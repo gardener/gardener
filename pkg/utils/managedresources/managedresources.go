@@ -160,7 +160,7 @@ func Update(
 	forceOverwriteAnnotations *bool,
 ) error {
 	var (
-		signature, err     = calculateSignature(ctx, client, data)
+		signature, err     = CalculateSignature(ctx, client, data)
 		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
 		managedResource    = New(client, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName).CreateIfNotExists(false)
 	)
@@ -190,7 +190,7 @@ func Create(
 	forceOverwriteAnnotations *bool,
 ) error {
 	var (
-		signature, err     = calculateSignature(ctx, c, data)
+		signature, err     = CalculateSignature(ctx, c, data)
 		secretName, secret = NewSecret(c, namespace, name, data, secretNameWithPrefix)
 		managedResource    = New(c, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName)
 	)
@@ -210,7 +210,7 @@ func Create(
 // CreateForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
 func CreateForSeed(ctx context.Context, c client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
 	var (
-		signature, err     = calculateSignature(ctx, c, data)
+		signature, err     = CalculateSignature(ctx, c, data)
 		secretName, secret = NewSecret(c, namespace, name, data, true)
 		managedResource    = NewForSeed(c, namespace, name, keepObjects).WithSecretRef(secretName)
 	)
@@ -229,7 +229,7 @@ func CreateForSeed(ctx context.Context, c client.Client, namespace, name string,
 // additional labels.
 func CreateForSeedWithLabels(ctx context.Context, c client.Client, namespace, name string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
 	var (
-		signature, err     = calculateSignature(ctx, c, data)
+		signature, err     = CalculateSignature(ctx, c, data)
 		secretName, secret = NewSecret(c, namespace, name, data, true)
 		managedResource    = NewForSeed(c, namespace, name, keepObjects).WithSecretRef(secretName).WithLabels(labels)
 	)
@@ -250,7 +250,7 @@ func CreateForSeedWithLabels(ctx context.Context, c client.Client, namespace, na
 // of this function should provide their own unique origin value.
 func CreateForShoot(ctx context.Context, c client.Client, namespace, name, origin string, keepObjects bool, data map[string][]byte) error {
 	var (
-		signature, err     = calculateSignature(ctx, c, data)
+		signature, err     = CalculateSignature(ctx, c, data)
 		secretName, secret = NewSecret(c, namespace, name, data, true)
 		managedResource    = NewForShoot(c, namespace, name, origin, keepObjects).WithSecretRef(secretName)
 	)
@@ -271,7 +271,7 @@ func CreateForShoot(ctx context.Context, c client.Client, namespace, name, origi
 // This function allows providing additional labels.
 func CreateForShootWithLabels(ctx context.Context, c client.Client, namespace, name, origin string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
 	var (
-		signature, err     = calculateSignature(ctx, c, data)
+		signature, err     = CalculateSignature(ctx, c, data)
 		secretName, secret = NewSecret(c, namespace, name, data, true)
 		managedResource    = NewForShoot(c, namespace, name, origin, keepObjects).WithSecretRef(secretName).WithLabels(labels)
 	)
@@ -287,23 +287,24 @@ func CreateForShootWithLabels(ctx context.Context, c client.Client, namespace, n
 }
 
 func VerifySignature(ctx context.Context, c client.Client, secret *corev1.Secret) error {
-	want, err := calculateSignature(ctx, c, secret.Data)
-	if err != nil {
-		return err
-	}
 	got, ok := secret.Annotations[SignatureAnnotationKey]
 	if !ok {
 		return fmt.Errorf("missing signature annotation %q in secret %q", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String())
 	}
 
+	want, err := CalculateSignature(ctx, c, secret.Data)
+	if err != nil {
+		return err
+	}
+
 	if want != got {
-		return fmt.Errorf("invalid signature annotation %q for secret %q", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String())
+		return fmt.Errorf("invalid signature annotation %q for secret %q: Want %q, Got: %q", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String(), want, got)
 	}
 
 	return nil
 }
 
-func calculateSignature(ctx context.Context, c client.Client, data map[string][]byte) (string, error) {
+func CalculateSignature(ctx context.Context, c client.Client, data map[string][]byte) (string, error) {
 	saltSecret := &corev1.Secret{}
 	err := c.Get(ctx, client.ObjectKey{
 		Name:      SigningSaltSecretName,

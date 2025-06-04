@@ -6,6 +6,7 @@ package managedresource_test
 
 import (
 	"context"
+	managedresourcesutils "github.com/gardener/gardener/pkg/utils/managedresources"
 	"path/filepath"
 	"testing"
 	"time"
@@ -94,6 +95,15 @@ var _ = BeforeSuite(func() {
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
+	By("Create garden Namespace")
+	gardenNs := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: managedresourcesutils.SigningSaltSecretNamespace,
+		},
+	}
+	Expect(testClient.Create(ctx, gardenNs)).To(Or(Succeed(), BeAlreadyExistsError()))
+	log.Info("Created garden Namespace for test", "namespaceName", gardenNs.Name)
+
 	DeferCleanup(func() {
 		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
@@ -104,7 +114,7 @@ var _ = BeforeSuite(func() {
 		Scheme:  resourcemanagerclient.CombinedScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
-			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
+			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}, gardenNs.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
 			SkipNameValidation: ptr.To(true),
