@@ -281,12 +281,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		} else if !strings.HasPrefix(path, "/") {
 			path = "/" + path
 		}
-
-		if wh.Handler != nil {
-			webhookServer.Register(path, wh.Handler)
-		} else {
-			webhookServer.Register(path, wh.Webhook)
-		}
+		webhookServer.Register(path, wh.Webhook)
 	}
 
 	seedWebhookConfigs, shootWebhookConfigs, err := extensionswebhook.BuildWebhookConfigs(

@@ -25,26 +25,33 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
+// remoteAddrContextKey is a context key. It will be filled by the remoteAddrInjectingHandler with the received
+// request's RemoteAddr field value.
+// The associated value will be of type string.
+var remoteAddrContextKey = struct{}{}
+
 // NewHandlerWithShootClient creates a new handler for the given types, using the given mutator, and logger.
-func NewHandlerWithShootClient(mgr manager.Manager, types []Type, mutator MutatorWithShootClient, logger logr.Logger) (http.Handler, error) {
+func NewHandlerWithShootClient(mgr manager.Manager, types []Type, mutator MutatorWithShootClient, logger logr.Logger) (admission.Handler, error) {
 	// Build a map of the given types keyed by their GVKs
 	typesMap, err := buildTypesMap(mgr.GetScheme(), objectsFromTypes(types))
 	if err != nil {
 		return nil, err
 	}
 
-	// inject RemoteAddr into admission http.Handler, we need it to identify which API server called the webhook server
-	// in order to create a client for that shoot cluster.
-	return remoteAddrInjectingHandler{
-		Handler: &admission.Webhook{
-			Handler: &handlerShootClient{
-				typesMap: typesMap,
-				mutator:  mutator,
-				client:   mgr.GetClient(),
-				decoder:  serializer.NewCodecFactory(mgr.GetScheme()).UniversalDecoder(),
-				logger:   logger.WithName("handlerShootClient"),
-			},
-			RecoverPanic: ptr.To(true),
+	return &admission.Webhook{
+		Handler: &handlerShootClient{
+			typesMap: typesMap,
+			mutator:  mutator,
+			client:   mgr.GetClient(),
+			decoder:  serializer.NewCodecFactory(mgr.GetScheme()).UniversalDecoder(),
+			logger:   logger.WithName("handlerShootClient"),
+		},
+		RecoverPanic: ptr.To(true),
+		WithContextFunc: func(ctx context.Context, r *http.Request) context.Context {
+			if r != nil {
+				ctx = context.WithValue(ctx, remoteAddrContextKey, r.RemoteAddr) //nolint:staticcheck
+			}
+			return ctx
 		},
 	}, nil
 }
