@@ -31,7 +31,9 @@ var logger = log.Log.WithName("shoot-webhook")
 type Args struct {
 	// Types is a list of resource types.
 	Types []extensionswebhook.Type
-	// Mutator is a mutator to be used by the admission handler. It doesn't need the shoot client.
+	// Mutator is a mutator to be used by the admission handler.
+	// If a shoot client is needed, the webhook.WantsShootClient interface must be implemented. A client.Client is then
+	// injected into the context under the webhook.ShootClientContextKey key.
 	Mutator extensionswebhook.Mutator
 	// MutatorWithShootClient is a mutator to be used by the admission handler. It needs the shoot client.
 	MutatorWithShootClient extensionswebhook.MutatorWithShootClient
@@ -55,27 +57,27 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		FailurePolicy:     args.FailurePolicy,
 	}
 
+	var (
+		handler admission.Handler
+		err     error
+	)
+
 	switch {
 	case args.Mutator != nil:
-		handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, args.Types...).Build()
-		if err != nil {
-			return nil, err
-		}
-
-		wh.Webhook = &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)}
-		return wh, nil
-
+		handler, err = extensionswebhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, args.Types...).Build()
 	case args.MutatorWithShootClient != nil:
-		handler, err := extensionswebhook.NewHandlerWithShootClient(mgr, args.Types, args.MutatorWithShootClient, logger)
-		if err != nil {
-			return nil, err
-		}
-
-		wh.Handler = handler
-		return wh, nil
+		handler, err = extensionswebhook.NewHandlerWithShootClient(mgr, args.Types, args.MutatorWithShootClient, logger)
 	}
 
-	return nil, fmt.Errorf("neither mutator nor mutator with shoot client is set")
+	if err != nil {
+		return nil, err
+	}
+	if handler == nil {
+		return nil, fmt.Errorf("neither mutator nor mutator with shoot client is set")
+	}
+
+	wh.Webhook = &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)}
+	return wh, nil
 }
 
 // buildNamespaceSelector creates and returns a LabelSelector for the given webhook kind and provider.

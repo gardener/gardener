@@ -13,7 +13,7 @@ import (
 // Mutator validates and if needed mutates objects.
 type Mutator interface {
 	// Mutate validates and if needed mutates the given object.
-	// "old" is optional and it must always be checked for nil.
+	// "old" is optional, and it must always be checked for nil.
 	Mutate(ctx context.Context, new, old client.Object) error
 }
 
