@@ -355,7 +355,6 @@ func EnsureSigningKeys(ctx context.Context, c client.Client) error {
 	err = errors.Join(privateErr, publicErr)
 	if err != nil {
 		return fmt.Errorf("failed to create matching signing secrets, manual intervention needed: %w", err)
-
 	}
 
 	return nil
