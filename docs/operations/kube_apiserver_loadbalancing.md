@@ -19,8 +19,9 @@ them with `shoot.gardener.cloud/disable-istio-tls-termination: "true"`.
 
 ## How it works
 
-L7 load balancing works for the externally resolvable Kube API server endpoints and for connections which use
-`apiserver-proxy` like endpoint `kubernetes.default.svc.cluster.local`.
+L7 load balancing works for the externally resolvable Kube API server endpoints, for connections which use
+`apiserver-proxy` like endpoint `kubernetes.default.svc.cluster.local` and for control plane components running in shoot
+namespaces.
 
 Clients might authenticate at Kube API server using client certificates, tokens or might connect unauthenticated. In the
 first case Istio ingress gateway must validate client certificates because it terminates the TLS connection. Thus, it is
@@ -41,6 +42,15 @@ The destination host of the istio virtual service has an istio destination rule 
 server authenticates requests by itself. It is used for the token based authentication. The istio destination rule for
 the mTLS connection is set by the lua script mentioned above only. This is a safety net to prevent that requests can
 reach Kube API server via the trusted connection in case the lua scripts fails for some reason.
+
+Cluster internal control plane components like `kube-controller-manager`, `kube-scheduler` and `gardener-resource-manager`
+use L7 load balancing too. They connect to the Kube API server via an cluster IP service for istio ingress gateway.
+The generic token kubeconfig uses the public Kube API server endpoint. In order to avoid external traffic, the control
+plane components use host aliases in their pod specifications. For convenience, the host alias are automatically added
+by the [`pod-kube-apiserver-load-balancing`](../../pkg/resourcemanager/webhook/podkubeapiserverloadbalancing) webhook
+in `gardener-resource-manager`. It also adds a label to create a network policy allowing egress traffic to the istio
+ingress gateway pods.
+This works for control plane components running in shoot namespaces and for the virtual garden control plane.
 
 The flow for L7 load balancing is shown in the following illustration.
 
