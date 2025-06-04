@@ -82,7 +82,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.ResourceManager,
 		b.Shoot.ControlPlaneNamespace,
 		func(ctx context.Context) (int32, error) {
-			return b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 2, false)
+			return b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 2)
 		},
 		func() string { return b.Shoot.ComputeInClusterAPIServerAddress(true) })
 }
