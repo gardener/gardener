@@ -5,7 +5,9 @@
 package shoot
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,8 +37,6 @@ type Args struct {
 	// If a shoot client is needed, the webhook.WantsShootClient interface must be implemented. A client.Client is then
 	// injected into the context under the webhook.ShootClientContextKey key.
 	Mutator extensionswebhook.Mutator
-	// MutatorWithShootClient is a mutator to be used by the admission handler. It needs the shoot client.
-	MutatorWithShootClient extensionswebhook.MutatorWithShootClient
 	// ObjectSelector is the object selector of the underlying webhook.
 	ObjectSelector *metav1.LabelSelector
 	// FailurePolicy is the failure policy for the webhook (defaults to Ignore).
@@ -57,26 +57,30 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		FailurePolicy:     args.FailurePolicy,
 	}
 
-	var (
-		handler admission.Handler
-		err     error
-	)
-
-	switch {
-	case args.Mutator != nil:
-		handler, err = extensionswebhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, args.Types...).Build()
-	case args.MutatorWithShootClient != nil:
-		handler, err = extensionswebhook.NewHandlerWithShootClient(mgr, args.Types, args.MutatorWithShootClient, logger)
+	if args.Mutator == nil {
+		return nil, fmt.Errorf("no mutator is set")
 	}
 
+	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, args.Types...).Build()
 	if err != nil {
 		return nil, err
 	}
-	if handler == nil {
-		return nil, fmt.Errorf("neither mutator nor mutator with shoot client is set")
+
+	wh.Webhook = &admission.Webhook{
+		Handler:      handler,
+		RecoverPanic: ptr.To(true),
 	}
 
-	wh.Webhook = &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)}
+	wantsShootClient, ok := args.Mutator.(extensionswebhook.WantsShootClient)
+	if ok && wantsShootClient.WantsShootClient() {
+		wh.Webhook.WithContextFunc = func(ctx context.Context, request *http.Request) context.Context {
+			if request != nil {
+				ctx = context.WithValue(ctx, extensionswebhook.RemoteAddrContextKey{}, request.RemoteAddr) //nolint:staticcheck
+			}
+			return ctx
+		}
+	}
+
 	return wh, nil
 }
 
