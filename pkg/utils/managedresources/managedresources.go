@@ -160,9 +160,18 @@ func Update(
 	forceOverwriteAnnotations *bool,
 ) error {
 	var (
+		signature, err     = calculateSignature(ctx, client, data)
 		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
 		managedResource    = New(client, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName).CreateIfNotExists(false)
 	)
+
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
 
 	return deployManagedResource(ctx, secret, managedResource)
 }
