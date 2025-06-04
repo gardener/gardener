@@ -143,7 +143,7 @@ func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) exten
 		Purpose:   purpose,
 	}
 
-	// TODO(theoddora): Remove this in v1.123.0 when the Purpose field (exposure/normal) is removed.
+	// TODO(theoddora): Remove this after v1.123.0 was released when the Purpose field (exposure/normal) is removed.
 	switch purpose {
 	case extensionsv1alpha1.Normal:
 		values.Type = b.Shoot.GetInfo().Spec.Provider.Type

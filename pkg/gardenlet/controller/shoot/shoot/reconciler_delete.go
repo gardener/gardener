@@ -625,7 +625,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 
-		// TODO(theoddora): Remove this step in v1.123.0 when the Purpose field (exposure/normal) is removed.
+		// TODO(theoddora): Remove this step after v1.123 was released when the Purpose field (exposure/normal) is removed.
 		destroyControlPlaneExposure = g.Add(flow.Task{
 			Name: "Destroying shoot control plane exposure",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
