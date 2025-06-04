@@ -62,6 +62,8 @@ type Interface interface {
 	SetMachineDeployments([]extensionsv1alpha1.MachineDeployment)
 	// SetMaxNodesTotal sets the maximum number of nodes that can be created in the cluster. 0 means unlimited.
 	SetMaxNodesTotal(int64)
+	// SetReplicas sets the replicas
+	SetReplicas(int32)
 }
 
 // New creates a new instance of DeployWaiter for the cluster-autoscaler.
@@ -390,6 +392,9 @@ func (c *clusterAutoscaler) SetMachineDeployments(machineDeployments []extension
 
 func (c *clusterAutoscaler) SetMaxNodesTotal(maxNodesTotal int64) {
 	c.maxNodesTotal = maxNodesTotal
+}
+func (c *clusterAutoscaler) SetReplicas(replicas int32) {
+	c.replicas = replicas
 }
 
 func (c *clusterAutoscaler) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {

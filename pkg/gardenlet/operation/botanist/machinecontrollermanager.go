@@ -50,7 +50,11 @@ func (b *Botanist) DeployMachineControllerManager(ctx context.Context) error {
 		replicas = 1
 	// if there are any existing machine deployments present with a positive replica count then MCM is needed.
 	case machineDeploymentWithPositiveReplicaCountExist(machineDeploymentList):
-		replicas = 1
+		repl, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameMachineControllerManager, 1)
+		if err != nil {
+			return err
+		}
+		replicas = repl
 	// If the cluster is hibernated then there is no further need of MCM and therefore its desired replicas is 0
 	case b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated:
 		replicas = 0
@@ -68,7 +72,6 @@ func (b *Botanist) DeployMachineControllerManager(ctx context.Context) error {
 	case b.IsRestorePhase():
 		replicas = 0
 	}
-
 	b.Shoot.Components.ControlPlane.MachineControllerManager.SetReplicas(replicas)
 
 	return b.Shoot.Components.ControlPlane.MachineControllerManager.Deploy(ctx)

@@ -99,3 +99,17 @@ func WaitUntilDeploymentRolloutIsComplete(ctx context.Context, client client.Cli
 		return HasDeploymentRolloutCompleted(ctx, client, namespace, name)
 	})
 }
+
+// GetAnnotationsForDeployment retrieves the annotations for a deployment.
+// If the deployment does not exist or has no annotations, it returns nil.
+func GetAnnotationsForDeployment(ctx context.Context, c client.Client, namespace, name string) (map[string]string, error) {
+	deployment := &appsv1.Deployment{}
+	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, deployment); err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+	if deployment.Annotations == nil {
+		return nil, nil
+	}
+	return deployment.Annotations, nil
+
+}
