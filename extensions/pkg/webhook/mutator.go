@@ -17,13 +17,6 @@ type Mutator interface {
 	Mutate(ctx context.Context, new, old client.Object) error
 }
 
-// MutatorWithShootClient validates and if needed mutates objects. It needs the shoot client.
-type MutatorWithShootClient interface {
-	// Mutate validates and if needed mutates the given object.
-	// "old" is optional and it must always be checked for nil.
-	Mutate(ctx context.Context, new, old client.Object, shootClient client.Client) error
-}
-
 type mutationWrapper struct {
 	Mutator
 }
