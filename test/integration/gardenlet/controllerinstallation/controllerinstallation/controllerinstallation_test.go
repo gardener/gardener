@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -43,6 +44,30 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		chartWithGardenKubeconfig    []byte
 		chartWithoutGardenKubeconfig []byte
 	)
+
+	BeforeEach(func() {
+		gardenNs := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: managedresources.SigningSaltSecretNamespace,
+			},
+		}
+		Expect(testClient.Create(ctx, gardenNs)).To(Or(Succeed(), BeAlreadyExistsError()))
+
+		signingSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedresources.SigningSaltSecretName,
+				Namespace: managedresources.SigningSaltSecretNamespace,
+			},
+			Data: map[string][]byte{
+				managedresources.SigningSaltSecretKey: []byte("test-salt"),
+			},
+		}
+		err := testClient.Create(ctx, signingSecret)
+		Expect(err).To(Or(BeNil(), BeAlreadyExistsError()))
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, signingSecret))).To(Succeed())
+		})
+	})
 
 	BeforeEach(func() {
 		controllerRegistration = &gardencorev1beta1.ControllerRegistration{

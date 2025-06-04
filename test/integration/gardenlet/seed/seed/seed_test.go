@@ -46,6 +46,7 @@ import (
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -66,6 +67,29 @@ var _ = Describe("Seed controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		By("Prepare managed resources")
+		gardenNs := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: managedresources.SigningSaltSecretNamespace,
+			},
+		}
+		Expect(testClient.Create(ctx, gardenNs)).To(Or(Succeed(), BeAlreadyExistsError()))
+
+		signingSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedresources.SigningSaltSecretName,
+				Namespace: managedresources.SigningSaltSecretNamespace,
+			},
+			Data: map[string][]byte{
+				managedresources.SigningSaltSecretKey: []byte("test-salt"),
+			},
+		}
+		err := testClient.Create(ctx, signingSecret)
+		Expect(err).To(Or(BeNil(), BeAlreadyExistsError()))
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, signingSecret))).To(Succeed())
+		})
+
 		By("Create test Namespace")
 		testNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{

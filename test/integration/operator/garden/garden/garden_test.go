@@ -119,6 +119,14 @@ var _ = Describe("Garden controller tests", func() {
 		log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 		testRunID = testNamespace.Name
 
+		By("Create garden Namespace")
+		gardenNamespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "garden",
+			},
+		}
+		Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+
 		DeferCleanup(func() {
 			By("Delete test Namespace")
 			Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
