@@ -14,6 +14,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	dwdapi "github.com/gardener/dependency-watchdog/api/prober"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -23,7 +24,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentName string, defaultReplicas int32, controlledByDependencyWatchdog bool) (int32, error) {
+func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentName string, defaultReplicas int32) (int32, error) {
 	isCreateOrRestoreOperation := b.Shoot.GetInfo().Status.LastOperation != nil &&
 		(b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate ||
 			b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore)
@@ -35,7 +36,13 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 		// so keep the replicas which are already available.
 		return kubernetesutils.CurrentReplicaCountForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, deploymentName)
 	}
-	if controlledByDependencyWatchdog && !isCreateOrRestoreOperation && !b.Shoot.HibernationEnabled && !b.Shoot.GetInfo().Status.IsHibernated {
+
+	isControlledByDWD, err := b.isControlledByDependencyWatchdog(ctx, deploymentName)
+	if err != nil {
+		return 0, err
+	}
+
+	if isControlledByDWD && !isCreateOrRestoreOperation && !b.Shoot.HibernationEnabled && !b.Shoot.GetInfo().Status.IsHibernated {
 		// The replicas of the component are controlled by dependency-watchdog and
 		// Shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated=false,
 		// so keep the replicas which are already available.
@@ -51,6 +58,20 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 	// Shoot is being reconciled with .spec.hibernation.enabled!=.status.isHibernated, so deploy the controller.
 	// In case the shoot is being hibernated then it will be scaled down to zero later after all machines are gone.
 	return defaultReplicas, nil
+}
+
+// If the deployment is controlled by dependency-watchdog, then it has the annotation dependency-watchdog.gardener.cloud/meltdown-protection set.
+func (b *Botanist) isControlledByDependencyWatchdog(ctx context.Context, deploymentName string) (bool, error) {
+	annotations, err := kubernetesutils.GetAnnotationsForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, deploymentName)
+	if err != nil {
+		return false, err
+	}
+	if annotations != nil {
+		if _, ok := annotations[dwdapi.MeltdownProtectionActive]; ok {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.

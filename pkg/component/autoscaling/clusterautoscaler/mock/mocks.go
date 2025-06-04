@@ -106,6 +106,17 @@ func (mr *MockInterfaceMockRecorder) SetNamespaceUID(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNamespaceUID", reflect.TypeOf((*MockInterface)(nil).SetNamespaceUID), arg0)
 }
 
+// SetReplicas mocks base method.
+func (m *MockInterface) SetReplicas(arg0 int32) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetReplicas", arg0)
+}
+// SetReplicas indicates an expected call of SetReplicas.
+func (mr *MockInterfaceMockRecorder) SetReplicas(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReplicas", reflect.TypeOf((*MockInterface)(nil).SetReplicas), arg0)
+}
+
 // Wait mocks base method.
 func (m *MockInterface) Wait(ctx context.Context) error {
 	m.ctrl.T.Helper()

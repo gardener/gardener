@@ -13,7 +13,7 @@ require (
 	github.com/docker/cli v28.2.2+incompatible
 	github.com/fluent/fluent-operator/v3 v3.3.0
 	github.com/gardener/cert-management v0.17.5
-	github.com/gardener/dependency-watchdog v1.4.0
+	github.com/gardener/dependency-watchdog v1.5.0
 	github.com/gardener/etcd-druid/api v0.30.1
 	github.com/gardener/machine-controller-manager v0.58.0
 	github.com/gardener/terminal-controller-manager v0.34.0
