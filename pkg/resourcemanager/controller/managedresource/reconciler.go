@@ -183,6 +183,10 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 
 		err := managedresourcesutils.VerifySecretSignature(ctx, r.SourceClient, secret)
 		if err != nil {
+			conditionResourcesApplied = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesApplied, gardencorev1beta1.ConditionFalse, "SignatureVerificationFailed", err.Error())
+			if err := updateConditions(ctx, r.SourceClient, mr, conditionResourcesApplied); err != nil {
+				return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+			}
 			return reconcile.Result{}, fmt.Errorf("could not verify signature of secret '%s': %w", secret.Name, err)
 		}
 

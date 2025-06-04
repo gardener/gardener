@@ -58,14 +58,14 @@ const (
 	LabelValueOperator = "gardener-operator"
 	// SignatureSecretNamespace is the namespace in which the signing secret is located.
 	SignatureSecretNamespace = v1beta1constants.GardenNamespace
-	// SignatureVerificationSecretName is the name of the secret containing the salt used for verifying managed resource secret signatures.
-	SignatureVerificationSecretName = "gardener-resource-manager-signing-secret-verify"
-	// SignatureSigningSecretName is the name of the secret containing the salt used for signing managed resources secrets.
-	SignatureSigningSecretName = "gardener-resource-manager-signing-secret-sign"
+	// SignatureVerificationSecretName is the name of the secret containing the public key used for verifying managed resource secret signatures.
+	SignatureVerificationSecretName = "gardener-resource-manager-signature-verify"
+	// SignatureSigningSecretName is the name of the secret containing the private key used for signing managed resources secrets.
+	SignatureSigningSecretName = "gardener-resource-manager-signature-sign"
 	// SignaturePublicSecretKey is the key for the public key in the secret used for verifying managed resource secret signatures.
-	SignaturePublicSecretKey = "public-key"
+	SignaturePublicSecretKey = "public-key.pem"
 	// SignaturePrivateSecretKey is the key for the private key in the secret used for signing managed resource secrets.
-	SignaturePrivateSecretKey = "private-key"
+	SignaturePrivateSecretKey = "private-key.pem"
 	// SignatureAnnotationKey is the key for the annotation on the secret containing the signature of managed resource secrets.
 	SignatureAnnotationKey = "gardener.cloud/managed-resource-signature"
 )
