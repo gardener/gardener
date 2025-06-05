@@ -5,6 +5,7 @@
 package webhook
 
 import (
+	"context"
 	"fmt"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -41,6 +42,18 @@ type Webhook struct {
 	ObjectSelector    *metav1.LabelSelector
 	FailurePolicy     *admissionregistrationv1.FailurePolicyType
 	TimeoutSeconds    *int32
+}
+
+// Validator validates objects.
+type Validator interface {
+	Validate(ctx context.Context, new, old client.Object) error
+}
+
+// Mutator validates and if needed mutates objects.
+type Mutator interface {
+	// Mutate validates and if needed mutates the given object.
+	// "old" is optional, and it must always be checked for nil.
+	Mutate(ctx context.Context, new, old client.Object) error
 }
 
 // Type contains information about the Kubernetes object types and subresources the webhook acts upon.
