@@ -8,6 +8,8 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,MachineTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,Regions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,VolumeTypes
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileStatus,KubernetesVersions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileStatus,MachineImageVersions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ClusterAutoscaler,IgnoreTaints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ClusterAutoscaler,StartupTaints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ClusterAutoscaler,StatusTaints
@@ -22,6 +24,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,DNSIncludeExclude,Exclude
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,DNSIncludeExclude,Include
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,EncryptionConfig,Resources
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExpirableVersion,Lifecycle
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExposureClassScheduling,Tolerations
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExtensionResourceState,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Hibernation,Schedules
@@ -34,6 +37,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,Architectures
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,CRI
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,CapabilitySets
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersionStatus,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NamespacedCloudProfileSpec,MachineImages
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NamespacedCloudProfileSpec,MachineTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NamespacedCloudProfileSpec,VolumeTypes
