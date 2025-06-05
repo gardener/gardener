@@ -19,16 +19,68 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-// CurrentLifecycleClassification returns the current lifecycle classification of the given version.
-// An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
 func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionClassification {
-	var currentTime = time.Now()
+	var (
+		currentClassification = core.ClassificationUnavailable
+		currentTime           = time.Now()
+	)
 
-	if version.ExpirationDate != nil && !currentTime.Before(version.ExpirationDate.Time) {
-		return core.ClassificationExpired
+	if version.Classification != nil || version.ExpirationDate != nil {
+		// old cloud profile definition, convert to lifecycle
+		// this can be removed as soon as we remove the old classification and expiration date fields
+
+		if version.Classification != nil {
+			version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{
+				Classification: *version.Classification,
+			})
+		}
+
+		if version.ExpirationDate != nil {
+			if version.Classification == nil {
+				version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{
+					Classification: core.ClassificationSupported,
+				})
+			}
+
+			version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{
+				Classification: core.ClassificationExpired,
+				StartTime:      version.ExpirationDate,
+			})
+		}
 	}
 
-	return ptr.Deref(version.Classification, core.ClassificationSupported)
+	if len(version.Lifecycle) == 0 {
+		// when there is no classification lifecycle defined then default to supported
+		version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{
+			Classification: core.ClassificationSupported,
+		})
+	}
+
+	for _, stage := range version.Lifecycle {
+		startTime := time.Time{}
+		if stage.StartTime != nil {
+			startTime = stage.StartTime.Time
+		}
+
+		if startTime.Before(currentTime) {
+			currentClassification = stage.Classification
+		}
+	}
+
+	return currentClassification
+}
+
+func VersionIsSupported(version core.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == core.ClassificationSupported
+}
+
+func SupportedLifecycleClassification(version core.ExpirableVersion) *core.LifecycleStage {
+	for _, stage := range version.Lifecycle {
+		if stage.Classification == core.ClassificationSupported {
+			return &stage
+		}
+	}
+	return nil
 }
 
 // FindMachineImageVersion finds the machine image version in the <cloudProfile> for the given <name> and <version>.
@@ -169,12 +221,24 @@ func getVersionDiff(v1, v2 []core.ExpirableVersion) map[string]int {
 	return diff
 }
 
+// MachineImageDiff contains the diff of machine images and versions between two slices of machine images.
+type MachineImageDiff struct {
+	RemovedImages                 sets.Set[string]
+	RemovedVersions               map[string]sets.Set[string]
+	RemovedVersionClassifications map[string]map[string][]core.VersionClassification
+	AddedImages                   sets.Set[string]
+	AddedVersions                 map[string]sets.Set[string]
+}
+
 // GetMachineImageDiff returns the removed and added machine images and versions from the diff of two slices.
-func GetMachineImageDiff(old, new []core.MachineImage) (removedMachineImages sets.Set[string], removedMachineImageVersions map[string]sets.Set[string], addedMachineImages sets.Set[string], addedMachineImageVersions map[string]sets.Set[string]) {
-	removedMachineImages = sets.Set[string]{}
-	removedMachineImageVersions = map[string]sets.Set[string]{}
-	addedMachineImages = sets.Set[string]{}
-	addedMachineImageVersions = map[string]sets.Set[string]{}
+func GetMachineImageDiff(old, new []core.MachineImage) MachineImageDiff {
+	diff := MachineImageDiff{
+		RemovedImages:                 sets.Set[string]{},
+		RemovedVersions:               map[string]sets.Set[string]{},
+		RemovedVersionClassifications: map[string]map[string][]core.VersionClassification{},
+		AddedImages:                   sets.Set[string]{},
+		AddedVersions:                 map[string]sets.Set[string]{},
+	}
 
 	oldImages := utils.CreateMapFromSlice(old, func(image core.MachineImage) string { return image.Name })
 	newImages := utils.CreateMapFromSlice(new, func(image core.MachineImage) string { return image.Name })
@@ -185,8 +249,8 @@ func GetMachineImageDiff(old, new []core.MachineImage) (removedMachineImages set
 		newImage, exists := newImages[imageName]
 		if !exists {
 			// Completely removed images.
-			removedMachineImages.Insert(imageName)
-			removedMachineImageVersions[imageName] = oldImageVersionsSet
+			diff.RemovedImages.Insert(imageName)
+			diff.RemovedVersions[imageName] = oldImageVersionsSet
 		} else {
 			// Check for image versions diff.
 			newImageVersions := utils.CreateMapFromSlice(newImage.Versions, func(version core.MachineImageVersion) string { return version.Version })
@@ -194,11 +258,30 @@ func GetMachineImageDiff(old, new []core.MachineImage) (removedMachineImages set
 
 			removedDiff := oldImageVersionsSet.Difference(newImageVersionsSet)
 			if removedDiff.Len() > 0 {
-				removedMachineImageVersions[imageName] = removedDiff
+				diff.RemovedVersions[imageName] = removedDiff
 			}
 			addedDiff := newImageVersionsSet.Difference(oldImageVersionsSet)
 			if addedDiff.Len() > 0 {
-				addedMachineImageVersions[imageName] = addedDiff
+				diff.AddedVersions[imageName] = addedDiff
+			}
+
+			for _, version := range oldImageVersions {
+				if removedDiff.Has(version.Version) {
+					continue
+				}
+				for _, existingStage := range version.Lifecycle {
+					if slices.ContainsFunc(newImageVersions[version.Version].Lifecycle, func(newStage core.LifecycleStage) bool {
+						return newStage.Classification == existingStage.Classification
+					}) {
+						continue
+					}
+					removedClassifications := diff.RemovedVersionClassifications[imageName]
+					if removedClassifications == nil {
+						removedClassifications = make(map[string][]core.VersionClassification)
+						diff.RemovedVersionClassifications[imageName] = removedClassifications
+					}
+					removedClassifications[version.Version] = append(removedClassifications[version.Version], existingStage.Classification)
+				}
 			}
 		}
 	}
@@ -209,20 +292,21 @@ func GetMachineImageDiff(old, new []core.MachineImage) (removedMachineImages set
 			newImageVersions := utils.CreateMapFromSlice(newImage.Versions, func(version core.MachineImageVersion) string { return version.Version })
 			newImageVersionsSet := sets.KeySet(newImageVersions)
 
-			addedMachineImages.Insert(imageName)
-			addedMachineImageVersions[imageName] = newImageVersionsSet
+			diff.AddedImages.Insert(imageName)
+			diff.AddedVersions[imageName] = newImageVersionsSet
 		}
 	}
-	return
+	return diff
 }
 
 // FilterVersionsWithClassification filters versions for a classification
 func FilterVersionsWithClassification(versions []core.ExpirableVersion, classification core.VersionClassification) []core.ExpirableVersion {
 	var result []core.ExpirableVersion
 	for _, version := range versions {
-		// TODO(LucaBernstein): Check whether this behavior should be corrected (i.e. changed) in a later GEP-32-PR.
-		//  The current behavior for nil classifications is treated differently across the codebase.
-		if version.Classification == nil || CurrentLifecycleClassification(version) != classification {
+		if (version.Classification == nil || *version.Classification != classification) &&
+			!slices.ContainsFunc(version.Lifecycle, func(s core.LifecycleStage) bool {
+				return s.Classification == classification
+			}) {
 			continue
 		}
 
