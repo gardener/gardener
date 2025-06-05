@@ -27,6 +27,8 @@ type CloudProfilesGetter interface {
 type CloudProfileInterface interface {
 	Create(ctx context.Context, cloudProfile *corev1beta1.CloudProfile, opts v1.CreateOptions) (*corev1beta1.CloudProfile, error)
 	Update(ctx context.Context, cloudProfile *corev1beta1.CloudProfile, opts v1.UpdateOptions) (*corev1beta1.CloudProfile, error)
+	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+	UpdateStatus(ctx context.Context, cloudProfile *corev1beta1.CloudProfile, opts v1.UpdateOptions) (*corev1beta1.CloudProfile, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*corev1beta1.CloudProfile, error)
