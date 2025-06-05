@@ -85,6 +85,8 @@ func findSupportedArchitectures(images []gardencorev1beta1.MachineImage, machine
 				// Skip versions that are not the specified one.
 				continue
 			}
+			// TODO(LucaBernstein): Check whether this behavior should be corrected (i.e. changed) in a later GEP-32-PR.
+			//  The current behavior for nil classifications is treated differently across the codebase.
 			if version.Classification != nil && v1beta1helper.CurrentLifecycleClassification(version.ExpirableVersion) == gardencorev1beta1.ClassificationSupported {
 				architectures.Insert(v1beta1helper.GetArchitecturesFromImageVersion(version)...)
 			}
@@ -161,6 +163,8 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 			return "", fmt.Errorf("image version %s not found not found in cloudProfile", *bastion.MachineImage.Version)
 		}
 
+		// TODO(LucaBernstein): Check whether this behavior should be corrected (i.e. changed) in a later GEP-32-PR.
+		//  The current behavior for nil classifications is treated differently across the codebase.
 		if image.Versions[versionIndex].Classification != nil && v1beta1helper.CurrentLifecycleClassification(image.Versions[versionIndex].ExpirableVersion) != gardencorev1beta1.ClassificationSupported {
 			return "", fmt.Errorf("specified image %s in version %s is not classified supported", imageName, *bastion.MachineImage.Version)
 		}
