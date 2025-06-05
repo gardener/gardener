@@ -554,13 +554,27 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 		return nil, fmt.Errorf("failed getting additional scrape configs: %w", err)
 	}
 
+	var storageClassName *string
+	volumeSize := "10Gi"
+	retentionSize := "5GB"
+	if mon := r.Config.Monitoring; mon != nil && mon.Seed != nil {
+		if storage := mon.Seed.PrometheusCache.Storage; storage != nil && storage.Capacity != nil {
+			volumeSize = storage.Capacity.String()
+			storageClassName = storage.ClassName
+		}
+		if !mon.Seed.PrometheusCache.Retention.IsZero() {
+			retentionSize = mon.Seed.PrometheusCache.Retention.String()
+		}
+	}
+
 	return sharedcomponent.NewPrometheus(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "cache",
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
-		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("10Gi")),
+		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize(volumeSize)),
 		Replicas:          1,
 		Retention:         ptr.To(monitoringv1.Duration("1d")),
-		RetentionSize:     "5GB",
+		RetentionSize:     monitoringv1.ByteSize(retentionSize),
+		StorageClassName:  storageClassName,
 		AdditionalPodLabels: map[string]string{
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
 		},
@@ -577,12 +591,26 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 }
 
 func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (component.DeployWaiter, error) {
+	var storageClassName *string
+	volumeSize := "100Gi"
+	retentionSize := "85GB"
+	if mon := r.Config.Monitoring; mon != nil && mon.Seed != nil {
+		if storage := mon.Seed.PrometheusSeed.Storage; storage != nil && storage.Capacity != nil {
+			volumeSize = storage.Capacity.String()
+			storageClassName = storage.ClassName
+		}
+		if !mon.Seed.PrometheusSeed.Retention.IsZero() {
+			retentionSize = mon.Seed.PrometheusSeed.Retention.String()
+		}
+	}
+
 	return sharedcomponent.NewPrometheus(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "seed",
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
-		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("100Gi")),
+		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize(volumeSize)),
 		Replicas:          1,
-		RetentionSize:     "85GB",
+		RetentionSize:     monitoringv1.ByteSize(retentionSize),
+		StorageClassName:  storageClassName,
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("400Mi")},
 		AdditionalPodLabels: map[string]string{
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets:            v1beta1constants.LabelNetworkPolicyAllowed,
@@ -601,13 +629,27 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 }
 
 func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed, seedIsGarden bool, secretsManager secretsmanager.Interface, globalMonitoringSecret, wildcardCertSecret, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
+	var storageClassName *string
+	volumeSize := "20Gi"
+	retentionSize := "15GB"
+	if mon := r.Config.Monitoring; mon != nil && mon.Seed != nil {
+		if storage := mon.Seed.PrometheusAggregate.Storage; storage != nil && storage.Capacity != nil {
+			volumeSize = storage.Capacity.String()
+			storageClassName = storage.ClassName
+		}
+		if !mon.Seed.PrometheusAggregate.Retention.IsZero() {
+			retentionSize = mon.Seed.PrometheusAggregate.Retention.String()
+		}
+	}
+
 	values := prometheus.Values{
 		Name:              "aggregate",
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
-		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("20Gi")),
+		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize(volumeSize)),
 		Replicas:          1,
 		Retention:         ptr.To(monitoringv1.Duration("30d")),
-		RetentionSize:     "15GB",
+		RetentionSize:     monitoringv1.ByteSize(retentionSize),
+		StorageClassName:  storageClassName,
 		ExternalLabels:    map[string]string{"seed": seed.GetInfo().Name},
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
 		CentralConfigs: prometheus.CentralConfigs{

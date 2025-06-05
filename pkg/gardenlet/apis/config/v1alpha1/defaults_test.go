@@ -853,7 +853,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the shoot monitoring configuration", func() {
 			obj.Monitoring = &MonitoringConfig{
-				&ShootMonitoringConfig{
+				Shoot: &ShootMonitoringConfig{
 					Enabled: ptr.To(false),
 				}}
 			SetObjectDefaults_GardenletConfiguration(obj)

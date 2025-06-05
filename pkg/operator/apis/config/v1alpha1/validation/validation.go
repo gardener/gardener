@@ -54,7 +54,7 @@ func validateControllerConfiguration(conf operatorconfigv1alpha1.ControllerConfi
 	return allErrs
 }
 
-func validateRuntimeClusterMonitoring(monitoring *operatorconfigv1alpha1.Monitoring, fldPath *field.Path) field.ErrorList {
+func validateRuntimeClusterMonitoring(monitoring *operatorconfigv1alpha1.GardenMonitoring, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if monitoring == nil {

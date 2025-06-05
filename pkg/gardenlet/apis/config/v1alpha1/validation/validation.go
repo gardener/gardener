@@ -133,6 +133,42 @@ func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfig
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(nodeTolerationCfg.DefaultUnreachableTolerationSeconds, 0), nodeTolerationConfigPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
+	if mon := cfg.Monitoring; mon != nil && mon.Seed != nil {
+		allErrs = append(allErrs, validatePrometheusMonitoringConfiguration(mon.Seed.PrometheusSeed, fldPath.Child("monitoring", "seed", "prometheusSeed"))...)
+		allErrs = append(allErrs, validatePrometheusMonitoringConfiguration(mon.Seed.PrometheusAggregate, fldPath.Child("monitoring", "seed", "prometheusAggregate"))...)
+		allErrs = append(allErrs, validatePrometheusMonitoringConfiguration(mon.Seed.PrometheusCache, fldPath.Child("monitoring", "seed", "prometheusCache"))...)
+	}
+
+	return allErrs
+}
+
+func validatePrometheusMonitoringConfiguration(config gardenletconfigv1alpha1.PrometheusConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if !config.Retention.IsZero() {
+		if config.Retention.Value() <= 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("retention"), config.Retention.String(), "retention must be greater than 0"))
+		}
+	}
+
+	if config.Storage != nil {
+		storagePath := fldPath.Child("storage")
+
+		if config.Storage.Capacity != nil {
+			if config.Storage.Capacity.Value() <= 0 {
+				allErrs = append(allErrs, field.Invalid(storagePath.Child("capacity"), config.Storage.Capacity.String(), "capacity must be greater than 0"))
+			}
+
+			if config.Retention.Sign() > 0 && config.Storage.Capacity.Cmp(config.Retention) < 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("retention"), config.Storage.Capacity.String(), "must be greater than or equal to the retention period"))
+			}
+		}
+
+		if config.Storage.ClassName != nil {
+			allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*config.Storage.ClassName, storagePath.Child("className"))...)
+		}
+	}
+
 	return allErrs
 }
 
