@@ -285,9 +285,7 @@ func IsUpdateStrategyInPlace(updateStrategy *core.MachineUpdateStrategy) bool {
 	return *updateStrategy == core.AutoInPlaceUpdate || *updateStrategy == core.ManualInPlaceUpdate
 }
 
-// IsLegacyAnonymousAuthenticationEnabled checks if the legacy anonymous authentication is enabled in the given kubeAPIServerConfig.
-func IsLegacyAnonymousAuthenticationEnabled(kubeAPIServerConfig *core.KubeAPIServerConfig) bool {
-	return kubeAPIServerConfig != nil &&
-		kubeAPIServerConfig.EnableAnonymousAuthentication != nil &&
-		*kubeAPIServerConfig.EnableAnonymousAuthentication
+// IsLegacyAnonymousAuthenticationSet checks if the legacy anonymous authentication is set in the given kubeAPIServerConfig.
+func IsLegacyAnonymousAuthenticationSet(kubeAPIServerConfig *core.KubeAPIServerConfig) bool {
+	return kubeAPIServerConfig != nil && kubeAPIServerConfig.EnableAnonymousAuthentication != nil
 }

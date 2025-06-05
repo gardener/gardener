@@ -410,7 +410,7 @@ anonymous:
 					return nil
 				})
 				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = ptr.To(true)
+				newShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = ptr.To(false)
 				test(admissionv1.Create, shootv1beta1, newShoot, false, statusCodeInvalid, "cannot use anonymous authentication configuration when the following shoots have the legacy configuration enabled: fake-shoot-name", "")
 			})
 		})
@@ -466,16 +466,6 @@ anonymous:
 
 					test(admissionv1.Update, cm, newCm, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
 				})
-
-				It("should allow anonymous authentication when the legacy kube-apiserver setting is disabled", func() {
-					shootv1beta1.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = ptr.To(false)
-					Expect(fakeClient.Create(ctx, shootv1beta1)).To(Succeed())
-
-					newCm := cm.DeepCopy()
-					newCm.Data["config.yaml"] = anonymousAuthenticationConfiguration
-
-					test(admissionv1.Update, cm, newCm, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
-				})
 			})
 
 			Context("Deny", func() {
@@ -518,6 +508,16 @@ anonymous:
 
 				It("uses anonymous authentication and has the legacy kube-apiserver setting already enabled", func() {
 					shootv1beta1.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = ptr.To(true)
+					Expect(fakeClient.Update(ctx, shootv1beta1)).To(Succeed())
+
+					newCm := cm.DeepCopy()
+					newCm.Data["config.yaml"] = anonymousAuthenticationConfiguration
+
+					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "cannot use anonymous authentication configuration when the following shoots have the legacy configuration enabled: fake-shoot-name", "")
+				})
+
+				It("uses anonymous authentication and has the legacy kube-apiserver setting already enabled", func() {
+					shootv1beta1.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = ptr.To(false)
 					Expect(fakeClient.Update(ctx, shootv1beta1)).To(Succeed())
 
 					newCm := cm.DeepCopy()
