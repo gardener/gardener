@@ -23,6 +23,57 @@ var _ = Describe("CloudProfile Helper", func() {
 		expirationDateInThePast = metav1.Time{Time: time.Now().AddDate(0, 0, -1)}
 	)
 
+	Describe("#CurrentLifecycleClassification", func() {
+		It("version is implicitly supported", func() {
+			classification := CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{
+				Version: "1.28.0",
+			})
+			Expect(classification).To(Equal(gardencorev1beta1.ClassificationSupported))
+		})
+
+		It("version is explicitly supported", func() {
+			classification := CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
+			})
+			Expect(classification).To(Equal(gardencorev1beta1.ClassificationSupported))
+		})
+
+		It("version is in preview stage", func() {
+			classification := CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: ptr.To(gardencorev1beta1.ClassificationPreview),
+			})
+			Expect(classification).To(Equal(gardencorev1beta1.ClassificationPreview))
+		})
+
+		It("version is deprecated ", func() {
+			classification := CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated),
+			})
+			Expect(classification).To(Equal(gardencorev1beta1.ClassificationDeprecated))
+		})
+
+		It("supported version will expire in the future", func() {
+			classification := CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
+				ExpirationDate: ptr.To(metav1.NewTime(time.Now().Add(2 * time.Hour))),
+			})
+			Expect(classification).To(Equal(gardencorev1beta1.ClassificationSupported))
+		})
+
+		It("supported version has already expired", func() {
+			classification := CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
+				ExpirationDate: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
+			})
+			Expect(classification).To(Equal(gardencorev1beta1.ClassificationExpired))
+		})
+	})
+
 	Describe("#FindMachineImageVersion", func() {
 		var machineImages []gardencorev1beta1.MachineImage
 
