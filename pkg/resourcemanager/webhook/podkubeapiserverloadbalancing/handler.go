@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -67,7 +68,7 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 	if pod.Labels == nil {
 		pod.Labels = make(map[string]string)
 	}
-	pod.Labels["networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-internal-tcp-9443"] = v1beta1constants.LabelNetworkPolicyAllowed
+	pod.Labels[gardenerutils.NetworkPolicyLabel("all-istio-ingresses-istio-ingressgateway-internal", 9443)] = v1beta1constants.LabelNetworkPolicyAllowed
 	h.Logger.Info("Added network policy label for all istio ingresses to pod", "pod", client.ObjectKeyFromObject(pod))
 
 	return nil
