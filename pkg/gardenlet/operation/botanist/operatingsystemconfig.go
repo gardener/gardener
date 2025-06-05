@@ -104,6 +104,9 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	if shoot.Status.Credentials != nil {
 		b.Shoot.Components.Extensions.OperatingSystemConfig.SetCredentialsRotationStatus(shoot.Status.Credentials.Rotation)
 	}
+	if shoot.Status.ManualWorkerPoolRollout != nil {
+		b.Shoot.Components.Extensions.OperatingSystemConfig.SetManualWorkerRolloutStatus(shoot.Status.ManualWorkerPoolRollout)
+	}
 
 	if v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()) {
 		sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)

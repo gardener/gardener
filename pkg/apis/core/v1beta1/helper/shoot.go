@@ -263,6 +263,18 @@ func GetShootETCDEncryptionKeyRotationPhase(credentials *gardencorev1beta1.Shoot
 	return ""
 }
 
+func MutateShootWorkerPoolRollout(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ManualWorkerPoolRollout)) {
+	if f == nil {
+		return
+	}
+
+	if shoot.Status.ManualWorkerPoolRollout == nil {
+		shoot.Status.ManualWorkerPoolRollout = &gardencorev1beta1.ManualWorkerPoolRollout{}
+	}
+
+	f(shoot.Status.ManualWorkerPoolRollout)
+}
+
 // MutateShootETCDEncryptionKeyRotation mutates the .status.credentials.rotation.etcdEncryptionKey field based on the
 // provided mutation function. If the field is nil then it is initialized.
 func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ETCDEncryptionKeyRotation)) {
@@ -631,6 +643,19 @@ func LastInitiationTimeForWorkerPool(name string, pendingWorkersRollout []garden
 		return pendingWorkersRollout[i].LastInitiationTime
 	}
 	return globalLastInitiationTime
+}
+
+// TODO(Rado): This was the function that fixed the issue with every machineset getting rolled out. Find out if this issue is happening in the other operations as well.
+// TODO(Rado): This custom function can be replaced with a call to `LastInitiationTimeForWorkerPool` with the `globalLastInitiationTime` set to nil.
+// LastInitiationTimeForWorkerPoolNoGlobal returns the last initiation time for the worker pool when found in the given list of
+// pending workers rollouts. If the worker pool is not found in the list, nil is returned.
+func LastInitiationTimeForWorkerPoolNoGlobal(name string, pendingWorkersRollout []gardencorev1beta1.PendingWorkersRollout, globalLastInitiationTime *metav1.Time) *metav1.Time {
+	if i := slices.IndexFunc(pendingWorkersRollout, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+		return rollout.Name == name
+	}); i != -1 {
+		return pendingWorkersRollout[i].LastInitiationTime
+	}
+	return nil
 }
 
 // IsShootAutonomous returns true if the shoot has a worker pool dedicated for running the control plane components.

@@ -160,6 +160,18 @@ func (mr *MockInterfaceMockRecorder) SetCredentialsRotationStatus(arg0 any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCredentialsRotationStatus", reflect.TypeOf((*MockInterface)(nil).SetCredentialsRotationStatus), arg0)
 }
 
+// SetManualWorkerRolloutStatus mocks base method.
+func (m *MockInterface) SetManualWorkerRolloutStatus(arg0 *v1beta1.ManualWorkerPoolRollout) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetManualWorkerRolloutStatus", arg0)
+}
+
+// SetManualWorkerRolloutStatus indicates an expected call of SetManualWorkerRolloutStatus.
+func (mr *MockInterfaceMockRecorder) SetManualWorkerRolloutStatus(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetManualWorkerRolloutStatus", reflect.TypeOf((*MockInterface)(nil).SetManualWorkerRolloutStatus), arg0)
+}
+
 // SetSSHPublicKeys mocks base method.
 func (m *MockInterface) SetSSHPublicKeys(arg0 []string) {
 	m.ctrl.T.Helper()
