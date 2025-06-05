@@ -45,15 +45,8 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 		return errors.New("oidc configuration is incompatible with structured authentication")
 	}
 
-	var (
-		structAuthGateEnabled, structAuthGateSet  = k.values.FeatureGates["StructuredAuthenticationConfiguration"]
-		anonymousGateEnabled, anonymousGateSet    = k.values.FeatureGates["AnonymousAuthConfigurableEndpoints"]
-		shouldConfigureAnonymousViaStructuredAuth = (!anonymousGateSet || anonymousGateEnabled) && versionutils.ConstraintK8sGreaterEqual132.Check(k.values.Version)
-	)
-
-	if (structAuthGateSet && !structAuthGateEnabled) ||
-		(k.values.AuthenticationConfiguration == nil && k.values.OIDC == nil && !shouldConfigureAnonymousViaStructuredAuth) ||
-		versionutils.ConstraintK8sLess130.Check(k.values.Version) {
+	if !k.structuredAuthenticationFeatureGateEnabled() ||
+		(k.values.AuthenticationConfiguration == nil && k.values.OIDC == nil && !k.anonymousAuthConfigurableEndpointsFeatureGateEnabled()) {
 		return nil
 	}
 
@@ -76,7 +69,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 		authenticationConfiguration.JWT = ConfigureJWTAuthenticators(k.values.OIDC)
 	}
 
-	if shouldConfigureAnonymousViaStructuredAuth && authenticationConfiguration.Anonymous == nil {
+	if k.anonymousAuthConfigurableEndpointsFeatureGateEnabled() && authenticationConfiguration.Anonymous == nil {
 		authenticationConfiguration.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
 			Enabled: ptr.Deref(k.values.AnonymousAuthenticationEnabled, false),
 		}
@@ -141,13 +134,9 @@ func ConfigureJWTAuthenticators(oidc *gardencorev1beta1.OIDCConfig) []apiserverv
 }
 
 func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, configMapAuthenticationConfig *corev1.ConfigMap, secretOIDCCABundle *corev1.Secret) error {
-	var (
-		structAuthGateEnabled, structAuthGateSet    = k.values.FeatureGates["StructuredAuthenticationConfiguration"]
-		structAuthIsDisabled                        = (structAuthGateSet && !structAuthGateEnabled)
-		structAuthConfiguresAnonymousAuthentication bool
-	)
+	var structAuthConfiguresAnonymousAuthentication bool
 
-	if versionutils.ConstraintK8sLess130.Check(k.values.Version) || structAuthIsDisabled {
+	if !k.structuredAuthenticationFeatureGateEnabled() {
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 	}
 
@@ -166,7 +155,7 @@ func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployme
 		structAuthConfiguresAnonymousAuthentication = authenticationConfiguration.Anonymous != nil
 	}
 
-	if structAuthIsDisabled || !structAuthConfiguresAnonymousAuthentication {
+	if !k.structuredAuthenticationFeatureGateEnabled() || !structAuthConfiguresAnonymousAuthentication {
 		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--anonymous-auth="+strconv.FormatBool(ptr.Deref(k.values.AnonymousAuthenticationEnabled, false)))
 	}
 
@@ -250,4 +239,30 @@ func (k *kubeAPIServer) handleOIDCSettings(deployment *appsv1.Deployment, secret
 	for key, value := range k.values.OIDC.RequiredClaims {
 		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-required-claim="+fmt.Sprintf("%s=%s", key, value))
 	}
+}
+
+func (k *kubeAPIServer) structuredAuthenticationFeatureGateEnabled() bool {
+	if versionutils.ConstraintK8sLess130.Check(k.values.Version) {
+		return false
+	}
+
+	featureGateEnabled, featureGateSet := k.values.FeatureGates["StructuredAuthenticationConfiguration"]
+	if featureGateSet {
+		return featureGateEnabled
+	}
+
+	return true
+}
+
+func (k *kubeAPIServer) anonymousAuthConfigurableEndpointsFeatureGateEnabled() bool {
+	if !versionutils.ConstraintK8sGreaterEqual132.Check(k.values.Version) {
+		return false
+	}
+
+	featureGateEnabled, featureGateSet := k.values.FeatureGates["AnonymousAuthConfigurableEndpoints"]
+	if featureGateSet {
+		return featureGateEnabled
+	}
+
+	return true
 }
