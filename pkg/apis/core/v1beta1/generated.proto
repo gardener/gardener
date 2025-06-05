@@ -403,6 +403,9 @@ message CloudProfile {
   // Spec defines the provider environment properties.
   // +optional
   optional CloudProfileSpec spec = 2;
+
+  // Status contains the current status of the cloud profile.
+  optional CloudProfileStatus status = 3;
 }
 
 // CloudProfileList is a collection of CloudProfiles.
@@ -485,6 +488,15 @@ message CloudProfileSpec {
   // During maintenance upgrades, the image that matches most capabilities will be selected.
   // +optional
   repeated CapabilityDefinition machineCapabilities = 12;
+}
+
+// CloudProfileStatus contains the status of the cloud profile.
+message CloudProfileStatus {
+  // KubernetesVersions contains the statuses of the kubernetes versions.
+  repeated ExpirableVersionStatus kubernetesVersions = 1;
+
+  // MachineImageVersions contains the statuses of the machine image versions.
+  repeated MachineImageVersionStatus machineImageVersions = 2;
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -1082,13 +1094,27 @@ message ExpirableVersion {
   optional string version = 1;
 
   // ExpirationDate defines the time at which this version expires.
+  // Deprecated: Is replaced by Lifecycle.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationDate = 2;
 
   // Classification defines the state of a version (preview, supported, deprecated).
-  // To get the currently valid classification, use CurrentLifecycleClassification().
+  // Deprecated: Is replaced by Lifecycle.
   // +optional
   optional string classification = 3;
+
+  // Lifecycle defines the lifecycle stages for this version. Cannot be used in combination with Classification and ExpirationDate.
+  // +optional
+  repeated LifecycleStage lifecycle = 4;
+}
+
+// ExpirableVersionStatus defines the current status of an expirable version.
+message ExpirableVersionStatus {
+  // Version is the version identifier.
+  optional string version = 1;
+
+  // Classification reflects the current state in the classification lifecycle.
+  optional string classification = 2;
 }
 
 // Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
@@ -1928,6 +1954,15 @@ message LastOperation {
   optional string type = 5;
 }
 
+message LifecycleStage {
+  // Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
+  optional string classification = 1;
+
+  // StartTime defines when this lifecycle stage becomes active.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 2;
+}
+
 // Limits configures operational limits for Shoot clusters using this CloudProfile.
 // See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
 message Limits {
@@ -2045,6 +2080,14 @@ message MachineImageVersion {
   // the machine image version.
   // +optional
   repeated MachineImageFlavor capabilityFlavors = 6;
+}
+
+message MachineImageVersionStatus {
+  // Name matches the name of the MachineImage the status is represented of.
+  optional string name = 1;
+
+  // Versions contains the statuses of the machine image versions.
+  repeated ExpirableVersionStatus versions = 2;
 }
 
 // MachineType contains certain properties of a machine type.
