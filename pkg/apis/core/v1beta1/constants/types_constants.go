@@ -414,6 +414,9 @@ const (
 	// (comma-separated) when the certificate authorities or service account signing key credentials rotation is in
 	// WaitingForWorkersRollout phase.
 	OperationRotateRolloutWorkers = "rotate-rollout-workers"
+	// OperationRolloutWorkers is a constant for an annotation triggering the rollout of one or more worker pools
+	// (comma-separated).
+	OperationRolloutWorkers = "rollout-workers"
 	// SeedOperationRenewGardenAccessSecrets is a constant for an annotation on a Seed indicating that
 	// all garden access secrets on the seed shall be renewed.
 	SeedOperationRenewGardenAccessSecrets = "renew-garden-access-secrets" // #nosec G101 -- No credential.

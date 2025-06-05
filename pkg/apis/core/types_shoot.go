@@ -163,6 +163,8 @@ type ShootStatus struct {
 	Networking *NetworkingStatus
 	// InPlaceUpdates contains information about in-place updates for the Shoot workers.
 	InPlaceUpdates *InPlaceUpdatesStatus
+	// ManualWorkerPoolRollout contains information about the worker pool rollout progress.
+	ManualWorkerPoolRollout *ManualWorkerPoolRollout
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -244,6 +246,18 @@ type CARotation struct {
 	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
 	// triggered.
 	LastCompletionTriggeredTime *metav1.Time
+	// PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
+	// credentials rotation.
+	PendingWorkersRollouts []PendingWorkersRollout
+}
+
+// ManualWorkerPoolRollout contains some info TODO(Rado)
+type ManualWorkerPoolRollout struct {
+	// LastCompletionTime is the most recent time when the
+	// completed.
+	LastCompletionTime *metav1.Time
+	// LastInitiationTime is the most recent time when the
+	LastInitiationTime *metav1.Time
 	// PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
 	// credentials rotation.
 	PendingWorkersRollouts []PendingWorkersRollout
