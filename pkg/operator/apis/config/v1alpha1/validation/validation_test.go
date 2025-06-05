@@ -196,7 +196,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			})
 
 			It("should complain about invalid Garden prometheus retention", func() {
-				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.Monitoring{
+				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.GardenMonitoring{
 					PrometheusGarden: &operatorconfigv1alpha1.PrometheusConfig{
 						Retention: resource.MustParse("-1Gi"),
 					},
@@ -218,7 +218,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			})
 
 			It("should complain about invalid Garden prometheus storage size", func() {
-				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.Monitoring{
+				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.GardenMonitoring{
 					PrometheusGarden: &operatorconfigv1alpha1.PrometheusConfig{
 						Storage: &operatorconfigv1alpha1.Storage{
 							Capacity: ptr.To(resource.MustParse("-1Gi")),
@@ -244,7 +244,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			})
 
 			It("should complain if Garden prometheus retention is greater than storage size", func() {
-				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.Monitoring{
+				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.GardenMonitoring{
 					PrometheusGarden: &operatorconfigv1alpha1.PrometheusConfig{
 						Retention: resource.MustParse("10Gi"),
 						Storage: &operatorconfigv1alpha1.Storage{
@@ -272,7 +272,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			})
 
 			It("should complain if Garden prometheus className is invalid", func() {
-				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.Monitoring{
+				conf.Controllers.Garden.Monitoring = &operatorconfigv1alpha1.GardenMonitoring{
 					PrometheusGarden: &operatorconfigv1alpha1.PrometheusConfig{
 						Storage: &operatorconfigv1alpha1.Storage{
 							ClassName: ptr.To("foo%"),

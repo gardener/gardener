@@ -100,7 +100,7 @@ type GardenControllerConfig struct {
 	// +optional
 	ETCDConfig *gardenletconfigv1alpha1.ETCDConfig `json:"etcdConfig,omitempty"`
 	// Monitoring contains the configuration for the monitoring components of the runtime cluster.
-	Monitoring *Monitoring `json:"monitoring,omitempty"`
+	Monitoring *GardenMonitoring `json:"monitoring,omitempty"`
 }
 
 // PrometheusConfig contains configuration for Prometheus components in the Garden cluster.
@@ -122,8 +122,8 @@ type Storage struct {
 	ClassName *string `json:"className,omitempty"`
 }
 
-// Monitoring contains the configuration for the monitoring components of the runtime cluster.
-type Monitoring struct {
+// GardenMonitoring contains the configuration for the monitoring components of the runtime cluster.
+type GardenMonitoring struct {
 	// PrometheusGarden contains the configuration for the Prometheus components in the Garden cluster.
 	// +optional
 	PrometheusGarden *PrometheusConfig `json:"prometheusGarden,omitempty"`
@@ -132,11 +132,29 @@ type Monitoring struct {
 	PrometheusLongterm *PrometheusConfig `json:"prometheusLongterm,omitempty"`
 }
 
+// SeedMonitoring contains the configuration for the monitoring components of the seed cluster.
+type SeedMonitoring struct {
+	// PrometheusCache contains the configuration for the Prometheus cache components in the seed cluster.
+	PrometheusCache *PrometheusConfig `json:"prometheusCache,omitempty"`
+	// PrometheusSeed contains the configuration for the Prometheus components in the seed cluster.
+	PrometheusSeed *PrometheusConfig `json:"prometheusSeed,omitempty"`
+	// PrometheusAggretate contains the configuration for the Prometheus aggregate components in the seed cluster.
+	PrometheusAggretate *PrometheusConfig `json:"prometheusAggretate,omitempty"`
+}
+
+// GardenletMonitoring contains the configuration for the monitoring components of the gardenlet.
+type GardenletMonitoring struct {
+	// Seed contains the configuration for the monitoring components of the seed cluster.
+	Seed SeedMonitoring `json:"seed,omitempty"`
+}
+
 // GardenletDeployerControllerConfig is the configuration for the gardenlet deployer controller.
 type GardenletDeployerControllerConfig struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// Monitoring contains the configuration for the monitoring components of the runtime cluster.
+	Monitoring *GardenletMonitoring `json:"monitoring,omitempty"`
 }
 
 // NetworkPolicyControllerConfiguration defines the configuration of the NetworkPolicy controller.
