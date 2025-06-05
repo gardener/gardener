@@ -35,11 +35,36 @@ type Handler struct {
 	TargetClient client.Reader
 }
 
-// Default defaults the scheduler name of the provided pod.
+// Default injects host alias to the istio ingress gateway clusterIP service of the provided pod if it uses the generic
+// token kubeconfig.
 func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
 		return fmt.Errorf("expected *corev1.Pod but got %T", obj)
+	}
+
+	var usesGenericKubeconfig bool
+volumes:
+	for _, volume := range pod.Spec.Volumes {
+		if volume.Secret != nil && strings.HasPrefix(volume.Secret.SecretName, v1beta1constants.SecretNameGenericTokenKubeconfig) {
+			usesGenericKubeconfig = true
+			h.Logger.Info("Pod uses generic kubeconfig", "pod", client.ObjectKeyFromObject(pod), "secretName", volume.Secret.SecretName)
+			break volumes
+		}
+
+		if volume.Projected != nil {
+			for _, source := range volume.Projected.Sources {
+				if source.Secret != nil && strings.HasPrefix(source.Secret.Name, v1beta1constants.SecretNameGenericTokenKubeconfig) {
+					usesGenericKubeconfig = true
+					h.Logger.Info("Pod uses generic kubeconfig via projected secret", "pod", client.ObjectKeyFromObject(pod), "secretName", source.Secret.Name)
+					break volumes
+				}
+			}
+		}
+	}
+
+	if !usesGenericKubeconfig {
+		return nil
 	}
 
 	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: pod.Namespace, Name: IstioInternalLoadBalancingConfigMapName}}
