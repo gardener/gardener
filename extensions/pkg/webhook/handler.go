@@ -30,14 +30,10 @@ import (
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
-type handlerAction struct {
+type handlerActionWithTypes struct {
 	mutator   Mutator
 	validator Validator
-}
-
-type handlerActionWithTypes struct {
-	handlerAction
-	types []Type
+	types     []Type
 }
 
 // HandlerBuilder contains information which are required to create an admission handler.
@@ -60,13 +56,13 @@ func NewBuilder(mgr manager.Manager, logger logr.Logger) *HandlerBuilder {
 
 // WithMutator adds the given mutator for the given types to the HandlerBuilder.
 func (b *HandlerBuilder) WithMutator(mutator Mutator, types ...Type) *HandlerBuilder {
-	b.handlerActions = append(b.handlerActions, handlerActionWithTypes{handlerAction: handlerAction{mutator: mutator}, types: types})
+	b.handlerActions = append(b.handlerActions, handlerActionWithTypes{mutator: mutator, types: types})
 	return b
 }
 
 // WithValidator adds the given validator for the given types to the HandlerBuilder.
 func (b *HandlerBuilder) WithValidator(validator Validator, types ...Type) *HandlerBuilder {
-	b.handlerActions = append(b.handlerActions, handlerActionWithTypes{handlerAction: handlerAction{validator: validator}, types: types})
+	b.handlerActions = append(b.handlerActions, handlerActionWithTypes{validator: validator, types: types})
 	return b
 }
 
@@ -79,7 +75,6 @@ func (b *HandlerBuilder) WithPredicates(predicates ...predicate.Predicate) *Hand
 // Build creates a new admission.Handler with the settings previously specified with the HandlerBuilder's functions.
 func (b *HandlerBuilder) Build() (admission.Handler, error) {
 	h := &handler{
-		gvkToObject:        make(map[metav1.GroupVersionKind]client.Object),
 		gvkToHandlerAction: make(map[metav1.GroupVersionKind]handlerAction),
 		predicates:         b.predicates,
 		scheme:             b.scheme,
@@ -93,13 +88,22 @@ func (b *HandlerBuilder) Build() (admission.Handler, error) {
 			return nil, err
 		}
 		for gvk, obj := range gvkToObjectType {
-			h.gvkToObject[gvk] = obj
-			h.gvkToHandlerAction[gvk] = action.handlerAction
+			h.gvkToHandlerAction[gvk] = handlerAction{
+				mutator:   action.mutator,
+				validator: action.validator,
+				object:    obj,
+			}
 		}
 	}
 	h.decoder = serializer.NewCodecFactory(b.scheme).UniversalDecoder()
 
 	return h, nil
+}
+
+type handlerAction struct {
+	mutator   Mutator
+	validator Validator
+	object    client.Object
 }
 
 type handler struct {
@@ -109,7 +113,6 @@ type handler struct {
 	decoder runtime.Decoder
 
 	gvkToHandlerAction map[metav1.GroupVersionKind]handlerAction
-	gvkToObject        map[metav1.GroupVersionKind]client.Object
 	predicates         []predicate.Predicate
 }
 
@@ -117,43 +120,28 @@ type handler struct {
 func (h *handler) Handle(ctx context.Context, req admission.Request) admission.Response {
 	ar := req.AdmissionRequest
 
-	// Decode object
-	t, ok := h.gvkToObject[ar.Kind]
-	if !ok {
-		// check if we can find an internal type
-		for gvk, obj := range h.gvkToObject {
-			if gvk.Version == runtime.APIVersionInternal && gvk.Group == ar.Kind.Group && gvk.Kind == ar.Kind.Kind {
-				t = obj
-				break
-			}
-		}
-		if t == nil {
-			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected request kind %s", ar.Kind.String()))
-		}
-	}
-
 	action, ok := h.gvkToHandlerAction[ar.Kind]
 	if !ok {
 		// check if we can find an internal type
-		for gvk, m := range h.gvkToHandlerAction {
+		for gvk, action2 := range h.gvkToHandlerAction {
 			if gvk.Version == runtime.APIVersionInternal && gvk.Group == ar.Kind.Group && gvk.Kind == ar.Kind.Kind {
-				action = m
+				action = action2
 				break
 			}
 		}
-		if action.mutator == nil || action.validator == nil {
+		if action.mutator == nil && action.validator == nil {
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected request kind %s", ar.Kind.String()))
 		}
 	}
 
-	return h.handle(ctx, req, action, t)
+	return h.handle(ctx, req, action)
 }
 
-func (h *handler) handle(ctx context.Context, req admission.Request, action handlerAction, t client.Object) admission.Response {
+func (h *handler) handle(ctx context.Context, req admission.Request, action handlerAction) admission.Response {
 	ar := req.AdmissionRequest
 
 	// Decode object
-	obj := t.DeepCopyObject().(client.Object)
+	obj := action.object.DeepCopyObject().(client.Object)
 	_, _, err := h.decoder.Decode(req.Object.Raw, nil, obj)
 	if err != nil {
 		h.logger.Error(err, "Could not decode request", "request", ar)
@@ -164,7 +152,7 @@ func (h *handler) handle(ctx context.Context, req admission.Request, action hand
 
 	// Only UPDATE and DELETE operations have oldObjects.
 	if len(req.OldObject.Raw) != 0 {
-		oldObj = t.DeepCopyObject().(client.Object)
+		oldObj = action.object.DeepCopyObject().(client.Object)
 		if _, _, err := h.decoder.Decode(ar.OldObject.Raw, nil, oldObj); err != nil {
 			h.logger.Error(err, "Could not decode old object", "object", oldObj)
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode old object %v: %v", oldObj, err))
@@ -216,10 +204,14 @@ func (h *handler) handle(ctx context.Context, req admission.Request, action hand
 
 func (h *handler) addAdditionalValuesToContext(ctx context.Context, action handlerAction) (context.Context, error) {
 	var obj interface{}
-	if action.mutator != nil {
+
+	switch {
+	case action.mutator != nil:
 		obj = action.mutator
-	} else if action.validator != nil {
+	case action.validator != nil:
 		obj = action.validator
+	default:
+		return nil, fmt.Errorf("neither mutator nor validator is set")
 	}
 
 	if wantsShootClient, ok := obj.(WantsShootClient); ok && wantsShootClient.WantsShootClient() {
