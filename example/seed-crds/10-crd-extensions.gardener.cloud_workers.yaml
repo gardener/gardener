@@ -72,15 +72,18 @@ spec:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               pools:
-                description: Pools is a list of worker pools.
+                description: |-
+                  worker pool workerpool spec
+                  Pools is a list of worker pools.
                 items:
                   description: WorkerPool is the definition of a specific worker pool.
                   properties:
                     annotations:
                       additionalProperties:
                         type: string
-                      description: Annotations is a map of key/value pairs for annotations
-                        for all the `Node` objects in this worker pool.
+                      description: |-
+                        Annotations is a map of key/value pairs for annotations for all the `Node` objects in this worker pool.
+                        annotations need to go here workerpool annotations node annotations
                       type: object
                     architecture:
                       description: Architecture is the CPU architecture of the worker

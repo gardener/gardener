@@ -1627,7 +1627,8 @@ Kubernetes core/v1.SecretReference
 </em>
 </td>
 <td>
-<p>Pools is a list of worker pools.</p>
+<p>worker pool workerpool spec
+Pools is a list of worker pools.</p>
 </td>
 </tr>
 </table>
@@ -4857,7 +4858,8 @@ map[string]string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Annotations is a map of key/value pairs for annotations for all the <code>Node</code> objects in this worker pool.</p>
+<p>Annotations is a map of key/value pairs for annotations for all the <code>Node</code> objects in this worker pool.
+annotations need to go here workerpool annotations node annotations</p>
 </td>
 </tr>
 <tr>
@@ -5218,7 +5220,8 @@ Kubernetes core/v1.SecretReference
 </em>
 </td>
 <td>
-<p>Pools is a list of worker pools.</p>
+<p>worker pool workerpool spec
+Pools is a list of worker pools.</p>
 </td>
 </tr>
 </tbody>
