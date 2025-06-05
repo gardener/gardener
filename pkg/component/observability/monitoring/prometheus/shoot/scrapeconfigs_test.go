@@ -17,7 +17,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 )
 
@@ -35,9 +34,8 @@ var _ = Describe("ScrapeConfigs", func() {
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						HonorTimestamps: ptr.To(false),
 						MetricsPath:     ptr.To("/federate"),
-						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-							Role:       monitoringv1alpha1.KubernetesRoleService,
-							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{v1beta1constants.GardenNamespace}},
+						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
+							Targets: []monitoringv1alpha1.Target{"prometheus-cache.garden.svc:80"},
 						}},
 						Params: map[string][]string{
 							"match[]": {
@@ -48,14 +46,6 @@ var _ = Describe("ScrapeConfigs", func() {
 							},
 						},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
-							{
-								SourceLabels: []monitoringv1.LabelName{
-									"__meta_kubernetes_service_name",
-									"__meta_kubernetes_service_port_name",
-								},
-								Regex:  "prometheus-cache;" + prometheus.ServicePortName,
-								Action: "keep",
-							},
 							{
 								Action:      "replace",
 								Replacement: ptr.To("kube-kubelet-seed"),
