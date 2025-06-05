@@ -7,14 +7,28 @@ package helper
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 )
+
+// CurrentLifecycleClassification returns the current lifecycle classification of the given version.
+// An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
+func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionClassification {
+	var currentTime = time.Now()
+
+	if version.ExpirationDate != nil && !currentTime.Before(version.ExpirationDate.Time) {
+		return core.ClassificationExpired
+	}
+
+	return ptr.Deref(version.Classification, core.ClassificationSupported)
+}
 
 // FindMachineImageVersion finds the machine image version in the <cloudProfile> for the given <name> and <version>.
 // In case no machine image version can be found with the given <name> or <version>, false is being returned.

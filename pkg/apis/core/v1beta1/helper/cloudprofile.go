@@ -12,11 +12,24 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
+
+// CurrentLifecycleClassification returns the current lifecycle classification of the given version.
+// An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
+func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) gardencorev1beta1.VersionClassification {
+	var currentTime = time.Now()
+
+	if version.ExpirationDate != nil && !currentTime.Before(version.ExpirationDate.Time) {
+		return gardencorev1beta1.ClassificationExpired
+	}
+
+	return ptr.Deref(version.Classification, gardencorev1beta1.ClassificationSupported)
+}
 
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
 // region. In case it does not find the machine image with the <name>, it returns false. Otherwise, true and the
@@ -505,7 +518,7 @@ func FilterLowerVersion(currentSemVerVersion semver.Version) VersionPredicate {
 // returns true if it is expired
 func FilterExpiredVersion() func(expirableVersion gardencorev1beta1.ExpirableVersion, version *semver.Version) (bool, error) {
 	return func(expirableVersion gardencorev1beta1.ExpirableVersion, _ *semver.Version) (bool, error) {
-		return expirableVersion.ExpirationDate != nil && (time.Now().UTC().After(expirableVersion.ExpirationDate.UTC()) || time.Now().UTC().Equal(expirableVersion.ExpirationDate.UTC())), nil
+		return CurrentLifecycleClassification(expirableVersion) == gardencorev1beta1.ClassificationExpired, nil
 	}
 }
 
@@ -513,7 +526,7 @@ func FilterExpiredVersion() func(expirableVersion gardencorev1beta1.ExpirableVer
 // returns true if it is deprecated
 func FilterDeprecatedVersion() func(expirableVersion gardencorev1beta1.ExpirableVersion, version *semver.Version) (bool, error) {
 	return func(expirableVersion gardencorev1beta1.ExpirableVersion, _ *semver.Version) (bool, error) {
-		return expirableVersion.Classification != nil && *expirableVersion.Classification == gardencorev1beta1.ClassificationDeprecated, nil
+		return CurrentLifecycleClassification(expirableVersion) == gardencorev1beta1.ClassificationDeprecated, nil
 	}
 }
 

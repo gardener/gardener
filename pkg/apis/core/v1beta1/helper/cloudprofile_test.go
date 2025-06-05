@@ -17,7 +17,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
-var _ = Describe("Helper", func() {
+var _ = Describe("CloudProfile Helper", func() {
 	var (
 		trueVar                 = true
 		expirationDateInThePast = metav1.Time{Time: time.Now().AddDate(0, 0, -1)}
