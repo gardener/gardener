@@ -271,12 +271,20 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 }
 
 func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
+	contextName := b.Shoot.ControlPlaneNamespace
 	kubeAPIServerAddress := b.Shoot.ComputeInClusterAPIServerAddress(true)
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()) {
+		// Add the failure tolerance type to the context name if high availability is enabled. This ensures that the
+		// generic token kubeconfig changes when a shoot is upgraded from non-HA to HA. The generic token kubeconfig is
+		// updated that the control plane pods are restarted and get the updated hosts alias for the kube-apiserver domain.
+		if b.Shoot.GetInfo().Spec.ControlPlane != nil && b.Shoot.GetInfo().Spec.ControlPlane.HighAvailability != nil {
+			contextName += fmt.Sprintf("--failure-tolerance-%s", b.Shoot.GetInfo().Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
+		}
+
 		kubeAPIServerAddress = b.Shoot.ComputeOutOfClusterAPIServerAddress(true)
 	}
 
-	genericTokenKubeconfigSecret, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, b.SecretsManager, b.Shoot.ControlPlaneNamespace, kubeAPIServerAddress)
+	genericTokenKubeconfigSecret, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, b.SecretsManager, contextName, kubeAPIServerAddress)
 	if err != nil {
 		return err
 	}

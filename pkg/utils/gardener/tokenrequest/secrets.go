@@ -42,7 +42,7 @@ func init() {
 
 // GenerateGenericTokenKubeconfig generates a generic token kubeconfig in the given namespace for the given kube-apiserver address.
 // In case of a rotation, the old kubeconfig is kept in the cluster.
-func GenerateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface, namespace, kubeAPIServerAddress string) (*corev1.Secret, error) {
+func GenerateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface, contextName, kubeAPIServerAddress string) (*corev1.Secret, error) {
 	clusterCABundleSecret, found := secretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
@@ -50,7 +50,7 @@ func GenerateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsm
 
 	config := &secretsutils.KubeconfigSecretConfig{
 		Name:        v1beta1constants.SecretNameGenericTokenKubeconfig,
-		ContextName: namespace,
+		ContextName: contextName,
 		Cluster: clientcmdv1.Cluster{
 			Server:                   kubeAPIServerAddress,
 			CertificateAuthorityData: clusterCABundleSecret.Data[secretsutils.DataKeyCertificateBundle],
