@@ -3763,7 +3763,7 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 					},
 					"classification": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Classification defines the state of a version (preview, supported, deprecated)",
+							Description: "Classification defines the state of a version (preview, supported, deprecated). To get the currently valid classification, use CurrentLifecycleClassification().",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -5783,7 +5783,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 					},
 					"classification": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Classification defines the state of a version (preview, supported, deprecated)",
+							Description: "Classification defines the state of a version (preview, supported, deprecated). To get the currently valid classification, use CurrentLifecycleClassification().",
 							Type:        []string{"string"},
 							Format:      "",
 						},

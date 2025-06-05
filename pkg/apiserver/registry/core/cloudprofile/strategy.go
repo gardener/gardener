@@ -6,7 +6,6 @@ package cloudprofile
 
 import (
 	"context"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -33,7 +33,7 @@ func (cloudProfileStrategy) NamespaceScoped() bool {
 func (cloudProfileStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	cloudProfile := obj.(*core.CloudProfile)
 
-	dropExpiredVersions(cloudProfile)
+	dropInactiveVersions(cloudProfile)
 }
 
 func (cloudProfileStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
@@ -77,11 +77,11 @@ func (cloudProfileStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Obj
 	return nil
 }
 
-func dropExpiredVersions(cloudProfile *core.CloudProfile) {
+func dropInactiveVersions(cloudProfile *core.CloudProfile) {
 	var validKubernetesVersions []core.ExpirableVersion
 
 	for _, version := range cloudProfile.Spec.Kubernetes.Versions {
-		if version.ExpirationDate != nil && version.ExpirationDate.Time.Before(time.Now()) {
+		if !gardencorehelper.CurrentLifecycleClassification(version).IsActive() {
 			continue
 		}
 		validKubernetesVersions = append(validKubernetesVersions, version)
@@ -93,7 +93,7 @@ func dropExpiredVersions(cloudProfile *core.CloudProfile) {
 		var validMachineImageVersions []core.MachineImageVersion
 
 		for _, version := range machineImage.Versions {
-			if version.ExpirationDate != nil && version.ExpirationDate.Time.Before(time.Now()) {
+			if gardencorehelper.CurrentLifecycleClassification(version.ExpirableVersion) == core.ClassificationExpired {
 				continue
 			}
 			validMachineImageVersions = append(validMachineImageVersions, version)

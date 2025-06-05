@@ -1030,7 +1030,8 @@ message ExpirableVersion {
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationDate = 2;
 
-  // Classification defines the state of a version (preview, supported, deprecated)
+  // Classification defines the state of a version (preview, supported, deprecated).
+  // To get the currently valid classification, use CurrentLifecycleClassification().
   // +optional
   optional string classification = 3;
 }

@@ -17,7 +17,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
 )
 
-var _ = Describe("Helper", func() {
+var _ = Describe("CloudProfile Helper", func() {
 	Describe("#FindMachineImageVersion", func() {
 		var machineImages []core.MachineImage
 

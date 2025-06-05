@@ -12,7 +12,6 @@ import (
 	"reflect"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/ptr"
@@ -201,7 +200,6 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 		return nil
 	}
 
-	now := ptr.To(metav1.Now())
 	parentVersions := utils.CreateMapFromSlice(c.parentCloudProfile.Spec.Kubernetes.Versions, func(version gardencorev1beta1.ExpirableVersion) string { return version.Version })
 	currentVersionsMerged := make(map[string]gardencore.ExpirableVersion)
 	if attr.GetOperation() == admission.Update {
@@ -214,7 +212,7 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 		if newVersion.ExpirationDate == nil {
 			return fmt.Errorf("specified version '%s' does not set expiration date", newVersion.Version)
 		}
-		if attr.GetOperation() == admission.Update && newVersion.ExpirationDate.Before(now) {
+		if attr.GetOperation() == admission.Update && gardencorehelper.CurrentLifecycleClassification(newVersion) == gardencore.ClassificationExpired {
 			if override, exists := currentVersionsMerged[newVersion.Version]; !exists || !override.ExpirationDate.Equal(newVersion.ExpirationDate) {
 				return fmt.Errorf("expiration date for version %q is in the past", newVersion.Version)
 			}
@@ -226,7 +224,6 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 func (c *validationContext) validateMachineImageOverrides(ctx context.Context, attr admission.Attributes) error {
 	var (
 		allErrs      = field.ErrorList{}
-		now          = ptr.To(metav1.Now())
 		parentImages = gardenerutils.NewV1beta1ImagesContext(c.parentCloudProfile.Spec.MachineImages)
 
 		oldVersionsSpec, oldVersionsMerged *gardenerutils.ImagesContext[gardencore.MachineImage, gardencore.MachineImageVersion]
@@ -281,7 +278,7 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 						}
 					}
 
-					if attr.GetOperation() == admission.Update && imageVersion.ExpirationDate.Before(now) {
+					if attr.GetOperation() == admission.Update && gardencorehelper.CurrentLifecycleClassification(imageVersion.ExpirableVersion) == gardencore.ClassificationExpired {
 						var (
 							override gardencore.MachineImageVersion
 							exists   bool
