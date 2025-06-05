@@ -94,6 +94,8 @@ honor_labels: true`
 		serviceAccount                      *corev1.ServiceAccount
 		service                             *corev1.Service
 		clusterRoleBinding                  *rbacv1.ClusterRoleBinding
+		role                                *rbacv1.Role
+		roleBinding                         *rbacv1.RoleBinding
 		prometheusFor                       func([]alertmanager, bool) *monitoringv1.Prometheus
 		vpa                                 *vpaautoscalingv1.VerticalPodAutoscaler
 		ingress                             *networkingv1.Ingress
@@ -205,6 +207,49 @@ honor_labels: true`
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      "ServiceAccount",
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+			}},
+		}
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{
+						"services",
+						"endpoints",
+						"pods",
+					},
+					Verbs: []string{"get", "list", "watch"},
+				},
+			},
+		}
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     "prometheus-" + name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
 				Name:      "prometheus-" + name,
 				Namespace: namespace,
 			}},
@@ -1328,7 +1373,8 @@ query_range:
 					Expect(managedResource).To(consistOf(
 						serviceAccount,
 						service,
-						clusterRoleBinding,
+						role,
+						roleBinding,
 						prometheusFor(nil, false),
 						vpa,
 						prometheusRule,
@@ -1373,7 +1419,8 @@ query_range:
 						Expect(managedResource).To(consistOf(
 							serviceAccount,
 							service,
-							clusterRoleBinding,
+							role,
+							roleBinding,
 							prometheusFor(nil, false),
 							vpa,
 							prometheusRule,

@@ -93,3 +93,46 @@ func (p *prometheus) clusterRoleBindingTarget() *rbacv1.ClusterRoleBinding {
 		}},
 	}
 }
+
+func (p *prometheus) role() *rbacv1.Role {
+	return &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "prometheus-" + p.values.Name,
+			Namespace: p.namespace,
+			Labels:    p.getLabels(),
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{
+					"services",
+					"endpoints",
+					"pods",
+				},
+				Verbs: []string{"get", "list", "watch"},
+			},
+		},
+	}
+}
+
+func (p *prometheus) roleBinding() *rbacv1.RoleBinding {
+	obj := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "prometheus-" + p.values.Name,
+			Namespace: p.namespace,
+			Labels:    p.getLabels(),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     "prometheus-" + p.values.Name,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      p.name(),
+			Namespace: p.namespace,
+		}},
+	}
+
+	return obj
+}
