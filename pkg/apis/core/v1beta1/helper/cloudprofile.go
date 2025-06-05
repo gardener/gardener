@@ -335,7 +335,7 @@ func GetLatestQualifyingVersion(versions []gardencorev1beta1.ExpirableVersion, p
 	)
 OUTER:
 	for _, v := range versions {
-		if v.Classification != nil && *v.Classification == gardencorev1beta1.ClassificationPreview {
+		if CurrentLifecycleClassification(v) == gardencorev1beta1.ClassificationPreview {
 			continue
 		}
 
@@ -411,7 +411,7 @@ OUTER:
 		}
 
 		// never update to preview versions
-		if v.Classification != nil && *v.Classification == gardencorev1beta1.ClassificationPreview {
+		if CurrentLifecycleClassification(v) == gardencorev1beta1.ClassificationPreview {
 			continue
 		}
 

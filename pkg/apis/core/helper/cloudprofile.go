@@ -106,7 +106,7 @@ func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPre
 			return core.ExpirableVersion{}, core.ExpirableVersion{}, fmt.Errorf("error while parsing expirable version '%s': %s", version.Version, err.Error())
 		}
 
-		if filterPreviewVersions && version.Classification != nil && *version.Classification == core.ClassificationPreview {
+		if filterPreviewVersions && CurrentLifecycleClassification(version) == core.ClassificationPreview {
 			continue
 		}
 
@@ -115,7 +115,7 @@ func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPre
 			latestExpirableVersion = version
 		}
 
-		if version.Classification != nil && *version.Classification != core.ClassificationDeprecated {
+		if CurrentLifecycleClassification(version) != core.ClassificationDeprecated {
 			if latestNonDeprecatedSemVerVersion == nil || v.GreaterThan(latestNonDeprecatedSemVerVersion) {
 				latestNonDeprecatedSemVerVersion = v
 				latestNonDeprecatedExpirableVersion = version
@@ -219,7 +219,7 @@ func GetMachineImageDiff(old, new []core.MachineImage) (removedMachineImages set
 func FilterVersionsWithClassification(versions []core.ExpirableVersion, classification core.VersionClassification) []core.ExpirableVersion {
 	var result []core.ExpirableVersion
 	for _, version := range versions {
-		if version.Classification == nil || *version.Classification != classification {
+		if CurrentLifecycleClassification(version) != classification {
 			continue
 		}
 
