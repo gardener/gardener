@@ -188,6 +188,8 @@ type Networks struct {
 	Services []net.IPNet
 	// Nodes subnets
 	Nodes []net.IPNet
+	// EgressCIDRs contains the outgoing IP address ranges used by the cluster if known.
+	EgressCIDRs []net.IPNet
 	// APIServer are the ClusterIPs of default/kubernetes Service
 	APIServer []net.IP
 	// CoreDNS are the ClusterIPs of kube-system/coredns Service

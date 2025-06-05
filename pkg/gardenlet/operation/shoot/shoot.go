@@ -561,8 +561,8 @@ func getPrimaryCIDRs(cidrs []net.IPNet, ipFamilies []gardencorev1beta1.IPFamily)
 // for a Shoot
 func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) {
 	var (
-		services, pods, nodes []net.IPNet
-		apiServerIPs, dnsIPs  []net.IP
+		services, pods, nodes, egressCIDRs []net.IPNet
+		apiServerIPs, dnsIPs               []net.IP
 	)
 
 	if shoot.Spec.Networking.Pods != nil {
@@ -611,6 +611,11 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 		} else {
 			nodes = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
+		if result, err := copyUniqueCIDRs(shoot.Status.Networking.EgressCIDRs, egressCIDRs, "egressCIDRs"); err != nil {
+			return nil, err
+		} else {
+			egressCIDRs = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
+		}
 	}
 
 	// During dual-stack migration, until nodes are migrated to  dual-stack, we only use the primary addresses.
@@ -636,11 +641,12 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 	}
 
 	return &Networks{
-		CoreDNS:   dnsIPs,
-		Pods:      pods,
-		Services:  services,
-		Nodes:     nodes,
-		APIServer: apiServerIPs,
+		CoreDNS:     dnsIPs,
+		Pods:        pods,
+		Services:    services,
+		Nodes:       nodes,
+		EgressCIDRs: egressCIDRs,
+		APIServer:   apiServerIPs,
 	}, nil
 }
 
