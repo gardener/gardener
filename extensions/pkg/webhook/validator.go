@@ -14,15 +14,3 @@ import (
 type Validator interface {
 	Validate(ctx context.Context, new, old client.Object) error
 }
-
-type validationWrapper struct {
-	Validator
-}
-
-func (d *validationWrapper) do(ctx context.Context, new, old client.Object) error {
-	return d.Validate(ctx, new, old)
-}
-
-func validatingActionHandler(val Validator) handlerAction {
-	return &validationWrapper{val}
-}
