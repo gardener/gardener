@@ -121,7 +121,7 @@ func validateCloudProfileKubernetesSettings(kubernetes core.KubernetesSettings, 
 func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if version.Classification != nil && *version.Classification == core.ClassificationSupported {
+	if version.Classification != nil && helper.CurrentLifecycleClassification(version) == core.ClassificationSupported {
 		currentSemVer, err := semver.NewVersion(version.Version)
 		if err != nil {
 			// check is already performed by caller, avoid duplicate error
@@ -363,7 +363,7 @@ func checkImageSupport(bastionImageName string, imageVersions []core.MachineImag
 			archSupported = true
 		}
 
-		if version.Classification != nil && *version.Classification == core.ClassificationSupported {
+		if version.Classification != nil && helper.CurrentLifecycleClassification(version.ExpirableVersion) == core.ClassificationSupported {
 			validClassification = true
 		}
 		if archSupported && validClassification {
