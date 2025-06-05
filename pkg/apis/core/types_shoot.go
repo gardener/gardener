@@ -169,6 +169,8 @@ type ShootStatus struct {
 	Networking *NetworkingStatus
 	// InPlaceUpdates contains information about in-place updates for the Shoot workers.
 	InPlaceUpdates *InPlaceUpdatesStatus
+	// ManualWorkerPoolRollout contains information about the worker pool rollout progress.
+	ManualWorkerPoolRollout *ManualWorkerPoolRollout
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -248,6 +250,16 @@ type CARotation struct {
 	LastCompletionTriggeredTime *metav1.Time
 	// PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
 	// credentials rotation.
+	PendingWorkersRollouts []PendingWorkersRollout
+}
+
+// ManualWorkerPoolRollout contains information about the worker pool rollout progress that has been initiated via the gardener.cloud/operation=rollout-workers annotation.
+type ManualWorkerPoolRollout struct {
+	// LastCompletionTime is the time when the last worker pool rollout was successfully completed.
+	LastCompletionTime *metav1.Time
+	// LastInitiationTime is the time when the last worker pool rollout was initiated.
+	LastInitiationTime *metav1.Time
+	// PendingWorkersRollouts contains the names of the worker pools that are still pending rollout.
 	PendingWorkersRollouts []PendingWorkersRollout
 }
 
