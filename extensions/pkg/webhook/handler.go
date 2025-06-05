@@ -30,38 +30,43 @@ import (
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
+type handlerAction struct {
+	mutator   Mutator
+	validator Validator
+}
+
+type handlerActionWithTypes struct {
+	handlerAction
+	types []Type
+}
+
 // HandlerBuilder contains information which are required to create an admission handler.
 type HandlerBuilder struct {
-	actionMap  map[handlerAction][]Type
-	predicates []predicate.Predicate
-	scheme     *runtime.Scheme
-	logger     logr.Logger
-	client     client.Client
+	handlerActions []handlerActionWithTypes
+	predicates     []predicate.Predicate
+	scheme         *runtime.Scheme
+	logger         logr.Logger
+	client         client.Client
 }
 
 // NewBuilder creates a new HandlerBuilder.
 func NewBuilder(mgr manager.Manager, logger logr.Logger) *HandlerBuilder {
 	return &HandlerBuilder{
-		actionMap: make(map[handlerAction][]Type),
-		scheme:    mgr.GetScheme(),
-		logger:    logger.WithName("handler"),
-		client:    mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		logger: logger.WithName("handler"),
+		client: mgr.GetClient(),
 	}
 }
 
 // WithMutator adds the given mutator for the given types to the HandlerBuilder.
 func (b *HandlerBuilder) WithMutator(mutator Mutator, types ...Type) *HandlerBuilder {
-	mutatingAction := mutatingActionHandler(mutator)
-	b.actionMap[mutatingAction] = append(b.actionMap[mutatingAction], types...)
-
+	b.handlerActions = append(b.handlerActions, handlerActionWithTypes{handlerAction: handlerAction{mutator: mutator}, types: types})
 	return b
 }
 
 // WithValidator adds the given validator for the given types to the HandlerBuilder.
 func (b *HandlerBuilder) WithValidator(validator Validator, types ...Type) *HandlerBuilder {
-	validatingAction := validatingActionHandler(validator)
-	b.actionMap[validatingAction] = append(b.actionMap[validatingAction], types...)
-
+	b.handlerActions = append(b.handlerActions, handlerActionWithTypes{handlerAction: handlerAction{validator: validator}, types: types})
 	return b
 }
 
@@ -74,22 +79,22 @@ func (b *HandlerBuilder) WithPredicates(predicates ...predicate.Predicate) *Hand
 // Build creates a new admission.Handler with the settings previously specified with the HandlerBuilder's functions.
 func (b *HandlerBuilder) Build() (admission.Handler, error) {
 	h := &handler{
-		typesMap:   make(map[metav1.GroupVersionKind]client.Object),
-		actionMap:  make(map[metav1.GroupVersionKind]handlerAction),
-		predicates: b.predicates,
-		scheme:     b.scheme,
-		logger:     b.logger,
-		client:     b.client,
+		gvkToObject:        make(map[metav1.GroupVersionKind]client.Object),
+		gvkToHandlerAction: make(map[metav1.GroupVersionKind]handlerAction),
+		predicates:         b.predicates,
+		scheme:             b.scheme,
+		logger:             b.logger,
+		client:             b.client,
 	}
 
-	for mutator, types := range b.actionMap {
-		typesMap, err := buildTypesMap(b.scheme, objectsFromTypes(types))
+	for _, action := range b.handlerActions {
+		gvkToObjectType, err := buildTypesMap(b.scheme, objectsFromTypes(action.types))
 		if err != nil {
 			return nil, err
 		}
-		for gvk, obj := range typesMap {
-			h.typesMap[gvk] = obj
-			h.actionMap[gvk] = mutator
+		for gvk, obj := range gvkToObjectType {
+			h.gvkToObject[gvk] = obj
+			h.gvkToHandlerAction[gvk] = action.handlerAction
 		}
 	}
 	h.decoder = serializer.NewCodecFactory(b.scheme).UniversalDecoder()
@@ -97,18 +102,15 @@ func (b *HandlerBuilder) Build() (admission.Handler, error) {
 	return h, nil
 }
 
-type handlerAction interface {
-	do(ctx context.Context, new, old client.Object) error
-}
-
 type handler struct {
-	actionMap  map[metav1.GroupVersionKind]handlerAction
-	typesMap   map[metav1.GroupVersionKind]client.Object
-	predicates []predicate.Predicate
-	decoder    runtime.Decoder
-	scheme     *runtime.Scheme
-	logger     logr.Logger
-	client     client.Client
+	client  client.Client
+	logger  logr.Logger
+	scheme  *runtime.Scheme
+	decoder runtime.Decoder
+
+	gvkToHandlerAction map[metav1.GroupVersionKind]handlerAction
+	gvkToObject        map[metav1.GroupVersionKind]client.Object
+	predicates         []predicate.Predicate
 }
 
 // Handle handles the given admission request.
@@ -116,10 +118,10 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 	ar := req.AdmissionRequest
 
 	// Decode object
-	t, ok := h.typesMap[ar.Kind]
+	t, ok := h.gvkToObject[ar.Kind]
 	if !ok {
 		// check if we can find an internal type
-		for gvk, obj := range h.typesMap {
+		for gvk, obj := range h.gvkToObject {
 			if gvk.Version == runtime.APIVersionInternal && gvk.Group == ar.Kind.Group && gvk.Kind == ar.Kind.Kind {
 				t = obj
 				break
@@ -130,24 +132,24 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 		}
 	}
 
-	mutator, ok := h.actionMap[ar.Kind]
+	action, ok := h.gvkToHandlerAction[ar.Kind]
 	if !ok {
 		// check if we can find an internal type
-		for gvk, m := range h.actionMap {
+		for gvk, m := range h.gvkToHandlerAction {
 			if gvk.Version == runtime.APIVersionInternal && gvk.Group == ar.Kind.Group && gvk.Kind == ar.Kind.Kind {
-				mutator = m
+				action = m
 				break
 			}
 		}
-		if mutator == nil {
+		if action.mutator == nil || action.validator == nil {
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected request kind %s", ar.Kind.String()))
 		}
 	}
 
-	return h.handle(ctx, req, mutator, t)
+	return h.handle(ctx, req, action, t)
 }
 
-func (h *handler) handle(ctx context.Context, req admission.Request, m handlerAction, t client.Object) admission.Response {
+func (h *handler) handle(ctx context.Context, req admission.Request, action handlerAction, t client.Object) admission.Response {
 	ar := req.AdmissionRequest
 
 	// Decode object
@@ -174,46 +176,69 @@ func (h *handler) handle(ctx context.Context, req admission.Request, m handlerAc
 		return admission.ValidationResponse(true, "")
 	}
 
-	if wantsShootClient, ok := m.(WantsShootClient); ok && wantsShootClient.WantsShootClient() {
-		shootClient, err := h.constructShootClient(ctx)
-		if err != nil {
-			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed building shoot client: %w", err))
-		}
-		ctx = context.WithValue(ctx, ShootClientContextKey{}, shootClient) //nolint:staticcheck
+	if ctx, err = h.addAdditionalValuesToContext(ctx, action); err != nil {
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("could not add additional values to context: %w", err))
 	}
 
-	if wantsClusterObject, ok := m.(WantsClusterObject); ok && wantsClusterObject.WantsClusterObject() {
-		cluster, err := h.constructClusterObject(ctx)
-		if err != nil {
-			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed building Cluster object: %w", err))
-		}
-		ctx = context.WithValue(ctx, ClusterObjectContextKey{}, cluster) //nolint:staticcheck
-	}
-
-	// Process the resource
 	newObj := obj.DeepCopyObject().(client.Object)
-	if err = m.do(ctx, newObj, oldObj); err != nil {
-		h.logger.Error(fmt.Errorf("could not process: %w", err), "Admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
-		return admission.Errored(http.StatusUnprocessableEntity, err)
-	}
 
-	_, isValidator := m.(Validator)
-	// Return a patch response if the resource should be changed
-	if !isValidator && !equality.Semantic.DeepEqual(obj, newObj) {
-		oldObjMarshaled, err := json.Marshal(obj)
-		if err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-		newObjMarshaled, err := json.Marshal(newObj)
-		if err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
+	switch {
+	case action.mutator != nil:
+		if err = action.mutator.Mutate(ctx, newObj, oldObj); err != nil {
+			h.logger.Error(fmt.Errorf("could not process: %w", err), "Admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
+			return admission.Errored(http.StatusUnprocessableEntity, err)
 		}
 
-		return admission.PatchResponseFromRaw(oldObjMarshaled, newObjMarshaled)
+		// Return a patch response if the resource should be changed
+		if !equality.Semantic.DeepEqual(obj, newObj) {
+			oldObjMarshaled, err := json.Marshal(obj)
+			if err != nil {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+			newObjMarshaled, err := json.Marshal(newObj)
+			if err != nil {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+
+			return admission.PatchResponseFromRaw(oldObjMarshaled, newObjMarshaled)
+		}
+
+	case action.validator != nil:
+		if err = action.validator.Validate(ctx, newObj, oldObj); err != nil {
+			h.logger.Error(fmt.Errorf("could not process: %w", err), "Admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
+			return admission.Errored(http.StatusUnprocessableEntity, err)
+		}
 	}
 
 	// Return a validation response if the resource should not be changed
 	return admission.ValidationResponse(true, "")
+}
+
+func (h *handler) addAdditionalValuesToContext(ctx context.Context, action handlerAction) (context.Context, error) {
+	var obj interface{}
+	if action.mutator != nil {
+		obj = action.mutator
+	} else if action.validator != nil {
+		obj = action.validator
+	}
+
+	if wantsShootClient, ok := obj.(WantsShootClient); ok && wantsShootClient.WantsShootClient() {
+		shootClient, err := h.constructShootClient(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed building shoot client: %w", err)
+		}
+		ctx = context.WithValue(ctx, ShootClientContextKey{}, shootClient) //nolint:staticcheck
+	}
+
+	if wantsClusterObject, ok := obj.(WantsClusterObject); ok && wantsClusterObject.WantsClusterObject() {
+		cluster, err := h.constructClusterObject(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed building Cluster object: %w", err)
+		}
+		ctx = context.WithValue(ctx, ClusterObjectContextKey{}, cluster) //nolint:staticcheck
+	}
+
+	return ctx, nil
 }
 
 func objectsFromTypes(in []Type) []client.Object {

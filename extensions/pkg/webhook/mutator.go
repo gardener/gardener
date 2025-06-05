@@ -16,15 +16,3 @@ type Mutator interface {
 	// "old" is optional, and it must always be checked for nil.
 	Mutate(ctx context.Context, new, old client.Object) error
 }
-
-type mutationWrapper struct {
-	Mutator
-}
-
-func (d *mutationWrapper) do(ctx context.Context, new, old client.Object) error {
-	return d.Mutate(ctx, new, old)
-}
-
-func mutatingActionHandler(val Mutator) handlerAction {
-	return &mutationWrapper{val}
-}
