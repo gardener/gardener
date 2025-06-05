@@ -46,7 +46,7 @@ reach Kube API server via the trusted connection in case the lua scripts fails f
 Cluster internal control plane components like `kube-controller-manager`, `kube-scheduler` and `gardener-resource-manager`
 use L7 load balancing too. They connect to the Kube API server via an cluster IP service for istio ingress gateway.
 The generic token kubeconfig uses the public Kube API server endpoint. In order to avoid external traffic, the control
-plane components use host aliases in their pod specifications. For convenience, the host alias are automatically added
+plane components use host aliases in their pod specifications. For convenience, the host aliases are automatically added
 by the [`pod-kube-apiserver-load-balancing`](../../pkg/resourcemanager/webhook/podkubeapiserverloadbalancing) webhook
 in `gardener-resource-manager`. It also adds a label to create a network policy allowing egress traffic to the istio
 ingress gateway pods.
