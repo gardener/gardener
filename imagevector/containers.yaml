@@ -92,7 +92,7 @@ images:
   - name: nginx-ingress-controller
     sourceRepository: github.com/kubernetes/ingress-nginx
     repository: registry.k8s.io/ingress-nginx/controller-chroot
-    tag: "v1.11.6"
+    tag: "v1.11.7"
     targetVersion: "1.27.x"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
