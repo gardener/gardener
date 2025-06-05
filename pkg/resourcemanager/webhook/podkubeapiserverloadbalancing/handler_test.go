@@ -73,37 +73,62 @@ var _ = Describe("Handler", func() {
 				})
 			})
 
-			It("should add host aliases and network policy label to the pod", func() {
-				istioService := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "istio-gateway",
-						Name:      "istio-ingressgateway-internal",
-					},
-					Spec: corev1.ServiceSpec{
-						ClusterIP:  "10.10.10.10",
-						ClusterIPs: []string{"10.10.10.10", "3fff::2"},
-					},
-				}
-				Expect(targetClient.Create(ctx, istioService)).To(Succeed())
-				DeferCleanup(func() {
-					Expect(targetClient.Delete(ctx, istioService)).To(Succeed())
+			When("the pod does not use a generic kubeconfig", func() {
+				It("should not patch the pod", func() {
+					Expect(handler.Default(ctx, pod)).To(Succeed())
+					Expect(pod.Spec.HostAliases).To(BeEmpty())
+					Expect(pod.Labels).To(BeEmpty())
 				})
-
-				Expect(handler.Default(ctx, pod)).To(Succeed())
-				Expect(pod.Spec.HostAliases).To(HaveLen(2))
-				Expect(pod.Spec.HostAliases[0].IP).To(Equal("10.10.10.10"))
-				Expect(pod.Spec.HostAliases[0].Hostnames).To(ConsistOf("api.example.com", "api2.example.com"))
-				Expect(pod.Spec.HostAliases[1].IP).To(Equal("3fff::2"))
-				Expect(pod.Spec.HostAliases[1].Hostnames).To(ConsistOf("api.example.com", "api2.example.com"))
-
-				Expect(pod.Labels).To(HaveKeyWithValue(
-					"networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-internal-tcp-9443",
-					"allowed",
-				))
 			})
 
-			It("should fail if the istio-ingressgateway service is not found", func() {
-				Expect(handler.Default(ctx, pod)).To(MatchError(ContainSubstring("failed to get internal istio-ingressgateway service:")))
+			When("the pod uses a generic kubeconfig", func() {
+				BeforeEach(func() {
+					pod.Spec.Volumes = []corev1.Volume{
+						{
+							Name: "foobar",
+							VolumeSource: corev1.VolumeSource{
+								Projected: &corev1.ProjectedVolumeSource{
+									Sources: []corev1.VolumeProjection{
+										{Secret: &corev1.SecretProjection{LocalObjectReference: corev1.LocalObjectReference{Name: "generic-token-kubeconfig-foobar"}}},
+									},
+								},
+							},
+						},
+					}
+				})
+
+				It("should add host aliases and network policy label to the pod", func() {
+					istioService := &corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "istio-gateway",
+							Name:      "istio-ingressgateway-internal",
+						},
+						Spec: corev1.ServiceSpec{
+							ClusterIP:  "10.10.10.10",
+							ClusterIPs: []string{"10.10.10.10", "3fff::2"},
+						},
+					}
+					Expect(targetClient.Create(ctx, istioService)).To(Succeed())
+					DeferCleanup(func() {
+						Expect(targetClient.Delete(ctx, istioService)).To(Succeed())
+					})
+
+					Expect(handler.Default(ctx, pod)).To(Succeed())
+					Expect(pod.Spec.HostAliases).To(HaveLen(2))
+					Expect(pod.Spec.HostAliases[0].IP).To(Equal("10.10.10.10"))
+					Expect(pod.Spec.HostAliases[0].Hostnames).To(ConsistOf("api.example.com", "api2.example.com"))
+					Expect(pod.Spec.HostAliases[1].IP).To(Equal("3fff::2"))
+					Expect(pod.Spec.HostAliases[1].Hostnames).To(ConsistOf("api.example.com", "api2.example.com"))
+
+					Expect(pod.Labels).To(HaveKeyWithValue(
+						"networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-internal-tcp-9443",
+						"allowed",
+					))
+				})
+
+				It("should fail if the istio-ingressgateway service is not found", func() {
+					Expect(handler.Default(ctx, pod)).To(MatchError(ContainSubstring("failed to get internal istio-ingressgateway service:")))
+				})
 			})
 		})
 	})
