@@ -509,7 +509,7 @@ func (f *fluentBit) getClusterFluentBitConfig() *fluentbitv1alpha2.ClusterFluent
 				LogLevel:     "error",
 				ParsersFile:  "parsers.conf",
 				HttpServer:   ptr.To(true),
-				HttpListen:   "0.0.0.0",
+				HttpListen:   "::",
 				HttpPort:     ptr.To[int32](2020),
 			},
 			InputSelector: metav1.LabelSelector{
