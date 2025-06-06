@@ -238,6 +238,151 @@ var _ = Describe("GardenletConfiguration", func() {
 							"Detail": ContainSubstring("minimum percentage must be less than maximum percentage"),
 						}))))
 					})
+
+					It("should complain about invalid Seed Prometheus retention", func() {
+						cfg.Monitoring = &gardenletconfigv1alpha1.MonitoringConfig{
+							Seed: &gardenletconfigv1alpha1.SeedMonitoringConfig{
+								PrometheusCache: gardenletconfigv1alpha1.PrometheusConfig{
+									Retention: resource.MustParse("-1Gi"),
+								},
+								PrometheusAggregate: gardenletconfigv1alpha1.PrometheusConfig{
+									Retention: resource.MustParse("-1Gi"),
+								},
+								PrometheusSeed: gardenletconfigv1alpha1.PrometheusConfig{
+									Retention: resource.MustParse("-1Gi"),
+								},
+							},
+						}
+
+						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusCache.retention"),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusAggregate.retention"),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusSeed.retention"),
+							})),
+						))
+					})
+
+					It("should complain about invalid Seed Prometheus storage size", func() {
+						cfg.Monitoring = &gardenletconfigv1alpha1.MonitoringConfig{
+							Seed: &gardenletconfigv1alpha1.SeedMonitoringConfig{
+								PrometheusCache: gardenletconfigv1alpha1.PrometheusConfig{
+									Storage: &gardenletconfigv1alpha1.Storage{
+										Capacity: ptr.To(resource.MustParse("-1Gi")),
+									},
+								},
+								PrometheusAggregate: gardenletconfigv1alpha1.PrometheusConfig{
+									Storage: &gardenletconfigv1alpha1.Storage{
+										Capacity: ptr.To(resource.MustParse("-1Gi")),
+									},
+								},
+								PrometheusSeed: gardenletconfigv1alpha1.PrometheusConfig{
+									Storage: &gardenletconfigv1alpha1.Storage{
+										Capacity: ptr.To(resource.MustParse("-1Gi")),
+									},
+								},
+							},
+						}
+
+						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusCache.storage.capacity"),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusAggregate.storage.capacity"),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusSeed.storage.capacity"),
+							})),
+						))
+					})
+
+					It("should complain if Seed Prometheus retention is greater than storage size", func() {
+						cfg.Monitoring = &gardenletconfigv1alpha1.MonitoringConfig{
+							Seed: &gardenletconfigv1alpha1.SeedMonitoringConfig{
+								PrometheusCache: gardenletconfigv1alpha1.PrometheusConfig{
+									Retention: resource.MustParse("10Gi"),
+									Storage: &gardenletconfigv1alpha1.Storage{
+										Capacity: ptr.To(resource.MustParse("1Gi")),
+									},
+								},
+								PrometheusAggregate: gardenletconfigv1alpha1.PrometheusConfig{
+									Retention: resource.MustParse("10Gi"),
+									Storage: &gardenletconfigv1alpha1.Storage{
+										Capacity: ptr.To(resource.MustParse("1Gi")),
+									},
+								},
+								PrometheusSeed: gardenletconfigv1alpha1.PrometheusConfig{
+									Retention: resource.MustParse("10Gi"),
+									Storage: &gardenletconfigv1alpha1.Storage{
+										Capacity: ptr.To(resource.MustParse("1Gi")),
+									},
+								},
+							},
+						}
+
+						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusCache.retention"),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusAggregate.retention"),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusSeed.retention"),
+							})),
+						))
+					})
+
+					It("should complain if Seed Prometheus className is invalid", func() {
+						cfg.Monitoring = &gardenletconfigv1alpha1.MonitoringConfig{
+							Seed: &gardenletconfigv1alpha1.SeedMonitoringConfig{
+								PrometheusCache: gardenletconfigv1alpha1.PrometheusConfig{
+									Storage: &gardenletconfigv1alpha1.Storage{
+										ClassName: ptr.To("foo%"),
+									},
+								},
+								PrometheusAggregate: gardenletconfigv1alpha1.PrometheusConfig{
+									Storage: &gardenletconfigv1alpha1.Storage{
+										ClassName: ptr.To("foo%"),
+									},
+								},
+								PrometheusSeed: gardenletconfigv1alpha1.PrometheusConfig{
+									Storage: &gardenletconfigv1alpha1.Storage{
+										ClassName: ptr.To("foo%"),
+									},
+								},
+							},
+						}
+
+						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusCache.storage.className"),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusAggregate.storage.className"),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("monitoring.seed.prometheusSeed.storage.className"),
+							})),
+						))
+					})
 				})
 			})
 

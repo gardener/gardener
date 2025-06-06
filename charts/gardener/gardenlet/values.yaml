@@ -200,6 +200,22 @@ config:
 # logging:
 #   enabled: false
 # monitoring:
+#   seed:
+#     prometheusCache:
+#       retention: 5GB
+#       storage:
+#         capacity: 10Gi
+#         className: default # optional
+#     prometheusSeed:
+#       retention: 85GB
+#       storage:
+#         capacity: 100Gi
+#         className: default # optional
+#     prometheusAggregate:
+#       retention: 15GB
+#       storage:
+#         capacity: 20Gi
+#         className: default # optional
 #   shoot:
 #     remoteWrite:
 #       url: https://remoteWriteUrl # remote write URL
