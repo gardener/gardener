@@ -330,15 +330,9 @@ func (r *Reconciler) deleteBackupBucket(
 
 	log.Info("Successfully deleted")
 
-	credentials, err := kubernetesutils.GetCredentialsByObjectReference(gardenCtx, r.GardenClient, *backupBucket.Spec.CredentialsRef)
-	if err != nil {
-		log.Error(err, "Failed to get backup credentials", "credentialsRef", backupBucket.Spec.CredentialsRef)
-		return reconcile.Result{}, err
-	}
-
-	if controllerutil.ContainsFinalizer(credentials, gardencorev1beta1.ExternalGardenerName) {
-		log.Info("Removing finalizer from credentials", "credentials", client.ObjectKeyFromObject(credentials))
-		if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, credentials, gardencorev1beta1.ExternalGardenerName); err != nil {
+	if controllerutil.ContainsFinalizer(backupCredentials, gardencorev1beta1.ExternalGardenerName) {
+		log.Info("Removing finalizer from credentials", "kind", backupCredentials.GetObjectKind().GroupVersionKind().Kind, "credentials", client.ObjectKeyFromObject(backupCredentials))
+		if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, backupCredentials, gardencorev1beta1.ExternalGardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from credentials: %w", err)
 		}
 	}
