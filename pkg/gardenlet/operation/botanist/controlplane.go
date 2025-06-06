@@ -6,10 +6,12 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +41,7 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 
 	isControlledByDWD, err := b.isControlledByDependencyWatchdog(ctx, deploymentName)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to check if deployment %q is controlled by dependency-watchdog: %w", deploymentName, err)
 	}
 	if isControlledByDWD && !isCreateOrRestoreOperation && !b.Shoot.HibernationEnabled && !b.Shoot.GetInfo().Status.IsHibernated {
 		// The replicas of the component are controlled by dependency-watchdog and
@@ -61,16 +63,16 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 
 // If the deployment is controlled by dependency-watchdog, then it has the annotation dependency-watchdog.gardener.cloud/meltdown-protection set.
 func (b *Botanist) isControlledByDependencyWatchdog(ctx context.Context, deploymentName string) (bool, error) {
-	annotations, err := kubernetesutils.GetAnnotationsForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, deploymentName)
-	if err != nil {
-		return false, err
+	deployment := &appsv1.Deployment{}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: deploymentName}, deployment); err != nil && !apierrors.IsNotFound(err) {
+		return false, fmt.Errorf("failed to get deployment %q: %w", deploymentName, err)
 	}
-	if annotations != nil {
-		if _, ok := annotations[dwdapi.MeltdownProtectionActive]; ok {
-			return true, nil
-		}
+	if deployment.Annotations == nil {
+		return false, nil
 	}
-	return false, nil
+
+	_, ok := deployment.Annotations[dwdapi.MeltdownProtectionActive]
+	return ok, nil
 }
 
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.
