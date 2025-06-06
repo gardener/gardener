@@ -620,13 +620,13 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 		roleReadGardenerInfoConfigMap = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:system:read-gardener-info-configmap",
+				Name:      "gardener.cloud:system:read-gardener-system-public-configmaps",
 				Namespace: gardencorev1beta1.GardenerSystemPublicNamespace,
 			},
 			Rules: []rbacv1.PolicyRule{{
 				APIGroups:     []string{corev1.GroupName},
 				Resources:     []string{"configmaps"},
-				ResourceNames: []string{"gardener-info"},
+				ResourceNames: []string{"gardener-info", "kube-root-ca.crt"},
 				Verbs:         []string{"get", "list", "watch"},
 			}},
 		}
