@@ -184,3 +184,17 @@ func mapToReservedKubeApiServerRange(ip net.IP) string {
 	prefix := prefixIp.To4()
 	return net.IPv4(prefix[0], ip[1], ip[2], ip[3]).String()
 }
+
+// ReconcileIstioInternalLoadBalancingConfigMap reconciles the configmap for istio internal load balancing.
+func (b *Botanist) ReconcileIstioInternalLoadBalancingConfigMap(ctx context.Context) error {
+	return kubeapiserverexposure.ReconcileIstioInternalLoadBalancingConfigMap(
+		ctx,
+		b.SeedClientSet.Client(),
+		b.Shoot.ControlPlaneNamespace,
+		b.IstioNamespace(),
+		[]string{
+			v1beta1helper.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+		},
+		features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
+	)
+}

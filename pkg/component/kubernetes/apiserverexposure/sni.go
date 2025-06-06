@@ -301,17 +301,6 @@ func (s *sni) Deploy(ctx context.Context) error {
 			filename := fmt.Sprintf("envoyfilter__%s__%s.yaml", envoyFilter.Namespace, envoyFilter.Name)
 			registry.AddSerialized(filename, envoyFilterIstioTLSTermination.Bytes())
 		}
-
-		configMap := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Namespace: s.namespace, Name: podkubeapiserverloadbalancing.IstioInternalLoadBalancingConfigMapName},
-			Data: map[string]string{
-				podkubeapiserverloadbalancing.HostsConfigMapKey:          strings.Join(s.valuesFunc().Hosts, ","),
-				podkubeapiserverloadbalancing.IstioNamespaceConfigMapKey: s.valuesFunc().IstioIngressGateway.Namespace,
-			},
-		}
-		if err := registry.Add(configMap); err != nil {
-			return fmt.Errorf("failed to add istio-internal-load-balancing configmap to managed resource: %w", err)
-		}
 	}
 
 	if (values.APIServerProxy != nil && values.APIServerProxy.UseProxyProtocol) || values.IstioTLSTermination {
@@ -600,4 +589,30 @@ func (s *sni) istioGatewayConfigurations() ([]istioGatewayConfiguration, error) 
 // This cluster is only available if Istio TLS termination is enabled for the shoot.
 func GetAPIServerProxyTargetClusterName(controlPlaneNamespace string) string {
 	return fmt.Sprintf("%s--kube-apiserver-socket", controlPlaneNamespace)
+}
+
+// ReconcileIstioInternalLoadBalancingConfigMap reconciles the configmap for istio internal load balancing.
+func ReconcileIstioInternalLoadBalancingConfigMap(ctx context.Context, c client.Client, namespace, istioNamespace string, hosts []string, istioTLSTerminationActive bool) error {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      podkubeapiserverloadbalancing.IstioInternalLoadBalancingConfigMapName,
+		},
+	}
+
+	if !istioTLSTerminationActive {
+		return client.IgnoreNotFound(c.Delete(ctx, configMap))
+	}
+
+	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, c, configMap, func() error {
+		configMap.Data = map[string]string{
+			podkubeapiserverloadbalancing.HostsConfigMapKey:          strings.Join(hosts, ","),
+			podkubeapiserverloadbalancing.IstioNamespaceConfigMapKey: istioNamespace,
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to reconcile configmap %q: %w", client.ObjectKeyFromObject(configMap), err)
+	}
+
+	return nil
 }
