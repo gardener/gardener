@@ -48,7 +48,8 @@ type AutonomousBotanist struct {
 	FS         afero.Afero
 	Extensions []Extension
 
-	operatingSystemConfigSecret *corev1.Secret
+	operatingSystemConfigSecret       *corev1.Secret
+	gardenerResourceManagerServiceIPs []string
 }
 
 // Extension contains the resources needed for an extension registration.

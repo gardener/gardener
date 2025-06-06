@@ -61,8 +61,9 @@ import (
 const (
 	lastAppliedOperatingSystemConfigFilePath         = nodeagentconfigv1alpha1.BaseDir + "/last-applied-osc.yaml"
 	lastComputedOperatingSystemConfigChangesFilePath = nodeagentconfigv1alpha1.BaseDir + "/last-computed-osc-changes.yaml"
-	annotationUpdatingOperatingSystemVersion         = "node-agent.gardener.cloud/updating-operating-system-version"
-	pathKubeletCPUManagerPolicyState                 = kubeletcomponent.PathKubeletDirectory + "/cpu_manager_state"
+
+	annotationUpdatingOperatingSystemVersion = "node-agent.gardener.cloud/updating-operating-system-version"
+	pathKubeletCPUManagerPolicyState         = kubeletcomponent.PathKubeletDirectory + "/cpu_manager_state"
 )
 
 var (
@@ -103,6 +104,11 @@ type Reconciler struct {
 	HostName      string
 	NodeName      string
 	MachineName   string
+	// SkipWritingStateFiles is used by gardenadm when it deploys the provision OSC. In this case, both the "last
+	// applied configuration" and the "last computed changes" files should not be written. Otherwise,
+	// gardener-node-agent might delete files which exist in the provision OSC only after it comes up and reconciles the
+	// actual OSC, or not reconcile them at all.
+	SkipWritingStateFiles bool
 
 	// Channel and TokenSecretSyncConfigs are used by the reconciler to trigger events for the token reconciler during an in-place service-account-key rotation.
 	Channel                chan event.TypedGenericEvent[*corev1.Secret]
@@ -153,7 +159,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed getting OS version: %w", err)
 	}
 
-	oscChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum, osVersion)
+	oscChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum, osVersion, r.SkipWritingStateFiles)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
 	}
@@ -253,14 +259,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	log.Info("Successfully applied operating system config")
 
-	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
-	oscRaw, err := runtime.Encode(codec, osc)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("unable to encode OSC: %w", err)
-	}
+	if !r.SkipWritingStateFiles {
+		log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
+		oscRaw, err := runtime.Encode(codec, osc)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("unable to encode OSC: %w", err)
+		}
 
-	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
-		return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
+		if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
+			return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
+		}
 	}
 
 	if oscChanges.MustRestartNodeAgent {
