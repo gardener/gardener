@@ -86,7 +86,7 @@ type Interface interface {
 type Values struct {
 	apiserver.Values
 	// AnonymousAuthenticationEnabled states whether anonymous authentication is enabled.
-	AnonymousAuthenticationEnabled bool
+	AnonymousAuthenticationEnabled *bool
 	// APIAudiences are identifiers of the API. The service account token authenticator will validate that tokens used
 	// against the API are bound to at least one of these audiences.
 	APIAudiences []string

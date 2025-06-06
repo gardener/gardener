@@ -762,18 +762,6 @@ var _ = Describe("Helper", func() {
 		Entry("StructuredAuthorization set", &gardencorev1beta1.KubeAPIServerConfig{StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{}}, &gardencorev1beta1.StructuredAuthorization{}),
 	)
 
-	DescribeTable("#AnonymousAuthenticationEnabled",
-		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, wantsAnonymousAuth bool) {
-			actualWantsAnonymousAuth := AnonymousAuthenticationEnabled(kubeAPIServerConfig)
-			Expect(actualWantsAnonymousAuth).To(Equal(wantsAnonymousAuth))
-		},
-
-		Entry("no kubeapiserver configuration", nil, false),
-		Entry("field not set", &gardencorev1beta1.KubeAPIServerConfig{}, false),
-		Entry("explicitly enabled", &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: &trueVar}, true),
-		Entry("explicitly disabled", &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: &falseVar}, false),
-	)
-
 	DescribeTable("#KubeAPIServerFeatureGateDisabled",
 		func(shoot *gardencorev1beta1.Shoot, featureGate string, expected bool) {
 			actual := KubeAPIServerFeatureGateDisabled(shoot, featureGate)

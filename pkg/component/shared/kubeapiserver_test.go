@@ -115,10 +115,10 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		Describe("AnonymousAuthenticationEnabled", func() {
-			It("should set the field to false by default", func() {
+			It("should not set the field by default", func() {
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, runsAsStaticPod, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(kubeAPIServer.GetValues().AnonymousAuthenticationEnabled).To(BeFalse())
+				Expect(kubeAPIServer.GetValues().AnonymousAuthenticationEnabled).To(BeNil())
 			})
 
 			It("should set the field to true if explicitly enabled", func() {
@@ -126,7 +126,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, runsAsStaticPod, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(kubeAPIServer.GetValues().AnonymousAuthenticationEnabled).To(BeTrue())
+				Expect(kubeAPIServer.GetValues().AnonymousAuthenticationEnabled).To(PointTo(BeTrue()))
 			})
 		})
 

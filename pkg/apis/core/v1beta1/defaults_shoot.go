@@ -204,9 +204,6 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 	if obj.Requests.MaxMutatingInflight == nil {
 		obj.Requests.MaxMutatingInflight = ptr.To[int32](200)
 	}
-	if obj.EnableAnonymousAuthentication == nil {
-		obj.EnableAnonymousAuthentication = ptr.To(false)
-	}
 	if obj.EventTTL == nil {
 		obj.EventTTL = &metav1.Duration{Duration: time.Hour}
 	}

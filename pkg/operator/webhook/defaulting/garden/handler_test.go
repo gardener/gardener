@@ -41,8 +41,7 @@ var _ = Describe("Handler", func() {
 						MaxNonMutatingInflight: ptr.To[int32](400),
 						MaxMutatingInflight:    ptr.To[int32](200),
 					},
-					EnableAnonymousAuthentication: ptr.To(false),
-					EventTTL:                      &metav1.Duration{Duration: time.Hour},
+					EventTTL: &metav1.Duration{Duration: time.Hour},
 					Logging: &gardencorev1beta1.APIServerLogging{
 						Verbosity: ptr.To[int32](2),
 					},
@@ -86,9 +85,8 @@ var _ = Describe("Handler", func() {
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
 								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
-									Requests:                      customRequests,
-									EnableAnonymousAuthentication: ptr.To(false),
-									EventTTL:                      &metav1.Duration{Duration: time.Hour},
+									Requests: customRequests,
+									EventTTL: &metav1.Duration{Duration: time.Hour},
 									Logging: &gardencorev1beta1.APIServerLogging{
 										Verbosity: ptr.To[int32](2),
 									},

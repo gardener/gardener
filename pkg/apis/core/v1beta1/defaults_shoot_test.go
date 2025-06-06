@@ -637,20 +637,6 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(Equal(&maxMutatingRequestsInflight))
 		})
 
-		It("should default anonymous authentication field", func() {
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeFalse()))
-		})
-
-		It("should not overwrite the already set values for anonymous authentication field", func() {
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeTrue()))
-		})
-
 		It("should default the event ttl field", func() {
 			SetObjectDefaults_Shoot(obj)
 
