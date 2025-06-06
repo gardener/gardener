@@ -74,6 +74,14 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 				Should(HaveField("Items", ConsistOf(HaveField("Status.Phase", corev1.PodRunning))))
 		}, SpecTimeout(time.Minute))
 
+		It("should download gardenadm in the control plane machine", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) {
+				stdOut, _, err := RunInMachine(ctx, technicalID, 0, "version")
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Eventually(ctx, stdOut).Should(gbytes.Say("gardenadm version"))
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
 		It("should finish successfully", func(ctx SpecContext) {
 			Wait(ctx, session)
 			Eventually(ctx, session.Err).Should(gbytes.Say("work in progress"))
