@@ -99,7 +99,7 @@ spec:
     #       cpu: "1"
     #       memory: 3Gi
     kubernetes:
-      version: 1.32.0
+      version: 1.33.0
     # kubeAPIServer:
     #   eventTTL: 1h
     #   featureGates:
