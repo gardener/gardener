@@ -264,7 +264,7 @@ users:
 			Expect(isClient).To(BeTrue())
 		})
 
-		It("should inject the cluster into the context", func() {
+		It("should inject the cluster object into the context", func() {
 			// Create mock mutator
 			mutator := &mutatorWantsClusterObject{MockMutator: extensionsmockwebhook.NewMockMutator(ctrl)}
 
@@ -279,7 +279,7 @@ users:
 			Expect(err).NotTo(HaveOccurred())
 			Expect(err).NotTo(HaveOccurred())
 
-			// Prepare shoot client retrieval
+			// Prepare cluster object retrieval
 			controlPlaneNamespace := "shoot--test--test"
 			ipAddress := "100.64.0.10"
 			ctxWithRemoteAddress := context.WithValue(ctxWithClient, RemoteAddrContextKey{}, ipAddress)
