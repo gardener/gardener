@@ -7,6 +7,7 @@
 set -e
 
 report_dir="$(git rev-parse --show-toplevel)"
+report_fname='gosec-report.sarif'
 
 gosec_report="false"
 gosec_report_parse_flags=""
@@ -20,6 +21,9 @@ parse_flags() {
         ;;
       --report-dir)
         shift; report_dir="$1"
+        ;;
+      --report-fname)
+        shift; report_fname="$1"
         ;;
       --exclude-dirs)
         shift; exclude_dirs="$1"
@@ -35,11 +39,13 @@ parse_flags() {
 
 parse_flags "$@"
 
+report_path="${report_dir}/${report_fname}"
+
 echo "> Running gosec"
 gosec --version
 if [[ "$gosec_report" != "false" ]]; then
-  echo "Exporting report to ${report_dir}/gosec-report.sarif"
-  gosec_report_parse_flags="-track-suppressions -fmt=sarif -out=${report_dir}/gosec-report.sarif -stdout"
+  echo "Exporting report to ${report_path}"
+  gosec_report_parse_flags="-track-suppressions -fmt=sarif -out=${report_path} -stdout"
 fi
 
 # Gardener uses code-generators https://github.com/kubernetes/code-generator and https://github.com/protocolbuffers/protobuf
