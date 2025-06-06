@@ -122,7 +122,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 				clusterAutoscaler.EXPECT().SetMaxNodesTotal(int64(0))
 				clusterAutoscaler.EXPECT().SetReplicas(int32(1))
 				kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1)).AnyTimes()
-
 			})
 
 			It("should set the secrets, namespace uid, machine deployments, and deploy", func() {
