@@ -41,7 +41,6 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 	if err != nil {
 		return 0, err
 	}
-
 	if isControlledByDWD && !isCreateOrRestoreOperation && !b.Shoot.HibernationEnabled && !b.Shoot.GetInfo().Status.IsHibernated {
 		// The replicas of the component are controlled by dependency-watchdog and
 		// Shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated=false,
