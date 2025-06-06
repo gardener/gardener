@@ -43,4 +43,14 @@ var _ = Describe("API Types", func() {
 			Expect(IsIPv6SingleStack([]IPFamily{IPFamilyIPv6})).To(BeTrue())
 		})
 	})
+
+	DescribeTable("#VersionClassification.IsActive", func(v VersionClassification, want bool) {
+		Expect(v.IsActive()).To(Equal(want))
+	},
+		Entry("#ClassificationUnavailable is not active", ClassificationUnavailable, false),
+		Entry("#ClassificationPreview is active", ClassificationPreview, true),
+		Entry("#ClassificationSupported is active", ClassificationSupported, true),
+		Entry("#ClassificationDeprecated is active", ClassificationDeprecated, true),
+		Entry("#ClassificationExpired is not active", ClassificationExpired, false),
+	)
 })

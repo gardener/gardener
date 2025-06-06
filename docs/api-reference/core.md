@@ -5666,7 +5666,8 @@ VersionClassification
 </td>
 <td>
 <em>(Optional)</em>
-<p>Classification defines the state of a version (preview, supported, deprecated)</p>
+<p>Classification defines the state of a version (preview, supported, deprecated).
+To get the currently valid classification, use CurrentLifecycleClassification().</p>
 </td>
 </tr>
 </tbody>

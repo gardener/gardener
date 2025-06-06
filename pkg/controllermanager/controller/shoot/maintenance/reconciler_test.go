@@ -36,20 +36,6 @@ var _ = Describe("Shoot Maintenance", func() {
 		expirationDateInThePast = metav1.Time{Time: now.AddDate(0, 0, -1)}
 	})
 
-	Context("Shoot Maintenance", func() {
-		Describe("#ExpirationDateExpired", func() {
-			It("should determine that expirationDate applies", func() {
-				applies := ExpirationDateExpired(&expirationDateInThePast)
-				Expect(applies).To(BeTrue())
-			})
-
-			It("should determine that expirationDate not applies", func() {
-				applies := ExpirationDateExpired(&expirationDateInTheFuture)
-				Expect(applies).To(BeFalse())
-			})
-		})
-	})
-
 	Describe("#maintainMachineImages", func() {
 		var (
 			shootCurrentImage        *gardencorev1beta1.ShootMachineImage

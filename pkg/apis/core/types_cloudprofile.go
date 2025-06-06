@@ -144,7 +144,8 @@ type ExpirableVersion struct {
 	Version string
 	// ExpirationDate defines the time at which this version expires.
 	ExpirationDate *metav1.Time
-	// Classification defines the state of a version (preview, supported, deprecated)
+	// Classification defines the state of a version (preview, supported, deprecated).
+	// To get the currently valid classification, use CurrentLifecycleClassification().
 	Classification *VersionClassification
 }
 
@@ -264,7 +265,14 @@ const (
 // VersionClassification is the logical state of a version.
 type VersionClassification string
 
+// IsActive returns whether the version can be used.
+func (v VersionClassification) IsActive() bool {
+	return v != ClassificationExpired && v != ClassificationUnavailable
+}
+
 const (
+	// ClassificationUnavailable indicates that a version is currently not available and is planned to become available depending on the classification lifecycle.
+	ClassificationUnavailable VersionClassification = "unavailable"
 	// ClassificationPreview indicates that a version has recently been added and not promoted to "Supported" yet.
 	// ClassificationPreview versions will not be considered for automatic Kubernetes and Machine Image patch version updates.
 	ClassificationPreview VersionClassification = "preview"
@@ -275,6 +283,9 @@ const (
 	// ClassificationDeprecated indicates that a patch version should not be used anymore, should be updated to a new version
 	// and will eventually expire.
 	ClassificationDeprecated VersionClassification = "deprecated"
+	// ClassificationExpired indicates that a version has expired.
+	// New entities with that version cannot be created and existing entities are forcefully migrated to a higher version during the maintenance time.
+	ClassificationExpired VersionClassification = "expired"
 )
 
 // MachineImageUpdateStrategy is the update strategy to use for a machine image

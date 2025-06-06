@@ -404,7 +404,7 @@ var _ = Describe("CloudProfile", func() {
 			})
 		})
 
-		Describe("#BuildCloudProfileReference", func() {
+		Describe("#BuildCoreCloudProfileReference", func() {
 			It("should return nil for nil shoot", func() {
 				Expect(gardenerutils.BuildCoreCloudProfileReference(nil)).To(BeNil())
 			})

@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -1156,7 +1157,7 @@ func getRemovedMachineImageVersions(namespacedCloudProfile, oldNamespacedCloudPr
 func validateShootForRemovedKubernetesVersions(channel chan error, shoot *gardencorev1beta1.Shoot, removedKubernetesVersions sets.Set[string], parentCloudProfileKubernetesVersions map[string]gardencorev1beta1.ExpirableVersion, namespacedCloudProfile *core.NamespacedCloudProfile) {
 	shootKubernetesVersion := shoot.Spec.Kubernetes.Version
 	if removedKubernetesVersions.Has(shootKubernetesVersion) {
-		if parentCloudProfileKubernetesVersions[shootKubernetesVersion].ExpirationDate != nil && parentCloudProfileKubernetesVersions[shootKubernetesVersion].ExpirationDate.Before(&metav1.Time{Time: time.Now()}) {
+		if v1beta1helper.CurrentLifecycleClassification(parentCloudProfileKubernetesVersions[shootKubernetesVersion]) == gardencorev1beta1.ClassificationExpired {
 			channel <- fmt.Errorf("unable to delete Kubernetes version %q from NamespacedCloudProfile '%s/%s' - version with extended expiration date is still in use by shoot '%s/%s'", shootKubernetesVersion, namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, shoot.Namespace, shoot.Name)
 		}
 	}
@@ -1175,7 +1176,7 @@ func validateShootWorkersForRemovedMachineImageVersions(channel chan error, shoo
 
 		if removedMachineImageVersions[worker.Machine.Image.Name].Has(*worker.Machine.Image.Version) {
 			parentVersion, exists := parentCloudProfileMachineImageVersions[worker.Machine.Image.Name][*worker.Machine.Image.Version]
-			if !exists || parentVersion.ExpirationDate != nil && parentVersion.ExpirationDate.Before(&metav1.Time{Time: time.Now()}) {
+			if !exists || v1beta1helper.CurrentLifecycleClassification(parentVersion.ExpirableVersion) == gardencorev1beta1.ClassificationExpired {
 				channel <- fmt.Errorf("unable to delete Machine image version '%s/%s' from NamespacedCloudProfile '%s/%s' - version is still in use by shoot '%s/%s' by worker %q", worker.Machine.Image.Name, *worker.Machine.Image.Version, namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, shoot.Namespace, shoot.Name, worker.Name)
 			}
 		}

@@ -626,7 +626,7 @@ func shouldKubernetesVersionBeUpdated(kubernetesVersion string, autoUpdate bool,
 		return true, updateReason, true, nil
 	}
 
-	if ExpirationDateExpired(version.ExpirationDate) {
+	if v1beta1helper.CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationExpired {
 		updateReason = "Kubernetes version expired - force update required"
 		return true, updateReason, true, nil
 	}
@@ -784,7 +784,7 @@ func shouldMachineImageVersionBeUpdated(shootMachineImage *gardencorev1beta1.Sho
 		return true, updateReason, true
 	}
 
-	if ExpirationDateExpired(machineImage.Versions[versionIndex].ExpirationDate) {
+	if v1beta1helper.CurrentLifecycleClassification(machineImage.Versions[versionIndex].ExpirableVersion) == gardencorev1beta1.ClassificationExpired {
 		updateReason = fmt.Sprintf("Machine image version expired - force update required (image update strategy: %s)", *machineImage.UpdateStrategy)
 		return true, updateReason, true
 	}
@@ -869,14 +869,6 @@ func determineVersionForStrategy(expirableVersions []gardencorev1beta1.Expirable
 	}
 
 	return versionForForceUpdate, nil
-}
-
-// ExpirationDateExpired returns if now is equal or after the given expirationDate
-func ExpirationDateExpired(timestamp *metav1.Time) bool {
-	if timestamp == nil {
-		return false
-	}
-	return time.Now().UTC().After(timestamp.Time) || time.Now().UTC().Equal(timestamp.Time)
 }
 
 // setLimitedSwap sets the swap behavior to `LimitedSwap` if it's currently set to `UnlimitedSwap`
