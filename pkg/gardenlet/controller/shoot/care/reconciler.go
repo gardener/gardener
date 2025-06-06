@@ -19,6 +19,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -59,7 +60,7 @@ type Reconciler struct {
 }
 
 // Reconcile executes care operations, e.g. health checks or garbage collection.
-func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	// Timeout for all calls (e.g. status updates), give status updates a bit of headroom if health checks
@@ -67,8 +68,39 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, r.Config.Controllers.ShootCare.SyncPeriod.Duration)
 	defer cancel()
 
+	if !req.IsManagedResource {
+		return r.reconcileShoot(ctx, log, req.NamespacedName)
+	}
+
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := r.GardenClient.List(context.Background(), shootList, client.MatchingFields{
+		core.ShootStatusTechnicalID: req.Namespace,
+	}); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error looking up shoot by technical id: %w", err)
+	}
+
+	if len(shootList.Items) == 0 {
+		log.V(1).Info("No shoot found for managed resource, ignoring it")
+		return reconcile.Result{}, nil
+	}
+
+	result, err := r.reconcileShoot(ctx, log, client.ObjectKey{
+		Name:      shootList.Items[0].Name,
+		Namespace: shootList.Items[0].Namespace,
+	})
+	if err != nil {
+		return result, err
+	}
+	// Do not requeue the shoot to avoid reconcile amplifications.
+	// Reconciles triggered due to a changed managed resource are one time checks.
+	// Periodic checks are already performed based on the existing shoot objects.
+	return reconcile.Result{}, nil
+}
+
+// Reconcile executes care operations, e.g. health checks or garbage collection.
+func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, key client.ObjectKey) (reconcile.Result, error) {
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.GardenClient.Get(ctx, req.NamespacedName, shoot); err != nil {
+	if err := r.GardenClient.Get(ctx, key, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
