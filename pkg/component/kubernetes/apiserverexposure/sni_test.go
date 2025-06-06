@@ -17,7 +17,6 @@ import (
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
@@ -362,30 +361,18 @@ var _ = Describe("#SNI", func() {
 			if (apiServerProxyValues != nil && apiServerProxyValues.UseProxyProtocol) || istioTLSTermination {
 				mrData := validateManagedResourceAndGetData(ctx, c, expectedManagedResourceSNI)
 
-				var (
-					envoyFilterObjectsMetas []metav1.ObjectMeta
-					istioConfigMap          *corev1.ConfigMap
-				)
+				var envoyFilterObjectsMetas []metav1.ObjectMeta
 				for _, mrDataSet := range strings.Split(string(mrData), "---\n") {
 					if mrDataSet == "" {
 						continue
 					}
 
-					managedResourceObject, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode([]byte(mrDataSet), nil, &unstructured.Unstructured{})
+					managedResourceEnvoyFilter, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode([]byte(mrDataSet), nil, &istionetworkingv1alpha3.EnvoyFilter{})
 					Expect(err).ToNot(HaveOccurred())
-					objectKind := managedResourceObject.GetObjectKind().GroupVersionKind().Kind
-					Expect(objectKind).To(Or(Equal("EnvoyFilter"), Equal("ConfigMap")))
-					if objectKind == "EnvoyFilter" {
-						managedResourceEnvoyFilter, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode([]byte(mrDataSet), nil, &istionetworkingv1alpha3.EnvoyFilter{})
-						Expect(err).ToNot(HaveOccurred())
-						actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)
-						// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
-						envoyFilterObjectsMetas = append(envoyFilterObjectsMetas, actualEnvoyFilter.ObjectMeta)
-					} else {
-						managedResourceConfigMap, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode([]byte(mrDataSet), nil, &corev1.ConfigMap{})
-						Expect(err).ToNot(HaveOccurred())
-						istioConfigMap = managedResourceConfigMap.(*corev1.ConfigMap)
-					}
+					Expect(managedResourceEnvoyFilter.GetObjectKind()).To(Equal(&metav1.TypeMeta{Kind: "EnvoyFilter", APIVersion: "networking.istio.io/v1alpha3"}))
+					actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)
+					// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
+					envoyFilterObjectsMetas = append(envoyFilterObjectsMetas, actualEnvoyFilter.ObjectMeta)
 				}
 
 				if apiServerProxyValues != nil && apiServerProxyValues.UseProxyProtocol {
@@ -394,20 +381,6 @@ var _ = Describe("#SNI", func() {
 
 				if istioTLSTermination {
 					Expect(envoyFilterObjectsMetas).To(ContainElement(expectedEnvoyFilterObjectMetaIstioTLSTermination))
-					Expect(istioConfigMap).To(Equal(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "ConfigMap",
-							APIVersion: "v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "istio-internal-load-balancing",
-							Namespace: namespace,
-						},
-						Data: map[string]string{
-							"hosts":           "foo.bar",
-							"istio-namespace": istioNamespace,
-						},
-					}))
 
 					if wildcardConfiguration != nil && wildcardConfiguration.IstioIngressGateway != nil {
 						Expect(envoyFilterObjectsMetas).To(ContainElement(expectedWildcardEnvoyFilterObjectMetaIstioTLSTermination))
@@ -794,6 +767,24 @@ var _ = Describe("#SNI", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
 		})
 	})
+
+	Describe("#ReconcileIstioInternalLoadBalancingConfigMap", func() {
+		It("should create, update and delete the configmap", func() {
+			configMap := &corev1.ConfigMap{}
+
+			Expect(ReconcileIstioInternalLoadBalancingConfigMap(ctx, c, namespace, istioNamespace, []string{"foo-host", "bar-host"}, true)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "istio-internal-load-balancing"}, configMap)).To(Succeed())
+			Expect(configMap.Data).To(Equal(map[string]string{"hosts": "foo-host,bar-host", "istio-namespace": istioNamespace}))
+
+			Expect(ReconcileIstioInternalLoadBalancingConfigMap(ctx, c, namespace, "bar-namespace", []string{"bar-host"}, true)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "istio-internal-load-balancing"}, configMap)).To(Succeed())
+			Expect(configMap.Data).To(Equal(map[string]string{"hosts": "bar-host", "istio-namespace": "bar-namespace"}))
+
+			Expect(ReconcileIstioInternalLoadBalancingConfigMap(ctx, c, namespace, "", []string{}, false)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "istio-internal-load-balancing"}, configMap)).To(BeNotFoundError())
+		})
+	})
+
 })
 
 func validateManagedResourceAndGetData(ctx context.Context, c client.Client, expectedManagedResource *resourcesv1alpha1.ManagedResource) []byte {
