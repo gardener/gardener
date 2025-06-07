@@ -289,6 +289,15 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 		PriorityClassName:                         v1beta1constants.PriorityClassNameSeedSystemCritical,
 		SecretNameServerCA:                        v1beta1constants.SecretNameCASeed,
 		Zones:                                     seed.Spec.Provider.Zones,
+		PodKubeAPIServerLoadBalancingWebhook: resourcemanager.PodKubeAPIServerLoadBalancingWebhook{
+			Enabled: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
+			Configs: []resourcemanager.PodKubeAPIServerLoadBalancingWebhookConfig{
+				{
+					KubeAPIServerNamePrefix: "",
+					NamespaceSelector:       map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
+				},
+			},
+		},
 	})
 }
 
@@ -324,6 +333,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 		true,
 		seed.GetInfo().Spec.Provider.Zones,
 		seed.IsDualStack(),
+		r.SeedVersion,
 	)
 	if err != nil {
 		return nil, nil, "", err
@@ -344,6 +354,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 				&zone,
 				seed.IsDualStack(),
 				seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone),
+				r.SeedVersion,
 			); err != nil {
 				return nil, nil, "", err
 			}
@@ -365,6 +376,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 			nil,
 			seed.IsDualStack(),
 			seed.GetLoadBalancerServiceProxyProtocolTermination(),
+			r.SeedVersion,
 		); err != nil {
 			return nil, nil, "", err
 		}
@@ -385,6 +397,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 					&zone,
 					seed.IsDualStack(),
 					seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone),
+					r.SeedVersion,
 				); err != nil {
 					return nil, nil, "", err
 				}

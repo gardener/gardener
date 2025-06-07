@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
@@ -49,6 +50,7 @@ func NewIstio(
 	vpnEnabled bool,
 	zones []string,
 	dualStack bool,
+	kubernetesVersion *semver.Version,
 ) (
 	istio.Interface,
 	error,
@@ -109,6 +111,7 @@ func NewIstio(
 		VPNEnabled:                         vpnEnabled,
 		DualStack:                          dualStack,
 		EnforceSpreadAcrossHosts:           enforceSpreadAcrossHosts,
+		KubernetesVersion:                  kubernetesVersion.String(),
 	}
 
 	return istio.NewIstio(
@@ -147,6 +150,7 @@ func AddIstioIngressGateway(
 	zone *string,
 	dualStack bool,
 	terminateLoadBalancerProxyProtocol *bool,
+	kubernetesVersion *semver.Version,
 ) error {
 	gatewayValues := istioDeployer.GetValues().IngressGateway
 	if len(gatewayValues) < 1 {
@@ -197,6 +201,7 @@ func AddIstioIngressGateway(
 		Zones:                              zones,
 		DualStack:                          dualStack,
 		EnforceSpreadAcrossHosts:           enforceSpreadAcrossHosts,
+		KubernetesVersion:                  kubernetesVersion.String(),
 	})
 
 	return nil

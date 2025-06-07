@@ -210,3 +210,17 @@ func (b *Botanist) DeployKubeAPIServerIngress(ctx context.Context) error {
 	// This is now part of the SNI deployer in kubeapiserverexposure.
 	return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Destroy(ctx)
 }
+
+// ReconcileIstioInternalLoadBalancingConfigMap reconciles the configmap for istio internal load balancing.
+func (b *Botanist) ReconcileIstioInternalLoadBalancingConfigMap(ctx context.Context) error {
+	return kubeapiserverexposure.ReconcileIstioInternalLoadBalancingConfigMap(
+		ctx,
+		b.SeedClientSet.Client(),
+		b.Shoot.ControlPlaneNamespace,
+		b.IstioNamespace(),
+		[]string{
+			gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+		},
+		features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
+	)
+}
