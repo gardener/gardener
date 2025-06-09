@@ -14,6 +14,9 @@ Kubernetes uses the underlying container runtime logging, which does not persist
 
 ## Container Logs Rotation and Retention
 
+> [!NOTE]
+> All of our logs and metrics are rotated after 14 days.
+
 It is possible to configure the `containerLogMaxSize` and `containerLogMaxFiles` fields in the Shoot specification. Both fields are optional and if nothing is specified, then the `kubelet` rotates on the size `100M`. Those fields are part of provider's workers definition. Here is an example:
 
 ```yaml
