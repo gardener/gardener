@@ -111,6 +111,7 @@ func (m *MockInterface) SetReplicas(arg0 int32) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetReplicas", arg0)
 }
+
 // SetReplicas indicates an expected call of SetReplicas.
 func (mr *MockInterfaceMockRecorder) SetReplicas(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
