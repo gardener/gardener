@@ -165,7 +165,7 @@
 * [Test Machinery Tests](development/testmachinery_tests.md)
 * [Dependency Management](development/dependencies.md)
 * [Kubernetes Clients in Gardener](development/kubernetes-clients.md)
-* [Logging in Gardener Components](development/logging.md)
+* [Logging Guidelines in Gardener Components](development/logging-guidelines.md)
 * [Changing the API](development/changing-the-api.md)
 * [Secrets Management for Seed and Shoot Clusters](development/secrets_management.md)
 * [IPv6 in Gardener Clusters](development/ipv6.md)

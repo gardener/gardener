@@ -1,4 +1,4 @@
-# Logging in Gardener Components
+# Logging Guidelines in Gardener Components
 
 This document aims at providing a general developer guideline on different aspects of logging practices and conventions used in the Gardener codebase.
 It contains mostly Gardener-specific points, and references other existing and commonly accepted logging guidelines for general advice.
