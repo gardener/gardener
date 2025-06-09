@@ -14,7 +14,7 @@ spec:
         app: etcd
     spec:
       containers:
-      - image: quay.io/coreos/etcd:v3.6.0
+      - image: quay.io/coreos/etcd:v3.6.1
         name: etcd
         command:
         - etcd
