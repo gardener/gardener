@@ -90,7 +90,6 @@ var _ = Describe("Handler", func() {
 			// Create handler
 			h, err := NewBuilder(mgr, logger).WithMutator(mutator, objTypes...).Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(err).NotTo(HaveOccurred())
 
 			// Call Handle and check response
 			resp := h.Handle(context.TODO(), req)
@@ -115,7 +114,6 @@ var _ = Describe("Handler", func() {
 
 			// Create handler
 			h, err := NewBuilder(mgr, logger).WithMutator(mutator, objTypes...).Build()
-			Expect(err).NotTo(HaveOccurred())
 			Expect(err).NotTo(HaveOccurred())
 
 			req.Operation = admissionv1.Update
@@ -144,7 +142,6 @@ var _ = Describe("Handler", func() {
 			// Create handler
 			h, err := NewBuilder(mgr, logger).WithMutator(mutator, objTypes...).Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(err).NotTo(HaveOccurred())
 
 			// Call Handle and check response
 			resp := h.Handle(context.TODO(), req)
@@ -172,7 +169,6 @@ var _ = Describe("Handler", func() {
 			// Create handler
 			h, err := NewBuilder(mgr, logger).WithMutator(mutator, objTypes...).Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(err).NotTo(HaveOccurred())
 
 			// Call Handle and check response
 			resp := h.Handle(context.TODO(), req)
@@ -199,7 +195,6 @@ var _ = Describe("Handler", func() {
 
 			// Create handler
 			h, err := NewBuilder(mgr, logger).WithMutator(mutator, objTypes...).Build()
-			Expect(err).NotTo(HaveOccurred())
 			Expect(err).NotTo(HaveOccurred())
 
 			// Prepare shoot client retrieval
@@ -276,7 +271,6 @@ users:
 
 			// Create handler
 			h, err := NewBuilder(mgr, logger).WithMutator(mutator, objTypes...).Build()
-			Expect(err).NotTo(HaveOccurred())
 			Expect(err).NotTo(HaveOccurred())
 
 			// Prepare cluster object retrieval
