@@ -370,7 +370,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleSNISettings(deployment)
 		k.handleTLSSNISettings(deployment, tlsSNISecrets)
 		k.handleServiceAccountSigningKeySettings(deployment)
-		k.handleAuthenticationSettings(deployment, configMapAuthenticationConfig, secretOIDCCABundle)
+		if err := k.handleAuthenticationSettings(deployment, configMapAuthenticationConfig, secretOIDCCABundle); err != nil {
+			return err
+		}
 		k.handleAuthenticationWebhookSettings(deployment, secretAuthenticationWebhookKubeconfig)
 		k.handleAuthorizationSettings(deployment, configMapAuthorizationConfig, secretAuthorizationWebhooksKubeconfigs)
 		if err := k.handleVPNSettings(deployment, serviceAccount, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
@@ -388,8 +390,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 
 func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 	var out []string
-
-	out = append(out, "--anonymous-auth="+strconv.FormatBool(k.values.AnonymousAuthenticationEnabled))
 
 	if len(k.values.APIAudiences) > 0 {
 		out = append(out, "--api-audiences="+strings.Join(k.values.APIAudiences, ","))

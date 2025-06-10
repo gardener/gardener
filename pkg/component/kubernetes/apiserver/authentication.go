@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -44,51 +45,64 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 		return errors.New("oidc configuration is incompatible with structured authentication")
 	}
 
-	if value, ok := k.values.FeatureGates["StructuredAuthenticationConfiguration"]; (ok && !value) ||
-		(k.values.AuthenticationConfiguration == nil && k.values.OIDC == nil) ||
-		versionutils.ConstraintK8sLess130.Check(k.values.Version) {
+	if !k.structuredAuthenticationFeatureGateEnabled() ||
+		(k.values.AuthenticationConfiguration == nil && k.values.OIDC == nil && !k.anonymousAuthConfigurableEndpointsFeatureGateEnabled()) {
 		return nil
 	}
 
 	authenticationConfig := ptr.Deref(k.values.AuthenticationConfiguration, "")
-	if k.values.OIDC != nil {
-		oidcAuthenticationConfig, err := ComputeAuthenticationConfigRawConfig(k.values.OIDC)
-		if err != nil {
-			return err
-		}
 
-		authenticationConfig = oidcAuthenticationConfig
-	}
-
-	configMap.Data = map[string]string{DataKeyConfigMapAuthenticationConfig: authenticationConfig}
-	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
-	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
-}
-
-// ComputeAuthenticationConfigRawConfig computes a AuthenticationConfiguration from oidcConfiguration.
-// TODO(AleksandarSavchev): Remove this functionality as soon as v1.32 is the least supported Kubernetes version in Gardener.
-func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (string, error) {
 	authenticationConfiguration := &apiserverv1beta1.AuthenticationConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiserverv1beta1.ConfigSchemeGroupVersion.String(),
 			Kind:       "AuthenticationConfiguration",
 		},
-		JWT: []apiserverv1beta1.JWTAuthenticator{{}},
 	}
 
+	if len(authenticationConfig) > 0 {
+		if err := runtime.DecodeInto(ConfigCodec, []byte(authenticationConfig), authenticationConfiguration); err != nil {
+			return err
+		}
+	}
+
+	if k.values.OIDC != nil {
+		authenticationConfiguration.JWT = ConfigureJWTAuthenticators(k.values.OIDC)
+	}
+
+	if k.anonymousAuthConfigurableEndpointsFeatureGateEnabled() && authenticationConfiguration.Anonymous == nil {
+		authenticationConfiguration.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
+			Enabled: ptr.Deref(k.values.AnonymousAuthenticationEnabled, false),
+		}
+	}
+
+	data, err := runtime.Encode(ConfigCodec, authenticationConfiguration)
+	if err != nil {
+		return fmt.Errorf("unable to encode authentication configuration: %w", err)
+	}
+
+	configMap.Data = map[string]string{DataKeyConfigMapAuthenticationConfig: string(data)}
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
+}
+
+// ConfigureJWTAuthenticators computes JWTAuthenticator configuration from oidcConfiguration.
+// TODO(AleksandarSavchev): Remove this functionality as soon as v1.32 is the least supported Kubernetes version in Gardener.
+func ConfigureJWTAuthenticators(oidc *gardencorev1beta1.OIDCConfig) []apiserverv1beta1.JWTAuthenticator {
+	jwts := []apiserverv1beta1.JWTAuthenticator{{}}
+
 	if v := oidc.CABundle; v != nil {
-		authenticationConfiguration.JWT[0].Issuer.CertificateAuthority = *v
+		jwts[0].Issuer.CertificateAuthority = *v
 	}
 
 	if v := oidc.IssuerURL; v != nil {
-		authenticationConfiguration.JWT[0].Issuer.URL = *v
+		jwts[0].Issuer.URL = *v
 	}
 
 	if v := oidc.ClientID; v != nil {
-		authenticationConfiguration.JWT[0].Issuer.Audiences = append(authenticationConfiguration.JWT[0].Issuer.Audiences, *v)
+		jwts[0].Issuer.Audiences = append(jwts[0].Issuer.Audiences, *v)
 	}
 
-	authenticationConfiguration.JWT[0].ClaimMappings.Username.Claim = ptr.Deref(oidc.UsernameClaim, "sub")
+	jwts[0].ClaimMappings.Username.Claim = ptr.Deref(oidc.UsernameClaim, "sub")
 
 	usernamePrefix := ptr.Deref(oidc.UsernamePrefix, "")
 
@@ -96,16 +110,16 @@ func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (s
 	// We use the defaulting suggested in kubernetes https://github.com/kubernetes/kubernetes/blob/a2106b5f73fe9352f7bc0520788855d57fc301e1/staging/src/k8s.io/apiserver/pkg/apis/apiserver/v1alpha1/types.go#L357-L366
 	switch {
 	case usernamePrefix == "-":
-		authenticationConfiguration.JWT[0].ClaimMappings.Username.Prefix = ptr.To("")
-	case len(usernamePrefix) == 0 && authenticationConfiguration.JWT[0].ClaimMappings.Username.Claim != "email":
-		authenticationConfiguration.JWT[0].ClaimMappings.Username.Prefix = ptr.To(fmt.Sprintf("%s#", authenticationConfiguration.JWT[0].Issuer.URL))
+		jwts[0].ClaimMappings.Username.Prefix = ptr.To("")
+	case len(usernamePrefix) == 0 && jwts[0].ClaimMappings.Username.Claim != "email":
+		jwts[0].ClaimMappings.Username.Prefix = ptr.To(fmt.Sprintf("%s#", jwts[0].Issuer.URL))
 	default:
-		authenticationConfiguration.JWT[0].ClaimMappings.Username.Prefix = ptr.To(usernamePrefix)
+		jwts[0].ClaimMappings.Username.Prefix = ptr.To(usernamePrefix)
 	}
 
 	if v := oidc.GroupsClaim; v != nil {
-		authenticationConfiguration.JWT[0].ClaimMappings.Groups.Claim = *v
-		authenticationConfiguration.JWT[0].ClaimMappings.Groups.Prefix = ptr.To(ptr.Deref(oidc.GroupsPrefix, ""))
+		jwts[0].ClaimMappings.Groups.Claim = *v
+		jwts[0].ClaimMappings.Groups.Prefix = ptr.To(ptr.Deref(oidc.GroupsPrefix, ""))
 	}
 
 	for key, value := range oidc.RequiredClaims {
@@ -113,25 +127,40 @@ func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (s
 			Claim:         key,
 			RequiredValue: value,
 		}
-		authenticationConfiguration.JWT[0].ClaimValidationRules = append(authenticationConfiguration.JWT[0].ClaimValidationRules, claimValidationRule)
+		jwts[0].ClaimValidationRules = append(jwts[0].ClaimValidationRules, claimValidationRule)
 	}
 
-	data, err := runtime.Encode(ConfigCodec, authenticationConfiguration)
-	if err != nil {
-		return "", fmt.Errorf("unable to encode authentication configuration: %w", err)
-	}
-
-	return string(data), nil
+	return jwts
 }
 
-func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, configMapAuthenticationConfig *corev1.ConfigMap, secretOIDCCABundle *corev1.Secret) {
-	if value, ok := k.values.FeatureGates["StructuredAuthenticationConfiguration"]; versionutils.ConstraintK8sLess130.Check(k.values.Version) || (ok && !value) {
+func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, configMapAuthenticationConfig *corev1.ConfigMap, secretOIDCCABundle *corev1.Secret) error {
+	var structAuthConfiguresAnonymousAuthentication bool
+
+	if !k.structuredAuthenticationFeatureGateEnabled() {
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
-		return
+	}
+
+	if config, ok := configMapAuthenticationConfig.Data[DataKeyConfigMapAuthenticationConfig]; ok {
+		authenticationConfiguration := &apiserverv1beta1.AuthenticationConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: apiserverv1beta1.ConfigSchemeGroupVersion.String(),
+				Kind:       "AuthenticationConfiguration",
+			},
+		}
+
+		if err := runtime.DecodeInto(ConfigCodec, []byte(config), authenticationConfiguration); err != nil {
+			return err
+		}
+
+		structAuthConfiguresAnonymousAuthentication = authenticationConfiguration.Anonymous != nil
+	}
+
+	if !k.structuredAuthenticationFeatureGateEnabled() || !structAuthConfiguresAnonymousAuthentication {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--anonymous-auth="+strconv.FormatBool(ptr.Deref(k.values.AnonymousAuthenticationEnabled, false)))
 	}
 
 	if _, ok := configMapAuthenticationConfig.Data[DataKeyConfigMapAuthenticationConfig]; !ok {
-		return
+		return nil
 	}
 
 	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authentication-config=%s/%s", volumeMountPathStructuredAuthenticationConfig, DataKeyConfigMapAuthenticationConfig))
@@ -149,6 +178,8 @@ func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployme
 			},
 		},
 	})
+
+	return nil
 }
 
 // TODO(AleksandarSavchev): Remove this functionality as soon as v1.32 is the least supported Kubernetes version in Gardener.
@@ -208,4 +239,35 @@ func (k *kubeAPIServer) handleOIDCSettings(deployment *appsv1.Deployment, secret
 	for key, value := range k.values.OIDC.RequiredClaims {
 		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-required-claim="+fmt.Sprintf("%s=%s", key, value))
 	}
+}
+
+func (k *kubeAPIServer) structuredAuthenticationFeatureGateEnabled() bool {
+	if versionutils.ConstraintK8sLess130.Check(k.values.Version) {
+		return false
+	}
+
+	featureGateEnabled, featureGateSet := k.values.FeatureGates["StructuredAuthenticationConfiguration"]
+	if featureGateSet {
+		return featureGateEnabled
+	}
+
+	return true
+}
+
+func (k *kubeAPIServer) anonymousAuthConfigurableEndpointsFeatureGateEnabled() bool {
+	if versionutils.ConstraintK8sLess131.Check(k.values.Version) {
+		return false
+	}
+
+	featureGateEnabled, featureGateSet := k.values.FeatureGates["AnonymousAuthConfigurableEndpoints"]
+	if featureGateSet {
+		return featureGateEnabled
+	}
+
+	if versionutils.ConstraintK8sEqual131.Check(k.values.Version) {
+		// the feature is not enabled by default in v1.31
+		return false
+	}
+
+	return true
 }
