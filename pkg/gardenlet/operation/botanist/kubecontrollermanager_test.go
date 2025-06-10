@@ -133,7 +133,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 			Context("last operation is nil or neither of type 'create' nor 'restore'", func() {
 				BeforeEach(func() {
-					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1)).AnyTimes()
+					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1)).MaxTimes(1)
 					botanist.Shoot.GetInfo().Status.LastOperation = nil
 				})
 
@@ -143,8 +143,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
 					kubernetesClient.EXPECT().Client().Return(c)
-					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).AnyTimes()
-
+					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
 
@@ -154,7 +153,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
 					kubernetesClient.EXPECT().Client().Return(c)
-					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).AnyTimes()
+					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
@@ -168,7 +167,7 @@ var _ = Describe("KubeControllerManager", func() {
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment, _ ...client.GetOption) error {
 						obj.Spec.Replicas = ptr.To(replicas)
 						return nil
-					}).AnyTimes()
+					})
 
 					kubeControllerManager.EXPECT().SetReplicaCount(replicas)
 
@@ -183,13 +182,13 @@ var _ = Describe("KubeControllerManager", func() {
 					var dwdMeltdownProtectionActive = map[string]string{
 						dwdapi.MeltdownProtectionActive: "",
 					}
-					kubernetesClient.EXPECT().Client().Return(c).AnyTimes()
+					kubernetesClient.EXPECT().Client().Return(c).MaxTimes(2)
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment, _ ...client.GetOption) error {
 						obj.Spec.Replicas = ptr.To(replicas)
 						obj.Annotations = dwdMeltdownProtectionActive
 						return nil
-					}).AnyTimes()
-					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).AnyTimes()
+					}).MaxTimes(2)
+					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).MaxTimes(2)
 
 					kubeControllerManager.EXPECT().SetReplicaCount(replicas)
 
@@ -210,7 +209,7 @@ var _ = Describe("KubeControllerManager", func() {
 						return nil
 					})
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).AnyTimes()
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).MaxTimes(2)
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
 
@@ -241,7 +240,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
 					kubernetesClient.EXPECT().Client().Return(c)
-					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).AnyTimes()
+					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
 			})
@@ -304,8 +303,8 @@ var _ = Describe("KubeControllerManager", func() {
 		})
 
 		It("should fail when the deploy function fails", func() {
-			kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](0)).AnyTimes()
-			kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{RuntimeConfig: map[string]bool{"foo": true}}).AnyTimes()
+			kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](0))
+			kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{RuntimeConfig: map[string]bool{"foo": true}})
 			kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
 			kubeControllerManager.EXPECT().SetRuntimeConfig(map[string]bool{"foo": true})
 			kubeControllerManager.EXPECT().SetServiceNetworks(botanist.Shoot.Networks.Services)
@@ -313,7 +312,7 @@ var _ = Describe("KubeControllerManager", func() {
 			kubeControllerManager.EXPECT().Deploy(ctx).Return(fakeErr)
 
 			kubernetesClient.EXPECT().Client().Return(c)
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).AnyTimes()
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 
 			Expect(botanist.DeployKubeControllerManager(ctx)).To(Equal(fakeErr))
 		})

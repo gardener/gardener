@@ -108,7 +108,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			}
 			botanist.Shoot.ControlPlaneNamespace = namespace
 			c = mockclient.NewMockClient(ctrl)
-			kubernetesClient.EXPECT().Client().Return(c).AnyTimes()
+			kubernetesClient.EXPECT().Client().Return(c).MaxTimes(3)
 		})
 
 		Context("CA wanted", func() {
@@ -121,11 +121,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 				clusterAutoscaler.EXPECT().SetMachineDeployments(machineDeployments)
 				clusterAutoscaler.EXPECT().SetMaxNodesTotal(int64(0))
 				clusterAutoscaler.EXPECT().SetReplicas(int32(1))
-				kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1)).AnyTimes()
+				kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1))
 			})
 
 			It("should set the secrets, namespace uid, machine deployments, and deploy", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "cluster-autoscaler"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).AnyTimes()
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "cluster-autoscaler"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 
 				clusterAutoscaler.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployClusterAutoscaler(ctx)).To(Succeed())
@@ -133,7 +133,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 			It("should fail when the deploy function fails", func() {
 				clusterAutoscaler.EXPECT().Deploy(ctx).Return(fakeErr)
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "cluster-autoscaler"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).AnyTimes()
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "cluster-autoscaler"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 				Expect(botanist.DeployClusterAutoscaler(ctx)).To(Equal(fakeErr))
 			})
 		})
