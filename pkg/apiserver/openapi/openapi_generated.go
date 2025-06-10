@@ -4651,7 +4651,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					},
 					"enableAnonymousAuthentication": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Deprecated: This field is deprecated and will be removed in a future release. Please use anonymous authentication configuration instead. For more information see: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration EnableAnonymousAuthentication defines whether anonymous requests to the secure port of the API server should be allowed (flag `--anonymous-auth`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Description: "EnableAnonymousAuthentication defines whether anonymous requests to the secure port of the API server should be allowed (flag `--anonymous-auth`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/\n\nDeprecated: This field is deprecated and will be removed in a future release. Please use anonymous authentication configuration instead. For more information see: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

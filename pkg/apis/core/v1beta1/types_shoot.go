@@ -902,13 +902,14 @@ type KubeAPIServerConfig struct {
 	// Requests contains configuration for request-specific settings for the kube-apiserver.
 	// +optional
 	Requests *APIServerRequests `json:"requests,omitempty" protobuf:"bytes,10,opt,name=requests"`
+	// EnableAnonymousAuthentication defines whether anonymous requests to the secure port
+	// of the API server should be allowed (flag `--anonymous-auth`).
+	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+	//
 	// Deprecated: This field is deprecated and will be removed in a future release.
 	// Please use anonymous authentication configuration instead.
 	// For more information see: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration
 	// TODO(marc1404): Forbid this field when the feature gate AnonymousAuthConfigurableEndpoints has graduated.
-	// EnableAnonymousAuthentication defines whether anonymous requests to the secure port
-	// of the API server should be allowed (flag `--anonymous-auth`).
-	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
 	// +optional
 	EnableAnonymousAuthentication *bool `json:"enableAnonymousAuthentication,omitempty" protobuf:"varint,11,opt,name=enableAnonymousAuthentication"`
 	// EventTTL controls the amount of time to retain events.
