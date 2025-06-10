@@ -10,6 +10,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -33,7 +34,7 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 			values.Zone = &b.Shoot.ExternalDomain.Zone
 		}
 		values.SecretData = b.Shoot.ExternalDomain.SecretData
-		values.DNSName = gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
+		values.DNSName = v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
 	}
 
 	return extensionsdnsrecord.New(
@@ -66,7 +67,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 			values.Zone = &b.Garden.InternalDomain.Zone
 		}
 		values.SecretData = b.Garden.InternalDomain.SecretData
-		values.DNSName = gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain)
+		values.DNSName = v1beta1helper.GetAPIServerDomain(b.Shoot.InternalClusterDomain)
 	}
 
 	return extensionsdnsrecord.New(
