@@ -164,7 +164,6 @@ spec:
   #     enabled: false
   kubernetes:
   # version: 1.27.3
-  # enableStaticTokenKubeconfig: false # Deprecated, will be removed in gardener v1.120
   # etcd:
   #   main:
   #     autoscaling:
