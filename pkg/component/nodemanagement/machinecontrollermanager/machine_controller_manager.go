@@ -163,6 +163,10 @@ func (m *machineControllerManager) MigrateRBAC(ctx context.Context) error {
 
 func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	var (
+		// In `gardenadm bootstrap`, machine-controller-manager runs without a target cluster. We don't need the shoot
+		// resources (e.g., RBAC) in this case.
+		hasTargetCluster = !m.values.AutonomousShoot || m.namespace == metav1.NamespaceSystem
+
 		shootAccessSecret   = m.newShootAccessSecret()
 		serviceAccount      = m.emptyServiceAccount()
 		roleBinding         = m.emptyRoleBindingRuntime()
@@ -174,11 +178,6 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		prometheusRule      = m.emptyPrometheusRule()
 		serviceMonitor      = m.emptyServiceMonitor()
 	)
-
-	genericTokenKubeconfigSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
-	}
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, serviceAccount, func() error {
 		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
@@ -359,6 +358,11 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		}
 
 		if !m.values.AutonomousShoot {
+			genericTokenKubeconfigSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+			if !found {
+				return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+			}
+
 			utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
 		}
 
@@ -535,19 +539,16 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	data, err := m.computeShootResourcesData(shootAccessSecret.ServiceAccountName)
-	if err != nil {
-		return err
+	if hasTargetCluster {
+		data, err := m.computeShootResourcesData(shootAccessSecret.ServiceAccountName)
+		if err != nil {
+			return err
+		}
+
+		return managedresources.CreateForShoot(ctx, m.client, m.namespace, managedResourceTargetName, managedresources.LabelValueGardener, false, data)
 	}
 
-	if m.values.AutonomousShoot && m.namespace != metav1.NamespaceSystem {
-		// This deploys the target cluster RBAC (e.g., for managing nodes and bootstrap tokens) in the bootstrap cluster
-		// because we configure machine-controller-manager with the in-cluster config as the target kubeconfig for now.
-		// TODO(timebertt): disable machine-controller-manager's target cluster interaction entirely
-		//  when https://github.com/gardener/machine-controller-manager/issues/994 has been implemented
-		return managedresources.CreateForSeed(ctx, m.client, m.namespace, managedResourceTargetName, false, data)
-	}
-	return managedresources.CreateForShoot(ctx, m.client, m.namespace, managedResourceTargetName, managedresources.LabelValueGardener, false, data)
+	return nil
 }
 
 // targetKubeconfig returns the path to the target kubeconfig file depending on the shoot configuration.
@@ -563,10 +564,7 @@ func targetKubeconfig(autonomousShoot bool, controlPlaneNamespace string) string
 
 	// There is no control plane for the autonomous shoot cluster yet, i.e., we're creating machines for the control plane
 	// nodes with `gardenadm bootstrap`. machine-controller-manager should not interact with a target cluster.
-	// TODO(timebertt): disable machine-controller-manager's target cluster interaction entirely
-	//  when https://github.com/gardener/machine-controller-manager/issues/994 has been implemented
-	// return "none" here
-	return ""
+	return "none"
 }
 
 func (m *machineControllerManager) Destroy(ctx context.Context) error {
@@ -627,9 +625,6 @@ func (m *machineControllerManager) computeShootResourcesData(serviceAccountName 
 		Kind:      rbacv1.ServiceAccountKind,
 		Name:      serviceAccountName,
 		Namespace: metav1.NamespaceSystem,
-	}
-	if m.values.AutonomousShoot {
-		subject.Namespace = m.namespace
 	}
 
 	var (
