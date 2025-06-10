@@ -632,27 +632,31 @@ subjects:
 			Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 
 			actualManagedResource := &resourcesv1alpha1.ManagedResource{}
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), actualManagedResource)).To(Succeed())
-			managedResource.ResourceVersion = "1"
-			managedResource.Spec.SecretRefs[0] = actualManagedResource.Spec.SecretRefs[0]
-			utilruntime.Must(references.InjectAnnotations(managedResource))
-			Expect(actualManagedResource).To(DeepEqual(managedResource))
+			if values.AutonomousShoot && namespace != "kube-system" {
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), actualManagedResource)).To(BeNotFoundError())
+			} else {
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), actualManagedResource)).To(Succeed())
+				managedResource.ResourceVersion = "1"
+				managedResource.Spec.SecretRefs[0] = actualManagedResource.Spec.SecretRefs[0]
+				utilruntime.Must(references.InjectAnnotations(managedResource))
+				Expect(actualManagedResource).To(DeepEqual(managedResource))
 
-			actualManagedResourceSecret := &corev1.Secret{}
-			managedResourceSecret.Name = actualManagedResource.Spec.SecretRefs[0].Name
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualManagedResourceSecret)).To(Succeed())
-			Expect(actualManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(actualManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				actualManagedResourceSecret := &corev1.Secret{}
+				managedResourceSecret.Name = actualManagedResource.Spec.SecretRefs[0].Name
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualManagedResourceSecret)).To(Succeed())
+				Expect(actualManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(actualManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 
-			manifests, err := test.ExtractManifestsFromManagedResourceData(actualManagedResourceSecret.Data)
-			Expect(err).NotTo(HaveOccurred())
+				manifests, err := test.ExtractManifestsFromManagedResourceData(actualManagedResourceSecret.Data)
+				Expect(err).NotTo(HaveOccurred())
 
-			Expect(manifests).To(ConsistOf(
-				clusterRoleYAML,
-				clusterRoleBindingYAML,
-				roleYAML,
-				roleBindingYAML,
-			))
+				Expect(manifests).To(ConsistOf(
+					clusterRoleYAML,
+					clusterRoleBindingYAML,
+					roleYAML,
+					roleBindingYAML,
+				))
+			}
 		}
 
 		When("the shoot is not autonomous", func() {
@@ -677,17 +681,19 @@ subjects:
 
 			JustBeforeEach(func() {
 				shootAccessSecret = nil
-
-				for i, s := range deployment.Spec.Template.Spec.Containers[0].Command {
-					if strings.HasPrefix(s, "--target-kubeconfig=") {
-						deployment.Spec.Template.Spec.Containers[0].Command[i] = "--target-kubeconfig="
-					}
-				}
 			})
 
 			When("running the control plane (gardenadm init)", func() {
 				BeforeEach(func() {
 					namespace = "kube-system"
+				})
+
+				JustBeforeEach(func() {
+					for i, s := range deployment.Spec.Template.Spec.Containers[0].Command {
+						if strings.HasPrefix(s, "--target-kubeconfig=") {
+							deployment.Spec.Template.Spec.Containers[0].Command[i] = "--target-kubeconfig="
+						}
+					}
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -697,12 +703,11 @@ subjects:
 
 			When("not running the control plane (gardenadm bootstrap)", func() {
 				JustBeforeEach(func() {
-					managedResource.Labels = nil
-					managedResource.Spec.InjectLabels = nil
-					managedResource.Spec.Class = ptr.To("seed")
-
-					clusterRoleBindingYAML = strings.ReplaceAll(clusterRoleBindingYAML, "name: machine-controller-manager\n  namespace: kube-system", "name: machine-controller-manager\n  namespace: "+namespace)
-					roleBindingYAML = strings.ReplaceAll(roleBindingYAML, "name: machine-controller-manager\n  namespace: kube-system", "name: machine-controller-manager\n  namespace: "+namespace)
+					for i, s := range deployment.Spec.Template.Spec.Containers[0].Command {
+						if strings.HasPrefix(s, "--target-kubeconfig=") {
+							deployment.Spec.Template.Spec.Containers[0].Command[i] = "--target-kubeconfig=none"
+						}
+					}
 				})
 
 				It("should successfully deploy all resources", func() {
