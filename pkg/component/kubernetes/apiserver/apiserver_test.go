@@ -1778,6 +1778,72 @@ rules:
 					Expect(kapi.Deploy(ctx)).To(MatchError("oidc configuration is incompatible with structured authentication"))
 				})
 
+				It("should successfully deploy the configmap resource disabling anonymous authentication if AnonymousAuthConfigurableEndpoints is enabled", func() {
+					var (
+						authenticationConfigInput = &apiserverv1beta1.AuthenticationConfiguration{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: "apiserver.config.k8s.io/v1beta1",
+								Kind:       "AuthenticationConfiguration",
+							},
+							JWT: []apiserverv1beta1.JWTAuthenticator{
+								{
+									Issuer: apiserverv1beta1.Issuer{
+										URL:       "https://foo.com",
+										Audiences: []string{"example-client-id"},
+									},
+									ClaimMappings: apiserverv1beta1.ClaimMappings{
+										Username: apiserverv1beta1.PrefixedClaimOrExpression{
+											Claim:  "username",
+											Prefix: ptr.To("foo:"),
+										},
+									},
+								},
+							},
+						}
+						version = semver.MustParse("1.31.0")
+					)
+
+					authenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
+					Expect(err).ToNot(HaveOccurred())
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+							FeatureGates: map[string]bool{
+								"AnonymousAuthConfigurableEndpoints": true,
+							},
+						},
+						AuthenticationConfiguration: ptr.To(string(authenticationConfig)),
+						Version:                     version,
+					})
+
+					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
+						Enabled: false,
+					}
+					expectedAuthenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
+					Expect(err).ToNot(HaveOccurred())
+
+					configMapAuthentication = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
+						Data:       map[string]string{"config.yaml": string(expectedAuthenticationConfig)},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(Succeed())
+					Expect(configMapAuthentication).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuthentication.Name,
+							Namespace:       configMapAuthentication.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAuthentication.Data,
+					}))
+				})
+
 				It("should successfully deploy the configmap resource disabling anonymous authentication", func() {
 					var (
 						authenticationConfigInput = &apiserverv1beta1.AuthenticationConfiguration{

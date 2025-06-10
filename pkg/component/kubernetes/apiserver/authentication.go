@@ -255,13 +255,18 @@ func (k *kubeAPIServer) structuredAuthenticationFeatureGateEnabled() bool {
 }
 
 func (k *kubeAPIServer) anonymousAuthConfigurableEndpointsFeatureGateEnabled() bool {
-	if !versionutils.ConstraintK8sGreaterEqual132.Check(k.values.Version) {
+	if versionutils.ConstraintK8sLess131.Check(k.values.Version) {
 		return false
 	}
 
 	featureGateEnabled, featureGateSet := k.values.FeatureGates["AnonymousAuthConfigurableEndpoints"]
 	if featureGateSet {
 		return featureGateEnabled
+	}
+
+	if versionutils.ConstraintK8sEqual131.Check(k.values.Version) {
+		// the feature is not enabled by default in v1.31
+		return false
 	}
 
 	return true
