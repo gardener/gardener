@@ -2270,6 +2270,56 @@ var _ = Describe("Validation Tests", func() {
 					})
 				})
 			})
+
+			Context("Kubernetes", func() {
+				Context("sni", func() {
+					BeforeEach(func() {
+						garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{
+							{Name: "example.com", Provider: ptr.To("primary")},
+						}
+					})
+
+					It("should complain when SNI matches the first virtual cluster API server domain", func() {
+						garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+							SNI: &operatorv1alpha1.SNI{
+								DomainPatterns: []string{"api.example.com"},
+							},
+						}
+
+						Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeForbidden),
+								"Field": Equal("spec.virtualCluster.kubernetes.kubeAPIServer.sni.domainPatterns[0]"),
+							})),
+						))
+					})
+
+					It("should complain when SNI matches the first virtual cluster API server domain with a wildcard entry", func() {
+						garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+							SNI: &operatorv1alpha1.SNI{
+								DomainPatterns: []string{"foo.bar", "*.example.com"},
+							},
+						}
+
+						Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeForbidden),
+								"Field": Equal("spec.virtualCluster.kubernetes.kubeAPIServer.sni.domainPatterns[1]"),
+							})),
+						))
+					})
+
+					It("should not complain when SNI does not matches the first virtual cluster API server domain", func() {
+						garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+							SNI: &operatorv1alpha1.SNI{
+								DomainPatterns: []string{"foo.bar"},
+							},
+						}
+
+						Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+					})
+				})
+			})
 		})
 	})
 
