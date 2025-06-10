@@ -26,13 +26,13 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockgardenletdepoyer "github.com/gardener/gardener/pkg/controller/gardenletdeployer/mock"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockrecord "github.com/gardener/gardener/third_party/mock/client-go/tools/record"
@@ -901,7 +901,7 @@ var _ = Describe("Utils", func() {
 
 			Expect(ensuredDeploymentWithDomain.Env[0].Name).To(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithDomain.Env[0].Value).To(Equal(preserveDomain))
-			Expect(ensuredDeploymentWithDomain.Env[0].Value).ToNot(Equal(gardenerutils.GetAPIServerDomain(domain)))
+			Expect(ensuredDeploymentWithDomain.Env[0].Value).ToNot(Equal(v1beta1helper.GetAPIServerDomain(domain)))
 
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).To(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Value).To(Equal(preserveDomain))
@@ -920,7 +920,7 @@ var _ = Describe("Utils", func() {
 			Expect(ensuredDeploymentWithoutDomain.Env).To(HaveLen(2))
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).ToNot(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithoutDomain.Env[1].Name).To(Equal(kubernetesServiceHost))
-			Expect(ensuredDeploymentWithoutDomain.Env[1].Value).To(Equal(gardenerutils.GetAPIServerDomain(domain)))
+			Expect(ensuredDeploymentWithoutDomain.Env[1].Value).To(Equal(v1beta1helper.GetAPIServerDomain(domain)))
 
 		})
 	})

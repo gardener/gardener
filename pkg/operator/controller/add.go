@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -102,7 +103,7 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 					return true, (&gardenlet.Reconciler{
 						Config: cfg.Controllers.GardenletDeployer,
 						// garden.Spec.VirtualCluster.DNS.Domains[0].Name is immutable and always set.
-						DefaultGardenClusterAddress: fmt.Sprintf("https://%s", gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name)),
+						DefaultGardenClusterAddress: fmt.Sprintf("https://%s", v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name)),
 					}).AddToManager(ctx, mgr, virtualCluster)
 				},
 			},
