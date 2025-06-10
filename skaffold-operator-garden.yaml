@@ -29,7 +29,7 @@ deploy:
             command:
               - bash
               - -ec
-              - kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > $VIRTUAL_GARDEN_KUBECONFIG
+              - hack/usage/generate-virtual-garden-admin-kubeconf.sh > $VIRTUAL_GARDEN_KUBECONFIG
   statusCheck: false # enabled status check would watch all deployments in the garden namespace
 ---
 apiVersion: skaffold/v4beta12

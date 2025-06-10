@@ -404,7 +404,7 @@ spec:
             watch "k get pods -A -o wide | awk '{split(\$3, a, \"/\"); if (a[1]!=a[2] || \$4 != \"Running\") {print}}'"
           EOF
           new_window "virtual-garden" "virtual-garden" <<"EOF"
-            k -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig && export KUBECONFIG=/tmp/virtual-garden-kubeconfig
+            hack/usage/generate-virtual-garden-admin-kubeconf.sh > /tmp/virtual-garden-kubeconfig && export KUBECONFIG=/tmp/virtual-garden-kubeconfig
           EOF
           new_window "git" "git" Enter <<"EOF"
             # Use 'pr' or 'pr_base' to checkout the head or base commit of a PR

@@ -936,14 +936,12 @@ cat <<EOF | sudo tee -a /etc/hosts
 EOF
 ```
 
-To access the virtual garden, you can acquire a `kubeconfig` by
+To access the virtual garden, you can generate a `kubeconfig` by running
 
 ```shell
-kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig
+hack/usage/generate-virtual-garden-admin-kubeconf.sh > /tmp/virtual-garden-kubeconfig
 kubectl --kubeconfig /tmp/virtual-garden-kubeconfig get namespaces
 ```
-
-Note that this kubeconfig uses a token that has validity of `12h` only, hence it might expire and causing you to re-download the kubeconfig.
 
 ### Creating Seeds and Shoots
 
