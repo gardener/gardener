@@ -70,8 +70,6 @@ echo "> Copy gardenadm binary to host (/opt/bin) and make it executable"
 mkdir -p "/opt/bin"
 cp -f "$tmp_dir/gardenadm" "/opt/bin" || cp -f "$tmp_dir/ko-app/gardenadm" "/opt/bin"
 chmod +x "/opt/bin/gardenadm"
-
-
 `)),
 					},
 				},

@@ -25,8 +25,8 @@ TODO(timebertt): remove this fallback once https://github.com/ko-build/ko/pull/1
 */}}
 cp -f "$tmp_dir/{{ .binaryName }}" "{{ .binaryDirectory }}" || cp -f "$tmp_dir/ko-app/{{ .binaryName }}" "{{ .binaryDirectory }}"
 chmod +x "{{ .binaryDirectory }}/{{ .binaryName }}"
+{{- if eq .binaryName "gardener-node-agent" }}
 
-{{ if eq .binaryName "gardener-node-agent" -}}
 echo "> Bootstrap {{ .binaryName }}"
 exec "{{ .binaryDirectory }}/{{ .binaryName }}" bootstrap --config="{{ .configFile }}"
 {{- end }}
