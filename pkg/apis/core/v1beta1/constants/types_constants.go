@@ -893,6 +893,11 @@ const (
 	CloudProfileReferenceKindCloudProfile = "CloudProfile"
 	// CloudProfileReferenceKindNamespacedCloudProfile is a constant for the NamespacedCloudProfile kind reference.
 	CloudProfileReferenceKindNamespacedCloudProfile = "NamespacedCloudProfile"
+
+	// APIServerFQDNPrefix is the part of a FQDN which will be used to construct the domain name for the kube-apiserver of
+	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the apiserver domain would be
+	// 'api.cluster.example.com'.
+	APIServerFQDNPrefix = "api"
 )
 
 var (

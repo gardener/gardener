@@ -16,7 +16,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/features"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // DefaultKubeAPIServerService returns a deployer for the kube-apiserver service.
@@ -158,8 +157,8 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 
 			values := &kubeapiserverexposure.SNIValues{
 				Hosts: []string{
-					gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-					gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+					v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+					v1beta1helper.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				},
 				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
 					APIServerClusterIP: b.APIServerClusterIP,

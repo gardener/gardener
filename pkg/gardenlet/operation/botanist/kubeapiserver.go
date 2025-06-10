@@ -28,7 +28,6 @@ import (
 	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
@@ -117,7 +116,7 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 	var (
 		ipAddresses = []net.IP{}
 		dnsNames    = []string{
-			gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			v1beta1helper.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 			b.Shoot.GetInfo().Status.TechnicalID,
 		}
 	)
@@ -127,7 +126,7 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 	}
 
 	if b.Shoot.ExternalClusterDomain != nil {
-		dnsNames = append(dnsNames, *(b.Shoot.GetInfo().Spec.DNS.Domain), gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
+		dnsNames = append(dnsNames, *(b.Shoot.GetInfo().Spec.DNS.Domain), v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
 	}
 
 	return kubeapiserver.ServerCertificateConfig{

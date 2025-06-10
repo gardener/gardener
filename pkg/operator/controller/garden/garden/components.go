@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
@@ -922,7 +923,7 @@ func (r *Reconciler) newGardenerAccess(garden *operatorv1alpha1.Garden, secretsM
 		secretsManager,
 		gardeneraccess.Values{
 			ServerInCluster:       fmt.Sprintf("%s%s.%s.svc.cluster.local", namePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
-			ServerOutOfCluster:    gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
+			ServerOutOfCluster:    v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
 			ManagedResourceLabels: map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
 		},
 	)
@@ -943,7 +944,7 @@ func getAPIServerDomains(domains []operatorv1alpha1.DNSDomain) []operatorv1alpha
 	for _, domain := range domains {
 		apiServerDomains = append(apiServerDomains,
 			operatorv1alpha1.DNSDomain{
-				Name:     gardenerutils.GetAPIServerDomain(domain.Name),
+				Name:     v1beta1helper.GetAPIServerDomain(domain.Name),
 				Provider: domain.Provider,
 			},
 			operatorv1alpha1.DNSDomain{
@@ -1213,7 +1214,7 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 	values := gardenerdashboard.Values{
 		Image:            image.String(),
 		LogLevel:         logger.InfoLevel,
-		APIServerURL:     gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
+		APIServerURL:     v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
 		EnableTokenLogin: true,
 		Ingress: gardenerdashboard.IngressValues{
 			Enabled:                true,
