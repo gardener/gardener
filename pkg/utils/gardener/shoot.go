@@ -199,8 +199,6 @@ func NodeLabelsForWorkerPool(workerPool gardencorev1beta1.Worker, nodeLocalDNSEn
 }
 
 const (
-	// ShootProjectSecretSuffixKubeconfig is a constant for a shoot project secret with suffix 'kubeconfig'.
-	ShootProjectSecretSuffixKubeconfig = "kubeconfig"
 	// ShootProjectSecretSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
 	//
 	// Deprecated: This constant is deprecated in favor of ShootProjectConfigMapSuffixCACluster
@@ -222,7 +220,6 @@ const (
 // GetShootProjectSecretSuffixes returns the list of shoot-related project secret suffixes.
 func GetShootProjectSecretSuffixes() []string {
 	return []string{
-		ShootProjectSecretSuffixKubeconfig,
 		ShootProjectSecretSuffixCACluster,
 		ShootProjectSecretSuffixSSHKeypair,
 		ShootProjectSecretSuffixOldSSHKeypair,
