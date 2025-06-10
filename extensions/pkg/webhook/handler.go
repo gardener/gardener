@@ -273,22 +273,22 @@ type (
 	ClusterObjectContextKey struct{}
 )
 
-// WantsShootClient can be implemented if a mutator wants a client for the shoot cluster. The client will always be
+// WantsShootClient can be implemented if a Mutator/Validator wants a client for the shoot cluster. The client will always be
 // an uncached client.
 type WantsShootClient interface {
-	// WantsShootClient returns true if the mutator wants a shoot client to be injected into the context.
+	// WantsShootClient returns true if the Mutator/Validator wants a shoot client to be injected into the context.
 	WantsShootClient() bool
 }
 
-// WantsClusterObject can be implemented if a mutator wants a Cluster object for the shoot cluster. It can be used to
+// WantsClusterObject can be implemented if a Mutator/Validator wants a Cluster object for the shoot cluster. It can be used to
 // read information about the Shoot, e.g., the specification, or information about the CloudProfile or Seed.
 type WantsClusterObject interface {
-	// WantsClusterObject returns true if the mutator wants a Cluster object to be injected into the context.
+	// WantsClusterObject returns true if the Mutator/Validator wants a Cluster object to be injected into the context.
 	WantsClusterObject() bool
 }
 
 func (h *handler) determineShootNamespaceInSeed(ctx context.Context) (string, error) {
-	// TODO: replace this logic with a proper authentication mechanism
+	// TODO(timuthy): Replace this logic with a proper authentication mechanism, after https://github.com/gardener/gardener/issues/12283 has been implemented.
 	// see https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
 	// API servers should authenticate against webhooks servers using TLS client certs, from which the webhook
 	// can identify from which shoot cluster the webhook call is coming
