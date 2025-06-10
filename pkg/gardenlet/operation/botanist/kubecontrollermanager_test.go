@@ -7,7 +7,6 @@ package botanist_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 
 	"github.com/Masterminds/semver/v3"
@@ -299,15 +298,12 @@ var _ = Describe("KubeControllerManager", func() {
 		})
 
 		It("should fail when the replicas cannot be determined", func() {
-			formattedFakeErr := fmt.Errorf("failed to check if deployment \"kube-controller-manager\" is controlled by dependency-watchdog: failed to get deployment \"kube-controller-manager\": fake err")
 			kubernetesClient.EXPECT().Client().Return(c)
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(fakeErr)
-
-			Expect(botanist.DeployKubeControllerManager(ctx).Error()).To(Equal(formattedFakeErr.Error()))
+			Expect(botanist.DeployKubeControllerManager(ctx).Error()).To(Equal(`failed to check if deployment "kube-controller-manager" is controlled by dependency-watchdog: failed to get deployment "kube-controller-manager": fake err`))
 		})
 
 		It("should fail when the deploy function fails", func() {
-
 			kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](0)).AnyTimes()
 			kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{RuntimeConfig: map[string]bool{"foo": true}}).AnyTimes()
 			kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
