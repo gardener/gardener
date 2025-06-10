@@ -71,8 +71,7 @@ func (b *Botanist) isControlledByDependencyWatchdog(ctx context.Context, deploym
 		return false, nil
 	}
 
-	_, ok := deployment.Annotations[dwdapi.MeltdownProtectionActive]
-	return ok, nil
+	return metav1.HasAnnotation(deployment.ObjectMeta, dwdapi.MeltdownProtectionActive), nil
 }
 
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.
