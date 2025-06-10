@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -76,12 +75,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	log = log.WithValues("shootName", shoot.Name)
 	actuator := r.newActuator(shoot)
-
-	var err error
-	ms.Spec.Gardenlet.Config, err = gardenletutils.SetDefaultGardenClusterAddress(log, ms.Spec.Gardenlet.Config, r.GardenConfig.Host)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to set default garden cluster address: %w", err)
-	}
 
 	if ms.DeletionTimestamp != nil {
 		return r.delete(ctx, log, ms, actuator)

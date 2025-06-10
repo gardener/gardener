@@ -96,6 +96,9 @@ type GardenClientConnection struct {
 	GardenClusterAddress *string `json:"gardenClusterAddress,omitempty"`
 	// GardenClusterCACert is the external address that the gardenlets can use to remotely connect to the Garden
 	// cluster. It is needed in case the gardenlet deploys itself into ManagedSeeds.
+	// Deprecated: This filed is deprecated and will be removed in Gardener v1.125.
+	// Garden cluster CA is now automatically set while gardenlet is bootstrapped. After that the gardenlet updates the
+	// CA from the garden cluster automatically. You can already enable this behavior by leaving the field empty.
 	// +optional
 	GardenClusterCACert []byte `json:"gardenClusterCACert,omitempty"`
 	// BootstrapKubeconfig is a reference to a secret that contains a data key 'kubeconfig' whose value
