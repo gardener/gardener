@@ -332,7 +332,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Waiting until istio LoadBalancer is ready and managed ingress DNS record is reconciled",
 			Fn: func(ctx context.Context) error {
-				ingressDNSRecord, err := r.deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(ctx, log, seed, c.nginxIngressController, seedIsGarden, c.istioDefaultNamespace)
+				ingressDNSRecord, err := r.deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(ctx, log, seed, c.nginxIngressController, c.istioDefaultNamespace)
 				if err != nil {
 					return err
 				}
@@ -679,16 +679,13 @@ func (r *Reconciler) deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(
 	log logr.Logger,
 	seed *seedpkg.Seed,
 	nginxIngress component.DeployWaiter,
-	seedIsGarden bool,
 	istioDefaultNamespace string,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
-	if !seedIsGarden {
-		if err := component.OpWait(nginxIngress).Deploy(ctx); err != nil {
-			return nil, err
-		}
+	if err := component.OpWait(nginxIngress).Deploy(ctx); err != nil {
+		return nil, err
 	}
 
 	ingressLoadBalancerAddress, err := WaitUntilLoadBalancerIsReady(

@@ -37,11 +37,9 @@ import (
 )
 
 const (
-	name = "nginx-ingress"
-	// ManagedResourceName is the name of the nginx-ingress managed resource.
-	ManagedResourceName = name
-	// ManagedResourceNameShootAddon is the name of the nginx-ingress addon managed resource.
-	ManagedResourceNameShootAddon = "shoot-addon-nginx-ingress"
+	name                          = "nginx-ingress"
+	managedResourceName           = name
+	managedResourceNameShootAddon = "shoot-addon-nginx-ingress"
 
 	// LabelAppValue is the value of the 'app' label for the ingress controller.
 	LabelAppValue = "nginx-ingress"
@@ -102,6 +100,10 @@ type Values struct {
 	WildcardIngressDomains []string
 	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
 	IstioIngressGatewayLabels map[string]string
+	// SeedIsGarden controls whether only the Istio VirtualService and Gateway resources should be managed.
+	// In this case, it is assumed that this nginx-ingress-controller is already deployed in the cluster and managed by
+	// gardener-operator. This flag only has an effect if the ClusterType is Seed.
+	SeedIsGarden bool
 }
 
 // New creates a new instance of DeployWaiter for nginx-ingress
@@ -130,16 +132,16 @@ func (n *nginxIngress) Deploy(ctx context.Context) error {
 	}
 
 	if n.values.ClusterType == component.ClusterTypeShoot {
-		return managedresources.CreateForShoot(ctx, n.client, n.namespace, ManagedResourceNameShootAddon, managedresources.LabelValueGardener, false, data)
+		return managedresources.CreateForShoot(ctx, n.client, n.namespace, n.managedResourceName(), managedresources.LabelValueGardener, false, data)
 	}
-	return managedresources.CreateForSeed(ctx, n.client, n.namespace, ManagedResourceName, false, data)
+	return managedresources.CreateForSeed(ctx, n.client, n.namespace, n.managedResourceName(), false, data)
 }
 
 func (n *nginxIngress) Destroy(ctx context.Context) error {
 	if n.values.ClusterType == component.ClusterTypeShoot {
-		return managedresources.DeleteForShoot(ctx, n.client, n.namespace, ManagedResourceNameShootAddon)
+		return managedresources.DeleteForShoot(ctx, n.client, n.namespace, n.managedResourceName())
 	}
-	return managedresources.DeleteForSeed(ctx, n.client, n.namespace, ManagedResourceName)
+	return managedresources.DeleteForSeed(ctx, n.client, n.namespace, n.managedResourceName())
 }
 
 var (
@@ -154,24 +156,14 @@ func (n *nginxIngress) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	name := ManagedResourceName
-	if n.values.ClusterType == component.ClusterTypeShoot {
-		name = ManagedResourceNameShootAddon
-	}
-
-	return WaitUntilHealthy(timeoutCtx, n.client, n.namespace, name)
+	return WaitUntilHealthy(timeoutCtx, n.client, n.namespace, n.managedResourceName())
 }
 
 func (n *nginxIngress) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	name := ManagedResourceName
-	if n.values.ClusterType == component.ClusterTypeShoot {
-		name = ManagedResourceNameShootAddon
-	}
-
-	return managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, name)
+	return managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, n.managedResourceName())
 }
 
 func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
@@ -649,14 +641,14 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 
 		port := uint32(ServicePortControllerHttps)
-		gateway = &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: controllerName, Namespace: n.values.TargetNamespace}}
+		gateway = &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: controllerName + n.nameSuffix(), Namespace: n.values.TargetNamespace}}
 		if err := istio.GatewayWithTLSPassthrough(gateway, n.getLabels(LabelValueController, false), n.values.IstioIngressGatewayLabels, n.values.WildcardIngressDomains, port)(); err != nil {
 			return nil, err
 		}
 
 		// If multiple domains overlap istio validation may complain => separate virtual services per domain solve this reliably
 		for i, domain := range n.values.WildcardIngressDomains {
-			virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-%d", controllerName, i), Namespace: n.values.TargetNamespace}}
+			virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-%d", controllerName+n.nameSuffix(), i), Namespace: n.values.TargetNamespace}}
 			if err := istio.VirtualServiceWithSNIMatch(virtualService, n.getLabels(LabelValueController, false), []string{domain}, gateway.Name, port, destinationHost)(); err != nil {
 				return nil, err
 			}
@@ -734,28 +726,28 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
-	if err := registry.Add(virtualServices...); err != nil {
-		return nil, err
+	objectsToAdd := append(virtualServices, gateway)
+	if !n.values.SeedIsGarden || n.values.ClusterType != component.ClusterTypeSeed {
+		objectsToAdd = append(objectsToAdd,
+			clusterRole,
+			clusterRoleBinding,
+			serviceAccount,
+			configMap,
+			serviceController,
+			deploymentController,
+			podDisruptionBudget,
+			vpa,
+			role,
+			roleBinding,
+			serviceBackend,
+			deploymentBackend,
+			ingressClass,
+			networkPolicy,
+			destinationRule,
+		)
 	}
 
-	return registry.AddAllAndSerialize(
-		clusterRole,
-		clusterRoleBinding,
-		serviceAccount,
-		configMap,
-		serviceController,
-		deploymentController,
-		podDisruptionBudget,
-		vpa,
-		role,
-		roleBinding,
-		serviceBackend,
-		deploymentBackend,
-		ingressClass,
-		networkPolicy,
-		destinationRule,
-		gateway,
-	)
+	return registry.AddAllAndSerialize(objectsToAdd...)
 }
 
 func (n *nginxIngress) getLabels(componentLabelValue string, optionalLabels bool) map[string]string {
@@ -841,6 +833,20 @@ func (n *nginxIngress) getName(kind string, backend bool) string {
 		return "ingress-controller-seed-leader"
 	}
 
+	return ""
+}
+
+func (n *nginxIngress) managedResourceName() string {
+	if n.values.ClusterType == component.ClusterTypeShoot {
+		return managedResourceNameShootAddon
+	}
+	return managedResourceName + n.nameSuffix()
+}
+
+func (n *nginxIngress) nameSuffix() string {
+	if n.values.SeedIsGarden {
+		return "-seed"
+	}
 	return ""
 }
 
