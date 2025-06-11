@@ -402,6 +402,30 @@ var _ = Describe("Shoot Status controller tests", func() {
 		}).Should(Succeed())
 	})
 
+	It("should annotate the shoot with operation Reconcile if in-place update status is nil but credentials rotation phases are in Preparing and the previous patching failed and is retried", func() {
+		shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+			Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+				CertificateAuthorities: &gardencorev1beta1.CARotation{
+					Phase: gardencorev1beta1.RotationPreparing,
+				},
+				ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+					Phase: gardencorev1beta1.RotationPreparing,
+				},
+			},
+		}
+		shoot.Status.InPlaceUpdates = nil
+		Expect(testClient.Status().Update(ctx, shoot)).To(Succeed())
+
+		waitForManagerToObserveUpdatedShootStatus(shoot)
+		patchAndWaitForManagerToObserveUpdatedWorkerStatus(worker, map[string]string{"worker1": "ef492a9674e2778a"})
+
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			g.Expect(shoot.Status.InPlaceUpdates).To(BeNil())
+			g.Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
+		}).Should(Succeed())
+	})
+
 	It("should not annotate the shoot with operation Reconcile if manual in-place update workers are not empty and credentials rotation phases are in Preparing", func() {
 		// Remove the force-update annotation
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
@@ -523,7 +547,6 @@ var _ = Describe("Shoot Status controller tests", func() {
 			g.Expect(shoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 		}).Should(Succeed())
 	})
-
 })
 
 func waitForManagerToObserveUpdatedShootStatus(shoot *gardencorev1beta1.Shoot) {
