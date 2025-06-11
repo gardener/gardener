@@ -67,9 +67,6 @@ func (b *Botanist) isControlledByDependencyWatchdog(ctx context.Context, deploym
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: deploymentName}, deployment); err != nil && !apierrors.IsNotFound(err) {
 		return false, fmt.Errorf("failed to get deployment %q: %w", deploymentName, err)
 	}
-	if deployment.Annotations == nil {
-		return false, nil
-	}
 
 	return metav1.HasAnnotation(deployment.ObjectMeta, dwdapi.MeltdownProtectionActive), nil
 }
