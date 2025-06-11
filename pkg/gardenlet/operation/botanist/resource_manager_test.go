@@ -174,8 +174,6 @@ var _ = Describe("ResourceManager", func() {
 
 			By("Ensure secrets managed outside of this function for which secretsmanager.Get() will be called")
 			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: "ca"}, gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).AnyTimes()
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}, gomock.AssignableToTypeOf(&metav1.ObjectMeta{})).AnyTimes()
 
 			botanist.SeedClientSet = k8sSeedClient
 			botanist.SecretsManager = sm
@@ -270,6 +268,7 @@ var _ = Describe("ResourceManager", func() {
 
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
+						c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](0)),
 						resourceManager.EXPECT().SetReplicas(ptr.To[int32](0)),
 					)
@@ -316,7 +315,7 @@ var _ = Describe("ResourceManager", func() {
 
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "gardener-resource-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).AnyTimes(),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "gardener-resource-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						resourceManager.EXPECT().SetReplicas(ptr.To[int32](0)),
 					)
 				})
@@ -326,6 +325,7 @@ var _ = Describe("ResourceManager", func() {
 				BeforeEach(func() {
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
+						c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1)),
 						resourceManager.EXPECT().SetReplicas(ptr.To[int32](2)),
 						resourceManager.EXPECT().GetReplicas().Return(ptr.To[int32](2)),
@@ -462,6 +462,7 @@ var _ = Describe("ResourceManager", func() {
 
 						gomock.InOrder(
 							resourceManager.EXPECT().GetReplicas(),
+							c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1)),
 							resourceManager.EXPECT().SetReplicas(ptr.To[int32](2)),
 							resourceManager.EXPECT().GetReplicas().Return(ptr.To[int32](2)),
@@ -478,6 +479,7 @@ var _ = Describe("ResourceManager", func() {
 
 						gomock.InOrder(
 							resourceManager.EXPECT().GetReplicas(),
+							c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1)),
 							resourceManager.EXPECT().SetReplicas(ptr.To[int32](2)),
 							resourceManager.EXPECT().GetReplicas().Return(ptr.To[int32](2)),
