@@ -1,8 +1,8 @@
 ---
-title: Secret Binding to Credentials Binding Migration
+title: SecretBinding to CredentialsBinding Migration
 ---
 
-# Secret Binding to Credentials Binding Migration
+# SecretBinding to CredentialsBinding Migration
 
 With the introduction of the [`CredentialsBinding`](../../api-reference/security.md) resource a new way of referencing credentials through the `Shoot` was created.
 While `SecretBinding`s can only reference `Secret`s, `CredentialsBinding`s can also reference `WorkloadIdentity`s which provide an alternative authentication method.
