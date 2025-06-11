@@ -83,6 +83,11 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			), "should be healthy and not have default (open) ingress CIDRs")
 		}, SpecTimeout(time.Minute))
 
+		It("should deploy the worker", func(ctx SpecContext) {
+			worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: technicalID}}
+			Eventually(ctx, Object(worker)).Should(BeHealthy(health.CheckExtensionObject))
+		}, SpecTimeout(5*time.Minute))
+
 		It("should deploy a control plane machine", func(ctx SpecContext) {
 			podList := &corev1.PodList{}
 			Eventually(ctx, ObjectList(podList, client.InNamespace(technicalID), client.MatchingLabels{"app": "machine"})).

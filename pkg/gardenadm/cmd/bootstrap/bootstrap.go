@@ -192,9 +192,11 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.DeployWorker,
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady, waitUntilOperatingSystemConfigReady, deployMachineControllerManager),
 		})
-		// The Machine objects won't get ready yet because there will not be any Node objects.
-		// TODO(timebertt): add b.Shoot.Components.Extensions.Worker.Wait when
-		//  https://github.com/gardener/machine-controller-manager/issues/994 has been implemented
+		waitUntilWorkerReady = g.Add(flow.Task{
+			Name:         "Waiting until control plane machines have been deployed",
+			Fn:           b.Shoot.Components.Extensions.Worker.Wait,
+			Dependencies: flow.NewTaskIDs(deployWorker),
+		})
 
 		deployBastion = g.Add(flow.Task{
 			Name: "Deploying and connecting to bastion host",
@@ -206,7 +208,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
 
-		_ = deployWorker
+		_ = waitUntilWorkerReady
 		_ = deployBastion
 	)
 
