@@ -865,7 +865,7 @@ metadata:
 manifests:
   kustomize:
     paths:
-      - example/gardenadm-local/high-touch
+      - dev-setup/gardenadm/machines
 deploy:
   kubectl:
     flags:
