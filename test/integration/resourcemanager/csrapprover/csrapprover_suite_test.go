@@ -159,7 +159,7 @@ var _ = BeforeSuite(func() {
 		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
 		Config: resourcemanagerconfigv1alpha1.CSRApproverControllerConfig{
 			ConcurrentSyncs:  ptr.To(5),
-			MachineNamespace: testNamespace.Name,
+			MachineNamespace: &testNamespace.Name,
 		},
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 

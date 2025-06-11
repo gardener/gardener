@@ -395,8 +395,9 @@ var _ = Describe("ResourceManager", func() {
 						SyncPeriod:      &healthSyncPeriod,
 					},
 					CSRApprover: resourcemanagerconfigv1alpha1.CSRApproverControllerConfig{
-						Enabled:         !isWorkerless,
-						ConcurrentSyncs: &maxConcurrentCSRApproverWorkers,
+						Enabled:          !isWorkerless,
+						ConcurrentSyncs:  &maxConcurrentCSRApproverWorkers,
+						MachineNamespace: watchedNamespace,
 					},
 					ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
 						ConcurrentSyncs: &concurrentSyncs,
@@ -436,14 +437,13 @@ var _ = Describe("ResourceManager", func() {
 					NodeAgentAuthorizer: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
 						Enabled:                true,
 						AuthorizeWithSelectors: ptr.To(true),
+						MachineNamespace:       watchedNamespace,
 					},
 				},
 			}
 
 			if watchedNamespace != nil {
 				config.SourceClientConnection.Namespaces = []string{*watchedNamespace}
-				config.Controllers.CSRApprover.MachineNamespace = *watchedNamespace
-				config.Webhooks.NodeAgentAuthorizer.MachineNamespace = *watchedNamespace
 			}
 
 			if responsibilityMode == ForTarget {

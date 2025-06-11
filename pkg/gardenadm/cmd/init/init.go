@@ -15,6 +15,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -101,15 +102,16 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.InitializeSecretsManagement,
 			Dependencies: flow.NewTaskIDs(reconcileClusterResource),
 		})
-		bootstrapKubelet = g.Add(flow.Task{
-			Name:         "Creating real bootstrap token for kubelet and restart unit",
-			Fn:           b.BootstrapKubelet,
+		activateGardenerNodeAgent = g.Add(flow.Task{
+			Name:         "Activating gardener-node-agent",
+			Fn:           b.ActivateGardenerNodeAgent,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Approving kubelet server certificate signing request if necessary",
-			Fn:           flow.TaskFn(b.ApproveKubeletServerCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
-			Dependencies: flow.NewTaskIDs(bootstrapKubelet),
+		approveGardenerNodeAgentCSR = g.Add(flow.Task{
+			Name:         "Approving gardener-node-agent client certificate signing request",
+			Fn:           flow.TaskFn(b.ApproveNodeAgentCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer),
+			Dependencies: flow.NewTaskIDs(activateGardenerNodeAgent),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager",
@@ -117,7 +119,7 @@ func run(ctx context.Context, opts *Options) error {
 				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 				return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
 			},
-			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement),
+			Dependencies: flow.NewTaskIDs(approveGardenerNodeAgentCSR),
 		})
 		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
 			Name:         "Waiting until gardener-resource-manager reports readiness",
@@ -244,7 +246,7 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.DeployControlPlane,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
-		_ = g.Add(flow.Task{
+		waitUntilControlPlaneReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot control plane has been reconciled",
 			Fn:           b.Shoot.Components.Extensions.ControlPlane.Wait,
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
@@ -255,14 +257,19 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
 		deployControlPlaneDeployments = g.Add(flow.Task{
-			Name:         "Deploying control plane components as Deployments/StatefulSets for static pod translation",
+			Name:         "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
 			Fn:           b.DeployControlPlaneDeployments,
-			Dependencies: flow.NewTaskIDs(reconcileBackupEntry),
+			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, reconcileBackupEntry),
+		})
+		finalizeGardenerNodeAgentBootstrapping = g.Add(flow.Task{
+			Name:         "Finalizing gardener-node-agent bootstrapping (remove cluster-admin access, activate node-agent authorizer)",
+			Fn:           b.FinalizeGardenerNodeAgentBootstrapping,
+			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying OperatingSystemConfig and activating gardener-node-agent",
-			Fn:           b.ActivateGardenerNodeAgent,
-			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
+			Name:         "Waiting until gardener-node-agent lease is renewed",
+			Fn:           b.WaitUntilGardenerNodeAgentLeaseIsRenewed,
+			Dependencies: flow.NewTaskIDs(finalizeGardenerNodeAgentBootstrapping),
 		})
 	)
 
@@ -344,7 +351,7 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Autono
 		})
 		deployOperatingSystemConfigSecretForNodeAgent = g.Add(flow.Task{
 			Name:         "Generating OperatingSystemConfig and deploying Secret for gardener-node-agent",
-			Fn:           b.DeployOperatingSystemConfigSecretForNodeAgent,
+			Fn:           b.DeployOperatingSystemConfigSecretForBootstrap,
 			SkipIf:       kubeconfigFileExists,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})

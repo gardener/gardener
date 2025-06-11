@@ -60,7 +60,7 @@ var _ = Describe("Translator", func() {
 			})
 
 			It("should successfully translate a deployment w/o volumes", func() {
-				Expect(Translate(ctx, fakeClient, deployment)).To(HaveExactElements(extensionsv1alpha1.File{
+				Expect(Translate(ctx, fakeClient, deployment, nil)).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
@@ -98,12 +98,52 @@ status: {}
 				}))
 			})
 
+			It("should successfully translate and mutate a deployment", func() {
+				Expect(Translate(ctx, fakeClient, deployment, foobarThePod)).To(HaveExactElements(extensionsv1alpha1.File{
+					Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
+					Permissions: ptr.To[uint32](0640),
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    bar: baz
+    foo: bar
+  creationTimestamp: null
+  labels:
+    foo: bar
+    static-pod: "true"
+  name: foo
+  namespace: kube-system
+spec:
+  containers: null
+  hostAliases:
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: 127.0.0.1
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: ::1
+  hostNetwork: true
+  priorityClassName: system-node-critical
+  securityContext:
+    fsGroup: 0
+status: {}
+`))}},
+				}))
+			})
+
 			It("should fail translate a deployment whose ConfigMap volumes refer to non-existing objects", func() {
 				deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
 					{Name: "foo", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "some-configmap"}}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, deployment)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
+				Expect(Translate(ctx, fakeClient, deployment, nil)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
 			})
 
 			It("should fail translate a deployment whose Secret volumes refer to non-existing objects", func() {
@@ -111,7 +151,7 @@ status: {}
 					{Name: "foo", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: "some-secret"}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, deployment)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
+				Expect(Translate(ctx, fakeClient, deployment, nil)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
 			})
 
 			It("should fail translate a deployment whose projected ConfigMap volumes refer to non-existing objects", func() {
@@ -119,7 +159,7 @@ status: {}
 					{Name: "foo", VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{Sources: []corev1.VolumeProjection{{ConfigMap: &corev1.ConfigMapProjection{LocalObjectReference: corev1.LocalObjectReference{Name: "some-configmap"}}}}}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, deployment)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
+				Expect(Translate(ctx, fakeClient, deployment, nil)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
 			})
 
 			It("should fail translate a deployment whose Secret volumes refer to non-existing objects", func() {
@@ -127,7 +167,7 @@ status: {}
 					{Name: "foo", VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{Sources: []corev1.VolumeProjection{{Secret: &corev1.SecretProjection{LocalObjectReference: corev1.LocalObjectReference{Name: "some-secret"}}}}}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, deployment)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
+				Expect(Translate(ctx, fakeClient, deployment, nil)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
 			})
 
 			It("should successfully translate a deployment w/ volumes", func() {
@@ -176,7 +216,7 @@ kind: Config
 					}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, deployment)).To(ConsistOf(
+				Expect(Translate(ctx, fakeClient, deployment, nil)).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
 						Permissions: ptr.To[uint32](0640),
@@ -300,7 +340,7 @@ kind: Config
 			})
 
 			It("should successfully translate a statefulSet w/o volumes", func() {
-				Expect(Translate(ctx, fakeClient, statefulSet)).To(HaveExactElements(extensionsv1alpha1.File{
+				Expect(Translate(ctx, fakeClient, statefulSet, nil)).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
@@ -345,12 +385,59 @@ status: {}
 				}))
 			})
 
+			It("should successfully translate and mutate a statefulSet", func() {
+				Expect(Translate(ctx, fakeClient, statefulSet, foobarThePod)).To(HaveExactElements(extensionsv1alpha1.File{
+					Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
+					Permissions: ptr.To[uint32](0640),
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    bar: baz
+    foo: bar
+  creationTimestamp: null
+  labels:
+    foo: bar
+    static-pod: "true"
+  name: foo
+  namespace: kube-system
+spec:
+  containers: null
+  hostAliases:
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: 127.0.0.1
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: ::1
+  hostNetwork: true
+  priorityClassName: system-node-critical
+  securityContext:
+    fsGroup: 0
+  volumes:
+  - hostPath:
+      path: /var/lib/pvc1/data
+    name: pvc1
+  - hostPath:
+      path: /var/lib/pvc2/data
+    name: pvc2
+status: {}
+`))}},
+				}))
+			})
+
 			It("should fail translate a statefulSet whose ConfigMap volumes refer to non-existing objects", func() {
 				statefulSet.Spec.Template.Spec.Volumes = []corev1.Volume{
 					{Name: "foo", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "some-configmap"}}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, statefulSet)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
+				Expect(Translate(ctx, fakeClient, statefulSet, nil)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
 			})
 
 			It("should fail translate a statefulSet whose Secret volumes refer to non-existing objects", func() {
@@ -358,7 +445,7 @@ status: {}
 					{Name: "foo", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: "some-secret"}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, statefulSet)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
+				Expect(Translate(ctx, fakeClient, statefulSet, nil)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
 			})
 
 			It("should fail translate a statefulSet whose projected ConfigMap volumes refer to non-existing objects", func() {
@@ -366,7 +453,7 @@ status: {}
 					{Name: "foo", VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{Sources: []corev1.VolumeProjection{{ConfigMap: &corev1.ConfigMapProjection{LocalObjectReference: corev1.LocalObjectReference{Name: "some-configmap"}}}}}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, statefulSet)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
+				Expect(Translate(ctx, fakeClient, statefulSet, nil)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
 			})
 
 			It("should fail translate a statefulSet whose Secret volumes refer to non-existing objects", func() {
@@ -374,7 +461,7 @@ status: {}
 					{Name: "foo", VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{Sources: []corev1.VolumeProjection{{Secret: &corev1.SecretProjection{LocalObjectReference: corev1.LocalObjectReference{Name: "some-secret"}}}}}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, statefulSet)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
+				Expect(Translate(ctx, fakeClient, statefulSet, nil)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
 			})
 
 			It("should successfully translate a statefulSet w/ volumes", func() {
@@ -423,7 +510,7 @@ kind: Config
 					}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, statefulSet)).To(ConsistOf(
+				Expect(Translate(ctx, fakeClient, statefulSet, nil)).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
 						Permissions: ptr.To[uint32](0640),
@@ -542,7 +629,7 @@ kind: Config
 			})
 
 			It("should successfully translate a pod w/o volumes", func() {
-				Expect(Translate(ctx, fakeClient, pod)).To(HaveExactElements(extensionsv1alpha1.File{
+				Expect(Translate(ctx, fakeClient, pod, nil)).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
@@ -578,12 +665,50 @@ status: {}
 				}))
 			})
 
+			It("should successfully translate and mutate a pod", func() {
+				Expect(Translate(ctx, fakeClient, pod, foobarThePod)).To(HaveExactElements(extensionsv1alpha1.File{
+					Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
+					Permissions: ptr.To[uint32](0640),
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    bar: baz
+    foo: bar
+  creationTimestamp: null
+  labels:
+    foo: bar
+    static-pod: "true"
+  name: foo
+  namespace: kube-system
+spec:
+  containers: null
+  hostAliases:
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: 127.0.0.1
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: ::1
+  hostNetwork: true
+  priorityClassName: system-node-critical
+status: {}
+`))}},
+				}))
+			})
+
 			It("should fail translate a pod whose ConfigMap volumes refer to non-existing objects", func() {
 				pod.Spec.Volumes = []corev1.Volume{
 					{Name: "foo", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "some-configmap"}}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, pod)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
+				Expect(Translate(ctx, fakeClient, pod, nil)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
 			})
 
 			It("should fail translate a pod whose Secret volumes refer to non-existing objects", func() {
@@ -591,7 +716,7 @@ status: {}
 					{Name: "foo", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: "some-secret"}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, pod)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
+				Expect(Translate(ctx, fakeClient, pod, nil)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
 			})
 
 			It("should fail translate a pod whose projected ConfigMap volumes refer to non-existing objects", func() {
@@ -599,7 +724,7 @@ status: {}
 					{Name: "foo", VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{Sources: []corev1.VolumeProjection{{ConfigMap: &corev1.ConfigMapProjection{LocalObjectReference: corev1.LocalObjectReference{Name: "some-configmap"}}}}}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, pod)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
+				Expect(Translate(ctx, fakeClient, pod, nil)).Error().To(MatchError(ContainSubstring("failed reading ConfigMap")))
 			})
 
 			It("should fail translate a pod whose Secret volumes refer to non-existing objects", func() {
@@ -607,7 +732,7 @@ status: {}
 					{Name: "foo", VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{Sources: []corev1.VolumeProjection{{Secret: &corev1.SecretProjection{LocalObjectReference: corev1.LocalObjectReference{Name: "some-secret"}}}}}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, pod)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
+				Expect(Translate(ctx, fakeClient, pod, nil)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
 			})
 
 			It("should successfully translate a pod w/ volumes", func() {
@@ -656,7 +781,7 @@ kind: Config
 					}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, pod)).To(ConsistOf(
+				Expect(Translate(ctx, fakeClient, pod, nil)).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
 						Permissions: ptr.To[uint32](0640),
@@ -748,7 +873,7 @@ kind: Config
 
 		When("object is of unsupported type", func() {
 			It("should return an error", func() {
-				Expect(Translate(ctx, fakeClient, &corev1.ConfigMap{})).Error().To(MatchError(ContainSubstring("unsupported object type")))
+				Expect(Translate(ctx, fakeClient, &corev1.ConfigMap{}, nil)).Error().To(MatchError(ContainSubstring("unsupported object type")))
 			})
 		})
 	})
@@ -759,3 +884,9 @@ kind: Config
 		})
 	})
 })
+
+func foobarThePod(pod *corev1.Pod) {
+	pod.Labels["foo"] = "bar"
+	pod.Annotations["foo"] = "bar"
+	delete(pod.Labels, "baz")
+}

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	systemddbus "github.com/coreos/go-systemd/v22/dbus"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -29,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
@@ -36,10 +38,10 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-// DeployOperatingSystemConfigSecretForNodeAgent deploys the OperatingSystemConfig resource and adds its content into
+// DeployOperatingSystemConfigSecretForBootstrap deploys the OperatingSystemConfig resource and adds its content into
 // a Secret so that gardener-node-agent can read it and reconcile its content.
-func (b *AutonomousBotanist) DeployOperatingSystemConfigSecretForNodeAgent(ctx context.Context) error {
-	if err := b.DeployControlPlaneDeployments(ctx); err != nil {
+func (b *AutonomousBotanist) DeployOperatingSystemConfigSecretForBootstrap(ctx context.Context) error {
+	if err := b.deployControlPlaneDeployments(ctx); err != nil {
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
 
@@ -60,20 +62,6 @@ func (b *AutonomousBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx c
 	}
 
 	return b.SeedClientSet.Client().Create(ctx, b.operatingSystemConfigSecret)
-}
-
-// ActivateGardenerNodeAgent deploys the OperatingSystemConfig and the corresponding ManagedResource containing the
-// Secret for gardener-node-agent. Then it activates the gardener-node-agent unit.
-func (b *AutonomousBotanist) ActivateGardenerNodeAgent(ctx context.Context) error {
-	if _, _, err := b.deployOperatingSystemConfig(ctx); err != nil {
-		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
-	}
-
-	if err := b.DeployManagedResourceForGardenerNodeAgent(ctx); err != nil {
-		return fmt.Errorf("failed deploying ManagedResource containing Secret with OperatingSystemConfig for gardener-node-agent: %w", err)
-	}
-
-	return b.DBus.Start(ctx, nil, nil, nodeagentconfigv1alpha1.UnitName)
 }
 
 func (b *AutonomousBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
@@ -135,22 +123,29 @@ func (b *AutonomousBotanist) ApplyOperatingSystemConfig(ctx context.Context) err
 		return fmt.Errorf("failed ensuring gardener-node-agent directories exist: %w", err)
 	}
 
+	node, err := nodeagent.FetchNodeByHostName(ctx, b.SeedClientSet.Client(), b.HostName)
+	if err != nil {
+		return fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err)
+	}
+
 	reconcilerCtx, cancelFunc := context.WithCancel(ctx)
 	reconcilerCtx = log.IntoContext(reconcilerCtx, b.Logger.WithName("operatingsystemconfig-reconciler").WithValues("secret", client.ObjectKeyFromObject(b.operatingSystemConfigSecret)))
 
-	_, err := (&operatingsystemconfigcontroller.Reconciler{
+	_, err = (&operatingsystemconfigcontroller.Reconciler{
 		Client: b.SeedClientSet.Client(),
 		Config: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
 			SyncPeriod:        &metav1.Duration{Duration: time.Minute},
 			SecretName:        b.operatingSystemConfigSecret.Name,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 		},
-		CancelContext: cancelFunc,
-		Recorder:      &record.FakeRecorder{},
-		Extractor:     registry.NewExtractor(),
-		HostName:      b.HostName,
-		DBus:          b.DBus,
-		FS:            b.FS,
+		CancelContext:         cancelFunc,
+		Recorder:              &record.FakeRecorder{},
+		Extractor:             registry.NewExtractor(),
+		HostName:              b.HostName,
+		NodeName:              ptr.Deref(node, corev1.Node{}).Name,
+		DBus:                  b.DBus,
+		FS:                    b.FS,
+		SkipWritingStateFiles: true,
 	}).Reconcile(reconcilerCtx, reconcile.Request{NamespacedName: types.NamespacedName{Name: b.operatingSystemConfigSecret.Name, Namespace: b.operatingSystemConfigSecret.Namespace}})
 	return err
 }
@@ -195,7 +190,9 @@ func (b *AutonomousBotanist) generateGardenerNodeInitOperatingSystemConfig(secre
 	for i, file := range files {
 		if file.Path == nodeagentconfigv1alpha1.BootstrapTokenFilePath {
 			files[i].Content.Inline.Data = bootstrapToken
-			break
+		}
+		if file.Path == nodeagentconfigv1alpha1.MachineNameFilePath {
+			files[i].Content.Inline.Data = b.HostName
 		}
 	}
 
