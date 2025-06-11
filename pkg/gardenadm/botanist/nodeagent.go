@@ -20,7 +20,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -178,11 +177,15 @@ func (b *AutonomousBotanist) ApproveNodeAgentCertificateSigningRequest(ctx conte
 }
 
 // FinalizeGardenerNodeAgentBootstrapping deletes the temporary cluster-admin ClusterRoleBinding for
-// gardener-node-agent, and the Lease object that it maintained. Afterward, it waits until gardener-node-agent recreated
-// the Lease object again, which indicates that it is ready to be used (and that it still has the needed permissions,
-// even though its cluster-admin binding has been removed).
-// If the ClusterRoleBinding is already gone, it just ensures that the Lease has been renewed in time.
+// gardener-node-agent.
 func (b *AutonomousBotanist) FinalizeGardenerNodeAgentBootstrapping(ctx context.Context) error {
+	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), emptyTemporaryClusterAdminBinding())
+}
+
+// WaitUntilGardenerNodeAgentLeaseIsRenewed waits until the gardener-node-agent lease is renewed, which indicates that
+// it is ready to be used (and that it still has the needed permissions, even though its cluster-admin binding has been
+// removed).
+func (b *AutonomousBotanist) WaitUntilGardenerNodeAgentLeaseIsRenewed(ctx context.Context) error {
 	node, err := nodeagent.FetchNodeByHostName(ctx, b.SeedClientSet.Client(), b.HostName)
 	if err != nil {
 		return fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err)
@@ -192,23 +195,10 @@ func (b *AutonomousBotanist) FinalizeGardenerNodeAgentBootstrapping(ctx context.
 	}
 	lease := &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Name: gardenerutils.NodeAgentLeaseName(node.GetName()), Namespace: metav1.NamespaceSystem}}
 
-	clusterRoleBinding := emptyTemporaryClusterAdminBinding()
-	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), clusterRoleBinding); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed checking whether temporary cluster-admin ClusterRoleBinding for bootstrapping gardener-node-agent exists: %w", err)
-		}
-	} else {
-		if err := kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
-			emptyTemporaryClusterAdminBinding(),
-			lease,
-		); err != nil {
-			return fmt.Errorf("failed deleting resources for finalizing gardener-node-agent bootstrapping: %w", err)
-		}
-	}
-
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
+	now := b.Clock.Now()
 	return retry.Until(timeoutCtx, 2*time.Second, func(ctx context.Context) (bool, error) {
 		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(lease), lease); err != nil {
 			if !apierrors.IsNotFound(err) {
@@ -217,7 +207,7 @@ func (b *AutonomousBotanist) FinalizeGardenerNodeAgentBootstrapping(ctx context.
 			return retry.MinorError(fmt.Errorf("lease %s not found, gardener-node-agent might not be ready yet", client.ObjectKeyFromObject(lease)))
 		}
 
-		if lease.Spec.RenewTime != nil && lease.Spec.RenewTime.Time.UTC().Add(time.Duration(ptr.Deref(lease.Spec.LeaseDurationSeconds, 40))*time.Second).After(b.Clock.Now().UTC()) {
+		if lease.Spec.RenewTime != nil && lease.Spec.RenewTime.UTC().After(now) {
 			return retry.Ok()
 		}
 
