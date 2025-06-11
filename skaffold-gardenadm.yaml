@@ -879,14 +879,14 @@ deploy:
               - bash
               - -ec
               - |
-                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/.skaffold-image machine-0:/tmp/.skaffold-image
-                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/.skaffold-image machine-1:/tmp/.skaffold-image
                 kubectl -n $SKAFFOLD_NAMESPACES exec machine-0 -- /bin/sh -c 'rm -rf /gardenadm/resources'
                 kubectl -n $SKAFFOLD_NAMESPACES exec machine-1 -- /bin/sh -c 'rm -rf /gardenadm/resources'
-                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources/high-touch machine-0:/gardenadm/resources
-                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources/high-touch machine-1:/gardenadm/resources
+                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/.skaffold-image             machine-0:/tmp/.skaffold-image
+                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/.skaffold-image             machine-1:/tmp/.skaffold-image
                 kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/.imagevector-overwrite.yaml machine-0:/gardenadm/imagevector-overwrite.yaml
                 kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/.imagevector-overwrite.yaml machine-1:/gardenadm/imagevector-overwrite.yaml
+                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/resources/high-touch        machine-0:/gardenadm/resources
+                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/resources/high-touch        machine-1:/gardenadm/resources
         - container:
             command:
               - bash
