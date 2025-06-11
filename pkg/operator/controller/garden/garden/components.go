@@ -1011,6 +1011,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 		v1beta1constants.SeedNginxIngressClass,
 		ingressDomains,
 		ingressGatewayValues[0].Labels,
+		false,
 	)
 }
 

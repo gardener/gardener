@@ -409,7 +409,7 @@ make operator-seed-up
 ```
 
 You find the kubeconfig for the KinD cluster at `./example/gardener-local/kind/operator/kubeconfig`.
-The one for the virtual garden is accessible at `./example/operator/virtual-garden/kubeconfig`.
+The one for the virtual garden is accessible at `./dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
 
 > [!IMPORTANT]
 > When you create non-HA shoot clusters (i.e., `Shoot`s with `.spec.controlPlane.highAvailability.failureTolerance != zone`), then they are not exposed via `172.18.255.1` ([ref](#accessing-the-shoot-cluster)).

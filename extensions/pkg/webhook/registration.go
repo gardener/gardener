@@ -27,6 +27,9 @@ const (
 	NamePrefix = "gardener-extension-"
 	// NameSuffixShoot is the suffix used for {Valida,Muta}tingWebhookConfigurations of extensions targeting a shoot.
 	NameSuffixShoot = "-shoot"
+	// NameSuffixRuntime is the suffix used for {Valida,Muta}tingWebhookConfigurations of extensions targeting a garden
+	// runtime cluster.
+	NameSuffixRuntime = "-runtime"
 	// ModeService is a constant for the webhook mode indicating that the controller is running inside of the Kubernetes cluster it
 	// is serving.
 	ModeService = "service"

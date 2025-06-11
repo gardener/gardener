@@ -4,11 +4,15 @@ kind: Kustomization
 sortOptions:
   order: fifo
 
+components:
+- ../../../../dev-setup/gardenconfig/components/cloudprofile
+- ../../../../dev-setup/gardenconfig/components/projects/garden
+- ../../../../dev-setup/gardenconfig/components/projects/local
+- ../../../../dev-setup/gardenconfig/components/credentials/etcd-backup
+- ../../../../dev-setup/gardenconfig/components/credentials/secret-project-garden
+- ../../../../dev-setup/gardenconfig/components/credentials/secret-project-local
+- ../../../../dev-setup/gardenconfig/components/credentials/workloadidentity-project-local
+
 resources:
-- ../cloudprofile
-- project.yaml
-- secret-backup.yaml
-- secretbinding.yaml
-- credentialsbinding.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.41.2/example/controller-registration.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.48.1/example/controller-registration.yaml

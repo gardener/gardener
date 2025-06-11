@@ -434,7 +434,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-kustomize-patch-gardenlet.sh
+              - dev-setup/gardenlet/base/generate-patch-gardenlet.sh
               - image
               - gardener-resource-manager
     - image: local-skaffold/gardener-apiserver
@@ -1079,6 +1079,7 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -1177,6 +1178,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/gardener/operator
             - pkg/utils/gardener/shootstate
             - pkg/utils/imagevector
             - pkg/utils/kubernetes
@@ -1233,6 +1235,7 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -1270,6 +1273,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/gardener/operator
             - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health
@@ -1341,13 +1345,13 @@ build:
 manifests:
   kustomize:
     paths:
-      - example/provider-local/garden/operator
+      - dev-setup/extensions/provider-local/overlays/operator
   hooks:
     before:
       - host:
           command:
             - bash
-            - hack/generate-kustomize-patch-extension-provider-local-prow.sh
+            - dev-setup/extensions/provider-local/components/extension/generate-patch-extension-prow.sh
 deploy:
   kubectl: {}
 resourceSelector:
@@ -1359,3 +1363,15 @@ resourceSelector:
         - .spec.deployment.extension.values.imageVectorOverwrite.images.*.ref
         - .spec.deployment.admission.runtimeCluster.helm.ociRepository.ref
         - .spec.deployment.admission.virtualCluster.helm.ociRepository.ref
+---
+apiVersion: skaffold/v4beta12
+kind: Config
+metadata:
+  name: extensions
+manifests:
+  kustomize:
+    paths:
+      - dev-setup/extensions/networking-calico
+      - dev-setup/extensions/networking-cilium
+deploy:
+  kubectl: {}

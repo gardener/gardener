@@ -149,9 +149,8 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:   component.OpDestroyAndWait(c.clusterAutoscaler).Destroy,
 		})
 		destroyNginxIngress = g.Add(flow.Task{
-			Name:   "Destroying nginx-ingress",
-			Fn:     component.OpDestroyAndWait(c.nginxIngressController).Destroy,
-			SkipIf: seedIsGarden,
+			Name: "Destroying nginx-ingress",
+			Fn:   component.OpDestroyAndWait(c.nginxIngressController).Destroy,
 		})
 		destroyDWDWeeder = g.Add(flow.Task{
 			Name: "Destroy dependency-watchdog-weeder",

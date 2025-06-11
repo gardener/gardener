@@ -707,6 +707,7 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -805,6 +806,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/gardener/operator
             - pkg/utils/gardener/shootstate
             - pkg/utils/imagevector
             - pkg/utils/kubernetes
@@ -874,7 +876,7 @@ manifests:
       - host:
           command:
             - bash
-            - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
+            - dev-setup/extensions/provider-local/components/controllerregistration/generate-patch-controllerdeployment-prow.sh
 deploy:
   kubectl:
     flags:
@@ -914,12 +916,6 @@ profiles:
         paths:
           - example/provider-local/garden/skaffold
           - example/provider-local/seed-kind-ha-single-zone/skaffold
-  - name: ha-multi-zone
-    manifests:
-      kustomize:
-        paths:
-          - example/provider-local/garden/skaffold
-          - example/provider-local/seed-kind-ha-multi-zone/skaffold
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
@@ -1325,7 +1321,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-kustomize-patch-gardenlet.sh
+              - dev-setup/gardenlet/base/generate-patch-gardenlet.sh
               - image
               - gardenlet
     - image: local-skaffold/gardenlet/chart
@@ -1342,7 +1338,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-kustomize-patch-gardenlet.sh
+              - dev-setup/gardenlet/base/generate-patch-gardenlet.sh
               - helm
     - image: local-skaffold/gardener-resource-manager
       ko:
@@ -1459,7 +1455,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-kustomize-patch-gardenlet.sh
+              - dev-setup/gardenlet/base/generate-patch-gardenlet.sh
               - image
               - gardener-resource-manager
     - image: local-skaffold/gardener-node-agent
@@ -1579,7 +1575,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-kustomize-patch-gardenlet.sh
+              - dev-setup/gardenlet/base/generate-patch-gardenlet.sh
               - image
               - gardener-node-agent
   insecureRegistries:
@@ -1676,17 +1672,6 @@ profiles:
           - bash
           - -ec
           - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2-ha-single-zone GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
-  - name: ha-multi-zone
-    patches:
-      - op: add
-        path: /deploy/helm/releases/0/valuesFiles/-
-        value: example/gardener-local/gardenlet/values-kind-ha-multi-zone.yaml
-      - op: replace
-        path: /deploy/helm/hooks/after/0/host/command
-        value:
-          - bash
-          - -ec
-          - TIMEOUT=1200 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
   - name: ipv6
     activation:
       - env: IPFAMILY=ipv6
@@ -1711,34 +1696,6 @@ profiles:
           config.leaderElection.leaderElect: false
           config.server.healthProbes.enable: false
           replicaCount: 1
-  - name: operator
-    patches:
-      - op: remove
-        path: /deploy/helm
-    manifests:
-      kustomize:
-        paths:
-          - example/gardener-local/gardenlet/operator
-    deploy:
-      kubectl:
-        hooks:
-          after:
-            - host:
-                command:
-                  - bash
-                  - -ec
-                  - KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
-  - name: operator-dev
-    patches:
-      - op: replace
-        path: /build/tagPolicy/customTemplate/template
-        value: '{{.version}}-{{.timestamp}}'
-      - op: replace
-        path: /build/tagPolicy/customTemplate/components/1
-        value:
-          dateTime:
-            format: "20060102150405"
-          name: timestamp
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
