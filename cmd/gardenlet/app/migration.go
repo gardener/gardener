@@ -20,6 +20,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -244,6 +245,30 @@ func cleanupNginxConfigMaps(ctx context.Context, client client.Client) error {
 func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seedClient client.Client) {
 	var tasks []flow.TaskFn
 
+	getManagedResourceWithPatch := func(ctx context.Context, namespace string) (*resourcesv1alpha1.ManagedResource, client.Patch, error) {
+		managedResource := &resourcesv1alpha1.ManagedResource{}
+		if err := seedClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "prometheus-shoot"}, managedResource); err != nil {
+			return nil, nil, err
+		}
+
+		return managedResource, client.MergeFrom(managedResource.DeepCopy()), nil
+	}
+
+	unignoreManagedResource := func(ctx context.Context, log logr.Logger, cluster string) {
+		managedResource, managedResourcePatch, err := getManagedResourceWithPatch(ctx, cluster)
+		if err != nil {
+			log.Error(err, "Failed to get ManagedResource for Prometheus to unignore", "cluster", cluster)
+			return
+		}
+
+		if value, ok := managedResource.Annotations[resourcesv1alpha1.Ignore]; ok && value == "true" {
+			delete(managedResource.Annotations, resourcesv1alpha1.Ignore)
+			if err := seedClient.Patch(ctx, managedResource, managedResourcePatch); err != nil {
+				log.Error(err, "Failed to unignore ManagedResource for Prometheus", "cluster", cluster)
+			}
+		}
+	}
+
 	log.Info("Clean up obsolete Prometheus folders")
 
 	clusterList := &extensionsv1alpha1.ClusterList{}
@@ -253,7 +278,25 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 	}
 
 	for _, cluster := range clusterList.Items {
+		unignoreManagedResource(ctx, log, cluster.Name)
+
 		tasks = append(tasks, func(ctx context.Context) error {
+			managedResource, managedResourcePatch, err := getManagedResourceWithPatch(ctx, cluster.Name)
+			if err != nil {
+				log.Error(err, "Failed to get ManagedResource for Prometheus", "cluster", cluster.Name)
+				return nil
+			}
+
+			// ignore the managed resource temporarily to prevent it from reverting the Prometheus patches
+			managedResource.Annotations[resourcesv1alpha1.Ignore] = "true"
+			if err := seedClient.Patch(ctx, managedResource, managedResourcePatch); err != nil {
+				log.Error(err, "Failed to ignore ManagedResource for Prometheus", "cluster", cluster.Name)
+				return nil
+			}
+
+			// make sure to unignore the managed resource before exiting this migration
+			defer unignoreManagedResource(ctx, log, cluster.Name)
+
 			return nil
 		})
 	}
