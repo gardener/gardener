@@ -678,15 +678,12 @@ webhooks:
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
 			gardenerClientset.EXPECT().Version().Return(seedVersion)
-
-			// Create mock chart renderer and factory
-			chartRenderer := mockchartrenderer.NewMockInterface(ctrl)
-			crf := extensionsmockcontroller.NewMockChartRendererFactory(ctrl)
-			crf.EXPECT().NewChartRendererForShoot(shootVersion).Return(chartRenderer, nil)
+			chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
+			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier)
 
 			// Create mock charts
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
-			cpExposureChart.EXPECT().Render(chartRenderer, namespace, imageVector, seedVersion, shootVersion, controlPlaneExposureChartValues).Return(chartName, []byte(renderedContent), nil)
+			cpExposureChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion, controlPlaneExposureChartValues).Return(nil)
 
 			// Create mock values provider
 			vp := extensionsmockgenericactuator.NewMockValuesProvider(ctrl)
@@ -716,21 +713,7 @@ webhooks:
 						Type: corev1.SecretTypeOpaque,
 					}))
 				})
-			createdMRSecretForExposureSeedChart := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneSeedExposureChartResourceName, Namespace: namespace},
-				Data:       map[string][]byte{chartName: []byte(renderedContent)},
-				Type:       corev1.SecretTypeOpaque,
-			}
-			createdMRForExposureSeedChart := &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneSeedExposureChartResourceName, Namespace: namespace},
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To(v1beta1constants.SeedResourceManagerClass),
-					SecretRefs: []corev1.LocalObjectReference{
-						{Name: ControlPlaneSeedConfigurationChartResourceName},
-					},
-				},
-			}
-			setupManagedResourceCreation(ctx, c, createdMRSecretForExposureSeedChart, createdMRForExposureSeedChart)
+
 			// Create actuator
 			a := &actuator{
 				providerName:                   providerName,
@@ -745,7 +728,7 @@ webhooks:
 				storageClassesChart:            nil,
 				controlPlaneExposureChart:      cpExposureChart,
 				vp:                             vp,
-				chartRendererFactory:           crf,
+				chartRendererFactory:           nil,
 				imageVector:                    imageVector,
 				configName:                     "",
 				atomicShootWebhookConfig:       nil,
@@ -778,19 +761,10 @@ webhooks:
 
 			// Create mock charts
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
+			cpExposureChart.EXPECT().Delete(ctx, c, namespace).Return(nil)
 
 			// Handle shoot access secrets and legacy secret cleanup
 			c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
-
-			deletedMRForExposureChart := &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneSeedExposureChartResourceName, Namespace: namespace},
-			}
-			deletedMRSecretForExposureChart := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneSeedExposureChartResourceName, Namespace: namespace},
-			}
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: ControlPlaneSeedExposureChartResourceName}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
-			c.EXPECT().Delete(ctx, deletedMRForExposureChart).Return(nil)
-			c.EXPECT().Delete(ctx, deletedMRSecretForExposureChart).Return(nil)
 
 			// Create actuator
 			a := &actuator{

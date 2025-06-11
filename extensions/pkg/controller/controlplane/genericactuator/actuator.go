@@ -144,8 +144,6 @@ const (
 	ControlPlaneSeedChartResourceName = "extension-controlplane-seed"
 	// ControlPlaneSeedConfigurationChartResourceName is the name of the managed resource for the control plane configuration chart
 	ControlPlaneSeedConfigurationChartResourceName = "extension-controlplane-configuration-seed"
-	// ControlPlaneSeedExposureChartResourceName is the name of the managed resource for the control plane exposure seed
-	ControlPlaneSeedExposureChartResourceName = "extension-controlplane-exposure-seed"
 	// ControlPlaneShootChartResourceName is the name of the managed resource for the control plane shoot
 	ControlPlaneShootChartResourceName = "extension-controlplane-shoot"
 	// ControlPlaneShootCRDsChartResourceName is the name of the managed resource for the extension control plane shoot CRDs
@@ -223,14 +221,7 @@ func (a *actuator) reconcileControlPlaneExposure(
 	// Apply control plane exposure chart
 	log.Info("Applying control plane exposure chart", "values", values)
 	version := cluster.Shoot.Spec.Kubernetes.Version
-
-	// Create shoot chart renderer
-	chartRenderer, err := a.chartRendererFactory.NewChartRendererForShoot(version)
-	if err != nil {
-		return false, fmt.Errorf("could not create chart renderer for shoot '%s': %w", cp.Namespace, err)
-	}
-
-	if err := managedresources.RenderChartAndCreateForSeed(ctx, cp.Namespace, ControlPlaneSeedExposureChartResourceName, a.client, chartRenderer, a.controlPlaneExposureChart, values, a.imageVector, cp.Namespace, a.gardenerClientset.Version(), version); err != nil {
+	if err := a.controlPlaneExposureChart.Apply(ctx, a.gardenerClientset.ChartApplier(), cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
 		return false, fmt.Errorf("could not apply control plane exposure chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 	}
 
@@ -439,7 +430,7 @@ func (a *actuator) deleteControlPlaneExposure(
 	// Delete control plane objects
 	if a.controlPlaneExposureChart != nil {
 		log.Info("Deleting control plane exposure with objects")
-		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneSeedExposureChartResourceName, false); err != nil {
+		if err := a.controlPlaneExposureChart.Delete(ctx, a.client, cp.Namespace); client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("could not delete control plane exposure objects for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
 	}
