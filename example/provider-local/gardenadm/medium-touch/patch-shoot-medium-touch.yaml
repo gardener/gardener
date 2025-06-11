@@ -4,4 +4,4 @@ metadata:
   name: root
   namespace: garden
 spec:
-  secretBindingName: provider-account
+  secretBindingName: local

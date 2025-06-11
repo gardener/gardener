@@ -3,7 +3,6 @@ kind: Kustomization
 
 resources:
 - shoot.yaml
-- cloudprovider.yaml
 - ../../../../dev-setup/gardenconfig/overlays/gardenadm
 - ../../../../dev-setup/extensions/networking-cilium/overlays/gardenadm
 - ../../../../dev-setup/extensions/networking-calico/overlays/gardenadm
