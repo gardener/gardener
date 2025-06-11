@@ -14,7 +14,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -83,11 +82,10 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			), "should be healthy and not have default (open) ingress CIDRs")
 		}, SpecTimeout(time.Minute))
 
-		It("should deploy a control plane machine", func(ctx SpecContext) {
-			podList := &corev1.PodList{}
-			Eventually(ctx, ObjectList(podList, client.InNamespace(technicalID), client.MatchingLabels{"app": "machine"})).
-				Should(HaveField("Items", ConsistOf(HaveField("Status.Phase", corev1.PodRunning))))
-		}, SpecTimeout(time.Minute))
+		It("should deploy the worker", func(ctx SpecContext) {
+			worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: technicalID}}
+			Eventually(ctx, Object(worker)).Should(BeHealthy(health.CheckExtensionObject))
+		}, SpecTimeout(5*time.Minute))
 
 		It("should download gardenadm in the control plane machine", func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) {
