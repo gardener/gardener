@@ -1,0 +1,12 @@
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: Gardenlet
+metadata:
+  name: local
+  namespace: garden
+spec:
+  config:
+    seedConfig:
+      spec:
+        provider:
+          zones:
+            - "0"
