@@ -50,13 +50,25 @@ func NewFilteredWorkloadIdentityInformer(client versioned.Interface, namespace s
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SecurityV1alpha1().WorkloadIdentities(namespace).List(context.TODO(), options)
+				return client.SecurityV1alpha1().WorkloadIdentities(namespace).List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SecurityV1alpha1().WorkloadIdentities(namespace).Watch(context.TODO(), options)
+				return client.SecurityV1alpha1().WorkloadIdentities(namespace).Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.SecurityV1alpha1().WorkloadIdentities(namespace).List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.SecurityV1alpha1().WorkloadIdentities(namespace).Watch(ctx, options)
 			},
 		},
 		&apissecurityv1alpha1.WorkloadIdentity{},

@@ -49,13 +49,25 @@ func NewFilteredControllerDeploymentInformer(client versioned.Interface, resyncP
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1beta1().ControllerDeployments().List(context.TODO(), options)
+				return client.CoreV1beta1().ControllerDeployments().List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1beta1().ControllerDeployments().Watch(context.TODO(), options)
+				return client.CoreV1beta1().ControllerDeployments().Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.CoreV1beta1().ControllerDeployments().List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.CoreV1beta1().ControllerDeployments().Watch(ctx, options)
 			},
 		},
 		&apiscorev1beta1.ControllerDeployment{},

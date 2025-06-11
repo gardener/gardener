@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.3
+    controller-gen.kubebuilder.io/version: v0.18.0
   name: perses.perses.dev
 spec:
   group: perses.dev
@@ -11,6 +11,8 @@ spec:
     kind: Perses
     listKind: PersesList
     plural: perses
+    shortNames:
+    - per
     singular: perses
   scope: Namespaced
   versions:
@@ -323,7 +325,6 @@ spec:
                                     pod labels will be ignored. The default value is empty.
                                     The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                     Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -338,7 +339,6 @@ spec:
                                     pod labels will be ignored. The default value is empty.
                                     The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                     Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -504,7 +504,6 @@ spec:
                                 pod labels will be ignored. The default value is empty.
                                 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                 Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                               items:
                                 type: string
                               type: array
@@ -519,7 +518,6 @@ spec:
                                 pod labels will be ignored. The default value is empty.
                                 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                 Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                               items:
                                 type: string
                               type: array
@@ -682,7 +680,6 @@ spec:
                                     pod labels will be ignored. The default value is empty.
                                     The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                     Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -697,7 +694,6 @@ spec:
                                     pod labels will be ignored. The default value is empty.
                                     The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                     Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -863,7 +859,6 @@ spec:
                                 pod labels will be ignored. The default value is empty.
                                 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                 Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                               items:
                                 type: string
                               type: array
@@ -878,7 +873,6 @@ spec:
                                 pod labels will be ignored. The default value is empty.
                                 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                 Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                               items:
                                 type: string
                               type: array
@@ -967,6 +961,96 @@ spec:
               client:
                 description: Perses client configuration
                 properties:
+                  basicAuth:
+                    description: BasicAuth basic auth config for perses client
+                    properties:
+                      name:
+                        description: Name of basic auth k8s resource (when type is
+                          secret or configmap)
+                        type: string
+                      namespace:
+                        description: Namsespace of certificate k8s resource (when
+                          type is secret or configmap)
+                        type: string
+                      password_path:
+                        description: Path to password
+                        type: string
+                      type:
+                        description: Type source type of secret
+                        enum:
+                        - secret
+                        - configmap
+                        - file
+                        type: string
+                      username:
+                        description: Username for basic auth
+                        type: string
+                    required:
+                    - password_path
+                    - type
+                    - username
+                    type: object
+                  kubernetesAuth:
+                    description: KubernetesAuth configuration for perses client
+                    properties:
+                      enable:
+                        description: Enable kubernetes auth for perses client
+                        type: boolean
+                    required:
+                    - enable
+                    type: object
+                  oauth:
+                    description: OAuth configuration for perses client
+                    properties:
+                      authStyle:
+                        description: |-
+                          AuthStyle optionally specifies how the endpoint wants the
+                          client ID & client secret sent. The zero value means to
+                          auto-detect.
+                        type: integer
+                      clientIDPath:
+                        description: Path to client id
+                        type: string
+                      clientSecretPath:
+                        description: Path to client secret
+                        type: string
+                      endpointParams:
+                        additionalProperties:
+                          items:
+                            type: string
+                          type: array
+                        description: EndpointParams specifies additional parameters
+                          for requests to the token endpoint.
+                        type: object
+                      name:
+                        description: Name of basic auth k8s resource (when type is
+                          secret or configmap)
+                        type: string
+                      namespace:
+                        description: Namsespace of certificate k8s resource (when
+                          type is secret or configmap)
+                        type: string
+                      scopes:
+                        description: Scope specifies optional requested permissions.
+                        items:
+                          type: string
+                        type: array
+                      tokenURL:
+                        description: |-
+                          TokenURL is the resource server's token endpoint
+                          URL. This is a constant specific to each server.
+                        type: string
+                      type:
+                        description: Type source type of secret
+                        enum:
+                        - secret
+                        - configmap
+                        - file
+                        type: string
+                    required:
+                    - tokenURL
+                    - type
+                    type: object
                   tls:
                     description: TLS the equivalent to the tls_config for perses client
                     properties:
@@ -977,14 +1061,18 @@ spec:
                             description: Path to Certificate
                             type: string
                           name:
-                            description: Name of certificate k8s resource (when type
+                            description: Name of basic auth k8s resource (when type
                               is secret or configmap)
+                            type: string
+                          namespace:
+                            description: Namsespace of certificate k8s resource (when
+                              type is secret or configmap)
                             type: string
                           privateKeyPath:
                             description: Path to Private key certificate
                             type: string
                           type:
-                            description: Type source type of certificate
+                            description: Type source type of secret
                             enum:
                             - secret
                             - configmap
@@ -1007,14 +1095,18 @@ spec:
                             description: Path to Certificate
                             type: string
                           name:
-                            description: Name of certificate k8s resource (when type
+                            description: Name of basic auth k8s resource (when type
                               is secret or configmap)
+                            type: string
+                          namespace:
+                            description: Namsespace of certificate k8s resource (when
+                              type is secret or configmap)
                             type: string
                           privateKeyPath:
                             description: Path to Private key certificate
                             type: string
                           type:
-                            description: Type source type of certificate
+                            description: Type source type of secret
                             enum:
                             - secret
                             - configmap
@@ -2285,6 +2377,30 @@ spec:
                   name:
                     type: string
                 type: object
+              serviceAccountName:
+                description: ServiceAccountName is the name of the service account
+                  to use for the perses deployment or statefulset.
+                type: string
+              storage:
+                default:
+                  size: 1Gi
+                description: Storage configuration used by the StatefulSet
+                properties:
+                  size:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      Size of the storage.
+                      cannot be decreased.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  storageClass:
+                    description: |-
+                      StorageClass to use for PVCs.
+                      If not specified, will use the default storage class
+                    type: string
+                type: object
               tls:
                 description: tls specifies the tls configuration for the perses instance
                 properties:
@@ -2295,14 +2411,18 @@ spec:
                         description: Path to Certificate
                         type: string
                       name:
-                        description: Name of certificate k8s resource (when type is
+                        description: Name of basic auth k8s resource (when type is
                           secret or configmap)
+                        type: string
+                      namespace:
+                        description: Namsespace of certificate k8s resource (when
+                          type is secret or configmap)
                         type: string
                       privateKeyPath:
                         description: Path to Private key certificate
                         type: string
                       type:
-                        description: Type source type of certificate
+                        description: Type source type of secret
                         enum:
                         - secret
                         - configmap
@@ -2325,14 +2445,18 @@ spec:
                         description: Path to Certificate
                         type: string
                       name:
-                        description: Name of certificate k8s resource (when type is
+                        description: Name of basic auth k8s resource (when type is
                           secret or configmap)
+                        type: string
+                      namespace:
+                        description: Namsespace of certificate k8s resource (when
+                          type is secret or configmap)
                         type: string
                       privateKeyPath:
                         description: Path to Private key certificate
                         type: string
                       type:
-                        description: Type source type of certificate
+                        description: Type source type of secret
                         enum:
                         - secret
                         - configmap

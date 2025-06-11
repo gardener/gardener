@@ -82,13 +82,16 @@ func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager, source
 		return err
 	}
 
-	// add controller that reloads the server cert secret periodically
-	ctrl, err := controller.NewUnmanaged(certificateReloaderName, mgr, controller.Options{
+	opts := controller.Options{
 		Reconciler:   r,
 		RecoverPanic: ptr.To(true),
 		// if going into exponential backoff, wait at most the configured sync period
 		RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.SyncPeriod),
-	})
+	}
+	opts.DefaultFromConfig(mgr.GetControllerOptions())
+
+	// add controller that reloads the server cert secret periodically
+	ctrl, err := controller.NewUnmanaged(certificateReloaderName, opts)
 	if err != nil {
 		return err
 	}
