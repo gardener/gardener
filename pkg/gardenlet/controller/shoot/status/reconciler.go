@@ -78,6 +78,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// If there are no manual in-place update workers in the shoot status, then nothing to do
 	if shoot.Status.InPlaceUpdates == nil || shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil || len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
+		if needsReconcile(shoot) {
+			log.Info("No manual in-place pending workers in Shoot status, but credentials rotation phases are not set to Prepared, triggering a Shoot reconciliation")
+			patch := client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+			if err := r.GardenClient.Patch(ctx, shoot, patch); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to patch Shoot: %w", err)
+			}
+
+			return reconcile.Result{}, nil
+		}
+
+		log.Info("No manual in-place pending workers in Shoot status, nothing to update")
 		return reconcile.Result{}, nil
 	}
 
@@ -150,7 +162,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	log.Info("Updating Shoot status with manual in-place pending workers", "manualInPlacePendingWorkers", sets.List(manualInPlacePendingWorkers))
+	if noManualInPlacePendingWorkers {
+		log.Info("No manual in-place pending workers remaining, updating Shoot status")
+	} else {
+		log.Info("Updating Shoot status with manual in-place pending workers", "manualInPlacePendingWorkers", sets.List(manualInPlacePendingWorkers))
+	}
 	if err := r.GardenClient.Status().Patch(ctx, shoot, patch); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to patch Shoot status: %w", err)
 	}
@@ -178,6 +194,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func needsReconcile(shoot *gardencorev1beta1.Shoot) bool {
+	if kubernetesutils.HasMetaDataAnnotation(shoot, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile) {
+		return false
+	}
+
 	caRotationPhase := v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials)
 	serviceAccountKeyRotationPhase := v1beta1helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials)
 
