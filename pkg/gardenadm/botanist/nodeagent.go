@@ -182,6 +182,15 @@ func (b *AutonomousBotanist) FinalizeGardenerNodeAgentBootstrapping(ctx context.
 	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), emptyTemporaryClusterAdminBinding())
 }
 
+var (
+	// WaitForNodeAgentLeaseInterval is the interval at which we check whether the gardener-node-agent lease is renewed.
+	// Exposed for testing.
+	WaitForNodeAgentLeaseInterval = 2 * time.Second
+	// WaitForNodeAgentLeaseTimeout is the timeout after which we give up waiting for the gardener-node-agent lease to
+	// be renewed. Exposed for testing.
+	WaitForNodeAgentLeaseTimeout = 5 * time.Minute
+)
+
 // WaitUntilGardenerNodeAgentLeaseIsRenewed waits until the gardener-node-agent lease is renewed, which indicates that
 // it is ready to be used (and that it still has the needed permissions, even though its cluster-admin binding has been
 // removed).
@@ -195,11 +204,11 @@ func (b *AutonomousBotanist) WaitUntilGardenerNodeAgentLeaseIsRenewed(ctx contex
 	}
 	lease := &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Name: gardenerutils.NodeAgentLeaseName(node.GetName()), Namespace: metav1.NamespaceSystem}}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, WaitForNodeAgentLeaseTimeout)
 	defer cancel()
 
 	now := b.Clock.Now()
-	return retry.Until(timeoutCtx, 2*time.Second, func(ctx context.Context) (bool, error) {
+	return retry.Until(timeoutCtx, WaitForNodeAgentLeaseInterval, func(ctx context.Context) (bool, error) {
 		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(lease), lease); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return retry.MinorError(fmt.Errorf("failed fetching lease %s: %w", client.ObjectKeyFromObject(lease), err))

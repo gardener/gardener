@@ -79,14 +79,6 @@ var _ = Describe("Kubelet", func() {
 		Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 	})
 
-	Describe("#WriteBootstrapToken", func() {
-		It("should create a bootstrap token", func() {
-			Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeFalse())
-			Expect(b.WriteBootstrapToken(ctx)).To(Succeed())
-			Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeTrue())
-		})
-	})
-
 	Describe("#WriteKubeletBootstrapKubeconfig", func() {
 		DescribeTable("should write the kubelet bootstrap kubeconfig",
 			func(createToken bool) {
