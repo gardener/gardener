@@ -8,6 +8,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -634,27 +635,32 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 		})
 	}
 
-	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
-	deployment.Spec.Template.Spec.HostAliases = append(deployment.Spec.Template.Spec.HostAliases, corev1.HostAlias{
-		IP: "127.0.0.1",
-		Hostnames: []string{
-			EnvoyHostHAVPN,
-		},
-	})
-	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-		{
-			Name:      volumeNameCAVPN,
-			MountPath: volumeMountPathCAVPN,
-		},
-		{
-			Name:      volumeNameHTTPProxyClient,
-			MountPath: volumeMountPathHTTPProxyClient,
-		},
-		{
-			Name:      volumeNameEgressSelector,
-			MountPath: volumeMountPathEgressSelector,
-		},
-	}...)
+	// Only inject Envoy Proxy if Seed and Shoot networks overlap. We need it for the network mapping.
+	overlap := netutils.OverLapAny(k.values.VPN.SeedPodNetwork, slices.Concat(k.values.VPN.PodNetworkCIDRs, k.values.ServiceNetworkCIDRs, k.values.VPN.NodeNetworkCIDRs)...)
+	if overlap {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
+		deployment.Spec.Template.Spec.HostAliases = append(deployment.Spec.Template.Spec.HostAliases, corev1.HostAlias{
+			IP: "127.0.0.1",
+			Hostnames: []string{
+				EnvoyHostHAVPN,
+			},
+		})
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+			{
+				Name:      volumeNameCAVPN,
+				MountPath: volumeMountPathCAVPN,
+			},
+			{
+				Name:      volumeNameHTTPProxyClient,
+				MountPath: volumeMountPathHTTPProxyClient,
+			},
+			{
+				Name:      volumeNameEgressSelector,
+				MountPath: volumeMountPathEgressSelector,
+			},
+		}...)
+		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedEnvoyProxyContainer())
+	}
 
 	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccount.Name
 	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
@@ -670,7 +676,6 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedClientContainer(i))
 	}
-	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedEnvoyProxyContainer())
 	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedPathControllerContainer())
 	deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, *k.vpnSeedClientInitContainer())
 
@@ -808,44 +813,49 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 				},
 			},
 		},
-		{
-			Name: volumeNameHTTPProxyClient,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName:  secretHTTPProxyClient.Name,
-					DefaultMode: ptr.To[int32](0640),
-				},
-			},
-		},
-		{
-			Name: volumeNameEgressSelector,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: configMapEgressSelector.Name,
-					},
-				},
-			},
-		},
-		{
-			Name: volumeNameEnvoyConfig,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: configMapEnvoyConfig.Name,
-					},
-				},
-			},
-		},
-		{
-			Name: volumeNameCAVPN,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretCAVPN.Name,
-				},
-			},
-		},
 	}...)
+
+	if overlap {
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+			{
+				Name: volumeNameHTTPProxyClient,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  secretHTTPProxyClient.Name,
+						DefaultMode: ptr.To[int32](0640),
+					},
+				},
+			},
+			{
+				Name: volumeNameEgressSelector,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: configMapEgressSelector.Name,
+						},
+					},
+				},
+			},
+			{
+				Name: volumeNameEnvoyConfig,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: configMapEnvoyConfig.Name,
+						},
+					},
+				},
+			},
+			{
+				Name: volumeNameCAVPN,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secretCAVPN.Name,
+					},
+				},
+			},
+		}...)
+	}
 	return nil
 }
 
@@ -908,7 +918,7 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 			{
 				Name:  "SEED_POD_NETWORK",
-				Value: k.values.VPN.SeedPodNetwork,
+				Value: k.values.VPN.SeedPodNetwork.String(),
 			},
 			{
 				Name:  "VPN_SERVER_INDEX",
@@ -991,6 +1001,10 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 			{
 				Name:  "SHOOT_NODE_NETWORKS",
 				Value: netutils.JoinByComma(k.values.VPN.NodeNetworkCIDRs),
+			},
+			{
+				Name:  "SEED_POD_NETWORK",
+				Value: k.values.VPN.SeedPodNetwork.String(),
 			},
 			{
 				Name:  "IS_HA",

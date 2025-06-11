@@ -195,7 +195,7 @@ type VPNConfig struct {
 	// Enabled states whether VPN is enabled.
 	Enabled bool
 	// SeedPodNetwork is the CIDR of the seed pod network.
-	SeedPodNetwork string
+	SeedPodNetwork net.IPNet
 	// PodNetworkCIDRs are the CIDRs of the pod network.
 	PodNetworkCIDRs []net.IPNet
 	// NodeNetworkCIDRs are the CIDRs of the node network.
@@ -617,7 +617,8 @@ func (k *kubeAPIServer) SetPodNetworkCIDRs(pods []net.IPNet) {
 }
 
 func (k *kubeAPIServer) SetSeedPodNetwork(pods string) {
-	k.values.VPN.SeedPodNetwork = pods
+	_, ipnet, _ := net.ParseCIDR(pods)
+	k.values.VPN.SeedPodNetwork = *ipnet
 }
 
 func (k *kubeAPIServer) SetServiceNetworkCIDRs(services []net.IPNet) {
