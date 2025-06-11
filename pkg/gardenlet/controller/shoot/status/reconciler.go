@@ -194,10 +194,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func needsReconcile(shoot *gardencorev1beta1.Shoot) bool {
-	if kubernetesutils.HasMetaDataAnnotation(shoot, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile) {
-		return false
-	}
-
 	caRotationPhase := v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials)
 	serviceAccountKeyRotationPhase := v1beta1helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials)
 
