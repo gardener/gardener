@@ -147,7 +147,7 @@ This will first build the needed images and then render the needed manifests for
 Afterward, you can use `go run` to execute `gardenadm` commands on your machine:
 
 ```shell
-$ export IMAGEVECTOR_OVERWRITE=$PWD/dev-setup/gardenadm/.imagevector-overwrite.yaml
+$ export IMAGEVECTOR_OVERWRITE=$PWD/dev-setup/gardenadm/resources/.imagevector-overwrite.yaml
 $ go run ./cmd/gardenadm bootstrap -d ./dev-setup/gardenadm/resources/medium-touch
 ...
 Command is work in progress
