@@ -16,6 +16,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -368,6 +369,7 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 				})
 			}
 
+			prometheus.Spec.Replicas = ptr.To(int32(1))
 			if err := seedClient.Patch(ctx, prometheus, prometheusPatch); err != nil {
 				log.Error(err, "Failed to patch Prometheus resource", "cluster", cluster.Name)
 				return nil
