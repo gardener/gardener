@@ -12,7 +12,7 @@ Kubernetes uses the underlying container runtime logging, which does not persist
 
 ![](./images/logging-architecture.png)
 
-## Container Logs Rotation and Retention
+## Container Logs Rotation and Retention in kubelet
 
 It is possible to configure the `containerLogMaxSize` and `containerLogMaxFiles` fields in the Shoot specification. Both fields are optional and if nothing is specified, then the `kubelet` rotates on the size `100M`. Those fields are part of provider's workers definition. Here is an example:
 
@@ -32,6 +32,10 @@ spec:
 The values of the `containerLogMaxSize` and `containerLogMaxFiles` fields need to be considered with care since container log files claim disk space from the host. On the opposite side, log rotations on too small sizes may result in frequent rotations which can be missed by other components (log shippers) observing these rotations.
 
 In the majority of the cases, the defaults should do just fine. Custom configuration might be of use under rare conditions.
+
+## Logs Retention in Vali
+
+Logs in Vali are preserved for a maximum of 14 days. Note that the retention period is also restricted to the Vali's persistent volume size and in some cases, it can be less than 14 days. The oldest logs are deleted when a configured threshold of free disk space is crossed.
 
 ## Extension of the Logging Stack
 
