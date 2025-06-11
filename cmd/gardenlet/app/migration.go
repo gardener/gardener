@@ -317,6 +317,10 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 				return nil
 			}
 
+			if value, ok := prometheus.Annotations[resourcesv1alpha1.PrometheusObsoleteFolderCleanedUp]; ok && value == "true" {
+				return nil
+			}
+
 			log.Info("Clean up obsolete Prometheus folders", "cluster", cluster.Name)
 
 			if needsInitContainer(prometheus) {
@@ -343,6 +347,17 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 
 			if err := waitUntilReady(ctx, cluster.Name); err != nil {
 				log.Error(err, "Prometheus statefulset did not become healthy", "cluster", cluster.Name)
+			}
+
+			prometheus, prometheusPatch, err = getPrometheusWithPatch(ctx, cluster.Name)
+			if err != nil {
+				log.Error(err, "Failed to get Prometheus resource to mark it as cleaned up", "cluster", cluster.Name)
+				return nil
+			}
+
+			prometheus.Annotations[resourcesv1alpha1.PrometheusObsoleteFolderCleanedUp] = "true"
+			if err := seedClient.Patch(ctx, prometheus, prometheusPatch); err != nil {
+				log.Error(err, "Failed to mark Prometheus resource as cleaned up", "cluster", cluster.Name)
 			}
 
 			return nil
