@@ -74,6 +74,11 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 				Should(HaveField("Items", ConsistOf(HaveField("Status.Phase", corev1.PodRunning))))
 		}, SpecTimeout(time.Minute))
 
+		It("should deploy the worker", func(ctx SpecContext) {
+			worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: technicalID}}
+			Eventually(ctx, Object(worker)).Should(BeHealthy(health.CheckExtensionObject))
+		}, SpecTimeout(time.Minute))
+
 		It("should finish successfully", func(ctx SpecContext) {
 			Wait(ctx, session)
 			Eventually(ctx, session.Err).Should(gbytes.Say("work in progress"))
