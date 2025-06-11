@@ -18,6 +18,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -42,6 +43,7 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 		return err
 	}
 
+	cleanupPrometheusObsoleteFolders(ctx, log, g.mgr.GetClient())
 	return nil
 }
 
@@ -209,4 +211,25 @@ func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 		}
 	}
 	return nil
+}
+
+// TODO(vicwicker): Remove this migration after v1.124 has been released.
+func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seedClient client.Client) {
+	var tasks []flow.TaskFn
+
+	log.Info("Clean up Prometheus obsolete folders")
+
+	clusterList := &extensionsv1alpha1.ClusterList{}
+	if err := seedClient.List(ctx, clusterList); err != nil {
+		log.Error(err, "Failed to list clusters while cleaning up Prometheus obsolete folders")
+		return
+	}
+
+	for _, cluster := range clusterList.Items {
+		tasks = append(tasks, func(ctx context.Context) error {
+			return nil
+		})
+	}
+
+	_ = flow.Parallel(tasks...)(ctx)
 }
