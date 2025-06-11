@@ -53,7 +53,6 @@
 * [Access Restrictions](usage/shoot/access_restrictions.md)
 * [Workload Identity](usage/shoot/shoot-workload-identity.md)
 
-
 ### Shoot Operations
 
 * [Shoot Credentials Rotation](usage/shoot-operations/shoot_credentials_rotation.md)
