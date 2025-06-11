@@ -5,7 +5,9 @@
 package shoot
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,10 +33,10 @@ var logger = log.Log.WithName("shoot-webhook")
 type Args struct {
 	// Types is a list of resource types.
 	Types []extensionswebhook.Type
-	// Mutator is a mutator to be used by the admission handler. It doesn't need the shoot client.
+	// Mutator is a mutator to be used by the admission handler.
+	// If a shoot client is needed, the webhook.WantsShootClient interface must be implemented. A client.Client is then
+	// injected into the context under the webhook.ShootClientContextKey key.
 	Mutator extensionswebhook.Mutator
-	// MutatorWithShootClient is a mutator to be used by the admission handler. It needs the shoot client.
-	MutatorWithShootClient extensionswebhook.MutatorWithShootClient
 	// ObjectSelector is the object selector of the underlying webhook.
 	ObjectSelector *metav1.LabelSelector
 	// FailurePolicy is the failure policy for the webhook (defaults to Ignore).
@@ -45,7 +47,16 @@ type Args struct {
 func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger.Info("Creating webhook", "name", WebhookName)
 
-	wh := &extensionswebhook.Webhook{
+	if args.Mutator == nil {
+		return nil, fmt.Errorf("no mutator is set")
+	}
+
+	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, args.Types...).Build()
+	if err != nil {
+		return nil, err
+	}
+
+	return &extensionswebhook.Webhook{
 		Name:              WebhookName,
 		Types:             args.Types,
 		Path:              WebhookName,
@@ -53,29 +64,12 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		NamespaceSelector: buildNamespaceSelector(),
 		ObjectSelector:    args.ObjectSelector,
 		FailurePolicy:     args.FailurePolicy,
-	}
-
-	switch {
-	case args.Mutator != nil:
-		handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, args.Types...).Build()
-		if err != nil {
-			return nil, err
-		}
-
-		wh.Webhook = &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)}
-		return wh, nil
-
-	case args.MutatorWithShootClient != nil:
-		handler, err := extensionswebhook.NewHandlerWithShootClient(mgr, args.Types, args.MutatorWithShootClient, logger)
-		if err != nil {
-			return nil, err
-		}
-
-		wh.Handler = handler
-		return wh, nil
-	}
-
-	return nil, fmt.Errorf("neither mutator nor mutator with shoot client is set")
+		Webhook: &admission.Webhook{
+			Handler:         handler,
+			RecoverPanic:    ptr.To(true),
+			WithContextFunc: injectRemoteAddrIntoContextFunc(args.Mutator),
+		},
+	}, nil
 }
 
 // buildNamespaceSelector creates and returns a LabelSelector for the given webhook kind and provider.
@@ -86,4 +80,23 @@ func buildNamespaceSelector() *metav1.LabelSelector {
 			{Key: v1beta1constants.GardenerPurpose, Operator: metav1.LabelSelectorOpIn, Values: []string{metav1.NamespaceSystem}},
 		},
 	}
+}
+
+func injectRemoteAddrIntoContextFunc(mutator extensionswebhook.Mutator) func(context.Context, *http.Request) context.Context {
+	wantsShootClient, ok1 := mutator.(extensionswebhook.WantsShootClient)
+	wantsClusterObject, ok2 := mutator.(extensionswebhook.WantsClusterObject)
+
+	if (ok1 && wantsShootClient.WantsShootClient()) ||
+		(ok2 && wantsClusterObject.WantsClusterObject()) {
+		logger.Info("Setting function for injecting the remote address into context for shoot webhook since it either wants a shoot client or a Cluster object")
+
+		return func(ctx context.Context, request *http.Request) context.Context {
+			if request != nil {
+				ctx = context.WithValue(ctx, extensionswebhook.RemoteAddrContextKey{}, request.RemoteAddr) //nolint:staticcheck
+			}
+			return ctx
+		}
+	}
+
+	return nil
 }
