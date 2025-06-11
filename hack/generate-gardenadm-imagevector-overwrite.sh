@@ -8,7 +8,7 @@ set -o pipefail
 source $(dirname "${0}")/lockfile.sh
 acquire_lockfile "/tmp/generate-gardenadm-imagevector-overwrite.sh.lock"
 
-dir="$(dirname $0)/../example/gardenadm-local"
+dir="$(dirname $0)/../dev-setup/gardenadm"
 patch_file="$dir/.imagevector-overwrite.yaml"
 image_name="$1"
 ref="$SKAFFOLD_IMAGE"
