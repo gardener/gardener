@@ -28,7 +28,7 @@ The **provider extension** will:
 * 🚫 **Prevent changes** that would weaken the policy (reduce retention period or disable immutability).
 * 🕑 **Manage deletion lifecycle**: If retention lock prevents immediate deletion of objects, a deletion policy will apply when allowed.
 
-> \[!IMPORTANT]
+> [!IMPORTANT]
 > Once a bucket's immutability is **locked** at the cloud provider level, it cannot be removed or shortened—even by administrators or operators.
 
 ## Provider Support
