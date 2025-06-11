@@ -6,18 +6,72 @@ package helper_test
 
 import (
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
 )
 
-var _ = Describe("Helper", func() {
+var _ = Describe("CloudProfile Helper", func() {
+	Describe("#CurrentLifecycleClassification", func() {
+		It("version is implicitly supported", func() {
+			classification := CurrentLifecycleClassification(core.ExpirableVersion{
+				Version: "1.28.0",
+			})
+			Expect(classification).To(Equal(core.ClassificationSupported))
+		})
+
+		It("version is explicitly supported", func() {
+			classification := CurrentLifecycleClassification(core.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: ptr.To(core.ClassificationSupported),
+			})
+			Expect(classification).To(Equal(core.ClassificationSupported))
+		})
+
+		It("version is in preview stage", func() {
+			classification := CurrentLifecycleClassification(core.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: ptr.To(core.ClassificationPreview),
+			})
+			Expect(classification).To(Equal(core.ClassificationPreview))
+		})
+
+		It("version is deprecated ", func() {
+			classification := CurrentLifecycleClassification(core.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: ptr.To(core.ClassificationDeprecated),
+			})
+			Expect(classification).To(Equal(core.ClassificationDeprecated))
+		})
+
+		It("supported version will expire in the future", func() {
+			classification := CurrentLifecycleClassification(core.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: ptr.To(core.ClassificationSupported),
+				ExpirationDate: ptr.To(metav1.NewTime(time.Now().Add(2 * time.Hour))),
+			})
+			Expect(classification).To(Equal(core.ClassificationSupported))
+		})
+
+		It("supported version has already expired", func() {
+			classification := CurrentLifecycleClassification(core.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: ptr.To(core.ClassificationSupported),
+				ExpirationDate: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
+			})
+			Expect(classification).To(Equal(core.ClassificationExpired))
+		})
+	})
+
 	Describe("#FindMachineImageVersion", func() {
 		var machineImages []core.MachineImage
 
