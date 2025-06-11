@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -40,14 +41,16 @@ var RequeueDurationSeedIsNotYetRegistered = 30 * time.Second
 
 // Reconciler reconciles the Gardenlet.
 type Reconciler struct {
-	RuntimeCluster        cluster.Cluster
-	VirtualConfig         *rest.Config
-	VirtualClient         client.Client
-	Config                operatorconfigv1alpha1.GardenletDeployerControllerConfig
-	Clock                 clock.Clock
-	Recorder              record.EventRecorder
-	HelmRegistry          oci.Interface
-	GardenNamespaceTarget string
+	RuntimeCluster              cluster.Cluster
+	VirtualConfig               *rest.Config
+	VirtualClient               client.Client
+	Config                      operatorconfigv1alpha1.GardenletDeployerControllerConfig
+	Clock                       clock.Clock
+	Recorder                    record.EventRecorder
+	HelmRegistry                oci.Interface
+	GardenNamespace             string
+	GardenNamespaceTarget       string
+	DefaultGardenClusterAddress string
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -149,6 +152,11 @@ func (r *Reconciler) reconcile(
 		}
 
 		return result, r.updateStatus(ctx, gardenlet, status)
+	}
+
+	gardenlet.Spec.Config, err = gardenletutils.SetDefaultGardenClusterAddress(log, gardenlet.Spec.Config, r.DefaultGardenClusterAddress)
+	if err != nil {
+		return result, fmt.Errorf("failed to set default garden cluster address: %w", err)
 	}
 
 	status.Conditions, err = actuator.Reconcile(ctx, log, gardenlet, status.Conditions, &gardenlet.Spec.Deployment.GardenletDeployment, &gardenlet.Spec.Config, seedmanagementv1alpha1.BootstrapToken, false)

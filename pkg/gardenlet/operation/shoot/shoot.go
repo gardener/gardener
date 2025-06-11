@@ -502,14 +502,14 @@ func (s *Shoot) ComputeInClusterAPIServerAddress(runsInShootNamespace bool) stri
 // the caller wants to use the internal cluster domain and whether DNS is disabled on this seed.
 func (s *Shoot) ComputeOutOfClusterAPIServerAddress(useInternalClusterDomain bool) string {
 	if v1beta1helper.ShootUsesUnmanagedDNS(s.GetInfo()) {
-		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
+		return v1beta1helper.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
 	if useInternalClusterDomain || s.ExternalClusterDomain == nil {
-		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
+		return v1beta1helper.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
-	return gardenerutils.GetAPIServerDomain(*s.ExternalClusterDomain)
+	return v1beta1helper.GetAPIServerDomain(*s.ExternalClusterDomain)
 }
 
 // IPVSEnabled returns true if IPVS is enabled for the shoot.
