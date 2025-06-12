@@ -129,12 +129,11 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 
 		shootMeta, seedMeta, projectMeta, backupBucketMeta, backupEntryMeta metav1.Object
 		err                                                                 error
-		coreInformers                                                       = r.coreInformerFactory.Core().V1beta1()
 	)
 
 	switch gvk := schema.FromAPIVersionAndKind(ctxObj.APIVersion, ctxObj.Kind); {
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "Shoot":
-		if shoot, err = coreInformers.Shoots().Lister().Shoots(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
+		if shoot, err = r.shootListers.Shoots(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 		shootMeta = shoot.GetObjectMeta()
@@ -145,19 +144,19 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 
 		if shoot.Spec.SeedName != nil {
 			seedName := *shoot.Spec.SeedName
-			if seed, err = coreInformers.Seeds().Lister().Get(seedName); err != nil {
+			if seed, err = r.seedLister.Get(seedName); err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
 			seedMeta = seed.GetObjectMeta()
 		}
 
-		if project, err = admissionutils.ProjectForNamespaceFromLister(coreInformers.Projects().Lister(), shoot.Namespace); err != nil {
+		if project, err = admissionutils.ProjectForNamespaceFromLister(r.projectLister, shoot.Namespace); err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 		projectMeta = project.GetObjectMeta()
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "Seed":
-		if seed, err = coreInformers.Seeds().Lister().Get(ctxObj.Name); err != nil {
+		if seed, err = r.seedLister.Get(ctxObj.Name); err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 
@@ -167,7 +166,7 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 		seedMeta = seed.GetObjectMeta()
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "BackupBucket":
-		if backupBucket, err = coreInformers.BackupBuckets().Lister().Get(ctxObj.Name); err != nil {
+		if backupBucket, err = r.backupBucketLister.Get(ctxObj.Name); err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 
@@ -178,14 +177,14 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 
 		if backupBucket.Spec.SeedName != nil {
 			seedName := *backupBucket.Spec.SeedName
-			if seed, err = coreInformers.Seeds().Lister().Get(seedName); err != nil {
+			if seed, err = r.seedLister.Get(seedName); err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
 			seedMeta = seed.GetObjectMeta()
 		}
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "BackupEntry":
-		if backupEntry, err = coreInformers.BackupEntries().Lister().BackupEntries(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
+		if backupEntry, err = r.backupEntryLister.BackupEntries(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 
@@ -194,21 +193,21 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 		}
 		backupEntryMeta = backupEntry.GetObjectMeta()
 
-		if backupBucket, err = coreInformers.BackupBuckets().Lister().Get(backupEntry.Spec.BucketName); err != nil {
+		if backupBucket, err = r.backupBucketLister.Get(backupEntry.Spec.BucketName); err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 		backupBucketMeta = backupBucket.GetObjectMeta()
 
 		if backupEntry.Spec.SeedName != nil {
 			seedName := *backupEntry.Spec.SeedName
-			if seed, err = coreInformers.Seeds().Lister().Get(seedName); err != nil {
+			if seed, err = r.seedLister.Get(seedName); err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
 			seedMeta = seed.GetObjectMeta()
 		}
 
 		if shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry); shootName != "" {
-			shoot, err := coreInformers.Shoots().Lister().Shoots(backupEntry.GetNamespace()).Get(shootName)
+			shoot, err := r.shootListers.Shoots(backupEntry.GetNamespace()).Get(shootName)
 			if err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
@@ -217,7 +216,7 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 			if shootTechnicalID == shoot.Status.TechnicalID && shootUID == shoot.GetUID() {
 				shootMeta = shoot.GetObjectMeta()
 
-				if project, err = admissionutils.ProjectForNamespaceFromLister(coreInformers.Projects().Lister(), shoot.Namespace); err != nil {
+				if project, err = admissionutils.ProjectForNamespaceFromLister(r.projectLister, shoot.Namespace); err != nil {
 					return nil, nil, nil, nil, nil, err
 				}
 				projectMeta = project.GetObjectMeta()

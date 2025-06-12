@@ -43,10 +43,15 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	credentialsBindingStorage := credentialsbindingstore.NewStorage(restOptionsGetter)
 	storage["credentialsbindings"] = credentialsBindingStorage.CredentialsBinding
 
+	sharedInformer := p.CoreInformerFactory.Core().V1beta1()
 	workloadIdentityStorage := workloadidentitystore.NewStorage(
 		restOptionsGetter,
 		p.TokenIssuer,
-		p.CoreInformerFactory,
+		sharedInformer.Shoots().Lister(),
+		sharedInformer.Seeds().Lister(),
+		sharedInformer.Projects().Lister(),
+		sharedInformer.BackupBuckets().Lister(),
+		sharedInformer.BackupEntries().Lister(),
 	)
 	storage["workloadidentities"] = workloadIdentityStorage.WorkloadIdentity
 	storage["workloadidentities/token"] = workloadIdentityStorage.TokenRequest

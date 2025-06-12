@@ -20,6 +20,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityapi "github.com/gardener/gardener/pkg/apis/security"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardenv1betainformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
@@ -195,6 +196,12 @@ var _ = Describe("#TokenRequest", func() {
 			backupEntry  *gardencorev1beta1.BackupEntry
 			seedUser     user.DefaultInfo
 			nonSeedUser  user.DefaultInfo
+
+			shootInformer        gardenv1betainformers.ShootInformer
+			seedInformer         gardenv1betainformers.SeedInformer
+			projectInformer      gardenv1betainformers.ProjectInformer
+			backupBucketInformer gardenv1betainformers.BackupBucketInformer
+			backupEntryInformer  gardenv1betainformers.BackupEntryInformer
 		)
 
 		BeforeEach(func() {
@@ -236,19 +243,24 @@ var _ = Describe("#TokenRequest", func() {
 			}
 			informerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
 
-			err := informerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)
-			Expect(err).ToNot(HaveOccurred())
-			err = informerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)
-			Expect(err).ToNot(HaveOccurred())
-			err = informerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)
-			Expect(err).ToNot(HaveOccurred())
-			err = informerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(backupBucket)
-			Expect(err).ToNot(HaveOccurred())
-			err = informerFactory.Core().V1beta1().BackupEntries().Informer().GetStore().Add(backupEntry)
-			Expect(err).ToNot(HaveOccurred())
+			shootInformer = informerFactory.Core().V1beta1().Shoots()
+			seedInformer = informerFactory.Core().V1beta1().Seeds()
+			projectInformer = informerFactory.Core().V1beta1().Projects()
+			backupBucketInformer = informerFactory.Core().V1beta1().BackupBuckets()
+			backupEntryInformer = informerFactory.Core().V1beta1().BackupEntries()
+
+			Expect(shootInformer.Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(seedInformer.Informer().GetStore().Add(seed)).To(Succeed())
+			Expect(projectInformer.Informer().GetStore().Add(project)).To(Succeed())
+			Expect(backupBucketInformer.Informer().GetStore().Add(backupBucket)).To(Succeed())
+			Expect(backupEntryInformer.Informer().GetStore().Add(backupEntry)).To(Succeed())
 
 			r = TokenRequestREST{
-				coreInformerFactory: informerFactory,
+				shootListers:       shootInformer.Lister(),
+				seedLister:         seedInformer.Lister(),
+				projectLister:      projectInformer.Lister(),
+				backupBucketLister: backupBucketInformer.Lister(),
+				backupEntryLister:  backupEntryInformer.Lister(),
 			}
 		})
 
@@ -319,8 +331,7 @@ var _ = Describe("#TokenRequest", func() {
 			By("Schedule the shoot to a seed")
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec = gardencorev1beta1.ShootSpec{SeedName: ptr.To(seedName)}
-			err = r.coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Update(shootCopy)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(shootInformer.Informer().GetStore().Update(shootCopy)).To(Succeed())
 
 			By("Resolve context object after the shoot is scheduled to a seed")
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
@@ -353,8 +364,7 @@ var _ = Describe("#TokenRequest", func() {
 			}
 
 			By("shoot does not exist")
-			err := r.coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Delete(shoot)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(shootInformer.Informer().GetStore().Delete(shoot)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
@@ -368,8 +378,7 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(rBackupEntry).To(BeNil())
 
 			By("shoot and context uid does not match")
-			err = r.coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(shootInformer.Informer().GetStore().Add(shoot)).To(Succeed())
 
 			uidMismatch := types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c")
 			uidMismatchContext := contextObject.DeepCopy()
@@ -389,10 +398,8 @@ var _ = Describe("#TokenRequest", func() {
 			shoot.Spec = gardencorev1beta1.ShootSpec{
 				SeedName: ptr.To(seedName),
 			}
-			err = r.coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Update(shoot)
-			Expect(err).ToNot(HaveOccurred())
-			err = r.coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Delete(seed)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(shootInformer.Informer().GetStore().Update(shoot)).To(Succeed())
+			Expect(seedInformer.Informer().GetStore().Delete(seed)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
@@ -406,10 +413,8 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(rBackupEntry).To(BeNil())
 
 			By("project does not exist")
-			err = r.coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)
-			Expect(err).ToNot(HaveOccurred())
-			err = r.coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Delete(project)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(seedInformer.Informer().GetStore().Add(seed)).To(Succeed())
+			Expect(projectInformer.Informer().GetStore().Delete(project)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
@@ -453,8 +458,7 @@ var _ = Describe("#TokenRequest", func() {
 			}
 
 			By("seed does not exist")
-			err := r.coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Delete(seed)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(seedInformer.Informer().GetStore().Delete(seed)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
@@ -468,8 +472,7 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(rBackupEntry).To(BeNil())
 
 			By("seed and context uid does not match")
-			err = r.coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(seedInformer.Informer().GetStore().Add(seed)).To(Succeed())
 
 			uidMismatch := types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c")
 			uidMismatchContext := contextObject.DeepCopy()
@@ -511,7 +514,7 @@ var _ = Describe("#TokenRequest", func() {
 			backupBucketCopy.Spec = gardencorev1beta1.BackupBucketSpec{
 				SeedName: ptr.To(seedName),
 			}
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Update(backupBucketCopy)).To(Succeed())
+			Expect(backupBucketInformer.Informer().GetStore().Update(backupBucketCopy)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
@@ -539,7 +542,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			By("backupBucket does not exist")
 
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Delete(backupBucket)).To(Succeed())
+			Expect(backupBucketInformer.Informer().GetStore().Delete(backupBucket)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
@@ -554,7 +557,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			By("backupBucket and context uid does not match")
 
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
+			Expect(backupBucketInformer.Informer().GetStore().Add(backupBucket)).To(Succeed())
 
 			uidMismatch := types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c")
 			uidMismatchContext := contextObject.DeepCopy()
@@ -576,8 +579,8 @@ var _ = Describe("#TokenRequest", func() {
 			backupBucketCopy.Spec = gardencorev1beta1.BackupBucketSpec{
 				SeedName: ptr.To(seedName),
 			}
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Update(backupBucketCopy)).To(Succeed())
-			Expect(r.coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Delete(seed)).To(Succeed())
+			Expect(backupBucketInformer.Informer().GetStore().Update(backupBucketCopy)).To(Succeed())
+			Expect(seedInformer.Informer().GetStore().Delete(seed)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
@@ -624,7 +627,7 @@ var _ = Describe("#TokenRequest", func() {
 				Name:       shoot.Name,
 				UID:        shootUID,
 			}}
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupEntries().Informer().GetStore().Update(backupEntry)).To(Succeed())
+			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntry)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
@@ -653,7 +656,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			backupEntryCopy := backupEntry.DeepCopy()
 			backupEntryCopy.Spec.SeedName = ptr.To(seedName)
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupEntries().Informer().GetStore().Update(backupEntryCopy)).To(Succeed())
+			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntryCopy)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
@@ -692,7 +695,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			By("backupEntry does not exist")
 
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupEntries().Informer().GetStore().Delete(backupEntry)).To(Succeed())
+			Expect(backupEntryInformer.Informer().GetStore().Delete(backupEntry)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
@@ -707,7 +710,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			By("backupEntry and context uid does not match")
 
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupEntries().Informer().GetStore().Add(backupEntry)).To(Succeed())
+			Expect(backupEntryInformer.Informer().GetStore().Add(backupEntry)).To(Succeed())
 
 			uidMismatch := types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c")
 			uidMismatchContext := contextObject.DeepCopy()
@@ -724,7 +727,7 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(rBackupEntry).To(BeNil())
 
 			By("backupBucket does not exist")
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Delete(backupBucket)).To(Succeed())
+			Expect(backupBucketInformer.Informer().GetStore().Delete(backupBucket)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
@@ -741,9 +744,9 @@ var _ = Describe("#TokenRequest", func() {
 
 			backupEntryCopy := backupEntry.DeepCopy()
 			backupEntryCopy.Spec.SeedName = ptr.To(seedName)
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupEntries().Informer().GetStore().Update(backupEntryCopy)).To(Succeed())
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
-			Expect(r.coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Delete(seed)).To(Succeed())
+			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntryCopy)).To(Succeed())
+			Expect(backupBucketInformer.Informer().GetStore().Add(backupBucket)).To(Succeed())
+			Expect(seedInformer.Informer().GetStore().Delete(seed)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
@@ -764,9 +767,9 @@ var _ = Describe("#TokenRequest", func() {
 				Name:       shoot.Name,
 				UID:        shootUID,
 			}}
-			Expect(r.coreInformerFactory.Core().V1beta1().BackupEntries().Informer().GetStore().Update(backupEntry)).To(Succeed())
-			Expect(r.coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
-			Expect(r.coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Delete(shoot)).To(Succeed())
+			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntry)).To(Succeed())
+			Expect(seedInformer.Informer().GetStore().Add(seed)).To(Succeed())
+			Expect(shootInformer.Informer().GetStore().Delete(shoot)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
@@ -780,8 +783,8 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(rBackupEntry).To(BeNil())
 
 			By("project does not exist")
-			Expect(r.coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
-			Expect(r.coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Delete(project)).To(Succeed())
+			Expect(shootInformer.Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(projectInformer.Informer().GetStore().Delete(project)).To(Succeed())
 
 			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
@@ -876,19 +879,23 @@ var _ = Describe("#TokenRequest", func() {
 
 			informerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
 
-			err := informerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)
-			Expect(err).ToNot(HaveOccurred())
-			err = informerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)
-			Expect(err).ToNot(HaveOccurred())
-			err = informerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)
-			Expect(err).ToNot(HaveOccurred())
+			shootInformer := informerFactory.Core().V1beta1().Shoots()
+			seedInformer := informerFactory.Core().V1beta1().Seeds()
+			projectInformer := informerFactory.Core().V1beta1().Projects()
+
+			Expect(shootInformer.Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(seedInformer.Informer().GetStore().Add(seed)).To(Succeed())
+			Expect(projectInformer.Informer().GetStore().Add(project)).To(Succeed())
 
 			tokenIssuer, err := workloadidentity.NewTokenIssuer(rsaPrivateKey, issuer, minDuration, maxDuration)
 			Expect(err).ToNot(HaveOccurred())
 
 			r = TokenRequestREST{
-				coreInformerFactory: informerFactory,
-				tokenIssuer:         tokenIssuer,
+				shootListers:  shootInformer.Lister(),
+				seedLister:    seedInformer.Lister(),
+				projectLister: projectInformer.Lister(),
+
+				tokenIssuer: tokenIssuer,
 			}
 		})
 
