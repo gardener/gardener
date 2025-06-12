@@ -282,6 +282,16 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 		return prometheus, client.MergeFrom(prometheus.DeepCopy()), nil
 	}
 
+	needsInitContainer := func(prometheus *monitoringv1.Prometheus) bool {
+		for _, initContainer := range prometheus.Spec.InitContainers {
+			if initContainer.Name == "cleanup-obsolete-folder" {
+				return false
+			}
+		}
+
+		return true
+	}
+
 	waitUntilCleanedUp := func(ctx context.Context, namespace string) error {
 		return retry.UntilTimeout(ctx, 10*time.Second, 10*time.Minute, func(ctx context.Context) (done bool, err error) {
 			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "prometheus-shoot-0"}}
@@ -344,6 +354,19 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 			}
 
 			log.Info("Clean up obsolete Prometheus folders", "cluster", cluster.Name)
+
+			if needsInitContainer(prometheus) {
+				prometheus.Spec.InitContainers = append(prometheus.Spec.InitContainers, corev1.Container{
+					Name:            "cleanup-obsolete-folder",
+					Image:           *prometheus.Spec.Image,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"sh", "-c", "rm -rf /prometheus/prometheus-; rm -rf /prometheus/prometheus-db/prometheus-"},
+					VolumeMounts: []corev1.VolumeMount{{
+						Name:      "prometheus-db",
+						MountPath: "/prometheus",
+					}},
+				})
+			}
 
 			if err := seedClient.Patch(ctx, prometheus, prometheusPatch); err != nil {
 				log.Error(err, "Failed to patch Prometheus resource", "cluster", cluster.Name)
