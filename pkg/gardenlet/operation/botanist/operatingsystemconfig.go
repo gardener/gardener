@@ -85,34 +85,6 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 	), nil
 }
 
-// ControlPlaneBootstrapOperatingSystemConfig creates the deployer for the OperatingSystemConfig custom resource that is
-// used for bootstrapping control plane nodes in `gardenadm bootstrap`.
-func (b *Botanist) ControlPlaneBootstrapOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
-	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenadm)
-	if err != nil {
-		return nil, fmt.Errorf("failed finding image %q: %w", imagevector.ContainerImageNameGardenadm, err)
-	}
-	image.WithOptionalTag(version.Get().GitVersion)
-
-	worker := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo())
-	if worker == nil {
-		return nil, fmt.Errorf("did not find the control plane worker pool of the shoot")
-	}
-
-	return operatingsystemconfig.NewControlPlaneBootstrap(
-		b.Logger,
-		b.SeedClientSet.Client(),
-		&operatingsystemconfig.ControlPlaneBootstrapValues{
-			Namespace:      b.Shoot.ControlPlaneNamespace,
-			Worker:         worker,
-			GardenadmImage: image.String(),
-		},
-		operatingsystemconfig.DefaultInterval,
-		operatingsystemconfig.DefaultSevereThreshold,
-		operatingsystemconfig.DefaultTimeout,
-	), nil
-}
-
 // DeployOperatingSystemConfig deploys the OperatingSystemConfig custom resource and triggers the restore operation in
 // case the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
