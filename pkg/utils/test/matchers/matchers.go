@@ -6,6 +6,7 @@ package matchers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
@@ -169,4 +170,37 @@ func expectedObjects(objs []client.Object, scheme *runtime.Scheme) map[string]cl
 	}
 
 	return objects
+}
+
+func NotContainAny(forbidden ...string) types.GomegaMatcher {
+	return &notContainAnyMatcher{forbidden: forbidden}
+}
+
+type notContainAnyMatcher struct {
+	forbidden []string
+	found     interface{}
+}
+
+func (matcher *notContainAnyMatcher) Match(actual interface{}) (bool, error) {
+	actualSlice, ok := actual.([]string)
+	if !ok {
+		return false, fmt.Errorf("NotContainAny expects a []string")
+	}
+	for _, forbid := range matcher.forbidden {
+		for _, val := range actualSlice {
+			if val == forbid {
+				matcher.found = forbid
+				return false, nil
+			}
+		}
+	}
+	return true, nil
+}
+
+func (matcher *notContainAnyMatcher) FailureMessage(actual interface{}) string {
+	return fmt.Sprintf("Expected\n\t%#v\nto NOT contain any of\n\t%#v\nbut found \n\t%#v", actual, matcher.forbidden, matcher.found)
+}
+
+func (matcher *notContainAnyMatcher) NegatedFailureMessage(actual interface{}) string {
+	return fmt.Sprintf("Expected\n\t%#v\nto contain any of\n\t%#v", actual, matcher.forbidden)
 }
