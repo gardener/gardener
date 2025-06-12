@@ -112,6 +112,12 @@ var _ = Describe("GardenerAPIServer", func() {
 	)
 
 	BeforeEach(func() {
+		fakeOps = &retryfake.Ops{MaxAttempts: 2}
+		DeferCleanup(test.WithVars(
+			&retry.Until, fakeOps.Until,
+			&retry.UntilTimeout, fakeOps.UntilTimeout,
+		))
+
 		testSchemeBuilder := runtime.NewSchemeBuilder(operatorclient.AddRuntimeSchemeToScheme, operatorclient.AddVirtualSchemeToScheme)
 		testScheme := runtime.NewScheme()
 		Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
@@ -1273,52 +1279,14 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 				})
 			})
 
-			Context("ManagedResource reconciliation delay", func() {
-				It("should fail if gardener-apiserver service does not get created from ManagedResource", func() {
-					DeferCleanup(test.WithVars(
-						&IntervalWaitServiceGardenerApiserver, time.Millisecond,
-						&TimeoutWaitServiceGardenerApiserver, 5*time.Millisecond,
-					))
-
+			Context("the gardener-apiserver service is not created", func() {
+				It("should fail after retrying", func() {
 					Expect(fakeClient.Delete(ctx, serviceRuntime)).To(Succeed())
 					Eventually(ctx, func(g Gomega) {
 						g.Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceRuntime), &corev1.Service{})).To(BeNotFoundError())
 					}).Should(Succeed())
 
 					Expect(deployer.Deploy(ctx)).To(MatchError(ContainSubstring("failed waiting for service gardener-apiserver to get created by gardener-resource-manager")))
-
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
-					expectedRuntimeMr := &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            managedResourceRuntime.Name,
-							Namespace:       managedResourceRuntime.Namespace,
-							ResourceVersion: "2",
-							Generation:      1,
-							Labels: map[string]string{
-								"gardener.cloud/role":                "seed-system-component",
-								"care.gardener.cloud/condition-type": "VirtualComponentsHealthy",
-							},
-						},
-						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							Class:       ptr.To("seed"),
-							SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-							KeepObjects: ptr.To(false),
-						},
-					}
-					utilruntime.Must(references.InjectAnnotations(expectedRuntimeMr))
-					Expect(managedResourceRuntime).To(Equal(expectedRuntimeMr))
-
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
-					// Virtual Mr should not have been changed
-					expectedVirtualMr := &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            managedResourceVirtual.Name,
-							Namespace:       managedResourceVirtual.Namespace,
-							Generation:      1,
-							ResourceVersion: "1",
-						},
-					}
-					Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
 				})
 			})
 

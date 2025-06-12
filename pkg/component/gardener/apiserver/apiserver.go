@@ -45,14 +45,13 @@ const (
 // deleted.
 var TimeoutWaitForManagedResource = 5 * time.Minute
 
-// exposed for testing
-var (
-	// IntervalWaitServiceGardenerApiserver is the interval when waiting for
+const (
+	// intervalWaitServiceRuntime is the interval when waiting for
 	// gardener-apiserver service to get created by gardener-resource-manager
-	IntervalWaitServiceGardenerApiserver = 5 * time.Second
-	// TimeoutWaitServiceGardenerApiserver is the timeout when waiting for
+	intervalWaitServiceRuntime = 5 * time.Second
+	// timeoutWaitServiceRuntime is the timeout when waiting for
 	// gardener-apiserver service to get created by gardener-resource-manager
-	TimeoutWaitServiceGardenerApiserver = 30 * time.Second
+	timeoutWaitServiceRuntime = 30 * time.Second
 )
 
 // Interface contains functions for a gardener-apiserver deployer.
@@ -197,9 +196,9 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	serviceRuntime := &corev1.Service{}
-	if err := retry.UntilTimeout(ctx, IntervalWaitServiceGardenerApiserver, TimeoutWaitServiceGardenerApiserver, func(ctx context.Context) (bool, error) {
-		if err := g.client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: g.namespace}, serviceRuntime); err != nil {
+	serviceRuntime := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: g.namespace}}
+	if err := retry.UntilTimeout(ctx, intervalWaitServiceRuntime, timeoutWaitServiceRuntime, func(ctx context.Context) (bool, error) {
+		if err := g.client.Get(ctx, client.ObjectKeyFromObject(serviceRuntime), serviceRuntime); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.MinorError(fmt.Errorf("service %s was not yet created", client.ObjectKeyFromObject(serviceRuntime)))
 			}
