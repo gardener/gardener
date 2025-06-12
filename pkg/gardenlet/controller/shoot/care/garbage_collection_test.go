@@ -107,5 +107,30 @@ var _ = Describe("GarbageCollection", func() {
 				})
 			})
 		})
+
+		Context("addons-nginx-ingress-controller resource lock configMap", func() {
+			It("should delete the configMap", func() {
+				cm1 := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ingress-controller-leader",
+						Namespace: metav1.NamespaceSystem,
+					},
+				}
+				Expect(fakeShootClient.Create(ctx, cm1)).To(Succeed())
+
+				cm2 := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ingress-controller-leader-nginx",
+						Namespace: metav1.NamespaceSystem,
+					},
+				}
+				Expect(fakeShootClient.Create(ctx, cm2)).To(Succeed())
+
+				gc.Collect(ctx)
+
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(cm1), cm1)).To(BeNotFoundError())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(cm2), cm2)).To(BeNotFoundError())
+			})
+		})
 	})
 })
