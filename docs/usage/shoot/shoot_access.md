@@ -165,6 +165,62 @@ The user is responsible for the validity of the configured `JWTAuthenticator`s.
 Be aware that changing the configuration in the `ConfigMap` will be applied in the next `Shoot` reconciliation, but this is not automatically triggered.
 If you want the changes to roll out immediately, [trigger a reconciliation explicitly](../shoot-operations/shoot_operations.md#immediate-reconciliation).
 
+### Upgrading from `OpenIDConnect` to Structured Authentication Config
+
+If you would like to migrate from `OpenIDConnect` to Structured Authentication Config and your `shoot.yaml` has `spec.kubernetes.kubeAPIServer.oidcConfig` set, for example:
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+spec:
+  kubernetes:
+    kubeAPIServer:
+      oidcConfig:
+        clientID: <client-ID>
+        groupsClaim: groups
+        issuerURL: <issuer-url>
+        usernameClaim: username
+```
+
+1. Create a `ConfigMap` in your project namespaces containing an equivalent `AuthenticationConfiguration` to your current `oidcConfig`. It should look similar to:
+
+    ```yaml
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: structured-authentication-config
+    data:
+      config.yaml: |
+        apiVersion: apiserver.config.k8s.io/v1beta1
+        kind: AuthenticationConfiguration
+        jwt:
+        - issuer:
+            url: <issuer-url>
+            audiences:
+            - <client-ID>
+          claimMappings:
+            groups:
+              claim: groups
+              prefix: ""
+            username:
+              claim: username
+              prefix: ""
+    ```
+
+    You can also follow the steps in the [Kubernetes 1.30: Structured Authentication Configuration Moves to Beta](https://kubernetes.io/blog/2024/04/25/structured-authentication-moves-to-beta/#migration-from-command-line-arguments-to-configuration-file) blog post.
+
+1. Remove the `spec.kubernetes.kubeAPIServer.oidcConfig` section from the `shoot.yaml` file and replace it a reference to the newly created `ConfigMap` in `spec.kubernetes.kubeAPIServer.structuredAuthentication.configMapName`:
+
+    ```yaml
+    apiVersion: core.gardener.cloud/v1beta1
+    kind: Shoot
+    spec:
+      kubernetes:
+        kubeAPIServer:
+          structuredAuthentication:
+            configMapName: structured-authentication-config
+    ```
+
 ## Structured Authorization
 
 For shoots with Kubernetes version `>= 1.30`, which have `StructuredAuthorizationConfiguration` feature gate enabled (enabled by default), `kube-apiserver` of shoot clusters can be provided with [Structured Authorization configuration](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#using-configuration-file-for-authorization) via the Shoot spec:
