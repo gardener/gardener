@@ -10,6 +10,7 @@ import (
 	"net"
 
 	"github.com/Masterminds/semver/v3"
+	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -20,7 +21,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
