@@ -50,7 +50,6 @@ func GardenadmConfig(gardenadmImage string) ([]extensionsv1alpha1.Unit, []extens
 		}
 
 		files = []extensionsv1alpha1.File{
-			// TODO(timebertt): add shell env?
 			{
 				Path:        GardenadmPathDownloadScript,
 				Permissions: ptr.To[uint32](0755),

@@ -6,6 +6,7 @@ package mediumtouch
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os/exec"
 	"slices"
@@ -83,14 +84,14 @@ func RunAndWait(ctx context.Context, args ...string) *gexec.Session {
 // gbytes.Buffers.
 func RunInMachine(ctx context.Context, technicalID string, ordinal int, args ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
 	var stdOutBuffer, stdErrBuffer = gbytes.NewBuffer(), gbytes.NewBuffer()
-
+	podName := machinePodName(ctx, technicalID, ordinal)
 	err := RuntimeClient.PodExecutor().ExecuteWithStreams(
 		ctx,
 		technicalID,
-		machinePodName(ctx, technicalID, ordinal),
+		podName,
 		ContainerName,
 		nil,
-		io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter("[machine][out] ", GinkgoWriter)),
+		io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter(fmt.Sprintf("[%s][out] ", podName), GinkgoWriter)),
 		io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter("[machine][err] ", GinkgoWriter)),
 		append([]string{"/opt/bin/gardenadm"}, args...)...,
 	)
