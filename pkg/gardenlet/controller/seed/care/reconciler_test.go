@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
@@ -24,6 +25,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 const (
@@ -181,6 +183,36 @@ var _ = Describe("Seed Care Control", func() {
 					updatedSeed := &gardencorev1beta1.Seed{}
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
 					Expect(updatedSeed.Status.Conditions).To(ConsistOf(conditions))
+				})
+			})
+
+			Context("garbage collection", func() {
+				BeforeEach(func() {
+					DeferCleanup(test.WithVars(&NewHealthCheck,
+						healthCheckFunc(func(_ SeedConditions) []gardencorev1beta1.Condition { return nil })))
+				})
+
+				It("should cleanup the resource lock configmaps", func() {
+					cm1 := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "ingress-controller-seed-leader",
+							Namespace: "garden",
+						},
+					}
+					Expect(seedClient.Create(ctx, cm1)).To(Succeed())
+
+					cm2 := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "ingress-controller-seed-leader-nginx-gardener",
+							Namespace: "garden",
+						},
+					}
+					Expect(seedClient.Create(ctx, cm2)).To(Succeed())
+
+					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(cm1), cm1)).To(BeNotFoundError())
+					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(cm2), cm2)).To(BeNotFoundError())
 				})
 			})
 		})
