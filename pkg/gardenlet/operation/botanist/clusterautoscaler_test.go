@@ -25,6 +25,7 @@ import (
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclusterautoscaler "github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler/mock"
 	mockworker "github.com/gardener/gardener/pkg/component/extensions/worker/mock"
+	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -34,9 +35,9 @@ import (
 
 var _ = Describe("ClusterAutoscaler", func() {
 	var (
-		ctx     = context.TODO()
-		fakeErr = errors.New("fake err")
-
+		ctx              = context.TODO()
+		fakeErr          = errors.New("fake err")
+		namespace        = "shoot--foo--bar"
 		ctrl             *gomock.Controller
 		botanist         *Botanist
 		kubernetesClient *kubernetesmock.MockInterface
@@ -65,6 +66,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			kubernetesClient.EXPECT().Client()
 			kubernetesClient.EXPECT().Version().Return("1.28.0")
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.28.0"}}})
+			botanist.Shoot.ControlPlaneNamespace = namespace
 		})
 
 		It("should successfully create a cluster-autoscaler interface", func() {
@@ -81,9 +83,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 			namespaceUID       = types.UID("5678")
 			machineDeployments = []extensionsv1alpha1.MachineDeployment{{}}
+			c                  *mockclient.MockClient
+			kubeAPIServer      *mockkubeapiserver.MockInterface
 		)
 
 		BeforeEach(func() {
+			kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 			clusterAutoscaler = mockclusterautoscaler.NewMockInterface(ctrl)
 			worker = mockworker.NewMockInterface(ctrl)
 
@@ -95,11 +100,15 @@ var _ = Describe("ClusterAutoscaler", func() {
 			botanist.Shoot.Components = &shootpkg.Components{
 				ControlPlane: &shootpkg.ControlPlane{
 					ClusterAutoscaler: clusterAutoscaler,
+					KubeAPIServer:     kubeAPIServer,
 				},
 				Extensions: &shootpkg.Extensions{
 					Worker: worker,
 				},
 			}
+			botanist.Shoot.ControlPlaneNamespace = namespace
+			c = mockclient.NewMockClient(ctrl)
+			kubernetesClient.EXPECT().Client().Return(c).MaxTimes(3)
 		})
 
 		Context("CA wanted", func() {
@@ -111,15 +120,20 @@ var _ = Describe("ClusterAutoscaler", func() {
 				worker.EXPECT().MachineDeployments().Return(machineDeployments)
 				clusterAutoscaler.EXPECT().SetMachineDeployments(machineDeployments)
 				clusterAutoscaler.EXPECT().SetMaxNodesTotal(int64(0))
+				clusterAutoscaler.EXPECT().SetReplicas(int32(1))
+				kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1))
 			})
 
 			It("should set the secrets, namespace uid, machine deployments, and deploy", func() {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "cluster-autoscaler"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
+
 				clusterAutoscaler.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployClusterAutoscaler(ctx)).To(Succeed())
 			})
 
 			It("should fail when the deploy function fails", func() {
 				clusterAutoscaler.EXPECT().Deploy(ctx).Return(fakeErr)
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "cluster-autoscaler"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 				Expect(botanist.DeployClusterAutoscaler(ctx)).To(Equal(fakeErr))
 			})
 		})
