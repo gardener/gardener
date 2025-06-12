@@ -5306,13 +5306,6 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"),
 						},
 					},
-					"enableStaticTokenKubeconfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster. Setting this field to true is not supported.\n\nDeprecated: This field is deprecated and will be removed in gardener v1.120",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
 					"etcd": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ETCD contains configuration for etcds of the shoot cluster.",

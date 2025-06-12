@@ -492,11 +492,6 @@ type Kubernetes struct {
 	Version string
 	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 	VerticalPodAutoscaler *VerticalPodAutoscaler
-	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
-	// Setting this field to true is not supported.
-	//
-	// Deprecated: This field is deprecated and will be removed in gardener v1.120
-	EnableStaticTokenKubeconfig *bool
 	// ETCD contains configuration for etcds of the shoot cluster.
 	ETCD *ETCD
 }

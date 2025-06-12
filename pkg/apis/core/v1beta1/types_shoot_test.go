@@ -40,6 +40,18 @@ var _ = Describe("Shoot", func() {
 				}
 			}
 		})
+
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(Kubernetes{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "10" {
+					Fail("protobuf 10 in Kubernetes is reserved for removed enableStaticTokenKubeconfig field")
+				}
+			}
+		})
 	})
 
 	Describe("KubeAPIServerConfig", func() {

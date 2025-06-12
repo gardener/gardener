@@ -1059,7 +1059,6 @@ var _ = Describe("handler", func() {
 							})
 						}
 
-						Describe("kubeconfig suffix", func() { testSuite(".kubeconfig") })
 						Describe("ca-cluster suffix", func() { testSuite(".ca-cluster") })
 						Describe("ssh-keypair suffix", func() { testSuite(".ssh-keypair") })
 						Describe("ssh-keypair.old suffix", func() { testSuite(".ssh-keypair.old") })

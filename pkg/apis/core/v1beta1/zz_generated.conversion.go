@@ -4484,7 +4484,6 @@ func autoConvert_v1beta1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core
 	}
 	out.Version = in.Version
 	out.VerticalPodAutoscaler = (*core.VerticalPodAutoscaler)(unsafe.Pointer(in.VerticalPodAutoscaler))
-	out.EnableStaticTokenKubeconfig = (*bool)(unsafe.Pointer(in.EnableStaticTokenKubeconfig))
 	out.ETCD = (*core.ETCD)(unsafe.Pointer(in.ETCD))
 	return nil
 }
@@ -4527,7 +4526,6 @@ func autoConvert_core_Kubernetes_To_v1beta1_Kubernetes(in *core.Kubernetes, out 
 	}
 	out.Version = in.Version
 	out.VerticalPodAutoscaler = (*VerticalPodAutoscaler)(unsafe.Pointer(in.VerticalPodAutoscaler))
-	out.EnableStaticTokenKubeconfig = (*bool)(unsafe.Pointer(in.EnableStaticTokenKubeconfig))
 	out.ETCD = (*ETCD)(unsafe.Pointer(in.ETCD))
 	return nil
 }
