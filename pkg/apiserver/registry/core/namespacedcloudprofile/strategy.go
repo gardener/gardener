@@ -6,7 +6,6 @@ package namespacedcloudprofile
 
 import (
 	"context"
-	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -36,7 +36,7 @@ func (namespacedCloudProfileStrategy) NamespaceScoped() bool {
 func (namespacedCloudProfileStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	namespacedCloudProfile := obj.(*core.NamespacedCloudProfile)
 
-	dropExpiredVersions(namespacedCloudProfile, nil)
+	dropInactiveVersions(namespacedCloudProfile, nil)
 	namespacedCloudProfile.Generation = 1
 	namespacedCloudProfile.Status = core.NamespacedCloudProfileStatus{}
 }
@@ -59,7 +59,7 @@ func (namespacedCloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj
 
 	newNamespacedCloudProfile.Status = oldNamespacedCloudProfile.Status // can only be changed by status subresource
 
-	dropExpiredVersions(newNamespacedCloudProfile, oldNamespacedCloudProfile)
+	dropInactiveVersions(newNamespacedCloudProfile, oldNamespacedCloudProfile)
 	if mustIncreaseGeneration(oldNamespacedCloudProfile, newNamespacedCloudProfile) {
 		newNamespacedCloudProfile.Generation = oldNamespacedCloudProfile.Generation + 1
 	}
@@ -98,14 +98,14 @@ func (namespacedCloudProfileStrategy) WarningsOnUpdate(_ context.Context, _, _ r
 	return nil
 }
 
-// dropExpiredVersions drops expired versions that are not already present in the NamespacedCloudProfile.
-func dropExpiredVersions(newProfile, oldProfile *core.NamespacedCloudProfile) {
-	dropExpiredKubernetesVersions(newProfile, oldProfile)
-	dropExpiredMachineImageVersions(newProfile, oldProfile)
+// dropInactiveVersions drops expired versions that are not already present in the NamespacedCloudProfile.
+func dropInactiveVersions(newProfile, oldProfile *core.NamespacedCloudProfile) {
+	dropInactiveKubernetesVersions(newProfile, oldProfile)
+	dropInactiveMachineImageVersions(newProfile, oldProfile)
 }
 
-// dropExpiredKubernetesVersions drops expired Kubernetes versions that are not already present in the NamespacedCloudProfile.
-func dropExpiredKubernetesVersions(newProfile, oldProfile *core.NamespacedCloudProfile) {
+// dropInactiveKubernetesVersions drops expired Kubernetes versions that are not already present in the NamespacedCloudProfile.
+func dropInactiveKubernetesVersions(newProfile, oldProfile *core.NamespacedCloudProfile) {
 	var existingKubernetesVersions map[string]core.ExpirableVersion
 	if oldProfile != nil && oldProfile.Spec.Kubernetes != nil {
 		existingKubernetesVersions = utils.CreateMapFromSlice(oldProfile.Spec.Kubernetes.Versions, func(v core.ExpirableVersion) string { return v.Version })
@@ -115,7 +115,7 @@ func dropExpiredKubernetesVersions(newProfile, oldProfile *core.NamespacedCloudP
 
 		for _, version := range newProfile.Spec.Kubernetes.Versions {
 			if _, exists := existingKubernetesVersions[version.Version]; !exists &&
-				version.ExpirationDate != nil && version.ExpirationDate.Time.Before(time.Now()) {
+				!helper.CurrentLifecycleClassification(version).IsActive() {
 				continue
 			}
 			validKubernetesVersions = append(validKubernetesVersions, version)
@@ -125,8 +125,8 @@ func dropExpiredKubernetesVersions(newProfile, oldProfile *core.NamespacedCloudP
 	}
 }
 
-// dropExpiredMachineImageVersions drops expired MachineImage versions that are not already present in the NamespacedCloudProfile.
-func dropExpiredMachineImageVersions(newProfile, oldProfile *core.NamespacedCloudProfile) {
+// dropInactiveMachineImageVersions drops expired MachineImage versions that are not already present in the NamespacedCloudProfile.
+func dropInactiveMachineImageVersions(newProfile, oldProfile *core.NamespacedCloudProfile) {
 	var existingMachineImages []core.MachineImage
 	if oldProfile != nil {
 		existingMachineImages = oldProfile.Spec.MachineImages
@@ -138,7 +138,7 @@ func dropExpiredMachineImageVersions(newProfile, oldProfile *core.NamespacedClou
 
 		for _, version := range machineImage.Versions {
 			if _, exists := existingMachineImageVersions.GetImageVersion(machineImage.Name, version.Version); !exists &&
-				version.ExpirationDate != nil && version.ExpirationDate.Time.Before(time.Now()) {
+				!helper.CurrentLifecycleClassification(version.ExpirableVersion).IsActive() {
 				continue
 			}
 			validMachineImageVersions = append(validMachineImageVersions, version)

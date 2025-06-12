@@ -7,14 +7,28 @@ package helper
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 )
+
+// CurrentLifecycleClassification returns the current lifecycle classification of the given version.
+// An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
+func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionClassification {
+	var currentTime = time.Now()
+
+	if version.ExpirationDate != nil && !currentTime.Before(version.ExpirationDate.Time) {
+		return core.ClassificationExpired
+	}
+
+	return ptr.Deref(version.Classification, core.ClassificationSupported)
+}
 
 // FindMachineImageVersion finds the machine image version in the <cloudProfile> for the given <name> and <version>.
 // In case no machine image version can be found with the given <name> or <version>, false is being returned.
@@ -92,7 +106,7 @@ func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPre
 			return core.ExpirableVersion{}, core.ExpirableVersion{}, fmt.Errorf("error while parsing expirable version '%s': %s", version.Version, err.Error())
 		}
 
-		if filterPreviewVersions && version.Classification != nil && *version.Classification == core.ClassificationPreview {
+		if filterPreviewVersions && CurrentLifecycleClassification(version) == core.ClassificationPreview {
 			continue
 		}
 
@@ -101,7 +115,7 @@ func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPre
 			latestExpirableVersion = version
 		}
 
-		if version.Classification != nil && *version.Classification != core.ClassificationDeprecated {
+		if CurrentLifecycleClassification(version) != core.ClassificationDeprecated {
 			if latestNonDeprecatedSemVerVersion == nil || v.GreaterThan(latestNonDeprecatedSemVerVersion) {
 				latestNonDeprecatedSemVerVersion = v
 				latestNonDeprecatedExpirableVersion = version
@@ -205,7 +219,7 @@ func GetMachineImageDiff(old, new []core.MachineImage) (removedMachineImages set
 func FilterVersionsWithClassification(versions []core.ExpirableVersion, classification core.VersionClassification) []core.ExpirableVersion {
 	var result []core.ExpirableVersion
 	for _, version := range versions {
-		if version.Classification == nil || *version.Classification != classification {
+		if CurrentLifecycleClassification(version) != classification {
 			continue
 		}
 
