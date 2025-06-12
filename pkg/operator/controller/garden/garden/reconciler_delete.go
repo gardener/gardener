@@ -414,7 +414,7 @@ func (r *Reconciler) delete(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for perses-operator",
-			Fn:           c.persesCRD.Destroy,
+			Fn:           component.OpWait(c.persesCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
