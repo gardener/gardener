@@ -114,7 +114,6 @@ var _ = Describe("GardenerAPIServer", func() {
 	BeforeEach(func() {
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
 		DeferCleanup(test.WithVars(
-			&retry.Until, fakeOps.Until,
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
