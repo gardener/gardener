@@ -5,7 +5,7 @@ description: Configure access to infrastructure accounts via workload identity i
 
 # Shoot Workload Identity
 
-[`WorkloadIdentity`](../../api-reference/security.md#workloadidentity) is resource that allows workloads to be presented before external systems by giving them identities managed by Gardener.
+[`WorkloadIdentity`](../../api-reference/security.md#workloadidentity) is a resource that allows workloads to be presented before external systems by giving them identities managed by Gardener.
 As `WorkloadIdentity`s do not directly contain credentials we gain the ability to create `Shoot`s without the need of preliminary exchange of credentials.
 For that to work users should establish trust to the Gardener Workload Identity Issuer in advance.
 The issuer URL can be read from the [Gardener Info ConfigMap](../gardener/gardener_info_configmap.md).
