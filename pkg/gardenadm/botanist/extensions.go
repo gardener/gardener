@@ -102,7 +102,7 @@ func wantedExtensionKinds(runsControlPlane bool) sets.Set[string] {
 	//  While we do not need the ControlPlane object itself, we rely on the ControlPlane webhook to inject the
 	//  machine-controller-manager provider sidecar. However, the webhook might want to read the ControlPlane object for
 	//  reading the providerSpec.
-	return sets.New[string](extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.OperatingSystemConfigResource, extensionsv1alpha1.WorkerResource)
+	return sets.New(extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.OperatingSystemConfigResource, extensionsv1alpha1.WorkerResource)
 }
 
 // computeWantedControllerRegistrationNames returns the names of all ControllerRegistrations relevant for the autonomous

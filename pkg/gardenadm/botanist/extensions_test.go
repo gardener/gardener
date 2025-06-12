@@ -37,9 +37,11 @@ var _ = Describe("Extensions", func() {
 			controllerRegistration2 *gardencorev1beta1.ControllerRegistration
 			controllerRegistration3 *gardencorev1beta1.ControllerRegistration
 			controllerRegistration4 *gardencorev1beta1.ControllerRegistration
+			controllerRegistration5 *gardencorev1beta1.ControllerRegistration
 			controllerDeployment1   *gardencorev1.ControllerDeployment
 			controllerDeployment2   *gardencorev1.ControllerDeployment
 			controllerDeployment3   *gardencorev1.ControllerDeployment
+			controllerDeployment4   *gardencorev1.ControllerDeployment
 
 			controllerRegistrations []*gardencorev1beta1.ControllerRegistration
 			controllerDeployments   []*gardencorev1.ControllerDeployment
@@ -49,8 +51,15 @@ var _ = Describe("Extensions", func() {
 			shoot = &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Provider: gardencorev1beta1.Provider{
-						Type:    "ext1",
-						Workers: []gardencorev1beta1.Worker{{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}},
+						Type: "ext1",
+						Workers: []gardencorev1beta1.Worker{{
+							ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+							Machine: gardencorev1beta1.Machine{
+								Image: &gardencorev1beta1.ShootMachineImage{
+									Name: "ext4-osc",
+								},
+							},
+						}},
 					},
 					Networking: &gardencorev1beta1.Networking{
 						Type: ptr.To("ext3"),
@@ -100,6 +109,19 @@ var _ = Describe("Extensions", func() {
 			controllerRegistration4 = &gardencorev1beta1.ControllerRegistration{
 				ObjectMeta: metav1.ObjectMeta{Name: "ext2"},
 			}
+			controllerRegistration5 = &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{Name: "ext4-osc"},
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
+						DeploymentRefs: []gardencorev1beta1.DeploymentRef{
+							{Name: "ext4-osc"},
+						},
+					},
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: "OperatingSystemConfig", Type: "ext4-osc"},
+					},
+				},
+			}
 
 			controllerDeployment1 = &gardencorev1.ControllerDeployment{
 				ObjectMeta:             metav1.ObjectMeta{Name: "ext1-controlplane"},
@@ -113,9 +135,13 @@ var _ = Describe("Extensions", func() {
 				ObjectMeta:             metav1.ObjectMeta{Name: "ext3"},
 				InjectGardenKubeconfig: ptr.To(false),
 			}
+			controllerDeployment4 = &gardencorev1.ControllerDeployment{
+				ObjectMeta:             metav1.ObjectMeta{Name: "ext4-osc"},
+				InjectGardenKubeconfig: ptr.To(false),
+			}
 
-			controllerRegistrations = []*gardencorev1beta1.ControllerRegistration{controllerRegistration1, controllerRegistration2, controllerRegistration3, controllerRegistration4}
-			controllerDeployments = []*gardencorev1.ControllerDeployment{controllerDeployment1, controllerDeployment2, controllerDeployment3}
+			controllerRegistrations = []*gardencorev1beta1.ControllerRegistration{controllerRegistration1, controllerRegistration2, controllerRegistration3, controllerRegistration4, controllerRegistration5}
+			controllerDeployments = []*gardencorev1.ControllerDeployment{controllerDeployment1, controllerDeployment2, controllerDeployment3, controllerDeployment4}
 		})
 
 		It("should return an error because deployment is not set", func() {
@@ -205,6 +231,18 @@ var _ = Describe("Extensions", func() {
 							Spec: gardencorev1beta1.ControllerInstallationSpec{
 								RegistrationRef: corev1.ObjectReference{Name: controllerRegistration2.Name},
 								DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment2.Name},
+								SeedRef:         corev1.ObjectReference{Name: shoot.Name},
+							},
+						},
+					},
+					{
+						ControllerRegistration: controllerRegistration5,
+						ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment4),
+						ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
+							ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration5.Name},
+							Spec: gardencorev1beta1.ControllerInstallationSpec{
+								RegistrationRef: corev1.ObjectReference{Name: controllerRegistration5.Name},
+								DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment4.Name},
 								SeedRef:         corev1.ObjectReference{Name: shoot.Name},
 							},
 						},
