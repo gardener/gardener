@@ -1286,7 +1286,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						g.Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceRuntime), &corev1.Service{})).To(BeNotFoundError())
 					}).Should(Succeed())
 
-					Expect(deployer.Deploy(ctx)).To(MatchError(ContainSubstring("failed waiting for service gardener-apiserver to get created by gardener-resource-manager")))
+					Expect(deployer.Deploy(ctx)).To(MatchError(ContainSubstring("failed waiting for service some-namespace/gardener-apiserver to get created by gardener-resource-manager")))
 				})
 			})
 
