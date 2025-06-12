@@ -6,6 +6,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultNginxIngress returns a deployer for the nginxingress.
@@ -61,6 +63,18 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 
 // DeployNginxIngressAddon deploys the NginxIngress Addon component.
 func (b *Botanist) DeployNginxIngressAddon(ctx context.Context) error {
+	// TODO (shafeeqes): Remove this in gardener v1.150
+	{
+		if err := kubernetesutils.DeleteObjects(
+			ctx,
+			b.ShootClientSet.Client(),
+			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "ingress-controller-leader", Namespace: metav1.NamespaceSystem}},
+			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "ingress-controller-leader-nginx", Namespace: metav1.NamespaceSystem}},
+		); err != nil {
+			return fmt.Errorf("failed deleting addons-nginx-ingress-controller resource lock configMaps: %w", err)
+		}
+	}
+
 	if !v1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons) {
 		return b.Shoot.Components.Addons.NginxIngress.Destroy(ctx)
 	}
