@@ -448,6 +448,8 @@ spec:
 			"clusterinputs.fluentbit.fluent.io",
 			"clusteroutputs.fluentbit.fluent.io",
 			"clusterparsers.fluentbit.fluent.io",
+			"clustermultilineparsers.fluentbit.fluent.io",
+			"multilineparsers.fluentbit.fluent.io",
 			"fluentbits.fluentbit.fluent.io",
 			"collectors.fluentbit.fluent.io",
 			"fluentbitconfigs.fluentbit.fluent.io",
