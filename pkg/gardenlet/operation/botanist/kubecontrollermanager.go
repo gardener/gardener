@@ -39,7 +39,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 
 // DeployKubeControllerManager deploys the Kubernetes Controller Manager.
 func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
-	replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameKubeControllerManager, 1, true)
+	replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameKubeControllerManager, 1)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,7 @@ import (
 	"net"
 
 	"github.com/Masterminds/semver/v3"
+	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -123,6 +124,8 @@ var _ = Describe("KubeControllerManager", func() {
 					botanist.Shoot.GetInfo().Status.IsHibernated = false
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
+					kubernetesClient.EXPECT().Client().Return(c)
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
@@ -130,7 +133,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 			Context("last operation is nil or neither of type 'create' nor 'restore'", func() {
 				BeforeEach(func() {
-					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1)).AnyTimes()
+					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1)).MaxTimes(1)
 					botanist.Shoot.GetInfo().Status.LastOperation = nil
 				})
 
@@ -139,7 +142,8 @@ var _ = Describe("KubeControllerManager", func() {
 					botanist.Shoot.GetInfo().Status.IsHibernated = false
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
-
+					kubernetesClient.EXPECT().Client().Return(c)
+					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
 
@@ -148,6 +152,8 @@ var _ = Describe("KubeControllerManager", func() {
 					botanist.Shoot.GetInfo().Status.IsHibernated = true
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
+					kubernetesClient.EXPECT().Client().Return(c)
+					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
@@ -162,6 +168,7 @@ var _ = Describe("KubeControllerManager", func() {
 						obj.Spec.Replicas = ptr.To(replicas)
 						return nil
 					})
+
 					kubeControllerManager.EXPECT().SetReplicaCount(replicas)
 
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
@@ -172,11 +179,16 @@ var _ = Describe("KubeControllerManager", func() {
 					botanist.Shoot.GetInfo().Status.IsHibernated = false
 
 					var replicas int32 = 4
-					kubernetesClient.EXPECT().Client().Return(c)
+					kubernetesClient.EXPECT().Client().Return(c).MaxTimes(2)
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment, _ ...client.GetOption) error {
 						obj.Spec.Replicas = ptr.To(replicas)
+						obj.Annotations = map[string]string{
+							proberapi.MeltdownProtectionActive: "",
+						}
 						return nil
-					})
+					}).MaxTimes(2)
+					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).MaxTimes(2)
+
 					kubeControllerManager.EXPECT().SetReplicaCount(replicas)
 
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
@@ -196,7 +208,7 @@ var _ = Describe("KubeControllerManager", func() {
 						return nil
 					})
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
-
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).MaxTimes(2)
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
 
@@ -226,7 +238,8 @@ var _ = Describe("KubeControllerManager", func() {
 					botanist.Shoot.HibernationEnabled = false
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
-
+					kubernetesClient.EXPECT().Client().Return(c)
+					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
 			})
@@ -275,6 +288,8 @@ var _ = Describe("KubeControllerManager", func() {
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
 
+					kubernetesClient.EXPECT().Client().Return(c)
+					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
 			})
@@ -283,19 +298,20 @@ var _ = Describe("KubeControllerManager", func() {
 		It("should fail when the replicas cannot be determined", func() {
 			kubernetesClient.EXPECT().Client().Return(c)
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(fakeErr)
-
-			Expect(botanist.DeployKubeControllerManager(ctx)).To(Equal(fakeErr))
+			Expect(botanist.DeployKubeControllerManager(ctx)).To(MatchError(`failed to check if deployment "foo/kube-controller-manager" is controlled by dependency-watchdog: fake err`))
 		})
 
 		It("should fail when the deploy function fails", func() {
-			kubernetesClient.EXPECT().Client().Return(c)
+			kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](0))
 			kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{RuntimeConfig: map[string]bool{"foo": true}})
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 			kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
 			kubeControllerManager.EXPECT().SetRuntimeConfig(map[string]bool{"foo": true})
 			kubeControllerManager.EXPECT().SetServiceNetworks(botanist.Shoot.Networks.Services)
 			kubeControllerManager.EXPECT().SetPodNetworks(botanist.Shoot.Networks.Pods)
 			kubeControllerManager.EXPECT().Deploy(ctx).Return(fakeErr)
+
+			kubernetesClient.EXPECT().Client().Return(c)
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 
 			Expect(botanist.DeployKubeControllerManager(ctx)).To(Equal(fakeErr))
 		})
