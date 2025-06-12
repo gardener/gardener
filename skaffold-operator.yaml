@@ -1039,6 +1039,7 @@ build:
             - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -1188,6 +1189,7 @@ build:
             - extensions/pkg/webhook/cmd
             - extensions/pkg/webhook/shoot
             - pkg/api/extensions
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1

@@ -638,6 +638,7 @@ build:
             - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
