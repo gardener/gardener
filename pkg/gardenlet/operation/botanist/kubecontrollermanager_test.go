@@ -10,7 +10,6 @@ import (
 	"net"
 
 	"github.com/Masterminds/semver/v3"
-	dwdapi "github.com/gardener/dependency-watchdog/api/prober"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -21,6 +20,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -179,13 +179,12 @@ var _ = Describe("KubeControllerManager", func() {
 					botanist.Shoot.GetInfo().Status.IsHibernated = false
 
 					var replicas int32 = 4
-					var dwdMeltdownProtectionActive = map[string]string{
-						dwdapi.MeltdownProtectionActive: "",
-					}
 					kubernetesClient.EXPECT().Client().Return(c).MaxTimes(2)
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment, _ ...client.GetOption) error {
 						obj.Spec.Replicas = ptr.To(replicas)
-						obj.Annotations = dwdMeltdownProtectionActive
+						obj.Annotations = map[string]string{
+							proberapi.MeltdownProtectionActive: "",
+						}
 						return nil
 					}).MaxTimes(2)
 					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).MaxTimes(2)
@@ -299,7 +298,7 @@ var _ = Describe("KubeControllerManager", func() {
 		It("should fail when the replicas cannot be determined", func() {
 			kubernetesClient.EXPECT().Client().Return(c)
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(fakeErr)
-			Expect(botanist.DeployKubeControllerManager(ctx).Error()).To(Equal(`failed to check if deployment "kube-controller-manager" is controlled by dependency-watchdog: failed to get deployment "kube-controller-manager": fake err`))
+			Expect(botanist.DeployKubeControllerManager(ctx)).To(MatchError(`failed to check if deployment "foo/kube-controller-manager" is controlled by dependency-watchdog: fake err`))
 		})
 
 		It("should fail when the deploy function fails", func() {

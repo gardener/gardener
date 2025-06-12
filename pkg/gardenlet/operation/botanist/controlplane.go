@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	dwdapi "github.com/gardener/dependency-watchdog/api/prober"
+	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,7 +41,7 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 
 	isControlledByDWD, err := b.isControlledByDependencyWatchdog(ctx, deploymentName)
 	if err != nil {
-		return 0, fmt.Errorf("failed to check if deployment %q is controlled by dependency-watchdog: %w", deploymentName, err)
+		return 0, fmt.Errorf("failed to check if deployment %q is controlled by dependency-watchdog: %w", client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: deploymentName}, err)
 	}
 	if isControlledByDWD && !isCreateOrRestoreOperation && !b.Shoot.HibernationEnabled && !b.Shoot.GetInfo().Status.IsHibernated {
 		// The replicas of the component are controlled by dependency-watchdog and
@@ -63,12 +63,12 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 
 // If the deployment is controlled by dependency-watchdog, then it has the annotation dependency-watchdog.gardener.cloud/meltdown-protection set.
 func (b *Botanist) isControlledByDependencyWatchdog(ctx context.Context, deploymentName string) (bool, error) {
-	deployment := &appsv1.Deployment{}
-	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: deploymentName}, deployment); err != nil && !apierrors.IsNotFound(err) {
-		return false, fmt.Errorf("failed to get deployment %q: %w", deploymentName, err)
+	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: b.Shoot.ControlPlaneNamespace}}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil && !apierrors.IsNotFound(err) {
+		return false, err
 	}
 
-	return metav1.HasAnnotation(deployment.ObjectMeta, dwdapi.MeltdownProtectionActive), nil
+	return metav1.HasAnnotation(deployment.ObjectMeta, proberapi.MeltdownProtectionActive), nil
 }
 
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.
