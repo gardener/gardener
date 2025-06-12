@@ -643,7 +643,7 @@ var _ = Describe("Seed controller tests", func() {
 							crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 							g.Expect(testClient.List(ctx, crdList)).To(Succeed())
 							return test.ObjectNames(crdList)
-						}).ShouldNot(ContainElements(crdsSharedWithGardenCluster))
+						}).Should(NotContainAny(crdsSharedWithGardenCluster...))
 
 						// Usually, the gardener-operator deploys and manages the following resources.
 						// However, it is not really running, so we have to fake its behaviour here.

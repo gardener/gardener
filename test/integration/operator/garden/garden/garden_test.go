@@ -422,12 +422,7 @@ spec:
 		}).Should(Equal(gardencorev1beta1.LastOperationStateProcessing))
 		Expect(garden.Status.Gardener).NotTo(BeNil())
 
-		By("Verify that the custom resource definitions have been created")
-		Eventually(func(g Gomega) []string {
-			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
-			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-			return test.ObjectNames(crdList)
-		}).WithTimeout(kubernetesutils.WaitTimeout).Should(ContainElements(
+		deployedCRDs := []string{
 			"etcds.druid.gardener.cloud",
 			"etcdcopybackupstasks.druid.gardener.cloud",
 			"managedresources.resources.gardener.cloud",
@@ -478,7 +473,14 @@ spec:
 			"perses.perses.dev",
 			"persesdashboards.perses.dev",
 			"persesdatasources.perses.dev",
-		))
+		}
+
+		By("Verify that the custom resource definitions have been created")
+		Eventually(func(g Gomega) []string {
+			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
+			return test.ObjectNames(crdList)
+		}).WithTimeout(kubernetesutils.WaitTimeout).Should(ContainElements(deployedCRDs))
 
 		// The garden controller waits for the gardener-resource-manager Deployment to be healthy, so let's fake this here.
 		By("Patch gardener-resource-manager deployment to report healthiness")
@@ -718,7 +720,7 @@ spec:
 			secretList := &corev1.SecretList{}
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return test.ObjectNames(secretList)
-		}).ShouldNot(ContainElements(
+		}).ShouldNot(ContainElement(
 			ContainSubstring("shoot-access-gardener-resource-manager-bootstrap-"),
 		))
 
@@ -729,7 +731,7 @@ spec:
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
 			// Don't patch bootstrapping deployment but wait for final deployment
-			g.Expect(deployment.Spec.Template.Spec.Volumes).ShouldNot(ContainElements(
+			g.Expect(deployment.Spec.Template.Spec.Volumes).ShouldNot(ContainElement(
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("kubeconfig-bootstrap")}),
 			))
 
@@ -920,7 +922,7 @@ spec:
 			deploymentList := &appsv1.DeploymentList{}
 			g.Expect(testClient.List(ctx, deploymentList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return test.ObjectNames(deploymentList)
-		}).ShouldNot(ContainElements(
+		}).ShouldNot(ContainAnyOf(
 			"virtual-garden-kube-apiserver",
 			"virtual-garden-kube-controller-manager",
 			"virtual-garden-gardener-resource-manager",
@@ -930,7 +932,7 @@ spec:
 			etcdList := &druidcorev1alpha1.EtcdList{}
 			g.Expect(testClient.List(ctx, etcdList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return test.ObjectNames(etcdList)
-		}).ShouldNot(ContainElements(
+		}).ShouldNot(ContainAnyOf(
 			"virtual-garden-etcd-main",
 			"virtual-garden-etcd-events",
 		))
@@ -942,61 +944,21 @@ spec:
 			return testClient.List(ctx, &resourcesv1alpha1.ManagedResourceList{}, client.InNamespace(testNamespace.Name))
 		}).Should(BeNotFoundError())
 
-		By("Verify that the custom resource definitions have been deleted")
-		Eventually(func(g Gomega) []string {
-			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
-			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-			return test.ObjectNames(crdList)
-		}).ShouldNot(ContainElements(
-			"etcds.druid.gardener.cloud",
-			"etcdcopybackupstasks.druid.gardener.cloud",
-			"managedresources.resources.gardener.cloud",
-			"verticalpodautoscalers.autoscaling.k8s.io",
-			"verticalpodautoscalercheckpoints.autoscaling.k8s.io",
-			"authorizationpolicies.security.istio.io",
-			"destinationrules.networking.istio.io",
-			"envoyfilters.networking.istio.io",
-			"gateways.networking.istio.io",
-			"peerauthentications.security.istio.io",
-			"proxyconfigs.networking.istio.io",
-			"requestauthentications.security.istio.io",
-			"serviceentries.networking.istio.io",
-			"sidecars.networking.istio.io",
-			"telemetries.telemetry.istio.io",
-			"virtualservices.networking.istio.io",
-			"wasmplugins.extensions.istio.io",
-			"workloadentries.networking.istio.io",
-			"workloadgroups.networking.istio.io",
-			// fluent-operator
-			"clusterfilters.fluentbit.fluent.io",
-			"clusterfluentbitconfigs.fluentbit.fluent.io",
-			"clusterinputs.fluentbit.fluent.io",
-			"clusteroutputs.fluentbit.fluent.io",
-			"clusterparsers.fluentbit.fluent.io",
-			"fluentbits.fluentbit.fluent.io",
-			"collectors.fluentbit.fluent.io",
-			"fluentbitconfigs.fluentbit.fluent.io",
-			"filters.fluentbit.fluent.io",
-			"parsers.fluentbit.fluent.io",
-			"outputs.fluentbit.fluent.io",
-			// prometheus-operator
-			"alertmanagerconfigs.monitoring.coreos.com",
-			"alertmanagers.monitoring.coreos.com",
-			"podmonitors.monitoring.coreos.com",
-			"probes.monitoring.coreos.com",
-			"prometheusagents.monitoring.coreos.com",
-			"prometheuses.monitoring.coreos.com",
-			"prometheusrules.monitoring.coreos.com",
-			"scrapeconfigs.monitoring.coreos.com",
-			"servicemonitors.monitoring.coreos.com",
-			"thanosrulers.monitoring.coreos.com",
-		))
-
 		By("Verify that gardener-resource-manager has been deleted")
 		Eventually(func() error {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 			return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
 		}).Should(BeNotFoundError())
+
+		By("Verify that the custom resource definitions have been deleted")
+		// Deleting these resources can take a long time, especially under load.
+		// It can happen that the storage layer needs to recover, as some CRDs might end up in a stuck terminating state,
+		// with error: "InstanceDeletionFailed could not list instances: storage is (re)initializing}"
+		Eventually(func(g Gomega) []string {
+			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+			g.Expect(mgrClient.List(ctx, crdList)).To(Succeed())
+			return test.ObjectNames(crdList)
+		}).WithTimeout(4 * time.Minute).ShouldNot(ContainAnyOf(deployedCRDs...))
 
 		By("Verify that secrets have been deleted")
 		Eventually(func(g Gomega) []corev1.Secret {
