@@ -11,6 +11,10 @@ While `SecretBinding`s can only reference `Secret`s, `CredentialsBinding`s can a
 As `CredentialsBinding`s cover the functionality of `SecretBinding`s, the latter are considered legacy and will be deprecated in the future.
 This incurs the need for migration from `SecretBinding` to `CredentialsBinding` resources.
 
+> [!NOTE] Mind that the migration will be allowed only if the old `SecretBinding` and the new `CredentialsBinding` refer to the same exact `Secret`.
+> One cannot do a direct migration to a `CredentialsBinding` that reference a `WorkloadIdentity`.
+> For information on how to use `WorkloadIdentity`, please refer to the following [document](../shoot/shoot-workload-identity.md).
+
 ## Migration Path
 
 A standard use of `SecretBinding` can look like the following example.
@@ -56,7 +60,7 @@ In order to migrate to `CredentialsBinding` one should:
       type: foo-provider
     ```
 
-1. Replace `secretBindingName` with `credentialsBindingName` in the `Shoot` spec. Mind that this migration will be allowed only if the old `SecretBinding` and the new `CredentialsBinding` refer to the same exact `Secret`.
+1. Replace `secretBindingName` with `credentialsBindingName` in the `Shoot` spec.
 
     ```yaml
     apiVersion: core.gardener.cloud/v1beta1
