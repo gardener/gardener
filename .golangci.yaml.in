@@ -83,6 +83,10 @@ linters:
           alias: druidcorecrds
         - pkg: github.com/gardener/cert-management/pkg/apis/cert/v1alpha1
           alias: certv1alpha1
+        - pkg: github.com/gardener/dependency-watchdog/api/prober
+          alias: proberapi
+        - pkg: github.com/gardener/dependency-watchdog/api/weeder
+          alias: weederapi
         # Gardener extension package
         - pkg: github.com/gardener/gardener/extensions/.*/(\w+)/mock$
           alias: extensionsmock${1}
