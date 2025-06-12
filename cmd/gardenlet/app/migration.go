@@ -8,11 +8,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -24,7 +28,9 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClient client.Client) error {
@@ -242,6 +248,30 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 		}
 	}
 
+	getPrometheusWithPatch := func(ctx context.Context, namespace string) (*monitoringv1.Prometheus, client.Patch, error) {
+		prometheus := &monitoringv1.Prometheus{}
+		if err := seedClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot"}, prometheus); err != nil {
+			return nil, nil, err
+		}
+
+		return prometheus, client.MergeFrom(prometheus.DeepCopy()), nil
+	}
+
+	waitUntilReady := func(ctx context.Context, namespace string) error {
+		return retry.UntilTimeout(ctx, 10*time.Second, 10*time.Minute, func(ctx context.Context) (done bool, err error) {
+			statefulSet := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "prometheus-shoot"}}
+			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(statefulSet), statefulSet); err != nil {
+				return retry.MinorError(err)
+			}
+
+			if err := health.CheckStatefulSet(statefulSet); err != nil {
+				return retry.MinorError(fmt.Errorf("prometheus-shoot statefulset cluster %s is not healthy: %w", namespace, err))
+			}
+
+			return retry.Ok()
+		})
+	}
+
 	log.Info("Clean up Prometheus obsolete folders")
 
 	clusterList := &extensionsv1alpha1.ClusterList{}
@@ -269,6 +299,26 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 
 			// make sure to unignore the managed resource before exiting this migration
 			defer unignoreManagedResource(ctx, log, cluster.Name)
+
+			prometheus, prometheusPatch, err := getPrometheusWithPatch(ctx, cluster.Name)
+			if err != nil {
+				log.Error(err, "Failed to get Prometheus resource", "cluster", cluster.Name)
+				return nil
+			}
+
+			log.Info("Clean up obsolete Prometheus folders", "cluster", cluster.Name)
+
+			if err := seedClient.Patch(ctx, prometheus, prometheusPatch); err != nil {
+				log.Error(err, "Failed to patch Prometheus resource", "cluster", cluster.Name)
+				return nil
+			}
+
+			// wait 10 seconds for the kubelet to pick up the changes and restart the Prometheus pod
+			time.Sleep(10 * time.Second)
+
+			if err := waitUntilReady(ctx, cluster.Name); err != nil {
+				log.Error(err, "Prometheus statefulset did not become healthy", "cluster", cluster.Name)
+			}
 
 			return nil
 		})
