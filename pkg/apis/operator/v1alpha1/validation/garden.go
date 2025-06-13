@@ -565,7 +565,7 @@ func validateOperation(operation string, garden *operatorv1alpha1.Garden, fldPat
 
 	fldPathOp := fldPath.Key(v1beta1constants.GardenerOperation)
 
-	if operation != "" && !operatorv1alpha1.AvailableOperationAnnotations.Has(operation) {
+	if !operatorv1alpha1.AvailableOperationAnnotations.Has(operation) {
 		allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(operatorv1alpha1.AvailableOperationAnnotations)))
 	}
 	allErrs = append(allErrs, validateOperationContext(operation, garden, fldPathOp)...)
