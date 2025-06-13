@@ -197,53 +197,53 @@ func (r *Reconciler) runReconcileSeedFlow(
 	var (
 		g = flow.NewGraph("Seed reconciliation")
 
-		deployMachineCRD = g.Add(flow.Task{
+		deployMachineCRDs = g.Add(flow.Task{
 			Name: "Deploying machine-related custom resource definitions",
 			Fn:   component.OpWait(c.machineCRD).Deploy,
 		})
-		deployExtensionCRD = g.Add(flow.Task{
+		deployExtensionCRDs = g.Add(flow.Task{
 			Name: "Deploying extensions-related custom resource definitions",
 			Fn:   component.OpWait(c.extensionCRD).Deploy,
 		})
-		deployEtcdCRD = g.Add(flow.Task{
+		deployEtcdCRDs = g.Add(flow.Task{
 			Name:   "Deploying ETCD-related custom resource definitions",
 			Fn:     component.OpWait(c.etcdCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
-		deployIstioCRD = g.Add(flow.Task{
+		deployIstioCRDs = g.Add(flow.Task{
 			Name:   "Deploying Istio-related custom resource definitions",
 			Fn:     component.OpWait(c.istioCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
-		deployVPACRD = g.Add(flow.Task{
+		deployVPACRDs = g.Add(flow.Task{
 			Name:   "Deploying VPA-related custom resource definitions",
 			Fn:     component.OpWait(c.vpaCRD).Deploy,
 			SkipIf: seedIsGarden || !vpaEnabled(seed.GetInfo().Spec.Settings),
 		})
-		deployFluentCRD = g.Add(flow.Task{
+		deployFluentCRDs = g.Add(flow.Task{
 			Name:   "Deploying logging-related custom resource definitions",
 			Fn:     component.OpWait(c.fluentCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
-		deployPrometheusCRD = g.Add(flow.Task{
+		deployPrometheusCRDs = g.Add(flow.Task{
 			Name:   "Deploying Prometheus-related custom resource definitions",
 			Fn:     component.OpWait(c.prometheusCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
-		deployPersesCRD = g.Add(flow.Task{
+		deployPersesCRDs = g.Add(flow.Task{
 			Name:   "Deploying Perses-related custom resource definitions",
 			Fn:     component.OpWait(c.persesCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		syncPointCRDs = flow.NewTaskIDs(
-			deployMachineCRD,
-			deployExtensionCRD,
-			deployEtcdCRD,
-			deployIstioCRD,
-			deployVPACRD,
-			deployFluentCRD,
-			deployPrometheusCRD,
-			deployPersesCRD,
+			deployMachineCRDs,
+			deployExtensionCRDs,
+			deployEtcdCRDs,
+			deployIstioCRDs,
+			deployVPACRDs,
+			deployFluentCRDs,
+			deployPrometheusCRDs,
+			deployPersesCRDs,
 		)
 
 		// TODO(shreyas-s-rao): Remove this in v1.123.0.
