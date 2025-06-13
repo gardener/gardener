@@ -7,6 +7,7 @@ package genericactuator
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -19,6 +20,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -27,6 +29,9 @@ type actuator struct {
 	backupEntryDelegate BackupEntryDelegate
 	client              client.Client
 }
+
+// Ensure actuator implements backupentry.Actuator interface
+var _ backupentry.Actuator = (*actuator)(nil)
 
 // AnnotationKeyCreatedByBackupEntry is a constant for the key of an annotation on the etcd-backup Secret whose value contains
 // the name of the BackupEntry object that created the Secret.
@@ -62,18 +67,32 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 		return nil
 	}
 
-	backupSecret, err := kubernetesutils.GetSecretByReference(ctx, a.client, &be.Spec.SecretRef)
+	backupEntrySecret, err := kubernetesutils.GetSecretByReference(ctx, a.client, &be.Spec.SecretRef)
 	if err != nil {
 		log.Error(err, "Failed to read backup extension secret")
 		return err
 	}
 
-	backupSecretData := backupSecret.DeepCopy().Data
-	if backupSecretData == nil {
-		backupSecretData = map[string][]byte{}
+	var (
+		backupEntrySecretData = backupEntrySecret.DeepCopy().Data
+		withWorkloadIdentity  = false
+	)
+
+	if purpose, ok := backupEntrySecret.Labels[securityv1alpha1constants.LabelPurpose]; ok && purpose == securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor {
+		withWorkloadIdentity = true
 	}
-	backupSecretData[v1beta1constants.DataKeyBackupBucketName] = []byte(be.Spec.BucketName)
-	etcdSecretData, err := a.backupEntryDelegate.GetETCDSecretData(ctx, log, be, backupSecretData)
+
+	if withWorkloadIdentity {
+		maps.DeleteFunc(backupEntrySecretData, func(k string, _ []byte) bool {
+			return k != securityv1alpha1constants.DataKeyConfig
+		})
+	}
+
+	if backupEntrySecretData == nil {
+		backupEntrySecretData = map[string][]byte{}
+	}
+	backupEntrySecretData[v1beta1constants.DataKeyBackupBucketName] = []byte(be.Spec.BucketName)
+	etcdSecretData, err := a.backupEntryDelegate.GetETCDSecretData(ctx, log, be, backupEntrySecretData)
 	if err != nil {
 		return err
 	}
@@ -81,6 +100,40 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 	etcdSecret := emptyEtcdBackupSecret(be.Name)
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, a.client, etcdSecret, func() error {
+		if withWorkloadIdentity {
+			maps.DeleteFunc(etcdSecret.Annotations, func(k, _ string) bool {
+				return k != securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp
+			})
+
+			if workloadIdentityName, ok := backupEntrySecret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityName]; !ok {
+				return fmt.Errorf("BackupEntry is set to use workload identity but WorkloadIdentity's name is missing")
+			} else {
+				metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityName, workloadIdentityName)
+			}
+
+			if workloadIdentityNamespace, ok := backupEntrySecret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityNamespace]; !ok {
+				return fmt.Errorf("BackupEntry is set to use workload identity but WorkloadIdentity's namespace is missing")
+			} else {
+				metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityNamespace, workloadIdentityNamespace)
+			}
+
+			if contextObj, ok := backupEntrySecret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityContextObject]; ok {
+				metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityContextObject, contextObj)
+			}
+
+			etcdSecret.Labels = map[string]string{securityv1alpha1constants.LabelPurpose: securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor}
+
+			if provider, ok := backupEntrySecret.Labels[securityv1alpha1constants.LabelWorkloadIdentityProvider]; !ok {
+				return fmt.Errorf("BackupEntry is set to use workload identity but WorkloadIdentity's provider type missing")
+			} else {
+				etcdSecret.Labels[securityv1alpha1constants.LabelWorkloadIdentityProvider] = provider
+			}
+
+			if token, ok := etcdSecret.Data[securityv1alpha1constants.DataKeyToken]; ok {
+				etcdSecretData[securityv1alpha1constants.DataKeyToken] = token
+			}
+		}
+
 		metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, AnnotationKeyCreatedByBackupEntry, be.Name)
 		etcdSecret.Data = etcdSecretData
 		return nil
