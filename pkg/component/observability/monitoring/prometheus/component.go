@@ -14,6 +14,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -227,10 +228,23 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		cortexConfigMap = p.cortexConfigMap()
 	}
 
+	var role *rbacv1.Role
+	var roleBinding *rbacv1.RoleBinding
+	var clusterRoleBinding *rbacv1.ClusterRoleBinding
+	if p.values.TargetCluster != nil {
+		// Restrict Prometheus instances with a target cluster to the corresponding control-plane namespace of the Seed.
+		role = p.role()
+		roleBinding = p.roleBinding()
+	} else {
+		clusterRoleBinding = p.clusterRoleBinding()
+	}
+
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
 		p.service(),
-		p.clusterRoleBinding(),
+		clusterRoleBinding,
+		role,
+		roleBinding,
 		p.secretAdditionalScrapeConfigs(),
 		p.secretAdditionalAlertmanagerConfigs(),
 		p.secretRemoteWriteBasicAuth(),
