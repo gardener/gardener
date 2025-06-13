@@ -210,12 +210,24 @@ var _ = Describe("Extensions", func() {
 							},
 						},
 					},
+					{
+						ControllerRegistration: controllerRegistration5,
+						ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment4),
+						ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
+							ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration5.Name},
+							Spec: gardencorev1beta1.ControllerInstallationSpec{
+								RegistrationRef: corev1.ObjectReference{Name: controllerRegistration5.Name},
+								DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment4.Name},
+								SeedRef:         corev1.ObjectReference{Name: shoot.Name},
+							},
+						},
+					},
 				}))
 			})
 		})
 
 		When("not running the control plane", func() {
-			It("should return the provider extension only (Infrastructure and Worker)", func() {
+			It("should return the provider extension only (Infrastructure, Worker and OSC)", func() {
 				extensions, err := ComputeExtensions(gardenadm.Resources{
 					Shoot:                   shoot,
 					ControllerRegistrations: controllerRegistrations,
