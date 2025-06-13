@@ -217,7 +217,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	}
 
 	if n.values.ClusterType == component.ClusterTypeShoot {
-		serviceAccount.Labels = utils.MergeStringMaps[string](serviceAccount.Labels, map[string]string{
+		serviceAccount.Labels = utils.MergeStringMaps(serviceAccount.Labels, map[string]string{
 			labelKeyRelease: labelValueAddons,
 		})
 		serviceAnnotations = map[string]string{"service.beta.kubernetes.io/aws-load-balancer-proxy-protocol": "*"}
@@ -485,13 +485,13 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Replicas:             ptr.To[int32](2),
 				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: utils.MergeStringMaps[string](n.getLabels(LabelValueController, false), map[string]string{
+					MatchLabels: utils.MergeStringMaps(n.getLabels(LabelValueController, false), map[string]string{
 						labelKeyRelease: labelValueAddons,
 					}),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: utils.MergeStringMaps[string](n.getLabels(LabelValueController, true), map[string]string{
+						Labels: utils.MergeStringMaps(n.getLabels(LabelValueController, true), map[string]string{
 							labelKeyRelease: labelValueAddons,
 						}),
 					},
