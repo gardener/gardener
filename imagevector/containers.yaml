@@ -379,7 +379,7 @@ images:
   - name: perses
     sourceRepository: github.com/perses/perses
     repository: quay.io/persesdev/perses
-    tag: "v0.50.3"
+    tag: "v0.51.0"
     labels:
       - name: gardener.cloud/cve-categorisation
         value:
