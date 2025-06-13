@@ -49,6 +49,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/test/framework"
@@ -64,6 +65,8 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 
 	f := framework.NewShootFramework(nil)
 
+	var isShootHibernated bool
+
 	f.Default().Serial().CIt("Testing if Shoot can be hibernated successfully", func(ctx context.Context) {
 		guestBookTest, err := applications.NewGuestBookTest(f)
 		framework.ExpectNoError(err)
@@ -75,6 +78,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		guestBookTest.Test(ctx)
 
 		ginkgo.By("Hibernate shoot")
+		isShootHibernated = true
 		err = f.HibernateShoot(ctx)
 		framework.ExpectNoError(err)
 
@@ -87,7 +91,13 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		guestBookTest.WaitUntilGuestbookDeploymentIsReady(ctx)
 		guestBookTest.Test(ctx)
 
-	}, hibernationTestTimeout)
+	}, hibernationTestTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+		if isShootHibernated && v1beta1helper.HibernationIsEnabled(f.Shoot) {
+			ginkgo.By("Wake up shoot")
+			err := f.WakeUpShoot(ctx)
+			framework.ExpectNoError(err)
+		}
+	}, 25*time.Minute))
 
 	f.Default().Serial().CIt("should fully maintain and reconcile a shoot cluster", func(ctx context.Context) {
 		ginkgo.By("Maintain shoot")
