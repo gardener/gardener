@@ -192,7 +192,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeSecret(requestLog, seedName, attrs)
 		case workloadIdentityResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeWorkloadIdentity, attrs,
-				[]string{"get", "list", "watch", "create"},
+				[]string{"get", "list", "watch", "create", "patch"},
 				nil,
 				[]string{"token"},
 			)
