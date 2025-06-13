@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
@@ -15,6 +16,7 @@ import (
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,6 +55,10 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 
 	pod, err := d.applyPod(ctx, req, providerSpec, userDataSecret)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := d.waitForPodToBeRunning(ctx, pod); err != nil {
 		return nil, err
 	}
 
@@ -172,6 +178,30 @@ func (d *localDriver) applyPod(
 	}
 
 	return pod, nil
+}
+
+func (d *localDriver) waitForPodToBeRunning(ctx context.Context, pod *corev1.Pod) error {
+	// Actively wait until pod is running. Without doing so, we might not be able to catch misconfigurations or image
+	// problems before the Machine transitions to Available/Pending.
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	if err := wait.PollUntilContextCancel(timeoutCtx, 5*time.Second, true, func(ctx context.Context) (bool, error) {
+		if err := d.client.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
+			return true, err
+		}
+
+		if pod.Status.Phase == corev1.PodRunning {
+			return true, nil
+		}
+
+		return false, nil
+	}); err != nil {
+		// will be retried with short retry by machine controller
+		return status.Error(codes.DeadlineExceeded, fmt.Sprintf("pod %q is in phase %q, failed waiting for phase %q: %v", pod.Name, pod.Status.Phase, corev1.PodRunning, err))
+	}
+
+	return nil
 }
 
 func validateProviderSpecAndSecret(machineClass *machinev1alpha1.MachineClass, secret *corev1.Secret) (*apiv1alpha1.ProviderSpec, error) {

@@ -189,8 +189,6 @@ github.com/gardener/dependency-watchdog v1.5.0 h1:MORMbQ8IJgISPWEhN8LROOUl9y2Tnv
 github.com/gardener/dependency-watchdog v1.5.0/go.mod h1:gsHy1P7QPTXzzBOEMQKhUXH8pv2YecYf9PwhLkLnYQQ=
 github.com/gardener/etcd-druid/api v0.30.1 h1:g1XKFi6OFotrQmj/ZppTacuUKq3rGVYBQDhRBc//Y98=
 github.com/gardener/etcd-druid/api v0.30.1/go.mod h1:R9by0d9G/kT8/yA6nY21h4GffQ8j8Uj8hA7mM8JgCmM=
-github.com/gardener/machine-controller-manager v0.58.0 h1:JLMpuD+omliu/RwK0mA9Ce+MLObJq421Du1qmaAHmAU=
-github.com/gardener/machine-controller-manager v0.58.0/go.mod h1:TCU/KoudCMt2eV0Jnrq2D1TwgsrBCuhIVgV3j1el6Og=
 github.com/gardener/terminal-controller-manager v0.34.0 h1:qE8xIKsOFnVr1yZ2meesRR0q65uZ1Nyf5oSluAiLTeM=
 github.com/gardener/terminal-controller-manager v0.34.0/go.mod h1:g1PHUb95LzP/iMFF6aU6yBxGLXpw+yuisvfHcxYQoYY=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
@@ -573,6 +571,8 @@ github.com/subosito/gotenv v1.6.0 h1:9NlTDc1FTs4qu0DDq7AEtTPNw6SVm7uBMsUCUjABIf8
 github.com/subosito/gotenv v1.6.0/go.mod h1:Dk4QP5c2W3ibzajGcXpNraDfq2IrhjMIvMSWPKKo0FU=
 github.com/texttheater/golang-levenshtein v1.0.1 h1:+cRNoVrfiwufQPhoMzB6N0Yf/Mqajr6t1lOv8GyGE2U=
 github.com/texttheater/golang-levenshtein v1.0.1/go.mod h1:PYAKrbF5sAiq9wd+H82hs7gNaen0CplQ9uvm6+enD/8=
+github.com/timebertt/machine-controller-manager v0.0.0-20250612074952-60fe36aceadf h1:exphBG9Qm4mvdDew85XaIeRqAXTZOrbMDIo+z3QQGLY=
+github.com/timebertt/machine-controller-manager v0.0.0-20250612074952-60fe36aceadf/go.mod h1:TCU/KoudCMt2eV0Jnrq2D1TwgsrBCuhIVgV3j1el6Og=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75 h1:6fotK7otjonDflCTK0BCfls4SPy3NcCVb5dqqmbRknE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75/go.mod h1:KO6IkyS8Y3j8OdNO85qEYBsRPuteD+YciPomcXdrMnk=
 github.com/urfave/cli v1.22.12/go.mod h1:sSBEIC79qR6OvcmsD4U3KABeOTxDqQtdDnaFuUN30b8=
