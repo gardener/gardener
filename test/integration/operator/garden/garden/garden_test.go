@@ -924,7 +924,7 @@ spec:
 			deploymentList := &appsv1.DeploymentList{}
 			g.Expect(testClient.List(ctx, deploymentList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return test.ObjectNames(deploymentList)
-		}).Should(NotContainAny(
+		}).ShouldNot(ContainAnyOf(
 			"virtual-garden-kube-apiserver",
 			"virtual-garden-kube-controller-manager",
 			"virtual-garden-gardener-resource-manager",
@@ -934,7 +934,7 @@ spec:
 			etcdList := &druidcorev1alpha1.EtcdList{}
 			g.Expect(testClient.List(ctx, etcdList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return test.ObjectNames(etcdList)
-		}).Should(NotContainAny(
+		}).ShouldNot(ContainAnyOf(
 			"virtual-garden-etcd-main",
 			"virtual-garden-etcd-events",
 		))
@@ -960,7 +960,7 @@ spec:
 			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 			g.Expect(mgrClient.List(ctx, crdList)).To(Succeed())
 			return test.ObjectNames(crdList)
-		}).WithTimeout(4 * time.Minute).Should(NotContainAny(deployedCRDs...))
+		}).WithTimeout(4 * time.Minute).ShouldNot(ContainAnyOf(deployedCRDs...))
 
 		By("Verify that secrets have been deleted")
 		Eventually(func(g Gomega) []corev1.Secret {

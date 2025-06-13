@@ -7,7 +7,6 @@ package matchers
 import (
 	"context"
 	"fmt"
-
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -172,35 +171,49 @@ func expectedObjects(objs []client.Object, scheme *runtime.Scheme) map[string]cl
 	return objects
 }
 
-func NotContainAny(forbidden ...string) types.GomegaMatcher {
-	return &notContainAnyMatcher{forbidden: forbidden}
+// ContainAnyOf returns a Gomega matcher that checks if the actual slice does contain at least of the wanted strings.
+func ContainAnyOf(wanted ...string) types.GomegaMatcher {
+	return &containAnyMatcher{wanted: wanted}
 }
 
-type notContainAnyMatcher struct {
-	forbidden []string
-	found     interface{}
+type containAnyMatcher struct {
+	wanted []string
 }
 
-func (matcher *notContainAnyMatcher) Match(actual interface{}) (bool, error) {
+// Match checks if the actual slice does not contain any of the forbidden strings.
+func (matcher *containAnyMatcher) Match(actual interface{}) (bool, error) {
 	actualSlice, ok := actual.([]string)
 	if !ok {
-		return false, fmt.Errorf("NotContainAny expects a []string")
+		return false, fmt.Errorf("ContainAnyOf expects a []string")
 	}
-	for _, forbid := range matcher.forbidden {
+	for _, wants := range matcher.wanted {
 		for _, val := range actualSlice {
-			if val == forbid {
-				matcher.found = forbid
-				return false, nil
+			if val == wants {
+				return true, nil
 			}
 		}
 	}
-	return true, nil
+	return false, nil
 }
 
-func (matcher *notContainAnyMatcher) FailureMessage(actual interface{}) string {
-	return fmt.Sprintf("Expected\n\t%#v\nto NOT contain any of\n\t%#v\nbut found \n\t%#v", actual, matcher.forbidden, matcher.found)
+// FailureMessage returns a formatted failure message if the actual slice contains none of the wanted strings.
+func (matcher *containAnyMatcher) FailureMessage(actual interface{}) string {
+	return fmt.Sprintf("Expected\n\t%#v\nto contain any of\n\t%#v\n", actual, matcher.wanted)
 }
 
-func (matcher *notContainAnyMatcher) NegatedFailureMessage(actual interface{}) string {
-	return fmt.Sprintf("Expected\n\t%#v\nto contain any of\n\t%#v", actual, matcher.forbidden)
+// NegatedFailureMessage returns a message indicating that there is at least one of the strings in the actual slice.
+func (matcher *containAnyMatcher) NegatedFailureMessage(actual interface{}) string {
+	actualSlice, ok := actual.([]string)
+	if !ok {
+		return fmt.Sprintf("ContainAnyOf expects a []string, but got %#v", actual)
+	}
+	foundStrings := []string{}
+	for _, wants := range matcher.wanted {
+		for _, val := range actualSlice {
+			if val == wants {
+				foundStrings = append(foundStrings, wants)
+			}
+		}
+	}
+	return fmt.Sprintf("Expected\n\t%#v\nto not contain any of\n\t%#v, but found \n\t%#v\n", actualSlice, matcher.wanted, foundStrings)
 }
