@@ -83,17 +83,6 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 				Web: &monitoringv1.PrometheusWebSpec{
 					MaxConnections: ptr.To[int32](1024),
 				},
-				// TODO(vicwicker): Remove this after v1.125 has been released.
-				InitContainers: []corev1.Container{{
-					Name:            "cleanup-obsolete-folder",
-					Image:           p.values.Image,
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"sh", "-c", "rm -rf /prometheus/prometheus-; rm -rf /prometheus/prometheus-db/prometheus-"},
-					VolumeMounts: []corev1.VolumeMount{{
-						Name:      "prometheus-db",
-						MountPath: "/prometheus",
-					}},
-				}},
 			},
 			RuleSelector:          &metav1.LabelSelector{MatchLabels: monitoringutils.Labels(p.values.Name)},
 			RuleNamespaceSelector: &metav1.LabelSelector{},
@@ -170,6 +159,23 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 	if p.values.Cortex != nil {
 		obj.Spec.Containers = append(obj.Spec.Containers, p.cortexContainer())
 		obj.Spec.Volumes = append(obj.Spec.Volumes, p.cortexVolume(cortexConfigMap.Name))
+	}
+
+	// TODO(vicwicker): Remove this after v1.125 has been released.
+	switch p.values.Name {
+	case "garden", "longterm", "aggregate", "cache", "seed":
+		obj.Spec.InitContainers = append(obj.Spec.InitContainers, corev1.Container{
+			Name:            "cleanup-obsolete-folder",
+			Image:           p.values.Image,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Command:         []string{"sh", "-c", "rm -rf /prometheus/prometheus-; rm -rf /prometheus/prometheus-db/prometheus-"},
+			VolumeMounts: []corev1.VolumeMount{{
+				Name:      "prometheus-db",
+				MountPath: "/prometheus",
+			}},
+		})
+	default:
+		// Future Prometheus types do not need migration
 	}
 
 	utilruntime.Must(references.InjectAnnotations(obj))
