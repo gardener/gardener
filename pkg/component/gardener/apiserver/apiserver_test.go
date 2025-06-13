@@ -112,6 +112,11 @@ var _ = Describe("GardenerAPIServer", func() {
 	)
 
 	BeforeEach(func() {
+		fakeOps = &retryfake.Ops{MaxAttempts: 2}
+		DeferCleanup(test.WithVars(
+			&retry.UntilTimeout, fakeOps.UntilTimeout,
+		))
+
 		testSchemeBuilder := runtime.NewSchemeBuilder(operatorclient.AddRuntimeSchemeToScheme, operatorclient.AddVirtualSchemeToScheme)
 		testScheme := runtime.NewScheme()
 		Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
@@ -1270,6 +1275,17 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							Data:      configMapAdmission.Data,
 						}))
 					})
+				})
+			})
+
+			Context("the gardener-apiserver service is not created", func() {
+				It("should fail after retrying", func() {
+					Expect(fakeClient.Delete(ctx, serviceRuntime)).To(Succeed())
+					Eventually(ctx, func(g Gomega) {
+						g.Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceRuntime), &corev1.Service{})).To(BeNotFoundError())
+					}).Should(Succeed())
+
+					Expect(deployer.Deploy(ctx)).To(MatchError(ContainSubstring("failed waiting for service some-namespace/gardener-apiserver to get created by gardener-resource-manager")))
 				})
 			})
 
