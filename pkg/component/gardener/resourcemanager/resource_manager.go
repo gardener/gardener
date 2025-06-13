@@ -367,6 +367,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 
 	fns := []flow.TaskFn{
 		r.ensureServiceAccount,
+		r.ensureSigningSecrets,
 		func(ctx context.Context) error {
 			return r.ensureConfigMap(ctx, configMap)
 		},
@@ -1098,6 +1099,10 @@ func (r *resourceManager) ensureServiceAccount(ctx context.Context) error {
 		return nil
 	})
 	return err
+}
+
+func (r *resourceManager) ensureSigningSecrets(ctx context.Context) error {
+	return managedresources.EnsureSigningKeys(ctx, r.client)
 }
 
 func (r *resourceManager) emptyServiceAccount() *corev1.ServiceAccount {

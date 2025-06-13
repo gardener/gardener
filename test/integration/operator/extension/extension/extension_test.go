@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -41,6 +42,35 @@ var _ = Describe("Extension controller tests", func() {
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&managedresources.IntervalWait, 100*time.Millisecond))
 		DeferCleanup(test.WithVar(&extensioncontroller.RequeueGardenResourceNotReady, 100*time.Millisecond))
+
+		gardenNs := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: managedresources.SignatureSecretNamespace,
+			},
+		}
+		Expect(testClient.Create(ctx, gardenNs)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, gardenNs))).To(Succeed())
+		})
+
+		Expect(managedresources.EnsureSigningKeys(ctx, testClient)).To(Succeed())
+		DeferCleanup(func() {
+			publicSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedresources.SignatureVerificationSecretName,
+					Namespace: managedresources.SignatureSecretNamespace,
+				},
+			}
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, publicSecret))).To(Succeed())
+
+			privateSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedresources.SignatureSigningSecretName,
+					Namespace: managedresources.SignatureSecretNamespace,
+				},
+			}
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, privateSecret))).To(Succeed())
+		})
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{

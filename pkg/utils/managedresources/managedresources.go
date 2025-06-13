@@ -7,9 +7,18 @@ package managedresources
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha512"
+	"crypto/x509"
+	"encoding/hex"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -47,6 +56,18 @@ const (
 	LabelValueGardener = "gardener"
 	// LabelValueOperator is a value for an origin label on a managed resource with the value 'gardener-operator'.
 	LabelValueOperator = "gardener-operator"
+	// SignatureSecretNamespace is the namespace in which the signing secret is located.
+	SignatureSecretNamespace = v1beta1constants.GardenNamespace
+	// SignatureVerificationSecretName is the name of the secret containing the public key used for verifying managed resource secret signatures.
+	SignatureVerificationSecretName = "gardener-resource-manager-signature-verify"
+	// SignatureSigningSecretName is the name of the secret containing the private key used for signing managed resources secrets.
+	SignatureSigningSecretName = "gardener-resource-manager-signature-sign"
+	// SignaturePublicSecretKey is the key for the public key in the secret used for verifying managed resource secret signatures.
+	SignaturePublicSecretKey = "public-key.pem"
+	// SignaturePrivateSecretKey is the key for the private key in the secret used for signing managed resource secrets.
+	SignaturePrivateSecretKey = "private-key.pem"
+	// SignatureAnnotationKey is the key for the annotation on the secret containing the signature of managed resource secrets.
+	SignatureAnnotationKey = "gardener.cloud/managed-resource-signature"
 )
 
 // New initiates a new ManagedResource object which can be reconciled.
@@ -149,9 +170,18 @@ func Update(
 	forceOverwriteAnnotations *bool,
 ) error {
 	var (
+		signature, err     = SignSecret(ctx, client, data)
 		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
 		managedResource    = New(client, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName).CreateIfNotExists(false)
 	)
+
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
 
 	return deployManagedResource(ctx, secret, managedResource)
 }
@@ -159,7 +189,7 @@ func Update(
 // Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
 func Create(
 	ctx context.Context,
-	client client.Client,
+	c client.Client,
 	namespace, name string,
 	labels map[string]string,
 	secretNameWithPrefix bool,
@@ -170,30 +200,56 @@ func Create(
 	forceOverwriteAnnotations *bool,
 ) error {
 	var (
-		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
-		managedResource    = New(client, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName)
+		signature, err     = SignSecret(ctx, c, data)
+		secretName, secret = NewSecret(c, namespace, name, data, secretNameWithPrefix)
+		managedResource    = New(c, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName)
 	)
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
+
+	// we should fetch the signing secret here and calculate the signature before deploying the managed resources
 
 	return deployManagedResource(ctx, secret, managedResource)
 }
 
 // CreateForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
-func CreateForSeed(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
+func CreateForSeed(ctx context.Context, c client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
 	var (
-		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForSeed(client, namespace, name, keepObjects).WithSecretRef(secretName)
+		signature, err     = SignSecret(ctx, c, data)
+		secretName, secret = NewSecret(c, namespace, name, data, true)
+		managedResource    = NewForSeed(c, namespace, name, keepObjects).WithSecretRef(secretName)
 	)
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
 
 	return deployManagedResource(ctx, secret, managedResource)
 }
 
 // CreateForSeedWithLabels deploys a ManagedResource CR for the seed's gardener-resource-manager and allows providing
 // additional labels.
-func CreateForSeedWithLabels(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
+func CreateForSeedWithLabels(ctx context.Context, c client.Client, namespace, name string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
 	var (
-		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForSeed(client, namespace, name, keepObjects).WithSecretRef(secretName).WithLabels(labels)
+		signature, err     = SignSecret(ctx, c, data)
+		secretName, secret = NewSecret(c, namespace, name, data, true)
+		managedResource    = NewForSeed(c, namespace, name, keepObjects).WithSecretRef(secretName).WithLabels(labels)
 	)
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
 
 	return deployManagedResource(ctx, secret, managedResource)
 }
@@ -202,11 +258,19 @@ func CreateForSeedWithLabels(ctx context.Context, client client.Client, namespac
 // The origin is used to identify the creator of the managed resource. Gardener acts on resources
 // with "origin=gardener" label. External callers (extension controllers or other components)
 // of this function should provide their own unique origin value.
-func CreateForShoot(ctx context.Context, client client.Client, namespace, name, origin string, keepObjects bool, data map[string][]byte) error {
+func CreateForShoot(ctx context.Context, c client.Client, namespace, name, origin string, keepObjects bool, data map[string][]byte) error {
 	var (
-		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForShoot(client, namespace, name, origin, keepObjects).WithSecretRef(secretName)
+		signature, err     = SignSecret(ctx, c, data)
+		secretName, secret = NewSecret(c, namespace, name, data, true)
+		managedResource    = NewForShoot(c, namespace, name, origin, keepObjects).WithSecretRef(secretName)
 	)
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
 
 	return deployManagedResource(ctx, secret, managedResource)
 }
@@ -215,13 +279,219 @@ func CreateForShoot(ctx context.Context, client client.Client, namespace, name, 
 // to identify the creator of the managed resource. Gardener acts on resources with "origin=gardener" label. External
 // callers (extension controllers or other components) of this function should provide their own unique origin value.
 // This function allows providing additional labels.
-func CreateForShootWithLabels(ctx context.Context, client client.Client, namespace, name, origin string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
+func CreateForShootWithLabels(ctx context.Context, c client.Client, namespace, name, origin string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
 	var (
-		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForShoot(client, namespace, name, origin, keepObjects).WithSecretRef(secretName).WithLabels(labels)
+		signature, err     = SignSecret(ctx, c, data)
+		secretName, secret = NewSecret(c, namespace, name, data, true)
+		managedResource    = NewForShoot(c, namespace, name, origin, keepObjects).WithSecretRef(secretName).WithLabels(labels)
 	)
+	if err != nil {
+		return err
+	}
+
+	secret.WithAnnotations(map[string]string{
+		SignatureAnnotationKey: signature,
+	})
 
 	return deployManagedResource(ctx, secret, managedResource)
+}
+
+func EnsureSigningKeys(ctx context.Context, c client.Client) error {
+	var (
+		privateErr    error
+		privateSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      SignatureSigningSecretName,
+				Namespace: SignatureSecretNamespace,
+			},
+		}
+		publicErr    error
+		publicSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      SignatureVerificationSecretName,
+				Namespace: SignatureSecretNamespace,
+			},
+		}
+	)
+	privateErr = c.Get(ctx, client.ObjectKeyFromObject(privateSecret), privateSecret)
+	publicErr = c.Get(ctx, client.ObjectKeyFromObject(publicSecret), publicSecret)
+
+	if privateErr == nil && publicErr == nil {
+		return nil
+	}
+
+	if apierrors.IsNotFound(privateErr) != apierrors.IsNotFound(publicErr) {
+		return fmt.Errorf("one of the signing secrets is missing, was one manipulated? %w", errors.Join(privateErr, publicErr))
+	}
+
+	if !apierrors.IsNotFound(privateErr) || !apierrors.IsNotFound(publicErr) {
+		return errors.Join(privateErr, publicErr)
+	}
+
+	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		return fmt.Errorf("could not generate private key: %w", err)
+	}
+
+	privatePEM, err := encodePrivateKeyToPEM(privateKey)
+	if err != nil {
+		return fmt.Errorf("could not encode private key to PEM: %w", err)
+	}
+	privateSecret.Data = map[string][]byte{
+		SignaturePrivateSecretKey: privatePEM,
+	}
+
+	publicPEM, err := encodePublicKeyToPEM(&privateKey.PublicKey)
+	if err != nil {
+		return fmt.Errorf("could not encode public key to PEM: %w", err)
+	}
+	publicSecret.Data = map[string][]byte{
+		SignaturePublicSecretKey: publicPEM,
+	}
+
+	privateErr = c.Create(ctx, privateSecret)
+	publicErr = c.Create(ctx, publicSecret)
+
+	err = errors.Join(privateErr, publicErr)
+	if err != nil {
+		return fmt.Errorf("failed to create matching signing secrets, manual intervention needed: %w", err)
+	}
+
+	return nil
+}
+
+func SignSecret(ctx context.Context, c client.Client, data map[string][]byte) (string, error) {
+	privateSecret := &corev1.Secret{}
+	err := c.Get(ctx, client.ObjectKey{
+		Name:      SignatureSigningSecretName,
+		Namespace: SignatureSecretNamespace,
+	}, privateSecret)
+	if err != nil {
+		return "", err
+	}
+
+	rawPEM, ok := privateSecret.Data[SignaturePrivateSecretKey]
+	if !ok {
+		return "", fmt.Errorf("could not find %q key in secret %q", SignaturePrivateSecretKey, client.ObjectKeyFromObject(privateSecret).String())
+	}
+	privateKey, err := decodePrivateKeyFromPEM(rawPEM)
+	if err != nil {
+		return "", err
+	}
+
+	rawSignature, err := ecdsa.SignASN1(rand.Reader, privateKey, calculateHash(data))
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(rawSignature), nil
+}
+
+func VerifySecretSignature(ctx context.Context, c client.Client, secret *corev1.Secret) error {
+	if secret.Annotations == nil {
+		return fmt.Errorf("missing %q annotation in secret %q", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String())
+	}
+
+	signature, ok := secret.Annotations[SignatureAnnotationKey]
+	if !ok {
+		return fmt.Errorf("missing %q annotation in secret %q", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String())
+	}
+	rawSignature, err := hex.DecodeString(signature)
+	if err != nil {
+		return fmt.Errorf("invalid %q annotation in secret %q: %w", SignatureAnnotationKey, client.ObjectKeyFromObject(secret).String(), err)
+	}
+
+	publicSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      SignatureVerificationSecretName,
+			Namespace: SignatureSecretNamespace,
+		},
+	}
+	err = c.Get(ctx, client.ObjectKeyFromObject(publicSecret), publicSecret)
+	if err != nil {
+		return err
+	}
+
+	rawPEM, ok := publicSecret.Data[SignaturePublicSecretKey]
+	if !ok {
+		return fmt.Errorf("could not find %q key in secret %q", SignaturePublicSecretKey, client.ObjectKeyFromObject(publicSecret).String())
+	}
+	publicKey, err := decodePublicKeyFromPEM(rawPEM)
+	if err != nil {
+		return err
+	}
+
+	ok = ecdsa.VerifyASN1(publicKey, calculateHash(secret.Data), rawSignature)
+	if !ok {
+		return fmt.Errorf("signature verification failed for secret %q", client.ObjectKeyFromObject(secret).String())
+	}
+
+	return nil
+}
+
+func calculateHash(data map[string][]byte) []byte {
+	hash := sha512.New()
+
+	secretKeys := make([]string, 0, len(data))
+	for secretKey := range data {
+		secretKeys = append(secretKeys, secretKey)
+	}
+	slices.Sort(secretKeys)
+
+	for _, secretKey := range secretKeys {
+		hash.Write([]byte(secretKey))
+		hash.Write(data[secretKey])
+	}
+
+	return hash.Sum(nil)
+}
+
+func encodePrivateKeyToPEM(key *ecdsa.PrivateKey) ([]byte, error) {
+	der, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return nil, err
+	}
+	block := &pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: der,
+	}
+	return pem.EncodeToMemory(block), nil
+}
+
+func encodePublicKeyToPEM(pub *ecdsa.PublicKey) ([]byte, error) {
+	der, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		return nil, err
+	}
+	block := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: der,
+	}
+	return pem.EncodeToMemory(block), nil
+}
+
+func decodePrivateKeyFromPEM(pemBytes []byte) (*ecdsa.PrivateKey, error) {
+	block, _ := pem.Decode(pemBytes)
+	if block == nil || block.Type != "EC PRIVATE KEY" {
+		return nil, fmt.Errorf("failed to decode PEM block containing private key")
+	}
+	return x509.ParseECPrivateKey(block.Bytes)
+}
+
+func decodePublicKeyFromPEM(pemBytes []byte) (*ecdsa.PublicKey, error) {
+	block, _ := pem.Decode(pemBytes)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, fmt.Errorf("failed to decode PEM block containing public key")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	ecdsaPub, ok := pub.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("not ECDSA public key")
+	}
+	return ecdsaPub, nil
 }
 
 func deployManagedResource(ctx context.Context, secret *builder.Secret, managedResource *builder.ManagedResource) error {
