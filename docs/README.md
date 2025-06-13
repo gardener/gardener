@@ -51,6 +51,7 @@
 * [Workerless `Shoot`s](usage/shoot/shoot_workerless.md)
 * [Shoot Workers Settings](usage/shoot/shoot_workers_settings.md)
 * [Access Restrictions](usage/shoot/access_restrictions.md)
+* [Workload Identity](usage/shoot/shoot-workload-identity.md)
 
 ### Shoot Operations
 
@@ -60,6 +61,7 @@
 * [Shoot Kubernetes and Operating System Versioning](usage/shoot-operations/shoot_versions.md)
 * [Supported Kubernetes versions](usage/shoot-operations/supported_k8s_versions.md)
 * [Controlling the Kubernetes versions for specific worker pools](usage/shoot-operations/worker_pool_k8s_versions.md)
+* [Migration from SecretBinding to CredentialsBinding](usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md)
 
 ### High Availability
 
