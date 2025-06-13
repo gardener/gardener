@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -108,6 +109,26 @@ func (r *Reconciler) conditionThresholdsToProgressingMapping() map[gardencorev1b
 }
 
 func (r *Reconciler) performGarbageCollection(ctx context.Context, log logr.Logger) error {
+	// TODO(shafeeqes): Remove this in gardener v1.125
+	{
+		if err := kubernetesutils.DeleteObjects(ctx, r.SeedClient,
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-controller-seed-leader",
+					Namespace: v1beta1constants.GardenNamespace,
+				},
+			},
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-controller-seed-leader-nginx-gardener",
+					Namespace: v1beta1constants.GardenNamespace,
+				},
+			},
+		); err != nil {
+			return fmt.Errorf("failed deleting ingress controller resource lock configmaps: %w", err)
+		}
+	}
+
 	podList := &corev1.PodList{}
 	if err := r.SeedClient.List(ctx, podList); err != nil {
 		return fmt.Errorf("failed listing pods: %w", err)

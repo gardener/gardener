@@ -62,6 +62,26 @@ func (g *GarbageCollection) performGarbageCollectionShoot(ctx context.Context, s
 		return fmt.Errorf("failed deleting orphaned node lease objects: %w", err)
 	}
 
+	// TODO (shafeeqes): Remove this in gardener v1.150
+	{
+		if err := kubernetesutils.DeleteObjects(ctx, shootClient,
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-controller-leader",
+					Namespace: metav1.NamespaceSystem,
+				},
+			},
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-controller-leader-nginx",
+					Namespace: metav1.NamespaceSystem,
+				},
+			},
+		); err != nil {
+			return fmt.Errorf("failed deleting addons-nginx-ingress-controller resource lock configMaps: %w", err)
+		}
+	}
+
 	namespace := metav1.NamespaceSystem
 	if g.shoot.GetInfo().DeletionTimestamp != nil {
 		namespace = metav1.NamespaceAll
