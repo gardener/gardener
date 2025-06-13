@@ -74,6 +74,8 @@ type Interface interface {
 	SetServiceNetworkCIDRs([]net.IPNet)
 	// SetPodNetworkCIDRs sets the pod CIDRs of the shoot network.
 	SetPodNetworkCIDRs([]net.IPNet)
+	// SetSeedPodNetwork sets the pod network of the seed.
+	SetSeedPodNetwork(string)
 	// SetServerCertificateConfig sets the ServerCertificateConfig field in the Values of the deployer.
 	SetServerCertificateConfig(ServerCertificateConfig)
 	// SetServiceAccountConfig sets the ServiceAccount field in the Values of the deployer.
@@ -185,12 +187,16 @@ type Images struct {
 	KubeAPIServer string
 	// VPNClient is the container image for the vpn-seed-client.
 	VPNClient string
+	// EnvoyProxy is the image name of the envoy-proxy.
+	EnvoyProxy string
 }
 
 // VPNConfig contains information for configuring the VPN settings for the kube-apiserver.
 type VPNConfig struct {
 	// Enabled states whether VPN is enabled.
 	Enabled bool
+	// SeedPodNetwork is the CIDR of the seed pod network.
+	SeedPodNetwork string
 	// PodNetworkCIDRs are the CIDRs of the pod network.
 	PodNetworkCIDRs []net.IPNet
 	// NodeNetworkCIDRs are the CIDRs of the node network.
@@ -292,6 +298,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapAuthenticationConfig          = k.emptyConfigMap(configMapAuthenticationConfigNamePrefix)
 		configMapAuthorizationConfig           = k.emptyConfigMap(configMapAuthorizationConfigNamePrefix)
 		configMapEgressSelector                = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
+		configMapEnvoyConfig                   = k.emptyConfigMap(configMapEnvoyConfigPrefix)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -323,6 +330,11 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	secretServiceAccountKey, err := k.reconcileSecretServiceAccountKey(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretHTTPProxyClient, err := k.reconcileSecretHTTPProxyClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -405,6 +417,9 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		if err := k.reconcileRoleBindingHAVPN(ctx, serviceAccount); err != nil {
 			return err
 		}
+		if err := k.reconcileConfigMapEnvoyConfig(ctx, configMapEnvoyConfig); err != nil {
+			return err
+		}
 	} else {
 		if err := kubernetesutils.DeleteObjects(ctx, k.client.Client(),
 			k.emptyServiceAccount(),
@@ -425,6 +440,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapAdmissionConfigs,
 		secretAdmissionKubeconfigs,
 		configMapEgressSelector,
+		configMapEnvoyConfig,
 		secretETCDEncryptionConfiguration,
 		secretOIDCCABundle,
 		secretServiceAccountKey,
@@ -432,6 +448,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretServer,
 		secretKubeletClient,
 		secretKubeAggregator,
+		secretHTTPProxyClient,
 		secretHTTPProxy,
 		secretHAVPNSeedClient,
 		secretHAVPNClientSeedTLSAuth,
@@ -602,6 +619,10 @@ func (k *kubeAPIServer) SetNodeNetworkCIDRs(nodes []net.IPNet) {
 
 func (k *kubeAPIServer) SetPodNetworkCIDRs(pods []net.IPNet) {
 	k.values.VPN.PodNetworkCIDRs = pods
+}
+
+func (k *kubeAPIServer) SetSeedPodNetwork(pods string) {
+	k.values.VPN.SeedPodNetwork = pods
 }
 
 func (k *kubeAPIServer) SetServiceNetworkCIDRs(services []net.IPNet) {
