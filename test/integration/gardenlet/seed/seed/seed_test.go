@@ -34,6 +34,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
+	extensionscrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
@@ -166,6 +167,10 @@ var _ = Describe("Seed controller tests", func() {
 			Identity:        identity,
 			GardenNamespace: testNamespace.Name,
 		}).AddToManager(mgr, mgr)).To(Succeed())
+
+		// The test deletes namespaces, so we need to finalize them as envtest doesn't run the namespace
+		// controller.
+		Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
 		By("Start manager")
 		mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -606,12 +611,12 @@ var _ = Describe("Seed controller tests", func() {
 						return test.ObjectNames(crdList)
 					}).WithTimeout(kubernetesutils.WaitTimeout).Should(ContainElements(crdsOnlyForSeedClusters))
 
-					By("Verify that VPA was created for gardenlet")
-					Eventually(func() error {
-						return testClient.Get(ctx, client.ObjectKey{Name: "gardenlet-vpa", Namespace: testNamespace.Name}, &vpaautoscalingv1.VerticalPodAutoscaler{})
-					}).WithTimeout(kubernetesutils.WaitTimeout).Should(Succeed())
-
 					if !seedIsGarden {
+						By("Verify that VPA was created for gardenlet")
+						Eventually(func() error {
+							return testClient.Get(ctx, client.ObjectKey{Name: "gardenlet-vpa", Namespace: testNamespace.Name}, &vpaautoscalingv1.VerticalPodAutoscaler{})
+						}).WithTimeout(kubernetesutils.WaitTimeout).Should(Succeed())
+
 						By("Verify that the CRDs shared with the garden cluster have been deployed")
 						Eventually(func(g Gomega) []string {
 							crdList := &apiextensionsv1.CustomResourceDefinitionList{}
@@ -637,7 +642,7 @@ var _ = Describe("Seed controller tests", func() {
 							crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 							g.Expect(testClient.List(ctx, crdList)).To(Succeed())
 							return test.ObjectNames(crdList)
-						}).Should(NotContainAny(crdsSharedWithGardenCluster...))
+						}).ShouldNot(ContainAnyOf(crdsSharedWithGardenCluster...))
 
 						// Usually, the gardener-operator deploys and manages the following resources.
 						// However, it is not really running, so we have to fake its behaviour here.
@@ -658,6 +663,9 @@ var _ = Describe("Seed controller tests", func() {
 						Expect(err).NotTo(HaveOccurred())
 						persesCRD, err := persesoperator.NewCRDs(testClient, applier)
 						Expect(err).NotTo(HaveOccurred())
+						// General CRDs are not deployed when seedIsGarden is true, as they are managed by the gardener-operator.
+						extensionCRD, err := extensionscrds.NewCRD(testClient, applier, true, false)
+						Expect(err).NotTo(HaveOccurred())
 
 						Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 						Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
@@ -666,6 +674,7 @@ var _ = Describe("Seed controller tests", func() {
 						Expect(fluentCRD.Deploy(ctx)).To(Succeed())
 						Expect(prometheusCRD.Deploy(ctx)).To(Succeed())
 						Expect(persesCRD.Deploy(ctx)).To(Succeed())
+						Expect(extensionCRD.Deploy(ctx)).To(Succeed())
 
 						DeferCleanup(func() {
 							Expect(applier.DeleteManifest(ctx, managedResourceCRDReader)).To(Succeed())
@@ -678,7 +687,14 @@ var _ = Describe("Seed controller tests", func() {
 							Expect(fluentCRD.Destroy(ctx)).To(Succeed())
 							Expect(prometheusCRD.Destroy(ctx)).To(Succeed())
 							Expect(persesCRD.Destroy(ctx)).To(Succeed())
+							Expect(extensionCRD.Destroy(ctx)).To(Succeed())
 						})
+						// We need to check it after the CRDs are deployed.
+						// We cannot check it in the general case beforehand, as the VPA CRDs are needed.
+						By("Verify that VPA was created for gardenlet")
+						Eventually(func() error {
+							return testClient.Get(ctx, client.ObjectKey{Name: "gardenlet-vpa", Namespace: testNamespace.Name}, &vpaautoscalingv1.VerticalPodAutoscaler{})
+						}).WithTimeout(kubernetesutils.WaitTimeout).Should(Succeed())
 					}
 
 					By("Verify that the seed system components have been deployed")
@@ -771,11 +787,13 @@ var _ = Describe("Seed controller tests", func() {
 						}).Should(BeEmpty())
 					} else {
 						By("Verify that gardener-resource-manager has been deleted")
-						// This step might take longer because it has to wait for some CRDs to be deleted.
+						// This step might take longer because it has to wait for CRDs to be deleted.
+						// It can happen that the storage layer needs to recover, as some CRDs might end up in a stuck terminating state,
+						// with error: "InstanceDeletionFailed could not list instances: storage is (re)initializing}"
 						Eventually(func() error {
 							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-						}).WithTimeout(25 * time.Second).Should(BeNotFoundError())
+						}).WithTimeout(4 * time.Minute).Should(BeNotFoundError())
 
 						// We should wait for the CRD to be deleted since it is a cluster-scoped resource so that we do not interfere
 						// with other test cases.
