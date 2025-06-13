@@ -38,6 +38,11 @@ images:
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/node-agent
     resourceId:
       name: node-agent
+  - name: gardenadm
+    sourceRepository: github.com/gardener/gardener
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenadm
+    resourceId:
+      name: gardenadm
   - name: gardener-discovery-server
     sourceRepository: github.com/gardener/gardener-discovery-server
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-discovery-server

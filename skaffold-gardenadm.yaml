@@ -339,6 +339,10 @@ build:
               - -ec
               - |
                 echo "$SKAFFOLD_IMAGE" > example/gardenadm-local/.skaffold-image
+          - command:
+              - bash
+              - hack/generate-gardenadm-imagevector-overwrite.sh
+              - gardenadm
     - image: local-skaffold/gardener-node-agent
       ko:
         dependencies:
