@@ -38,19 +38,6 @@ func generateClusterInputs() []*fluentbitv1alpha2.ClusterInput {
 				},
 			},
 		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   journaldServiceName + "-monitor",
-				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
-			},
-			Spec: fluentbitv1alpha2.InputSpec{
-				Systemd: &fluentbitv1alpha2input.Systemd{
-					Tag:           "journald.containerd-monitor",
-					ReadFromTail:  "on",
-					SystemdFilter: []string{"_SYSTEMD_UNIT=containerd-monitor.service"},
-				},
-			},
-		},
 	}
 }
 
@@ -67,22 +54,6 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 					{
 						RecordModifier: &fluentbitv1alpha2filter.RecordModifier{
 							Records: []string{"hostname ${NODE_NAME}", "unit containerd"},
-						},
-					},
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   journaldServiceName + "-monitor",
-				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
-			},
-			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: "journald.containerd-monitor",
-				FilterItems: []fluentbitv1alpha2.FilterItem{
-					{
-						RecordModifier: &fluentbitv1alpha2filter.RecordModifier{
-							Records: []string{"hostname ${NODE_NAME}", "unit containerd-monitor"},
 						},
 					},
 				},

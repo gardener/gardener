@@ -12,7 +12,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("Component", func() {
@@ -31,22 +30,6 @@ var _ = Describe("Component", func() {
 			containerdUnit := extensionsv1alpha1.Unit{
 				Name:      "containerd.service",
 				FilePaths: []string{"/var/lib/ca-certificates-local/ROOTcerts.crt"},
-			}
-
-			monitorUnit := extensionsv1alpha1.Unit{
-				Name:    "containerd-monitor.service",
-				Command: ptr.To(extensionsv1alpha1.CommandStart),
-				Enable:  ptr.To(true),
-				Content: ptr.To(`[Unit]
-Description=Containerd-monitor daemon
-After=containerd.service
-[Install]
-WantedBy=multi-user.target
-[Service]
-Restart=always
-EnvironmentFile=/etc/environment
-ExecStart=/opt/bin/health-monitor-containerd`),
-				FilePaths: []string{"/opt/bin/health-monitor-containerd"},
 			}
 
 			logrotateUnit := extensionsv1alpha1.Unit{
@@ -75,17 +58,6 @@ Persistent=true
 WantedBy=multi-user.target`),
 			}
 
-			monitorFile := extensionsv1alpha1.File{
-				Path:        "/opt/bin/health-monitor-containerd",
-				Permissions: ptr.To[uint32](0755),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64([]byte(healthMonitorScript)),
-					},
-				},
-			}
-
 			logrotateConfigFile := extensionsv1alpha1.File{
 				Path:        "/etc/systemd/containerd.conf",
 				Permissions: ptr.To[uint32](0644),
@@ -96,51 +68,13 @@ WantedBy=multi-user.target`),
 				},
 			}
 
-			Expect(units).To(ConsistOf(containerdUnit, monitorUnit, logrotateUnit, logrotateTimerUnit))
-			Expect(files).To(ConsistOf(monitorFile, logrotateConfigFile))
+			Expect(units).To(ConsistOf(containerdUnit, logrotateUnit, logrotateTimerUnit))
+			Expect(files).To(ConsistOf(logrotateConfigFile))
 		})
 	})
 })
 
-const (
-	healthMonitorScript = `#!/bin/bash
-set -o nounset
-set -o pipefail
-
-function containerd_monitoring {
-  echo "containerd monitor has started !"
-  while [ 1 ]; do
-    start_timestamp=$(date +%s)
-    until ctr c list > /dev/null; do
-      CONTAINERD_PID=$(systemctl show --property MainPID containerd --value)
-
-      if [ $CONTAINERD_PID -eq 0 ]; then
-          echo "Connection to containerd socket failed (process not started), retrying in $SLEEP_SECONDS seconds..."
-          break
-      fi
-
-      now=$(date +%s)
-      time_elapsed="$(($now-$start_timestamp))"
-
-      if [ $time_elapsed -gt 60 ]; then
-        echo "containerd daemon unreachable for more than 60s. Sending SIGTERM to PID $CONTAINERD_PID"
-        kill -n 15 $CONTAINERD_PID
-        sleep 20
-        break 2
-      fi
-      echo "Connection to containerd socket failed, retrying in $SLEEP_SECONDS seconds..."
-      sleep $SLEEP_SECONDS
-    done
-    sleep $SLEEP_SECONDS
-  done
-}
-
-SLEEP_SECONDS=10
-echo "Start health monitoring for containerd"
-containerd_monitoring
-`
-
-	logRotateData = `/var/log/pods/*/*/*.log {
+const logRotateData = `/var/log/pods/*/*/*.log {
     rotate 14
     copytruncate
     missingok
@@ -152,4 +86,3 @@ containerd_monitoring
     create 0644 root root
 }
 `
-)

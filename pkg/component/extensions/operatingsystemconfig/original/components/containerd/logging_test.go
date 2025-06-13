@@ -36,19 +36,6 @@ var _ = Describe("Logging", func() {
 							},
 						},
 					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   "journald-containerd-monitor",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
-						},
-						Spec: fluentbitv1alpha2.InputSpec{
-							Systemd: &fluentbitv1alpha2input.Systemd{
-								Tag:           "journald.containerd-monitor",
-								ReadFromTail:  "on",
-								SystemdFilter: []string{"_SYSTEMD_UNIT=containerd-monitor.service"},
-							},
-						},
-					},
 				}))
 
 			Expect(loggingConfig.Filters).To(Equal(
@@ -64,22 +51,6 @@ var _ = Describe("Logging", func() {
 								{
 									RecordModifier: &fluentbitv1alpha2filter.RecordModifier{
 										Records: []string{"hostname ${NODE_NAME}", "unit containerd"},
-									},
-								},
-							},
-						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   "journald-containerd-monitor",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
-						},
-						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "journald.containerd-monitor",
-							FilterItems: []fluentbitv1alpha2.FilterItem{
-								{
-									RecordModifier: &fluentbitv1alpha2filter.RecordModifier{
-										Records: []string{"hostname ${NODE_NAME}", "unit containerd-monitor"},
 									},
 								},
 							},

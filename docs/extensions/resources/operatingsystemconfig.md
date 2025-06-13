@@ -23,7 +23,7 @@ The reasons for that will become evident later.
 ## What does the user-data bootstrapping the machines contain?
 
 Gardener installs a few components onto every worker machine in order to allow it to join the shoot cluster.
-There is the `kubelet` process, some scripts for continuously checking the health of `kubelet` and `containerd`, but also configuration for log rotation, CA certificates, etc.
+There is the `kubelet` process and also configuration for log rotation, CA certificates, etc.
 You can find the complete configuration [at the components folder](../../../pkg/component/extensions/operatingsystemconfig/original/components). We are calling this the "original" user-data.
 
 ## How does Gardener bootstrap the machines?
@@ -70,19 +70,6 @@ spec:
       content: |
         [Service]
         Environment="SOME_OPTS=--foo=bar"
-  - name: containerd-monitor.service
-    command: start
-    enable: true
-    content: |
-      [Unit]
-      Description=Containerd-monitor daemon
-      After=kubelet.service
-      [Install]
-      WantedBy=multi-user.target
-      [Service]
-      Restart=always
-      EnvironmentFile=/etc/environment
-      ExecStart=/opt/bin/health-monitor containerd
   files:
   - path: /var/lib/kubelet/ca.crt
     permissions: 0644
@@ -230,8 +217,6 @@ status:
     state: Succeeded
     type: Reconcile
   observedGeneration: 5
-  units:
-  - docker-monitor.service
 ```
 
 Once the `.status` indicates that the extension controller finished reconciling Gardener will continue with the next step of the shoot reconciliation flow.
