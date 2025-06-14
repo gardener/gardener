@@ -14,6 +14,9 @@ gardener:
     istio:
       listenAddresses:
       - 172.18.255.1
+    bastion:
+      listenAddresses:
+      - 172.18.255.24
   repositoryRoot: "."
   garden:
     deployed: false

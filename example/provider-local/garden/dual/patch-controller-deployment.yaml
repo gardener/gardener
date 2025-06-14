@@ -10,6 +10,7 @@ helm:
         zone0IP: "::10"
         zone1IP: "::11"
         zone2IP: "::12"
+        bastionIP: "::24"
     coredns:
       ipFamilies:
         - IPv6

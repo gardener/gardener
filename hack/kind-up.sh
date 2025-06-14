@@ -294,6 +294,14 @@ if [[ "$MULTI_ZONAL" == "true" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::10 ::11 ::12)
   fi
 fi
+
+if [[ "$CLUSTER_NAME" != "*local2*" ]] ; then
+  LOOPBACK_IP_ADDRESSES+=(172.18.255.24)
+  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+    LOOPBACK_IP_ADDRESSES+=(::24)
+  fi
+fi
+
 if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]]; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.3)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then

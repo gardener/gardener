@@ -3,6 +3,9 @@ gardener:
     istio:
       listenAddresses:
       - ::1
+    bastion:
+      listenAddresses:
+      - ::24
 
 networking:
   ipFamily: ipv6

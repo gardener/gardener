@@ -4,6 +4,10 @@ gardener:
       listenAddresses:
       - "::1"
       - "172.18.255.1"
+    bastion:
+      listenAddresses:
+      - "::24"
+      - "172.18.255.24"
 
 networking:
   ipFamily: dual
