@@ -107,6 +107,12 @@ This controller leverages the standard [generic `Worker` actuator](../../extensi
 
 Additionally, it generates the [`MachineClass`es](https://github.com/gardener/machine-controller-manager-provider-local/blob/master/kubernetes/machine-class.yaml) and the `MachineDeployment`s based on the specification of the `Worker` resources.
 
+#### `Bastion`
+
+This controller implements the `Bastion.extensions.gardener.cloud` resource by deploying a pod with the local machine image along with a `LoadBalancer` service.
+
+Note that this controller does not respect the `Bastion.spec.ingress` configuration as there is no way to perform client IP restrictions in the local setup.
+
 #### `Ingress`
 
 The gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
