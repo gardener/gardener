@@ -18,6 +18,8 @@ vpa:
     updateMode: "Auto"
 
 controllers:
+  bastion:
+    concurrentSyncs: 5
   controlplane:
     concurrentSyncs: 5
   dnsrecord:
