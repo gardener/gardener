@@ -5,6 +5,7 @@
 package app
 
 import (
+	extensionsbastioncontroller "github.com/gardener/gardener/extensions/pkg/controller/bastion"
 	extensionscmdcontroller "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	extensionscontrolplanecontroller "github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	extensionsdnsrecordcontroller "github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
@@ -18,6 +19,7 @@ import (
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/provider-local/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/provider-local/controller/backupentry"
+	bastioncontroller "github.com/gardener/gardener/pkg/provider-local/controller/bastion"
 	controlplanecontroller "github.com/gardener/gardener/pkg/provider-local/controller/controlplane"
 	dnsrecordcontroller "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
 	localextensionseedcontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/seed"
@@ -45,6 +47,7 @@ func ControllerSwitchOptions() *extensionscmdcontroller.SwitchOptions {
 	return extensionscmdcontroller.NewSwitchOptions(
 		extensionscmdcontroller.Switch(backupbucketcontroller.ControllerName, backupbucketcontroller.AddToManager),
 		extensionscmdcontroller.Switch(backupentrycontroller.ControllerName, backupentrycontroller.AddToManager),
+		extensionscmdcontroller.Switch(extensionsbastioncontroller.ControllerName, bastioncontroller.AddToManager),
 		extensionscmdcontroller.Switch(extensionscontrolplanecontroller.ControllerName, controlplanecontroller.AddToManager),
 		extensionscmdcontroller.Switch(extensionsdnsrecordcontroller.ControllerName, dnsrecordcontroller.AddToManager),
 		extensionscmdcontroller.Switch(extensionsinfrastructurecontroller.ControllerName, infrastructurecontroller.AddToManager),
