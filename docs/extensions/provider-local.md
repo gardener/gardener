@@ -118,9 +118,10 @@ This only happens for shoot namespaces (`gardener.cloud/role=shoot` label) to ma
 
 This controller reconciles `Services` of type `LoadBalancer` in the local `Seed` cluster.
 Since the local Kubernetes clusters used as Seed clusters typically don't support such services, this controller sets the `.status.ingress.loadBalancer.ip[0]` to the IP of the host.
-It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgateway` and `garden/nginx-ingress-controller`) available to the host by setting `spec.ports[].nodePort` to well-known ports that are mapped to `hostPorts` in the kind cluster configuration.
+It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgateway` and `shoot--*--*/bastion-*`) available to the host by setting `spec.ports[].nodePort` to well-known ports that are mapped to `hostPorts` in the kind cluster configuration.
 
 `istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` by this controller.
+The bastion services are exposed on `nodePort` `30022`.
 
 In case the seed has multiple availability zones (`.spec.provider.zones`) and it uses SNI, the different zone-specific `istio-ingressgateway` loadbalancers are exposed via different IP addresses. Per default, IP addresses `172.18.255.10`, `172.18.255.11`, and `172.18.255.12` are used for the zones `0`, `1`, and `2` respectively.
 
