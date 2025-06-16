@@ -59,6 +59,7 @@ import (
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -493,8 +494,14 @@ spec:
 		By("Verify that the custom resource definitions have been created")
 		Eventually(func(g Gomega) []string {
 			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
-			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-			return test.ObjectNames(crdList)
+			crdListReady := &apiextensionsv1.CustomResourceDefinitionList{}
+			g.Expect(mgrClient.List(ctx, crdList)).To(Succeed())
+			for _, crd := range crdList.Items {
+				if crd.Status.Conditions != nil && health.CheckCustomResourceDefinition(&crd) == nil {
+					crdListReady.Items = append(crdListReady.Items, crd)
+				}
+			}
+			return test.ObjectNames(crdListReady)
 		}).WithTimeout(kubernetesutils.WaitTimeout).Should(ContainElements(deployedCRDs))
 
 		// The garden controller waits for the gardener-resource-manager Deployment to be healthy, so let's fake this here.
