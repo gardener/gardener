@@ -88,12 +88,6 @@ func GetAPIServerDomain(domain string) string {
 	return fmt.Sprintf("%s.%s", APIServerFQDNPrefix, domain)
 }
 
-// GetOwnerDomain returns the fully qualified domain name for the owner of the Shoot cluster. The
-// end result is 'owner.<domain>'.
-func GetOwnerDomain(domain string) string {
-	return fmt.Sprintf("%s.%s", OwnerFQDNPrefix, domain)
-}
-
 // GenerateDNSProviderName creates a name for the dns provider out of the passed `secretName` and `providerType`.
 func GenerateDNSProviderName(secretName, providerType string) string {
 	switch {
