@@ -377,6 +377,9 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 						corev1.ResourceMemory: resource.MustParse("200Mi"),
 					},
 				},
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: ptr.To(false),
+				},
 				Env:                    t.envVars,
 				TerminationMessagePath: "/terraform-termination-log",
 			}},
