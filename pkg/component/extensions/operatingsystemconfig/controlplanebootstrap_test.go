@@ -129,39 +129,6 @@ var _ = Describe("controlPlaneBootstrap", func() {
 		})
 	})
 
-	Describe("Stale Resources", func() {
-		var staleOSC *extensionsv1alpha1.OperatingSystemConfig
-
-		BeforeEach(func() {
-			staleOSC = &extensionsv1alpha1.OperatingSystemConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "foo",
-					Namespace:  namespace,
-					Finalizers: []string{"gardener.cloud/finalizer"},
-				},
-			}
-			Expect(c.Create(ctx, staleOSC)).To(Succeed())
-		})
-
-		It("should delete stale OSCs", func() {
-			Expect(deployer.DeleteStaleResources(ctx)).To(Succeed())
-
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(staleOSC), staleOSC)).To(Succeed())
-			Expect(staleOSC.DeletionTimestamp.IsZero()).To(BeFalse())
-		})
-
-		It("should wait for the cleanup", func() {
-			Expect(deployer.DeleteStaleResources(ctx)).To(Succeed())
-			Expect(deployer.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("is still present")))
-
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(staleOSC), staleOSC)).To(Succeed())
-			staleOSC.Finalizers = nil
-			Expect(c.Update(ctx, staleOSC)).To(Succeed())
-
-			Expect(deployer.WaitCleanupStaleResources(ctx)).To(Succeed())
-		})
-	})
-
 	Describe("#WorkerPoolNameToOperatingSystemConfigsMap", func() {
 		var (
 			osc      *extensionsv1alpha1.OperatingSystemConfig

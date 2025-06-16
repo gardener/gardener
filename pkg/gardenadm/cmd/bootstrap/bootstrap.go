@@ -175,16 +175,6 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.Wait,
 			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
 		})
-		deleteStaleOperatingSystemConfigResources = g.Add(flow.Task{
-			Name:         "Delete stale OperatingSystemConfig resources",
-			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.DeleteStaleResources,
-			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until stale OperatingSystemConfig resources are deleted",
-			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanupStaleResources,
-			Dependencies: flow.NewTaskIDs(deleteStaleOperatingSystemConfigResources),
-		})
 
 		deployMachineControllerManager = g.Add(flow.Task{
 			Name:         "Deploying machine-controller-manager",

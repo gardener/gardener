@@ -124,30 +124,6 @@ func (c *controlPlaneBootstrap) Wait(ctx context.Context) error {
 	)
 }
 
-func (c *controlPlaneBootstrap) DeleteStaleResources(ctx context.Context) error {
-	return extensions.DeleteExtensionObjects(
-		ctx,
-		c.client,
-		&extensionsv1alpha1.OperatingSystemConfigList{},
-		c.values.Namespace,
-		func(obj extensionsv1alpha1.Object) bool { return obj.GetName() != c.osc.Name },
-	)
-}
-
-func (c *controlPlaneBootstrap) WaitCleanupStaleResources(ctx context.Context) error {
-	return extensions.WaitUntilExtensionObjectsDeleted(
-		ctx,
-		c.client,
-		c.log,
-		&extensionsv1alpha1.OperatingSystemConfigList{},
-		extensionsv1alpha1.OperatingSystemConfigResource,
-		c.values.Namespace,
-		c.waitInterval,
-		c.waitTimeout,
-		func(obj extensionsv1alpha1.Object) bool { return obj.GetName() != c.osc.Name },
-	)
-}
-
 func (c *controlPlaneBootstrap) WorkerPoolNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs {
 	return map[string]*OperatingSystemConfigs{
 		c.values.Worker.Name: {
