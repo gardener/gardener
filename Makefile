@@ -349,16 +349,23 @@ gardener%dev gardenlet%dev operator-dev operator-seed-dev: export SKAFFOLD_TRIGG
 # Disabling the skaffold cache for debugging ensures that you run artifacts with gcflags required for debugging.
 gardener%debug gardenlet%debug operator-debug: export SKAFFOLD_CACHE_ARTIFACTS = false
 
-gardener-ha-single-zone%: export SKAFFOLD_PROFILE=ha-single-zone
 
-gardener-up gardener-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) run
-gardener-dev gardener-ha-single-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+gardener-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) dev
-gardener-debug gardener-ha-single-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+gardener-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) debug
-gardener-down gardener-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
+
+gardener-ha-single-zone%: export SKAFFOLD_PROFILE=multi-node
+gardener-ha-single-zone-up:
+	$(MAKE) operator-seed-up
+gardener-ha-single-zone-dev:
+	$(MAKE) operator-seed-dev
+gardener-ha-single-zone-down:
+	$(MAKE) operator-seed-down
 
 gardener-extensions-%: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
 
@@ -409,10 +416,10 @@ operator-seed-up: SKAFFOLD_MODE=run
 operator-seed-dev: SKAFFOLD_MODE=dev
 operator-seed-dev: export SKAFFOLD_PROFILE=dev
 operator-seed-up operator-seed-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up
-	$(SKAFFOLD) run -m garden -f=skaffold-operator-garden.yaml
-	$(SKAFFOLD) run -m garden-config -f=skaffold-operator-garden.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
+	$(SKAFFOLD) run -m garden
+	$(SKAFFOLD) run -m garden-config --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
 		--status-check=false --platform="linux/$(SYSTEM_ARCH)" 	# deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
-	$(SKAFFOLD) $(SKAFFOLD_MODE) -m gardenlet -f=skaffold-operator-garden.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
+	$(SKAFFOLD) $(SKAFFOLD_MODE) -m gardenlet --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
 		--cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh) \
 		--status-check=false --platform="linux/$(SYSTEM_ARCH)" 	# deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 	TIMEOUT=900 ./hack/usage/wait-for.sh garden local VirtualGardenAPIServerAvailable RuntimeComponentsHealthy VirtualComponentsHealthy
