@@ -23,14 +23,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/gardener/gardener/imagevector"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -135,7 +132,8 @@ func NewAutonomousBotanist(
 	if !autonomousBotanist.Shoot.RunsControlPlane() {
 		// For `gardenadm bootstrap`, we don't initialize the control plane machines with a "full OSC".
 		// Instead, we provide a small alternative OSC, that only fetches the `gardenadm` binary from the registry.
-		if err := overwriteControlPlaneBootstrapOSC(autonomousBotanist.Botanist); err != nil {
+		autonomousBotanist.Shoot.Components.Extensions.OperatingSystemConfig, err = autonomousBotanist.ControlPlaneBootstrapOperatingSystemConfig()
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -399,34 +397,4 @@ func shootUID(fs afero.Afero) (types.UID, error) {
 	}
 
 	return types.UID(content), nil
-}
-
-// overwriteControlPlaneBootstrapOSC creates the deployer for the OperatingSystemConfig custom resource that is
-// used for bootstrapping control plane nodes in `gardenadm bootstrap` and overwrites it in the botanist.
-func overwriteControlPlaneBootstrapOSC(b *botanistpkg.Botanist) error {
-	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenadm)
-	if err != nil {
-		return fmt.Errorf("failed finding image %q: %w", imagevector.ContainerImageNameGardenadm, err)
-	}
-	image.WithOptionalTag(version.Get().GitVersion)
-
-	worker := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo())
-	if worker == nil {
-		return fmt.Errorf("did not find the control plane worker pool of the shoot")
-	}
-
-	osc := operatingsystemconfig.NewControlPlaneBootstrap(
-		b.Logger,
-		b.SeedClientSet.Client(),
-		&operatingsystemconfig.ControlPlaneBootstrapValues{
-			Namespace:      b.Shoot.ControlPlaneNamespace,
-			Worker:         worker,
-			GardenadmImage: image.String(),
-		},
-		operatingsystemconfig.DefaultInterval,
-		operatingsystemconfig.DefaultSevereThreshold,
-		operatingsystemconfig.DefaultTimeout,
-	)
-	b.Shoot.Components.Extensions.OperatingSystemConfig = osc
-	return nil
 }
