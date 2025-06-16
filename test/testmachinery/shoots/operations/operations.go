@@ -57,8 +57,9 @@ import (
 )
 
 const (
-	hibernationTestTimeout = 1 * time.Hour
-	reconcileTimeout       = 40 * time.Minute
+	hibernationTestTimeout        = 1 * time.Hour
+	hibernationTestCleanupTimeout = 25 * time.Minute
+	reconcileTimeout              = 40 * time.Minute
 )
 
 var _ = ginkgo.Describe("Shoot operation testing", func() {
@@ -97,7 +98,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 			err := f.WakeUpShoot(ctx)
 			framework.ExpectNoError(err)
 		}
-	}, 25*time.Minute))
+	}, hibernationTestCleanupTimeout))
 
 	f.Default().Serial().CIt("should fully maintain and reconcile a shoot cluster", func(ctx context.Context) {
 		ginkgo.By("Maintain shoot")
