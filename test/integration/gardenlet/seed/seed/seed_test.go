@@ -42,7 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/persesoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
-	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/opentelemetryoperator"
+	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
@@ -664,7 +664,7 @@ var _ = Describe("Seed controller tests", func() {
 						Expect(err).NotTo(HaveOccurred())
 						persesCRD, err := persesoperator.NewCRDs(testClient, applier)
 						Expect(err).NotTo(HaveOccurred())
-						openTelemetryCRD, err := opentelemetryoperator.NewCRDs(testClient, applier)
+						openTelemetryCRD, err := oteloperator.NewCRDs(testClient, applier)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())

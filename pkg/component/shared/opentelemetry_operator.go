@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -9,7 +9,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/opentelemetryoperator"
+	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 )
 
 // NewOpenTelemetryOperator instantiates a new `OpenTelemetryOperator` component.
@@ -27,10 +27,10 @@ func NewOpenTelemetryOperator(
 		return nil, err
 	}
 
-	deployer = opentelemetryoperator.NewOpenTelemetryOperator(
+	deployer = oteloperator.NewOpenTelemetryOperator(
 		c,
 		gardenNamespaceName,
-		opentelemetryoperator.Values{
+		oteloperator.Values{
 			Image:             image.String(),
 			PriorityClassName: priorityClassName,
 		},

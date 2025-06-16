@@ -75,7 +75,7 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	longtermprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/longterm"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
-	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/opentelemetryoperator"
+	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
@@ -185,7 +185,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.openTelemetryCRD, err = opentelemetryoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	c.openTelemetryCRD, err = oteloperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
 	if err != nil {
 		return
 	}
