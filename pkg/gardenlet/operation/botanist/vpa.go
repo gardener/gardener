@@ -50,6 +50,7 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 			PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane200,
 			Replicas:          ptr.To(b.Shoot.GetReplicas(1)),
 		}
+		featureGates = map[string]bool{}
 	)
 
 	if vpaConfig := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler; vpaConfig != nil {
@@ -71,6 +72,8 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 		valuesUpdater.EvictionRateLimit = vpaConfig.EvictionRateLimit
 		valuesUpdater.EvictionTolerance = vpaConfig.EvictionTolerance
 		valuesUpdater.Interval = vpaConfig.UpdaterInterval
+
+		featureGates = vpaConfig.FeatureGates
 	}
 
 	return vpa.New(
@@ -85,6 +88,7 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 			AdmissionController:      valuesAdmissionController,
 			Recommender:              valuesRecommender,
 			Updater:                  valuesUpdater,
+			FeatureGates:             featureGates,
 		},
 	), nil
 }
