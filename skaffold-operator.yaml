@@ -1012,6 +1012,8 @@ profiles:
           config.leaderElection.leaderElect: false
           config.server.healthProbes.enable: false
           replicaCount: 1
+  - name: multi-zone
+  - name: multi-node
 ---
 apiVersion: skaffold/v4beta12
 kind: Config

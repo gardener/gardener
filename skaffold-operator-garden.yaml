@@ -2,10 +2,17 @@ apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: garden
-manifests:
-  kustomize:
-    paths:
-      - dev-setup/garden/overlays/multi-zone
+profiles:
+  - name: multi-zone
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/garden/overlays/multi-zone
+  - name: multi-node
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/garden/overlays/multi-node
 deploy:
   kubectl:
     hooks:
@@ -683,19 +690,6 @@ build:
         - name: sha
           gitCommit:
             variant: AbbrevCommitSha
-manifests:
-  kustomize:
-    paths:
-      - dev-setup/gardenlet/overlays/multi-zone
-deploy:
-  kubectl:
-    hooks:
-      after:
-        - host:
-            command:
-              - bash
-              - -ec
-              - KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 profiles:
   - name: dev
     patches:
@@ -708,3 +702,22 @@ profiles:
           dateTime:
             format: "20060102150405"
           name: timestamp
+  - name: multi-zone
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenlet/overlays/multi-zone
+  - name: multi-node
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenlet/overlays/multi-node
+deploy:
+  kubectl:
+    hooks:
+      after:
+        - host:
+            command:
+              - bash
+              - -ec
+              - KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady

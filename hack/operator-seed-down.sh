@@ -37,7 +37,7 @@ kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" delete \
   --timeout 5m
 
 kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" annotate project local garden confirmation.gardener.cloud/deletion=true
-skaffold -f=skaffold-operator-garden.yaml --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m gardenlet
+skaffold --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m gardenlet
 
 # workaround for https://github.com/gardener/gardener/issues/5164
 kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete ns \
@@ -46,7 +46,7 @@ kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete ns \
 
 # cleanup garden
 kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" annotate garden local confirmation.gardener.cloud/deletion=true
-skaffold -f=skaffold-operator-garden.yaml --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m garden
+skaffold --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m garden
 kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete secrets -n garden virtual-garden-etcd-main-backup-local
 # delete provider-local extension
 kubectl wait --for=condition=RequiredRuntime="False" extensions.operator.gardener.cloud provider-local --timeout=120s
