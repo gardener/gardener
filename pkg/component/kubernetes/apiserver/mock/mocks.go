@@ -173,18 +173,6 @@ func (mr *MockInterfaceMockRecorder) SetExternalHostname(arg0 any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExternalHostname", reflect.TypeOf((*MockInterface)(nil).SetExternalHostname), arg0)
 }
 
-// SetExternalServer mocks base method.
-func (m *MockInterface) SetExternalServer(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetExternalServer", arg0)
-}
-
-// SetExternalServer indicates an expected call of SetExternalServer.
-func (mr *MockInterfaceMockRecorder) SetExternalServer(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExternalServer", reflect.TypeOf((*MockInterface)(nil).SetExternalServer), arg0)
-}
-
 // SetNodeNetworkCIDRs mocks base method.
 func (m *MockInterface) SetNodeNetworkCIDRs(arg0 []net.IPNet) {
 	m.ctrl.T.Helper()

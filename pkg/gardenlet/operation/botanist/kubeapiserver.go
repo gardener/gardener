@@ -154,8 +154,6 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 
 // DeployKubeAPIServer deploys the Kubernetes API server.
 func (b *Botanist) DeployKubeAPIServer(ctx context.Context, enableNodeAgentAuthorizer bool) error {
-	externalServer := b.Shoot.ComputeOutOfClusterAPIServerAddress(false)
-
 	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(true)
 	serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(externalHostname)
 	if err != nil {
@@ -215,7 +213,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 		b.computeKubeAPIServerServerCertificateConfig(),
 		b.computeKubeAPIServerSNIConfig(),
 		externalHostname,
-		externalServer,
 		b.Shoot.Networks.Nodes,
 		b.Shoot.Networks.Services,
 		b.Shoot.Networks.Pods,

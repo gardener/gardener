@@ -66,8 +66,6 @@ type Interface interface {
 	EnableStaticTokenKubeconfig()
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)
-	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
-	SetExternalServer(string)
 	// SetNodeNetworkCIDRs sets the node CIDRs of the shoot network.
 	SetNodeNetworkCIDRs([]net.IPNet)
 	// SetServiceNetworkCIDRs sets the service CIDRs of the shoot network.
@@ -108,8 +106,6 @@ type Values struct {
 	EventTTL *metav1.Duration
 	// ExternalHostname is the external hostname which should be exposed by the kube-apiserver.
 	ExternalHostname string
-	// ExternalServer is the external server which should be used when generating the user kubeconfig.
-	ExternalServer string
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
 	Images Images
 	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
@@ -590,10 +586,6 @@ func (k *kubeAPIServer) SetETCDEncryptionConfig(config apiserver.ETCDEncryptionC
 
 func (k *kubeAPIServer) SetExternalHostname(hostname string) {
 	k.values.ExternalHostname = hostname
-}
-
-func (k *kubeAPIServer) SetExternalServer(server string) {
-	k.values.ExternalServer = server
 }
 
 func (k *kubeAPIServer) SetNodeNetworkCIDRs(nodes []net.IPNet) {

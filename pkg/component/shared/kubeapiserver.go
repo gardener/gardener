@@ -213,7 +213,6 @@ func DeployKubeAPIServer(
 	serverCertificateConfig kubeapiserver.ServerCertificateConfig,
 	sniConfig kubeapiserver.SNIConfig,
 	externalHostname string,
-	externalServer string,
 	nodeNetworkCIDRs []net.IPNet,
 	serviceNetworkCIDRs []net.IPNet,
 	podNetworkCIDRs []net.IPNet,
@@ -256,7 +255,6 @@ func DeployKubeAPIServer(
 	kubeAPIServer.SetServiceAccountConfig(serviceAccountConfig)
 	kubeAPIServer.SetSNIConfig(sniConfig)
 	kubeAPIServer.SetExternalHostname(externalHostname)
-	kubeAPIServer.SetExternalServer(externalServer)
 	kubeAPIServer.SetNodeNetworkCIDRs(nodeNetworkCIDRs)
 	kubeAPIServer.SetServiceNetworkCIDRs(serviceNetworkCIDRs)
 	kubeAPIServer.SetPodNetworkCIDRs(podNetworkCIDRs)

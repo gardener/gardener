@@ -857,7 +857,6 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			},
 			sniConfig,
 			externalHostname,
-			externalHostname,
 			nil,
 			services,
 			nil,
