@@ -87,10 +87,9 @@ func (c *controlPlaneBootstrap) Deploy(ctx context.Context) error {
 			Files:   files,
 		}
 
-		if c.values.Worker.Machine.Image != nil {
-			c.osc.Spec.Type = c.values.Worker.Machine.Image.Name
-			c.osc.Spec.ProviderConfig = c.values.Worker.Machine.Image.ProviderConfig
-		}
+		// TODO(timebertt): ensure Worker.Machine.Image is set in Shoot validation for `gardenadm bootstrap`
+		c.osc.Spec.Type = c.values.Worker.Machine.Image.Name
+		c.osc.Spec.ProviderConfig = c.values.Worker.Machine.Image.ProviderConfig
 
 		return nil
 	})
