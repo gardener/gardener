@@ -338,7 +338,7 @@ build:
               - bash
               - -ec
               - |
-                echo "$SKAFFOLD_IMAGE" > dev-setup/gardenadm/resources/.skaffold-image
+                echo "$SKAFFOLD_IMAGE" > dev-setup/gardenadm/resources/generated/.skaffold-image
           - command:
               - bash
               - dev-setup/gardenadm/resources/generate-imagevector-overwrite.sh
@@ -882,9 +882,9 @@ deploy:
                 for i in 0 1; do
                   pod="machine-$i"
                   kubectl -n "$SKAFFOLD_NAMESPACES" exec "$pod" -- sh -c 'rm -rf /gardenadm/resources && mkdir -p /gardenadm/resources'
-                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/.skaffold-image             "$pod:/tmp/.skaffold-image"
-                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/.imagevector-overwrite.yaml "$pod:/gardenadm/imagevector-overwrite.yaml"
-                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/high-touch/manifests.yaml   "$pod:/gardenadm/resources/manifests.yaml"
+                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.skaffold-image             "$pod:/tmp/.skaffold-image"
+                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml "$pod:/gardenadm/imagevector-overwrite.yaml"
+                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/high-touch/manifests.yaml   "$pod:/gardenadm/resources/manifests.yaml"
                 done
         - container:
             command:

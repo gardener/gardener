@@ -142,13 +142,13 @@ Use the following command to prepare the `gardenadm` medium-touch scenario:
 make gardenadm-medium-touch-up
 ```
 
-This will first build the needed images and then render the needed manifests for `gardenadm bootstrap` to the [`./dev-setup/gardenadm/resources/medium-touch`](../../dev-setup/gardenadm/resources/medium-touch) directory.
+This will first build the needed images and then render the needed manifests for `gardenadm bootstrap` to the [`./dev-setup/gardenadm/resources/generated/medium-touch`](../../dev-setup/gardenadm/resources/generated/medium-touch) directory.
 
 Afterward, you can use `go run` to execute `gardenadm` commands on your machine:
 
 ```shell
-$ export IMAGEVECTOR_OVERWRITE=$PWD/dev-setup/gardenadm/resources/.imagevector-overwrite.yaml
-$ go run ./cmd/gardenadm bootstrap -d ./dev-setup/gardenadm/resources/medium-touch
+$ export IMAGEVECTOR_OVERWRITE=$PWD/dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml
+$ go run ./cmd/gardenadm bootstrap -d ./dev-setup/gardenadm/resources/generated/medium-touch
 ...
 Command is work in progress
 ```

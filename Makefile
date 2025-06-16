@@ -424,7 +424,7 @@ operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 # Prepare the gardenadm manifests in dev-setup/gardenadm/resources/$(SCENARIO): `make gardenadm-up SCENARIO=<high-touch|medium-touch>`
 # The manifests are copied to the high-touch machine pods in `make gardenadm-high-touch-up` or can be passed to the `--config-dir` flag of `gardenadm bootstrap`
 gardenadm-prepare-resources: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) build -f=skaffold-gardenadm.yaml -p $(SCENARIO) -m gardenadm,provider-local-node,provider-local -q --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh gardenadm) | $(SKAFFOLD) render -f=skaffold-gardenadm.yaml -p $(SCENARIO) -m provider-local-node,provider-local -o dev-setup/gardenadm/resources/$(SCENARIO)/manifests.yaml --build-artifacts -
+	$(SKAFFOLD) build -f=skaffold-gardenadm.yaml -p $(SCENARIO) -m gardenadm,provider-local-node,provider-local -q --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh gardenadm) | $(SKAFFOLD) render -f=skaffold-gardenadm.yaml -p $(SCENARIO) -m provider-local-node,provider-local -o dev-setup/gardenadm/resources/generated/$(SCENARIO)/manifests.yaml --build-artifacts -
 gardenadm-high-touch-up: $(SKAFFOLD) $(KUBECTL)
 	$(MAKE) gardenadm-prepare-resources SCENARIO=high-touch
 	$(SKAFFOLD) run -f=skaffold-gardenadm.yaml -n gardenadm-high-touch -m provider-local-node,machine
