@@ -851,12 +851,12 @@ profiles:
     manifests:
       kustomize:
         paths:
-          - example/provider-local/gardenadm/high-touch
+          - dev-setup/gardenadm/resources/overlays/high-touch
   - name: medium-touch
     manifests:
       kustomize:
         paths:
-          - example/provider-local/gardenadm/medium-touch
+          - dev-setup/gardenadm/resources/overlays/medium-touch
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
@@ -879,14 +879,13 @@ deploy:
               - bash
               - -ec
               - |
-                kubectl -n $SKAFFOLD_NAMESPACES exec machine-0 -- /bin/sh -c 'rm -rf /gardenadm/resources'
-                kubectl -n $SKAFFOLD_NAMESPACES exec machine-1 -- /bin/sh -c 'rm -rf /gardenadm/resources'
-                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/resources/.skaffold-image             machine-0:/tmp/.skaffold-image
-                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/resources/.skaffold-image             machine-1:/tmp/.skaffold-image
-                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/resources/.imagevector-overwrite.yaml machine-0:/gardenadm/imagevector-overwrite.yaml
-                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/resources/.imagevector-overwrite.yaml machine-1:/gardenadm/imagevector-overwrite.yaml
-                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/resources/high-touch                  machine-0:/gardenadm/resources
-                kubectl -n $SKAFFOLD_NAMESPACES cp dev-setup/gardenadm/resources/high-touch                  machine-1:/gardenadm/resources
+                for i in 0 1; do
+                  pod="machine-$i"
+                  kubectl -n "$SKAFFOLD_NAMESPACES" exec "$pod" -- sh -c 'rm -rf /gardenadm/resources && mkdir -p /gardenadm/resources'
+                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/.skaffold-image             "$pod:/tmp/.skaffold-image"
+                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/.imagevector-overwrite.yaml "$pod:/gardenadm/imagevector-overwrite.yaml"
+                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/high-touch/manifests.yaml   "$pod:/gardenadm/resources/manifests.yaml"
+                done
         - container:
             command:
               - bash
