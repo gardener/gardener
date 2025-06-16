@@ -92,7 +92,7 @@ func RunInMachine(ctx context.Context, technicalID string, ordinal int, args ...
 		ContainerName,
 		nil,
 		io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter(fmt.Sprintf("[%s][out] ", podName), GinkgoWriter)),
-		io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter("[machine][err] ", GinkgoWriter)),
+		io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter(fmt.Sprintf("[%s][err] ", podName), GinkgoWriter)),
 		append([]string{"/opt/bin/gardenadm"}, args...)...,
 	)
 	return stdOutBuffer, stdErrBuffer, err

@@ -56,7 +56,7 @@ var _ = Describe("Extensions", func() {
 							ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
 							Machine: gardencorev1beta1.Machine{
 								Image: &gardencorev1beta1.ShootMachineImage{
-									Name: "ext4-osc",
+									Name: "ext-osc",
 								},
 							},
 						}},
@@ -110,15 +110,15 @@ var _ = Describe("Extensions", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "ext2"},
 			}
 			controllerRegistration5 = &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{Name: "ext4-osc"},
+				ObjectMeta: metav1.ObjectMeta{Name: "ext-osc"},
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
 						DeploymentRefs: []gardencorev1beta1.DeploymentRef{
-							{Name: "ext4-osc"},
+							{Name: "ext-osc"},
 						},
 					},
 					Resources: []gardencorev1beta1.ControllerResource{
-						{Kind: "OperatingSystemConfig", Type: "ext4-osc"},
+						{Kind: "OperatingSystemConfig", Type: "ext-osc"},
 					},
 				},
 			}
@@ -136,7 +136,7 @@ var _ = Describe("Extensions", func() {
 				InjectGardenKubeconfig: ptr.To(false),
 			}
 			controllerDeployment4 = &gardencorev1.ControllerDeployment{
-				ObjectMeta:             metav1.ObjectMeta{Name: "ext4-osc"},
+				ObjectMeta:             metav1.ObjectMeta{Name: "ext-osc"},
 				InjectGardenKubeconfig: ptr.To(false),
 			}
 
@@ -227,7 +227,7 @@ var _ = Describe("Extensions", func() {
 		})
 
 		When("not running the control plane", func() {
-			It("should return the provider extension only (Infrastructure, Worker and OSC)", func() {
+			It("should return the Infrastructure, Worker, and OSC extensions", func() {
 				extensions, err := ComputeExtensions(gardenadm.Resources{
 					Shoot:                   shoot,
 					ControllerRegistrations: controllerRegistrations,

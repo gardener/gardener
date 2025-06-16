@@ -78,7 +78,6 @@ var _ = Describe("controlPlaneBootstrap", func() {
 	})
 
 	Describe("#Deploy", func() {
-
 		It("Should correctly deploy the OSC", func() {
 			Expect(deployer.Deploy(ctx)).To(Succeed())
 			actual := &extensionsv1alpha1.OperatingSystemConfig{}
@@ -132,6 +131,7 @@ var _ = Describe("controlPlaneBootstrap", func() {
 
 	Describe("Stale Resources", func() {
 		var staleOSC *extensionsv1alpha1.OperatingSystemConfig
+
 		BeforeEach(func() {
 			staleOSC = &extensionsv1alpha1.OperatingSystemConfig{
 				ObjectMeta: metav1.ObjectMeta{
@@ -142,6 +142,7 @@ var _ = Describe("controlPlaneBootstrap", func() {
 			}
 			Expect(c.Create(ctx, staleOSC)).To(Succeed())
 		})
+
 		It("should delete stale OSCs", func() {
 			Expect(deployer.DeleteStaleResources(ctx)).To(Succeed())
 
