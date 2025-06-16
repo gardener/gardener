@@ -399,9 +399,9 @@ var _ = Describe("CloudProfile Helper", func() {
 	})
 
 	Describe("#FilterVersionsWithClassification", func() {
-		classification := core.ClassificationDeprecated
 		var (
-			versions = []core.ExpirableVersion{
+			classification = core.ClassificationSupported
+			versions       = []core.ExpirableVersion{
 				{
 					Version:        "1.0.2",
 					Classification: &classification,
@@ -415,6 +415,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				},
 			}
 		)
+
 		It("should filter version", func() {
 			filteredVersions := FilterVersionsWithClassification(versions, classification)
 
