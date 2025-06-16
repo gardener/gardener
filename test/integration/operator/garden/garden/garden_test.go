@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -17,9 +18,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -40,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	extensioncomponent "github.com/gardener/gardener/pkg/component/extensions/extension"
 	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
@@ -154,6 +158,14 @@ var _ = Describe("Garden controller tests", func() {
 		// reconciler for it since envtest does not run the responsible controller (e.g. etcd-druid).
 		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &druidcorev1alpha1.Etcd{} }}).AddToManager(mgr)).To(Succeed())
 		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &extensionsv1alpha1.Extension{} }}).AddToManager(mgr)).To(Succeed())
+
+		// Etcd and Extension CRDs are not available from the start, so we need to deploy them manually at first, so these controllers can start.
+		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
+		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
+		applier := kubernetes.NewApplier(testClient, mapper)
+		deployer, err := etcd.NewCRD(testClient, applier, semver.MustParse("1.30"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(component.OpWait(deployer).Deploy(ctx)).To(Succeed())
 
 		Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
