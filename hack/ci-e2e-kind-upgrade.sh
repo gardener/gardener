@@ -21,7 +21,7 @@ function copy_kubeconfig_from_kubeconfig_env_var() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
     cp $KUBECONFIG example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
-    cp $KUBECONFIG example/gardener-local/kind/ha-single-zone/kubeconfig
+    cp $KUBECONFIG example/gardener-local/kind/operator/kubeconfig
     ;;
   zone)
     cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig

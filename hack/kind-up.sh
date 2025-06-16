@@ -67,7 +67,7 @@ check_local_dns_records() {
     echo "Warning: Unknown OS. Make sure garden.local.gardener.cloud resolves to 127.0.0.1"
     return 0
   fi
-    
+
   if ! echo "$glgc_ip_address" | grep -q "127.0.0.1" ; then
       echo "Error: garden.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
       echo "Command output: $glgc_ip_address"
@@ -386,7 +386,7 @@ if [[ "$CLUSTER_NAME" == "gardener-local2" ]] ; then
 fi
 
 if [[ "$CLUSTER_NAME" == "gardener-local2-ha-single-zone" ]]; then
-  garden_cluster="gardener-local-ha-single-zone"
+  garden_cluster="gardener-operator-local"
 fi
 
 ip_address_field="IPAddress"
