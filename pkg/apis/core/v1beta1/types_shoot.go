@@ -810,6 +810,9 @@ type VerticalPodAutoscaler struct {
 	// (default: 8)
 	// +optional
 	MemoryAggregationIntervalCount *int64 `json:"memoryAggregationIntervalCount,omitempty" protobuf:"varint,18,opt,name=memoryAggregationIntervalCount"`
+	// FeatureGates contains information about enabled feature gates.
+	// +optional
+	FeatureGates map[string]bool `json:"featureGates,omitempty" protobuf:"bytes,19,rep,name=featureGates"`
 }
 
 const (

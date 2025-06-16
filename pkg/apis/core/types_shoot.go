@@ -642,6 +642,8 @@ type VerticalPodAutoscaler struct {
 	// `MemoryAggregationWindowLength = memory-aggregation-interval * memory-aggregation-interval-count`.
 	// (default: 8)
 	MemoryAggregationIntervalCount *int64
+	// FeatureGates contains information about enabled feature gates.
+	FeatureGates map[string]bool
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.
