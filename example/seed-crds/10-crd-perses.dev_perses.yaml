@@ -1125,6 +1125,41 @@ spec:
                   api_prefix:
                     description: Use it in case you want to prefix the API path.
                     type: string
+                  dashboard:
+                    description: Dashboard contains the configuration for the dashboard
+                      feature.
+                    properties:
+                      custom_lint_rules:
+                        items:
+                          properties:
+                            assertion:
+                              description: |-
+                                Assertion is a CEL expression that validates the extracted value.
+                                Refer to https://github.com/google/cel-spec/blob/master/doc/langdef.md for the syntax.
+                              type: string
+                            disable:
+                              description: Disable is a flag to disable the rule.
+                              type: boolean
+                            message:
+                              description: Message is displayed if the assertion fails.
+                              type: string
+                            name:
+                              description: Name of the rule
+                              type: string
+                            target:
+                              description: |-
+                                Target is a JSONPath expression to extract the relevant portion of the dashboard data.
+                                Refer to https://goessner.net/articles/JsonPath/ for the syntax.
+                              type: string
+                          required:
+                          - assertion
+                          - disable
+                          - message
+                          - name
+                          - target
+                          type: object
+                        type: array
+                    type: object
                   database:
                     description: Database contains the different configuration depending
                       on the database you want to use
@@ -1305,6 +1340,273 @@ spec:
                         - write_timeout
                         type: object
                     type: object
+                  datasource:
+                    description: Datasource contains the configuration for the datasource.
+                    properties:
+                      disable_local:
+                        description: |-
+                          DisableLocal when used is preventing the possibility to add a datasource directly in the dashboard spec.
+                          It will also disable the associated proxy.
+                        type: boolean
+                      global:
+                        properties:
+                          disable:
+                            description: |-
+                              Disable is used to disable the global datasource feature.
+                              It will also remove the associated proxy.
+                              Also, since the global variable depends on the global datasource, it will also disable the global variable feature.
+                            type: boolean
+                          discovery:
+                            description: |-
+                              Discovery is the configuration that helps to generate a list of global datasource based on the discovery chosen.
+                              Be careful: the data coming from the discovery will totally override what exists in the database.
+                              Note that this is an experimental feature. Behavior and config may change in the future.
+                            items:
+                              properties:
+                                http_sd:
+                                  description: |-
+                                    HTTP-based service discovery provides a more generic way to generate a set of global datasource and serves as an interface to plug in custom service discovery mechanisms.
+                                    It fetches an HTTP endpoint containing a list of zero or more global datasources.
+                                    The target must reply with an HTTP 200 response.
+                                    The HTTP header Content-Type must be application/json, and the body must be valid array of JSON.
+                                  properties:
+                                    authorization:
+                                      description: The HTTP authorization credentials
+                                        for the targets.
+                                      properties:
+                                        credentials:
+                                          type: string
+                                        credentialsFile:
+                                          type: string
+                                        type:
+                                          type: string
+                                      type: object
+                                    basic_auth:
+                                      properties:
+                                        password:
+                                          type: string
+                                        passwordFile:
+                                          description: PasswordFile is a path to a
+                                            file that contains a password
+                                          type: string
+                                        username:
+                                          type: string
+                                      required:
+                                      - username
+                                      type: object
+                                    headers:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    native_auth:
+                                      properties:
+                                        login:
+                                          type: string
+                                        password:
+                                          type: string
+                                      required:
+                                      - login
+                                      - password
+                                      type: object
+                                    oauth:
+                                      properties:
+                                        authStyle:
+                                          description: |-
+                                            AuthStyle optionally specifies how the endpoint wants the
+                                            client ID & client secret sent. The zero value means to
+                                            auto-detect.
+                                          type: integer
+                                        clientID:
+                                          description: ClientID is the application's
+                                            ID.
+                                          type: string
+                                        clientSecret:
+                                          description: ClientSecret is the application's
+                                            secret.
+                                          type: string
+                                        clientSecretFile:
+                                          type: string
+                                        endpointParams:
+                                          additionalProperties:
+                                            items:
+                                              type: string
+                                            type: array
+                                          description: EndpointParams specifies additional
+                                            parameters for requests to the token endpoint.
+                                          type: object
+                                        scopes:
+                                          description: Scope specifies optional requested
+                                            permissions.
+                                          items:
+                                            type: string
+                                          type: array
+                                        tokenURL:
+                                          description: |-
+                                            TokenURL is the resource server's token endpoint
+                                            URL. This is a constant specific to each server.
+                                          type: string
+                                      required:
+                                      - authStyle
+                                      - clientID
+                                      - clientSecret
+                                      - clientSecretFile
+                                      - endpointParams
+                                      - scopes
+                                      - tokenURL
+                                      type: object
+                                    tls_config:
+                                      description: TLSConfig to use to connect to
+                                        the targets.
+                                      properties:
+                                        ca:
+                                          description: Text of the CA cert to use
+                                            for the targets.
+                                          type: string
+                                        caFile:
+                                          description: The CA cert to use for the
+                                            targets.
+                                          type: string
+                                        cert:
+                                          description: Text of the client cert file
+                                            for the targets.
+                                          type: string
+                                        certFile:
+                                          description: The client cert file for the
+                                            targets.
+                                          type: string
+                                        insecureSkipVerify:
+                                          description: Disable target certificate
+                                            validation.
+                                          type: boolean
+                                        key:
+                                          description: Text of the client key file
+                                            for the targets.
+                                          type: string
+                                        keyFile:
+                                          description: The client key file for the
+                                            targets.
+                                          type: string
+                                        maxVersion:
+                                          description: |-
+                                            Maximum acceptable TLS version. Accepted values: TLS10 (TLS 1.0), TLS11 (TLS 1.1), TLS12 (TLS 1.2), TLS13 (TLS 1.3).
+                                            If unset, Perses will use Go default maximum version, which is TLS 1.3.
+                                            See MaxVersion in https://pkg.go.dev/crypto/tls#Config.
+                                          type: string
+                                        minVersion:
+                                          description: |-
+                                            Minimum acceptable TLS version. Accepted values: TLS10 (TLS 1.0), TLS11 (TLS 1.1), TLS12 (TLS 1.2), TLS13 (TLS 1.3).
+                                            If unset, Perses will use Go default minimum version, which is TLS 1.2.
+                                            See MinVersion in https://pkg.go.dev/crypto/tls#Config.
+                                          type: string
+                                        serverName:
+                                          description: Used to verify the hostname
+                                            for the targets.
+                                          type: string
+                                      type: object
+                                    url:
+                                      format: uri
+                                      type: string
+                                  required:
+                                  - url
+                                  type: object
+                                kubernetes_sd:
+                                  description: |-
+                                    Kubernetes SD configurations allow retrieving global datasource from Kubernetes' REST API
+                                    and always staying synchronized with the cluster state.
+                                  properties:
+                                    datasource_plugin_kind:
+                                      description: DatasourcePluginKind is the name
+                                        of the datasource plugin that should be filled
+                                        when creating datasources found.
+                                      type: string
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      description: The labels used to filter the list
+                                        of resource when contacting the Kubernetes
+                                        API.
+                                      type: object
+                                    namespace:
+                                      description: |-
+                                        Kubernetes namespace to constraint the query to only one namespace.
+                                        Leave empty if you are looking for datasource cross-namespace.
+                                      type: string
+                                    pod_configuration:
+                                      description: Configuration when you want to
+                                        discover the pods in Kubernetes
+                                      properties:
+                                        container_name:
+                                          description: Name of the container the target
+                                            address points to.
+                                          type: string
+                                        container_port_name:
+                                          description: Name of the container port.
+                                          type: string
+                                        container_port_number:
+                                          description: Number of the container port.
+                                          format: int32
+                                          type: integer
+                                        enable:
+                                          description: If set to true, Perses server
+                                            will discovery the pod
+                                          type: boolean
+                                      type: object
+                                    service_configuration:
+                                      description: Configuration when you want to
+                                        discover the services in Kubernetes
+                                      properties:
+                                        enable:
+                                          description: If set to true, Perses server
+                                            will discovery the service
+                                          type: boolean
+                                        port_name:
+                                          description: Name of the service port for
+                                            the target.
+                                          type: string
+                                        port_number:
+                                          description: Number of the service port
+                                            for the target.
+                                          format: int32
+                                          type: integer
+                                        service_type:
+                                          description: The type of the service.
+                                          type: string
+                                      type: object
+                                  required:
+                                  - datasource_plugin_kind
+                                  - namespace
+                                  type: object
+                                name:
+                                  description: The name of the discovery config. It
+                                    is used for logging purposes only
+                                  type: string
+                                refresh_interval:
+                                  description: Refresh interval to re-query the endpoint.
+                                  format: duration
+                                  pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                        required:
+                        - disable
+                        type: object
+                      project:
+                        properties:
+                          disable:
+                            description: |-
+                              Disable is used to disable the project datasource feature.
+                              It will also remove the associated proxy.
+                            type: boolean
+                        required:
+                        - disable
+                        type: object
+                    required:
+                    - disable_local
+                    - global
+                    - project
+                    type: object
                   ephemeral_dashboard:
                     description: EphemeralDashboard contains the config about the
                       ephemeral dashboard feature
@@ -1376,6 +1678,8 @@ spec:
                         properties:
                           disable_custom:
                             type: boolean
+                          disable_zoom:
+                            type: boolean
                           options:
                             items:
                               format: duration
@@ -1384,234 +1688,31 @@ spec:
                             type: array
                         required:
                         - disable_custom
+                        - disable_zoom
                         type: object
                     required:
                     - disable
                     - explorer
                     type: object
-                  global_datasource_discovery:
-                    description: |-
-                      GlobalDatasourceDiscovery is the configuration that helps to generate a list of global datasource based on the discovery chosen.
-                      Be careful: the data coming from the discovery will totally override what exists in the database.
-                      Note that this is an experimental feature. Behavior and config may change in the future.
-                    items:
-                      properties:
-                        discovery_name:
-                          description: The name of the discovery config. It is used
-                            for logging purposes only
-                          type: string
-                        http_sd:
-                          description: |-
-                            HTTP-based service discovery provides a more generic way to generate a set of global datasource and serves as an interface to plug in custom service discovery mechanisms.
-                            It fetches an HTTP endpoint containing a list of zero or more global datasources.
-                            The target must reply with an HTTP 200 response.
-                            The HTTP header Content-Type must be application/json, and the body must be valid array of JSON.
-                          properties:
-                            authorization:
-                              description: The HTTP authorization credentials for
-                                the targets.
-                              properties:
-                                credentials:
-                                  type: string
-                                credentialsFile:
-                                  type: string
-                                type:
-                                  type: string
-                              type: object
-                            basic_auth:
-                              properties:
-                                password:
-                                  type: string
-                                passwordFile:
-                                  description: PasswordFile is a path to a file that
-                                    contains a password
-                                  type: string
-                                username:
-                                  type: string
-                              required:
-                              - username
-                              type: object
-                            headers:
-                              additionalProperties:
-                                type: string
-                              type: object
-                            native_auth:
-                              properties:
-                                login:
-                                  type: string
-                                password:
-                                  type: string
-                              required:
-                              - login
-                              - password
-                              type: object
-                            oauth:
-                              properties:
-                                authStyle:
-                                  description: |-
-                                    AuthStyle optionally specifies how the endpoint wants the
-                                    client ID & client secret sent. The zero value means to
-                                    auto-detect.
-                                  type: integer
-                                clientID:
-                                  description: ClientID is the application's ID.
-                                  type: string
-                                clientSecret:
-                                  description: ClientSecret is the application's secret.
-                                  type: string
-                                clientSecretfile:
-                                  type: string
-                                endpointParams:
-                                  additionalProperties:
-                                    items:
-                                      type: string
-                                    type: array
-                                  description: EndpointParams specifies additional
-                                    parameters for requests to the token endpoint.
-                                  type: object
-                                scopes:
-                                  description: Scope specifies optional requested
-                                    permissions.
-                                  items:
-                                    type: string
-                                  type: array
-                                tokenURL:
-                                  description: |-
-                                    TokenURL is the resource server's token endpoint
-                                    URL. This is a constant specific to each server.
-                                  type: string
-                              required:
-                              - authStyle
-                              - clientID
-                              - clientSecret
-                              - clientSecretfile
-                              - endpointParams
-                              - scopes
-                              - tokenURL
-                              type: object
-                            tls_config:
-                              description: TLSConfig to use to connect to the targets.
-                              properties:
-                                ca:
-                                  description: Text of the CA cert to use for the
-                                    targets.
-                                  type: string
-                                caFile:
-                                  description: The CA cert to use for the targets.
-                                  type: string
-                                cert:
-                                  description: Text of the client cert file for the
-                                    targets.
-                                  type: string
-                                certFile:
-                                  description: The client cert file for the targets.
-                                  type: string
-                                insecureSkipVerify:
-                                  description: Disable target certificate validation.
-                                  type: boolean
-                                key:
-                                  description: Text of the client key file for the
-                                    targets.
-                                  type: string
-                                keyFile:
-                                  description: The client key file for the targets.
-                                  type: string
-                                maxVersion:
-                                  description: |-
-                                    Maximum acceptable TLS version. Accepted values: TLS10 (TLS 1.0), TLS11 (TLS 1.1), TLS12 (TLS 1.2), TLS13 (TLS 1.3).
-                                    If unset, Perses will use Go default maximum version, which is TLS 1.3.
-                                    See MaxVersion in https://pkg.go.dev/crypto/tls#Config.
-                                  type: string
-                                minVersion:
-                                  description: |-
-                                    Minimum acceptable TLS version. Accepted values: TLS10 (TLS 1.0), TLS11 (TLS 1.1), TLS12 (TLS 1.2), TLS13 (TLS 1.3).
-                                    If unset, Perses will use Go default minimum version, which is TLS 1.2.
-                                    See MinVersion in https://pkg.go.dev/crypto/tls#Config.
-                                  type: string
-                                serverName:
-                                  description: Used to verify the hostname for the
-                                    targets.
-                                  type: string
-                              type: object
-                            url:
-                              type: object
-                          required:
-                          - url
-                          type: object
-                        kubernetes_sd:
-                          description: |-
-                            Kubernetes SD configurations allow retrieving global datasource from Kubernetes' REST API
-                            and always staying synchronized with the cluster state.
-                          properties:
-                            datasource_plugin_kind:
-                              description: DatasourcePluginKind is the name of the
-                                datasource plugin that should be filled when creating
-                                datasources found.
-                              type: string
-                            labels:
-                              additionalProperties:
-                                type: string
-                              description: The labels used to filter the list of resource
-                                when contacting the Kubernetes API.
-                              type: object
-                            namespace:
-                              description: |-
-                                Kubernetes namespace to constraint the query to only one namespace.
-                                Leave empty if you are looking for datasource cross-namespace.
-                              type: string
-                            pod_configuration:
-                              description: Configuration when you want to discover
-                                the pods in Kubernetes
-                              properties:
-                                container_name:
-                                  description: Name of the container the target address
-                                    points to.
-                                  type: string
-                                container_port_name:
-                                  description: Name of the container port.
-                                  type: string
-                                container_port_number:
-                                  description: Number of the container port.
-                                  format: int32
-                                  type: integer
-                                enable:
-                                  description: If set to true, Perses server will
-                                    discovery the pod
-                                  type: boolean
-                              type: object
-                            service_configuration:
-                              description: Configuration when you want to discover
-                                the services in Kubernetes
-                              properties:
-                                enable:
-                                  description: If set to true, Perses server will
-                                    discovery the service
-                                  type: boolean
-                                port_name:
-                                  description: Name of the service port for the target.
-                                  type: string
-                                port_number:
-                                  description: Number of the service port for the
-                                    target.
-                                  format: int32
-                                  type: integer
-                                service_type:
-                                  description: The type of the service.
-                                  type: string
-                              type: object
-                          required:
-                          - datasource_plugin_kind
-                          - namespace
-                          type: object
-                        refresh_interval:
-                          description: Refresh interval to re-query the endpoint.
-                          format: duration
-                          pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
-                          type: string
-                      required:
-                      - discovery_name
-                      type: object
-                    type: array
+                  plugin:
+                    description: Plugin contains the config for runtime plugins.
+                    properties:
+                      archive_path:
+                        description: |-
+                          ArchivePath is the path to the directory containing the archived plugins
+                          When Perses is starting, it will extract the content of the archive in the folder specified in the `folder` attribute.
+                        type: string
+                      enable_dev:
+                        description: DevEnvironment is the configuration to use when
+                          developing a plugin
+                        type: boolean
+                      path:
+                        description: Path is the path to the directory containing
+                          the runtime plugins
+                        type: string
+                    required:
+                    - enable_dev
+                    type: object
                   provisioning:
                     description: Provisioning contains the provisioning config that
                       can be used if you want to provide default resources.
@@ -1627,8 +1728,10 @@ spec:
                         type: string
                     type: object
                   schemas:
-                    description: Schemas contain the configuration to get access to
-                      the CUE schemas
+                    description: |-
+                      Schemas contain the configuration to get access to the CUE schemas
+                      DEPRECATED.
+                      Please remove it from your config.
                     properties:
                       datasources_path:
                         type: string
@@ -1673,7 +1776,8 @@ spec:
                                 items:
                                   properties:
                                     auth_url:
-                                      type: object
+                                      format: uri
+                                      type: string
                                     client_credentials:
                                       properties:
                                         client_id:
@@ -1704,7 +1808,8 @@ spec:
                                     custom_login_property:
                                       type: string
                                     device_auth_url:
-                                      type: object
+                                      format: uri
+                                      type: string
                                     device_code:
                                       properties:
                                         client_id:
@@ -1784,7 +1889,8 @@ spec:
                                     name:
                                       type: string
                                     redirect_uri:
-                                      type: object
+                                      format: uri
+                                      type: string
                                     scopes:
                                       items:
                                         type: string
@@ -1792,9 +1898,11 @@ spec:
                                     slug_id:
                                       type: string
                                     token_url:
-                                      type: object
+                                      format: uri
+                                      type: string
                                     user_infos_url:
-                                      type: object
+                                      format: uri
+                                      type: string
                                   required:
                                   - auth_url
                                   - client_id
@@ -1858,7 +1966,8 @@ spec:
                                     disable_pkce:
                                       type: boolean
                                     discovery_url:
-                                      type: object
+                                      format: uri
+                                      type: string
                                     http:
                                       properties:
                                         timeout:
@@ -1917,11 +2026,13 @@ spec:
                                       - tls_config
                                       type: object
                                     issuer:
-                                      type: object
+                                      format: uri
+                                      type: string
                                     name:
                                       type: string
                                     redirect_uri:
-                                      type: object
+                                      format: uri
+                                      type: string
                                     scopes:
                                       items:
                                         type: string
@@ -2007,6 +2118,34 @@ spec:
                         required:
                         - secure
                         type: object
+                      cors:
+                        description: Configuration for the CORS middleware.
+                        properties:
+                          allow_credentials:
+                            type: boolean
+                          allow_headers:
+                            items:
+                              type: string
+                            type: array
+                          allow_methods:
+                            items:
+                              type: string
+                            type: array
+                          allow_origins:
+                            items:
+                              type: string
+                            type: array
+                          enable:
+                            type: boolean
+                          expose_headers:
+                            items:
+                              type: string
+                            type: array
+                          max_age:
+                            type: integer
+                        required:
+                        - enable
+                        type: object
                       enable_auth:
                         description: |-
                           When it is true, the authentication and authorization config are considered.
@@ -2032,6 +2171,39 @@ spec:
                     - cookie
                     - enable_auth
                     - readonly
+                    type: object
+                  variable:
+                    description: Variable contains the configuration for the variable.
+                    properties:
+                      disable_local:
+                        description: DisableLocal when used is preventing the possibility
+                          to add a variable directly in the dashboard spec.
+                        type: boolean
+                      global:
+                        properties:
+                          disable:
+                            description: |-
+                              Disable is used to disable the global variable feature.
+                              Note that if the global datasource is disabled, the global variable will also be disabled.
+                            type: boolean
+                        required:
+                        - disable
+                        type: object
+                      project:
+                        properties:
+                          disable:
+                            description: |-
+                              Disable is used to disable the project variable feature.
+                              Note that if the global datasource and the project datasource are disabled,
+                              then the project variable will also be disabled.
+                            type: boolean
+                        required:
+                        - disable
+                        type: object
+                    required:
+                    - disable_local
+                    - global
+                    - project
                     type: object
                 type: object
               containerPort:
