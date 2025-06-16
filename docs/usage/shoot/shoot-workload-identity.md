@@ -12,8 +12,11 @@ The issuer URL can be read from the [Gardener Info ConfigMap](../gardener/garden
 
 > [!TIP]
 > `Shoot`s that were previously using `Secret`s as authentication method can also be migrated to use `WorkloadIdentity`.
+> As the `credentialsRef` field of [`CredentialsBinding`](../../api-reference/security.md#credentialsbinding) is immutable,
+> one would have to create a new `CredentialsBinding` that references a `WorkloadIdentity` and set the `.spec.credentialsBindingName` field of the `Shoot`
+> to refer to the newly created `CredentialsBinding`.
 
-As of now `WorkloadIdentity` is supported for AWS, Azure and GCP. For detailed explanation on how to enable the feature, please consult the provider specific documentation:
+As of now `WorkloadIdentity` is supported for AWS, Azure and GCP. For detailed explanation on how to enable the feature, please consult the provider extension specific documentation:
  - [provider-aws](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage/usage.md#aws-workload-identity-federation)
  - [provider-azure](https://github.com/gardener/gardener-extension-provider-azure/blob/master/docs/usage/usage.md#azure-workload-identity-federation)
  - [provider-gcp](https://github.com/gardener/gardener-extension-provider-gcp/blob/master/docs/usage/usage.md#gcp-workload-identity-federation)
