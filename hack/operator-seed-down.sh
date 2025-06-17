@@ -28,27 +28,20 @@ parse_flags() {
 
 parse_flags "$@"
 
-# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
-kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" delete \
-  gardenlet/local \
-  seed/local \
-  --ignore-not-found \
-  --wait \
-  --timeout 5m
-
 kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" annotate project local garden confirmation.gardener.cloud/deletion=true
-skaffold --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m gardenlet
 
-# workaround for https://github.com/gardener/gardener/issues/5164
-kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete ns \
-  seed-local \
-  --ignore-not-found
+# cleanup gardenlet and seed
+"$(dirname "$0")/operator-gardenlet-down.sh" \
+  --path-kind-kubeconfig "$PATH_KIND_KUBECONFIG" \
+  --path-garden-kubeconfig "$PATH_GARDEN_KUBECONFIG"
 
 # cleanup garden
 kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" annotate garden local confirmation.gardener.cloud/deletion=true
 skaffold --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m garden
 kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete secrets -n garden virtual-garden-etcd-main-backup-local
-# delete provider-local extension
+# wait for garden deletion
+kubectl wait --for=delete garden local --timeout=300s
+# wait for provider-local to get uninstalled
 kubectl wait --for=condition=RequiredRuntime="False" extensions.operator.gardener.cloud provider-local --timeout=120s
-kubectl wait --for=condition=RequiredVirtual="False" extensions.operator.gardener.cloud provider-local --timeout=10s
-kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete extensions.operator.gardener.cloud provider-local
+kubectl wait --for=condition=RequiredVirtual="False" extensions.operator.gardener.cloud provider-local --timeout=30s
+kubectl wait --for=condition=Installed="False"       extensions.operator.gardener.cloud provider-local --timeout=30s
