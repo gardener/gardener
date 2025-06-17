@@ -367,6 +367,9 @@ done
 
 if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
   cp "$KUBECONFIG" "$PATH_KUBECONFIG"
+  if [[ "$PATH_KUBECONFIG" == *"dev-setup/gardenlet/components/kubeconfigs/seed-local2/kubeconfig" ]]; then
+    sed -i "s/127\.0\.0\.1:[0-9]\+/gardener-local-multi-node2-control-plane:6443/g" "$PATH_KUBECONFIG"
+  fi
 fi
 
 # Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster.
