@@ -16,7 +16,7 @@ ensure_glgc_resolves_to_localhost
 
 # test setup
 make kind-operator-multi-node-up
-make kind2-ha-single-zone-up
+make kind-multi-node2-up
 
 # export all container logs and events after test execution
 trap "
@@ -24,7 +24,7 @@ trap "
   ( export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots; export_events_for_shoots)
   ( export KUBECONFIG=$GARDENER_LOCAL2_KUBECONFIG; export_artifacts "gardener-local2-ha-single-zone" )
   ( make kind-operator-multi-node-down )
-  ( make kind2-ha-single-zone-down )
+  ( make kind-multi-node2-down )
 " EXIT
 
 make operator-seed-up SKAFFOLD_PROFILE=multi-node
