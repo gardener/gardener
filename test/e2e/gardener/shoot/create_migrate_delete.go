@@ -5,7 +5,6 @@
 package shoot
 
 import (
-	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -106,18 +105,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 })
 
 func getSeedName(isTarget bool) (seedName string) {
-	switch os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") {
-	case "node":
-		seedName = "local-ha-single-zone"
-		if isTarget {
-			seedName = "local2-ha-single-zone"
-		}
-	default:
-		seedName = "local"
-		if isTarget {
-			seedName = "local2"
-		}
+	seedName = "local"
+	if isTarget {
+		seedName = "local2"
 	}
-
 	return
 }
