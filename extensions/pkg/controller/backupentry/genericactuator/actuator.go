@@ -78,6 +78,9 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 	)
 
 	if withWorkloadIdentity {
+		// When WorkloadIdentity is used as credentials, the only standard data keys are `config` and `token`.
+		// Any other data key shall be set via (admission) controller, also the `token` value will be set by the
+		// token-requestor controller, therefore we are not copying from the backupEntry secret.
 		maps.DeleteFunc(backupEntrySecretData, func(k string, _ []byte) bool {
 			return k != securityv1alpha1constants.DataKeyConfig
 		})
@@ -96,6 +99,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, a.client, etcdSecret, func() error {
 		if withWorkloadIdentity {
+			// Preserve only the workload identity token renew timestamp annotation and reset all others.
 			maps.DeleteFunc(etcdSecret.Annotations, func(k, _ string) bool {
 				return k != securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp
 			})
@@ -116,6 +120,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 				metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityContextObject, contextObj)
 			}
 
+			// Preserve only the workload identity token purpose label and reset all others.
 			etcdSecret.Labels = map[string]string{securityv1alpha1constants.LabelPurpose: securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor}
 
 			if provider, ok := backupEntrySecret.Labels[securityv1alpha1constants.LabelWorkloadIdentityProvider]; !ok {
