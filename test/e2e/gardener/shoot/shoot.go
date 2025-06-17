@@ -379,5 +379,5 @@ func ItShouldWaitForPodsInShootToBeReady(s *ShootContext, namespace string, podL
 
 			return nil
 		}).Should(Succeed())
-	}, SpecTimeout(5*time.Minute))
+	}, SpecTimeout(time.Minute))
 }

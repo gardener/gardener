@@ -76,6 +76,6 @@ func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[s
 			}
 
 			return nil
-		}, 10*time.Second, 5*time.Second).Should(Succeed())
+		}).WithPolling(5 * time.Second).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
