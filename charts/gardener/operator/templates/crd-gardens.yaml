@@ -2017,13 +2017,13 @@ spec:
                               PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
                               credentials rotation.
                             items:
-                              description: |-
-                                PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
-                                credentials rotation.
+                              description: PendingWorkersRollout contains the name
+                                of a worker pool and the initiation time of their
+                                last rollout.
                               properties:
                                 lastInitiationTime:
                                   description: LastInitiationTime is the most recent
-                                    time when the credential rotation was initiated.
+                                    time when the worker rollout was initiated.
                                   format: date-time
                                   type: string
                                 name:
@@ -2124,13 +2124,13 @@ spec:
                               PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
                               credentials rotation.
                             items:
-                              description: |-
-                                PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
-                                credentials rotation.
+                              description: PendingWorkersRollout contains the name
+                                of a worker pool and the initiation time of their
+                                last rollout.
                               properties:
                                 lastInitiationTime:
                                   description: LastInitiationTime is the most recent
-                                    time when the credential rotation was initiated.
+                                    time when the worker rollout was initiated.
                                   format: date-time
                                   type: string
                                 name:

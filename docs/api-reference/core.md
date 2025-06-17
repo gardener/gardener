@@ -9009,6 +9009,69 @@ If not present, the value will be computed based on the &ldquo;Begin&rdquo; valu
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ManualWorkerPoolRollout">ManualWorkerPoolRollout
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
+</p>
+<p>
+<p>ManualWorkerPoolRollout contains some info TODO(Rado)</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the
+completed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pendingWorkersRollouts</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.PendingWorkersRollout">
+[]PendingWorkersRollout
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
+credentials rotation.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.MemorySwapConfiguration">MemorySwapConfiguration
 </h3>
 <p>
@@ -9972,11 +10035,11 @@ string
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.CARotation">CARotation</a>, 
+<a href="#core.gardener.cloud/v1beta1.ManualWorkerPoolRollout">ManualWorkerPoolRollout</a>, 
 <a href="#core.gardener.cloud/v1beta1.ServiceAccountKeyRotation">ServiceAccountKeyRotation</a>)
 </p>
 <p>
-<p>PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
-credentials rotation.</p>
+<p>PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout.</p>
 </p>
 <table>
 <thead>
@@ -10008,7 +10071,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastInitiationTime is the most recent time when the credential rotation was initiated.</p>
+<p>LastInitiationTime is the most recent time when the worker rollout was initiated.</p>
 </td>
 </tr>
 </tbody>
@@ -13529,6 +13592,20 @@ InPlaceUpdatesStatus
 <td>
 <em>(Optional)</em>
 <p>InPlaceUpdates contains information about in-place updates for the Shoot workers.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>manualWorkerPoolRollout</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ManualWorkerPoolRollout">
+ManualWorkerPoolRollout
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ManualWorkerPoolRollout contains information about the worker pool rollout progress.</p>
 </td>
 </tr>
 </tbody>
