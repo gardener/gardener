@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -10,7 +10,6 @@ import (
 
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal/observability"
-	"github.com/gardener/gardener/test/framework/resources/templates"
 )
 
 var (
@@ -20,6 +19,7 @@ var (
 	}
 	randomLength   = 11
 	shootLogsCount = 100
+	loggerAppName  = "logger-app.yaml.tpl"
 )
 
 // ShootLogging checks that the logging stack for shoots works as expected.
@@ -53,7 +53,7 @@ func ShootLogging(s *ShootContext) {
 			"resources.gardener.cloud/managed-by": "gardener",
 		},
 	}
-	ItShouldRenderAndDeployTemplateToShoot(s, templates.LoggerAppName, loggerParams)
+	ItShouldRenderAndDeployTemplateToShoot(s, loggerAppName, loggerParams)
 
 	loggerParams = map[string]any{
 		"LoggerName":          nonGardenerLoggerName,
@@ -62,7 +62,7 @@ func ShootLogging(s *ShootContext) {
 		"LogsCount":           shootLogsCount,
 		"LogsDuration":        "20s",
 	}
-	ItShouldRenderAndDeployTemplateToShoot(s, templates.LoggerAppName, loggerParams)
+	ItShouldRenderAndDeployTemplateToShoot(s, loggerAppName, loggerParams)
 
 	gardenerLoggerLabels := labels.SelectorFromSet(map[string]string{
 		"app": gardenerLoggerAppLabel,

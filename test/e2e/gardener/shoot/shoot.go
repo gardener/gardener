@@ -282,7 +282,6 @@ func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
 	}, SpecTimeout(time.Minute))
 }
 
-<<<<<<< HEAD
 // ItShouldFindAllMachinePodsBefore finds all machine pods before running the required tests and returns their names.
 func ItShouldFindAllMachinePodsBefore(s *ShootContext) sets.Set[string] {
 	GinkgoHelper()
@@ -379,5 +378,5 @@ func ItShouldWaitForPodsInShootToBeReady(s *ShootContext, namespace string, podL
 
 			return nil
 		}).Should(Succeed())
-	}, SpecTimeout(5*time.Minute))
+	}, SpecTimeout(time.Minute))
 }
