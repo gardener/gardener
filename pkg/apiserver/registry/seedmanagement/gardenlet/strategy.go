@@ -16,8 +16,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
-	"github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/internal/utils"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -40,15 +38,11 @@ func (gardenletStrategy) PrepareForCreate(_ context.Context, obj runtime.Object)
 	gardenlet := obj.(*seedmanagement.Gardenlet)
 
 	gardenlet.Generation = 1
-
-	SyncSeedBackupCredentials(gardenlet)
 }
 
 func (gardenletStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newGardenlet := obj.(*seedmanagement.Gardenlet)
 	oldGardenlet := old.(*seedmanagement.Gardenlet)
-
-	SyncSeedBackupCredentials(newGardenlet)
 
 	if mustIncreaseGeneration(oldGardenlet, newGardenlet) {
 		newGardenlet.Generation = oldGardenlet.Generation + 1
@@ -127,23 +121,4 @@ func (s statusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obj
 
 func (statusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateGardenletStatusUpdate(obj.(*seedmanagement.Gardenlet), old.(*seedmanagement.Gardenlet))
-}
-
-// SyncSeedBackupCredentials ensures the backup fields
-// credentialsRef and secretRef are synced.
-// TODO(vpnachev): Remove once the backup.secretRef field is removed.
-func SyncSeedBackupCredentials(gardenlet *seedmanagement.Gardenlet) {
-	if gardenlet.Spec.Config == nil {
-		return
-	}
-	gardenletConfig, ok := gardenlet.Spec.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
-	if !ok {
-		return
-	}
-
-	if gardenletConfig.SeedConfig == nil {
-		return
-	}
-
-	utils.SyncBackupSecretRefAndCredentialsRef(gardenletConfig.SeedConfig.Spec.Backup)
 }
