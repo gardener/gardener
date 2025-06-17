@@ -28,7 +28,9 @@ trap "
 " EXIT
 
 make operator-seed-up SKAFFOLD_PROFILE=multi-node
-make gardenlet-kind2-ha-single-zone-up
+make operator-gardenlet-up SKAFFOLD_PROFILE=multi-node2
+
 make test-e2e-local-migration-ha-single-zone
+
+make operator-gardenlet-down SKAFFOLD_PROFILE=multi-node2 GARDENLET_NAME=local2
 make operator-seed-down SKAFFOLD_PROFILE=multi-node
-make gardenlet-kind2-ha-single-zone-down

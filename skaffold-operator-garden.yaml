@@ -712,6 +712,15 @@ profiles:
       kustomize:
         paths:
           - dev-setup/gardenlet/overlays/multi-node
+  - name: multi-node2
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenlet/overlays/multi-node2
+    patches:
+      - op: replace
+        path: /deploy/kubectl/hooks/after/0/host/command/2
+        value: "KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local2 GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady"
 deploy:
   kubectl:
     hooks:
