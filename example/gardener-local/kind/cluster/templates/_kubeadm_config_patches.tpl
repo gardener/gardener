@@ -5,10 +5,12 @@
   apiVersion: kubeadm.k8s.io/v1beta3
   kind: ClusterConfiguration
   apiServer:
-{{- if .Values.gardener.apiserverRelay.deployed }}
     certSANs:
     - localhost
     - 127.0.0.1
+    - ::1
+    - host.docker.internal
+{{- if .Values.gardener.apiserverRelay.deployed }}
     - gardener-apiserver.relay.svc.cluster.local
 {{- end }}
     extraArgs:

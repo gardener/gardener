@@ -367,6 +367,9 @@ done
 
 if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
   cp "$KUBECONFIG" "$PATH_KUBECONFIG"
+  if [[ "$PATH_KUBECONFIG" == *"dev-setup/gardenlet/components/kubeconfigs/seed-local2/kubeconfig" ]]; then
+    sed -i "s/127.0.0.1/host.docker.internal/g" "$PATH_KUBECONFIG"
+  fi
 fi
 
 # Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster.
@@ -394,18 +397,21 @@ if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]] ; then
   ip_address_field="GlobalIPv6Address"
 fi
 
+host_ip="$(ip route | awk '$1 == "default" && $3 ~ /^[0-9.]+$/ { print $3; exit }')"
 garden_cluster_ip="$(docker inspect "$garden_cluster"-control-plane | yq ".[].NetworkSettings.Networks.kind.$ip_address_field")"
 
-# Inject garden.local.gardener.cloud into all nodes
+# Inject host.docker.internal garden.local.gardener.cloud into all nodes
 for node in $nodes; do
+  docker exec "$node" sh -c "echo $host_ip host.docker.internal >> /etc/hosts"
   docker exec "$node" sh -c "echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts"
 done
 
-# Inject garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
+# Inject host.docker.internal garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
 kubectl -n kube-system get configmap coredns -ojson | \
   yq '.data.Corefile' | \
   sed '0,/ready.*$/s//&'"\n\
     hosts {\n\
+      $host_ip host.docker.internal\n\
       $garden_cluster_ip garden.local.gardener.cloud\n\
       $garden_cluster_ip gardener.virtual-garden.local.gardener.cloud\n\
       $garden_cluster_ip api.virtual-garden.local.gardener.cloud\n\
