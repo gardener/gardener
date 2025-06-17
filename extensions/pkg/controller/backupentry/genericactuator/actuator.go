@@ -132,7 +132,12 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 		metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, AnnotationKeyCreatedByBackupEntry, be.Name)
 		etcdSecret.Data = etcdSecretData
 		return nil
-	})
+	},
+		// The token-requestor might concurrently update the secret token key to populate the token.
+		// Hence, we need to use optimistic locking here to ensure we don't accidentally overwrite the concurrent update.
+		// ref https://github.com/gardener/gardener/issues/6092#issuecomment-1156244514
+		controllerutils.MergeFromOption{MergeFromOption: client.MergeFromWithOptimisticLock{}},
+	)
 	return err
 }
 
