@@ -20,10 +20,11 @@ make kind-ha-single-zone-up
 
 # export all container logs and events after test execution
 trap "
-  ( export_artifacts "gardener-local-ha-single-zone" )
-  ( make kind-ha-single-zone-down )
+  ( export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig; export_artifacts 'gardener-operator-local'; export_resource_yamls_for garden)
+  ( export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots; export_events_for_shoots)
+  ( make kind-operator-down )
 " EXIT
 
-make gardener-ha-single-zone-up
+make operator-seed-up SKAFFOLD_PROFILE=multi-node
 make test-e2e-local-ha-single-zone
-make gardener-ha-single-zone-down
+make operator-seed-down SKAFFOLD_PROFILE=multi-node
