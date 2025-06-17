@@ -11,6 +11,7 @@ This documentation describes the differences and requirements for upgrading to a
 ## Upgrading to Kubernetes `v1.33`
 
 - A new `deny-all` `NetworkPolicy` is deployed into the `kube-system` namespace of the `Shoot` cluster. `Shoot` owners that run workloads in the `kube-system` namespace are required to explicitly allow their expected `Ingress` and `Egress` traffic in `kube-system` via `NetworkPolicies`.
+- The new `ReduceDefaultCrashLoopBackOffDecay` feature gate was added to reduce both the initial delay and the maximum delay accrued between container restarts for a node for containers in `CrashLoopBackOff` across the cluster to the recommended values of 1s initial delay and 60s maximum delay. If you are also using the older feature gate `KubeletCrashLoopBackOffMax` with a configured per-node `CrashLoopBackOff.MaxContainerRestartPeriod`, the effective kubelet configuration will follow the conflict resolution policy described further in the documentation [here](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#reduced-container-restart-delay).
 
 ## Upgrading to Kubernetes `v1.32`
 
