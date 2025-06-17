@@ -268,37 +268,38 @@ test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
 kind2-ha-single-zone-up kind2-ha-single-zone-down gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down: export KUBECONFIG = $(GARDENER_LOCAL2_HA_SINGLE_ZONE_KUBECONFIG)
-kind-operator-multi-zone-up kind-operator-multi-zone-down operator%up operator-dev operator-debug operator%down operator-seed-dev test-e2e-local-operator ci-e2e-kind-operator ci-e2e-kind-operator-seed kind-ha-single-zone-up kind-ha-single-zone-down: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
+kind-operator-multi-node-up kind-operator-multi-node-down kind-operator-multi-zone-up kind-operator-multi-zone-down operator%up operator-dev operator-debug operator%down operator-seed-dev test-e2e-local-operator ci-e2e-kind-operator ci-e2e-kind-operator-seed: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 operator-seed-% test-e2e-local-operator-seed test-e2e-local-ha-% ci-e2e-kind-ha-% ci-e2e-kind-ha-%-upgrade test-e2e-local-migration-ha-single-zone gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down: export VIRTUAL_GARDEN_KUBECONFIG = $(REPO_ROOT)/dev-setup/kubeconfigs/virtual-garden/kubeconfig
 test-e2e-local-operator-seed test-e2e-local-ha-% test-e2e-local-migration-ha-single-zone ci-e2e-kind-ha-% ci-e2e-kind-ha-%-upgrade: export KUBECONFIG = $(VIRTUAL_GARDEN_KUBECONFIG)
 # CLUSTER_NAME
 kind-up kind-down: export CLUSTER_NAME = gardener-local
 kind2-up kind2-down: export CLUSTER_NAME = gardener-local2
 kind2-ha-single-zone-up kind2-ha-single-zone-down: export CLUSTER_NAME = gardener-local2-ha-single-zone
-kind-operator-multi-zone-up kind-operator-multi-zone-down kind-ha-single-zone-up kind-ha-single-zone-down: export CLUSTER_NAME = gardener-operator-local
+kind-operator-multi-node-up kind-operator-multi-node-down kind-operator-multi-zone-up kind-operator-multi-zone-down: export CLUSTER_NAME = gardener-operator-local
 # KIND_KUBECONFIG
 kind-up kind-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
 kind2-up kind2-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig
 kind2-ha-single-zone-up kind2-ha-single-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind2-ha-single-zone/base/kubeconfig
-kind-operator-multi-zone-up kind-operator-multi-zone-down ci-e2e-kind-ha-multi-zone-upgrade kind-ha-single-zone-up kind-ha-single-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
+kind-operator-multi-node-up kind-operator-multi-node-down kind-operator-multi-zone-up kind-operator-multi-zone-down ci-e2e-kind-ha-multi-zone-upgrade: export KIND_KUBECONFIG = $(REPO_ROOT)/dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
 # CLUSTER_VALUES
 kind-up kind-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
 kind2-up kind2-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local2/values.yaml
-kind-ha-single-zone-up kind-ha-single-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/operator-multi-node/values.yaml
+kind-operator-multi-node-up kind-operator-multi-node-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/operator-multi-node/values.yaml
+kind-operator-multi-zone-up kind-operator-multi-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml
 kind2-ha-single-zone-up kind2-ha-single-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone2/values.yaml
 # ADDITIONAL_PARAMETERS
 kind2-up kind2-ha-single-zone-up: export ADDITIONAL_PARAMETERS = --skip-registry
 kind2-down: export ADDITIONAL_PARAMETERS = --keep-backupbuckets-dir
 kind-operator-multi-zone-up: export ADDITIONAL_PARAMETERS = --multi-zonal
 
-kind-up kind2-up kind-ha-single-zone-up kind2-ha-single-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
+kind-up kind2-up kind2-ha-single-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
 	./hack/kind-up.sh \
 		--cluster-name $(CLUSTER_NAME) \
 		--path-kubeconfig $(KIND_KUBECONFIG) \
 		--path-cluster-values $(CLUSTER_VALUES) \
 		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT) \
 		$(ADDITIONAL_PARAMETERS)
-kind-down kind2-down kind-ha-single-zone-down kind2-ha-single-zone-down: $(KIND)
+kind-down kind2-down kind2-ha-single-zone-down: $(KIND)
 	./hack/kind-down.sh \
 		--cluster-name $(CLUSTER_NAME) \
 		--path-kubeconfig $(KIND_KUBECONFIG) \
@@ -311,15 +312,15 @@ kind-extensions-down:
 kind-extensions-clean: $(KIND)
 	./hack/kind-down.sh --cluster-name gardener-extensions --path-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig
 
-kind-operator-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
+kind-operator-multi-node-up kind-operator-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
 	./hack/kind-up.sh \
 		--cluster-name $(CLUSTER_NAME) \
 		--path-kubeconfig $(KIND_KUBECONFIG) \
-		--path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml \
+		--path-cluster-values $(CLUSTER_VALUES) \
 		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT) \
 		$(ADDITIONAL_PARAMETERS)
 	mkdir -p $(REPO_ROOT)/dev/local-backupbuckets/gardener-operator
-kind-operator-multi-zone-down: $(KIND)
+kind-operator-multi-node-down kind-operator-multi-zone-down: $(KIND)
 	./hack/kind-down.sh \
 		--cluster-name $(CLUSTER_NAME) \
 		--path-kubeconfig $(KIND_KUBECONFIG)
