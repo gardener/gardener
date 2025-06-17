@@ -3484,6 +3484,8 @@ message Toleration {
 
 // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 message VerticalPodAutoscaler {
+  optional KubernetesConfig kubernetesConfig = 19;
+
   // Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.
   optional bool enabled = 1;
 
