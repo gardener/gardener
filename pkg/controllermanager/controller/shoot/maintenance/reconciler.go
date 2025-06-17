@@ -174,6 +174,21 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
+	// Set the .spec.kubernetes.kubeControllerManager.podEvictionTimeout field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.33.
+	// Gardener forbids setting the field for Shoots with K8s 1.33+. See <TODO: Add link to PR after it is opened>
+	{
+		oldK8sLess133, _ := versionutils.CheckVersionMeetsConstraint(oldShootKubernetesVersion.String(), "< 1.33")
+		newK8sGreaterEqual133, _ := versionutils.CheckVersionMeetsConstraint(shootKubernetesVersion.String(), ">= 1.33")
+		if oldK8sLess133 && newK8sGreaterEqual133 {
+			if maintainedShoot.Spec.Kubernetes.KubeControllerManager != nil && maintainedShoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout != nil {
+				maintainedShoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = nil
+
+				reason := ".spec.kubernetes.kubeControllerManager.podEvictionTimeout is set to nil. Reason: The field was deprecated in favour of `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds` and can no longer be enabled for Shoot clusters using Kubernetes version 1.33+"
+				operations = append(operations, reason)
+			}
+		}
+	}
+
 	// Now it's time to update worker pool kubernetes version if specified
 	for i, pool := range maintainedShoot.Spec.Provider.Workers {
 		if pool.Kubernetes == nil || pool.Kubernetes.Version == nil {
