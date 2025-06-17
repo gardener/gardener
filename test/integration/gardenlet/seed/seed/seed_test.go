@@ -33,6 +33,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	extensionscrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
@@ -669,12 +670,12 @@ var _ = Describe("Seed controller tests", func() {
 
 						Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 						Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
-						Expect(istioCRDs.Deploy(ctx)).To(Succeed())
-						Expect(vpaCRD.Deploy(ctx)).To(Succeed())
-						Expect(fluentCRD.Deploy(ctx)).To(Succeed())
-						Expect(prometheusCRD.Deploy(ctx)).To(Succeed())
-						Expect(persesCRD.Deploy(ctx)).To(Succeed())
-						Expect(extensionCRD.Deploy(ctx)).To(Succeed())
+						Expect(component.OpWait(istioCRDs).Deploy(ctx)).To(Succeed())
+						Expect(component.OpWait(vpaCRD).Deploy(ctx)).To(Succeed())
+						Expect(component.OpWait(fluentCRD).Deploy(ctx)).To(Succeed())
+						Expect(component.OpWait(prometheusCRD).Deploy(ctx)).To(Succeed())
+						Expect(component.OpWait(persesCRD).Deploy(ctx)).To(Succeed())
+						Expect(component.OpWait(extensionCRD).Deploy(ctx)).To(Succeed())
 
 						DeferCleanup(func() {
 							Expect(applier.DeleteManifest(ctx, managedResourceCRDReader)).To(Succeed())
@@ -696,6 +697,14 @@ var _ = Describe("Seed controller tests", func() {
 							return testClient.Get(ctx, client.ObjectKey{Name: "gardenlet-vpa", Namespace: testNamespace.Name}, &vpaautoscalingv1.VerticalPodAutoscaler{})
 						}).WithTimeout(kubernetesutils.WaitTimeout).Should(Succeed())
 					}
+
+					controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
+					Expect(testClient.List(ctx, controllerRegistrationList)).To(Succeed())
+
+					// Wait for extension resources to be ready
+					Eventually(func() error {
+						return gardenerutils.RequiredExtensionsReady(ctx, testClient, seed.Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList))
+					}).WithTimeout(time.Minute).Should(Succeed())
 
 					By("Verify that the seed system components have been deployed")
 					expectedManagedResources := []string{
@@ -724,12 +733,12 @@ var _ = Describe("Seed controller tests", func() {
 							"perses-operator",
 						)
 					}
-
+					// There are additional parts in the flow that we not check here, which could take time.
 					Eventually(func(g Gomega) []string {
 						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
 						return test.ObjectNames(managedResourceList)
-					}).Should(ConsistOf(expectedManagedResources))
+					}).WithTimeout(time.Minute).Should(ConsistOf(expectedManagedResources))
 
 					expectedIstioManagedResources := []string{
 						"istio",
