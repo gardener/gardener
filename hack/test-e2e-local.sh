@@ -73,12 +73,6 @@ case $TYPE in
 
   default)
     seed_name="local"
-    if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "node" ]]; then
-      seed_name="local-ha-single-zone"
-    elif [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" ]]; then
-      seed_name="local-ha-multi-zone"
-    fi
-
     shoot_names=(
       e2e-managedseed.garden
       e2e-hib.local

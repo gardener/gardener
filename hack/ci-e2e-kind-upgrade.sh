@@ -177,24 +177,13 @@ function set_gardener_upgrade_version_env_variables() {
 function set_cluster_name() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    CLUSTER_NAME="gardener-local-ha-single-zone"
+    CLUSTER_NAME="gardener-operator-local"
     ;;
   zone)
     CLUSTER_NAME="gardener-operator-local"
     ;;
   *)
     CLUSTER_NAME="gardener-local"
-    ;;
-  esac
-}
-
-function set_seed_name() {
-  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
-  node)
-    SEED_NAME="local-ha-single-zone"
-    ;;
-  *)
-    SEED_NAME="local"
     ;;
   esac
 }
@@ -235,7 +224,7 @@ fi
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables
 set_cluster_name
-set_seed_name
+SEED_NAME="local"
 
 # download gardener previous release to perform gardener upgrade tests
 $(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_PREVIOUS_RELEASE --download-path $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases

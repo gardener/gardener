@@ -3,7 +3,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-
 set -o errexit
 set -o nounset
 set -o pipefail
@@ -12,9 +11,6 @@ set -o pipefail
 kubectl delete seed \
   local \
   local2 \
-  local-ha-single-zone \
-  local2-ha-single-zone \
-  local-ha-multi-zone \
   --ignore-not-found \
   --wait \
   --timeout 5m
@@ -29,9 +25,6 @@ skaffold delete -m etcd,controlplane
 kubectl delete ns \
   seed-local \
   seed-local2 \
-  seed-local-ha-single-zone \
-  seed-local2-ha-single-zone \
-  seed-local-ha-multi-zone \
   --ignore-not-found
 
 # cleanup namespaces that don't get deleted automatically
