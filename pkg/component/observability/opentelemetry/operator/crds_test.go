@@ -49,12 +49,12 @@ var _ = Describe("CRDs", func() {
 	})
 
 	JustBeforeEach(func() {
-		Expect(crdDeployer.Deploy(ctx)).ToNot(HaveOccurred(), "opentelemetry operator crds deploy succeeds")
+		Expect(crdDeployer.Deploy(ctx)).To(Succeed(), "opentelemetry operator crds deploy succeeds")
 	})
 
 	DescribeTable("CRD is deployed",
 		func(crdName string) {
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		},
 
 		Entry("OpenTelemetryCollector", "opentelemetrycollectors.opentelemetry.io"),
@@ -67,7 +67,7 @@ var _ = Describe("CRDs", func() {
 		func(crdName string) {
 			Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
-			Expect(crdDeployer.Deploy(ctx)).To(Succed())
+			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		},
 

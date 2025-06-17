@@ -65,17 +65,17 @@ func NewOpenTelemetryOperator(
 	}
 }
 
-func (otel *openTelemetryOperator) Deploy(ctx context.Context) error {
+func (o *openTelemetryOperator) Deploy(ctx context.Context) error {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-		serviceAccount     = otel.serviceAccount()
-		clusterRole        = otel.clusterRole()
-		clusterRoleBinding = otel.clusterRoleBinding()
-		role               = otel.role()
-		roleBinding        = otel.roleBinding()
-		deployment         = otel.deployment()
-		vpa                = otel.vpa()
+		serviceAccount     = o.serviceAccount()
+		clusterRole        = o.clusterRole()
+		clusterRoleBinding = o.clusterRoleBinding()
+		role               = o.role()
+		roleBinding        = o.roleBinding()
+		deployment         = o.deployment()
+		vpa                = o.vpa()
 	)
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
@@ -93,42 +93,42 @@ func (otel *openTelemetryOperator) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, otel.client, otel.namespace, OperatorManagedResourceName, false, serializedResources)
+	return managedresources.CreateForSeed(ctx, o.client, o.namespace, OperatorManagedResourceName, false, serializedResources)
 }
 
-func (otel *openTelemetryOperator) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, otel.client, otel.namespace, OperatorManagedResourceName)
+func (o *openTelemetryOperator) Destroy(ctx context.Context) error {
+	return managedresources.DeleteForSeed(ctx, o.client, o.namespace, OperatorManagedResourceName)
 }
 
 var timeoutWaitForManagedResources = 2 * time.Minute
 
-func (otel *openTelemetryOperator) Wait(ctx context.Context) error {
+func (o *openTelemetryOperator) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, otel.client, otel.namespace, OperatorManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, o.client, o.namespace, OperatorManagedResourceName)
 }
 
-func (otel *openTelemetryOperator) WaitCleanup(ctx context.Context) error {
+func (o *openTelemetryOperator) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, otel.client, otel.namespace, OperatorManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, o.client, o.namespace, OperatorManagedResourceName)
 }
 
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:   name,
 		v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
 	}
 }
 
-func (otel *openTelemetryOperator) serviceAccount() *corev1.ServiceAccount {
+func (o *openTelemetryOperator) serviceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: otel.namespace,
+			Namespace: o.namespace,
 			Labels:    getLabels(),
 		},
 		AutomountServiceAccountToken: ptr.To(false),
@@ -231,7 +231,7 @@ func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 	}
 }
 
-func (otel *openTelemetryOperator) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
+func (o *openTelemetryOperator) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   clusterRoleName,
@@ -245,16 +245,17 @@ func (otel *openTelemetryOperator) clusterRoleBinding() *rbacv1.ClusterRoleBindi
 		Subjects: []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
 			Name:      serviceAccountName,
-			Namespace: otel.namespace,
+			Namespace: o.namespace,
 		}},
 	}
 }
 
-func (otel *openTelemetryOperator) role() *rbacv1.Role {
+func (o *openTelemetryOperator) role() *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleName,
-			Namespace: otel.namespace,
+			Namespace: o.namespace,
+			Labels:    getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -276,17 +277,18 @@ func (otel *openTelemetryOperator) role() *rbacv1.Role {
 	}
 }
 
-func (otel *openTelemetryOperator) roleBinding() *rbacv1.RoleBinding {
+func (o *openTelemetryOperator) roleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleName,
-			Namespace: otel.namespace,
+			Namespace: o.namespace,
+			Labels:    getLabels(),
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      name,
-				Namespace: otel.namespace,
+				Namespace: o.namespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
@@ -297,11 +299,11 @@ func (otel *openTelemetryOperator) roleBinding() *rbacv1.RoleBinding {
 	}
 }
 
-func (otel *openTelemetryOperator) deployment() *appsv1.Deployment {
+func (o *openTelemetryOperator) deployment() *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
-			Namespace: otel.namespace,
+			Namespace: o.namespace,
 			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 			}),
@@ -321,7 +323,7 @@ func (otel *openTelemetryOperator) deployment() *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: name,
-					PriorityClassName:  otel.values.PriorityClassName,
+					PriorityClassName:  o.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: ptr.To(true),
 						RunAsUser:    ptr.To[int64](65532),
@@ -331,7 +333,7 @@ func (otel *openTelemetryOperator) deployment() *appsv1.Deployment {
 					Containers: []corev1.Container{
 						{
 							Name:            name,
-							Image:           otel.values.Image,
+							Image:           o.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
 								"--metrics-addr=127.0.0.1:8080",
@@ -365,7 +367,7 @@ func (otel *openTelemetryOperator) deployment() *appsv1.Deployment {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceCPU:    resource.MustParse("10m"),
 									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},
 							},
@@ -377,12 +379,13 @@ func (otel *openTelemetryOperator) deployment() *appsv1.Deployment {
 	}
 }
 
-func (otel *openTelemetryOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
+func (o *openTelemetryOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: otel.namespace,
+			Namespace: o.namespace,
+			Labels:    getLabels(),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -396,9 +399,9 @@ func (otel *openTelemetryOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						ContainerName: name,
 						MinAllowed: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+							corev1.ResourceMemory: resource.MustParse("64Mi"),
 						},
 					},
 				},

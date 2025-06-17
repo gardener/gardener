@@ -44,10 +44,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 		namespace         = "some-namespace"
 		image             = "some-image:some-tag"
 		priorityClassName = "some-priority-class"
-		values            = Values{
-			Image:             image,
-			PriorityClassName: priorityClassName,
-		}
+		values            Values
 
 		c         client.Client
 		component component.DeployWaiter
@@ -67,6 +64,11 @@ var _ = Describe("OpenTelemetry Operator", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+		values = Values{
+			Image:             image,
+			PriorityClassName: priorityClassName,
+		}
 		component = NewOpenTelemetryOperator(c, namespace, values)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
@@ -192,6 +194,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
+				Labels:    getLabels(),
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -215,6 +218,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
+				Labels:    getLabels(),
 			},
 			Subjects: []rbacv1.Subject{
 				{
@@ -311,6 +315,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
+				Labels:    getLabels(),
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -397,6 +402,11 @@ var _ = Describe("OpenTelemetry Operator", func() {
 			Expect(c.Create(ctx, operatorManagedResource)).To(Succeed())
 			Expect(c.Create(ctx, operatorManagedResourceSecret)).To(Succeed())
 
+			managedResource := &resourcesv1alpha1.ManagedResource{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResource), managedResource)).To(Succeed())
+			managedResourceSecret := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResourceSecret), managedResourceSecret)).To(Succeed())
+
 			Expect(component.Destroy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResource), operatorManagedResource)).To(BeNotFoundError())
@@ -416,13 +426,11 @@ var _ = Describe("OpenTelemetry Operator", func() {
 		})
 
 		Describe("#Wait", func() {
-			It("should fail because reading the ManagedResources fails", func() {
+			It("should fail because reading the ManagedResource fails", func() {
 				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
 			})
 
-			It("should fail because the ManagedResources don't become healthy", func() {
-				fakeOps.MaxAttempts = 2
-
+			It("should fail because the ManagedResource doesn't become healthy", func() {
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       OperatorManagedResourceName,
