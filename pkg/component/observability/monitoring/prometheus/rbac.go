@@ -116,7 +116,7 @@ func (p *prometheus) role() *rbacv1.Role {
 }
 
 func (p *prometheus) roleBinding() *rbacv1.RoleBinding {
-	obj := &rbacv1.RoleBinding{
+	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "prometheus-" + p.values.Name,
 			Namespace: p.namespace,
@@ -133,6 +133,4 @@ func (p *prometheus) roleBinding() *rbacv1.RoleBinding {
 			Namespace: p.namespace,
 		}},
 	}
-
-	return obj
 }
