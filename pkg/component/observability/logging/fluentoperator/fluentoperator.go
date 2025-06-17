@@ -271,9 +271,9 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ContainerName: name,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("128Mi"),
+								corev1.ResourceMemory: resource.MustParse("64Mi"),
 							},
 						},
 					},

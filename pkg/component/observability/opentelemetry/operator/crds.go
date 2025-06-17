@@ -20,18 +20,18 @@ var (
 	//go:embed assets/crd-opentelemetry.io_instrumentations.yaml
 	openTelemetryInstrumentationCRD string
 	//go:embed assets/crd-opentelemetry.io_opampbridges.yaml
-	openTelemetryOpenTelemetryCollectorBridgeCRD string
+	openTelemetryOpAMPBridgeCRD string
 	//go:embed assets/crd-opentelemetry.io_targetallocators.yaml
-	openTelemetryOpenTelemetryTargetAllocatorCRD string
+	openTelemetryTargetAllocatorCRD string
 )
 
-// NewCRDs can be used to deploy OpenTelemetry Operator CRDS
+// NewCRDs can be used to deploy OpenTelemetry Operator CRDs
 func NewCRDs(client client.Client, applier kubernetes.Applier) (component.DeployWaiter, error) {
 	resources := []string{
 		openTelemetryOpenTelemetryCollectorCRD,
 		openTelemetryInstrumentationCRD,
-		openTelemetryOpenTelemetryCollectorBridgeCRD,
-		openTelemetryOpenTelemetryTargetAllocatorCRD,
+		openTelemetryOpAMPBridgeCRD,
+		openTelemetryTargetAllocatorCRD,
 	}
 
 	return crddeployer.New(client, applier, resources, false)
