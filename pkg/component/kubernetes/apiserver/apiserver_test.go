@@ -4813,14 +4813,6 @@ kind: AuthenticationConfiguration
 		})
 	})
 
-	Describe("#SetExternalServer", func() {
-		It("should properly set the field", func() {
-			v := "bar"
-			kapi.SetExternalServer(v)
-			Expect(kapi.GetValues().ExternalServer).To(Equal(v))
-		})
-	})
-
 	Describe("#SetAutoscalingReplicas", func() {
 		It("should properly set the field", func() {
 			v := ptr.To[int32](2)
