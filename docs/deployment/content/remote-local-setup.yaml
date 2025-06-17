@@ -125,9 +125,9 @@ spec:
           that can be prepared in a tmux session for convenience:
 
           - '${g}prepare-gardener.sh${n}'          A basic 'make kind-up gardener-up' setup
-          - '${g}prepare-operator.sh${n}'          A 'make kind-operator-up operator-up' setup
+          - '${g}prepare-operator.sh${n}'          A 'make kind-operator-multi-zone-up operator-up' setup
              ${g}                   ${n}           with several tmux windows
-          - '${g}prepare-operator-complete.sh${n}' A 'make kind-operator-up operator-up operator-seed-up' setup,
+          - '${g}prepare-operator-complete.sh${n}' A 'make kind-operator-multi-zone-up operator-up operator-seed-up' setup,
              ${g}                            ${n}  a complete local "development landscape"
 
           The "Gardener HA" tmux session is prepared by default.
@@ -330,7 +330,7 @@ spec:
           cat > /usr/local/bin/prepare-gardener.sh <<"SCRIPT_EOF"
           tmux kill-session 2>/dev/null || true
           cd ~/go/src/github.com/gardener/gardener
-          make kind-down kind-operator-down >/dev/null 2>&1
+          make kind-down kind-operator-multi-zone-down >/dev/null 2>&1
           cd - >/dev/null
           mkdir -p ~/.kube
           echo '{"current-context": "kind-gardener-local"}' > ~/.kube/config
@@ -365,7 +365,7 @@ spec:
           cat > /usr/local/bin/prepare-operator.sh <<"SCRIPT_EOF"
           tmux kill-session 2>/dev/null || true
           cd ~/go/src/github.com/gardener/gardener
-          make kind-down kind-operator-down >/dev/null 2>&1
+          make kind-down kind-operator-multi-zone-down >/dev/null 2>&1
           cd - >/dev/null
           mkdir -p ~/.kube
           echo '{"current-context": "kind-gardener-operator-local"}' > ~/.kube/config
@@ -373,9 +373,9 @@ spec:
           tmux new -d -s operator -n make -x 2000 -y 2000
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
           for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
-          new_pane "make kind-operator-up" <<"EOF"
+          new_pane "make kind-operator-multi-zone-up" <<"EOF"
             sync_kubeconfig example/gardener-local/kind/operator & sleep 1
-            nice make kind-operator-down kind-operator-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
+            nice make kind-operator-multi-zone-down kind-operator-multi-zone-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
           EOF
           new_pane "make operator-up" <<"EOF"
             export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig
@@ -423,7 +423,7 @@ spec:
           cat > /usr/local/bin/prepare-operator-complete.sh <<"SCRIPT_EOF"
           tmux kill-session 2>/dev/null || true
           cd ~/go/src/github.com/gardener/gardener
-          make kind-down kind-operator-down >/dev/null 2>&1
+          make kind-down kind-operator-multi-zone-down >/dev/null 2>&1
           cd - >/dev/null
           mkdir -p ~/.kube
           echo '{"current-context": "kind-gardener-operator-local"}' > ~/.kube/config
@@ -431,9 +431,9 @@ spec:
           tmux new -d -s operator-complete -n make -x 2000 -y 2000
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
           for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
-          new_pane "make kind-operator-up" <<"EOF"
+          new_pane "make kind-operator-multi-zone-up" <<"EOF"
             sync_kubeconfig example/gardener-local/kind/operator & sleep 1
-            nice make kind-operator-down kind-operator-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
+            nice make kind-operator-multi-zone-down kind-operator-multi-zone-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
           EOF
           new_pane "make operator-up" <<"EOF"
             export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig

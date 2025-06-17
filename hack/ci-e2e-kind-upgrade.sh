@@ -68,7 +68,7 @@ function kind_up() {
     make kind-ha-single-zone-up
     ;;
   zone)
-    make kind-operator-up
+    make kind-operator-multi-zone-up
     ;;
   *)
     make kind-up
@@ -82,7 +82,7 @@ function kind_down() {
     make kind-ha-single-zone-down
     ;;
   zone)
-    make kind-operator-down
+    make kind-operator-multi-zone-down
     ;;
   *)
     make kind-down
