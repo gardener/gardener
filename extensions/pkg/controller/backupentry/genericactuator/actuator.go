@@ -74,12 +74,8 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 
 	var (
 		backupEntrySecretData = backupEntrySecret.DeepCopy().Data
-		withWorkloadIdentity  = false
+		withWorkloadIdentity  = backupEntrySecret.Labels[securityv1alpha1constants.LabelPurpose] == securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor
 	)
-
-	if purpose, ok := backupEntrySecret.Labels[securityv1alpha1constants.LabelPurpose]; ok && purpose == securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor {
-		withWorkloadIdentity = true
-	}
 
 	if withWorkloadIdentity {
 		maps.DeleteFunc(backupEntrySecretData, func(k string, _ []byte) bool {
