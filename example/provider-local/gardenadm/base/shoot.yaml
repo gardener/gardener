@@ -12,9 +12,6 @@ spec:
       controlPlane:
         backup:
           provider: local
-          secretRef:
-            name: backup-local
-            namespace: garden
           credentialsRef:
             apiVersion: v1
             kind: Secret
