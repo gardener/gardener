@@ -165,9 +165,9 @@ The user is responsible for the validity of the configured `JWTAuthenticator`s.
 Be aware that changing the configuration in the `ConfigMap` will be applied in the next `Shoot` reconciliation, but this is not automatically triggered.
 If you want the changes to roll out immediately, [trigger a reconciliation explicitly](../shoot-operations/shoot_operations.md#immediate-reconciliation).
 
-### Upgrading from `OpenIDConnect` to Structured Authentication Config
+### Migrating from `OpenIDConnect` to Structured Authentication Config
 
-If you would like to migrate from `OpenIDConnect` to Structured Authentication Config and your `shoot.yaml` has `spec.kubernetes.kubeAPIServer.oidcConfig` set, for example:
+If you would like to migrate from `OpenIDConnect` to Structured Authentication Config and your `Shoot` spec has the `spec.kubernetes.kubeAPIServer.oidcConfig` field set, for example:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -209,7 +209,7 @@ spec:
 
     You can also follow the steps in the [Kubernetes 1.30: Structured Authentication Configuration Moves to Beta](https://kubernetes.io/blog/2024/04/25/structured-authentication-moves-to-beta/#migration-from-command-line-arguments-to-configuration-file) blog post.
 
-1. Remove the `spec.kubernetes.kubeAPIServer.oidcConfig` section from the `shoot.yaml` file and replace it a reference to the newly created `ConfigMap` in `spec.kubernetes.kubeAPIServer.structuredAuthentication.configMapName`:
+1. Remove the `spec.kubernetes.kubeAPIServer.oidcConfig` field from the Shoot spec and replace it with a reference to the newly created `ConfigMap` in `spec.kubernetes.kubeAPIServer.structuredAuthentication.configMapName`:
 
     ```yaml
     apiVersion: core.gardener.cloud/v1beta1
