@@ -234,8 +234,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
-	if p.values.TargetCluster != nil {
-		// Restrict Prometheus instances with a target cluster to the corresponding control-plane namespace of the Seed.
+	if p.values.ClusterType == component.ClusterTypeShoot {
 		role = p.role()
 		roleBinding = p.roleBinding()
 	} else {
