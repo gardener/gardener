@@ -222,7 +222,7 @@ $(PROTOC): $(call tool_version_file,$(PROTOC),$(PROTOC_VERSION))
 	@PROTOC_VERSION=$(PROTOC_VERSION) $(TOOLS_PKG_PATH)/install-protoc.sh
 
 $(TYPOS): $(call tool_version_file,$(TYPOS),$(TYPOS_VERSION))
-	@TYPOS_VERSION=$(TYPOS_VERSION) $(TOOLS_PKG_PATH)/install-typos.sh
+	@TYPOS_VERSION=$(TYPOS_VERSION) bash $(TOOLS_PKG_PATH)/install-typos.sh
 
 $(PROTOC_GEN_GOGO): $(call tool_version_file,$(PROTOC_GEN_GOGO),$(CODE_GENERATOR_VERSION))
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
