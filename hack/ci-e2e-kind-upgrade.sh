@@ -20,8 +20,8 @@ ensure_glgc_resolves_to_localhost
 function copy_kubeconfig_from_kubeconfig_env_var() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    cp $KUBECONFIG example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
-    cp $KUBECONFIG example/gardener-local/kind/operator/kubeconfig
+    cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
+    cp $KIND_KUBECONFIG example/gardener-local/kind/operator/kubeconfig
     ;;
   zone)
     cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
@@ -65,7 +65,7 @@ function gardener_down() {
 function kind_up() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make kind-ha-single-zone-up
+    make kind-operator-multi-node-up
     ;;
   zone)
     make kind-operator-multi-zone-up
@@ -79,7 +79,7 @@ function kind_up() {
 function kind_down() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make kind-ha-single-zone-down
+    make kind-operator-multi-node-down
     ;;
   zone)
     make kind-operator-multi-zone-down
