@@ -145,9 +145,10 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				mustIncrease, mustRemoveOperationAnnotation = false, false
 			}
 
-			if strings.HasPrefix(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.OperationRotateRolloutWorkers) {
+			if strings.HasPrefix(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.OperationRotateRolloutWorkers) ||
+				strings.HasPrefix(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.OperationRolloutWorkers) {
 				// We don't want to remove the annotation so that the gardenlet can pick it up and perform
-				// the rotation. It has to remove the annotation after it is done.
+				// the rotation/rollout. It has to remove the annotation after it is done.
 				mustIncrease, mustRemoveOperationAnnotation = true, false
 			}
 		}
