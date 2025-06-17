@@ -45,27 +45,9 @@ func Config(
 	}
 
 	var (
-		nodeInitUnits = []extensionsv1alpha1.Unit{{
-			Name:    nodeagentconfigv1alpha1.InitUnitName,
-			Command: ptr.To(extensionsv1alpha1.CommandStart),
-			Enable:  ptr.To(true),
-			Content: ptr.To(`[Unit]
-Description=Downloads the gardener-node-agent binary from the container registry and bootstraps it.
-Requires=containerd.service
-After=containerd.service
-After=network-online.target
-Wants=network-online.target
-[Service]
-Type=oneshot
-Restart=on-failure
-RestartSec=5
-StartLimitBurst=0
-EnvironmentFile=/etc/environment
-ExecStart=` + PathInitScript + `
-[Install]
-WantedBy=multi-user.target`),
-			FilePaths: []string{PathInitScript},
-		}}
+		nodeInitUnits = []extensionsv1alpha1.Unit{
+			generateInitScriptUnit(nodeagentconfigv1alpha1.InitUnitName, "gardener-node-agent", PathInitScript),
+		}
 
 		nodeInitFiles = []extensionsv1alpha1.File{
 			{
@@ -138,6 +120,7 @@ func generateInitScript(nodeAgentImage string) ([]byte, error) {
 	var initScript bytes.Buffer
 	if err := initScriptTpl.Execute(&initScript, map[string]any{
 		"image":           nodeAgentImage,
+		"binaryName":      "gardener-node-agent",
 		"binaryDirectory": nodeagentconfigv1alpha1.BinaryDir,
 		"configFile":      nodeagentconfigv1alpha1.ConfigFilePath,
 	}); err != nil {
@@ -145,4 +128,28 @@ func generateInitScript(nodeAgentImage string) ([]byte, error) {
 	}
 
 	return initScript.Bytes(), nil
+}
+
+func generateInitScriptUnit(unitName, binaryName, filePath string) extensionsv1alpha1.Unit {
+	return extensionsv1alpha1.Unit{
+		Name:    unitName,
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Enable:  ptr.To(true),
+		Content: ptr.To(`[Unit]
+Description=Downloads the ` + binaryName + ` binary from the container registry and bootstraps it.
+Requires=containerd.service
+After=containerd.service
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=0
+EnvironmentFile=/etc/environment
+ExecStart=` + filePath + `
+[Install]
+WantedBy=multi-user.target`),
+		FilePaths: []string{filePath},
+	}
 }

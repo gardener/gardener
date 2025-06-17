@@ -130,6 +130,15 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
 
+	if !autonomousBotanist.Shoot.RunsControlPlane() {
+		// For `gardenadm bootstrap`, we don't initialize the control plane machines with a "full OSC".
+		// Instead, we provide a small alternative OSC, that only fetches the `gardenadm` binary from the registry.
+		autonomousBotanist.Shoot.Components.Extensions.OperatingSystemConfig, err = autonomousBotanist.ControlPlaneBootstrapOperatingSystemConfig()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	autonomousBotanist.Extensions = extensions
 
 	return autonomousBotanist, nil

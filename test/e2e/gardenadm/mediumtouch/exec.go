@@ -6,15 +6,23 @@ package mediumtouch
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"os/exec"
+	"slices"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	. "github.com/gardener/gardener/test/e2e/gardenadm/common"
 )
 
 var binaryPath string
@@ -70,4 +78,37 @@ func Run(args ...string) *gexec.Session {
 // RunAndWait runs gardenadm with the given arguments and waits for the session to finish.
 func RunAndWait(ctx context.Context, args ...string) *gexec.Session {
 	return Wait(ctx, Run(args...))
+}
+
+// RunInMachine runs gardenadm in the given machine (sorted lexicographically) with the given arguments and returns the
+// gbytes.Buffers.
+func RunInMachine(ctx context.Context, technicalID string, ordinal int, args ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
+	var stdOutBuffer, stdErrBuffer = gbytes.NewBuffer(), gbytes.NewBuffer()
+	podName := machinePodName(ctx, technicalID, ordinal)
+	err := RuntimeClient.PodExecutor().ExecuteWithStreams(
+		ctx,
+		technicalID,
+		podName,
+		ContainerName,
+		nil,
+		io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter(fmt.Sprintf("[%s][out] ", podName), GinkgoWriter)),
+		io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter(fmt.Sprintf("[%s][err] ", podName), GinkgoWriter)),
+		append([]string{"/opt/bin/gardenadm"}, args...)...,
+	)
+	return stdOutBuffer, stdErrBuffer, err
+}
+
+func machinePodName(ctx context.Context, technicalID string, ordinal int) string {
+	GinkgoHelper()
+
+	podList := &corev1.PodList{}
+	Expect(RuntimeClient.Client().List(ctx, podList, client.InNamespace(technicalID), client.MatchingLabels{"app": "machine"})).To(Succeed())
+
+	Expect(ordinal).To(BeNumerically("<", len(podList.Items)))
+
+	slices.SortFunc(podList.Items, func(a, b corev1.Pod) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+
+	return podList.Items[ordinal].Name
 }
