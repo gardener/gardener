@@ -175,7 +175,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	}
 
 	// Set the .spec.kubernetes.kubeControllerManager.podEvictionTimeout field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.33.
-	// Gardener forbids setting the field for Shoots with K8s 1.33+. See <TODO: Add link to PR after it is opened>
+	// Gardener forbids setting the field for Shoots with K8s 1.33+. See https://github.com/gardener/gardener/pull/12343
 	{
 		oldK8sLess133, _ := versionutils.CheckVersionMeetsConstraint(oldShootKubernetesVersion.String(), "< 1.33")
 		newK8sGreaterEqual133, _ := versionutils.CheckVersionMeetsConstraint(shootKubernetesVersion.String(), ">= 1.33")
