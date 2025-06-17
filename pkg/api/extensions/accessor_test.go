@@ -9,7 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -101,21 +100,6 @@ var _ = Describe("Accessor", func() {
 					acc := mkUnstructuredAccessorWithSpec(extensionsv1alpha1.DefaultSpec{})
 
 					Expect(acc.GetProviderConfig()).To(BeNil())
-				})
-			})
-
-			Describe("#GetExtensionPurpose", func() {
-				It("should return nil", func() {
-					acc := mkUnstructuredAccessorWithSpec(extensionsv1alpha1.DefaultSpec{})
-
-					Expect(acc.GetExtensionPurpose()).To(BeNil())
-				})
-
-				It("should return purpose", func() {
-					purpose := extensionsv1alpha1.Normal
-					acc := mkUnstructuredAccessor(&extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{Purpose: &purpose}})
-
-					Expect(acc.GetExtensionSpec().GetExtensionPurpose()).To(PointTo(Equal(string(purpose))))
 				})
 			})
 		})

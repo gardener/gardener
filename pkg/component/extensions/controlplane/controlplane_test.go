@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -48,7 +47,6 @@ var _ = Describe("ControlPlane", func() {
 		name                         = "test"
 		namespace                    = "testnamespace"
 		extensionType                = "some-type"
-		purpose                      = extensionsv1alpha1.Purpose("foo")
 		region                       = "local"
 		providerConfig               = &runtime.RawExtension{Raw: []byte(`{"bar":"baz"}`)}
 		infrastructureProviderStatus = &runtime.RawExtension{Raw: []byte(`{"baz":"foo"}`)}
@@ -86,8 +84,7 @@ var _ = Describe("ControlPlane", func() {
 				Type:           extensionType,
 				ProviderConfig: providerConfig,
 			},
-			Region:  region,
-			Purpose: &purpose,
+			Region: region,
 			SecretRef: corev1.SecretReference{
 				Name:      "cloudprovider",
 				Namespace: namespace,
@@ -100,7 +97,6 @@ var _ = Describe("ControlPlane", func() {
 			Namespace:                    namespace,
 			Type:                         extensionType,
 			ProviderConfig:               providerConfig,
-			Purpose:                      purpose,
 			Region:                       region,
 			InfrastructureProviderStatus: infrastructureProviderStatus,
 		}
@@ -112,7 +108,7 @@ var _ = Describe("ControlPlane", func() {
 	})
 
 	Describe("#Deploy", func() {
-		It("should successfully deploy the ControlPlane resource (purpose != exposure)", func() {
+		It("should successfully deploy the ControlPlane resource", func() {
 			defer test.WithVars(&controlplane.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
@@ -125,34 +121,6 @@ var _ = Describe("ControlPlane", func() {
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.ControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"gardener.cloud/operation": "reconcile",
-						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
-					},
-					ResourceVersion: "1",
-				},
-				Spec: cpSpec,
-			}))
-		})
-
-		It("should successfully deploy the ControlPlane resource (purpose == exposure)", func() {
-			defer test.WithVars(&controlplane.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			values.Purpose = extensionsv1alpha1.Exposure
-			cpSpec.Purpose = &values.Purpose
-			defaultDepWaiter = controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-
-			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-			obj := &extensionsv1alpha1.ControlPlane{}
-			err := c.Get(ctx, client.ObjectKey{Name: name + "-exposure", Namespace: namespace}, obj)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(obj).To(DeepEqual(&extensionsv1alpha1.ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name + "-exposure",
 					Namespace: namespace,
 					Annotations: map[string]string{
 						"gardener.cloud/operation": "reconcile",
@@ -180,7 +148,7 @@ var _ = Describe("ControlPlane", func() {
 			Expect(defaultDepWaiter.Wait(ctx)).To(HaveOccurred(), "controlplane indicates error")
 		})
 
-		It("should return error if we haven't observed the latest timestamp annotation (purpose != exposure)", func() {
+		It("should return error if we haven't observed the latest timestamp annotation", func() {
 			defer test.WithVars(&controlplane.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
@@ -203,64 +171,9 @@ var _ = Describe("ControlPlane", func() {
 			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "controlplane indicates error")
 		})
 
-		It("should return no error when it's ready (purpose != exposure)", func() {
+		It("should return no error when it's ready", func() {
 			defer test.WithVars(&controlplane.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			By("Deploy")
-			// Deploy should fill internal state with the added timestamp annotation
-			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-			By("Patch object")
-			patch := client.MergeFrom(cp.DeepCopy())
-			// remove operation annotation, add up-to-date timestamp annotation
-			cp.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
-			}
-			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
-			}
-			Expect(c.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
-
-			By("Wait")
-			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "controlplane is ready")
-		})
-
-		It("should return error if we haven't observed the latest timestamp annotation (purpose == exposure)", func() {
-			defer test.WithVars(&controlplane.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			values.Purpose = extensionsv1alpha1.Exposure
-			defaultDepWaiter = controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-			cp.Name += "-exposure"
-
-			By("Deploy")
-			// Deploy should fill internal state with the added timestamp annotation
-			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-			By("Patch object")
-			patch := client.MergeFrom(cp.DeepCopy())
-			// remove operation annotation, add old timestamp annotation
-			cp.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
-			}
-			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State: gardencorev1beta1.LastOperationStateSucceeded,
-			}
-			Expect(c.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
-
-			By("Wait")
-			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "controlplane indicates error")
-		})
-
-		It("should return no error when it's ready (purpose == exposure)", func() {
-			defer test.WithVars(&controlplane.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			values.Purpose = extensionsv1alpha1.Exposure
-			defaultDepWaiter = controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-			cp.Name += "-exposure"
 
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
@@ -293,7 +206,7 @@ var _ = Describe("ControlPlane", func() {
 			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 		})
 
-		It("should return error if not deleted successfully (purpose != exposure)", func() {
+		It("should return error if not deleted successfully", func() {
 			defer test.WithVars(
 				&extensions.TimeNow, mockNow.Do,
 				&gardenerutils.TimeNow, mockNow.Do,
@@ -302,30 +215,6 @@ var _ = Describe("ControlPlane", func() {
 
 			fakeErr := fmt.Errorf("some random error")
 			obj := cp.DeepCopy()
-			obj.Annotations = map[string]string{
-				"confirmation.gardener.cloud/deletion": "true",
-				"gardener.cloud/timestamp":             now.UTC().Format(time.RFC3339Nano),
-			}
-
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}), gomock.Any())
-			mc.EXPECT().Delete(ctx, obj).Return(fakeErr)
-
-			err := controlplane.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Destroy(ctx)
-			Expect(err).To(MatchError(fakeErr))
-		})
-
-		It("should return error if not deleted successfully (purpose == exposure)", func() {
-			defer test.WithVars(
-				&extensions.TimeNow, mockNow.Do,
-				&gardenerutils.TimeNow, mockNow.Do,
-			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			values.Purpose = extensionsv1alpha1.Exposure
-			fakeErr := fmt.Errorf("some random error")
-			obj := cp.DeepCopy()
-			obj.Name += "-exposure"
 			obj.Annotations = map[string]string{
 				"confirmation.gardener.cloud/deletion": "true",
 				"gardener.cloud/timestamp":             now.UTC().Format(time.RFC3339Nano),
@@ -345,24 +234,12 @@ var _ = Describe("ControlPlane", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
 		})
 
-		It("should return error if resources with deletionTimestamp still exist (purpose != exposure)", func() {
+		It("should return error if resources with deletionTimestamp still exist", func() {
 			timeNow := metav1.Now()
 			obj := cp.DeepCopy()
 			obj.DeletionTimestamp = &timeNow
 			Expect(c.Create(ctx, obj)).To(Succeed())
 
-			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(HaveOccurred())
-		})
-
-		It("should return error if resources with deletionTimestamp still exist (purpose == exposure)", func() {
-			timeNow := metav1.Now()
-			obj := cp.DeepCopy()
-			obj.Name += "-exposure"
-			obj.DeletionTimestamp = &timeNow
-			Expect(c.Create(ctx, obj)).To(Succeed())
-
-			values.Purpose = extensionsv1alpha1.Exposure
-			defaultDepWaiter = controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(HaveOccurred())
 		})
 	})
@@ -378,17 +255,16 @@ var _ = Describe("ControlPlane", func() {
 				Spec: gardencorev1beta1.ShootStateSpec{
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
-							Name:    &name,
-							Kind:    extensionsv1alpha1.ControlPlaneResource,
-							Purpose: ptr.To(string(purpose)),
-							State:   state,
+							Name:  &name,
+							Kind:  extensionsv1alpha1.ControlPlaneResource,
+							State: state,
 						},
 					},
 				},
 			}
 		})
 
-		It("should properly restore the controlplane state if it exists (purpose != exposure)", func() {
+		It("should properly restore the controlplane state if it exists", func() {
 			defer test.WithVars(
 				&controlplane.TimeNow, mockNow.Do,
 				&extensions.TimeNow, mockNow.Do,
@@ -426,74 +302,16 @@ var _ = Describe("ControlPlane", func() {
 
 			Expect(controlplane.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 		})
-
-		It("should properly restore the controlplane state if it exists (purpose == exposure)", func() {
-			defer test.WithVars(
-				&controlplane.TimeNow, mockNow.Do,
-				&extensions.TimeNow, mockNow.Do,
-			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			mc := mockclient.NewMockClient(ctrl)
-			mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
-
-			mc.EXPECT().Status().Return(mockStatusWriter)
-
-			empty.Name += "-exposure"
-			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
-				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("controlplanes"), name))
-
-			// deploy with wait-for-state annotation
-			values.Purpose = extensionsv1alpha1.Exposure
-			cp.Name += "-exposure"
-			obj := cp.DeepCopy()
-			obj.Spec = cpSpec
-			obj.Spec.Purpose = &values.Purpose
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
-			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
-					Expect(actual).To(DeepEqual(obj))
-					return nil
-				})
-
-			// restore state
-			shootState.Spec.Extensions[0].Name = &obj.Name
-			shootState.Spec.Extensions[0].Purpose = ptr.To(string(values.Purpose))
-			expectedWithState := obj.DeepCopy()
-			expectedWithState.Status.State = state
-			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)
-
-			// annotate with restore annotation
-			expectedWithRestore := expectedWithState.DeepCopy()
-			expectedWithRestore.Annotations["gardener.cloud/operation"] = "restore"
-			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
-
-			Expect(controlplane.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
-		})
 	})
 
 	Describe("#Migrate", func() {
-		It("should migrate the resources (purpose != exposure)", func() {
+		It("should migrate the resources", func() {
 			Expect(c.Create(ctx, cp.DeepCopy())).To(Succeed(), "creating controlplane succeeds")
 
 			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
 
 			result := &extensionsv1alpha1.ControlPlane{}
 			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, result)).To(Succeed())
-			Expect(result.Annotations).To(HaveKeyWithValue("gardener.cloud/operation", "migrate"))
-		})
-
-		It("should migrate the resources (purpose == exposure)", func() {
-			values.Purpose = extensionsv1alpha1.Exposure
-			defaultDepWaiter = controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-
-			Expect(c.Create(ctx, cp.DeepCopy())).To(Succeed(), "creating controlplane succeeds")
-
-			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
-
-			result := &extensionsv1alpha1.ControlPlane{}
-			Expect(c.Get(ctx, client.ObjectKey{Name: values.Name, Namespace: values.Namespace}, result)).To(Succeed())
 			Expect(result.Annotations).To(HaveKeyWithValue("gardener.cloud/operation", "migrate"))
 		})
 
@@ -521,24 +339,8 @@ var _ = Describe("ControlPlane", func() {
 			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(HaveOccurred())
 		})
 
-		It("should not return error if resource gets migrated successfully (purpose != exposure)", func() {
+		It("should not return error if resource gets migrated successfully", func() {
 			obj := cp.DeepCopy()
-			obj.Status.LastError = nil
-			obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State: gardencorev1beta1.LastOperationStateSucceeded,
-				Type:  gardencorev1beta1.LastOperationTypeMigrate,
-			}
-
-			Expect(c.Create(ctx, obj)).To(Succeed(), "creating controlplane succeeds")
-			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(Succeed(), "controlplane is ready, should not return an error")
-		})
-
-		It("should not return error if resource gets migrated successfully (purpose == exposure)", func() {
-			values.Purpose = extensionsv1alpha1.Exposure
-			defaultDepWaiter = controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-
-			obj := cp.DeepCopy()
-			obj.Name += "-exposure"
 			obj.Status.LastError = nil
 			obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,

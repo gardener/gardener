@@ -77,6 +77,6 @@ func Reconcile() {
 ```
 
 Please pay attention to the following points:
-- There should be one `SecretsManager` identity per controller (and purpose if applicable) in order to prevent conflicts between different instances.
-  E.g., there should be different identities for `Infrastructrue`, `Worker` controller, etc., and the `ControlPlane` controller should use dedicated `SecretsManager` identities per purpose (e.g. `provider-foo-controlplane` and `provider-foo-controlplane-exposure`).
+- There should be one `SecretsManager` identity per controller in order to prevent conflicts between different instances.
+  E.g., there should be different identities for `Infrastructrue`, `Worker`, `ControlPlane` controller, etc.
 - All other points in [Reusing the SecretsManager in Other Components](../development/secrets_management.md#reusing-the-secretsmanager-in-other-components).

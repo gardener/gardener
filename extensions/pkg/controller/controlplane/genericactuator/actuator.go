@@ -48,11 +48,6 @@ type ValuesProvider interface {
 	GetControlPlaneShootCRDsChartValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (map[string]any, error)
 	// GetStorageClassesChartValues returns the values for the storage classes chart applied by this actuator.
 	GetStorageClassesChartValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (map[string]any, error)
-	// GetControlPlaneExposureChartValues returns the values for the control plane exposure chart applied by this actuator.
-	//
-	// Deprecated: Control plane with purpose `exposure` is being deprecated and will be removed in gardener v1.123.0.
-	// TODO(theoddora): Remove this function in v1.123.0 when the Purpose field is removed.
-	GetControlPlaneExposureChartValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster, secretsReader secretsmanager.Reader, checksums map[string]string) (map[string]any, error)
 }
 
 // NewActuator creates a new Actuator that acts upon and updates the status of ControlPlane resources.
@@ -62,8 +57,7 @@ func NewActuator(
 	mgr manager.Manager,
 	providerName string,
 	secretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, shootAccessSecrets func(namespace string) []*gardenerutils.AccessSecret,
-	exposureSecretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, exposureShootAccessSecrets func(namespace string) []*gardenerutils.AccessSecret,
-	configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassesChart, controlPlaneExposureChart chart.Interface,
+	configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassesChart chart.Interface,
 	vp ValuesProvider,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
 	imageVector imagevector.ImageVector,
@@ -85,15 +79,11 @@ func NewActuator(
 		secretConfigsFunc:      secretConfigs,
 		shootAccessSecretsFunc: shootAccessSecrets,
 
-		exposureSecretConfigsFunc:      exposureSecretConfigs,
-		exposureShootAccessSecretsFunc: exposureShootAccessSecrets,
-
 		configChart:                configChart,
 		controlPlaneChart:          controlPlaneChart,
 		controlPlaneShootChart:     controlPlaneShootChart,
 		controlPlaneShootCRDsChart: controlPlaneShootCRDsChart,
 		storageClassesChart:        storageClassesChart,
-		controlPlaneExposureChart:  controlPlaneExposureChart,
 		vp:                         vp,
 		chartRendererFactory:       chartRendererFactory,
 		imageVector:                imageVector,
@@ -117,15 +107,11 @@ type actuator struct {
 	secretConfigsFunc      func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions
 	shootAccessSecretsFunc func(namespace string) []*gardenerutils.AccessSecret
 
-	exposureSecretConfigsFunc      func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions
-	exposureShootAccessSecretsFunc func(namespace string) []*gardenerutils.AccessSecret
-
 	configChart                chart.Interface
 	controlPlaneChart          chart.Interface
 	controlPlaneShootChart     chart.Interface
 	controlPlaneShootCRDsChart chart.Interface
 	storageClassesChart        chart.Interface
-	controlPlaneExposureChart  chart.Interface
 	vp                         ValuesProvider
 	chartRendererFactory       extensionscontroller.ChartRendererFactory
 	imageVector                imagevector.ImageVector
@@ -163,78 +149,6 @@ func (a *actuator) Reconcile(
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) (bool, error) {
-	if cp.Spec.Purpose != nil && *cp.Spec.Purpose == extensionsv1alpha1.Exposure {
-		return a.reconcileControlPlaneExposure(ctx, log, cp, cluster)
-	}
-	return a.reconcileControlPlane(ctx, log, cp, cluster)
-}
-
-func (a *actuator) reconcileControlPlaneExposure(
-	ctx context.Context,
-	log logr.Logger,
-	cp *extensionsv1alpha1.ControlPlane,
-	cluster *extensionscontroller.Cluster,
-) (bool, error) {
-	if a.controlPlaneExposureChart == nil {
-		return false, nil
-	}
-
-	var secretConfigs []extensionssecretsmanager.SecretConfigWithOptions
-	if a.exposureSecretConfigsFunc != nil {
-		secretConfigs = a.exposureSecretConfigsFunc(cp.Namespace)
-	}
-
-	sm, err := a.newSecretsManagerForControlPlane(ctx, log, cp, cluster, secretConfigs)
-	if err != nil {
-		return false, fmt.Errorf("failed to create secrets manager for ControlPlane: %w", err)
-	}
-
-	// Deploy secrets managed by secretsmanager
-	log.Info("Deploying control plane exposure secrets")
-	deployedSecrets, err := extensionssecretsmanager.GenerateAllSecrets(ctx, sm, secretConfigs)
-	if err != nil {
-		return false, fmt.Errorf("could not deploy control plane exposure secrets for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
-	}
-
-	// Deploy shoot access secrets
-	if a.exposureShootAccessSecretsFunc != nil {
-		for _, shootAccessSecret := range a.exposureShootAccessSecretsFunc(cp.Namespace) {
-			if err := shootAccessSecret.Reconcile(ctx, a.client); err != nil {
-				return false, fmt.Errorf("could not reconcile control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, client.ObjectKeyFromObject(cp), err)
-			}
-		}
-	}
-
-	// Compute all needed checksums
-	checksums := controlplane.ComputeChecksums(deployedSecrets, nil)
-
-	// Get control plane exposure chart values
-	values, err := a.vp.GetControlPlaneExposureChartValues(ctx, cp, cluster, sm, checksums)
-	if err != nil {
-		return false, err
-	}
-
-	// Apply control plane exposure chart
-	log.Info("Applying control plane exposure chart", "values", values)
-	version := cluster.Shoot.Spec.Kubernetes.Version
-	if err := a.controlPlaneExposureChart.Apply(ctx, a.gardenerClientset.ChartApplier(), cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
-		return false, fmt.Errorf("could not apply control plane exposure chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
-	}
-
-	return false, sm.Cleanup(ctx)
-}
-
-// reconcileControlPlane reconciles the given controlplane and cluster, creating or updating the additional Shoot
-// control plane components as needed.
-func (a *actuator) reconcileControlPlane(
-	ctx context.Context,
-	log logr.Logger,
-	cp *extensionsv1alpha1.ControlPlane,
-	cluster *extensionscontroller.Cluster,
-) (
-	bool,
-	error,
-) {
 	if a.hasShootWebhooks(cluster.Shoot) {
 		value := a.atomicShootWebhookConfig.Load()
 		webhookConfig, ok := value.(*webhook.Configs)
@@ -252,7 +166,7 @@ func (a *actuator) reconcileControlPlane(
 		secretConfigs = a.secretConfigsFunc(cp.Namespace)
 	}
 
-	sm, err := a.newSecretsManagerForControlPlane(ctx, log, cp, cluster, secretConfigs)
+	sm, err := a.newSecretsManagerForControlPlane(ctx, log, cluster, secretConfigs)
 	if err != nil {
 		return false, fmt.Errorf("failed to create secrets manager for ControlPlane: %w", err)
 	}
@@ -386,7 +300,7 @@ func (a *actuator) Delete(
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) error {
-	sm, err := a.newSecretsManagerForControlPlane(ctx, log, cp, cluster, nil)
+	sm, err := a.newSecretsManagerForControlPlane(ctx, log, cluster, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create secrets manager for ControlPlane: %w", err)
 	}
@@ -408,48 +322,9 @@ func (a *actuator) ForceDelete(
 	return a.Delete(ctx, log, cp, cluster)
 }
 
-func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) error {
-	if cp.Spec.Purpose != nil && *cp.Spec.Purpose == extensionsv1alpha1.Exposure {
-		return a.deleteControlPlaneExposure(ctx, log, cp)
-	}
-
-	return a.deleteControlPlane(ctx, log, cp, cluster)
-}
-
-// deleteControlPlaneExposure reconciles the given controlplane and cluster, deleting the additional Seed
-// control plane components as needed.
-func (a *actuator) deleteControlPlaneExposure(
-	ctx context.Context,
-	log logr.Logger,
-	cp *extensionsv1alpha1.ControlPlane,
-) error {
-	// Delete control plane objects
-	if a.controlPlaneExposureChart != nil {
-		log.Info("Deleting control plane exposure with objects")
-		if err := a.controlPlaneExposureChart.Delete(ctx, a.client, cp.Namespace); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("could not delete control plane exposure objects for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
-		}
-	}
-
-	if a.exposureShootAccessSecretsFunc != nil {
-		for _, shootAccessSecret := range a.exposureShootAccessSecretsFunc(cp.Namespace) {
-			if err := kubernetesutils.DeleteObject(ctx, a.client, shootAccessSecret.Secret); err != nil {
-				return fmt.Errorf("could not delete control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, client.ObjectKeyFromObject(cp), err)
-			}
-		}
-	}
-
-	return nil
-}
-
 // deleteControlPlane reconciles the given controlplane and cluster, deleting the additional Shoot
 // control plane components as needed.
-func (a *actuator) deleteControlPlane(
-	ctx context.Context,
-	log logr.Logger,
-	cp *extensionsv1alpha1.ControlPlane,
-	cluster *extensionscontroller.Cluster,
-) error {
+func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) error {
 	forceDelete := cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot)
 
 	// Get config chart values
@@ -617,11 +492,6 @@ func (a *actuator) Migrate(
 	return a.delete(ctx, log, cp, cluster)
 }
 
-func (a *actuator) newSecretsManagerForControlPlane(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster, secretConfigs []extensionssecretsmanager.SecretConfigWithOptions) (secretsmanager.Interface, error) {
-	identity := a.providerName + "-controlplane"
-	if purpose := cp.Spec.Purpose; purpose != nil && *purpose != extensionsv1alpha1.Normal {
-		identity += "-" + string(*purpose)
-	}
-
-	return a.newSecretsManager(ctx, log.WithName("secretsmanager"), clock.RealClock{}, a.client, cluster, identity, secretConfigs)
+func (a *actuator) newSecretsManagerForControlPlane(ctx context.Context, log logr.Logger, cluster *extensionscontroller.Cluster, secretConfigs []extensionssecretsmanager.SecretConfigWithOptions) (secretsmanager.Interface, error) {
+	return a.newSecretsManager(ctx, log.WithName("secretsmanager"), clock.RealClock{}, a.client, cluster, a.providerName+"-controlplane", secretConfigs)
 }
