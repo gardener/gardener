@@ -6840,7 +6840,9 @@ in favor of the kube-apiserver flags <code>--default-not-ready-toleration-second
 The <code>--pod-eviction-timeout</code> flag does not have effect when the taint based eviction is enabled. The taint
 based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
 instead of setting this field, set the <code>spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds</code> and
-<code>spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds</code>. This field will be removed in gardener v1.120.</p>
+<code>spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds</code>. Setting this field will be forbidden starting
+from Kubernetes 1.33.
+TODO(plkokanov): Drop this field after support for Kubernetes 1.32 is dropped.</p>
 </td>
 </tr>
 <tr>
