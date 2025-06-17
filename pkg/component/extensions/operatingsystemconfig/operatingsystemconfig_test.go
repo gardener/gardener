@@ -1766,6 +1766,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 				values.CredentialsRotationStatus.ServiceAccountKey = credentialStatusWithInitiatedRotation
 			})
 
+			It("when a manual worker rollout is triggered", func() {
+				now := metav1.Now()
+				values.ManualWorkerPoolRolloutStatus = &gardencorev1beta1.ManualWorkerPoolRollout{
+					LastInitiationTime:     &now,
+					PendingWorkersRollouts: []gardencorev1beta1.PendingWorkersRollout{{Name: p.Name, LastInitiationTime: &now}},
+				}
+			})
+
 			It("when enabling node local dns via specification", func() {
 				values.NodeLocalDNSEnabled = true
 			})
