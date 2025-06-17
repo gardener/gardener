@@ -66,9 +66,6 @@ func (o *options) Complete() error {
 }
 
 func (o *options) Validate() error {
-	// TODO(vpnachev): Remove once the backup.secretRef field is removed.
-	syncBackupSecretRefAndCredentialsRef(o.config.SeedConfig.Spec.Backup)
-
 	if errs := gardenletvalidation.ValidateGardenletConfiguration(o.config, nil, false); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
