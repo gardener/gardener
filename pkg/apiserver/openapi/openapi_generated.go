@@ -1431,13 +1431,6 @@ func schema_pkg_apis_core_v1beta1_Backup(ref common.ReferenceCallback) common.Op
 							Format:      "",
 						},
 					},
-					"secretRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where backups should be stored. It should have enough privileges to manipulate the objects as well as buckets. Deprecated: This field will be removed after v1.121.0 has been released. Use `CredentialsRef` instead. Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
-						},
-					},
 					"credentialsRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CredentialsRef is reference to a resource holding the credentials used for authentication with the object store service where the backups are stored. Supported referenced resources are v1.Secrets and security.gardener.cloud/v1alpha1.WorkloadIdentity",
@@ -1445,11 +1438,11 @@ func schema_pkg_apis_core_v1beta1_Backup(ref common.ReferenceCallback) common.Op
 						},
 					},
 				},
-				Required: []string{"provider", "secretRef"},
+				Required: []string{"provider"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.ObjectReference", "k8s.io/api/core/v1.SecretReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 

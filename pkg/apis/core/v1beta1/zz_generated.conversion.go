@@ -2292,7 +2292,6 @@ func autoConvert_v1beta1_Backup_To_core_Backup(in *Backup, out *core.Backup, s c
 	out.Provider = in.Provider
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = (*string)(unsafe.Pointer(in.Region))
-	out.SecretRef = in.SecretRef
 	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
 	return nil
 }
@@ -2306,7 +2305,6 @@ func autoConvert_core_Backup_To_v1beta1_Backup(in *core.Backup, out *Backup, s c
 	out.Provider = in.Provider
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = (*string)(unsafe.Pointer(in.Region))
-	out.SecretRef = in.SecretRef
 	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
 	return nil
 }
