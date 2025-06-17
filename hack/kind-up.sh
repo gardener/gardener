@@ -299,7 +299,7 @@ if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]]; then
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::3)
   fi
-elif [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local2-ha-single-zone" ]]; then
+elif [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local-multi-node2" ]]; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.2)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::2)
@@ -388,7 +388,7 @@ if [[ "$CLUSTER_NAME" == "gardener-local2" ]] ; then
   garden_cluster="gardener-local"
 fi
 
-if [[ "$CLUSTER_NAME" == "gardener-local2-ha-single-zone" ]]; then
+if [[ "$CLUSTER_NAME" == "gardener-local-multi-node2" ]]; then
   garden_cluster="gardener-operator-local"
 fi
 
