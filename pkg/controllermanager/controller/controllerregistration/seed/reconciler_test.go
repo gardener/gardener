@@ -799,13 +799,13 @@ var _ = Describe("Reconciler", func() {
 				installation2.Labels = map[string]string{
 					ControllerDeploymentHash: "deb30f197b882cd1",
 					RegistrationSpecHash:     "61ca93a1782c5fa3",
-					SeedSpecHash:             "8e09957b7d0d3c19",
+					SeedSpecHash:             "4586dcc7af9f5412",
 				}
 
 				installation3 := controllerInstallation3.DeepCopy()
 				installation3.Labels = map[string]string{
 					RegistrationSpecHash: "61ca93a1782c5fa3",
-					SeedSpecHash:         "8e09957b7d0d3c19",
+					SeedSpecHash:         "4586dcc7af9f5412",
 				}
 
 				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
@@ -840,7 +840,7 @@ var _ = Describe("Reconciler", func() {
 				installation2.Labels = map[string]string{
 					ControllerDeploymentHash: "deb30f197b882cd1",
 					RegistrationSpecHash:     "61ca93a1782c5fa3",
-					SeedSpecHash:             "8e09957b7d0d3c19",
+					SeedSpecHash:             "4586dcc7af9f5412",
 				}
 
 				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
@@ -894,7 +894,7 @@ var _ = Describe("Reconciler", func() {
 				installation2.Labels = map[string]string{
 					ControllerDeploymentHash: "deb30f197b882cd1",
 					RegistrationSpecHash:     "61ca93a1782c5fa3",
-					SeedSpecHash:             "8e09957b7d0d3c19",
+					SeedSpecHash:             "4586dcc7af9f5412",
 				}
 				installation2.Annotations = map[string]string{
 					v1beta1constants.AnnotationPodSecurityEnforce: "baseline",
@@ -929,7 +929,7 @@ var _ = Describe("Reconciler", func() {
 				installation2.Labels = map[string]string{
 					ControllerDeploymentHash: "deb30f197b882cd1",
 					RegistrationSpecHash:     "61ca93a1782c5fa3",
-					SeedSpecHash:             "8e09957b7d0d3c19",
+					SeedSpecHash:             "4586dcc7af9f5412",
 				}
 				installation2.Annotations = map[string]string{
 					v1beta1constants.AnnotationPodSecurityEnforce: "baseline",
@@ -948,7 +948,7 @@ var _ = Describe("Reconciler", func() {
 				installation2.Labels = map[string]string{
 					ControllerDeploymentHash: "deb30f197b882cd1",
 					RegistrationSpecHash:     "61ca93a1782c5fa3",
-					SeedSpecHash:             "8e09957b7d0d3c19",
+					SeedSpecHash:             "4586dcc7af9f5412",
 				}
 
 				k8sClient.EXPECT().Get(ctx, client.ObjectKey{Name: controllerInstallation2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
