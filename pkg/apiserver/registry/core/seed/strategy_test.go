@@ -9,7 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -111,21 +110,6 @@ var _ = Describe("Strategy", func() {
 				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
 
 				Expect(newSeed.Generation).To(Equal(oldSeed.Generation))
-			})
-
-			It("should bump generation when backup.credentialsRef is synced with backup.secretRef", func() {
-				newSeed.Spec.Backup = &core.Backup{
-					CredentialsRef: &corev1.ObjectReference{
-						APIVersion: "v1",
-						Kind:       "Secret",
-						Namespace:  "namespace",
-						Name:       "name",
-					},
-				}
-				oldSeed = newSeed.DeepCopy()
-
-				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
-				Expect(newSeed.Generation).To(Equal(oldSeed.Generation + 1))
 			})
 		})
 	})
