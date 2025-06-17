@@ -247,30 +247,10 @@ func validateSeedBackup(seedBackup *core.Backup, seedProviderType string, fldPat
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("region"), "", "region must be specified for if backup provider is different from seed provider used in `spec.provider.type`"))
 	}
 
-	// How to achieve backward compatibility between secretRef and credentialsRef?
-	// - if secretRef is set, credentialsRef must be set and refer the same secret
-	// - if secretRef is not set, then credentialsRef must refer a WorkloadIdentity
-	//
-	// After the sync in the strategy, we can have the following cases:
-	// - both secretRef and credentialsRef are unset, which we forbid here
-	// - both can be set but refer to different resources, which we forbid here
-	// - secretRef can be unset only when workloadIdentity is used, which we respect here
-
 	if seedBackup.CredentialsRef == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child("credentialsRef"), "must be set to refer a Secret or WorkloadIdentity"))
 	} else {
 		allErrs = append(allErrs, ValidateCredentialsRef(*seedBackup.CredentialsRef, fldPath.Child("credentialsRef"))...)
-
-		if seedBackup.CredentialsRef.GroupVersionKind().String() == corev1.SchemeGroupVersion.WithKind("Secret").String() {
-			if seedBackup.SecretRef.Namespace != seedBackup.CredentialsRef.Namespace || seedBackup.SecretRef.Name != seedBackup.CredentialsRef.Name {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretRef"), "must refer to the same secret as `spec.backup.credentialsRef`"))
-			}
-		} else {
-			emptySecretRef := corev1.SecretReference{}
-			if seedBackup.SecretRef != emptySecretRef {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretRef"), "must not be set when `spec.backup.credentialsRef` refer to resource other than secret"))
-			}
-		}
 
 		// TODO(vpnachev): Allow WorkloadIdentities once the support in the controllers and components is fully implemented.
 		if seedBackup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&

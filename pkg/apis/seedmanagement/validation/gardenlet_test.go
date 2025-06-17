@@ -41,10 +41,6 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 						Name:       "backup-test",
 						Namespace:  "garden",
 					},
-					SecretRef: corev1.SecretReference{
-						Name:      "backup-test",
-						Namespace: "garden",
-					},
 				},
 				DNS: core.SeedDNS{
 					Provider: &core.SeedDNSProvider{
