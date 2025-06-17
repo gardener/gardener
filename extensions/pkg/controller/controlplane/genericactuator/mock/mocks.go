@@ -73,21 +73,6 @@ func (mr *MockValuesProviderMockRecorder) GetControlPlaneChartValues(ctx, cp, cl
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetControlPlaneChartValues), ctx, cp, cluster, secretsReader, checksums, scaledDown)
 }
 
-// GetControlPlaneExposureChartValues mocks base method.
-func (m *MockValuesProvider) GetControlPlaneExposureChartValues(ctx context.Context, cp *v1alpha1.ControlPlane, cluster *controller.Cluster, secretsReader manager.Reader, checksums map[string]string) (map[string]any, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetControlPlaneExposureChartValues", ctx, cp, cluster, secretsReader, checksums)
-	ret0, _ := ret[0].(map[string]any)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetControlPlaneExposureChartValues indicates an expected call of GetControlPlaneExposureChartValues.
-func (mr *MockValuesProviderMockRecorder) GetControlPlaneExposureChartValues(ctx, cp, cluster, secretsReader, checksums any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneExposureChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetControlPlaneExposureChartValues), ctx, cp, cluster, secretsReader, checksums)
-}
-
 // GetControlPlaneShootCRDsChartValues mocks base method.
 func (m *MockValuesProvider) GetControlPlaneShootCRDsChartValues(ctx context.Context, cp *v1alpha1.ControlPlane, cluster *controller.Cluster) (map[string]any, error) {
 	m.ctrl.T.Helper()

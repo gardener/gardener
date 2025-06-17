@@ -53,8 +53,6 @@ type Values struct {
 	Type string
 	// ProviderConfig contains the provider config for the ControlPlane provider.
 	ProviderConfig *runtime.RawExtension
-	// Purpose is the purpose of the ControlPlane resource (normal/exposure).
-	Purpose extensionsv1alpha1.Purpose
 	// Region is the region of the shoot.
 	Region string
 	// InfrastructureProviderStatus is the provider status of the Infrastructure resource which might be relevant for
@@ -71,11 +69,6 @@ func New(
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
 ) Interface {
-	name := values.Name
-	if values.Purpose == extensionsv1alpha1.Exposure {
-		name += "-exposure"
-	}
-
 	return &controlPlane{
 		log:                 log,
 		client:              client,
@@ -86,7 +79,7 @@ func New(
 
 		controlPlane: &extensionsv1alpha1.ControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      values.Name,
 				Namespace: values.Namespace,
 			},
 		},
@@ -126,8 +119,7 @@ func (c *controlPlane) deploy(ctx context.Context, operation string) (extensions
 				Type:           c.values.Type,
 				ProviderConfig: providerConfig,
 			},
-			Region:  c.values.Region,
-			Purpose: &c.values.Purpose,
+			Region: c.values.Region,
 			SecretRef: corev1.SecretReference{
 				Name:      v1beta1constants.SecretNameCloudProvider,
 				Namespace: c.controlPlane.Namespace,

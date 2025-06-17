@@ -441,23 +441,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployNamespace, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
-		// TODO(theoddora): Remove this step after v1.123 was released when the Purpose field (exposure/normal) is removed.
-		destroyControlPlaneExposure = g.Add(flow.Task{
-			Name: "Destroying shoot control plane exposure",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.Destroy(ctx)
-			}),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
-		})
-		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
-			Name: "Waiting until shoot control plane exposure has been destroyed",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.WaitCleanup(ctx)
-			}),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(destroyControlPlaneExposure),
-		})
 		deployGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying Gardener shoot access resources",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.GardenerAccess.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -466,7 +449,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord, deployGardenerAccess),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady, deployInternalDomainDNSRecord, deployGardenerAccess),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Sync public service account signing keys to Garden cluster",
