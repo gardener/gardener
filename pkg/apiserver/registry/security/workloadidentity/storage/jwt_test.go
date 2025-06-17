@@ -71,44 +71,45 @@ var _ = Describe("#TokenRequest", func() {
 			func(objType, name, namespace, uid string) {
 				Expect(objType).To(BeElementOf("shoot", "seed", "project", "backupBucket", "backupEntry", "none"))
 
-				var shoot, seed, project, backupBucket, backupEntry metav1.Object
+				var ctxObjects *contextObjects
 				switch objType {
 				case "shoot":
 					Expect(name).ToNot(BeEmpty())
 					Expect(namespace).ToNot(BeEmpty())
 					Expect(uid).ToNot(BeEmpty())
-					shoot = &metav1.ObjectMeta{Namespace: namespace, Name: name, UID: types.UID(uid)}
+					ctxObjects = &contextObjects{shoot: &metav1.ObjectMeta{Namespace: namespace, Name: name, UID: types.UID(uid)}}
 
 				case "seed":
 					Expect(name).ToNot(BeEmpty())
 					Expect(namespace).To(BeEmpty())
 					Expect(uid).ToNot(BeEmpty())
-					seed = &metav1.ObjectMeta{Name: name, UID: types.UID(uid)}
+					ctxObjects = &contextObjects{seed: &metav1.ObjectMeta{Name: name, UID: types.UID(uid)}}
 
 				case "project":
 					Expect(name).ToNot(BeEmpty())
 					Expect(namespace).To(BeEmpty())
 					Expect(uid).ToNot(BeEmpty())
-					project = &metav1.ObjectMeta{Name: name, UID: types.UID(uid)}
+					ctxObjects = &contextObjects{project: &metav1.ObjectMeta{Name: name, UID: types.UID(uid)}}
 
 				case "backupBucket":
 					Expect(name).ToNot(BeEmpty())
 					Expect(namespace).To(BeEmpty())
 					Expect(uid).ToNot(BeEmpty())
-					backupBucket = &metav1.ObjectMeta{Name: name, UID: types.UID(uid)}
+					ctxObjects = &contextObjects{backupBucket: &metav1.ObjectMeta{Name: name, UID: types.UID(uid)}}
 				case "backupEntry":
 					Expect(name).ToNot(BeEmpty())
 					Expect(namespace).ToNot(BeEmpty())
 					Expect(uid).ToNot(BeEmpty())
-					backupEntry = &metav1.ObjectMeta{Namespace: namespace, Name: name, UID: types.UID(uid)}
+					ctxObjects = &contextObjects{backupEntry: &metav1.ObjectMeta{Namespace: namespace, Name: name, UID: types.UID(uid)}}
 
 				case "none":
 					Expect(name).To(BeEmpty())
 					Expect(namespace).To(BeEmpty())
 					Expect(uid).To(BeEmpty())
+					ctxObjects = nil
 				}
 
-				g := r.getGardenerClaims(workloadIdentity, shoot, seed, project, backupBucket, backupEntry)
+				g := r.getGardenerClaims(workloadIdentity, ctxObjects)
 
 				Expect(g).ToNot(BeNil())
 				Expect(g.Gardener.WorkloadIdentity.Name).To(Equal(workloadName))
@@ -116,49 +117,67 @@ var _ = Describe("#TokenRequest", func() {
 				Expect(*g.Gardener.WorkloadIdentity.Namespace).To(Equal(workloadNamespace))
 				Expect(g.Gardener.WorkloadIdentity.UID).To(Equal(workloadUID))
 
-				if shoot != nil {
+				if objType == "none" {
+					Expect(ctxObjects).To(BeNil())
+					return
+				}
+
+				Expect(ctxObjects).ToNot(BeNil())
+
+				if objType == "shoot" {
+					Expect(ctxObjects.shoot).ToNot(BeNil())
 					Expect(g.Gardener.Shoot).ToNot(BeNil())
-					Expect(g.Gardener.Shoot.Name).To(Equal(shoot.GetName()))
+					Expect(g.Gardener.Shoot.Name).To(Equal(ctxObjects.shoot.GetName()))
 					Expect(g.Gardener.Shoot.Namespace).ToNot(BeNil())
-					Expect(*g.Gardener.Shoot.Namespace).To(Equal(shoot.GetNamespace()))
-					Expect(g.Gardener.Shoot.UID).To(BeEquivalentTo(shoot.GetUID()))
+					Expect(*g.Gardener.Shoot.Namespace).To(Equal(ctxObjects.shoot.GetNamespace()))
+					Expect(g.Gardener.Shoot.UID).To(BeEquivalentTo(ctxObjects.shoot.GetUID()))
 				} else {
+					Expect(ctxObjects.shoot).To(BeNil())
 					Expect(g.Gardener.Shoot).To(BeNil())
 				}
 
-				if seed != nil {
+				if objType == "seed" {
+					Expect(ctxObjects.seed).ToNot(BeNil())
 					Expect(g.Gardener.Seed).ToNot(BeNil())
-					Expect(g.Gardener.Seed.Name).To(Equal(seed.GetName()))
-					Expect(g.Gardener.Seed.UID).To(BeEquivalentTo(seed.GetUID()))
+					Expect(g.Gardener.Seed.Name).To(Equal(ctxObjects.seed.GetName()))
+					Expect(g.Gardener.Seed.UID).To(BeEquivalentTo(ctxObjects.seed.GetUID()))
 					Expect(g.Gardener.Seed.Namespace).To(BeNil())
 				} else {
+					Expect(ctxObjects.seed).To(BeNil())
 					Expect(g.Gardener.Seed).To(BeNil())
 				}
 
-				if project != nil {
+				if objType == "project" {
+					Expect(ctxObjects.project).ToNot(BeNil())
 					Expect(g.Gardener.Project).ToNot(BeNil())
-					Expect(g.Gardener.Project.Name).To(Equal(project.GetName()))
-					Expect(g.Gardener.Project.UID).To(BeEquivalentTo(project.GetUID()))
+					Expect(g.Gardener.Project.Name).To(Equal(ctxObjects.project.GetName()))
+					Expect(g.Gardener.Project.UID).To(BeEquivalentTo(ctxObjects.project.GetUID()))
 					Expect(g.Gardener.Project.Namespace).To(BeNil())
 				} else {
+					Expect(ctxObjects.project).To(BeNil())
 					Expect(g.Gardener.Project).To(BeNil())
 				}
 
-				if backupBucket != nil {
+				if objType == "backupBucket" {
+					Expect(ctxObjects.backupBucket).ToNot(BeNil())
 					Expect(g.Gardener.BackupBucket).ToNot(BeNil())
-					Expect(g.Gardener.BackupBucket.Name).To(Equal(backupBucket.GetName()))
-					Expect(g.Gardener.BackupBucket.UID).To(BeEquivalentTo(backupBucket.GetUID()))
+					Expect(g.Gardener.BackupBucket.Name).To(Equal(ctxObjects.backupBucket.GetName()))
+					Expect(g.Gardener.BackupBucket.UID).To(BeEquivalentTo(ctxObjects.backupBucket.GetUID()))
 					Expect(g.Gardener.BackupBucket.Namespace).To(BeNil())
 				} else {
+					Expect(ctxObjects.backupBucket).To(BeNil())
 					Expect(g.Gardener.BackupBucket).To(BeNil())
 				}
-				if backupEntry != nil {
+
+				if objType == "backupEntry" {
+					Expect(ctxObjects.backupEntry).ToNot(BeNil())
 					Expect(g.Gardener.BackupEntry).ToNot(BeNil())
-					Expect(g.Gardener.BackupEntry.Name).To(Equal(backupEntry.GetName()))
-					Expect(g.Gardener.BackupEntry.UID).To(BeEquivalentTo(backupEntry.GetUID()))
+					Expect(g.Gardener.BackupEntry.Name).To(Equal(ctxObjects.backupEntry.GetName()))
+					Expect(g.Gardener.BackupEntry.UID).To(BeEquivalentTo(ctxObjects.backupEntry.GetUID()))
 					Expect(g.Gardener.BackupEntry.Namespace).ToNot(BeNil())
-					Expect(*g.Gardener.BackupEntry.Namespace).To(Equal(backupEntry.GetNamespace()))
+					Expect(*g.Gardener.BackupEntry.Namespace).To(Equal(ctxObjects.backupEntry.GetNamespace()))
 				} else {
+					Expect(ctxObjects.backupEntry).To(BeNil())
 					Expect(g.Gardener.BackupEntry).To(BeNil())
 				}
 			},
@@ -265,23 +284,15 @@ var _ = Describe("#TokenRequest", func() {
 		})
 
 		It("should successfully resolve when the context object is nil and user is seed", func() {
-			shoot, seed, project, backupBucket, backupEntry, err := r.resolveContextObject(&seedUser, nil)
+			ctxObjects, err := r.resolveContextObject(&seedUser, nil)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(shoot).To(BeNil())
-			Expect(seed).To(BeNil())
-			Expect(project).To(BeNil())
-			Expect(backupBucket).To(BeNil())
-			Expect(backupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 		})
 
 		It("should successfully resolve when the context object is nil and user is not seed", func() {
-			shoot, seed, project, backupBucket, backupEntry, err := r.resolveContextObject(&nonSeedUser, nil)
+			ctxObjects, err := r.resolveContextObject(&nonSeedUser, nil)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(shoot).To(BeNil())
-			Expect(seed).To(BeNil())
-			Expect(project).To(BeNil())
-			Expect(backupBucket).To(BeNil())
-			Expect(backupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 		})
 
 		It("should successfully resolve when the context object is not nil and user is not seed", func() {
@@ -293,13 +304,9 @@ var _ = Describe("#TokenRequest", func() {
 				UID:        shootUID,
 			}
 
-			shoot, seed, project, backupBucket, backupEntry, err := r.resolveContextObject(&nonSeedUser, contextObject)
+			ctxObjects, err := r.resolveContextObject(&nonSeedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(shoot).To(BeNil())
-			Expect(seed).To(BeNil())
-			Expect(project).To(BeNil())
-			Expect(backupBucket).To(BeNil())
-			Expect(backupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 		})
 
 		It("should successfully resolve when the context object is shoot", func() {
@@ -312,21 +319,22 @@ var _ = Describe("#TokenRequest", func() {
 			}
 
 			By("Resolve context object before the shoot is scheduled to a seed")
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(ctxObjects).ToNot(BeNil())
 
-			Expect(rShoot).ToNot(BeNil())
-			Expect(rShoot.GetName()).To(Equal(shootName))
-			Expect(rShoot.GetNamespace()).To(Equal(namespaceName))
-			Expect(rShoot.GetUID()).To(Equal(shootUID))
+			Expect(ctxObjects.shoot).ToNot(BeNil())
+			Expect(ctxObjects.shoot.GetName()).To(Equal(shootName))
+			Expect(ctxObjects.shoot.GetNamespace()).To(Equal(namespaceName))
+			Expect(ctxObjects.shoot.GetUID()).To(Equal(shootUID))
 
-			Expect(rSeed).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects.seed).To(BeNil())
+			Expect(ctxObjects.backupBucket).To(BeNil())
+			Expect(ctxObjects.backupEntry).To(BeNil())
 
-			Expect(rProject).ToNot(BeNil())
-			Expect(rProject.GetName()).To(Equal(projectName))
-			Expect(rProject.GetUID()).To(Equal(projectUID))
+			Expect(ctxObjects.project).ToNot(BeNil())
+			Expect(ctxObjects.project.GetName()).To(Equal(projectName))
+			Expect(ctxObjects.project.GetUID()).To(Equal(projectUID))
 
 			By("Schedule the shoot to a seed")
 			shootCopy := shoot.DeepCopy()
@@ -334,24 +342,25 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(shootInformer.Informer().GetStore().Update(shootCopy)).To(Succeed())
 
 			By("Resolve context object after the shoot is scheduled to a seed")
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(ctxObjects).ToNot(BeNil())
 
-			Expect(rShoot).ToNot(BeNil())
-			Expect(rShoot.GetName()).To(Equal(shootName))
-			Expect(rShoot.GetNamespace()).To(Equal(namespaceName))
-			Expect(rShoot.GetUID()).To(Equal(shootUID))
+			Expect(ctxObjects.shoot).ToNot(BeNil())
+			Expect(ctxObjects.shoot.GetName()).To(Equal(shootName))
+			Expect(ctxObjects.shoot.GetNamespace()).To(Equal(namespaceName))
+			Expect(ctxObjects.shoot.GetUID()).To(Equal(shootUID))
 
-			Expect(rSeed).ToNot(BeNil())
-			Expect(rSeed.GetName()).To(Equal(seedName))
-			Expect(rSeed.GetUID()).To(Equal(seedUID))
+			Expect(ctxObjects.seed).ToNot(BeNil())
+			Expect(ctxObjects.seed.GetName()).To(Equal(seedName))
+			Expect(ctxObjects.seed.GetUID()).To(Equal(seedUID))
 
-			Expect(rProject).ToNot(BeNil())
-			Expect(rProject.GetName()).To(Equal(projectName))
-			Expect(rProject.GetUID()).To(Equal(projectUID))
+			Expect(ctxObjects.project).ToNot(BeNil())
+			Expect(ctxObjects.project.GetName()).To(Equal(projectName))
+			Expect(ctxObjects.project.GetUID()).To(Equal(projectUID))
 
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects.backupBucket).To(BeNil())
+			Expect(ctxObjects.backupEntry).To(BeNil())
 		})
 
 		It("should fail to resolve with shoot context object", func() {
@@ -366,16 +375,11 @@ var _ = Describe("#TokenRequest", func() {
 			By("shoot does not exist")
 			Expect(shootInformer.Informer().GetStore().Delete(shoot)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("shoot.core.gardener.cloud \"test-shoot\" not found"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 
 			By("shoot and context uid does not match")
 			Expect(shootInformer.Informer().GetStore().Add(shoot)).To(Succeed())
@@ -384,15 +388,10 @@ var _ = Describe("#TokenRequest", func() {
 			uidMismatchContext := contextObject.DeepCopy()
 			uidMismatchContext.UID = uidMismatch
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, uidMismatchContext)
+			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world resource(" + shootUID + ") differ"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 
 			By("seed does not exist")
 			shoot.Spec = gardencorev1beta1.ShootSpec{
@@ -401,31 +400,21 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(shootInformer.Informer().GetStore().Update(shoot)).To(Succeed())
 			Expect(seedInformer.Informer().GetStore().Delete(seed)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("seed.core.gardener.cloud \"test-seed\" not found"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 
 			By("project does not exist")
 			Expect(seedInformer.Informer().GetStore().Add(seed)).To(Succeed())
 			Expect(projectInformer.Informer().GetStore().Delete(project)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("Project.core.gardener.cloud \"<unknown>\" not found"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 		})
 
 		It("should successfully resolve when context object is seed", func() {
@@ -436,17 +425,18 @@ var _ = Describe("#TokenRequest", func() {
 				UID:        seedUID,
 			}
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(ctxObjects).ToNot(BeNil())
 
-			Expect(rShoot).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects.shoot).To(BeNil())
+			Expect(ctxObjects.project).To(BeNil())
+			Expect(ctxObjects.backupBucket).To(BeNil())
+			Expect(ctxObjects.backupEntry).To(BeNil())
 
-			Expect(rSeed).ToNot(BeNil())
-			Expect(rSeed.GetName()).To(Equal(seedName))
-			Expect(rSeed.GetUID()).To(Equal(seedUID))
+			Expect(ctxObjects.seed).ToNot(BeNil())
+			Expect(ctxObjects.seed.GetName()).To(Equal(seedName))
+			Expect(ctxObjects.seed.GetUID()).To(Equal(seedUID))
 		})
 
 		It("should fail to resolve with seed context object", func() {
@@ -460,16 +450,11 @@ var _ = Describe("#TokenRequest", func() {
 			By("seed does not exist")
 			Expect(seedInformer.Informer().GetStore().Delete(seed)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("seed.core.gardener.cloud \"test-seed\" not found"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 
 			By("seed and context uid does not match")
 			Expect(seedInformer.Informer().GetStore().Add(seed)).To(Succeed())
@@ -477,15 +462,10 @@ var _ = Describe("#TokenRequest", func() {
 			uidMismatch := types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c")
 			uidMismatchContext := contextObject.DeepCopy()
 			uidMismatchContext.UID = uidMismatch
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, uidMismatchContext)
+			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world resource(" + seedUID + ") differ"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 		})
 
 		It("should successfully resolve when context object is backupBucket", func() {
@@ -496,40 +476,41 @@ var _ = Describe("#TokenRequest", func() {
 				UID:        backupBucketUID,
 			}
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(ctxObjects).ToNot(BeNil())
 
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects.shoot).To(BeNil())
+			Expect(ctxObjects.seed).To(BeNil())
+			Expect(ctxObjects.project).To(BeNil())
+			Expect(ctxObjects.backupEntry).To(BeNil())
 
-			Expect(rBackupBucket).ToNot(BeNil())
-			Expect(rBackupBucket.GetName()).To(Equal(backupBucketName))
-			Expect(rBackupBucket.GetUID()).To(Equal(backupBucketUID))
+			Expect(ctxObjects.backupBucket).ToNot(BeNil())
+			Expect(ctxObjects.backupBucket.GetName()).To(Equal(backupBucketName))
+			Expect(ctxObjects.backupBucket.GetUID()).To(Equal(backupBucketUID))
 
 			By("bind the backupBucket to the seed")
-
 			backupBucketCopy := backupBucket.DeepCopy()
 			backupBucketCopy.Spec = gardencorev1beta1.BackupBucketSpec{
 				SeedName: ptr.To(seedName),
 			}
 			Expect(backupBucketInformer.Informer().GetStore().Update(backupBucketCopy)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(ctxObjects).ToNot(BeNil())
 
-			Expect(rShoot).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects.shoot).To(BeNil())
+			Expect(ctxObjects.project).To(BeNil())
+			Expect(ctxObjects.backupEntry).To(BeNil())
 
-			Expect(rBackupBucket).ToNot(BeNil())
-			Expect(rBackupBucket.GetName()).To(Equal(backupBucketName))
-			Expect(rBackupBucket.GetUID()).To(Equal(backupBucketUID))
+			Expect(ctxObjects.backupBucket).ToNot(BeNil())
+			Expect(ctxObjects.backupBucket.GetName()).To(Equal(backupBucketName))
+			Expect(ctxObjects.backupBucket.GetUID()).To(Equal(backupBucketUID))
 
-			Expect(rSeed).ToNot(BeNil())
-			Expect(rSeed.GetName()).To(Equal(seedName))
-			Expect(rSeed.GetUID()).To(Equal(seedUID))
+			Expect(ctxObjects.seed).ToNot(BeNil())
+			Expect(ctxObjects.seed.GetName()).To(Equal(seedName))
+			Expect(ctxObjects.seed.GetUID()).To(Equal(seedUID))
 		})
 
 		It("should fail to resolve with backupBucket context object", func() {
@@ -541,40 +522,27 @@ var _ = Describe("#TokenRequest", func() {
 			}
 
 			By("backupBucket does not exist")
-
 			Expect(backupBucketInformer.Informer().GetStore().Delete(backupBucket)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("backupbucket.core.gardener.cloud \"test-backup-bucket\" not found"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 
 			By("backupBucket and context uid does not match")
-
 			Expect(backupBucketInformer.Informer().GetStore().Add(backupBucket)).To(Succeed())
 
 			uidMismatch := types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c")
 			uidMismatchContext := contextObject.DeepCopy()
 			uidMismatchContext.UID = uidMismatch
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, uidMismatchContext)
+			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world resource(" + backupBucketUID + ") differ"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 
 			By("bind the backupBucket to the seed")
-
 			backupBucketCopy := backupBucket.DeepCopy()
 			backupBucketCopy.Spec = gardencorev1beta1.BackupBucketSpec{
 				SeedName: ptr.To(seedName),
@@ -582,16 +550,11 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(backupBucketInformer.Informer().GetStore().Update(backupBucketCopy)).To(Succeed())
 			Expect(seedInformer.Informer().GetStore().Delete(seed)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("seed.core.gardener.cloud \"test-seed\" not found"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 		})
 
 		It("should successfully resolve when context object is backupEntry", func() {
@@ -603,24 +566,24 @@ var _ = Describe("#TokenRequest", func() {
 				UID:        backupEntryUID,
 			}
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(ctxObjects).ToNot(BeNil())
 
-			Expect(rShoot).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rSeed).To(BeNil())
+			Expect(ctxObjects.shoot).To(BeNil())
+			Expect(ctxObjects.project).To(BeNil())
+			Expect(ctxObjects.seed).To(BeNil())
 
-			Expect(rBackupEntry).ToNot(BeNil())
-			Expect(rBackupEntry.GetName()).To(Equal(backupEntryName))
-			Expect(rBackupEntry.GetNamespace()).To(Equal(namespaceName))
-			Expect(rBackupEntry.GetUID()).To(Equal(backupEntryUID))
+			Expect(ctxObjects.backupEntry).ToNot(BeNil())
+			Expect(ctxObjects.backupEntry.GetName()).To(Equal(backupEntryName))
+			Expect(ctxObjects.backupEntry.GetNamespace()).To(Equal(namespaceName))
+			Expect(ctxObjects.backupEntry.GetUID()).To(Equal(backupEntryUID))
 
-			Expect(rBackupBucket).ToNot(BeNil())
-			Expect(rBackupBucket.GetName()).To(Equal(backupBucketName))
-			Expect(rBackupBucket.GetUID()).To(Equal(backupBucketUID))
+			Expect(ctxObjects.backupBucket).ToNot(BeNil())
+			Expect(ctxObjects.backupBucket.GetName()).To(Equal(backupBucketName))
+			Expect(ctxObjects.backupBucket.GetUID()).To(Equal(backupBucketUID))
 
 			By("set shoot as owner of the BackupEntry")
-
 			backupEntry.OwnerReferences = []metav1.OwnerReference{{
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Kind:       "Shoot",
@@ -629,59 +592,60 @@ var _ = Describe("#TokenRequest", func() {
 			}}
 			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntry)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(ctxObjects).ToNot(BeNil())
 
-			Expect(rSeed).To(BeNil())
+			Expect(ctxObjects.seed).To(BeNil())
 
-			Expect(rBackupEntry).ToNot(BeNil())
-			Expect(rBackupEntry.GetName()).To(Equal(backupEntryName))
-			Expect(rBackupEntry.GetNamespace()).To(Equal(namespaceName))
-			Expect(rBackupEntry.GetUID()).To(Equal(backupEntryUID))
+			Expect(ctxObjects.backupEntry).ToNot(BeNil())
+			Expect(ctxObjects.backupEntry.GetName()).To(Equal(backupEntryName))
+			Expect(ctxObjects.backupEntry.GetNamespace()).To(Equal(namespaceName))
+			Expect(ctxObjects.backupEntry.GetUID()).To(Equal(backupEntryUID))
 
-			Expect(rBackupBucket).ToNot(BeNil())
-			Expect(rBackupBucket.GetName()).To(Equal(backupBucketName))
-			Expect(rBackupBucket.GetUID()).To(Equal(backupBucketUID))
+			Expect(ctxObjects.backupBucket).ToNot(BeNil())
+			Expect(ctxObjects.backupBucket.GetName()).To(Equal(backupBucketName))
+			Expect(ctxObjects.backupBucket.GetUID()).To(Equal(backupBucketUID))
 
-			Expect(rShoot).ToNot(BeNil())
-			Expect(rShoot.GetName()).To(Equal(shootName))
-			Expect(rShoot.GetNamespace()).To(Equal(namespaceName))
-			Expect(rShoot.GetUID()).To(Equal(shootUID))
+			Expect(ctxObjects.shoot).ToNot(BeNil())
+			Expect(ctxObjects.shoot.GetName()).To(Equal(shootName))
+			Expect(ctxObjects.shoot.GetNamespace()).To(Equal(namespaceName))
+			Expect(ctxObjects.shoot.GetUID()).To(Equal(shootUID))
 
-			Expect(rProject).ToNot(BeNil())
-			Expect(rProject.GetName()).To(Equal(projectName))
-			Expect(rProject.GetUID()).To(Equal(projectUID))
+			Expect(ctxObjects.project).ToNot(BeNil())
+			Expect(ctxObjects.project.GetName()).To(Equal(projectName))
+			Expect(ctxObjects.project.GetUID()).To(Equal(projectUID))
 
 			By("bind the backupEntry to the seed")
-
 			backupEntryCopy := backupEntry.DeepCopy()
 			backupEntryCopy.Spec.SeedName = ptr.To(seedName)
 			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntryCopy)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(ctxObjects).ToNot(BeNil())
 
-			Expect(rBackupEntry).ToNot(BeNil())
-			Expect(rBackupEntry.GetName()).To(Equal(backupEntryName))
-			Expect(rBackupEntry.GetNamespace()).To(Equal(namespaceName))
-			Expect(rBackupEntry.GetUID()).To(Equal(backupEntryUID))
+			Expect(ctxObjects.backupEntry).ToNot(BeNil())
+			Expect(ctxObjects.backupEntry.GetName()).To(Equal(backupEntryName))
+			Expect(ctxObjects.backupEntry.GetNamespace()).To(Equal(namespaceName))
+			Expect(ctxObjects.backupEntry.GetUID()).To(Equal(backupEntryUID))
 
-			Expect(rBackupBucket).ToNot(BeNil())
-			Expect(rBackupBucket.GetName()).To(Equal(backupBucketName))
-			Expect(rBackupBucket.GetUID()).To(Equal(backupBucketUID))
+			Expect(ctxObjects.backupBucket).ToNot(BeNil())
+			Expect(ctxObjects.backupBucket.GetName()).To(Equal(backupBucketName))
+			Expect(ctxObjects.backupBucket.GetUID()).To(Equal(backupBucketUID))
 
-			Expect(rShoot).ToNot(BeNil())
-			Expect(rShoot.GetName()).To(Equal(shootName))
-			Expect(rShoot.GetNamespace()).To(Equal(namespaceName))
-			Expect(rShoot.GetUID()).To(Equal(shootUID))
+			Expect(ctxObjects.shoot).ToNot(BeNil())
+			Expect(ctxObjects.shoot.GetName()).To(Equal(shootName))
+			Expect(ctxObjects.shoot.GetNamespace()).To(Equal(namespaceName))
+			Expect(ctxObjects.shoot.GetUID()).To(Equal(shootUID))
 
-			Expect(rProject).ToNot(BeNil())
-			Expect(rProject.GetName()).To(Equal(projectName))
-			Expect(rProject.GetUID()).To(Equal(projectUID))
+			Expect(ctxObjects.project).ToNot(BeNil())
+			Expect(ctxObjects.project.GetName()).To(Equal(projectName))
+			Expect(ctxObjects.project.GetUID()).To(Equal(projectUID))
 
-			Expect(rSeed).ToNot(BeNil())
-			Expect(rSeed.GetName()).To(Equal(seedName))
-			Expect(rSeed.GetUID()).To(Equal(seedUID))
+			Expect(ctxObjects.seed).ToNot(BeNil())
+			Expect(ctxObjects.seed.GetName()).To(Equal(seedName))
+			Expect(ctxObjects.seed.GetUID()).To(Equal(seedUID))
 		})
 
 		It("should fail to resolve with backupEntry context object", func() {
@@ -694,73 +658,49 @@ var _ = Describe("#TokenRequest", func() {
 			}
 
 			By("backupEntry does not exist")
-
 			Expect(backupEntryInformer.Informer().GetStore().Delete(backupEntry)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("backupentry.core.gardener.cloud \"shoot--test-project--test-shoot--9a134d22-dd61-4845-951e-9a20bde1648a\" not found"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 
 			By("backupEntry and context uid does not match")
-
 			Expect(backupEntryInformer.Informer().GetStore().Add(backupEntry)).To(Succeed())
 
 			uidMismatch := types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c")
 			uidMismatchContext := contextObject.DeepCopy()
 			uidMismatchContext.UID = uidMismatch
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, uidMismatchContext)
+			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world resource(" + backupEntryUID + ") differ"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 
 			By("backupBucket does not exist")
 			Expect(backupBucketInformer.Informer().GetStore().Delete(backupBucket)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("backupbucket.core.gardener.cloud \"test-backup-bucket\" not found"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 
 			By("bind the backupEntry to the seed")
-
 			backupEntryCopy := backupEntry.DeepCopy()
 			backupEntryCopy.Spec.SeedName = ptr.To(seedName)
 			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntryCopy)).To(Succeed())
 			Expect(backupBucketInformer.Informer().GetStore().Add(backupBucket)).To(Succeed())
 			Expect(seedInformer.Informer().GetStore().Delete(seed)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("seed.core.gardener.cloud \"test-seed\" not found"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 
 			By("shoot does not exist")
-
 			backupEntry.OwnerReferences = []metav1.OwnerReference{{
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Kind:       "Shoot",
@@ -771,31 +711,21 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(seedInformer.Informer().GetStore().Add(seed)).To(Succeed())
 			Expect(shootInformer.Informer().GetStore().Delete(shoot)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("shoot.core.gardener.cloud \"test-shoot\" not found"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 
 			By("project does not exist")
 			Expect(shootInformer.Informer().GetStore().Add(shoot)).To(Succeed())
 			Expect(projectInformer.Informer().GetStore().Delete(project)).To(Succeed())
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err = r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("Project.core.gardener.cloud \"<unknown>\" not found"))
-
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 		})
 
 		It("should fail to resolve with unsupported context object", func() {
@@ -806,14 +736,10 @@ var _ = Describe("#TokenRequest", func() {
 				UID:        types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c"),
 			}
 
-			rShoot, rSeed, rProject, rBackupBucket, rBackupEntry, err := r.resolveContextObject(&seedUser, contextObject)
+			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("unsupported GVK for context object: test/v1alpha1, Kind=Foo"))
-			Expect(rShoot).To(BeNil())
-			Expect(rSeed).To(BeNil())
-			Expect(rProject).To(BeNil())
-			Expect(rBackupBucket).To(BeNil())
-			Expect(rBackupEntry).To(BeNil())
+			Expect(ctxObjects).To(BeNil())
 		})
 	})
 
