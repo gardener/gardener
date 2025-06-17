@@ -40,9 +40,19 @@ type ref struct {
 	UID       string  `json:"uid"`
 }
 
+// contextObjects contains metadata information about the objects
+// which are in the context of given WorkloadIdentity
+type contextObjects struct {
+	shoot        metav1.Object
+	seed         metav1.Object
+	project      metav1.Object
+	backupBucket metav1.Object
+	backupEntry  metav1.Object
+}
+
 // issueToken generates the JSON Web Token based on the provided configurations.
 func (r *TokenRequestREST) issueToken(user user.Info, tokenRequest *securityapi.TokenRequest, workloadIdentity *securityapi.WorkloadIdentity) (string, *time.Time, error) {
-	shoot, seed, project, backupBucket, backupEntry, err := r.resolveContextObject(user, tokenRequest.Spec.ContextObject)
+	contextObjects, err := r.resolveContextObject(user, tokenRequest.Spec.ContextObject)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to resolve context object: %w", err)
 	}
@@ -51,7 +61,7 @@ func (r *TokenRequestREST) issueToken(user user.Info, tokenRequest *securityapi.
 		workloadIdentity.Status.Sub,
 		workloadIdentity.Spec.Audiences,
 		tokenRequest.Spec.ExpirationSeconds,
-		r.getGardenerClaims(workloadIdentity, shoot, seed, project, backupBucket, backupEntry),
+		r.getGardenerClaims(workloadIdentity, contextObjects),
 	)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to issue JSON Web Token: %w", err)
@@ -60,7 +70,7 @@ func (r *TokenRequestREST) issueToken(user user.Info, tokenRequest *securityapi.
 	return token, exp, nil
 }
 
-func (r *TokenRequestREST) getGardenerClaims(workloadIdentity *securityapi.WorkloadIdentity, shoot, seed, project, backupBucket, backupEntry metav1.Object) *gardenerClaims {
+func (r *TokenRequestREST) getGardenerClaims(workloadIdentity *securityapi.WorkloadIdentity, ctxObjects *contextObjects) *gardenerClaims {
 	gardenerClaims := &gardenerClaims{
 		Gardener: gardener{
 			WorkloadIdentity: ref{
@@ -71,161 +81,165 @@ func (r *TokenRequestREST) getGardenerClaims(workloadIdentity *securityapi.Workl
 		},
 	}
 
-	if shoot != nil {
+	if ctxObjects == nil {
+		return gardenerClaims
+	}
+
+	if ctxObjects.shoot != nil {
 		gardenerClaims.Gardener.Shoot = &ref{
-			Name:      shoot.GetName(),
-			Namespace: ptr.To(shoot.GetNamespace()),
-			UID:       string(shoot.GetUID()),
+			Name:      ctxObjects.shoot.GetName(),
+			Namespace: ptr.To(ctxObjects.shoot.GetNamespace()),
+			UID:       string(ctxObjects.shoot.GetUID()),
 		}
 	}
 
-	if seed != nil {
+	if ctxObjects.seed != nil {
 		gardenerClaims.Gardener.Seed = &ref{
-			Name: seed.GetName(),
-			UID:  string(seed.GetUID()),
+			Name: ctxObjects.seed.GetName(),
+			UID:  string(ctxObjects.seed.GetUID()),
 		}
 	}
 
-	if project != nil {
+	if ctxObjects.project != nil {
 		gardenerClaims.Gardener.Project = &ref{
-			Name: project.GetName(),
-			UID:  string(project.GetUID()),
+			Name: ctxObjects.project.GetName(),
+			UID:  string(ctxObjects.project.GetUID()),
 		}
 	}
 
-	if backupBucket != nil {
+	if ctxObjects.backupBucket != nil {
 		gardenerClaims.Gardener.BackupBucket = &ref{
-			Name: backupBucket.GetName(),
-			UID:  string(backupBucket.GetUID()),
+			Name: ctxObjects.backupBucket.GetName(),
+			UID:  string(ctxObjects.backupBucket.GetUID()),
 		}
 	}
 
-	if backupEntry != nil {
+	if ctxObjects.backupEntry != nil {
 		gardenerClaims.Gardener.BackupEntry = &ref{
-			Name:      backupEntry.GetName(),
-			Namespace: ptr.To(backupEntry.GetNamespace()),
-			UID:       string(backupEntry.GetUID()),
+			Name:      ctxObjects.backupEntry.GetName(),
+			Namespace: ptr.To(ctxObjects.backupEntry.GetNamespace()),
+			UID:       string(ctxObjects.backupEntry.GetUID()),
 		}
 	}
 
 	return gardenerClaims
 }
 
-func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *securityapi.ContextObject) (metav1.Object, metav1.Object, metav1.Object, metav1.Object, metav1.Object, error) {
+func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *securityapi.ContextObject) (*contextObjects, error) {
 	if ctxObj == nil {
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil
 	}
 
 	if !slices.Contains(user.GetGroups(), v1beta1constants.SeedsGroup) {
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil
 	}
 
 	var (
+		ctxObjects   = &contextObjects{}
 		shoot        *gardencorev1beta1.Shoot
 		seed         *gardencorev1beta1.Seed
 		project      *gardencorev1beta1.Project
 		backupBucket *gardencorev1beta1.BackupBucket
 		backupEntry  *gardencorev1beta1.BackupEntry
 
-		shootMeta, seedMeta, projectMeta, backupBucketMeta, backupEntryMeta metav1.Object
-		err                                                                 error
+		err error
 	)
 
 	switch gvk := schema.FromAPIVersionAndKind(ctxObj.APIVersion, ctxObj.Kind); {
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "Shoot":
 		if shoot, err = r.shootListers.Shoots(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, err
 		}
-		shootMeta = shoot.GetObjectMeta()
+		ctxObjects.shoot = shoot.GetObjectMeta()
 
 		if shoot.UID != ctxObj.UID {
-			return nil, nil, nil, nil, nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, shoot.UID)
+			return nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, shoot.UID)
 		}
 
 		if shoot.Spec.SeedName != nil {
 			seedName := *shoot.Spec.SeedName
 			if seed, err = r.seedLister.Get(seedName); err != nil {
-				return nil, nil, nil, nil, nil, err
+				return nil, err
 			}
-			seedMeta = seed.GetObjectMeta()
+			ctxObjects.seed = seed.GetObjectMeta()
 		}
 
 		if project, err = admissionutils.ProjectForNamespaceFromLister(r.projectLister, shoot.Namespace); err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, err
 		}
-		projectMeta = project.GetObjectMeta()
+		ctxObjects.project = project.GetObjectMeta()
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "Seed":
 		if seed, err = r.seedLister.Get(ctxObj.Name); err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, err
 		}
 
 		if seed.UID != ctxObj.UID {
-			return nil, nil, nil, nil, nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, seed.UID)
+			return nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, seed.UID)
 		}
-		seedMeta = seed.GetObjectMeta()
+		ctxObjects.seed = seed.GetObjectMeta()
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "BackupBucket":
 		if backupBucket, err = r.backupBucketLister.Get(ctxObj.Name); err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, err
 		}
 
 		if backupBucket.UID != ctxObj.UID {
-			return nil, nil, nil, nil, nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, backupBucket.UID)
+			return nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, backupBucket.UID)
 		}
-		backupBucketMeta = backupBucket.GetObjectMeta()
+		ctxObjects.backupBucket = backupBucket.GetObjectMeta()
 
 		if backupBucket.Spec.SeedName != nil {
 			seedName := *backupBucket.Spec.SeedName
 			if seed, err = r.seedLister.Get(seedName); err != nil {
-				return nil, nil, nil, nil, nil, err
+				return nil, err
 			}
-			seedMeta = seed.GetObjectMeta()
+			ctxObjects.seed = seed.GetObjectMeta()
 		}
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "BackupEntry":
 		if backupEntry, err = r.backupEntryLister.BackupEntries(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, err
 		}
 
 		if backupEntry.UID != ctxObj.UID {
-			return nil, nil, nil, nil, nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, backupEntry.UID)
+			return nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, backupEntry.UID)
 		}
-		backupEntryMeta = backupEntry.GetObjectMeta()
+		ctxObjects.backupEntry = backupEntry.GetObjectMeta()
 
 		if backupBucket, err = r.backupBucketLister.Get(backupEntry.Spec.BucketName); err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, err
 		}
-		backupBucketMeta = backupBucket.GetObjectMeta()
+		ctxObjects.backupBucket = backupBucket.GetObjectMeta()
 
 		if backupEntry.Spec.SeedName != nil {
 			seedName := *backupEntry.Spec.SeedName
 			if seed, err = r.seedLister.Get(seedName); err != nil {
-				return nil, nil, nil, nil, nil, err
+				return nil, err
 			}
-			seedMeta = seed.GetObjectMeta()
+			ctxObjects.seed = seed.GetObjectMeta()
 		}
 
 		if shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry); shootName != "" {
 			shoot, err := r.shootListers.Shoots(backupEntry.GetNamespace()).Get(shootName)
 			if err != nil {
-				return nil, nil, nil, nil, nil, err
+				return nil, err
 			}
 
 			shootTechnicalID, shootUID := gardenerutils.ExtractShootDetailsFromBackupEntryName(ctxObj.Name)
 			if shootTechnicalID == shoot.Status.TechnicalID && shootUID == shoot.GetUID() {
-				shootMeta = shoot.GetObjectMeta()
+				ctxObjects.shoot = shoot.GetObjectMeta()
 
 				if project, err = admissionutils.ProjectForNamespaceFromLister(r.projectLister, shoot.Namespace); err != nil {
-					return nil, nil, nil, nil, nil, err
+					return nil, err
 				}
-				projectMeta = project.GetObjectMeta()
+				ctxObjects.project = project.GetObjectMeta()
 			}
 		}
 
 	default:
-		return nil, nil, nil, nil, nil, fmt.Errorf("unsupported GVK for context object: %s", gvk.String())
+		return nil, fmt.Errorf("unsupported GVK for context object: %s", gvk.String())
 	}
 
-	return shootMeta, seedMeta, projectMeta, backupBucketMeta, backupEntryMeta, nil
+	return ctxObjects, nil
 }
