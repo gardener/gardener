@@ -245,7 +245,9 @@ seedConfig:
   spec:
     backup:
       provider: <provider>
-      secretRef:
+      credentialsRef:
+        apiVersion: v1
+        kind: Secret
         name: sweet-seed-backup
         namespace: garden
 ```
@@ -327,7 +329,9 @@ config:
         type: <provider>
       backup:
         provider: <provider>
-        secretRef:
+        credentialsRef:
+          apiVersion: v1
+          kind: Secret
           name: sweet-seed-backup
           namespace: garden
 ```
