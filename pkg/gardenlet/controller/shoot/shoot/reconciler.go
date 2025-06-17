@@ -578,9 +578,12 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		LastUpdateTime: now,
 	}
 
-	var mustRemoveOperationAnnotation bool
+	var (
+		operation                     = shoot.Annotations[v1beta1constants.GardenerOperation]
+		mustRemoveOperationAnnotation bool
+	)
 
-	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
+	switch operation {
 	case v1beta1constants.OperationRotateCredentialsStart:
 		mustRemoveOperationAnnotation = true
 		startRotationCA(shoot, &now)
@@ -643,7 +646,8 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		completeRotationETCDEncryptionKey(shoot, &now)
 	}
 
-	if operation := shoot.Annotations[v1beta1constants.GardenerOperation]; strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
+	switch {
+	case strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers):
 		mustRemoveOperationAnnotation = true
 		poolNames := sets.NewString(strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers+"="), ",")...)
 
@@ -662,6 +666,28 @@ func (r *Reconciler) updateShootStatusOperationStart(
 				})
 			})
 		}
+	case strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers):
+		mustRemoveOperationAnnotation = true
+		poolNames := sets.NewString(strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRolloutWorkers+"="), ",")...)
+
+		v1beta1helper.MutateShootWorkerPoolRollout(shoot, func(rollout *gardencorev1beta1.ManualWorkerPoolRollout) {
+			workerRolloutInitiationTime := &now
+			if rollout.LastInitiationTime != nil {
+				workerRolloutInitiationTime = rollout.LastInitiationTime.DeepCopy()
+			}
+
+			var pendingWorkersRollouts []gardencorev1beta1.PendingWorkersRollout
+			for worker := range poolNames {
+				pendingWorkersRollouts = append(pendingWorkersRollouts, gardencorev1beta1.PendingWorkersRollout{
+					Name:               worker,
+					LastInitiationTime: workerRolloutInitiationTime,
+				})
+			}
+
+			rollout.PendingWorkersRollouts = pendingWorkersRollouts
+			rollout.LastInitiationTime = &now
+			rollout.LastCompletionTime = nil
+		})
 	}
 
 	removeNonExistentPoolsFromPendingWorkersRollouts(shoot, v1beta1helper.HibernationIsEnabled(shoot))
@@ -787,6 +813,13 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 			rotation.LastCompletionTime = &now
 			rotation.LastInitiationFinishedTime = nil
 			rotation.LastCompletionTriggeredTime = nil
+		})
+	}
+
+	if shoot.Status.ManualWorkerPoolRollout != nil {
+		v1beta1helper.MutateShootWorkerPoolRollout(shoot, func(rollout *gardencorev1beta1.ManualWorkerPoolRollout) {
+			rollout.LastCompletionTime = &now
+			rollout.PendingWorkersRollouts = nil
 		})
 	}
 
@@ -936,6 +969,14 @@ func removeNonExistentPoolsFromPendingWorkersRollouts(shoot *gardencorev1beta1.S
 			}
 		} else {
 			shoot.Status.InPlaceUpdates = nil
+		}
+	}
+
+	if shoot.Status.ManualWorkerPoolRollout != nil {
+		if shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts != nil {
+			shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts = slices.DeleteFunc(shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+				return !poolNames.Has(rollout.Name)
+			})
 		}
 	}
 }
