@@ -2899,23 +2899,6 @@ string
 </tr>
 <tr>
 <td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<p>SecretRef is a reference to a Secret object containing the cloud provider credentials for
-the object store where backups should be stored. It should have enough privileges to manipulate
-the objects as well as buckets.
-Deprecated: This field will be removed after v1.121.0 has been released. Use <code>CredentialsRef</code> instead.
-Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>credentialsRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
