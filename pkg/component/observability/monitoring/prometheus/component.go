@@ -228,9 +228,12 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		cortexConfigMap = p.cortexConfigMap()
 	}
 
-	var role *rbacv1.Role
-	var roleBinding *rbacv1.RoleBinding
-	var clusterRoleBinding *rbacv1.ClusterRoleBinding
+	var (
+		role               *rbacv1.Role
+		roleBinding        *rbacv1.RoleBinding
+		clusterRoleBinding *rbacv1.ClusterRoleBinding
+	)
+
 	if p.values.TargetCluster != nil {
 		// Restrict Prometheus instances with a target cluster to the corresponding control-plane namespace of the Seed.
 		role = p.role()
