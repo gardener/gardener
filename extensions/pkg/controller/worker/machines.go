@@ -161,6 +161,12 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 		}
 	}
 
+	if status := cluster.Shoot.Status; status.ManualWorkerPoolRollout != nil {
+		if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(pool.Name, status.ManualWorkerPoolRollout.PendingWorkersRollouts, nil); lastInitiationTime != nil {
+			data = append(data, lastInitiationTime.String())
+		}
+	}
+
 	if v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
 		data = append(data, "node-local-dns")
 	}
