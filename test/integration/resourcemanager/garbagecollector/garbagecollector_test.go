@@ -9,8 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -21,6 +19,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Garbage collector tests", func() {
@@ -201,51 +200,43 @@ var _ = Describe("Garbage collector tests", func() {
 			Expect(testClient.Create(ctx, obj)).To(Succeed())
 		}
 
-		Eventually(func(g Gomega) []corev1.Secret {
+		Eventually(func(g Gomega) []string {
 			secretList := &corev1.SecretList{}
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
-			return secretList.Items
+			return test.ObjectNames(secretList)
 		}).Should(And(
 			ContainElements(
-				withName(resourceName+"-secret0"),
-				withName(resourceName+"-secret1"),
-				withName(resourceName+"-secret2"),
-				withName(resourceName+"-secret3"),
-				withName(resourceName+"-secret4"),
-				withName(resourceName+"-secret5"),
-				withName(resourceName+"-secret6"),
-				withName(resourceName+"-secret7"),
+				resourceName+"-secret0",
+				resourceName+"-secret1",
+				resourceName+"-secret2",
+				resourceName+"-secret3",
+				resourceName+"-secret4",
+				resourceName+"-secret5",
+				resourceName+"-secret6",
+				resourceName+"-secret7",
 			),
-			Not(ContainElement(withName(resourceName+"-secret8"))),
+			Not(ContainElement(resourceName+"-secret8")),
 		))
 
-		Eventually(func(g Gomega) []corev1.ConfigMap {
+		Eventually(func(g Gomega) []string {
 			configMapList := &corev1.ConfigMapList{}
 			g.Expect(testClient.List(ctx, configMapList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
-			return configMapList.Items
+			return test.ObjectNames(configMapList)
 		}).Should(And(
-			Not(ContainElement(withName(resourceName+"-configmap0"))),
+			Not(ContainElement(resourceName+"-configmap0")),
 			ContainElements(
-				withName(resourceName+"-configmap1"),
-				withName(resourceName+"-configmap2"),
-				withName(resourceName+"-configmap3"),
-				withName(resourceName+"-configmap4"),
-				withName(resourceName+"-configmap5"),
-				withName(resourceName+"-configmap6"),
-				withName(resourceName+"-configmap7"),
-				withName(resourceName+"-configmap8"),
+				resourceName+"-configmap1",
+				resourceName+"-configmap2",
+				resourceName+"-configmap3",
+				resourceName+"-configmap4",
+				resourceName+"-configmap5",
+				resourceName+"-configmap6",
+				resourceName+"-configmap7",
+				resourceName+"-configmap8",
 			),
 		))
 	})
 })
-
-func withName(name string) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"ObjectMeta": gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-			"Name": Equal(name),
-		}),
-	})
-}
 
 func objectMeta(name string, testLabels map[string]string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{

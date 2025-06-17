@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -58,22 +59,23 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 
 		ensureNetworkPolicies = func(asyncAssertion func(int, any, ...any) AsyncAssertion, should bool) func() {
 			return func() {
-				assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
+				assertedFunc := func(g Gomega) []string {
 					networkPolicyList := &networkingv1.NetworkPolicyList{}
 					g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
-					return networkPolicyList.Items
+					return test.ObjectNames(networkPolicyList)
 				}
-				expectation := ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port1Suffix)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port1Suffix)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port2Suffix)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port2Suffix)})}),
-				)
+				expectation := []string{
+					"ingress-to-" + service.Name + port1Suffix,
+					"egress-to-" + service.Name + port1Suffix,
+					"ingress-to-" + service.Name + port2Suffix,
+					"egress-to-" + service.Name + port2Suffix,
+				}
 
 				if should {
-					asyncAssertion(1, assertedFunc).Should(expectation)
+					asyncAssertion(1, assertedFunc).Should(ContainElements(expectation))
 				} else {
-					asyncAssertion(1, assertedFunc).ShouldNot(expectation)
+					// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
+					asyncAssertion(1, assertedFunc).ShouldNot(ContainElements(expectation))
 				}
 			}
 		}
@@ -85,37 +87,39 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		ensureCrossNamespaceNetworkPolicies = func(asyncAssertion func(int, any, ...any) AsyncAssertion, should bool) func() {
 			return func() {
 				// ingress rules
-				assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
+				assertedFunc := func(g Gomega) []string {
 					networkPolicyList := &networkingv1.NetworkPolicyList{}
 					g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
-					return networkPolicyList.Items
+					return test.ObjectNames(networkPolicyList)
 				}
-				expectation := ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port1Suffix + "-from-" + otherNamespace.Name)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port2Suffix + "-from-" + otherNamespace.Name)})}),
-				)
+				expectation := []string{
+					"ingress-to-" + service.Name + port1Suffix + "-from-" + otherNamespace.Name,
+					"ingress-to-" + service.Name + port2Suffix + "-from-" + otherNamespace.Name,
+				}
 
 				if should {
-					asyncAssertion(1, assertedFunc).Should(expectation)
+					asyncAssertion(1, assertedFunc).Should(ContainElements(expectation))
 				} else {
-					asyncAssertion(1, assertedFunc).ShouldNot(expectation)
+					// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
+					asyncAssertion(1, assertedFunc).ShouldNot(ContainElements(expectation))
 				}
 
 				// egress rules
-				assertedFunc = func(g Gomega) []networkingv1.NetworkPolicy {
+				assertedFunc = func(g Gomega) []string {
 					networkPolicyList := &networkingv1.NetworkPolicyList{}
 					g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(otherNamespace.Name))).To(Succeed())
-					return networkPolicyList.Items
+					return test.ObjectNames(networkPolicyList)
 				}
-				expectation = ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port1Suffix)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port2Suffix)})}),
-				)
+				expectation = []string{
+					"egress-to-" + service.Namespace + "-" + service.Name + port1Suffix,
+					"egress-to-" + service.Namespace + "-" + service.Name + port2Suffix,
+				}
 
 				if should {
-					asyncAssertion(1, assertedFunc).Should(expectation)
+					asyncAssertion(1, assertedFunc).Should(ContainElements(expectation))
 				} else {
-					asyncAssertion(1, assertedFunc).ShouldNot(expectation)
+					// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
+					asyncAssertion(1, assertedFunc).ShouldNot(ContainElements(expectation))
 				}
 			}
 		}
@@ -125,26 +129,27 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 
 		ensureNetworkPoliciesWithCustomPodLabelSelectors = func(asyncAssertion func(int, any, ...any) AsyncAssertion, should bool) func() {
 			return func() {
-				assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
+				assertedFunc := func(g Gomega) []string {
 					networkPolicyList := &networkingv1.NetworkPolicyList{}
 					g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
-					return networkPolicyList.Items
+					return test.ObjectNames(networkPolicyList)
 				}
-				expectation := ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector1)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector1)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector1)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector1)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port5Suffix + "-via-" + customPodLabelSelector2)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port5Suffix + "-via-" + customPodLabelSelector2)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port6Suffix + "-via-" + customPodLabelSelector2)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port6Suffix + "-via-" + customPodLabelSelector2)})}),
-				)
+				expectation := []string{
+					"ingress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector1,
+					"egress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector1,
+					"ingress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector1,
+					"egress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector1,
+					"ingress-to-" + service.Name + port5Suffix + "-via-" + customPodLabelSelector2,
+					"egress-to-" + service.Name + port5Suffix + "-via-" + customPodLabelSelector2,
+					"ingress-to-" + service.Name + port6Suffix + "-via-" + customPodLabelSelector2,
+					"egress-to-" + service.Name + port6Suffix + "-via-" + customPodLabelSelector2,
+				}
 
 				if should {
-					asyncAssertion(1, assertedFunc).Should(expectation)
+					asyncAssertion(1, assertedFunc).Should(ContainElements(expectation))
 				} else {
-					asyncAssertion(1, assertedFunc).ShouldNot(expectation)
+					// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
+					asyncAssertion(1, assertedFunc).ShouldNot(ContainElements(expectation))
 				}
 			}
 		}
@@ -153,19 +158,20 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 
 		ensureIngressFromWorldNetworkPolicy = func(asyncAssertion func(int, any, ...any) AsyncAssertion, should bool) func() {
 			return func() {
-				assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
+				assertedFunc := func(g Gomega) []string {
 					networkPolicyList := &networkingv1.NetworkPolicyList{}
 					g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
-					return networkPolicyList.Items
+					return test.ObjectNames(networkPolicyList)
 				}
-				expectation := ContainElement(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + "-from-world")})}),
-				)
+				expectation := []string{
+					"ingress-to-" + service.Name + "-from-world",
+				}
 
 				if should {
-					asyncAssertion(1, assertedFunc).Should(expectation)
+					asyncAssertion(1, assertedFunc).Should(ContainElements(expectation))
 				} else {
-					asyncAssertion(1, assertedFunc).ShouldNot(expectation)
+					// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
+					asyncAssertion(1, assertedFunc).ShouldNot(ContainElements(expectation))
 				}
 			}
 		}
@@ -337,20 +343,21 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
 
 			By("Wait until all policies were reconciled")
-			Eventually(func(g Gomega) []networkingv1.NetworkPolicy {
+			Eventually(func(g Gomega) []string {
 				networkPolicyList := &networkingv1.NetworkPolicyList{}
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
-				return networkPolicyList.Items
+				return test.ObjectNames(networkPolicyList)
 			}).Should(And(
+				// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
 				Not(ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port1Suffix)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port1Suffix)})}),
+					"ingress-to-"+service.Name+port1Suffix,
+					"egress-to-"+service.Name+port1Suffix,
 				)),
 				ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port2Suffix)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port2Suffix)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + "-udp-2468")})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + "-udp-2468")})}),
+					"ingress-to-"+service.Name+port2Suffix,
+					"egress-to-"+service.Name+port2Suffix,
+					"ingress-to-"+service.Name+"-udp-2468",
+					"egress-to-"+service.Name+"-udp-2468",
 				),
 			))
 		})
@@ -570,17 +577,18 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				),
 			))
 
-			Eventually(func(g Gomega) []networkingv1.NetworkPolicy {
+			Eventually(func(g Gomega) []string {
 				networkPolicyList := &networkingv1.NetworkPolicyList{}
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(otherNamespace.Name))).To(Succeed())
-				return networkPolicyList.Items
+				return test.ObjectNames(networkPolicyList)
 			}).Should(And(
+				// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
 				Not(ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port1Suffix)})}),
+					"egress-to-"+service.Namespace+"-"+service.Name+port1Suffix,
 				)),
 				ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port2Suffix)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + "-udp-2468")})}),
+					"egress-to-"+service.Namespace+"-"+service.Name+port2Suffix,
+					"egress-to-"+service.Namespace+"-"+service.Name+"-udp-2468",
 				),
 			))
 		})
@@ -687,23 +695,23 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			})
 
 			By("Wait until all ingress policies are created")
-			Eventually(func(g Gomega) []networkingv1.NetworkPolicy {
+			Eventually(func(g Gomega) []string {
 				networkPolicyList := &networkingv1.NetworkPolicyList{}
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
-				return networkPolicyList.Items
+				return test.ObjectNames(networkPolicyList)
 			}).Should(ContainElements(
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port1Suffix + "-from-" + otherNamespace.Name)})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port2Suffix + "-from-" + otherNamespace.Name)})}),
+				"ingress-to-"+service.Name+port1Suffix+"-from-"+otherNamespace.Name,
+				"ingress-to-"+service.Name+port2Suffix+"-from-"+otherNamespace.Name,
 			))
 
 			By("Wait until all egress policies are created")
-			Eventually(func(g Gomega) []networkingv1.NetworkPolicy {
+			Eventually(func(g Gomega) []string {
 				networkPolicyList := &networkingv1.NetworkPolicyList{}
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(newNamespace.Name))).To(Succeed())
-				return networkPolicyList.Items
+				return test.ObjectNames(networkPolicyList)
 			}).Should(ContainElements(
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port1Suffix)})}),
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Namespace + "-" + service.Name + port2Suffix)})}),
+				"egress-to-"+service.Namespace+"-"+service.Name+port1Suffix,
+				"egress-to-"+service.Namespace+"-"+service.Name+port2Suffix,
 			))
 		})
 
@@ -878,24 +886,24 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
 
 			By("Wait until all policies were reconciled")
-			Eventually(func(g Gomega) []networkingv1.NetworkPolicy {
+			Eventually(func(g Gomega) []string {
 				networkPolicyList := &networkingv1.NetworkPolicyList{}
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
-				return networkPolicyList.Items
+				return test.ObjectNames(networkPolicyList)
 			}).Should(And(
 				Not(ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector1)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port3Suffix + "-via-" + customPodLabelSelector1)})}),
+					"ingress-to-"+service.Name+port3Suffix+"-via-"+customPodLabelSelector1,
+					"egress-to-"+service.Name+port3Suffix+"-via-"+customPodLabelSelector1,
 				)),
 				ContainElements(
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector1)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port4Suffix + "-via-" + customPodLabelSelector1)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + "-udp-2468-via-" + customPodLabelSelector1)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + "-udp-2468-via-" + customPodLabelSelector1)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port5Suffix + "-via-" + customPodLabelSelector2)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port5Suffix + "-via-" + customPodLabelSelector2)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("ingress-to-" + service.Name + port6Suffix + "-via-" + customPodLabelSelector2)})}),
-					MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-to-" + service.Name + port6Suffix + "-via-" + customPodLabelSelector2)})}),
+					"ingress-to-"+service.Name+port4Suffix+"-via-"+customPodLabelSelector1,
+					"egress-to-"+service.Name+port4Suffix+"-via-"+customPodLabelSelector1,
+					"ingress-to-"+service.Name+"-udp-2468-via-"+customPodLabelSelector1,
+					"egress-to-"+service.Name+"-udp-2468-via-"+customPodLabelSelector1,
+					"ingress-to-"+service.Name+port5Suffix+"-via-"+customPodLabelSelector2,
+					"egress-to-"+service.Name+port5Suffix+"-via-"+customPodLabelSelector2,
+					"ingress-to-"+service.Name+port6Suffix+"-via-"+customPodLabelSelector2,
+					"egress-to-"+service.Name+port6Suffix+"-via-"+customPodLabelSelector2,
 				),
 			))
 		})
