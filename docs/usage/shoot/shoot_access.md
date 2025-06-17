@@ -165,9 +165,9 @@ The user is responsible for the validity of the configured `JWTAuthenticator`s.
 Be aware that changing the configuration in the `ConfigMap` will be applied in the next `Shoot` reconciliation, but this is not automatically triggered.
 If you want the changes to roll out immediately, [trigger a reconciliation explicitly](../shoot-operations/shoot_operations.md#immediate-reconciliation).
 
-### Migrating from `OpenIDConnect` to Structured Authentication Config
+### Migrating from OIDC to Structured Authentication Config
 
-If you would like to migrate from `OpenIDConnect` to Structured Authentication Config and your `Shoot` spec has the `spec.kubernetes.kubeAPIServer.oidcConfig` field set, for example:
+If you would like to migrate from OIDC to Structured Authentication Config and your `Shoot` spec has the `spec.kubernetes.kubeAPIServer.oidcConfig` field set, for example:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -178,6 +178,7 @@ spec:
       oidcConfig:
         clientID: <client-ID>
         groupsClaim: groups
+        groupsPrefix: "<groups-prefix>"
         issuerURL: <issuer-url>
         usernameClaim: username
 ```
@@ -201,7 +202,7 @@ spec:
           claimMappings:
             groups:
               claim: groups
-              prefix: ""
+              prefix: "<groups-prefix>"
             username:
               claim: username
               prefix: ""
