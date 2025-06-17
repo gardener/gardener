@@ -708,7 +708,8 @@ honor_labels: true`
 					Expect(managedResource).To(consistOf(
 						serviceAccount,
 						service,
-						clusterRoleBinding,
+						role,
+						roleBinding,
 						prometheusFor(nil, true),
 						vpa,
 						prometheusRule,
@@ -1373,8 +1374,7 @@ query_range:
 					Expect(managedResource).To(consistOf(
 						serviceAccount,
 						service,
-						role,
-						roleBinding,
+						clusterRoleBinding,
 						prometheusFor(nil, false),
 						vpa,
 						prometheusRule,
@@ -1419,8 +1419,7 @@ query_range:
 						Expect(managedResource).To(consistOf(
 							serviceAccount,
 							service,
-							role,
-							roleBinding,
+							clusterRoleBinding,
 							prometheusFor(nil, false),
 							vpa,
 							prometheusRule,
