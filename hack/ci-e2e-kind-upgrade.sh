@@ -212,12 +212,12 @@ function run_post_upgrade_test() {
   make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
 }
 
-# TODO(rfranzke): Remove this after v1.121 has been released.
-if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]]; then
-  echo "WARNING: The Gardener upgrade tests for the zone failure tolerance type are not executed in this release because the dev/e2e test setup is currently reworked."
+# TODO(rfranzke): Remove this after v1.122 has been released.
+if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]] || [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "node" ]]; then
+  echo "WARNING: The Gardener upgrade tests for the zone/node failure tolerance types are not executed in this release because the dev/e2e test setup is currently reworked."
   echo "See https://github.com/gardener/gardener/issues/11958 for more information."
   echo "Skipping the tests."
-  echo "After v1.121 has been released, this early exit can be removed again (TODO(rfranzke))."
+  echo "After v1.122 has been released, this early exit can be removed again (TODO(rfranzke))."
   exit 0
 fi
 
