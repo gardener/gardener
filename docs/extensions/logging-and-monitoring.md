@@ -9,6 +9,7 @@ Each shoot namespace hosts managed logging and monitoring components. As part of
 The logging and monitoring stack is extensible by configuration. Gardener extensions can take advantage of that and contribute monitoring configurations encoded in `ConfigMap`s for their own, specific dashboards, alerts and other supported assets and integrate with it. As with other Gardener resources, they will be continuously reconciled. The extensions can also deploy directly fluent-operator custom resources which will be created in the seed cluster and plugged into the fluent-bit instance.
 
 This guide is about the roles and extensibility options of the logging and monitoring stack components, and how to integrate extensions with:
+
 - [Monitoring](#monitoring)
 - [Logging](#logging)
 
@@ -326,6 +327,7 @@ In Kubernetes clusters, container logs are non-persistent and do not survive sto
 !["Cluster Logging Topology"](../usage/observability/images/logging-architecture.png "Cluster Logging Topology")
 
 Gardener logging consists of components in three roles - log collectors and forwarders, log persistency and exploration/consumption interfaces. All of them live in the seed clusters in multiple instances:
+
 - Logs are persisted by Vali instances deployed as StatefulSets - one per shoot namespace, if the logging is enabled in the `gardenlet` configuration (`logging.enabled`) and the [shoot purpose](../usage/shoot/shoot_purposes.md#behavioral-differences) is not `testing`, and one in the `garden` namespace. The shoot instances store logs from the control plane components hosted there. The `garden` Vali instance is responsible for logs from the rest of the seed namespaces - `kube-system`, `garden`, `extension-*`, and others.
 - Fluent-bit DaemonSets deployed by the fluent-operator on each seed node collect logs from it. A custom plugin takes care to distribute the collected log messages to the Vali instances that they are intended for. This allows to fetch the logs once for the whole cluster, and to distribute them afterwards.
 - Plutono is the UI component used to explore monitoring and log data together for easier troubleshooting and in context. Plutono instances are configured to use the corresponding Vali instances, sharing the same namespace as data providers. There is one Plutono Deployment in the `garden` namespace and one Deployment per shoot namespace (exposed to the end users and to the operators).
@@ -361,7 +363,9 @@ spec:
 Further details how to define parsers and use them with examples can be found in the following [guide](../development/log_parsers.md).
 
 ### Plutono
+
 The two types of Plutono instances found in a seed cluster are configured to expose logs of different origin in their dashboards:
+
 - Garden Plutono dashboards expose logs from non-shoot namespaces of the seed clusters
   - [Pod Logs](../../pkg/component/observability/plutono/dashboards/seed/pod-logs.json)
   - [Extensions](../../pkg/component/observability/plutono/dashboards/seed/extensions-dashboard.json)
@@ -385,9 +389,8 @@ If the type of logs exposed in the Plutono instances needs to be changed, it is 
 
 ## References and Additional Resources
 
-* [GitHub Issue Describing the Concept](https://github.com/gardener/gardener/issues/1351)
-* [Exemplary Implementation (Monitoring) for the GCP Provider](https://github.com/gardener/gardener-extension-provider-gcp/blob/master/charts/internal/seed-controlplane/charts/cloud-controller-manager/templates/configmap-observability.yaml)
-* [Exemplary Implementation (ClusterFilter) for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/blob/master/charts/gardener-extension-provider-aws/templates/clusterfilters-logging.yaml)
-* [Exemplary Implementation (ClusterParser) for the Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service/blob/master/charts/gardener-extension-shoot-dns-service/templates/clusterparsers-logging.yaml)
-* [Network Policies for Logging & Monitoring in Garden Runtime Cluster](../operations/network_policies.md#logging--monitoring)
-* [Network Policies for Logging & Monitoring in Seed Cluster](../operations/network_policies.md#logging--monitoring-1)
+- [GitHub Issue Describing the Concept](https://github.com/gardener/gardener/issues/1351)
+- [Exemplary Implementation (ClusterFilter) for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/blob/master/charts/gardener-extension-provider-aws/templates/clusterfilters-logging.yaml)
+- [Exemplary Implementation (ClusterParser) for the Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service/blob/master/charts/gardener-extension-shoot-dns-service/templates/clusterparsers-logging.yaml)
+- [Network Policies for Logging & Monitoring in Garden Runtime Cluster](../operations/network_policies.md#logging--monitoring)
+- [Network Policies for Logging & Monitoring in Seed Cluster](../operations/network_policies.md#logging--monitoring-1)

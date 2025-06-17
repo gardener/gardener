@@ -4,7 +4,7 @@ This document contains logging stack related how-tos and configuration options f
 
 ## Expose Logs for Component to User Plutono
 
-Exposing logs for a new component to the User's Plutono is described in the [How to Expose Logs to the Users](../../extensions/logging-and-monitoring.md#how-to-expose-logs-to-the-users) section.
+Exposing logs for a new component to the User's Plutono is described in the [How to Expose Logs to the Users](../extensions/logging-and-monitoring.md#how-to-expose-logs-to-the-users) section.
 
 ## Configuration
 
