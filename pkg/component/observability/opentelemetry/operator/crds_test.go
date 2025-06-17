@@ -54,7 +54,7 @@ var _ = Describe("CRDs", func() {
 
 	DescribeTable("CRD is deployed",
 		func(crdName string) {
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).ToNot(HaveOccurred())
+			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succed())
 		},
 
 		Entry("OpenTelemetryCollector", "opentelemetrycollectors.opentelemetry.io"),
@@ -65,10 +65,10 @@ var _ = Describe("CRDs", func() {
 
 	DescribeTable("should re-create CRD if it is deleted",
 		func(crdName string) {
-			Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).ToNot(HaveOccurred())
+			Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
-			Expect(crdDeployer.Deploy(ctx)).ToNot(HaveOccurred())
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).ToNot(HaveOccurred())
+			Expect(crdDeployer.Deploy(ctx)).To(Succed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		},
 
 		Entry("OpenTelemetryCollector", "opentelemetrycollectors.opentelemetry.io"),
