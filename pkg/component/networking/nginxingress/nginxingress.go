@@ -12,6 +12,7 @@ import (
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -217,7 +218,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	}
 
 	if n.values.ClusterType == component.ClusterTypeShoot {
-		serviceAccount.Labels = utils.MergeStringMaps[string](serviceAccount.Labels, map[string]string{
+		serviceAccount.Labels = utils.MergeStringMaps(serviceAccount.Labels, map[string]string{
 			labelKeyRelease: labelValueAddons,
 		})
 		serviceAnnotations = map[string]string{"service.beta.kubernetes.io/aws-load-balancer-proxy-protocol": "*"}
@@ -485,13 +486,13 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Replicas:             ptr.To[int32](2),
 				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: utils.MergeStringMaps[string](n.getLabels(LabelValueController, false), map[string]string{
+					MatchLabels: utils.MergeStringMaps(n.getLabels(LabelValueController, false), map[string]string{
 						labelKeyRelease: labelValueAddons,
 					}),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: utils.MergeStringMaps[string](n.getLabels(LabelValueController, true), map[string]string{
+						Labels: utils.MergeStringMaps(n.getLabels(LabelValueController, true), map[string]string{
 							labelKeyRelease: labelValueAddons,
 						}),
 					},
@@ -588,6 +589,17 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 			Spec: networkingv1.IngressClassSpec{
 				Controller: "k8s.io/" + n.values.IngressClass,
+			},
+		}
+
+		lease = &coordinationv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      n.getName("Lease", false),
+				Namespace: n.values.TargetNamespace,
+				Annotations: map[string]string{
+					// We don't want to overwrite the lease, but still want to delete it when the component is destroyed.
+					resourcesv1alpha1.Ignore: "true",
+				},
 			},
 		}
 
@@ -744,6 +756,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ingressClass,
 			networkPolicy,
 			destinationRule,
+			lease,
 		)
 	}
 

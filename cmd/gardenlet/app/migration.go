@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -22,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -40,6 +42,11 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 	log.Info("Migrating RBAC resources for machine-controller-manager")
 	if err := migrateMCMRBAC(ctx, g.mgr.GetClient()); err != nil {
 		return err
+	}
+
+	log.Info("Cleaning up ingress controller resource lock configmaps")
+	if err := cleanupNginxConfigMaps(ctx, g.mgr.GetClient()); err != nil {
+		return fmt.Errorf("failed deleting nginx ingress controller resource lock configmaps: %w", err)
 	}
 
 	return nil
@@ -209,4 +216,24 @@ func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 		}
 	}
 	return nil
+}
+
+// TODO(shafeeqes): Remove this function in gardener v1.125
+func cleanupNginxConfigMaps(ctx context.Context, client client.Client) error {
+	return kubernetesutils.DeleteObjects(
+		ctx,
+		client,
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ingress-controller-seed-leader",
+				Namespace: v1beta1constants.GardenNamespace,
+			},
+		},
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ingress-controller-seed-leader-nginx-gardener",
+				Namespace: v1beta1constants.GardenNamespace,
+			},
+		},
+	)
 }

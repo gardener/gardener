@@ -653,6 +653,17 @@ spec:
 status: {}
 `
 				}
+
+				leaseYAML = `apiVersion: coordination.k8s.io/v1
+kind: Lease
+metadata:
+  annotations:
+    resources.gardener.cloud/ignore: "true"
+  creationTimestamp: null
+  name: ingress-controller-seed-leader
+  namespace: ` + namespace + `
+spec: {}
+`
 			)
 
 			It("should successfully deploy all resources", func() {
@@ -709,6 +720,7 @@ status: {}
 					podDisruptionBudgetYAML,
 					virtualServiceYAML(0),
 					virtualServiceYAML(1),
+					leaseYAML,
 				}
 
 				Expect(manifests).To(ConsistOf(expectedManifests))
@@ -1241,6 +1253,17 @@ spec:
     updateMode: Auto
 status: {}
 `
+
+			leaseYAML = `apiVersion: coordination.k8s.io/v1
+kind: Lease
+metadata:
+  annotations:
+    resources.gardener.cloud/ignore: "true"
+  creationTimestamp: null
+  name: ingress-controller-leader
+  namespace: kube-system
+spec: {}
+`
 		)
 
 		BeforeEach(func() {
@@ -1314,6 +1337,7 @@ status: {}
 					networkPolicyYAML,
 					ingressClassYAML,
 					deploymentControllerYAMLFor(configMapData),
+					leaseYAML,
 				}
 			})
 
