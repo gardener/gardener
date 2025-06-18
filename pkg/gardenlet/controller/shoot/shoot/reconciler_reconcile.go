@@ -178,7 +178,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		reconcileIstioInternalLoadbalancingConfigMap = g.Add(flow.Task{
-			Name:         "Reconcile Istio internal load balancing configmap",
+			Name:         "Reconcile Istio internal load balancing ConfigMap",
 			Fn:           flow.TaskFn(botanist.ReconcileIstioInternalLoadBalancingConfigMap).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})

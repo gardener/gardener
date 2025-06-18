@@ -16,6 +16,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/podkubeapiserverloadbalancing"
 )
 
@@ -63,8 +64,8 @@ var _ = Describe("Handler", func() {
 						Name:      "istio-internal-load-balancing",
 					},
 					Data: map[string]string{
-						HostsConfigMapKey:          "api.example.com,api2.example.com",
-						IstioNamespaceConfigMapKey: "istio-gateway",
+						resourcemanagerconfigv1alpha1.HostsConfigMapKey:          "api.example.com,api2.example.com",
+						resourcemanagerconfigv1alpha1.IstioNamespaceConfigMapKey: "istio-gateway",
 					},
 				}
 				Expect(targetClient.Create(ctx, configMap)).To(Succeed())
@@ -127,7 +128,7 @@ var _ = Describe("Handler", func() {
 				})
 
 				It("should fail if the istio-ingressgateway service is not found", func() {
-					Expect(handler.Default(ctx, pod)).To(MatchError(ContainSubstring("failed to get internal istio-ingressgateway service:")))
+					Expect(handler.Default(ctx, pod)).To(MatchError(ContainSubstring("failed to get internal istio-ingressgateway service")))
 				})
 			})
 		})
