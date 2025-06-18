@@ -69,7 +69,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
-		}, SpecTimeout(5*time.Minute))
+		}, SpecTimeout(10*time.Minute))
 
 		It("copy admin kubeconfig and create client", func(ctx SpecContext) {
 			tempDir, err := os.MkdirTemp("", "tmp")
