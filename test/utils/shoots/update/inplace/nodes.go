@@ -33,8 +33,8 @@ func LabelManualInPlaceNodesWithSelectedForUpdate(ctx context.Context, shootClie
 		}
 
 		nodeList := &corev1.NodeList{}
-		Eventually(ctx, func(g Gomega) {
-			g.Expect(shootClient.List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPool: pool.Name})).To(Succeed())
+		Eventually(ctx, func() error {
+			return shootClient.List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPool: pool.Name})
 		}).Should(Succeed())
 
 		for _, node := range nodeList.Items {
@@ -64,8 +64,8 @@ func FindNodesOfInPlaceWorkers(ctx context.Context, shootClient client.Client, s
 		}
 
 		nodeList := &corev1.NodeList{}
-		Eventually(ctx, func(g Gomega) {
-			g.Expect(shootClient.List(context.Background(), nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPool: pool.Name})).To(Succeed())
+		Eventually(ctx, func() error {
+			return shootClient.List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPool: pool.Name})
 		}).Should(Succeed())
 
 		for _, node := range nodeList.Items {
