@@ -237,7 +237,7 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),
 		})
 		cleanupIstioInternalLoadBalancingConfigMap = g.Add(flow.Task{
-			Name:         "Cleaning up Istio internal load balancing configmap",
+			Name:         "Cleaning up Istio internal load balancing ConfigMap",
 			Fn:           r.cleanupIstioInternalLoadBalancingConfigMap,
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),
 		})

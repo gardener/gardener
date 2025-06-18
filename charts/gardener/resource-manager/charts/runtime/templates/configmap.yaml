@@ -154,6 +154,8 @@ data:
         {{- if .Values.global.config.webhooks.kubernetesServiceHost.host }}
         host: {{ .Values.global.config.webhooks.kubernetesServiceHost.host }}
         {{- end }}
+      podKubeAPIServerLoadBalancing:
+        enabled: {{ .Values.global.config.webhooks.podKubeAPIServerLoadBalancing.enabled }}
       podSchedulerName:
         enabled: {{ .Values.global.config.webhooks.podSchedulerName.enabled }}
         {{- if .Values.global.config.webhooks.podSchedulerName.schedulerName }}
