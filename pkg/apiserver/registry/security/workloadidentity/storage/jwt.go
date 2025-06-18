@@ -153,7 +153,7 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 		ctxObjects.shoot = shoot.GetObjectMeta()
 
 		if shoot.UID != ctxObj.UID {
-			return nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, shoot.UID)
+			return nil, fmt.Errorf("uid of contextObject (%s) and real world Shoot resource (%s) differ", ctxObj.UID, shoot.UID)
 		}
 
 		if shoot.Spec.SeedName != nil {
@@ -175,7 +175,7 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 		}
 
 		if seed.UID != ctxObj.UID {
-			return nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, seed.UID)
+			return nil, fmt.Errorf("uid of contextObject (%s) and real world Seed resource (%s) differ", ctxObj.UID, seed.UID)
 		}
 		ctxObjects.seed = seed.GetObjectMeta()
 
@@ -185,7 +185,7 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 		}
 
 		if backupBucket.UID != ctxObj.UID {
-			return nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, backupBucket.UID)
+			return nil, fmt.Errorf("uid of contextObject (%s) and real world BackupBucket resource (%s) differ", ctxObj.UID, backupBucket.UID)
 		}
 		ctxObjects.backupBucket = backupBucket.GetObjectMeta()
 
@@ -203,7 +203,7 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 		}
 
 		if backupEntry.UID != ctxObj.UID {
-			return nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, backupEntry.UID)
+			return nil, fmt.Errorf("uid of contextObject (%s) and real world BackupEntry resource (%s) differ", ctxObj.UID, backupEntry.UID)
 		}
 		ctxObjects.backupEntry = backupEntry.GetObjectMeta()
 
