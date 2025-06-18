@@ -126,7 +126,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			SkipIf: !nonTerminatingNamespace,
 		})
 		reconcileIstioInternalLoadbalancingConfigMap = g.Add(flow.Task{
-			Name:         "Reconcile Istio internal load balancing configmap",
+			Name:         "Reconcile Istio internal load balancing ConfigMap",
 			Fn:           flow.TaskFn(botanist.ReconcileIstioInternalLoadBalancingConfigMap).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       !nonTerminatingNamespace,
 			Dependencies: flow.NewTaskIDs(deployNamespace),

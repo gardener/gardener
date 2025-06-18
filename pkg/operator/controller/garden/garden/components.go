@@ -411,8 +411,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 			Enabled: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
 			Configs: []resourcemanager.PodKubeAPIServerLoadBalancingWebhookConfig{
 				{
-					KubeAPIServerNamePrefix: "",
-					NamespaceSelector:       map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
+					NamespaceSelector: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
 				}, {
 					KubeAPIServerNamePrefix: namePrefix,
 					NamespaceSelector:       map[string]string{"kubernetes.io/metadata.name": v1beta1constants.GardenNamespace},

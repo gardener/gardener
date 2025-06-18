@@ -1376,7 +1376,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 
 	if r.values.PodKubeAPIServerLoadBalancingWebhook.Enabled {
 		for _, config := range r.values.PodKubeAPIServerLoadBalancingWebhook.Configs {
-			webhooks = append(webhooks, getPodKubeAPIServerLoadBalancingMutatingWebhook(&metav1.LabelSelector{MatchLabels: config.NamespaceSelector}, config.KubeAPIServerNamePrefix, secretServerCA, buildClientConfigFn))
+			webhooks = append(webhooks, GetPodKubeAPIServerLoadBalancingMutatingWebhook(&metav1.LabelSelector{MatchLabels: config.NamespaceSelector}, config.KubeAPIServerNamePrefix, secretServerCA, buildClientConfigFn))
 		}
 	}
 
@@ -1483,12 +1483,7 @@ func GetCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 // GetExtensionValidationValidatingWebhooks returns the ValidatingWebhooks for the crd-deletion-protection webhook for
 // reuse between the component and integration tests.
 func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.ValidatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-		webhooks      []admissionregistrationv1.ValidatingWebhook
-	)
+	var webhooks []admissionregistrationv1.ValidatingWebhook
 
 	for _, webhook := range []struct {
 		resource string
@@ -1612,12 +1607,12 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 				},
 			},
-			FailurePolicy:           &failurePolicy,
 			NamespaceSelector:       &metav1.LabelSelector{},
 			ClientConfig:            buildClientConfigFn(secretServerCA, webhook.path),
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-			MatchPolicy:             &matchPolicy,
-			SideEffects:             &sideEffect,
+			FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+			MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+			SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 			TimeoutSeconds:          ptr.To[int32](10),
 		})
 	}
@@ -1626,12 +1621,6 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 }
 
 func (r *resourceManager) getProjectedTokenMountMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-	)
-
 	return admissionregistrationv1.MutatingWebhook{
 		Name: "projected-token-mount.resources.gardener.cloud",
 		Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -1658,20 +1647,16 @@ func (r *resourceManager) getProjectedTokenMountMutatingWebhook(namespaceSelecto
 		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, projectedtokenmount.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           &failurePolicy,
-		MatchPolicy:             &matchPolicy,
-		SideEffects:             &sideEffect,
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
 
-func getPodKubeAPIServerLoadBalancingMutatingWebhook(namespaceSelector *metav1.LabelSelector, labelSelectorPrefix string, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-	)
-
+// GetPodKubeAPIServerLoadBalancingMutatingWebhook returns the pod-kube-apiserver-load-balancing mutating webhook for
+// the resourcemanager component for reuse between the component and integration tests.
+func GetPodKubeAPIServerLoadBalancingMutatingWebhook(namespaceSelector *metav1.LabelSelector, labelSelectorPrefix string, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
 	return admissionregistrationv1.MutatingWebhook{
 		Name: "pod-" + labelSelectorPrefix + "kube-apiserver-load-balancing.resources.gardener.cloud",
 		Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -1686,9 +1671,9 @@ func getPodKubeAPIServerLoadBalancingMutatingWebhook(namespaceSelector *metav1.L
 		ObjectSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{gardenerutils.NetworkPolicyLabel(labelSelectorPrefix+"kube-apiserver", 443): v1beta1constants.LabelNetworkPolicyAllowed}},
 		ClientConfig:            buildClientConfigFn(secretServerCA, podkubeapiserverloadbalancing.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           &failurePolicy,
-		MatchPolicy:             &matchPolicy,
-		SideEffects:             &sideEffect,
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1696,12 +1681,6 @@ func getPodKubeAPIServerLoadBalancingMutatingWebhook(namespaceSelector *metav1.L
 // GetPodSchedulerNameMutatingWebhook returns the pod-scheduler-name1 mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
 func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Ignore
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-	)
-
 	return admissionregistrationv1.MutatingWebhook{
 		Name: "pod-scheduler-name.resources.gardener.cloud",
 		Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -1716,9 +1695,9 @@ func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 		ObjectSelector:          &metav1.LabelSelector{},
 		ClientConfig:            buildClientConfigFn(secretServerCA, podschedulername.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           &failurePolicy,
-		MatchPolicy:             &matchPolicy,
-		SideEffects:             &sideEffect,
+		FailurePolicy:           ptr.To(admissionregistrationv1.Ignore),
+		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1732,12 +1711,6 @@ func GetPodTopologySpreadConstraintsMutatingWebhook(
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
 ) admissionregistrationv1.MutatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-	)
-
 	oSelector := &metav1.LabelSelector{}
 	if objectSelector != nil {
 		oSelector = objectSelector.DeepCopy()
@@ -1770,9 +1743,9 @@ func GetPodTopologySpreadConstraintsMutatingWebhook(
 		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, podtopologyspreadconstraints.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           &failurePolicy,
-		MatchPolicy:             &matchPolicy,
-		SideEffects:             &sideEffect,
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1785,12 +1758,6 @@ func GetSeccompProfileMutatingWebhook(
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
 ) admissionregistrationv1.MutatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-	)
-
 	return admissionregistrationv1.MutatingWebhook{
 		Name: "seccomp-profile.resources.gardener.cloud",
 		Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -1817,9 +1784,9 @@ func GetSeccompProfileMutatingWebhook(
 		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, seccompprofile.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           &failurePolicy,
-		MatchPolicy:             &matchPolicy,
-		SideEffects:             &sideEffect,
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1831,13 +1798,6 @@ func GetKubernetesServiceHostMutatingWebhook(
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
 ) admissionregistrationv1.MutatingWebhook {
-	var (
-		failurePolicy      = admissionregistrationv1.Ignore
-		matchPolicy        = admissionregistrationv1.Exact
-		sideEffect         = admissionregistrationv1.SideEffectClassNone
-		reinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
-	)
-
 	var nsSelector *metav1.LabelSelector
 	if namespaceSelector == nil {
 		nsSelector = &metav1.LabelSelector{}
@@ -1872,10 +1832,10 @@ func GetKubernetesServiceHostMutatingWebhook(
 		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, kubernetesservicehost.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		ReinvocationPolicy:      &reinvocationPolicy,
-		FailurePolicy:           &failurePolicy,
-		MatchPolicy:             &matchPolicy,
-		SideEffects:             &sideEffect,
+		ReinvocationPolicy:      ptr.To(admissionregistrationv1.NeverReinvocationPolicy),
+		FailurePolicy:           ptr.To(admissionregistrationv1.Ignore),
+		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](2),
 	}
 }
@@ -1883,12 +1843,6 @@ func GetKubernetesServiceHostMutatingWebhook(
 // GetSystemComponentsConfigMutatingWebhook returns the system-components-config mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
 func GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-	)
-
 	oSelector := &metav1.LabelSelector{}
 	if objectSelector != nil {
 		oSelector = objectSelector.DeepCopy()
@@ -1916,9 +1870,9 @@ func GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector 
 		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, systemcomponentsconfig.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           &failurePolicy,
-		MatchPolicy:             &matchPolicy,
-		SideEffects:             &sideEffect,
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1926,12 +1880,6 @@ func GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector 
 // GetHighAvailabilityConfigMutatingWebhook returns the high-availability-config mutating webhook for the
 // resourcemanager component for reuse between the component and integration tests.
 func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Equivalent
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-	)
-
 	nsSelector := &metav1.LabelSelector{}
 	if namespaceSelector != nil {
 		nsSelector = namespaceSelector.DeepCopy()
@@ -1980,9 +1928,9 @@ func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, highavailabilityconfig.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           &failurePolicy,
-		MatchPolicy:             &matchPolicy,
-		SideEffects:             &sideEffect,
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		MatchPolicy:             ptr.To(admissionregistrationv1.Equivalent),
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1994,12 +1942,6 @@ func GetEndpointSliceHintsMutatingWebhook(
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
 ) admissionregistrationv1.MutatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Equivalent
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-	)
-
 	return admissionregistrationv1.MutatingWebhook{
 		Name: "endpoint-slice-hints.resources.gardener.cloud",
 		Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -2021,9 +1963,9 @@ func GetEndpointSliceHintsMutatingWebhook(
 		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, endpointslicehints.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           &failurePolicy,
-		MatchPolicy:             &matchPolicy,
-		SideEffects:             &sideEffect,
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		MatchPolicy:             ptr.To(admissionregistrationv1.Equivalent),
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }

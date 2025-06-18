@@ -185,7 +185,7 @@ func (r *Reconciler) reconcile(
 			},
 		})
 		reconcileIstioInternalLoadBalancingConfigMap = g.Add(flow.Task{
-			Name: "Reconcile Istio internal load balancing configmap",
+			Name: "Reconcile Istio internal load balancing ConfigMap",
 			Fn: func(ctx context.Context) error {
 				return r.reconcileIstioInternalLoadbalancingConfigMap(ctx, garden, c.istio.GetValues().IngressGateway)
 			},

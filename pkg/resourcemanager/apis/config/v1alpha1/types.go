@@ -361,4 +361,11 @@ const (
 	DefaultResourceClass = "resources"
 	// AllResourceClass is used as resource class when all values for resource classes should be covered.
 	AllResourceClass = "*"
+
+	// HostsConfigMapKey defines the key in the configmap that contains the kube-apiserver hosts.
+	HostsConfigMapKey = "hosts"
+	// IstioNamespaceConfigMapKey defines the key in the configmap that contains the namespace of the istio-ingressgateway service.
+	IstioNamespaceConfigMapKey = "istio-namespace"
+	// IstioInternalLoadBalancingConfigMapName defines the name of the configmap that contains the kube-apiserver hosts and istio namespace.
+	IstioInternalLoadBalancingConfigMapName = "istio-internal-load-balancing"
 )

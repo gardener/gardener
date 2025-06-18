@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podkubeapiserverloadbalancing"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -596,7 +596,7 @@ func ReconcileIstioInternalLoadBalancingConfigMap(ctx context.Context, c client.
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      podkubeapiserverloadbalancing.IstioInternalLoadBalancingConfigMapName,
+			Name:      resourcemanagerconfigv1alpha1.IstioInternalLoadBalancingConfigMapName,
 		},
 	}
 
@@ -606,8 +606,8 @@ func ReconcileIstioInternalLoadBalancingConfigMap(ctx context.Context, c client.
 
 	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, c, configMap, func() error {
 		configMap.Data = map[string]string{
-			podkubeapiserverloadbalancing.HostsConfigMapKey:          strings.Join(hosts, ","),
-			podkubeapiserverloadbalancing.IstioNamespaceConfigMapKey: istioNamespace,
+			resourcemanagerconfigv1alpha1.HostsConfigMapKey:          strings.Join(hosts, ","),
+			resourcemanagerconfigv1alpha1.IstioNamespaceConfigMapKey: istioNamespace,
 		}
 		return nil
 	}); err != nil {

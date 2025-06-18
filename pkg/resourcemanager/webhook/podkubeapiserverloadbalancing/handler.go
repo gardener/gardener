@@ -17,16 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-)
-
-const (
-	// HostsConfigMapKey defines the key in the configmap that contains the kube-apiserver hosts.
-	HostsConfigMapKey = "hosts"
-	// IstioNamespaceConfigMapKey defines the key in the configmap that contains the namespace of the istio-ingressgateway service.
-	IstioNamespaceConfigMapKey = "istio-namespace"
-	// IstioInternalLoadBalancingConfigMapName defines the name of the configmap that contains the kube-apiserver hosts and istio namespace.
-	IstioInternalLoadBalancingConfigMapName = "istio-internal-load-balancing"
 )
 
 // Handler handles admission requests and sets host aliases and network policy label to istio-ingressgateway in Pod resources.
@@ -67,19 +59,19 @@ volumes:
 		return nil
 	}
 
-	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: pod.Namespace, Name: IstioInternalLoadBalancingConfigMapName}}
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: pod.Namespace, Name: resourcemanagerconfigv1alpha1.IstioInternalLoadBalancingConfigMapName}}
 	if err := h.TargetClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); apierrors.IsNotFound(err) {
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("failed to get istio-internal-load-balancing configmap: %w", err)
+		return fmt.Errorf("failed to get istio-internal-load-balancing configmap %q: %w", client.ObjectKeyFromObject(configMap), err)
 	}
 
-	hosts := strings.Split(configMap.Data[HostsConfigMapKey], ",")
-	istioNamespace := configMap.Data[IstioNamespaceConfigMapKey]
+	hosts := strings.Split(configMap.Data[resourcemanagerconfigv1alpha1.HostsConfigMapKey], ",")
+	istioNamespace := configMap.Data[resourcemanagerconfigv1alpha1.IstioNamespaceConfigMapKey]
 
 	istioService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: v1beta1constants.InternalSNIIngressServiceName}}
 	if err := h.TargetClient.Get(ctx, client.ObjectKeyFromObject(istioService), istioService); err != nil {
-		return fmt.Errorf("failed to get internal istio-ingressgateway service: %w", err)
+		return fmt.Errorf("failed to get internal istio-ingressgateway service %q: %w", client.ObjectKeyFromObject(istioService), err)
 	}
 
 	for _, clusterIP := range istioService.Spec.ClusterIPs {
@@ -87,14 +79,14 @@ volumes:
 			IP:        clusterIP,
 			Hostnames: hosts,
 		})
-		h.Logger.Info("Added host alias to pod", "pod", client.ObjectKeyFromObject(pod), "ip", clusterIP, "hostnames", hosts)
+		h.Logger.V(1).Info("Added host alias to pod", "pod", client.ObjectKeyFromObject(pod), "ip", clusterIP, "hostnames", hosts)
 	}
 
 	if pod.Labels == nil {
 		pod.Labels = make(map[string]string)
 	}
 	pod.Labels[gardenerutils.NetworkPolicyLabel("all-istio-ingresses-istio-ingressgateway-internal", 9443)] = v1beta1constants.LabelNetworkPolicyAllowed
-	h.Logger.Info("Added network policy label for all istio ingresses to pod", "pod", client.ObjectKeyFromObject(pod))
+	h.Logger.V(1).Info("Added network policy label for all istio ingresses to pod", "pod", client.ObjectKeyFromObject(pod))
 
 	return nil
 }
