@@ -348,8 +348,10 @@ func (v *vpa) computeRecommenderArgs() []string {
 		out = append(out, "--kubeconfig="+gardenerutils.PathGenericKubeconfig)
 	}
 
-	featureGates := kubernetesutils.FeatureGatesToCommandLineParameter(v.values.FeatureGates)
-	out = append(out, featureGates)
+	if len(v.values.FeatureGates) > 0 {
+		featureGates := kubernetesutils.FeatureGatesToCommandLineParameter(v.values.FeatureGates)
+		out = append(out, featureGates)
+	}
 
 	return out
 }
