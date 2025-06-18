@@ -291,6 +291,11 @@ build:
             - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_servicemonitors.yaml
             - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_thanosrulers.yaml
             - pkg/component/observability/monitoring/utils
+            - pkg/component/observability/opentelemetry/operator
+            - pkg/component/observability/opentelemetry/operator/assets/crd-opentelemetry.io_instrumentations.yaml
+            - pkg/component/observability/opentelemetry/operator/assets/crd-opentelemetry.io_opampbridges.yaml
+            - pkg/component/observability/opentelemetry/operator/assets/crd-opentelemetry.io_opentelemetrycollectors.yaml
+            - pkg/component/observability/opentelemetry/operator/assets/crd-opentelemetry.io_targetallocators.yaml
             - pkg/component/observability/plutono
             - pkg/component/observability/plutono/dashboards/common
             - pkg/component/observability/plutono/dashboards/garden
