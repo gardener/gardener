@@ -727,6 +727,14 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 }
 
 func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSettings, secretsManager secretsmanager.Interface, isGardenCluster bool) (component.DeployWaiter, error) {
+	var (
+		featureGates = make(map[string]bool)
+	)
+
+	if settings.VerticalPodAutoscaler.FeatureGates != nil {
+		featureGates = settings.VerticalPodAutoscaler.FeatureGates
+	}
+
 	return sharedcomponent.NewVerticalPodAutoscaler(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
@@ -738,6 +746,7 @@ func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSe
 		v1beta1constants.PriorityClassNameSeedSystem700,
 		v1beta1constants.PriorityClassNameSeedSystem700,
 		isGardenCluster,
+		featureGates,
 	)
 }
 
