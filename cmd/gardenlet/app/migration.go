@@ -44,25 +44,9 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 		return err
 	}
 
-	// TODO(shafeeqes): Remove this in gardener v1.125
-	{
-		log.Info("Deleting ingress controller resource lock configmaps")
-		if err := kubernetesutils.DeleteObjects(ctx, g.mgr.GetClient(),
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ingress-controller-seed-leader",
-					Namespace: v1beta1constants.GardenNamespace,
-				},
-			},
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ingress-controller-seed-leader-nginx-gardener",
-					Namespace: v1beta1constants.GardenNamespace,
-				},
-			},
-		); err != nil {
-			return fmt.Errorf("failed deleting ingress controller resource lock configmaps: %w", err)
-		}
+	log.Info("Cleaning up ingress controller resource lock configmaps")
+	if err := cleanupNginxConfigMaps(ctx, g.mgr.GetClient()); err != nil {
+		return fmt.Errorf("failed deleting nginx ingress controller resource lock configmaps: %w", err)
 	}
 
 	return nil
@@ -232,4 +216,24 @@ func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 		}
 	}
 	return nil
+}
+
+// TODO(shafeeqes): Remove this function in gardener v1.125
+func cleanupNginxConfigMaps(ctx context.Context, client client.Client) error {
+	return kubernetesutils.DeleteObjects(
+		ctx,
+		client,
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ingress-controller-seed-leader",
+				Namespace: v1beta1constants.GardenNamespace,
+			},
+		},
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ingress-controller-seed-leader-nginx-gardener",
+				Namespace: v1beta1constants.GardenNamespace,
+			},
+		},
+	)
 }
