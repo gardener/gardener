@@ -12,6 +12,7 @@ import (
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -591,6 +592,17 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
+		lease = &coordinationv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      n.getName("Lease", false),
+				Namespace: n.values.TargetNamespace,
+				Annotations: map[string]string{
+					// We don't want to overwrite the lease, but still want to delete it when the component is destroyed.
+					resourcesv1alpha1.Ignore: "true",
+				},
+			},
+		}
+
 		updateMode          = vpaautoscalingv1.UpdateModeAuto
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 		podDisruptionBudget *policyv1.PodDisruptionBudget
@@ -744,6 +756,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ingressClass,
 			networkPolicy,
 			destinationRule,
+			lease,
 		)
 	}
 
