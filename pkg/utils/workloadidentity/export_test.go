@@ -4,7 +4,11 @@
 
 package workloadidentity
 
-import "time"
+import (
+	"time"
+
+	"k8s.io/apimachinery/pkg/types"
+)
 
 // Functions exported for testing.
 
@@ -22,6 +26,10 @@ func SetNow(n func() time.Time) {
 
 func Now() func() time.Time {
 	return now
+}
+
+func SetUID(u func() types.UID) {
+	uid = u
 }
 
 // Types exported for testing.

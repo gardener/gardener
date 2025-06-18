@@ -17,6 +17,8 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/util/keyutil"
 
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
@@ -46,6 +48,8 @@ var _ = Describe("#JWT", func() {
 		workloadidentity.SetNow(func() time.Time {
 			return time.Date(2024, time.July, 9, 2, 0, 0, 0, time.UTC)
 		})
+
+		workloadidentity.SetUID(uuid.NewUUID)
 	})
 
 	Context("#getKeyID", func() {
@@ -311,6 +315,84 @@ wQIDAQAB
 			Expect(exp).ToNot(BeNil())
 			Expect(exp.After(n)).To(BeTrue())
 			Expect(exp.Compare(n.Add(time.Second * time.Duration(durationSeconds)))).To(Equal(1))
+		})
+
+		It("should not issue the same token twice for the same input", func() {
+			var (
+				n               = workloadidentity.Now()()
+				durationSeconds = int64(time.Hour.Seconds()) * 2
+			)
+			token1, exp1, err := t.IssueToken(sub, audiences, durationSeconds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp1).ToNot(BeNil())
+			Expect(exp1.After(n)).To(BeTrue())
+			Expect(token1).ToNot(BeEmpty())
+
+			token2, exp2, err := t.IssueToken(sub, audiences, durationSeconds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp2).ToNot(BeNil())
+			Expect(exp2.After(n)).To(BeTrue())
+			Expect(exp2).To(Equal(exp1))
+			Expect(token2).ToNot(BeEmpty())
+			Expect(token2).ToNot(Equal(token1))
+		})
+
+		It("should issue the same token twice for the same input when the JTI is the same", func() {
+			var (
+				n               = workloadidentity.Now()()
+				durationSeconds = int64(time.Hour.Seconds()) * 2
+			)
+
+			workloadidentity.SetUID(func() types.UID {
+				return types.UID("foo-bar")
+			})
+
+			token1, exp1, err := t.IssueToken(sub, audiences, durationSeconds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp1).ToNot(BeNil())
+			Expect(exp1.After(n)).To(BeTrue())
+			Expect(token1).ToNot(BeEmpty())
+
+			token2, exp2, err := t.IssueToken(sub, audiences, durationSeconds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp2).ToNot(BeNil())
+			Expect(exp2.After(n)).To(BeTrue())
+			Expect(exp2).To(Equal(exp1))
+			Expect(token2).ToNot(BeEmpty())
+			Expect(token2).To(Equal(token1))
+		})
+
+		It("should issue the different tokens when JTI is the same but time differs", func() {
+			var (
+				n               = workloadidentity.Now()()
+				durationSeconds = int64(time.Hour.Seconds()) * 2
+			)
+
+			workloadidentity.SetUID(func() types.UID {
+				return types.UID("foo-bar")
+			})
+
+			token1, exp1, err := t.IssueToken(sub, audiences, durationSeconds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp1).ToNot(BeNil())
+			Expect(exp1.After(n)).To(BeTrue())
+			Expect(token1).ToNot(BeEmpty())
+
+			// Advance the time to ensure iat, exp, nbf claims have other values in the next issued token
+			workloadidentity.SetNow(func() time.Time {
+				return n.Add(time.Minute)
+			})
+
+			n2 := workloadidentity.Now()()
+			token2, exp2, err := t.IssueToken(sub, audiences, durationSeconds)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp2).ToNot(BeNil())
+			Expect(exp2.After(n2)).To(BeTrue())
+			Expect(*exp2).To(Equal(exp1.Add(time.Minute)))
+
+			Expect(token2).ToNot(BeEmpty())
+			Expect(token2).ToNot(Equal(token1))
 		})
 	})
 })

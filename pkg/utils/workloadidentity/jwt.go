@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
 const (
@@ -27,6 +28,7 @@ const (
 
 var (
 	now = time.Now
+	uid = uuid.NewUUID
 )
 
 // TokenIssuer is an interface for JSON Web Token issuers.
@@ -98,6 +100,7 @@ func (t *tokenIssuer) IssueToken(sub string, aud []string, duration int64, claim
 		NotBefore: jwt.NewNumericDate(iat),
 		Subject:   sub,
 		Audience:  aud,
+		ID:        string(uid()),
 	}
 
 	token, err := builder.Claims(c).Serialize()
