@@ -92,4 +92,18 @@ var _ = Describe("Seed", func() {
 			}
 		})
 	})
+
+	Describe("Backup", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(Backup{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "4" {
+					Fail("protobuf 4 in Backup is reserved for removed secretRef field")
+				}
+			}
+		})
+	})
 })
