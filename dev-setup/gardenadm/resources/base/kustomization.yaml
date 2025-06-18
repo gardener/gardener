@@ -7,6 +7,3 @@ resources:
 - ../../../extensions/networking-cilium/overlays/gardenadm
 - ../../../extensions/networking-calico/overlays/gardenadm
 - ../../../extensions/provider-local/overlays/gardenadm
-
-patches:
-- path: patch-controllerdeployment-provider-local-disable-coredns.yaml

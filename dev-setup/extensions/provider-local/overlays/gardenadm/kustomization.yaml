@@ -3,3 +3,6 @@ kind: Kustomization
 
 components:
 - ../../components/controllerregistration
+
+patches:
+- path: patch-controllerdeployment-provider-local-disable-coredns.yaml
