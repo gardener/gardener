@@ -171,6 +171,10 @@ const (
 	// the machine-controller-manager pod.
 	DeploymentNameMachineControllerManager = "machine-controller-manager"
 
+	// DeploymentNameOpenTelemetryOperator is a constant for the name of a Kubernetes deployment object that contains
+	// the opentelemetry-operator pod.
+	DeploymentNameOpenTelemetryOperator = "opentelemetry-operator"
+
 	// ConfigMapNameShootInfo is the name of a ConfigMap in the kube-system namespace of shoot clusters which contains
 	// information about the shoot cluster.
 	ConfigMapNameShootInfo = "shoot-info"
@@ -292,6 +296,8 @@ const (
 	GardenRoleShootServiceAccountIssuer = "shoot-service-account-issuer"
 	// GardenRoleHelmPullSecret is the value of the GardenRole key indicating type 'helm-pull-secret'.
 	GardenRoleHelmPullSecret = "helm-pull-secret"
+	// GardenRoleObservability is the value of the GardenRole key indicating type 'observability'.
+	GardenRoleObservability = "observability"
 
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
