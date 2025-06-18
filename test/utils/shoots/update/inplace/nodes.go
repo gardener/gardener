@@ -42,9 +42,11 @@ func LabelManualInPlaceNodesWithSelectedForUpdate(ctx context.Context, shootClie
 				continue
 			}
 
+			patch := client.MergeFrom(node.DeepCopy())
 			metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeSelectedForUpdate, "true")
+
 			Eventually(ctx, func(g Gomega) {
-				g.Expect(shootClient.Update(ctx, &node)).To(Succeed())
+				g.Expect(shootClient.Patch(ctx, &node, patch)).To(Succeed())
 			}).Should(Succeed(), "node %s should be labeled", node.Name)
 		}
 	}
