@@ -15,10 +15,9 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/util/keyutil"
 
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
@@ -49,7 +48,7 @@ var _ = Describe("#JWT", func() {
 			return time.Date(2024, time.July, 9, 2, 0, 0, 0, time.UTC)
 		})
 
-		workloadidentity.SetUID(uuid.NewUUID)
+		workloadidentity.SetNewUUID(uuid.NewRandom)
 	})
 
 	Context("#getKeyID", func() {
@@ -209,6 +208,7 @@ wQIDAQAB
 			maxDurationSeconds int64
 			t                  workloadidentity.TokenIssuer
 			audiences          []string
+			staticUUID         uuid.UUID
 		)
 
 		type customClaims struct {
@@ -226,6 +226,9 @@ wQIDAQAB
 
 			t = tokenIssuer
 			audiences = []string{aud}
+
+			staticUUID, err = uuid.Parse("cae0e350-b683-4a72-829c-675a686c0c54")
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should successfully issue token without claims", func() {
@@ -343,8 +346,8 @@ wQIDAQAB
 				durationSeconds = int64(time.Hour.Seconds()) * 2
 			)
 
-			workloadidentity.SetUID(func() types.UID {
-				return types.UID("foo-bar")
+			workloadidentity.SetNewUUID(func() (uuid.UUID, error) {
+				return staticUUID, nil
 			})
 
 			token1, exp1, err := t.IssueToken(sub, audiences, durationSeconds)
@@ -368,8 +371,8 @@ wQIDAQAB
 				durationSeconds = int64(time.Hour.Seconds()) * 2
 			)
 
-			workloadidentity.SetUID(func() types.UID {
-				return types.UID("foo-bar")
+			workloadidentity.SetNewUUID(func() (uuid.UUID, error) {
+				return staticUUID, nil
 			})
 
 			token1, exp1, err := t.IssueToken(sub, audiences, durationSeconds)
@@ -393,6 +396,18 @@ wQIDAQAB
 
 			Expect(token2).ToNot(BeEmpty())
 			Expect(token2).ToNot(Equal(token1))
+		})
+
+		It("should fail to issue token when uuid generation fails", func() {
+			workloadidentity.SetNewUUID(func() (uuid.UUID, error) {
+				return uuid.UUID{}, fmt.Errorf("failed to generated uuid")
+			})
+
+			token, exp, err := t.IssueToken(sub, audiences, int64(time.Hour.Seconds())*2)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("failed to generated UUID for the jti claim: failed to generated uuid"))
+			Expect(exp).To(BeNil())
+			Expect(token).To(BeEmpty())
 		})
 	})
 })

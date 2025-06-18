@@ -7,7 +7,7 @@ package workloadidentity
 import (
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
+	"github.com/google/uuid"
 )
 
 // Functions exported for testing.
@@ -28,8 +28,8 @@ func Now() func() time.Time {
 	return now
 }
 
-func SetUID(u func() types.UID) {
-	uid = u
+func SetNewUUID(u func() (uuid.UUID, error)) {
+	newUUID = u
 }
 
 // Types exported for testing.
