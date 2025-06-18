@@ -116,8 +116,7 @@ var _ = Describe("#TokenRequest", func() {
 
 				Expect(g).ToNot(BeNil())
 				Expect(g.Gardener.WorkloadIdentity.Name).To(Equal(workloadName))
-				Expect(g.Gardener.WorkloadIdentity.Namespace).ToNot(BeNil())
-				Expect(*g.Gardener.WorkloadIdentity.Namespace).To(Equal(workloadNamespace))
+				Expect(g.Gardener.WorkloadIdentity.Namespace).To(Equal(workloadNamespace))
 				Expect(g.Gardener.WorkloadIdentity.UID).To(Equal(workloadUID))
 
 				if objType == "none" {
@@ -131,8 +130,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(ctxObjects.shoot).ToNot(BeNil())
 					Expect(g.Gardener.Shoot).ToNot(BeNil())
 					Expect(g.Gardener.Shoot.Name).To(Equal(ctxObjects.shoot.GetName()))
-					Expect(g.Gardener.Shoot.Namespace).ToNot(BeNil())
-					Expect(*g.Gardener.Shoot.Namespace).To(Equal(ctxObjects.shoot.GetNamespace()))
+					Expect(g.Gardener.Shoot.Namespace).To(Equal(ctxObjects.shoot.GetNamespace()))
 					Expect(g.Gardener.Shoot.UID).To(BeEquivalentTo(ctxObjects.shoot.GetUID()))
 				} else {
 					Expect(ctxObjects.shoot).To(BeNil())
@@ -144,7 +142,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(g.Gardener.Seed).ToNot(BeNil())
 					Expect(g.Gardener.Seed.Name).To(Equal(ctxObjects.seed.GetName()))
 					Expect(g.Gardener.Seed.UID).To(BeEquivalentTo(ctxObjects.seed.GetUID()))
-					Expect(g.Gardener.Seed.Namespace).To(BeNil())
+					Expect(g.Gardener.Seed.Namespace).To(BeZero())
 				} else {
 					Expect(ctxObjects.seed).To(BeNil())
 					Expect(g.Gardener.Seed).To(BeNil())
@@ -155,7 +153,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(g.Gardener.Project).ToNot(BeNil())
 					Expect(g.Gardener.Project.Name).To(Equal(ctxObjects.project.GetName()))
 					Expect(g.Gardener.Project.UID).To(BeEquivalentTo(ctxObjects.project.GetUID()))
-					Expect(g.Gardener.Project.Namespace).To(BeNil())
+					Expect(g.Gardener.Project.Namespace).To(BeZero())
 				} else {
 					Expect(ctxObjects.project).To(BeNil())
 					Expect(g.Gardener.Project).To(BeNil())
@@ -166,7 +164,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(g.Gardener.BackupBucket).ToNot(BeNil())
 					Expect(g.Gardener.BackupBucket.Name).To(Equal(ctxObjects.backupBucket.GetName()))
 					Expect(g.Gardener.BackupBucket.UID).To(BeEquivalentTo(ctxObjects.backupBucket.GetUID()))
-					Expect(g.Gardener.BackupBucket.Namespace).To(BeNil())
+					Expect(g.Gardener.BackupBucket.Namespace).To(BeZero())
 				} else {
 					Expect(ctxObjects.backupBucket).To(BeNil())
 					Expect(g.Gardener.BackupBucket).To(BeNil())
@@ -177,8 +175,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(g.Gardener.BackupEntry).ToNot(BeNil())
 					Expect(g.Gardener.BackupEntry.Name).To(Equal(ctxObjects.backupEntry.GetName()))
 					Expect(g.Gardener.BackupEntry.UID).To(BeEquivalentTo(ctxObjects.backupEntry.GetUID()))
-					Expect(g.Gardener.BackupEntry.Namespace).ToNot(BeNil())
-					Expect(*g.Gardener.BackupEntry.Namespace).To(Equal(ctxObjects.backupEntry.GetNamespace()))
+					Expect(g.Gardener.BackupEntry.Namespace).To(Equal(ctxObjects.backupEntry.GetNamespace()))
 				} else {
 					Expect(ctxObjects.backupEntry).To(BeNil())
 					Expect(g.Gardener.BackupEntry).To(BeNil())
