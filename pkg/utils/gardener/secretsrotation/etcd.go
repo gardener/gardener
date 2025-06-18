@@ -8,13 +8,10 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"golang.org/x/time/rate"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -242,11 +239,11 @@ func GetResourcesForRewrite(
 	error,
 ) {
 	var (
-		resourcesForRewrite        = resourcesToEncrypt
-		encryptionConfigHasChanged = !apiequality.Semantic.DeepEqual(resourcesToEncrypt, encryptedResources)
+		resourcesForRewrite = resourcesToEncrypt
+		// encryptionConfigHasChanged = !apiequality.Semantic.DeepEqual(resourcesToEncrypt, encryptedResources)
+		encryptionConfigHasChanged = !sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...))
 		encryptedGVKs              = sets.New[schema.GroupVersionKind]()
-		coreResourcesToEncrypt     = sets.New[string]()
-		groupResourcesToEncrypt    = map[string]sets.Set[string]{}
+		groupResourcesToEncrypt    = []schema.GroupResource{}
 		message                    = "Objects requiring to be rewritten after ETCD encryption key rotation"
 	)
 
@@ -257,22 +254,7 @@ func GetResourcesForRewrite(
 	}
 
 	for _, resource := range resourcesForRewrite {
-		var (
-			split    = strings.Split(resource, ".")
-			group    = strings.Join(split[1:], ".")
-			resource = split[0]
-		)
-
-		if len(split) == 1 {
-			coreResourcesToEncrypt.Insert(resource)
-			continue
-		}
-
-		if _, ok := groupResourcesToEncrypt[group]; !ok {
-			groupResourcesToEncrypt[group] = sets.New[string]()
-		}
-
-		groupResourcesToEncrypt[group].Insert(resource)
+		groupResourcesToEncrypt = append(groupResourcesToEncrypt, schema.ParseGroupResource(resource))
 	}
 
 	resourceLists, err := discoveryClient.ServerPreferredResources()
@@ -310,12 +292,11 @@ func GetResourcesForRewrite(
 				version = apiResource.Version
 			}
 
-			if group == corev1.SchemeGroupVersion.Group && coreResourcesToEncrypt.Has(apiResource.Name) {
-				encryptedGVKs.Insert(schema.GroupVersionKind{Group: group, Version: version, Kind: apiResource.Kind})
-				continue
-			}
+			shouldEncrypt := slices.ContainsFunc(groupResourcesToEncrypt, func(gr schema.GroupResource) bool {
+				return gr.Group == group && gr.Resource == apiResource.Name
+			})
 
-			if resources, ok := groupResourcesToEncrypt[group]; ok && resources.Has(apiResource.Name) {
+			if shouldEncrypt {
 				encryptedGVKs.Insert(schema.GroupVersionKind{Group: group, Version: version, Kind: apiResource.Kind})
 			}
 		}

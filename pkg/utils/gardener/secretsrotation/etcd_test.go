@@ -331,6 +331,35 @@ var _ = Describe("ETCD", func() {
 			))
 		})
 
+		It("should return the correct GVK list when not all resources are part from resourece list", func() {
+			var (
+				resourcesToEncrypt = []string{
+					"crontabs.stable.example.com",
+					"baz",
+					"configmaps",
+					"foo.bar",
+				}
+
+				encryptedResources = []string{
+					"baz",
+					"foo.bar",
+					"crontabs.stable.example.com",
+					"configmaps",
+				}
+
+				defaultGVKs = []schema.GroupVersionKind{corev1.SchemeGroupVersion.WithKind("Secret")}
+			)
+
+			list, message, err := GetResourcesForRewrite(fakeDiscoveryClient, resourcesToEncrypt, encryptedResources, defaultGVKs)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(message).To(Equal("Objects requiring to be rewritten after ETCD encryption key rotation"))
+			Expect(list).To(ConsistOf(
+				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
+				schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronTab"},
+			))
+		})
+
 		It("should return the correct GVK list for the modified resources when the resources to encrypt and encrypted resources are not equal", func() {
 			var (
 				resourcesToEncrypt = []string{
