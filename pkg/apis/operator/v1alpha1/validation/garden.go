@@ -12,11 +12,11 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -291,7 +291,7 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 			allErrs = append(allErrs, field.InternalError(path, err))
 		}
 
-		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, gardenerutils.DefaultResourcesForEncryption(), path)...)
+		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, gardenerutils.DefaultGRsForEncryption(), path)...)
 	}
 
 	if kubeControllerManager := virtualCluster.Kubernetes.KubeControllerManager; kubeControllerManager != nil && kubeControllerManager.KubeControllerManagerConfig != nil {
@@ -392,27 +392,33 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 	}
 
 	if config.EncryptionConfig != nil {
-		seenResources := sets.New[string]()
+		var seenResources []schema.GroupResource
 
 		for i, resource := range config.EncryptionConfig.Resources {
-			idxPath := fldPath.Child("encryptionConfig", "resources").Index(i)
-			if seenResources.Has(resource) {
+			var (
+				idxPath = fldPath.Child("encryptionConfig", "resources").Index(i)
+				gr      = schema.ParseGroupResource(resource)
+			)
+
+			if strings.ToLower(resource) != resource {
+				allErrs = append(allErrs, field.Invalid(idxPath, resource, "resource must be lower case"))
+			}
+
+			if slices.Contains(seenResources, gr) {
 				allErrs = append(allErrs, field.Duplicate(idxPath, resource))
 			}
-
-			if gardenerutils.DefaultGardenerResourcesForEncryption().Has(resource) {
+			if slices.Contains(gardenerutils.DefaultGardenerGRsForEncryption(), gr) {
 				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("%q are always encrypted", resource)))
 			}
-
-			if !operator.IsServedByGardenerAPIServer(resource) {
-				allErrs = append(allErrs, field.Invalid(idxPath, resource, "should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"))
-			}
-
-			if strings.HasPrefix(resource, "*") {
+			if gr.Resource == "*" || gr.Group == "*" {
 				allErrs = append(allErrs, field.Invalid(idxPath, resource, "wildcards are not supported"))
 			}
 
-			seenResources.Insert(resource)
+			if !operator.IsServedByGardenerAPIServer(resource) && gr.Group != "*" {
+				allErrs = append(allErrs, field.Invalid(idxPath, resource, "should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"))
+			}
+
+			seenResources = append(seenResources, gr)
 		}
 	}
 
@@ -576,6 +582,8 @@ func validateOperation(operation string, garden *operatorv1alpha1.Garden, fldPat
 func validateOperationContext(operation string, garden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs                  = field.ErrorList{}
+		encryptedResources       = sets.New[schema.GroupResource]()
+		resourcesToEncrypt       = sets.New[schema.GroupResource]()
 		encryptionConfig         *gardencorev1beta1.EncryptionConfig
 		gardenerEncryptionConfig *gardencorev1beta1.EncryptionConfig
 	)
@@ -587,7 +595,11 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 		gardenerEncryptionConfig = garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig
 	}
 
-	resourcesToEncrypt := append(sharedcomponent.GetResourcesForEncryptionFromConfig(encryptionConfig), sharedcomponent.GetResourcesForEncryptionFromConfig(gardenerEncryptionConfig)...)
+	for _, r := range garden.Status.EncryptedResources {
+		encryptedResources.Insert(schema.ParseGroupResource(r))
+	}
+	resourcesToEncrypt.Insert(sharedcomponent.GetResourcesForEncryptionFromConfig(encryptionConfig)...)
+	resourcesToEncrypt.Insert(sharedcomponent.GetResourcesForEncryptionFromConfig(gardenerEncryptionConfig)...)
 
 	switch operation {
 	case v1beta1constants.OperationRotateCredentialsStart:
@@ -606,7 +618,7 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 		if phase := helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.workloadIdentityKey.phase is not 'Completed'"))
 		}
-		if !apiequality.Semantic.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources) {
+		if !resourcesToEncrypt.Equal(encryptedResources) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials because a previous encryption configuration change is currently being rolled out"))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
@@ -663,7 +675,7 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 		if phase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
 		}
-		if !apiequality.Semantic.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources) {
+		if !resourcesToEncrypt.Equal(encryptedResources) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation because a previous encryption configuration change is currently being rolled out"))
 		}
 	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
@@ -702,6 +714,8 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
 	var (
 		allErrs                              = field.ErrorList{}
+		currentEncryptedKubernetesResources  = sets.New[schema.GroupResource]()
+		currentEncryptedGardenerResources    = sets.New[schema.GroupResource]()
 		oldKubeAPIServerEncryptionConfig     = &gardencore.EncryptionConfig{}
 		newKubeAPIServerEncryptionConfig     = &gardencore.EncryptionConfig{}
 		oldGAPIServerEncryptionConfig        = &gardencore.EncryptionConfig{}
@@ -737,11 +751,15 @@ func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garde
 		}
 	}
 
-	currentEncryptedKubernetesResources := utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, operator.IsServedByKubeAPIServer)
-	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newKubeAPIServerEncryptionConfig, oldKubeAPIServerEncryptionConfig, sets.New(currentEncryptedKubernetesResources...), etcdEncryptionKeyRotation, false, kubeAPIServerEncryptionConfigFldPath)...)
+	for _, r := range utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, operator.IsServedByKubeAPIServer) {
+		currentEncryptedKubernetesResources.Insert(schema.ParseGroupResource(r))
+	}
+	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newKubeAPIServerEncryptionConfig, oldKubeAPIServerEncryptionConfig, currentEncryptedKubernetesResources, etcdEncryptionKeyRotation, false, kubeAPIServerEncryptionConfigFldPath)...)
 
-	currentEncryptedGardenerResources := utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, operator.IsServedByGardenerAPIServer)
-	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newGAPIServerEncryptionConfig, oldGAPIServerEncryptionConfig, sets.New(currentEncryptedGardenerResources...), etcdEncryptionKeyRotation, false, gAPIServerEncryptionConfigFldPath)...)
+	for _, r := range utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, operator.IsServedByGardenerAPIServer) {
+		currentEncryptedGardenerResources.Insert(schema.ParseGroupResource(r))
+	}
+	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newGAPIServerEncryptionConfig, oldGAPIServerEncryptionConfig, currentEncryptedGardenerResources, etcdEncryptionKeyRotation, false, gAPIServerEncryptionConfigFldPath)...)
 
 	return allErrs
 }
