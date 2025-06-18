@@ -390,7 +390,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world resource(" + shootUID + ") differ"))
+			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world Shoot resource (" + shootUID + ") differ"))
 			Expect(ctxObjects).To(BeNil())
 
 			By("seed does not exist")
@@ -464,7 +464,7 @@ var _ = Describe("#TokenRequest", func() {
 			uidMismatchContext.UID = uidMismatch
 			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world resource(" + seedUID + ") differ"))
+			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world Seed resource (" + seedUID + ") differ"))
 			Expect(ctxObjects).To(BeNil())
 		})
 
@@ -539,7 +539,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world resource(" + backupBucketUID + ") differ"))
+			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world BackupBucket resource (" + backupBucketUID + ") differ"))
 			Expect(ctxObjects).To(BeNil())
 
 			By("bind the backupBucket to the seed")
@@ -675,7 +675,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world resource(" + backupEntryUID + ") differ"))
+			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world BackupEntry resource (" + backupEntryUID + ") differ"))
 			Expect(ctxObjects).To(BeNil())
 
 			By("backupBucket does not exist")
