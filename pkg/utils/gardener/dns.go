@@ -82,7 +82,7 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 	return
 }
 
-// GetAPIServerDomain returns the fully qualified domain name for the api-server of the Shoot cluster. The
+// GetAPIServerDomain returns the fully qualified domain name for the api-server of a Shoot or Virtual Garden cluster. The
 // end result is 'api.<domain>'.
 func GetAPIServerDomain(domain string) string {
 	return fmt.Sprintf("%s.%s", APIServerFQDNPrefix, domain)

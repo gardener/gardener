@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 	"time"
 
@@ -840,8 +841,29 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			services = append(services, *cidr)
 		}
 
-		domains := toDomainNames(getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains))
-		externalHostname := domains[0]
+		var (
+			domains          = toDomainNames(getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains))
+			externalHostname = domains[0]
+		)
+
+		if serviceAccountConfig != nil && serviceAccountConfig.Issuer != nil {
+			// If the hostname of the service account issuer matches a kube-apiserver domain
+			// prefer that for external hostname instead of using the first kube-apiserver domain.
+			// This allows operators to expose OpenID Discovery documents directly through the virtual kube-apiserver
+			// by allowing certain paths to be accessed by uauthenticated users.
+			issuerURL, err := url.Parse(*serviceAccountConfig.Issuer)
+			if err != nil {
+				return err
+			}
+
+			for _, domain := range domains {
+				if domain == issuerURL.Hostname() {
+					externalHostname = issuerURL.Host
+					break
+				}
+			}
+		}
+
 		return shared.DeployKubeAPIServer(
 			ctx,
 			r.RuntimeClientSet.Client(),
