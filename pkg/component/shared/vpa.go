@@ -31,6 +31,7 @@ func NewVerticalPodAutoscaler(
 	priorityClassNameRecommender string,
 	priorityClassNameUpdater string,
 	isGardenCluster bool,
+	featureGates map[string]bool,
 ) (
 	component.DeployWaiter,
 	error,
@@ -75,6 +76,7 @@ func NewVerticalPodAutoscaler(
 				Image:                  imageUpdater.String(),
 				PriorityClassName:      priorityClassNameUpdater,
 			},
+			FeatureGates: featureGates,
 		},
 	), nil
 }
