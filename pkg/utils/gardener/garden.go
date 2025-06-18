@@ -319,13 +319,23 @@ func PrepareGardenClientRestConfig(baseConfig *rest.Config, address *string, caC
 	return gardenClientRestConfig
 }
 
-// DefaultGardenerGVKsForEncryption returns the list of GroupVersionKinds served by Gardener API Server which are encrypted by default.
+// DefaultGardenerGVKsForEncryption returns the list of [schema.GroupVersionKind] served by Gardener API Server which are encrypted by default.
 func DefaultGardenerGVKsForEncryption() []schema.GroupVersionKind {
 	return []schema.GroupVersionKind{
 		gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerDeployment"),
 		gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerRegistration"),
 		gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecret"),
 		gardencorev1beta1.SchemeGroupVersion.WithKind("ShootState"),
+	}
+}
+
+// DefaultGardenerGRSsForEncryption returns the list of [schema.GroupResource] served by Gardener API Server which are encrypted by default.
+func DefaultGardenerGRsForEncryption() []schema.GroupResource {
+	return []schema.GroupResource{
+		gardencorev1beta1.Resource("controllerdeployments"),
+		gardencorev1beta1.Resource("controllerregistrations"),
+		gardencorev1beta1.Resource("internalsecrets"),
+		gardencorev1beta1.Resource("shootstates"),
 	}
 }
 

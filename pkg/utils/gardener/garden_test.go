@@ -328,6 +328,17 @@ var _ = Describe("Garden", func() {
 		})
 	})
 
+	Describe("#DefaultGardenerGRsForEncryption", func() {
+		It("should return all default GroupVersionKinds", func() {
+			Expect(DefaultGardenerGRsForEncryption()).To(ConsistOf(
+				schema.GroupResource{Group: "core.gardener.cloud", Resource: "controllerdeployments"},
+				schema.GroupResource{Group: "core.gardener.cloud", Resource: "controllerregistrations"},
+				schema.GroupResource{Group: "core.gardener.cloud", Resource: "internalsecrets"},
+				schema.GroupResource{Group: "core.gardener.cloud", Resource: "shootstates"},
+			))
+		})
+	})
+
 	Describe("#DefaultGardenerResourcesForEncryption", func() {
 		It("should return all default resources", func() {
 			Expect(DefaultGardenerResourcesForEncryption().UnsortedList()).To(ConsistOf(
