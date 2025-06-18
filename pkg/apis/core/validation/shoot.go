@@ -25,6 +25,7 @@ import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -167,6 +168,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation
 		oldEncryptionConfig       *core.EncryptionConfig
 		newEncryptionConfig       *core.EncryptionConfig
+		encryptedResources        = sets.New[schema.GroupResource]()
 		hibernationEnabled        = false
 	)
 
@@ -182,8 +184,11 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	if newShoot.Spec.Hibernation != nil {
 		hibernationEnabled = ptr.Deref(newShoot.Spec.Hibernation.Enabled, false)
 	}
+	for _, er := range newShoot.Status.EncryptedResources {
+		encryptedResources.Insert(schema.ParseGroupResource(er))
+	}
 
-	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, sets.New(newShoot.Status.EncryptedResources...), etcdEncryptionKeyRotation, hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
+	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, encryptedResources, etcdEncryptionKeyRotation, hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
@@ -571,19 +576,23 @@ func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32, networ
 }
 
 // ValidateEncryptionConfigUpdate validates the updates to the KubeAPIServer encryption configuration.
-func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig, currentEncryptedResources sets.Set[string], etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, isClusterInHibernation bool, fldPath *field.Path) field.ErrorList {
+func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig, currentEncryptedResources sets.Set[schema.GroupResource], etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, isClusterInHibernation bool, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs               = field.ErrorList{}
-		oldEncryptedResources = sets.New[string]()
-		newEncryptedResources = sets.New[string]()
+		oldEncryptedResources = sets.New[schema.GroupResource]()
+		newEncryptedResources = sets.New[schema.GroupResource]()
 	)
 
 	if oldConfig != nil {
-		oldEncryptedResources.Insert(oldConfig.Resources...)
+		for _, r := range oldConfig.Resources {
+			oldEncryptedResources.Insert(schema.ParseGroupResource(r))
+		}
 	}
 
 	if newConfig != nil {
-		newEncryptedResources.Insert(newConfig.Resources...)
+		for _, r := range newConfig.Resources {
+			newEncryptedResources.Insert(schema.ParseGroupResource(r))
+		}
 	}
 
 	if !newEncryptedResources.Equal(oldEncryptedResources) {
@@ -848,7 +857,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 	}
 
 	allErrs = append(allErrs, validateETCD(kubernetes.ETCD, fldPath.Child("etcd"))...)
-	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
+	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultGRsForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
 	if workerless {
@@ -1101,31 +1110,46 @@ func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.
 	return allErrs
 }
 
-func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEncryptedResources sets.Set[string], fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEncryptedResources []schema.GroupResource, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs       = field.ErrorList{}
+		seenResources []schema.GroupResource
+	)
 
 	if encryptionConfig == nil {
 		return allErrs
 	}
 
-	seenResources := sets.New[string]()
 	for i, resource := range encryptionConfig.Resources {
-		idxPath := fldPath.Child("encryptionConfig", "resources").Index(i)
-		// core resources can be mentioned with empty group (eg: secrets.)
-		if seenResources.Has(resource) || seenResources.Has(strings.TrimSuffix(resource, ".")) {
+		var (
+			idxPath = fldPath.Child("encryptionConfig", "resources").Index(i)
+			gr      = schema.ParseGroupResource(resource)
+		)
+
+		if strings.ToLower(resource) != resource {
+			allErrs = append(allErrs, field.Invalid(idxPath, resource, "resource must be lower case"))
+		}
+		if resource == "apiserveripinfo" || resource == "serviceipallocations" || resource == "servicenodeportallocations" {
+			allErrs = append(allErrs, field.Invalid(idxPath, resource, "resource cannot be encrypted"))
+		}
+
+		if gr.Group == "events.k8s.io" {
+			allErrs = append(allErrs, field.Invalid(idxPath, resource, "'*.events.k8s.io' objects are stored using the 'events' API group in etcd"))
+		}
+		if gr.Group == "extensions" {
+			allErrs = append(allErrs, field.Invalid(idxPath, resource, "group cannot be used for encryption"))
+		}
+		if slices.Contains(seenResources, gr) {
 			allErrs = append(allErrs, field.Duplicate(idxPath, resource))
 		}
-
-		// core resources can be mentioned with empty group (eg: secrets.)
-		if defaultEncryptedResources.Has(strings.TrimSuffix(resource, ".")) {
+		if slices.Contains(defaultEncryptedResources, gr) {
 			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("%q are always encrypted", resource)))
 		}
-
-		if strings.HasPrefix(resource, "*") {
+		if gr.Resource == "*" || gr.Group == "*" {
 			allErrs = append(allErrs, field.Invalid(idxPath, resource, "wildcards are not supported"))
 		}
 
-		seenResources.Insert(resource)
+		seenResources = append(seenResources, gr)
 	}
 
 	return allErrs
@@ -1289,16 +1313,18 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 		fldPath                     = field.NewPath("spec", "hibernation", "enabled")
 		hibernationEnabledInOld     = old.Spec.Hibernation != nil && ptr.Deref(old.Spec.Hibernation.Enabled, false)
 		hibernationEnabledInNew     = new.Spec.Hibernation != nil && ptr.Deref(new.Spec.Hibernation.Enabled, false)
-		encryptedResourcesInOldSpec = sets.Set[string]{}
-		encryptedResourcesInNewSpec = sets.Set[string]{}
+		encryptedResourcesInOldSpec = sets.New[schema.GroupResource]()
+		encryptedResourcesInStatus  = sets.New[schema.GroupResource]()
 	)
 
 	if old.Spec.Kubernetes.KubeAPIServer != nil && old.Spec.Kubernetes.KubeAPIServer.EncryptionConfig != nil {
-		encryptedResourcesInOldSpec.Insert(old.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources...)
+		for _, r := range old.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources {
+			encryptedResourcesInOldSpec.Insert(schema.ParseGroupResource(r))
+		}
 	}
 
-	if new.Spec.Kubernetes.KubeAPIServer != nil && new.Spec.Kubernetes.KubeAPIServer.EncryptionConfig != nil {
-		encryptedResourcesInNewSpec.Insert(new.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources...)
+	for _, r := range old.Status.EncryptedResources {
+		encryptedResourcesInStatus.Insert(schema.ParseGroupResource(r))
 	}
 
 	if !hibernationEnabledInOld && hibernationEnabledInNew {
@@ -1313,7 +1339,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 			}
 		}
 
-		if !encryptedResourcesInOldSpec.Equal(sets.New(old.Status.EncryptedResources...)) {
+		if !encryptedResourcesInOldSpec.Equal(encryptedResourcesInStatus) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "shoot cannot be hibernated when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.encryptedResources are not equal"))
 		}
 	}
@@ -1322,7 +1348,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 }
 
 // ValidateKubeAPIServer validates KubeAPIServerConfig.
-func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, workerless bool, defaultEncryptedResources sets.Set[string], fldPath *field.Path) field.ErrorList {
+func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, workerless bool, defaultEncryptedResources []schema.GroupResource, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeAPIServer == nil {
@@ -2551,10 +2577,17 @@ func ValidateCoreDNSRewritingCommonSuffixes(commonSuffixes []string, fldPath *fi
 }
 
 func validateShootOperation(operation, maintenanceOperation string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs            = field.ErrorList{}
+		encryptedResources = sets.New[schema.GroupResource]()
+	)
 
 	if operation == "" && maintenanceOperation == "" {
 		return allErrs
+	}
+
+	for _, res := range shoot.Status.EncryptedResources {
+		encryptedResources.Insert(schema.ParseGroupResource(res))
 	}
 
 	fldPathOp := fldPath.Key(v1beta1constants.GardenerOperation)
@@ -2588,7 +2621,7 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 			(forbiddenShootOperationsWhenHibernated.Has(operation) || strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers)) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
-		if !apiequality.Semantic.DeepEqual(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer), shoot.Status.EncryptedResources) &&
+		if !encryptedResources.Equal(sets.New(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer)...)) &&
 			forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(operation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted because a previous encryption configuration change is currently being rolled out"))
 		}
@@ -2602,7 +2635,7 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 			(forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers)) {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
-		if !apiequality.Semantic.DeepEqual(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer), shoot.Status.EncryptedResources) && forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(maintenanceOperation) {
+		if !encryptedResources.Equal(sets.New(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer)...)) && forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(maintenanceOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted because a previous encryption configuration change is currently being rolled out"))
 		}
 	}
@@ -2934,16 +2967,16 @@ func isShootReadyForRotationStart(lastOperation *core.LastOperation) bool {
 	return lastOperation.Type == core.LastOperationTypeReconcile
 }
 
-func getResourcesForEncryption(apiServerConfig *core.KubeAPIServerConfig) []string {
-	resources := sets.New[string]()
+func getResourcesForEncryption(apiServerConfig *core.KubeAPIServerConfig) []schema.GroupResource {
+	var resources []schema.GroupResource
 
 	if apiServerConfig != nil && apiServerConfig.EncryptionConfig != nil {
 		for _, res := range apiServerConfig.EncryptionConfig.Resources {
-			resources.Insert(res)
+			resources = append(resources, schema.ParseGroupResource(res))
 		}
 	}
 
-	return sets.List(resources)
+	return resources
 }
 
 // ValidateControlPlaneAutoscaling validates the given auto-scaling configuration.

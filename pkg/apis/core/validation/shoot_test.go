@@ -1996,6 +1996,68 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(BeEmpty())
 				})
 
+				It("should deny using capital letters for resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"ConfigMaps", "deployments.Apps"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[0]"),
+							"Detail": Equal("resource must be lower case"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"Detail": Equal("resource must be lower case"),
+						})),
+					))
+				})
+
+				It("should deny using none encryptable resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"apiserveripinfo", "serviceipallocations", "servicenodeportallocations"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[0]"),
+							"Detail": Equal("resource cannot be encrypted"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"Detail": Equal("resource cannot be encrypted"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[2]"),
+							"Detail": Equal("resource cannot be encrypted"),
+						})),
+					))
+				})
+
+				It("should deny using specific group", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"foo.extensions", "events.events.k8s.io"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[0]"),
+							"Detail": Equal("group cannot be used for encryption"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"Detail": Equal("'*.events.k8s.io' objects are stored using the 'events' API group in etcd"),
+						})),
+					))
+				})
+
 				It("should deny specifying duplicated resources", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"configmaps", "configmaps", "services", "services."},
@@ -2022,25 +2084,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeDuplicate),
 							"Field": Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
-						})),
-					))
-				})
-
-				It("should deny specifying wildcard resources", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"*.apps", "*.*"},
-					}
-
-					Expect(ValidateShoot(shoot)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[0]"),
-							"Detail": Equal("wildcards are not supported"),
-						})),
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
-							"Detail": Equal("wildcards are not supported"),
 						})),
 					))
 				})
@@ -2073,6 +2116,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
+				It("should deny specifying wildcard resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"*.apps", "*.*", "pods.*"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[0]"),
+							"Detail": Equal("wildcards are not supported"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"Detail": Equal("wildcards are not supported"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[2]"),
+							"Detail": Equal("wildcards are not supported"),
+						})),
+					))
+				})
+
 				It("should deny changing items when resources in the spec and status are not equal", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"configmaps", "deployments.apps"},
@@ -2088,6 +2155,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 							"Detail": Equal("resources cannot be changed because a previous encryption configuration change is currently being rolled out"),
 						})),
 					))
+				})
+
+				It("should allow changing items when resources in the spec and status are equal", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps.", "deployments.apps"},
+					}
+					shoot.Status.EncryptedResources = []string{"deployments.apps", "configmaps"}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 				})
 
 				It("should deny changing items when shoot is in hibernation", func() {
@@ -4850,8 +4929,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 
 			DescribeTable("starting ETCD encryption key rotation",
-				func(allowed bool, status core.ShootStatus) {
+				func(allowed bool, encryptionResources []string, status core.ShootStatus) {
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+					if encryptionResources != nil {
+						shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+							EncryptionConfig: &core.EncryptionConfig{
+								Resources: encryptionResources,
+							},
+						}
+					}
 					shoot.Status = status
 
 					matcher := BeEmpty()
@@ -4865,46 +4951,46 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(matcher)
 				},
 
-				Entry("shoot was never created successfully", false, core.ShootStatus{}),
-				Entry("shoot is still being created", false, core.ShootStatus{
+				Entry("shoot was never created successfully", false, nil, core.ShootStatus{}),
+				Entry("shoot is still being created", false, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type:  core.LastOperationTypeCreate,
 						State: core.LastOperationStateProcessing,
 					},
 				}),
-				Entry("shoot was created successfully", true, core.ShootStatus{
+				Entry("shoot was created successfully", true, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type:  core.LastOperationTypeCreate,
 						State: core.LastOperationStateSucceeded,
 					},
 				}),
-				Entry("shoot is in reconciliation phase", true, core.ShootStatus{
+				Entry("shoot is in reconciliation phase", true, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
 				}),
-				Entry("shoot is in deletion phase", false, core.ShootStatus{
+				Entry("shoot is in deletion phase", false, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeDelete,
 					},
 				}),
-				Entry("shoot is in migration phase", false, core.ShootStatus{
+				Entry("shoot is in migration phase", false, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeMigrate,
 					},
 				}),
-				Entry("shoot is in restoration phase", false, core.ShootStatus{
+				Entry("shoot is in restoration phase", false, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeRestore,
 					},
 				}),
-				Entry("shoot was restored successfully", true, core.ShootStatus{
+				Entry("shoot was restored successfully", true, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type:  core.LastOperationTypeRestore,
 						State: core.LastOperationStateSucceeded,
 					},
 				}),
-				Entry("rotation phase is prepare", false, core.ShootStatus{
+				Entry("rotation phase is prepare", false, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
@@ -4916,7 +5002,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
-				Entry("rotation phase is prepared", false, core.ShootStatus{
+				Entry("rotation phase is prepared", false, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
@@ -4928,7 +5014,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
-				Entry("rotation phase is complete", false, core.ShootStatus{
+				Entry("rotation phase is complete", false, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
@@ -4940,7 +5026,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
-				Entry("rotation phase is completed", true, core.ShootStatus{
+				Entry("rotation phase is completed", true, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
@@ -4952,12 +5038,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
-				Entry("when shoot spec encrypted resources and status encrypted resources are not equal", false, core.ShootStatus{
+				Entry("when shoot spec encrypted resources and status encrypted resources are not equal", false, nil, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
 					EncryptedResources: []string{"configmaps"},
 				}),
+				Entry("when shoot spec encrypted resources and status encrypted resources are not equal", false,
+					[]string{"pods"}, core.ShootStatus{
+						LastOperation: &core.LastOperation{
+							Type: core.LastOperationTypeReconcile,
+						},
+						EncryptedResources: []string{"configmaps"},
+					}),
+				Entry("when shoot spec encrypted resources and status encrypted resources are equal", true,
+					[]string{"configmaps"}, core.ShootStatus{
+						LastOperation: &core.LastOperation{
+							Type: core.LastOperationTypeReconcile,
+						},
+						EncryptedResources: []string{"configmaps"},
+					}),
+				Entry("when shoot spec encrypted resources and status encrypted resources are equal", true,
+					[]string{"configmaps."}, core.ShootStatus{
+						LastOperation: &core.LastOperation{
+							Type: core.LastOperationTypeReconcile,
+						},
+						EncryptedResources: []string{"configmaps"},
+					}),
 			)
 
 			DescribeTable("completing ETCD encryption key rotation",
@@ -5457,7 +5564,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
 				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					EncryptionConfig: &core.EncryptionConfig{
-						Resources: []string{"events", "configmaps"},
+						Resources: []string{"events", "configmaps."},
 					},
 				}
 				shoot.Status.EncryptedResources = []string{"configmaps", "events"}
