@@ -1134,7 +1134,7 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEn
 		}
 
 		if gr.Group == "events.k8s.io" {
-			allErrs = append(allErrs, field.Invalid(idxPath, resource, "'*.events.k8s.io' objects are stored using the 'events' API group in etcd"))
+			allErrs = append(allErrs, field.Invalid(idxPath, resource, "'*.events.k8s.io' objects are stored using the 'events' API group in etcd. Use 'events' instead in the config file"))
 		}
 		if gr.Group == "extensions" {
 			allErrs = append(allErrs, field.Invalid(idxPath, resource, "group cannot be used for encryption"))

@@ -331,7 +331,7 @@ var _ = Describe("ETCD", func() {
 			))
 		})
 
-		It("should return the correct GVK list when not all resources are part from resourece list", func() {
+		It("should return the correct GVK list when not all resources are part from the discovered resources list", func() {
 			var (
 				resourcesToEncrypt = []string{
 					"crontabs.stable.example.com",

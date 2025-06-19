@@ -239,8 +239,7 @@ func GetResourcesForRewrite(
 	error,
 ) {
 	var (
-		resourcesForRewrite = resourcesToEncrypt
-		// encryptionConfigHasChanged = !apiequality.Semantic.DeepEqual(resourcesToEncrypt, encryptedResources)
+		resourcesForRewrite        = resourcesToEncrypt
 		encryptionConfigHasChanged = !sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...))
 		encryptedGVKs              = sets.New[schema.GroupVersionKind]()
 		groupResourcesToEncrypt    = []schema.GroupResource{}
@@ -292,11 +291,9 @@ func GetResourcesForRewrite(
 				version = apiResource.Version
 			}
 
-			shouldEncrypt := slices.ContainsFunc(groupResourcesToEncrypt, func(gr schema.GroupResource) bool {
+			if shouldEncrypt := slices.ContainsFunc(groupResourcesToEncrypt, func(gr schema.GroupResource) bool {
 				return gr.Group == group && gr.Resource == apiResource.Name
-			})
-
-			if shouldEncrypt {
+			}); shouldEncrypt {
 				encryptedGVKs.Insert(schema.GroupVersionKind{Group: group, Version: version, Kind: apiResource.Kind})
 			}
 		}

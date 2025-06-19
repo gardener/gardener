@@ -2053,7 +2053,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
-							"Detail": Equal("'*.events.k8s.io' objects are stored using the 'events' API group in etcd"),
+							"Detail": Equal("'*.events.k8s.io' objects are stored using the 'events' API group in etcd. Use 'events' instead in the config file"),
 						})),
 					))
 				})

@@ -41,11 +41,11 @@ var _ = Describe("APIServer", func() {
 
 		It("should return the correct list of resources when resources are not nil", func() {
 			resources := []schema.GroupResource{
-				schema.GroupResource{Resource: "deployments", Group: "apps"},
-				schema.GroupResource{Resource: "fancyresource", Group: "customoperator.io"},
-				schema.GroupResource{Resource: "configmaps", Group: ""},
-				schema.GroupResource{Resource: "services", Group: ""},
-				schema.GroupResource{Resource: "daemonsets", Group: "apps"},
+				{Resource: "deployments", Group: "apps"},
+				{Resource: "fancyresource", Group: "customoperator.io"},
+				{Resource: "configmaps", Group: ""},
+				{Resource: "services", Group: ""},
+				{Resource: "daemonsets", Group: "apps"},
 			}
 
 			Expect(StringifyGroupResources(resources)).To(ConsistOf(
