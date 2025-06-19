@@ -678,7 +678,7 @@ func (r *Reconciler) reconcileBackupEntryExtensionSecret(ctx context.Context, ex
 		}
 		return s.Reconcile(ctx, r.SeedClient)
 	default:
-		return fmt.Errorf("unsupported credentials type GVK: %q", backupCredentials.GetObjectKind().GroupVersionKind())
+		return fmt.Errorf("unsupported credentials type GVK: %q", backupCredentials.GetObjectKind().GroupVersionKind().String())
 	}
 }
 
