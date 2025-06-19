@@ -7,7 +7,10 @@ package storage
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -30,6 +33,8 @@ import (
 
 var (
 	rsaPrivateKey *rsa.PrivateKey
+	seedUser      user.DefaultInfo
+	nonSeedUser   user.DefaultInfo
 )
 
 var _ = BeforeSuite(func() {
@@ -39,6 +44,20 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = Describe("#TokenRequest", func() {
+	BeforeEach(func() {
+		seedUser = user.DefaultInfo{
+			Name: v1beta1constants.SeedUserNamePrefix + "foo",
+			Groups: []string{
+				v1beta1constants.SeedsGroup,
+				"foo",
+			},
+		}
+		nonSeedUser = user.DefaultInfo{
+			Name:   "foo",
+			Groups: []string{"foo", "bar"},
+		}
+	})
+
 	Context("#getGardenerClaims", func() {
 		const (
 			workloadName      = "identity"
@@ -213,8 +232,6 @@ var _ = Describe("#TokenRequest", func() {
 			project      *gardencorev1beta1.Project
 			backupBucket *gardencorev1beta1.BackupBucket
 			backupEntry  *gardencorev1beta1.BackupEntry
-			seedUser     user.DefaultInfo
-			nonSeedUser  user.DefaultInfo
 
 			shootInformer        gardenv1betainformers.ShootInformer
 			seedInformer         gardenv1betainformers.SeedInformer
@@ -248,17 +265,6 @@ var _ = Describe("#TokenRequest", func() {
 				TypeMeta:   metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "BackupEntry"},
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespaceName, Name: backupEntryName, UID: backupEntryUID},
 				Spec:       gardencorev1beta1.BackupEntrySpec{BucketName: backupBucketName},
-			}
-			seedUser = user.DefaultInfo{
-				Name: v1beta1constants.SeedUserNamePrefix + "foo",
-				Groups: []string{
-					v1beta1constants.SeedsGroup,
-					"foo",
-				},
-			}
-			nonSeedUser = user.DefaultInfo{
-				Name:   "foo",
-				Groups: []string{"foo", "bar"},
 			}
 			informerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
 
@@ -875,6 +881,49 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(exp).ToNot(BeNil())
 			Expect(exp.After(now)).To(BeTrue())
 			Expect(token).ToNot(BeEmpty())
+		})
+
+		It("should omit setting empty namespace claim", func() {
+			var (
+				now          = time.Now()
+				tokenRequest = &securityapi.TokenRequest{
+					Spec: securityapi.TokenRequestSpec{
+						ContextObject: &securityapi.ContextObject{
+							APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+							Kind:       "Seed",
+							Name:       seedName,
+							UID:        seedUID,
+						},
+						ExpirationSeconds: int64(3600),
+					},
+				}
+			)
+			token, exp, err := r.issueToken(&seedUser, tokenRequest, workloadIdentity)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp).ToNot(BeNil())
+			Expect(exp.After(now)).To(BeTrue())
+			Expect(token).ToNot(BeEmpty())
+			Expect(strings.Split(token, ".")).To(HaveLen(3))
+
+			encodedPayload := strings.Split(token, ".")[1]
+			Expect(encodedPayload).ToNot(BeEmpty())
+
+			payload, err := base64.RawURLEncoding.DecodeString(encodedPayload)
+			Expect(err).ToNot(HaveOccurred())
+
+			gardenerClaims := map[string](map[string](map[string]string)){}
+			Expect(json.Unmarshal(payload, &gardenerClaims)).To(Succeed())
+			Expect(gardenerClaims).To(HaveKey("gardener.cloud"))
+			Expect(gardenerClaims["gardener.cloud"]).To(HaveKey("seed"))
+
+			seedClaims := gardenerClaims["gardener.cloud"]["seed"]
+			Expect(seedClaims).To(HaveLen(2))
+			Expect(seedClaims).To(Not(HaveKey("namespace")))
+			Expect(seedClaims).To(And(
+				HaveKeyWithValue("name", seedName),
+				HaveKeyWithValue("uid", string(seedUID)),
+			))
 		})
 	})
 })

@@ -36,7 +36,7 @@ type gardener struct {
 
 type ref struct {
 	Name      string `json:"name"`
-	Namespace string `json:"namespace,omitempty"`
+	Namespace string `json:"namespace,omitempty,omitzero"`
 	UID       string `json:"uid"`
 }
 
