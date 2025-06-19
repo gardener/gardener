@@ -115,7 +115,7 @@ func (r *Reconciler) reconcileBackupBucket(
 	}
 
 	if !controllerutil.ContainsFinalizer(backupCredentials, gardencorev1beta1.ExternalGardenerName) {
-		log.Info("Adding finalizer to backup credentials", "kind", backupCredentials.GetObjectKind().GroupVersionKind().Kind, "key", client.ObjectKeyFromObject(backupCredentials))
+		log.Info("Adding finalizer to backup credentials", "gvk", backupCredentials.GetObjectKind().GroupVersionKind().String(), "key", client.ObjectKeyFromObject(backupCredentials))
 		if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, backupCredentials, gardencorev1beta1.ExternalGardenerName); err != nil {
 			return fmt.Errorf("failed to add finalizer to backup credentials: %w", err)
 		}
@@ -331,7 +331,7 @@ func (r *Reconciler) deleteBackupBucket(
 	log.Info("Successfully deleted")
 
 	if controllerutil.ContainsFinalizer(backupCredentials, gardencorev1beta1.ExternalGardenerName) {
-		log.Info("Removing finalizer from credentials", "kind", backupCredentials.GetObjectKind().GroupVersionKind().Kind, "credentials", client.ObjectKeyFromObject(backupCredentials))
+		log.Info("Removing finalizer from credentials", "gvk", backupCredentials.GetObjectKind().GroupVersionKind().String(), "credentials", client.ObjectKeyFromObject(backupCredentials))
 		if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, backupCredentials, gardencorev1beta1.ExternalGardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from credentials: %w", err)
 		}
@@ -380,7 +380,7 @@ func (r *Reconciler) reconcileBackupBucketExtensionSecret(ctx context.Context, e
 		}
 		return s.Reconcile(ctx, r.SeedClient)
 	default:
-		return fmt.Errorf("unsupported credentials type GVK: %q", backupCredentials.GetObjectKind().GroupVersionKind())
+		return fmt.Errorf("unsupported credentials type GVK: %q", backupCredentials.GetObjectKind().GroupVersionKind().String())
 	}
 }
 
