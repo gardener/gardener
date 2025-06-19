@@ -6,7 +6,8 @@ description: Defining the differences and requirements for upgrading to a suppor
 # Shoot Kubernetes Minor Version Upgrades
 
 Breaking changes may be introduced with new Kubernetes versions.
-This documentation describes the differences and requirements for upgrading to a supported Kubernetes version.
+This documentation describes the Gardener specific differences and requirements for upgrading to a supported Kubernetes version.
+For Kubernetes specific upgrade notes the upstream Kubernetes release notes, [changelogs](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG) and release blogs should be considered before upgrade.
 
 ## Upgrading to Kubernetes `v1.33`
 

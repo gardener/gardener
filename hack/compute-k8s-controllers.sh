@@ -40,6 +40,7 @@ declare -A path_map=(
   ["certificatesigningrequest-signing-controller"]="pkg/controller/certificates/signer/signer.go"
   ["daemonset-controller"]="pkg/controller/daemon/daemon_controller.go"
   ["deployment-controller"]="pkg/controller/deployment/deployment_controller.go"
+  ["device-taint-eviction-controller"]="pkg/controller/devicetainteviction/device_taint_eviction.go"
   ["disruption-controller"]="pkg/controller/disruption/disruption.go"
   ["endpoints-controller"]="pkg/controller/endpoint/endpoints_controller.go"
   ["endpointslice-controller"]="pkg/controller/endpointslice/endpointslice_controller.go"

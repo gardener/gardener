@@ -54,6 +54,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 	},
 	"certificates/v1beta1": {
 		"csrsigning": {},
+		"kube-apiserver-serving-clustertrustbundle-publisher-controller": {AddedInVersion: "1.33"},
 	},
 	"coordination/v1": {
 		"nodelifecycle":      {},
@@ -66,11 +67,14 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 	"extensions/v1beta1": {
 		"disruption": {},
 	},
+	"networking/v1": {
+		"service-cidr-controller": {AddedInVersion: "1.33"},
+	},
 	"networking/v1alpha1": {
 		"service-cidr-controller": {AddedInVersion: "1.29", RemovedInVersion: "1.31"},
 	},
 	"networking/v1beta1": {
-		"service-cidr-controller": {AddedInVersion: "1.31"},
+		"service-cidr-controller": {AddedInVersion: "1.31", RemovedInVersion: "1.33"},
 	},
 	"policy/v1": {
 		"disruption": {},
@@ -85,7 +89,8 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"resource-claim-controller": {AddedInVersion: "1.31", RemovedInVersion: "1.32"},
 	},
 	"resource/v1beta1": {
-		"resource-claim-controller": {AddedInVersion: "1.32"},
+		"resource-claim-controller":        {AddedInVersion: "1.32"},
+		"device-taint-eviction-controller": {AddedInVersion: "1.33"},
 	},
 	"storage/v1": {
 		"selinux-warning-controller": {AddedInVersion: "1.32"},
@@ -106,6 +111,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"csrsigning":                           {},
 		"daemonset":                            {},
 		"deployment":                           {},
+		"device-taint-eviction-controller":     {AddedInVersion: "1.33"},
 		"disruption":                           {},
 		"endpoint":                             {},
 		"endpointslice":                        {},
