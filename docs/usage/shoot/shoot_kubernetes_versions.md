@@ -20,7 +20,7 @@ For Kubernetes specific upgrade notes the upstream Kubernetes release notes, [ch
 > It is recommended to [migrate from OIDC to `StructuredAuthentication`](shoot_access.md#migrating-from-oidc-to-structured-authentication-config) before updating to Kubernetes v1.32 in order to avoid not being able to revert the change.
 
 - The `Shoot`'s `spec.kubernetes.kubeAPIServer.oidcConfig` field is forbidden.
-  - `Shoot` owners that have used `oidcConfig` are required to [migrate to `StructuredAuthentication`](shoot_access.md#migrating-from-oidc-to-structured-authentication-config). More information about `StructuredAuthentication` can be found in the [Structured Authentication documentation](./shoot_access.md#structured-authentication).
+  - `Shoot` owners that have used `oidcConfig` or a `(Cluster)OpenIDConnectPreset` resource are recommended to [migrate to `StructuredAuthentication`](shoot_access.md#migrating-from-oidc-to-structured-authentication-config). More information about `StructuredAuthentication` can be found in the [Structured Authentication documentation](./shoot_access.md#structured-authentication).
 
 ## Upgrading to Kubernetes `v1.31`
 
