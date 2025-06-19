@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/google/uuid"
 )
 
 const (
@@ -26,7 +27,8 @@ const (
 )
 
 var (
-	now = time.Now
+	now     = time.Now
+	newUUID = uuid.NewRandom
 )
 
 // TokenIssuer is an interface for JSON Web Token issuers.
@@ -91,6 +93,11 @@ func (t *tokenIssuer) IssueToken(sub string, aud []string, duration int64, claim
 	iat := now()
 	exp := iat.Add(time.Second * time.Duration(duration))
 
+	jti, err := newUUID()
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to generate UUID for the jti claim: %w", err)
+	}
+
 	c := jwt.Claims{
 		Issuer:    t.issuer,
 		IssuedAt:  jwt.NewNumericDate(iat),
@@ -98,6 +105,7 @@ func (t *tokenIssuer) IssueToken(sub string, aud []string, duration int64, claim
 		NotBefore: jwt.NewNumericDate(iat),
 		Subject:   sub,
 		Audience:  aud,
+		ID:        jti.String(),
 	}
 
 	token, err := builder.Claims(c).Serialize()

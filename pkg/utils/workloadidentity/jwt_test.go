@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/util/keyutil"
@@ -46,6 +47,8 @@ var _ = Describe("#JWT", func() {
 		workloadidentity.SetNow(func() time.Time {
 			return time.Date(2024, time.July, 9, 2, 0, 0, 0, time.UTC)
 		})
+
+		workloadidentity.SetNewUUID(uuid.NewRandom)
 	})
 
 	Context("#getKeyID", func() {
@@ -205,6 +208,7 @@ wQIDAQAB
 			maxDurationSeconds int64
 			t                  workloadidentity.TokenIssuer
 			audiences          []string
+			staticUUID         uuid.UUID
 		)
 
 		type customClaims struct {
@@ -222,6 +226,9 @@ wQIDAQAB
 
 			t = tokenIssuer
 			audiences = []string{aud}
+
+			staticUUID, err = uuid.Parse("cae0e350-b683-4a72-829c-675a686c0c54")
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should successfully issue token without claims", func() {
@@ -311,6 +318,96 @@ wQIDAQAB
 			Expect(exp).ToNot(BeNil())
 			Expect(exp.After(n)).To(BeTrue())
 			Expect(exp.Compare(n.Add(time.Second * time.Duration(durationSeconds)))).To(Equal(1))
+		})
+
+		It("should not issue the same token twice for the same input", func() {
+			var (
+				n               = workloadidentity.Now()()
+				durationSeconds = int64(time.Hour.Seconds()) * 2
+			)
+			token1, exp1, err := t.IssueToken(sub, audiences, durationSeconds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp1).ToNot(BeNil())
+			Expect(exp1.After(n)).To(BeTrue())
+			Expect(token1).ToNot(BeEmpty())
+
+			token2, exp2, err := t.IssueToken(sub, audiences, durationSeconds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp2).ToNot(BeNil())
+			Expect(exp2.After(n)).To(BeTrue())
+			Expect(exp2).To(Equal(exp1))
+			Expect(token2).ToNot(BeEmpty())
+			Expect(token2).ToNot(Equal(token1))
+		})
+
+		It("should issue the same token twice for the same input when the JTI is the same", func() {
+			var (
+				n               = workloadidentity.Now()()
+				durationSeconds = int64(time.Hour.Seconds()) * 2
+			)
+
+			workloadidentity.SetNewUUID(func() (uuid.UUID, error) {
+				return staticUUID, nil
+			})
+
+			token1, exp1, err := t.IssueToken(sub, audiences, durationSeconds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp1).ToNot(BeNil())
+			Expect(exp1.After(n)).To(BeTrue())
+			Expect(token1).ToNot(BeEmpty())
+
+			token2, exp2, err := t.IssueToken(sub, audiences, durationSeconds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp2).ToNot(BeNil())
+			Expect(exp2.After(n)).To(BeTrue())
+			Expect(exp2).To(Equal(exp1))
+			Expect(token2).ToNot(BeEmpty())
+			Expect(token2).To(Equal(token1))
+		})
+
+		It("should issue the different tokens when JTI is the same but time differs", func() {
+			var (
+				n               = workloadidentity.Now()()
+				durationSeconds = int64(time.Hour.Seconds()) * 2
+			)
+
+			workloadidentity.SetNewUUID(func() (uuid.UUID, error) {
+				return staticUUID, nil
+			})
+
+			token1, exp1, err := t.IssueToken(sub, audiences, durationSeconds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp1).ToNot(BeNil())
+			Expect(exp1.After(n)).To(BeTrue())
+			Expect(token1).ToNot(BeEmpty())
+
+			// Advance the time to ensure iat, exp, nbf claims have other values in the next issued token
+			workloadidentity.SetNow(func() time.Time {
+				return n.Add(time.Minute)
+			})
+
+			n2 := workloadidentity.Now()()
+			token2, exp2, err := t.IssueToken(sub, audiences, durationSeconds)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp2).ToNot(BeNil())
+			Expect(exp2.After(n2)).To(BeTrue())
+			Expect(*exp2).To(Equal(exp1.Add(time.Minute)))
+
+			Expect(token2).ToNot(BeEmpty())
+			Expect(token2).ToNot(Equal(token1))
+		})
+
+		It("should fail to issue token when uuid generation fails", func() {
+			workloadidentity.SetNewUUID(func() (uuid.UUID, error) {
+				return uuid.UUID{}, fmt.Errorf("failed to generate uuid")
+			})
+
+			token, exp, err := t.IssueToken(sub, audiences, int64(time.Hour.Seconds())*2)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("failed to generate UUID for the jti claim: failed to generate uuid"))
+			Expect(exp).To(BeNil())
+			Expect(token).To(BeEmpty())
 		})
 	})
 })
