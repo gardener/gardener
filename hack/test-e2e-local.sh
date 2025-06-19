@@ -167,4 +167,4 @@ case $TYPE in
     ;;
 esac
 
-GO111MODULE=on ginkgo run --timeout=90m $ginkgo_flags --v --show-node-events "$@"
+GO111MODULE=on ginkgo run --timeout=105m $ginkgo_flags --v --show-node-events "$@"

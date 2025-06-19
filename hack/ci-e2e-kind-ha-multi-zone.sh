@@ -7,7 +7,6 @@
 set -o nounset
 set -o pipefail
 set -o errexit
-set -x
 
 source $(dirname "${0}")/ci-common.sh
 
