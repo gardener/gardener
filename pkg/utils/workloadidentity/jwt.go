@@ -95,7 +95,7 @@ func (t *tokenIssuer) IssueToken(sub string, aud []string, duration int64, claim
 
 	jti, err := newUUID()
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to generated UUID for the jti claim: %w", err)
+		return "", nil, fmt.Errorf("failed to generate UUID for the jti claim: %w", err)
 	}
 
 	c := jwt.Claims{

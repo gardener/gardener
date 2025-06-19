@@ -400,12 +400,12 @@ wQIDAQAB
 
 		It("should fail to issue token when uuid generation fails", func() {
 			workloadidentity.SetNewUUID(func() (uuid.UUID, error) {
-				return uuid.UUID{}, fmt.Errorf("failed to generated uuid")
+				return uuid.UUID{}, fmt.Errorf("failed to generate uuid")
 			})
 
 			token, exp, err := t.IssueToken(sub, audiences, int64(time.Hour.Seconds())*2)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("failed to generated UUID for the jti claim: failed to generated uuid"))
+			Expect(err).To(MatchError("failed to generate UUID for the jti claim: failed to generate uuid"))
 			Expect(exp).To(BeNil())
 			Expect(token).To(BeEmpty())
 		})
