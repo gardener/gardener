@@ -1300,7 +1300,7 @@ var _ = Describe("Validation Tests", func() {
 			})
 
 			Context("ETCD", func() {
-				It("should complain if both bucket name and provider config are set", func() {
+				It("should allow provider config even if bucket name is set", func() {
 					garden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
 						Main: &operatorv1alpha1.ETCDMain{
 							Backup: &operatorv1alpha1.Backup{
@@ -1313,12 +1313,8 @@ var _ = Describe("Validation Tests", func() {
 						},
 					}
 
-					Expect(ValidateGarden(garden, extensions)).To(ContainElements(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.virtualCluster.etcd.main.backup.providerConfig"),
-						})),
-					))
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+
 				})
 
 				It("should complain if invalid autoscaling resource is configured", func() {
