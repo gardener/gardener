@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -345,7 +346,8 @@ func StringifyGroupResources(resources []schema.GroupResource) []string {
 		out = append(out, r.String())
 	}
 
-	return out
+	// We use NormalizeResources for backwards compatibility
+	return NormalizeResources(out)
 }
 
 // NormalizeResources returns the list of resources after trimming the suffix '.' if present.
@@ -354,7 +356,8 @@ func NormalizeResources(resources []string) []string {
 	var out []string
 
 	for _, resource := range resources {
-		out = append(out, schema.ParseGroupResource(resource).String())
+		// For backwards compatibility we always remove the suffix '.'
+		out = append(out, strings.TrimSuffix(resource, "."))
 	}
 
 	return out

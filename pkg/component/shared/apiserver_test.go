@@ -45,7 +45,7 @@ var _ = Describe("APIServer", func() {
 				{Resource: "fancyresource", Group: "customoperator.io"},
 				{Resource: "configmaps", Group: ""},
 				{Resource: "services", Group: ""},
-				{Resource: "daemonsets", Group: "apps"},
+				{Resource: "daemonsets", Group: "apps."},
 			}
 
 			Expect(StringifyGroupResources(resources)).To(ConsistOf(
@@ -64,7 +64,7 @@ var _ = Describe("APIServer", func() {
 		})
 
 		It("should return the correct list of resources when encryptionConfig is not nil", func() {
-			resources := []string{"deployments.apps", "fancyresource.customoperator.io", "endpoints.", "configmaps", "services."}
+			resources := []string{"deployments.apps.", "fancyresource.customoperator.io", "endpoints.", "configmaps", "services."}
 
 			Expect(NormalizeResources(resources)).To(ConsistOf(
 				"deployments.apps",
