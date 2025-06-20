@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -61,7 +62,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 
 	if len(authenticationConfig) > 0 {
 		if err := runtime.DecodeInto(ConfigCodec, []byte(authenticationConfig), authenticationConfiguration); err != nil {
-			return err
+			return v1beta1helper.NewErrorWithCodes(err, gardencorev1beta1.ErrorConfigurationProblem)
 		}
 	}
 
