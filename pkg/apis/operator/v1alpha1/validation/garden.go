@@ -264,15 +264,7 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 	allErrs = validateDomains(dns, virtualCluster.DNS.Domains, fldPath.Child("dns", "domains"), allErrs)
 
 	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil {
-		etcdMainFldPath := fldPath.Child("etcd", "main")
-
-		if virtualCluster.ETCD.Main.Backup != nil {
-			if virtualCluster.ETCD.Main.Backup.BucketName != nil && virtualCluster.ETCD.Main.Backup.ProviderConfig != nil {
-				allErrs = append(allErrs, field.Forbidden(etcdMainFldPath.Child("backup", "providerConfig"), "provider must not be set when bucket name is set"))
-			}
-		}
-
-		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, etcdMainFldPath.Child("autoscaling"))...)
+		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, fldPath.Child("etcd", "main", "autoscaling"))...)
 	}
 
 	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Events != nil {
