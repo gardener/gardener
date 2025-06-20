@@ -484,8 +484,8 @@ func GetVersionCapabilitySets(version core.MachineImageVersion, capabilitiesDefi
 // AreCapabilitiesEqual checks if two capabilities are semantically equal.
 // It compares the keys and values of the capabilities maps.
 func AreCapabilitiesEqual(a, b core.Capabilities, capabilitiesDefinitions []core.CapabilityDefinition) bool {
-	defaultedA := ApplyDefaultCapabilities(a, capabilitiesDefinitions)
-	defaultedB := ApplyDefaultCapabilities(b, capabilitiesDefinitions)
+	defaultedA := ApplyDefaultCapabilities(maps.Clone(a), capabilitiesDefinitions)
+	defaultedB := ApplyDefaultCapabilities(maps.Clone(b), capabilitiesDefinitions)
 
 	// Check if all keys and values in `a` exist in `b` and vice versa
 	if !areCapabilitiesSubsetOf(defaultedA, defaultedB) {
