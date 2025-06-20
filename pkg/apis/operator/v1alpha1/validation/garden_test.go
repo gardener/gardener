@@ -1621,7 +1621,7 @@ var _ = Describe("Validation Tests", func() {
 
 						It("should deny specifying wildcard resources", func() {
 							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
-								Resources: []string{"*.core.gardener.cloud", "*.operations.gardener.cloud", "*.*", "shoots.*"},
+								Resources: []string{"shoots.*.gardener.cloud", "*.operations.gardener.cloud", "*.*", "shoots.*"},
 							}
 
 							Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
@@ -1644,6 +1644,24 @@ var _ = Describe("Validation Tests", func() {
 									"Type":   Equal(field.ErrorTypeInvalid),
 									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[3]"),
 									"Detail": Equal("wildcards are not supported"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeInvalid),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[0]"),
+									"BadValue": Equal("shoots.*.gardener.cloud"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeInvalid),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[2]"),
+									"BadValue": Equal("*.*"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeInvalid),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[3]"),
+									"BadValue": Equal("shoots.*"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"),
 								})),
 							))
 						})

@@ -329,8 +329,8 @@ func DefaultGardenerGVKsForEncryption() []schema.GroupVersionKind {
 	}
 }
 
-// DefaultGardenerGRsForEncryption returns the list of [schema.GroupResource] served by Gardener API Server which are encrypted by default.
-func DefaultGardenerGRsForEncryption() []schema.GroupResource {
+// DefaultGardenerGroupResourcesForEncryption returns the list of [schema.GroupResource] served by Gardener API Server which are encrypted by default.
+func DefaultGardenerGroupResourcesForEncryption() []schema.GroupResource {
 	return []schema.GroupResource{
 		gardencorev1beta1.Resource("controllerdeployments"),
 		gardencorev1beta1.Resource("controllerregistrations"),

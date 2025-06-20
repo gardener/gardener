@@ -788,8 +788,8 @@ func DefaultGVKsForEncryption() []schema.GroupVersionKind {
 	}
 }
 
-// DefaultGRsForEncryption returns the list of GroupResources which are encrypted by default.
-func DefaultGRsForEncryption() []schema.GroupResource {
+// DefaultGroupResourcesForEncryption returns the list of GroupResources which are encrypted by default.
+func DefaultGroupResourcesForEncryption() []schema.GroupResource {
 	return []schema.GroupResource{
 		corev1.Resource("secrets"),
 	}

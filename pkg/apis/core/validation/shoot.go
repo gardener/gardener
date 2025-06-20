@@ -857,7 +857,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 	}
 
 	allErrs = append(allErrs, validateETCD(kubernetes.ETCD, fldPath.Child("etcd"))...)
-	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultGRsForEncryption(), fldPath.Child("kubeAPIServer"))...)
+	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultGroupResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
 	if workerless {
@@ -1110,10 +1110,12 @@ func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.
 	return allErrs
 }
 
+// validateEncryptionConfig was created by reusing validation from the kubernetes/kubernetes project
+// https://github.com/kubernetes/kubernetes/blob/8adc0f041b8e7ad1d30e29cc59c6ae7a15e19828/staging/src/k8s.io/apiserver/pkg/apis/apiserver/validation/validation_encryption.go#L122-L284
 func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEncryptedResources []schema.GroupResource, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs       = field.ErrorList{}
-		seenResources []schema.GroupResource
+		seenResources = sets.New[schema.GroupResource]()
 	)
 
 	if encryptionConfig == nil {
@@ -1130,26 +1132,26 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEn
 			allErrs = append(allErrs, field.Invalid(idxPath, resource, "resource must be lower case"))
 		}
 		if resource == "apiserveripinfo" || resource == "serviceipallocations" || resource == "servicenodeportallocations" {
-			allErrs = append(allErrs, field.Invalid(idxPath, resource, "resource cannot be encrypted"))
+			allErrs = append(allErrs, field.Invalid(idxPath, resource, "resources which do not have REST API/s cannot be encrypted"))
+		}
+		if strings.Contains(resource, "*") {
+			allErrs = append(allErrs, field.Invalid(idxPath, resource, "wildcards are not supported"))
 		}
 
 		if gr.Group == "events.k8s.io" {
-			allErrs = append(allErrs, field.Invalid(idxPath, resource, "'*.events.k8s.io' objects are stored using the 'events' API group in etcd. Use 'events' instead in the config file"))
+			allErrs = append(allErrs, field.Invalid(idxPath, resource, "'*.events.k8s.io' objects are stored using the 'events' API group in etcd. Use 'events' instead"))
 		}
 		if gr.Group == "extensions" {
-			allErrs = append(allErrs, field.Invalid(idxPath, resource, "group cannot be used for encryption"))
+			allErrs = append(allErrs, field.Invalid(idxPath, resource, "'extensions' group has been removed and cannot be used for encryption"))
 		}
-		if slices.Contains(seenResources, gr) {
+		if seenResources.Has(gr) {
 			allErrs = append(allErrs, field.Duplicate(idxPath, resource))
 		}
 		if slices.Contains(defaultEncryptedResources, gr) {
 			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("%q are always encrypted", resource)))
 		}
-		if gr.Resource == "*" || gr.Group == "*" {
-			allErrs = append(allErrs, field.Invalid(idxPath, resource, "wildcards are not supported"))
-		}
 
-		seenResources = append(seenResources, gr)
+		seenResources.Insert(gr)
 	}
 
 	return allErrs

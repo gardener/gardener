@@ -291,7 +291,7 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 			allErrs = append(allErrs, field.InternalError(path, err))
 		}
 
-		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, gardenerutils.DefaultGRsForEncryption(), path)...)
+		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, gardenerutils.DefaultGroupResourcesForEncryption(), path)...)
 	}
 
 	if kubeControllerManager := virtualCluster.Kubernetes.KubeControllerManager; kubeControllerManager != nil && kubeControllerManager.KubeControllerManagerConfig != nil {
@@ -392,7 +392,7 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 	}
 
 	if config.EncryptionConfig != nil {
-		var seenResources []schema.GroupResource
+		seenResources := sets.New[schema.GroupResource]()
 
 		for i, resource := range config.EncryptionConfig.Resources {
 			var (
@@ -403,22 +403,22 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 			if strings.ToLower(resource) != resource {
 				allErrs = append(allErrs, field.Invalid(idxPath, resource, "resource must be lower case"))
 			}
-
-			if slices.Contains(seenResources, gr) {
-				allErrs = append(allErrs, field.Duplicate(idxPath, resource))
-			}
-			if slices.Contains(gardenerutils.DefaultGardenerGRsForEncryption(), gr) {
-				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("%q are always encrypted", resource)))
-			}
-			if gr.Resource == "*" || gr.Group == "*" {
+			if strings.Contains(resource, "*") {
 				allErrs = append(allErrs, field.Invalid(idxPath, resource, "wildcards are not supported"))
 			}
 
-			if !operator.IsServedByGardenerAPIServer(resource) && gr.Group != "*" {
+			if seenResources.Has(gr) {
+				allErrs = append(allErrs, field.Duplicate(idxPath, resource))
+			}
+			if slices.Contains(gardenerutils.DefaultGardenerGroupResourcesForEncryption(), gr) {
+				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("%q are always encrypted", resource)))
+			}
+
+			if !operator.IsServedByGardenerAPIServer(resource) {
 				allErrs = append(allErrs, field.Invalid(idxPath, resource, "should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"))
 			}
 
-			seenResources = append(seenResources, gr)
+			seenResources.Insert(gr)
 		}
 	}
 

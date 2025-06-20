@@ -2024,17 +2024,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[0]"),
-							"Detail": Equal("resource cannot be encrypted"),
+							"Detail": Equal("resources which do not have REST API/s cannot be encrypted"),
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
-							"Detail": Equal("resource cannot be encrypted"),
+							"Detail": Equal("resources which do not have REST API/s cannot be encrypted"),
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[2]"),
-							"Detail": Equal("resource cannot be encrypted"),
+							"Detail": Equal("resources which do not have REST API/s cannot be encrypted"),
 						})),
 					))
 				})
@@ -2048,12 +2048,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[0]"),
-							"Detail": Equal("group cannot be used for encryption"),
+							"Detail": Equal("'extensions' group has been removed and cannot be used for encryption"),
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
-							"Detail": Equal("'*.events.k8s.io' objects are stored using the 'events' API group in etcd. Use 'events' instead in the config file"),
+							"Detail": Equal("'*.events.k8s.io' objects are stored using the 'events' API group in etcd. Use 'events' instead"),
 						})),
 					))
 				})
@@ -2118,7 +2118,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should deny specifying wildcard resources", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"*.apps", "*.*", "pods.*"},
+						Resources: []string{"*.apps", "*.*", "pods.*", "foo.*.bar"},
 					}
 
 					Expect(ValidateShoot(shoot)).To(ConsistOf(
@@ -2135,6 +2135,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[2]"),
+							"Detail": Equal("wildcards are not supported"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[3]"),
 							"Detail": Equal("wildcards are not supported"),
 						})),
 					))

@@ -291,9 +291,9 @@ func GetResourcesForRewrite(
 				version = apiResource.Version
 			}
 
-			if shouldEncrypt := slices.ContainsFunc(groupResourcesToEncrypt, func(gr schema.GroupResource) bool {
+			if slices.ContainsFunc(groupResourcesToEncrypt, func(gr schema.GroupResource) bool {
 				return gr.Group == group && gr.Resource == apiResource.Name
-			}); shouldEncrypt {
+			}) {
 				encryptedGVKs.Insert(schema.GroupVersionKind{Group: group, Version: version, Kind: apiResource.Kind})
 			}
 		}
