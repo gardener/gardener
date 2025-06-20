@@ -6,6 +6,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
@@ -138,7 +139,7 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list client.
 				if utilclient.AreObjectsRemaining(err) {
 					return retry.MinorError(helper.NewErrorWithCodes(err, gardencorev1beta1.ErrorCleanupClusterResources))
 				}
-				return retry.SevereError(err)
+				return retry.SevereError(fmt.Errorf("failed cleanup of resource kind %s : %w", list.GetObjectKind(), err))
 			}
 			return retry.Ok()
 		})
