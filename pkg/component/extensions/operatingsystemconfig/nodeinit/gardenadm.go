@@ -12,6 +12,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -37,30 +39,30 @@ var (
 // The result of this operating system config is exactly the user-data that will be sent to the providers.
 // We must not exceed the 16 KB, so be careful when extending/changing anything in here.
 // ### !CAUTION! ###
-func GardenadmConfig(gardenadmImage string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+func GardenadmConfig(gardenadmImage, sshPublicKey string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+	units, files, err := gardeneruser.New().Config(components.Context{SSHPublicKeys: []string{sshPublicKey}})
+	if err != nil {
+		return nil, nil, fmt.Errorf("error generating gardener user component contents: %w", err)
+	}
+
 	downloadScript, err := generateGardenadmDownloadScript(gardenadmImage)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed generating download script: %w", err)
 	}
 
-	var (
-		units = []extensionsv1alpha1.Unit{
-			generateInitScriptUnit("gardenadm-download.service", "gardenadm", GardenadmPathDownloadScript),
-		}
-
-		files = []extensionsv1alpha1.File{
-			{
-				Path:        GardenadmPathDownloadScript,
-				Permissions: ptr.To[uint32](0755),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64(downloadScript),
-					},
-				},
-			},
-		}
+	units = append(units,
+		generateInitScriptUnit("gardenadm-download.service", "gardenadm", GardenadmPathDownloadScript),
 	)
+	files = append(files, extensionsv1alpha1.File{
+		Path:        GardenadmPathDownloadScript,
+		Permissions: ptr.To[uint32](0755),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Encoding: "b64",
+				Data:     utils.EncodeBase64(downloadScript),
+			},
+		},
+	})
 
 	return units, files, nil
 }

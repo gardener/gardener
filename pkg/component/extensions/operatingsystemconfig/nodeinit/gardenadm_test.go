@@ -15,17 +15,30 @@ import (
 )
 
 var _ = Describe("Init", func() {
-	var image = "gardenadm:tag"
+	const (
+		image        = "gardenadm:tag"
+		sshPublicKey = "ssh-rsa foobar"
+	)
+
 	Describe("#GardenadmConfig", func() {
 		It("should return the correct units and files", func() {
-			units, files, err := GardenadmConfig(image)
+			units, files, err := GardenadmConfig(image, sshPublicKey)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
-				Name:    "gardenadm-download.service",
-				Command: ptr.To(extensionsv1alpha1.CommandStart),
-				Enable:  ptr.To(true),
-				Content: ptr.To(`[Unit]
+			Expect(units).To(ConsistOf(
+				And(
+					HaveField("Name", "gardener-user.service"),
+					HaveField("Enable", HaveValue(BeTrue())),
+				),
+				And(
+					HaveField("Name", "gardener-user.path"),
+					HaveField("Enable", HaveValue(BeTrue())),
+				),
+				extensionsv1alpha1.Unit{
+					Name:    "gardenadm-download.service",
+					Command: ptr.To(extensionsv1alpha1.CommandStart),
+					Enable:  ptr.To(true),
+					Content: ptr.To(`[Unit]
 Description=Downloads the gardenadm binary from the container registry and bootstraps it.
 Requires=containerd.service
 After=containerd.service
@@ -40,16 +53,23 @@ EnvironmentFile=/etc/environment
 ExecStart=/var/lib/gardenadm/download.sh
 [Install]
 WantedBy=multi-user.target`),
-				FilePaths: []string{"/var/lib/gardenadm/download.sh"},
-			}))
+					FilePaths: []string{"/var/lib/gardenadm/download.sh"},
+				},
+			))
 
-			Expect(files).To(ConsistOf(extensionsv1alpha1.File{
-				Path:        "/var/lib/gardenadm/download.sh",
-				Permissions: ptr.To[uint32](0755),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data: utils.EncodeBase64([]byte(`#!/usr/bin/env bash
+			Expect(files).To(ConsistOf(
+				HaveField("Path", "/var/lib/gardener-user/run.sh"),
+				And(
+					HaveField("Path", "/var/lib/gardener-user-authorized-keys"),
+					HaveField("Content.Inline.Data", utils.EncodeBase64([]byte(sshPublicKey))),
+				),
+				extensionsv1alpha1.File{
+					Path:        "/var/lib/gardenadm/download.sh",
+					Permissions: ptr.To[uint32](0755),
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "b64",
+							Data: utils.EncodeBase64([]byte(`#!/usr/bin/env bash
 
 set -o errexit
 set -o nounset
@@ -71,9 +91,10 @@ mkdir -p "/opt/bin"
 cp -f "$tmp_dir/gardenadm" "/opt/bin" || cp -f "$tmp_dir/ko-app/gardenadm" "/opt/bin"
 chmod +x "/opt/bin/gardenadm"
 `)),
+						},
 					},
 				},
-			}))
+			))
 		})
 	})
 })
