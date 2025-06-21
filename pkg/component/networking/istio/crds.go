@@ -6,6 +6,7 @@ package istio
 
 import (
 	_ "embed"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -24,5 +25,6 @@ func NewCRD(
 	client client.Client,
 	applier kubernetes.Applier,
 ) (component.DeployWaiter, error) {
-	return crddeployer.New(client, applier, []string{crds}, false)
+	splitCRDs := strings.Split(crds, "\n---\n")
+	return crddeployer.New(client, applier, splitCRDs, false)
 }
