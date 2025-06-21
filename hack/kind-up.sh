@@ -67,7 +67,7 @@ check_local_dns_records() {
     echo "Warning: Unknown OS. Make sure garden.local.gardener.cloud resolves to 127.0.0.1"
     return 0
   fi
-    
+
   if ! echo "$glgc_ip_address" | grep -q "127.0.0.1" ; then
       echo "Error: garden.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
       echo "Command output: $glgc_ip_address"
@@ -299,7 +299,7 @@ if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]]; then
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::3)
   fi
-elif [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local2-ha-single-zone" ]]; then
+elif [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local-multi-node2" ]]; then
   LOOPBACK_IP_ADDRESSES+=(172.18.255.2)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::2)
@@ -367,6 +367,9 @@ done
 
 if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
   cp "$KUBECONFIG" "$PATH_KUBECONFIG"
+  if [[ "$PATH_KUBECONFIG" == *"dev-setup/gardenlet/components/kubeconfigs/seed-local2/kubeconfig" ]]; then
+    sed -i "s/127.0.0.1/host.docker.internal/g" "$PATH_KUBECONFIG"
+  fi
 fi
 
 # Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster.
@@ -385,8 +388,8 @@ if [[ "$CLUSTER_NAME" == "gardener-local2" ]] ; then
   garden_cluster="gardener-local"
 fi
 
-if [[ "$CLUSTER_NAME" == "gardener-local2-ha-single-zone" ]]; then
-  garden_cluster="gardener-local-ha-single-zone"
+if [[ "$CLUSTER_NAME" == "gardener-local-multi-node2" ]]; then
+  garden_cluster="gardener-operator-local"
 fi
 
 ip_address_field="IPAddress"
@@ -394,18 +397,21 @@ if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]] ; then
   ip_address_field="GlobalIPv6Address"
 fi
 
+host_ip="$(ip route | awk '$1 == "default" && $3 ~ /^[0-9.]+$/ { print $3; exit }')"
 garden_cluster_ip="$(docker inspect "$garden_cluster"-control-plane | yq ".[].NetworkSettings.Networks.kind.$ip_address_field")"
 
-# Inject garden.local.gardener.cloud into all nodes
+# Inject host.docker.internal garden.local.gardener.cloud into all nodes
 for node in $nodes; do
+  docker exec "$node" sh -c "echo $host_ip host.docker.internal >> /etc/hosts"
   docker exec "$node" sh -c "echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts"
 done
 
-# Inject garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
+# Inject host.docker.internal garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
 kubectl -n kube-system get configmap coredns -ojson | \
   yq '.data.Corefile' | \
   sed '0,/ready.*$/s//&'"\n\
     hosts {\n\
+      $host_ip host.docker.internal\n\
       $garden_cluster_ip garden.local.gardener.cloud\n\
       $garden_cluster_ip gardener.virtual-garden.local.gardener.cloud\n\
       $garden_cluster_ip api.virtual-garden.local.gardener.cloud\n\

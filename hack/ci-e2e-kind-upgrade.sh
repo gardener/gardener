@@ -20,8 +20,8 @@ ensure_glgc_resolves_to_localhost
 function copy_kubeconfig_from_kubeconfig_env_var() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    cp $KUBECONFIG example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
-    cp $KUBECONFIG example/gardener-local/kind/ha-single-zone/kubeconfig
+    cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
+    cp $KIND_KUBECONFIG example/gardener-local/kind/operator/kubeconfig
     ;;
   zone)
     cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
@@ -37,10 +37,10 @@ function copy_kubeconfig_from_kubeconfig_env_var() {
 function gardener_up() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make gardener-ha-single-zone-up
+    make operator-seed-up SKAFFOLD_PROFILE=multi-node
     ;;
   zone)
-    make operator-seed-up
+    make operator-seed-up SKAFFOLD_PROFILE=multi-zone
     ;;
   *)
     make gardener-up
@@ -51,10 +51,10 @@ function gardener_up() {
 function gardener_down() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make gardener-ha-single-zone-down
+    make operator-seed-down SKAFFOLD_PROFILE=multi-node
     ;;
   zone)
-    make operator-seed-down
+    make operator-seed-down SKAFFOLD_PROFILE=multi-zone
     ;;
   *)
     make gardener-down
@@ -65,10 +65,10 @@ function gardener_down() {
 function kind_up() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make kind-ha-single-zone-up
+    make kind-operator-multi-node-up
     ;;
   zone)
-    make kind-operator-up
+    make kind-operator-multi-zone-up
     ;;
   *)
     make kind-up
@@ -79,10 +79,10 @@ function kind_up() {
 function kind_down() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make kind-ha-single-zone-down
+    make kind-operator-multi-node-down
     ;;
   zone)
-    make kind-operator-down
+    make kind-operator-multi-zone-down
     ;;
   *)
     make kind-down
@@ -177,24 +177,13 @@ function set_gardener_upgrade_version_env_variables() {
 function set_cluster_name() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    CLUSTER_NAME="gardener-local-ha-single-zone"
+    CLUSTER_NAME="gardener-operator-local"
     ;;
   zone)
     CLUSTER_NAME="gardener-operator-local"
     ;;
   *)
     CLUSTER_NAME="gardener-local"
-    ;;
-  esac
-}
-
-function set_seed_name() {
-  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
-  node)
-    SEED_NAME="local-ha-single-zone"
-    ;;
-  *)
-    SEED_NAME="local"
     ;;
   esac
 }
@@ -223,19 +212,19 @@ function run_post_upgrade_test() {
   make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
 }
 
-# TODO(rfranzke): Remove this after v1.121 has been released.
-if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]]; then
-  echo "WARNING: The Gardener upgrade tests for the zone failure tolerance type are not executed in this release because the dev/e2e test setup is currently reworked."
+# TODO(rfranzke): Remove this after v1.122 has been released.
+if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]] || [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "node" ]]; then
+  echo "WARNING: The Gardener upgrade tests for the zone/node failure tolerance types are not executed in this release because the dev/e2e test setup is currently reworked."
   echo "See https://github.com/gardener/gardener/issues/11958 for more information."
   echo "Skipping the tests."
-  echo "After v1.121 has been released, this early exit can be removed again (TODO(rfranzke))."
+  echo "After v1.122 has been released, this early exit can be removed again (TODO(rfranzke))."
   exit 0
 fi
 
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables
 set_cluster_name
-set_seed_name
+SEED_NAME="local"
 
 # download gardener previous release to perform gardener upgrade tests
 $(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_PREVIOUS_RELEASE --download-path $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases

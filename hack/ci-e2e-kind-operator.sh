@@ -15,12 +15,12 @@ clamp_mss_to_pmtu
 ensure_glgc_resolves_to_localhost
 
 # test setup
-make kind-operator-up
+make kind-operator-multi-zone-up
 
 # export all container logs and events after test execution
 trap "
   ( export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig; export_artifacts 'gardener-operator-local'; export_resource_yamls_for garden)
-  ( make kind-operator-down )
+  ( make kind-operator-multi-zone-down )
 " EXIT
 
 make operator-up

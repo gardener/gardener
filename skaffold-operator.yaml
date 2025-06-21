@@ -1012,6 +1012,8 @@ profiles:
           config.leaderElection.leaderElect: false
           config.server.healthProbes.enable: false
           replicaCount: 1
+  - name: multi-zone
+  - name: multi-node
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
@@ -1164,6 +1166,7 @@ build:
             - pkg/provider-local/machine-provider/local
             - pkg/provider-local/webhook/controlplane
             - pkg/provider-local/webhook/dnsconfig
+            - pkg/provider-local/webhook/istio
             - pkg/provider-local/webhook/networkpolicy
             - pkg/provider-local/webhook/node
             - pkg/provider-local/webhook/prometheus
