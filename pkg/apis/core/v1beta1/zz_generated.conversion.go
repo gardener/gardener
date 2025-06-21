@@ -6282,6 +6282,7 @@ func Convert_core_SeedSettingTopologyAwareRouting_To_v1beta1_SeedSettingTopology
 
 func autoConvert_v1beta1_SeedSettingVerticalPodAutoscaler_To_core_SeedSettingVerticalPodAutoscaler(in *SeedSettingVerticalPodAutoscaler, out *core.SeedSettingVerticalPodAutoscaler, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
@@ -6292,6 +6293,7 @@ func Convert_v1beta1_SeedSettingVerticalPodAutoscaler_To_core_SeedSettingVertica
 
 func autoConvert_core_SeedSettingVerticalPodAutoscaler_To_v1beta1_SeedSettingVerticalPodAutoscaler(in *core.SeedSettingVerticalPodAutoscaler, out *SeedSettingVerticalPodAutoscaler, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
@@ -7127,6 +7129,9 @@ func Convert_core_Toleration_To_v1beta1_Toleration(in *core.Toleration, out *Tol
 }
 
 func autoConvert_v1beta1_VerticalPodAutoscaler_To_core_VerticalPodAutoscaler(in *VerticalPodAutoscaler, out *core.VerticalPodAutoscaler, s conversion.Scope) error {
+	if err := Convert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+		return err
+	}
 	out.Enabled = in.Enabled
 	out.EvictAfterOOMThreshold = (*metav1.Duration)(unsafe.Pointer(in.EvictAfterOOMThreshold))
 	out.EvictionRateBurst = (*int32)(unsafe.Pointer(in.EvictionRateBurst))
@@ -7154,6 +7159,9 @@ func Convert_v1beta1_VerticalPodAutoscaler_To_core_VerticalPodAutoscaler(in *Ver
 }
 
 func autoConvert_core_VerticalPodAutoscaler_To_v1beta1_VerticalPodAutoscaler(in *core.VerticalPodAutoscaler, out *VerticalPodAutoscaler, s conversion.Scope) error {
+	if err := Convert_core_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+		return err
+	}
 	out.Enabled = in.Enabled
 	out.EvictAfterOOMThreshold = (*metav1.Duration)(unsafe.Pointer(in.EvictAfterOOMThreshold))
 	out.EvictionRateBurst = (*int32)(unsafe.Pointer(in.EvictionRateBurst))

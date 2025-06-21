@@ -33,7 +33,10 @@ func SetDefaults_SeedSettings(obj *SeedSettings) {
 	}
 
 	if obj.VerticalPodAutoscaler == nil {
-		obj.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
+		obj.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{
+			Enabled:      true,
+			FeatureGates: make(map[string]bool),
+		}
 	}
 
 	if obj.DependencyWatchdog == nil {

@@ -2850,6 +2850,10 @@ message SeedSettingVerticalPodAutoscaler {
   // is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
   // your seed cluster already has another, manually/custom managed VPA deployment.
   optional bool enabled = 1;
+
+  // FeatureGates is a map of feature gates for the vpa components.
+  // +optional
+  map<string, bool> featureGates = 2;
 }
 
 // SeedSettings contains certain settings for this seed cluster.
@@ -3484,6 +3488,8 @@ message Toleration {
 
 // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 message VerticalPodAutoscaler {
+  optional KubernetesConfig kubernetesConfig = 19;
+
   // Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.
   optional bool enabled = 1;
 
