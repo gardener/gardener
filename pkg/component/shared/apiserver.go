@@ -15,7 +15,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -323,13 +323,31 @@ func handleETCDEncryptionKeyRotation(
 	return nil
 }
 
-// GetResourcesForEncryptionFromConfig returns the list of resources requiring encryption from the EncryptionConfig.
-func GetResourcesForEncryptionFromConfig(encryptionConfig *gardencorev1beta1.EncryptionConfig) []string {
+// GetResourcesForEncryptionFromConfig returns the list of [schema.GroupResource] requiring encryption from the EncryptionConfig.
+func GetResourcesForEncryptionFromConfig(encryptionConfig *gardencorev1beta1.EncryptionConfig) []schema.GroupResource {
 	if encryptionConfig == nil {
 		return nil
 	}
 
-	return sets.List(sets.New(encryptionConfig.Resources...))
+	var out []schema.GroupResource
+
+	for _, r := range encryptionConfig.Resources {
+		out = append(out, schema.ParseGroupResource(r))
+	}
+
+	return out
+}
+
+// StringifyGroupResources returns the list of [schema.GroupResource] resources in string type.
+func StringifyGroupResources(resources []schema.GroupResource) []string {
+	var out []string
+
+	for _, r := range resources {
+		out = append(out, r.String())
+	}
+
+	// We use NormalizeResources for backwards compatibility
+	return NormalizeResources(out)
 }
 
 // NormalizeResources returns the list of resources after trimming the suffix '.' if present.
@@ -338,6 +356,7 @@ func NormalizeResources(resources []string) []string {
 	var out []string
 
 	for _, resource := range resources {
+		// For backwards compatibility we always remove the suffix '.'
 		out = append(out, strings.TrimSuffix(resource, "."))
 	}
 

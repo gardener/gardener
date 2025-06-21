@@ -40,6 +40,7 @@ var _ = Describe("Garden", func() {
 		Entry("authentication resource", authenticationv1alpha1.Resource("adminkubeconfigrequests").String(), true),
 		Entry("security resource", securityv1alpha1.Resource("workloadidentities").String(), true),
 		Entry("any other resource", "foo", false),
+		Entry("not served with suffix of served", "workloadidentities.foo.security.gardener.cloud", false),
 	)
 
 	DescribeTable("#IsServedByKubeAPIServer",
