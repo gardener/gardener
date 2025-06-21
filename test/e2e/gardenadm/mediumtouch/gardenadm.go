@@ -40,7 +40,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		It("should start the bootstrap flow", func() {
 			// Start the gardenadm process but don't wait for it to complete so that we can asynchronously perform assertions
 			// on individual steps in the test specs below.
-			session = Run("bootstrap", "-d", "../../../example/gardenadm-local/resources/medium-touch")
+			session = Run("bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/medium-touch")
 		})
 
 		It("should find the cloud provider secret", func(ctx SpecContext) {
@@ -88,7 +88,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		}, SpecTimeout(time.Minute))
 
 		It("should run successfully a second time (should be idempotent)", func(ctx SpecContext) {
-			RunAndWait(ctx, "bootstrap", "-d", "../../../example/gardenadm-local/resources/medium-touch")
+			RunAndWait(ctx, "bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/medium-touch")
 		}, SpecTimeout(2*time.Minute))
 	})
 })

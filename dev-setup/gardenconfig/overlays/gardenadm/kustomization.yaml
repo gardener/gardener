@@ -5,6 +5,7 @@ sortOptions:
   order: fifo
 
 components:
-- ../../../../dev-setup/gardenconfig/components/cloudprofile
-- ../../../../dev-setup/gardenconfig/components/projects/garden
-- ../../../../dev-setup/gardenconfig/components/credentials/etcd-backup
+- ../../components/cloudprofile
+- ../../components/projects/garden
+- ../../components/credentials/etcd-backup
+- ../../components/credentials/secret-project-garden

@@ -5,7 +5,7 @@ sortOptions:
   order: fifo
 
 resources:
-- ../base
+- ../../base
 
 patches:
 - path: patch-shoot-medium-touch.yaml

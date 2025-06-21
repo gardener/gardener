@@ -338,10 +338,10 @@ build:
               - bash
               - -ec
               - |
-                echo "$SKAFFOLD_IMAGE" > example/gardenadm-local/.skaffold-image
+                echo "$SKAFFOLD_IMAGE" > dev-setup/gardenadm/resources/generated/.skaffold-image
           - command:
               - bash
-              - hack/generate-gardenadm-imagevector-overwrite.sh
+              - dev-setup/gardenadm/resources/generate-imagevector-overwrite.sh
               - gardenadm
     - image: local-skaffold/gardener-node-agent
       ko:
@@ -459,7 +459,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-gardenadm-imagevector-overwrite.sh
+              - dev-setup/gardenadm/resources/generate-imagevector-overwrite.sh
               - gardener-node-agent
     - image: local-skaffold/gardener-resource-manager
       ko:
@@ -576,7 +576,7 @@ build:
         after:
           - command:
               - bash
-              - hack/generate-gardenadm-imagevector-overwrite.sh
+              - dev-setup/gardenadm/resources/generate-imagevector-overwrite.sh
               - gardener-resource-manager
   insecureRegistries:
     - garden.local.gardener.cloud:5001
@@ -851,12 +851,12 @@ profiles:
     manifests:
       kustomize:
         paths:
-          - example/provider-local/gardenadm/high-touch
+          - dev-setup/gardenadm/resources/overlays/high-touch
   - name: medium-touch
     manifests:
       kustomize:
         paths:
-          - example/provider-local/gardenadm/medium-touch
+          - dev-setup/gardenadm/resources/overlays/medium-touch
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
@@ -865,7 +865,7 @@ metadata:
 manifests:
   kustomize:
     paths:
-      - example/gardenadm-local/high-touch
+      - dev-setup/gardenadm/machines
 deploy:
   kubectl:
     flags:
@@ -879,14 +879,13 @@ deploy:
               - bash
               - -ec
               - |
-                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.skaffold-image machine-0:/tmp/.skaffold-image
-                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.skaffold-image machine-1:/tmp/.skaffold-image
-                kubectl -n $SKAFFOLD_NAMESPACES exec machine-0 -- /bin/sh -c 'rm -rf /gardenadm/resources'
-                kubectl -n $SKAFFOLD_NAMESPACES exec machine-1 -- /bin/sh -c 'rm -rf /gardenadm/resources'
-                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources/high-touch machine-0:/gardenadm/resources
-                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources/high-touch machine-1:/gardenadm/resources
-                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.imagevector-overwrite.yaml machine-0:/gardenadm/imagevector-overwrite.yaml
-                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.imagevector-overwrite.yaml machine-1:/gardenadm/imagevector-overwrite.yaml
+                for i in 0 1; do
+                  pod="machine-$i"
+                  kubectl -n "$SKAFFOLD_NAMESPACES" exec "$pod" -- sh -c 'rm -rf /gardenadm/resources && mkdir -p /gardenadm/resources'
+                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.skaffold-image             "$pod:/tmp/.skaffold-image"
+                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml "$pod:/gardenadm/imagevector-overwrite.yaml"
+                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/high-touch/manifests.yaml   "$pod:/gardenadm/resources/manifests.yaml"
+                done
         - container:
             command:
               - bash
