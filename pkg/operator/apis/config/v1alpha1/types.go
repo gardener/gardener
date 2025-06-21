@@ -5,6 +5,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 
@@ -98,6 +99,53 @@ type GardenControllerConfig struct {
 	// backup compaction feature of ETCD backup-restore functionality.
 	// +optional
 	ETCDConfig *gardenletconfigv1alpha1.ETCDConfig `json:"etcdConfig,omitempty"`
+	// Monitoring contains the configuration for the monitoring components of the runtime cluster.
+	Monitoring *GardenMonitoring `json:"monitoring,omitempty"`
+}
+
+// PrometheusConfig contains configuration for Prometheus components in the Garden cluster.
+type PrometheusConfig struct {
+	// Retention is the retention size for the Prometheus data.
+	Retention resource.Quantity `json:"retention,omitempty"`
+	// Storage is the storage configuration for Prometheus.
+	Storage *Storage `json:"storage,omitempty"`
+}
+
+// Storage contains storage configuration.
+type Storage struct {
+	// Capacity is the storage capacity for the volumes.
+	// +kubebuilder:default=`10Gi`
+	// +optional
+	Capacity *resource.Quantity `json:"capacity,omitempty"`
+	// ClassName is the name of a storage class.
+	// +optional
+	ClassName *string `json:"className,omitempty"`
+}
+
+// GardenMonitoring contains the configuration for the monitoring components of the runtime cluster.
+type GardenMonitoring struct {
+	// PrometheusGarden contains the configuration for the Prometheus components in the Garden cluster.
+	// +optional
+	PrometheusGarden *PrometheusConfig `json:"prometheusGarden,omitempty"`
+	// PrometheusLongterm contains the configuration for the long-term Prometheus components in the Garden cluster.
+	// +optional
+	PrometheusLongterm *PrometheusConfig `json:"prometheusLongterm,omitempty"`
+}
+
+// SeedMonitoring contains the configuration for the monitoring components of the seed cluster.
+type SeedMonitoring struct {
+	// PrometheusCache contains the configuration for the Prometheus cache components in the seed cluster.
+	PrometheusCache *PrometheusConfig `json:"prometheusCache,omitempty"`
+	// PrometheusSeed contains the configuration for the Prometheus components in the seed cluster.
+	PrometheusSeed *PrometheusConfig `json:"prometheusSeed,omitempty"`
+	// PrometheusAggretate contains the configuration for the Prometheus aggregate components in the seed cluster.
+	PrometheusAggretate *PrometheusConfig `json:"prometheusAggretate,omitempty"`
+}
+
+// GardenletMonitoring contains the configuration for the monitoring components of the gardenlet.
+type GardenletMonitoring struct {
+	// Seed contains the configuration for the monitoring components of the seed cluster.
+	Seed SeedMonitoring `json:"seed,omitempty"`
 }
 
 // GardenletDeployerControllerConfig is the configuration for the gardenlet deployer controller.
@@ -105,6 +153,8 @@ type GardenletDeployerControllerConfig struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// Monitoring contains the configuration for the monitoring components of the runtime cluster.
+	Monitoring *GardenletMonitoring `json:"monitoring,omitempty"`
 }
 
 // NetworkPolicyControllerConfiguration defines the configuration of the NetworkPolicy controller.
