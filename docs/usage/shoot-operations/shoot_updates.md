@@ -213,11 +213,12 @@ spec:
 ```
 
 Once `machine-controller-manager` labels nodes with `node.machine.sapcloud.io/candidate-for-update`, user can select the candidate nodes for update by labeling them with `node.machine.sapcloud.io/selected-for-update=true`:
-```
+
+```sh
 kubectl label node <node-name> node.machine.sapcloud.io/selected-for-update=true
 ```
 
-The `ManualInPlaceWorkersUpdated` [constraint](../shoot/shoot_status.md/#constraints) in the shoot status indicates that at least one worker pool with the `ManualInPlaceUpdate` strategy is pending an update. Shoot reconciliation will still succeed even if there are worker pools pending updates.
+The `ManualInPlaceWorkersUpdated` [constraint](../shoot/shoot_status.md#constraints) in the shoot status indicates that at least one worker pool with the `ManualInPlaceUpdate` strategy is pending an update. Shoot reconciliation will still succeed even if there are worker pools pending updates.
 
 The `inPlaceUpdates.pendingWorkerUpdates.manualInPlaceUpdate` field in the `Shoot` status lists the names of worker pools that are pending updates with this strategy.
 

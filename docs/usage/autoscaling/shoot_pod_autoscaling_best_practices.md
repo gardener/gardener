@@ -189,7 +189,7 @@ VPA is an independent community project that [consists of](https://github.com/ku
 
 ### VPA Recommender Options
 
-You can read up the [full VPA recommender options](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/FAQ.md#what-are-the-parameters-to-vpa-recommender) online and set some of them conveniently in your [Gardener shoot cluster spec](https://github.com/gardener/gardener/blob/957e4c7/example/90-shoot.yaml#L298-L307):
+You can read up the [full VPA recommender options](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/faq.md#what-are-the-parameters-to-vpa-recommender) online and set some of them conveniently in your [Gardener shoot cluster spec](https://github.com/gardener/gardener/blob/957e4c7/example/90-shoot.yaml#L298-L307):
 - `recommendationMarginFraction` (default 15%): Safety margin that will be added to the recommended requests.
 - `targetCPUPercentile` (default 90%): CPU usage percentile that will be targeted with the CPU recommendation (i.e. recommendation will "fit" e.g. 90% of the observed CPU usages). This setting is relevant for balancing your requests reservations vs. your costs. If you want to reduce costs, you can reduce this value (higher risk because of potential under-reservation, but lower costs), because CPU is compressible, but then VPA may lack the necessary signals for scale-up as throttling on an otherwise fully utilized node will go unnoticed by VPA. If you want to err on the safe side, you can increase this value, but you will then target more and more a worst case scenario, quickly (maybe even exponentially) increasing the costs.
 - `targetMemoryPercentile` (default 90%): Memory usage percentile that will be targeted with the memory recommendation (i.e. recommendation will "fit" e.g. 90% of the observed memory usages). This setting is relevant for balancing your requests reservations vs. your costs. If you want to reduce costs, you can reduce this value (higher risk because of potential under-reservation, but lower costs), because OOMs will trigger bump-ups, but those will disrupt the workload. If you want to err on the safe side, you can increase this value, but you will then target more and more a worst case scenario, quickly (maybe even exponentially) increasing the costs.
@@ -197,14 +197,14 @@ You can read up the [full VPA recommender options](https://github.com/kubernetes
 There are a few more configurable options of lesser interest:
 - `recommenderInterval` (default 1m): How often VPA retrieves the pods and metrics respectively how often it recomputes the recommendations and bounds.
 
-There are many more options that you can only configure if you deploy your own VPA and which we will not discuss here, but you can check them out [here](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/FAQ.md#what-are-the-parameters-to-vpa-recommender).
+There are many more options that you can only configure if you deploy your own VPA and which we will not discuss here, but you can check them out [here](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/faq.md#what-are-the-parameters-to-vpa-recommender).
 
 > [!NOTE]
 > Due to an implementation detail (smallest bucket size), VPA cannot create recommendations below [10m cores](https://github.com/kubernetes/autoscaler/blob/1f89ff92cf87dd3700f74f9b387ae4846aa51846/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go#L89-L99) and [10M memory](https://github.com/kubernetes/autoscaler/blob/1f89ff92cf87dd3700f74f9b387ae4846aa51846/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go#L101-L111) even if `minAllowed` is lower.
 
 ### VPA Updater Options
 
-You can read up the [full VPA updater options](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/FAQ.md#what-are-the-parameters-to-vpa-updater) online and set some of them conveniently in your [Gardener shoot cluster spec](https://github.com/gardener/gardener/blob/957e4c7/example/90-shoot.yaml#L298-L307):
+You can read up the [full VPA updater options](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/faq.md#what-are-the-parameters-to-vpa-updater) online and set some of them conveniently in your [Gardener shoot cluster spec](https://github.com/gardener/gardener/blob/957e4c7/example/90-shoot.yaml#L298-L307):
 - `evictAfterOOMThreshold` (default 10m): Pods where at least one container OOMs within this time period since its start will be actively evicted, which will implicitly apply the new target recommendation that will have been [bumped up after `OOMKill`](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/README.md#custom-memory-bump-up-after-oomkill). Please note, the kubelet may evict pods even before an OOM, but only if `kube-reserved` is underrun, i.e. [node-level resources are running low](https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/#pod-selection-for-kubelet-eviction). In these cases, eviction will happen first by pod priority and second by how much the usage overruns the requests.
 - `evictionTolerance` (default 50%): Defines a threshold below which no further eligible pod will be evited anymore, i.e. limits how many eligible pods may be in eviction in parallel (but at least 1). The [threshold is computed as follows](https://github.com/kubernetes/autoscaler/blob/4d0511363eeeff657119797dd8d26e851dcc3459/vertical-pod-autoscaler/pkg/updater/eviction/pods_eviction_restriction.go#L108-L117): `running - evicted > replicas - tolerance`. Example: 10 replicas, 9 running, 8 eligible for eviction, 20% tolerance with 10 replicas which amounts to 2 pods, and no pod evicted in this round yet, then `9 - 0 > 10 - 2` is true and a pod would be evicted, but the next one would be in violation as `9 - 1 = 10 - 2` and no further pod would be evicted anymore in this round.
 - `evictionRateBurst` (default 1): Defines how many eligible pods may be evicted in one go.
@@ -215,7 +215,7 @@ In general, avoid modifying these eviction settings unless you have good reasons
 There are a few more configurable options of lesser interest:
 - `updaterInterval` (default 1m): How often VPA evicts the pods.
 
-There are many more options that you can only configure if you deploy your own VPA and which we will not discuss here, but you can check them out [here](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/FAQ.md#what-are-the-parameters-to-vpa-updater).
+There are many more options that you can only configure if you deploy your own VPA and which we will not discuss here, but you can check them out [here](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/faq.md#what-are-the-parameters-to-vpa-updater).
 
 ## Considerations When Using VPA
 

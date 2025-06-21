@@ -15,18 +15,19 @@ We rely on Kubernetes extension concepts in order to enable extensibility for Ga
 ### Building Blocks
 
 Extensions consist of the following building blocks:
+
 1. A Helm chart as the vehicle to generally deploy extension controllers to a Kubernetes clusters
 1. Extension controllers that reconcile objects of the API group `extensions.gardener.cloud`. These controllers take over outsourced tasks, like creating the shoot infrastructure or deploying components to the control-plane. Optionally, extensions can bring their own webhooks to mutate resources deployed by Gardener.
 1. Optionally, a Helm chart with an admission component inside. The admission controller runs in the garden runtime cluster and validates extension specific settings of the `Shoot` (given in `providerConfig` fields). See [admission](./admission.md) for more details.
 
 ### Registration
 
-Before an extension can be used, it needs to be made known to the system. The [gardener-operator](../concepts/gardener-operator.md) automates much of the registration process, making `Extension` resources (group `operator.gardener.cloud`) the preferred method for registering extensions. For more information, see the [Registration documentation](./registration.md).
+Before an extension can be used, it needs to be made known to the system. The [gardener-operator](../concepts/operator.md) automates much of the registration process, making `Extension` resources (group `operator.gardener.cloud`) the preferred method for registering extensions. For more information, see the [Registration documentation](./registration.md).
 Practically, many extensions provide basic example manifests to start with the registration in their `example` directory ([example1](https://github.com/gardener/gardener-extension-provider-aws/tree/master/example), [example2](https://github.com/gardener/gardener-extension-shoot-cert-service/tree/master/example)).
 
 ### Kinds and Types
 
-Extensions are defined by their Kinds (defined by Gardener - see [resources](../resources])) and Types.
+Extensions are defined by their Kinds (defined by Gardener - see [resources](../resources)) and Types.
 
 For example, the following is an extension resource of Kind `Infrastructure` and Type `local`, which means we need a Gardener extension `local` that reconciles `Infrastructure` resources.
 
@@ -43,21 +44,21 @@ spec:
 ### Classes
 
 A Gardener landscape consists of various cluster types which extension controllers may consider during reconciliation.
-The `.spec.class` field identifies the different deployment cases. 
+The `.spec.class` field identifies the different deployment cases.
 
 #### Garden
 
-Extension controllers serve the garden (run in garden runtime), e.g. installing certificates for API and ingress endpoints.
+Extension controllers serve the garden (run in garden runtime), e.g., installing certificates for API and ingress endpoints.
 In the course of the `Garden` reconciliation, the `gardener-operator` creates `BackupBucket`, `DNSRecord` and `Extension` resources (group `extensions.gardener.cloud`) which triggers the responsible extension controllers to reconcile them.
 
 #### Seed
 
-Extension controllers serve the seed (run in seed), e.g. requesting a wildcard certificate for the seed's ingress domain.
+Extension controllers serve the seed (run in seed), e.g., requesting a wildcard certificate for the seed's ingress domain.
 In the course of the `Seed` reconciliation, the `gardenlet` creates `DNSRecord` and `Extension` resources (group `extensions.gardener.cloud`) which triggers the responsible extension controllers to reconcile them.
 
 #### Shoot
 
-Extension controllers serve the shoot (run in seed), e.g. deploying a certificate controller into the control-plane namespace.
+Extension controllers serve the shoot (run in seed), e.g., deploying a certificate controller into the control-plane namespace.
 In the course of the `Shoot` reconciliation, the `gardenlet` creates various extension resources (group `extensions.gardener.cloud`) which triggers the responsible extension controllers to reconcile them.
 
 ### `gardenlet` Reconciliation Walkthrough
@@ -140,7 +141,7 @@ The extension-specific output in `.status.providerStatus` is - similar to `.spec
 
 **Example 2**:
 
-Gardener deploys the control plane components into the seed cluster, e.g. the `kube-controller-manager` deployment with the following flags:
+Gardener deploys the control plane components into the seed cluster, e.g., the `kube-controller-manager` deployment with the following flags:
 
 ```yaml
 apiVersion: apps/v1
@@ -185,4 +186,3 @@ We are truly looking forward to your feedback!
 ## Known Extensions
 
 We track all extensions of Gardener in the [known Gardener Extensions List](../README.md#known-extension-implementations) repo.
-
