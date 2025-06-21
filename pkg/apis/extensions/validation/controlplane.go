@@ -44,12 +44,6 @@ func ValidateControlPlaneSpec(spec *extensionsv1alpha1.ControlPlaneSpec, fldPath
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "field is required"))
 	}
 
-	if spec.Purpose != nil {
-		if *spec.Purpose != extensionsv1alpha1.Normal && *spec.Purpose != extensionsv1alpha1.Exposure {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("purpose"), *spec.Purpose, []string{string(extensionsv1alpha1.Normal), string(extensionsv1alpha1.Exposure)}))
-		}
-	}
-
 	if len(spec.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "field is required"))
 	}
@@ -71,7 +65,6 @@ func ValidateControlPlaneSpecUpdate(new, old *extensionsv1alpha1.ControlPlaneSpe
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Purpose, old.Purpose, fldPath.Child("purpose"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Region, old.Region, fldPath.Child("region"))...)
 
 	return allErrs
