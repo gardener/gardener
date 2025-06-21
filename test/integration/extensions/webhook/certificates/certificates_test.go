@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -134,6 +135,18 @@ var _ = Describe("Certificates tests", func() {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(shootNamespace), &corev1.Namespace{})
 			}).Should(BeNotFoundError())
 		})
+
+		By("Create garden Namespace")
+		gardenNamespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: managedresources.SignatureSecretNamespace,
+			},
+		}
+		err := testClient.Create(ctx, gardenNamespace)
+		Expect(err).To(Or(Succeed(), BeAlreadyExistsError()), "Failed to create garden Namespace")
+
+		By("Create resource manager signing secret")
+		Expect(managedresources.EnsureSigningKeys(ctx, testClient)).To(Succeed())
 
 		// use unique extension name for each test,for unique webhook config name
 		extensionName = "provider-test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]

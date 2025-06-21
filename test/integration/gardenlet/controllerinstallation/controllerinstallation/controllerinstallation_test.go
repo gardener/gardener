@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -43,6 +44,16 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		chartWithGardenKubeconfig    []byte
 		chartWithoutGardenKubeconfig []byte
 	)
+
+	BeforeEach(func() {
+		gardenNs := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: managedresources.SignatureSecretNamespace,
+			},
+		}
+		Expect(testClient.Create(ctx, gardenNs)).To(Or(Succeed(), BeAlreadyExistsError()))
+		Expect(managedresources.EnsureSigningKeys(ctx, testClient)).To(Succeed())
+	})
 
 	BeforeEach(func() {
 		controllerRegistration = &gardencorev1beta1.ControllerRegistration{

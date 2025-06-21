@@ -54,6 +54,7 @@ import (
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	managedresourcesutils "github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 var (
@@ -113,6 +114,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		log.Info("Waiting for previous handler to clean resources created by ManagedResource")
 		return reconcile.Result{Requeue: true}, nil
 	}
+
+	if err := managedresourcesutils.EnsureSigningKeys(ctx, r.SourceClient); err != nil {
+		log.Error(err, "Could not ensure signing secret")
+		return reconcile.Result{}, fmt.Errorf("could not ensure signing secret: %w", err)
+	}
+
 	return r.reconcile(ctx, log, mr)
 }
 
@@ -173,6 +180,15 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 			secretKeys = append(secretKeys, secretKey)
 		}
 		slices.Sort(secretKeys)
+
+		err := managedresourcesutils.VerifySecretSignature(ctx, r.SourceClient, secret)
+		if err != nil {
+			conditionResourcesApplied = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesApplied, gardencorev1beta1.ConditionFalse, "SignatureVerificationFailed", err.Error())
+			if err := updateConditions(ctx, r.SourceClient, mr, conditionResourcesApplied); err != nil {
+				return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+			}
+			return reconcile.Result{}, fmt.Errorf("could not verify signature of secret '%s': %w", secret.Name, err)
+		}
 
 		for _, secretKey := range secretKeys {
 			var reader io.Reader = bytes.NewReader(secret.Data[secretKey])
