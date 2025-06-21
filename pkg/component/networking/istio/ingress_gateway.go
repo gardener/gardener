@@ -49,6 +49,7 @@ type IngressGatewayValues struct {
 	Zones                              []string
 	DualStack                          bool
 	EnforceSpreadAcrossHosts           bool
+	KubernetesVersion                  string
 
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
 	// Port 15021 and 15000 cannot be used.
@@ -95,6 +96,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"istiodNamespace":                    istioIngressGateway.IstiodNamespace,
 			"loadBalancerIP":                     istioIngressGateway.LoadBalancerIP,
 			"serviceName":                        v1beta1constants.DefaultSNIIngressServiceName,
+			"internalServiceName":                v1beta1constants.InternalSNIIngressServiceName,
 			"proxyProtocolEnabled":               istioIngressGateway.ProxyProtocolEnabled,
 			"terminateLoadBalancerProxyProtocol": istioIngressGateway.TerminateLoadBalancerProxyProtocol,
 			"terminateAPIServerTLS":              enableAPIServerTLSTermination,
@@ -106,6 +108,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"apiServerRequestHeaderGroup":               kubeapiserverconstants.RequestHeaderGroup,
 			"apiServerAuthenticationDynamicMetadataKey": apiserverexposure.AuthenticationDynamicMetadataKey,
 			"cpuRequests":                               cpuRequests,
+			"kubernetesVersion":                         istioIngressGateway.KubernetesVersion,
 		}
 
 		if istioIngressGateway.MinReplicas != nil {
