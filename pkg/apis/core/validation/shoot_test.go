@@ -2707,6 +2707,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
+			It("should prevent setting the pod eviction timeout for kubernetes versions >= 1.33", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
+				shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: time.Minute}
+				shoot.Spec.Kubernetes.Version = "1.33.0"
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
+				}))))
+			})
+
 			It("should prevent setting a negative pod eviction timeout", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: -1}
 

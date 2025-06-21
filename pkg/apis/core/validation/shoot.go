@@ -1541,8 +1541,13 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 			}
 		}
 
-		if podEvictionTimeout := kcm.PodEvictionTimeout; podEvictionTimeout != nil && podEvictionTimeout.Duration <= 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionTimeout"), podEvictionTimeout.Duration, "podEvictionTimeout must be larger than 0"))
+		// TODO(plkokanov): Remove this check after support for Kubernetes 1.32 is dropped.
+		if podEvictionTimeout := kcm.PodEvictionTimeout; podEvictionTimeout != nil {
+			if k8sGreaterEqual133, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.33"); k8sGreaterEqual133 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionTimeout"), kcm.PodEvictionTimeout, "podEvictionTimeout is no longer supported by Gardener starting from Kubernetes 1.33"))
+			} else if podEvictionTimeout.Duration <= 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionTimeout"), podEvictionTimeout.Duration, "podEvictionTimeout must be larger than 0"))
+			}
 		}
 
 		if nodeMonitorGracePeriod := kcm.NodeMonitorGracePeriod; nodeMonitorGracePeriod != nil && nodeMonitorGracePeriod.Duration <= 0 {
@@ -1575,6 +1580,7 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 		if kcm.HorizontalPodAutoscalerConfig != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("horizontalPodAutoscaler"), workerlessErrorMsg))
 		}
+		// TODO(plkokanov): Remove this check after support for Kubernetes 1.32 is dropped.
 		if kcm.PodEvictionTimeout != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("podEvictionTimeout"), workerlessErrorMsg))
 		}
