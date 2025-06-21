@@ -31,8 +31,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` |         |
 | CredentialsRotationWithoutWorkersRollout | `true`  | `Beta`  | `1.121` |         |
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
-| RemoveAPIServerProxyLegacyPort           | `false` | `Alpha` | `1.113` | `1.118` |
-| RemoveAPIServerProxyLegacyPort           | `true`  | `Beta`  | `1.119` |         |
 | IstioTLSTermination                      | `false` | `Alpha` | `1.114` |         |
 | CloudProfileCapabilities                 | `false` | `Alpha` | `1.117` |         |
 | DoNotCopyBackupCredentials               | `false` | `Alpha` | `1.121` |         |
@@ -191,6 +189,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | NewVPN                                       | `false` | `Alpha`      | `1.104` | `1.114` |
 | NewVPN                                       | `true`  | `Beta`       | `1.115` | `1.115` |
 | NewVPN                                       | `true`  | `GA`         | `1.116` |         |
+| RemoveAPIServerProxyLegacyPort               | `false` | `Alpha`      | `1.113` | `1.118` |
+| RemoveAPIServerProxyLegacyPort               | `true`  | `Beta`       | `1.119` | `1.121` |
+| RemoveAPIServerProxyLegacyPort               | `true`  | `GA`         | `1.122` |         |
 
 ## Using a Feature
 
