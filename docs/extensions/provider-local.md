@@ -87,6 +87,7 @@ data:
 #### `Infrastructure`
 
 This controller generates a `NetworkPolicy` which allows the control plane pods (like `kube-apiserver`) to communicate with the worker machine pods (see [`Worker` section](#worker)).
+It also deploys a `NetworkPolicy` which allows the bastion pods to communicate with the worker machine pods (see [`Bastion` section](#bastion)).
 
 #### `Network`
 
@@ -106,6 +107,12 @@ This controller leverages the standard [generic `Worker` actuator](../../extensi
 
 Additionally, it generates the [`MachineClass`es](https://github.com/gardener/machine-controller-manager-provider-local/blob/master/kubernetes/machine-class.yaml) and the `MachineDeployment`s based on the specification of the `Worker` resources.
 
+#### `Bastion`
+
+This controller implements the `Bastion.extensions.gardener.cloud` resource by deploying a pod with the local machine image along with a `LoadBalancer` service.
+
+Note that this controller does not respect the `Bastion.spec.ingress` configuration as there is no way to perform client IP restrictions in the local setup.
+
 #### `Ingress`
 
 The gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
@@ -117,9 +124,10 @@ This only happens for shoot namespaces (`gardener.cloud/role=shoot` label) to ma
 
 This controller reconciles `Services` of type `LoadBalancer` in the local `Seed` cluster.
 Since the local Kubernetes clusters used as Seed clusters typically don't support such services, this controller sets the `.status.ingress.loadBalancer.ip[0]` to the IP of the host.
-It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgateway` and `garden/nginx-ingress-controller`) available to the host by setting `spec.ports[].nodePort` to well-known ports that are mapped to `hostPorts` in the kind cluster configuration.
+It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgateway` and `shoot--*--*/bastion-*`) available to the host by setting `spec.ports[].nodePort` to well-known ports that are mapped to `hostPorts` in the kind cluster configuration.
 
 `istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` by this controller.
+The bastion services are exposed on `nodePort` `30022`.
 
 In case the seed has multiple availability zones (`.spec.provider.zones`) and it uses SNI, the different zone-specific `istio-ingressgateway` loadbalancers are exposed via different IP addresses. Per default, IP addresses `172.18.255.10`, `172.18.255.11`, and `172.18.255.12` are used for the zones `0`, `1`, and `2` respectively.
 

@@ -55,6 +55,7 @@ spec:
         image: {{ .Values.image }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
         args:
+        - --bastion-max-concurrent-reconciles={{ .Values.controllers.bastion.concurrentSyncs }}
         - --controlplane-max-concurrent-reconciles={{ .Values.controllers.controlplane.concurrentSyncs }}
         - --dnsrecord-max-concurrent-reconciles={{ .Values.controllers.dnsrecord.concurrentSyncs }}
         - --healthcheck-max-concurrent-reconciles={{ .Values.controllers.healthcheck.concurrentSyncs }}
@@ -68,6 +69,7 @@ spec:
         - --service-zone-0-ip={{ .Values.controllers.service.zone0IP }}
         - --service-zone-1-ip={{ .Values.controllers.service.zone1IP }}
         - --service-zone-2-ip={{ .Values.controllers.service.zone2IP }}
+        - --service-bastion-ip={{ .Values.controllers.service.bastionIP }}
         - --backupbucket-local-dir={{ .Values.controllers.backupbucket.localDir }}
         - --backupbucket-container-mount-path={{ .Values.controllers.backupbucket.containerMountPath }}
         - --heartbeat-namespace={{ .Release.Namespace }}

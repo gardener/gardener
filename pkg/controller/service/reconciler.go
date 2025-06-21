@@ -37,6 +37,7 @@ const (
 	nodePortTunnelIstioIngressGatewayZone0 int32 = 32133
 	nodePortTunnelIstioIngressGatewayZone1 int32 = 32134
 	nodePortTunnelIstioIngressGatewayZone2 int32 = 32135
+	nodePortBastion                        int32 = 30022
 )
 
 // Reconciler is a reconciler for Service resources.
@@ -47,6 +48,7 @@ type Reconciler struct {
 	Zone1IP     string
 	Zone2IP     string
 	IsMultiZone bool
+	BastionIP   string
 }
 
 // Reconcile reconciles Service resources.
@@ -75,6 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		ips            []string
 		nodePort       int32
 		nodePortTunnel int32
+		isBastion      = service.Labels["app"] == "bastion"
 		patch          = client.MergeFrom(service.DeepCopy())
 	)
 
@@ -130,8 +133,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		ips = append(ips, nodes...)
 	}
 
+	if isBastion {
+		// We only allocate and port-forward a single IP/nodePort for bastion services in the local setup.
+		// Multiple bastion services are not supported.
+		serviceList := &corev1.ServiceList{}
+		if err := r.Client.List(ctx, serviceList, client.MatchingLabels{"app": "bastion"}); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error listing bastion services: %w", err)
+		}
+		if len(serviceList.Items) > 1 {
+			return reconcile.Result{}, fmt.Errorf("only one bastion service is supported in the local setup")
+		}
+
+		nodePort = nodePortBastion
+		ips = append(ips, r.BastionIP)
+	}
+
 	for i, servicePort := range service.Spec.Ports {
-		if servicePort.Name == "tcp" {
+		if servicePort.Name == "tcp" || servicePort.Name == "ssh" {
 			service.Spec.Ports[i].NodePort = nodePort
 		}
 		if servicePort.Name == "tls-tunnel" {
@@ -201,7 +219,8 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 				port.NodePort == nodePortTunnelIstioIngressGatewayZone0 ||
 				port.NodePort == nodePortTunnelIstioIngressGatewayZone1 ||
 				port.NodePort == nodePortTunnelIstioIngressGatewayZone2 ||
-				port.NodePort == nodePortVirtualGardenKubeAPIServer {
+				port.NodePort == nodePortVirtualGardenKubeAPIServer ||
+				port.NodePort == nodePortBastion {
 				var (
 					min, max    = 30000, 32767
 					newNodePort = int32(rand.N(max-min) + min) // #nosec: G115 G404 -- Value range limited in previous line, no cryptographic context.

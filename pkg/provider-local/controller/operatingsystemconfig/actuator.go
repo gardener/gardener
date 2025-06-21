@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -35,9 +36,9 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, osc *extensions
 		return []byte(userData), nil, nil, nil, err
 
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		inPlaceUpdates := a.handleReconcileOSC(osc)
+		extensionUnits, inPlaceUpdates := a.handleReconcileOSC(osc)
 		// provider-local does not add any additional units or additional files
-		return nil, nil, nil, inPlaceUpdates, nil
+		return nil, extensionUnits, nil, inPlaceUpdates, nil
 
 	default:
 		return nil, nil, nil, nil, fmt.Errorf("unknown purpose: %s", purpose)
@@ -80,22 +81,47 @@ systemctl daemon-reload
 	return operatingsystemconfig.WrapProvisionOSCIntoOneshotScript(script), nil
 }
 
-func (a *actuator) handleReconcileOSC(osc *extensionsv1alpha1.OperatingSystemConfig) *extensionsv1alpha1.InPlaceUpdatesStatus {
-	if osc.Spec.InPlaceUpdates == nil {
-		return nil
+func (a *actuator) handleReconcileOSC(osc *extensionsv1alpha1.OperatingSystemConfig) ([]extensionsv1alpha1.Unit, *extensionsv1alpha1.InPlaceUpdatesStatus) {
+	var (
+		extensionUnits       []extensionsv1alpha1.Unit
+		inPlaceUpdatesStatus *extensionsv1alpha1.InPlaceUpdatesStatus
+	)
+
+	extensionUnits = append(extensionUnits,
+		// Explicitly allow user sessions. For some reason, systemd-user-sessions.service is not activated automatically in
+		// local machine pods (systemd thinking it has not booted successfully?). Without this, non-privileged users are not
+		// able to log into the machine (e.g., via SSH).
+		extensionsv1alpha1.Unit{
+			Name: "remove-nologin.service",
+			Content: ptr.To(`[Unit]
+Description=Removes the /run/nologin file to allow user login sessions.
+After=multi-user.target
+[Service]
+Type=oneshot
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=0
+ExecStart=rm /run/nologin
+`),
+			Command: ptr.To(extensionsv1alpha1.CommandStart),
+		},
+	)
+
+	if osc.Spec.InPlaceUpdates != nil {
+		inPlaceUpdatesStatus = &extensionsv1alpha1.InPlaceUpdatesStatus{
+			OSUpdate: &extensionsv1alpha1.OSUpdate{
+				Command: "sed",
+				Args: []string{
+					"-i", "-E",
+					fmt.Sprintf(
+						`s/^PRETTY_NAME="[^"]*"/PRETTY_NAME="Machine Image Version %s (version overwritten for tests, check VERSION_ID for actual version)"/`,
+						osc.Spec.InPlaceUpdates.OperatingSystemVersion,
+					),
+					"/etc/os-release",
+				},
+			},
+		}
 	}
 
-	return &extensionsv1alpha1.InPlaceUpdatesStatus{
-		OSUpdate: &extensionsv1alpha1.OSUpdate{
-			Command: "sed",
-			Args: []string{
-				"-i", "-E",
-				fmt.Sprintf(
-					`s/^PRETTY_NAME="[^"]*"/PRETTY_NAME="Machine Image Version %s (version overwritten for tests, check VERSION_ID for actual version)"/`,
-					osc.Spec.InPlaceUpdates.OperatingSystemVersion,
-				),
-				"/etc/os-release",
-			},
-		},
-	}
+	return extensionUnits, inPlaceUpdatesStatus
 }
