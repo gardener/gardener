@@ -17,6 +17,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -30,6 +31,7 @@ var _ = Describe("secretref", func() {
 
 		secretRef               *corev1.SecretReference
 		secret                  *corev1.Secret
+		workloadIdentity        *securityv1alpha1.WorkloadIdentity
 		objectRef               *corev1.ObjectReference
 		secretPartialObjectMeta *metav1.PartialObjectMetadata
 	)
@@ -69,6 +71,18 @@ var _ = Describe("secretref", func() {
 				"foo": []byte("bar"),
 			},
 			Type: corev1.SecretTypeOpaque,
+		}
+		workloadIdentity = &securityv1alpha1.WorkloadIdentity{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Spec: securityv1alpha1.WorkloadIdentitySpec{
+				Audiences: []string{"aud"},
+				TargetSystem: securityv1alpha1.TargetSystem{
+					Type: "local",
+				},
+			},
 		}
 		secretPartialObjectMeta = &metav1.PartialObjectMetadata{
 			TypeMeta: metav1.TypeMeta{
@@ -162,6 +176,73 @@ var _ = Describe("secretref", func() {
 			_, err := kubernetesutils.GetSecretByObjectReference(ctx, c, ref)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("objectRef does not refer to secret"))
+		})
+	})
+
+	Describe("#GetCredentialsByObjectReference", func() {
+		It("should get referenced Secret", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
+				*s = *secret
+				return nil
+			})
+
+			result, err := kubernetesutils.GetCredentialsByObjectReference(ctx, c, *objectRef)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(secret))
+		})
+
+		It("should fail to get referenced Secret if reading it fails", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fmt.Errorf("error"))
+
+			result, err := kubernetesutils.GetCredentialsByObjectReference(ctx, c, *objectRef)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
+
+		It("should get referenced WorkloadIdentity", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&securityv1alpha1.WorkloadIdentity{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, wi *securityv1alpha1.WorkloadIdentity, _ ...client.GetOption) error {
+				*wi = *workloadIdentity
+				return nil
+			})
+
+			objectRef = &corev1.ObjectReference{
+				APIVersion: "security.gardener.cloud/v1alpha1",
+				Kind:       "WorkloadIdentity",
+				Namespace:  namespace,
+				Name:       name,
+			}
+
+			result, err := kubernetesutils.GetCredentialsByObjectReference(ctx, c, *objectRef)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(workloadIdentity))
+		})
+
+		It("should fail to get referenced WorkloadIdentity if reading it fails", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&securityv1alpha1.WorkloadIdentity{})).Return(fmt.Errorf("error"))
+
+			objectRef = &corev1.ObjectReference{
+				APIVersion: "security.gardener.cloud/v1alpha1",
+				Kind:       "WorkloadIdentity",
+				Namespace:  namespace,
+				Name:       name,
+			}
+
+			result, err := kubernetesutils.GetCredentialsByObjectReference(ctx, c, *objectRef)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
+
+		It("should fail if object reference does not refer to a secret", func() {
+			ref := &corev1.ObjectReference{
+				APIVersion: "foo.bar/v1alpha1",
+				Kind:       "Baz",
+				Name:       name,
+				Namespace:  namespace,
+			}
+
+			_, err := kubernetesutils.GetCredentialsByObjectReference(ctx, c, *ref)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("unsupported credentials reference: garden/foo, foo.bar/v1alpha1, Kind=Baz"))
 		})
 	})
 
