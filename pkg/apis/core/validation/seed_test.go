@@ -81,10 +81,6 @@ var _ = Describe("Seed Validation Tests", func() {
 						Name:       "backup-foo",
 						Namespace:  "garden",
 					},
-					SecretRef: corev1.SecretReference{
-						Namespace: "garden",
-						Name:      "backup-foo",
-					},
 				},
 			},
 		}
@@ -235,7 +231,6 @@ var _ = Describe("Seed Validation Tests", func() {
 				{Key: "foo"},
 				{Key: ""},
 			}
-			seed.Spec.Backup.SecretRef = corev1.SecretReference{}
 			seed.Spec.Backup.CredentialsRef = nil
 			seed.Spec.Backup.Provider = ""
 			minSize := resource.MustParse("-1")
@@ -344,7 +339,6 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			It("should forbid credentialsRef to refer a WorkloadIdentity", func() {
 				seed.Spec.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Namespace: "garden", Name: "backup"}
-				seed.Spec.Backup.SecretRef = corev1.SecretReference{}
 
 				Expect(ValidateSeed(seed)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -357,17 +351,12 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			It("should allow credentialsRef to refer a Secret", func() {
 				seed.Spec.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "garden", Name: "backup"}
-				seed.Spec.Backup.SecretRef = corev1.SecretReference{
-					Namespace: seed.Spec.Backup.CredentialsRef.Namespace,
-					Name:      seed.Spec.Backup.CredentialsRef.Name,
-				}
 
 				Expect(ValidateSeed(seed)).To((BeEmpty()))
 			})
 
 			It("should forbid invalid values objectReference fields", func() {
 				seed.Spec.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "", Kind: "", Namespace: "", Name: ""}
-				seed.Spec.Backup.SecretRef = corev1.SecretReference{}
 
 				Expect(ValidateSeed(seed)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -404,68 +393,6 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Type":   Equal(field.ErrorTypeNotSupported),
 						"Field":  Equal("spec.backup.credentialsRef"),
 						"Detail": Equal(`supported values: "/v1, Kind=Secret", "security.gardener.cloud/v1alpha1, Kind=WorkloadIdentity"`),
-					})),
-				))
-			})
-
-			It("should forbid secretRef to refer a Secret other than the one referred by the credentialsRef", func() {
-				seed.Spec.Backup.CredentialsRef = &corev1.ObjectReference{
-					APIVersion: "v1",
-					Kind:       "Secret",
-					Namespace:  "garden",
-					Name:       "backup-secret",
-				}
-				seed.Spec.Backup.SecretRef = corev1.SecretReference{
-					Namespace: "another-namespace",
-					Name:      "another-secret",
-				}
-
-				Expect(ValidateSeed(seed)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.backup.secretRef"),
-						"Detail": Equal("must refer to the same secret as `spec.backup.credentialsRef`"),
-					})),
-				))
-			})
-
-			It("should forbid secretRef to be empty when credentialsRef refer a Secret", func() {
-				seed.Spec.Backup.CredentialsRef = &corev1.ObjectReference{
-					APIVersion: "v1",
-					Kind:       "Secret",
-					Namespace:  "garden",
-					Name:       "backup-secret",
-				}
-				seed.Spec.Backup.SecretRef = corev1.SecretReference{}
-
-				Expect(ValidateSeed(seed)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.backup.secretRef"),
-						"Detail": Equal("must refer to the same secret as `spec.backup.credentialsRef`"),
-					})),
-				))
-			})
-
-			It("should forbid secretRef to be set when credentialsRef refer a WorkloadIdentity", func() {
-				seed.Spec.Backup.CredentialsRef = &corev1.ObjectReference{
-					APIVersion: "security.gardener.cloud/v1alpha1",
-					Kind:       "WorkloadIdentity",
-					Namespace:  "garden",
-					Name:       "backup-secret",
-				}
-				seed.Spec.Backup.SecretRef = corev1.SecretReference{Namespace: "foo", Name: "bar"}
-
-				Expect(ValidateSeed(seed)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.backup.secretRef"),
-						"Detail": Equal("must not be set when `spec.backup.credentialsRef` refer to resource other than secret"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.backup.credentialsRef"),
-						"Detail": Equal("support for WorkloadIdentity as backup credentials is not yet fully implemented"),
 					})),
 				))
 			})

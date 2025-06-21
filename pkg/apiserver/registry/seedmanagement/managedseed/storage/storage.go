@@ -55,7 +55,6 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 		CreateStrategy: strategy,
 		UpdateStrategy: strategy,
 		DeleteStrategy: strategy,
-		Decorator:      defaultOnRead,
 
 		TableConvertor: newTableConvertor(),
 	}
@@ -112,30 +111,4 @@ var _ rest.ShortNamesProvider = &REST{}
 // ShortNames implements the ShortNamesProvider interface. Returns a list of short names for a resource.
 func (r *REST) ShortNames() []string {
 	return []string{"ms"}
-}
-
-// defaultOnRead ensures the backup.credentialsRef field is set on Read requests
-// TODO(vpnachev): Remove once the backup.secretRef field is removed.
-func defaultOnRead(obj runtime.Object) {
-	switch m := obj.(type) {
-	case *seedmanagement.ManagedSeed:
-		defaultOnReadManagedSeed(m)
-	case *seedmanagement.ManagedSeedList:
-		defaultOnReadManagedSeeds(m)
-	default:
-	}
-}
-
-func defaultOnReadManagedSeed(managedSeed *seedmanagement.ManagedSeed) {
-	managedseed.SyncSeedBackupCredentials(managedSeed)
-}
-
-func defaultOnReadManagedSeeds(managedSeedList *seedmanagement.ManagedSeedList) {
-	if managedSeedList == nil {
-		return
-	}
-
-	for i := range managedSeedList.Items {
-		defaultOnReadManagedSeed(&managedSeedList.Items[i])
-	}
 }
