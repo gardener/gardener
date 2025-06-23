@@ -538,7 +538,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 				{
 					APIGroups: []string{"storage.k8s.io"},
-					Resources: []string{"storageclasses", "csinodes", "csidrivers", "csistoragecapacities"},
+					Resources: []string{"storageclasses", "csinodes", "csidrivers", "csistoragecapacities", "volumeattachments"},
 					Verbs:     []string{"watch", "list", "get"},
 				},
 				{
