@@ -383,7 +383,7 @@ images:
             teamname: 'gardener/monitoring-maintainers'
   - name: perses
     sourceRepository: github.com/perses/perses
-    repository: quay.io/persesdev/perses
+    repository: europe-docker.pkg.dev/gardener-project/releases/3rd/persesdev/perses
     tag: "v0.51.0"
     labels:
       - name: gardener.cloud/cve-categorisation
@@ -400,7 +400,7 @@ images:
             teamname: 'gardener/monitoring-maintainers'
   - name: perses-operator
     sourceRepository: github.com/perses/perses-operator
-    repository: quay.io/persesdev/perses-operator
+    repository: europe-docker.pkg.dev/gardener-project/releases/3rd/persesdev/perses-operator
     tag: v0.1.12
     labels:
       - name: 'gardener.cloud/cve-categorisation'
