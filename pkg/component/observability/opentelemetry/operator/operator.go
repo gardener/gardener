@@ -119,7 +119,7 @@ func (o *openTelemetryOperator) WaitCleanup(ctx context.Context) error {
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:   name,
-		v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
+		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
 	}
 }

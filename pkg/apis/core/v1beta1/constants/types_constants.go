@@ -480,6 +480,8 @@ const (
 	LabelCredentialsBindingReference = "reference.gardener.cloud/credentialsbinding"
 	// LabelPrefixSeedName is the prefix for the label key describing the name of a seed, e.g. name.seed.gardener.cloud/my-seed=true.
 	LabelPrefixSeedName = "name.seed.gardener.cloud/"
+	// LabelObservability is a constant for a label for observability stack configurations
+	LabelObservability = "observability"
 
 	// LabelExtensionExtensionTypePrefix is used to prefix extension label for extension types.
 	LabelExtensionExtensionTypePrefix = "extensions.extensions.gardener.cloud/"

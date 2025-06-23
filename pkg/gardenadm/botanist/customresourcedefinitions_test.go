@@ -110,10 +110,6 @@ var _ = Describe("CustomResourceDefinitions", func() {
 					HaveField("ObjectMeta.Name", "verticalpodautoscalercheckpoints.autoscaling.k8s.io"),
 					HaveField("ObjectMeta.Name", "verticalpodautoscalers.autoscaling.k8s.io"),
 					HaveField("ObjectMeta.Name", "workers.extensions.gardener.cloud"),
-					HaveField("ObjectMeta.Name", "instrumentations.opentelemetry.io"),
-					HaveField("ObjectMeta.Name", "opampbridges.opentelemetry.io"),
-					HaveField("ObjectMeta.Name", "opentelemetrycollectors.opentelemetry.io"),
-					HaveField("ObjectMeta.Name", "targetallocators.opentelemetry.io"),
 				))
 			})
 		})
