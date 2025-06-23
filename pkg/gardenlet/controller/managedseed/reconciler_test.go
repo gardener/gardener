@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
@@ -79,9 +78,6 @@ var _ = Describe("Reconciler", func() {
 
 		gardenClusterAddress := "foobar"
 		reconciler = &Reconciler{
-			GardenConfig: &rest.Config{
-				Host: gardenClusterAddress,
-			},
 			GardenAPIReader: gardenClient,
 			GardenClient:    gardenClient,
 			Config:          cfg,
