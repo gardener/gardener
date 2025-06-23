@@ -19,7 +19,7 @@ This documentation describes the differences and requirements for upgrading to a
 
 ## Upgrading to Kubernetes `v1.31`
 
-- The `Shoot`'s field `spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication` is forbidden.
+- The `Shoot`'s field `.spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication` is forbidden.
 - The `Shoot`'s fields `.spec.kubernetes.kubelet.systemReserved` and `.spec.provider.workers[].kubernetes.kubelet.systemReserved` are forbidden. `Shoot` owners should use the `.spec.kubernetes.kubelet.kubeReserved` and `.spec.provider.workers[].kubernetes.kubelet.kubeReserved` fields.
 
 ## Upgrading to Kubernetes `v1.30`

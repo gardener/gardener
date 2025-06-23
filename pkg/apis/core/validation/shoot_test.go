@@ -2714,8 +2714,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
+					"Detail": ContainSubstring("podEvictionTimeout is no longer supported by Gardener starting from Kubernetes 1.33"),
 				}))))
 			})
 
