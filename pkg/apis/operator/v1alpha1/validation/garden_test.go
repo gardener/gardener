@@ -860,9 +860,9 @@ var _ = Describe("Validation Tests", func() {
 				),
 				Entry("when spec encrypted resources and status encrypted resources are equal", true,
 					operatorv1alpha1.GardenStatus{
-						EncryptedResources: []string{"configmaps", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
+						EncryptedResources: []string{"configmaps.", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
 					},
-					&gardencorev1beta1.EncryptionConfig{Resources: []string{"daemonsets.apps", "configmaps."}},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"daemonsets.apps", "configmaps"}},
 					&gardencorev1beta1.EncryptionConfig{Resources: []string{"shoots.core.gardener.cloud", "projects.core.gardener.cloud"}},
 				),
 			)
@@ -1590,7 +1590,7 @@ var _ = Describe("Validation Tests", func() {
 						It("should deny specifying resources which are not served by gardener-apiserver", func() {
 							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 								Resources: []string{"shoots.core.gardener.cloud",
-									"bastions.operations.gardener.cloud",
+									"bastions.operations.gardener.cloud.",
 									"ingresses.networking.io",
 									"foo.gardener.cloud",
 									"configmaps",
@@ -1598,6 +1598,12 @@ var _ = Describe("Validation Tests", func() {
 							}
 
 							Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeInvalid),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[1]"),
+									"BadValue": Equal("bastions.operations.gardener.cloud."),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"),
+								})),
 								PointTo(MatchFields(IgnoreExtras, Fields{
 									"Type":     Equal(field.ErrorTypeInvalid),
 									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[2]"),
@@ -2724,7 +2730,7 @@ var _ = Describe("Validation Tests", func() {
 						}
 						newGarden.Status.EncryptedResources = append(oldResources, oldGardenerResources...)
 
-						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps.", "resource.custom.io"}
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "resource.custom.io"}
 						newGarden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud", "bastions.operations.gardener.cloud"}
 
 						newGarden.Status.Credentials = &operatorv1alpha1.Credentials{

@@ -2060,7 +2060,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should deny specifying duplicated resources", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"configmaps", "configmaps", "services", "services."},
+						Resources: []string{"configmaps", "configmaps", "services", "services"},
 					}
 
 					Expect(ValidateShoot(shoot)).To(ConsistOf(
@@ -2075,15 +2075,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
-				It("should deny specifying duplicated resources", func() {
+				It("should deny resoureces with '.' suffix", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"services.", "services."},
+						Resources: []string{"configmaps.", "deployment.apps.", "services"},
 					}
 
 					Expect(ValidateShoot(shoot)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeDuplicate),
-							"Field": Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[0]"),
+							"Detail": Equal("resource should not end with '.'"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"Detail": Equal("resource should not end with '.'"),
 						})),
 					))
 				})
@@ -2098,20 +2104,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
 							"Detail": Equal("\"secrets\" are always encrypted"),
-						})),
-					))
-				})
-
-				It("should deny specifying 'secrets.' resource in resources", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"configmaps", "secrets."},
-					}
-
-					Expect(ValidateShoot(shoot)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
-							"Detail": Equal("\"secrets.\" are always encrypted"),
 						})),
 					))
 				})
@@ -2164,7 +2156,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should allow changing items when resources in the spec and status are equal", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"configmaps.", "deployments.apps"},
+						Resources: []string{"configmaps", "deployments.apps"},
 					}
 					shoot.Status.EncryptedResources = []string{"deployments.apps", "configmaps"}
 
@@ -5064,11 +5056,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 						EncryptedResources: []string{"configmaps"},
 					}),
 				Entry("when shoot spec encrypted resources and status encrypted resources are equal", true,
-					[]string{"configmaps."}, core.ShootStatus{
+					[]string{"configmaps"}, core.ShootStatus{
 						LastOperation: &core.LastOperation{
 							Type: core.LastOperationTypeReconcile,
 						},
-						EncryptedResources: []string{"configmaps"},
+						EncryptedResources: []string{"configmaps."},
 					}),
 			)
 
@@ -5569,10 +5561,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
 				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					EncryptionConfig: &core.EncryptionConfig{
-						Resources: []string{"events", "configmaps."},
+						Resources: []string{"events", "configmaps"},
 					},
 				}
-				shoot.Status.EncryptedResources = []string{"configmaps", "events"}
+				shoot.Status.EncryptedResources = []string{"configmaps.", "events"}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}

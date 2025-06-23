@@ -1134,6 +1134,9 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEn
 		if resource == "apiserveripinfo" || resource == "serviceipallocations" || resource == "servicenodeportallocations" {
 			allErrs = append(allErrs, field.Invalid(idxPath, resource, "resources which do not have REST API/s cannot be encrypted"))
 		}
+		if strings.HasSuffix(resource, ".") {
+			allErrs = append(allErrs, field.Invalid(idxPath, resource, "resource should not end with '.'"))
+		}
 		if strings.Contains(resource, "*") {
 			allErrs = append(allErrs, field.Invalid(idxPath, resource, "wildcards are not supported"))
 		}
