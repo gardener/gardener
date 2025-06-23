@@ -3,6 +3,9 @@
 # entry must have a key "runtimeVersion" whose value describe for which kubernetes runtime
 # the respective tag can be used. The syntax must be as described in the
 # Masterminds/semver package: https://github.com/Masterminds/semver#hyphen-range-comparisons.
+#
+# Before introducing a new image, ensure it complies with the container image guidelines
+# in the component checklist: https://github.com/gardener/gardener/blob/master/docs/development/component-checklist.md#images
 images:
   # Gardener components
   - name: gardener-apiserver
