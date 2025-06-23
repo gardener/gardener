@@ -172,6 +172,7 @@ func (p *prometheus) prometheus(ctx context.Context, cortexConfigMap *corev1.Con
 	case "shoot":
 		var (
 			isNew      bool
+			isMarked   bool
 			prometheus monitoringv1.Prometheus
 		)
 
@@ -182,7 +183,11 @@ func (p *prometheus) prometheus(ctx context.Context, cortexConfigMap *corev1.Con
 			isNew = true
 		}
 
-		if isNew {
+		if value, ok := prometheus.Annotations[resourcesv1alpha1.PrometheusObsoleteFolderCleanedUp]; ok && value == "true" {
+			isMarked = true
+		}
+
+		if isNew || isMarked {
 			if obj.Annotations == nil {
 				obj.Annotations = map[string]string{}
 			}
