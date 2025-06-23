@@ -707,6 +707,10 @@ var _ = Describe("Seed controller tests", func() {
 							"prometheus-operator",
 							"perses-operator",
 						)
+					} else {
+						expectedManagedResources = append(expectedManagedResources,
+							"nginx-ingress-seed",
+						)
 					}
 
 					Eventually(func(g Gomega) []string {
