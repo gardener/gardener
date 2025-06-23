@@ -114,6 +114,9 @@ func For(workloadIdentityName, workloadIdentityNamespace, workloadIdentityProvid
 // provider specific information in the workload identity secret.
 func WithProviderConfig(providerConfig *runtime.RawExtension) SecretOption {
 	return func(s *Secret) error {
+		if providerConfig == nil {
+			return nil
+		}
 		data, err := json.Marshal(providerConfig)
 		if err != nil {
 			return err

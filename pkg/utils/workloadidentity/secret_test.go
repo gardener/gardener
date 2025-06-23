@@ -245,4 +245,23 @@ var _ = Describe("#Secret", func() {
 			},
 		}))
 	})
+
+	It("should not set the `config` data key when provider config is nil", func() {
+		secret, err := workloadidentity.NewSecret(secretName, secretNamespace,
+			workloadidentity.For("wi-foo", "wi-ns", "provider"),
+			workloadidentity.WithProviderConfig(nil),
+		)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(secret.Reconcile(ctx, fakeClient)).To(Succeed())
+		got := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: secretNamespace,
+			},
+		}
+
+		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(got), got)).To(Succeed())
+		Expect(got.Data).ToNot(HaveKey("config"))
+	})
 })
