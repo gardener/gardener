@@ -139,7 +139,7 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list client.
 				if utilclient.AreObjectsRemaining(err) {
 					return retry.MinorError(helper.NewErrorWithCodes(err, gardencorev1beta1.ErrorCleanupClusterResources))
 				}
-				return retry.SevereError(fmt.Errorf("failed cleanup of resource kind %s : %w", list.GetObjectKind(), err))
+				return retry.SevereError(fmt.Errorf("failed cleanup of resource kind %s : %w", list.GetObjectKind().GroupVersionKind().Kind, err))
 			}
 			return retry.Ok()
 		})
