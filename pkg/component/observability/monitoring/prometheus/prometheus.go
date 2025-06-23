@@ -5,22 +5,28 @@
 package prometheus
 
 import (
+	"context"
+	"fmt"
+
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1.Prometheus {
+func (p *prometheus) prometheus(ctx context.Context, cortexConfigMap *corev1.ConfigMap) (*monitoringv1.Prometheus, error) {
 	obj := &monitoringv1.Prometheus{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.values.Name,
@@ -163,6 +169,25 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 
 	// TODO(vicwicker): Remove this after v1.125 has been released.
 	switch p.values.Name {
+	case "shoot":
+		var (
+			isNew      bool
+			prometheus monitoringv1.Prometheus
+		)
+
+		if err := p.client.Get(ctx, client.ObjectKey{Namespace: p.namespace, Name: p.values.Name}, &prometheus); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("failed to check if shoot prometheus exists: %w", err)
+			}
+			isNew = true
+		}
+
+		if isNew {
+			if obj.Annotations == nil {
+				obj.Annotations = map[string]string{}
+			}
+			obj.Annotations[resourcesv1alpha1.PrometheusObsoleteFolderCleanedUp] = "true"
+		}
 	case "garden", "longterm", "aggregate", "cache", "seed":
 		obj.Spec.InitContainers = append(obj.Spec.InitContainers, corev1.Container{
 			Name:            "cleanup-obsolete-folder",
@@ -179,5 +204,5 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 	}
 
 	utilruntime.Must(references.InjectAnnotations(obj))
-	return obj
+	return obj, nil
 }
