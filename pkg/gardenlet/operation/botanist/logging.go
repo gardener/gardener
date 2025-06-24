@@ -105,3 +105,21 @@ func (b *Botanist) DefaultVali() (vali.Interface, error) {
 		b.ComputeValiHost(),
 	)
 }
+
+// DefaultOtelCollector returns a deployer for the OpenTelemetry Collector.
+func (b *Botanist) DefaultOtelCollector() (component.DeployWaiter, error) {
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameOpentelemetryCollectorControlPlane)
+	if err != nil {
+		return nil, err
+	}
+
+	return collector.New(
+		b.SeedClientSet.Client(),
+		b.Shoot.ControlPlaneNamespace,
+		collector.Values{
+			Image: image.String(),
+		},
+		"http://"+constants.ServiceName+":"+strconv.Itoa(constants.ValiPort)+constants.PushEndpoint,
+	), nil
+
+}
