@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -145,7 +146,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			// for some reason this error is not of type "Invalid"
 			strings.Contains(err.Error(), "duplicate nodePort") {
 			log.Info("Patching nodePort failed because it is already allocated, enabling auto-remediation", "err", err.Error())
-			return reconcile.Result{Requeue: true}, r.remediateAllocatedNodePorts(ctx, log, key, nodePort, nodePortTunnel)
+			return reconcile.Result{RequeueAfter: 2 * time.Second}, r.remediateAllocatedNodePorts(ctx, log, key, nodePort, nodePortTunnel)
 		}
 		return reconcile.Result{}, err
 	}
