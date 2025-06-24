@@ -13,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/helper"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -42,6 +43,12 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 	// check if vali is enabled in gardenlet config, default is true
 	if !gardenlethelper.IsValiEnabled(b.Config) {
 		return b.Shoot.Components.ControlPlane.Vali.Destroy(ctx)
+	}
+
+	if grmIsPresent && features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		if err := b.Shoot.Components.ControlPlane.OtelCollector.Deploy(ctx); err != nil {
+			return err
+		}
 	}
 
 	return b.Shoot.Components.ControlPlane.Vali.Deploy(ctx)
