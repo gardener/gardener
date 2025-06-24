@@ -91,6 +91,12 @@ const (
 	// alpha: v1.121.0
 	// beta: v1.123.0
 	DoNotCopyBackupCredentials featuregate.Feature = "DoNotCopyBackupCredentials"
+
+	// OpenTelemetryCollector enables the usage of an OpenTelemetry Collector instance in the Control Plane of Shoot clusters.
+	// All logs will be routed through the Collector before they reach the Vali instance.
+	// owner: @rrhubenov
+	// alpha: v1.124.0
+	OpenTelemetryCollector featuregate.Feature = "OpenTelemetryCollector"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -129,6 +135,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},
 	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha},
 	DoNotCopyBackupCredentials:               {Default: true, PreRelease: featuregate.Beta},
+	OpenTelemetryCollector:                   {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
