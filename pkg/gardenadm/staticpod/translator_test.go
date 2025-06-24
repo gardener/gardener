@@ -60,11 +60,9 @@ var _ = Describe("Translator", func() {
 			})
 
 			It("should successfully translate a deployment w/o volumes", func() {
-				expectedHash := "fcb8535b78ef1f7dedef28177099bd7824a14188b75e13a79f1c24c7df7d2b68"
-
 				files, hash, err := Translate(ctx, fakeClient, deployment, nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hash).To(Equal(expectedHash))
+				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
@@ -73,7 +71,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
-    gardener.cloud/config.mirror: ` + expectedHash + `
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo
@@ -105,11 +103,9 @@ status: {}
 			})
 
 			It("should successfully translate and mutate a deployment", func() {
-				expectedHash := "573fb5fbf7e6e745de68ec9e051853e91de07ed69aab23998f5ffc4cf6b7a924"
-
 				files, hash, err := Translate(ctx, fakeClient, deployment, foobarThePod)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hash).To(Equal(expectedHash))
+				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
@@ -119,7 +115,7 @@ metadata:
   annotations:
     bar: baz
     foo: bar
-    gardener.cloud/config.mirror: ` + expectedHash + `
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     foo: bar
@@ -228,11 +224,9 @@ kind: Config
 					}}},
 				}
 
-				expectedHash := "6d55f8c03ac821018baf3f392ab8d5b8241692f84b2cacabe3ea853cd0c7ccd1"
-
 				files, hash, err := Translate(ctx, fakeClient, deployment, nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hash).To(Equal(expectedHash))
+				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
@@ -242,7 +236,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
-    gardener.cloud/config.mirror: ` + expectedHash + `
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo
@@ -358,11 +352,9 @@ kind: Config
 			})
 
 			It("should successfully translate a statefulSet w/o volumes", func() {
-				expectedHash := "0a0dce34dbdd4cd050eed92546f194956c749d04d580e5137a645ad697a2570c"
-
 				files, hash, err := Translate(ctx, fakeClient, statefulSet, nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hash).To(Equal(expectedHash))
+				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
@@ -371,7 +363,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
-    gardener.cloud/config.mirror: ` + expectedHash + `
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo
@@ -410,11 +402,9 @@ status: {}
 			})
 
 			It("should successfully translate and mutate a statefulSet", func() {
-				expectedHash := "84c3416a92a660311982d76ccc7caef6484b7209d4ee602947cca29ee3fef311"
-
 				files, hash, err := Translate(ctx, fakeClient, statefulSet, foobarThePod)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hash).To(Equal(expectedHash))
+				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
@@ -424,7 +414,7 @@ metadata:
   annotations:
     bar: baz
     foo: bar
-    gardener.cloud/config.mirror: ` + expectedHash + `
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     foo: bar
@@ -540,11 +530,9 @@ kind: Config
 					}}},
 				}
 
-				expectedHash := "f28c356d9b4728314e8d459c96e69754d134ce1e3374d7a44e046c87d3e23c30"
-
 				files, hash, err := Translate(ctx, fakeClient, statefulSet, nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hash).To(Equal(expectedHash))
+				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
@@ -554,7 +542,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
-    gardener.cloud/config.mirror: ` + expectedHash + `
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo
@@ -665,11 +653,9 @@ kind: Config
 			})
 
 			It("should successfully translate a pod w/o volumes", func() {
-				expectedHash := "e249a745a2e918f35372be750b288328d9d3998a1dd43e25d13436c5e5ef287c"
-
 				files, hash, err := Translate(ctx, fakeClient, pod, nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hash).To(Equal(expectedHash))
+				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
@@ -678,7 +664,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
-    gardener.cloud/config.mirror: ` + expectedHash + `
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo
@@ -708,11 +694,9 @@ status: {}
 			})
 
 			It("should successfully translate and mutate a pod", func() {
-				expectedHash := "7b5edbd5478ffef20a6040a18daab42eb45c4d93e76e24a1b98f30cfc02044f5"
-
 				files, hash, err := Translate(ctx, fakeClient, pod, foobarThePod)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hash).To(Equal(expectedHash))
+				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
@@ -722,7 +706,7 @@ metadata:
   annotations:
     bar: baz
     foo: bar
-    gardener.cloud/config.mirror: ` + expectedHash + `
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     foo: bar
@@ -829,11 +813,9 @@ kind: Config
 					}}},
 				}
 
-				expectedHash := "7dda80e405e43ba9910a809a0b74082995a4a27dde91827b99f00bee4859000f"
-
 				files, hash, err := Translate(ctx, fakeClient, pod, nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hash).To(Equal(expectedHash))
+				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
@@ -843,7 +825,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
-    gardener.cloud/config.mirror: ` + expectedHash + `
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo

@@ -285,8 +285,8 @@ var _ = Describe("NodeAgent", func() {
 				}
 
 				DeferCleanup(test.WithVars(
-					&WaitForNodeAgentLeaseInterval, 50*time.Millisecond,
-					&WaitForNodeAgentLeaseTimeout, 500*time.Millisecond,
+					&WaitForNodeAgentLeaseInterval, 10*time.Millisecond,
+					&WaitForNodeAgentLeaseTimeout, 50*time.Millisecond,
 				))
 			})
 
