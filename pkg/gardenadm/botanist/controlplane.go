@@ -128,7 +128,20 @@ func (b *AutonomousBotanist) DeployControlPlaneDeployments(ctx context.Context) 
 		return fmt.Errorf("failed deploying ManagedResource containing Secret with OperatingSystemConfig for gardener-node-agent: %w", err)
 	}
 
-	return managedresources.WaitUntilHealthyAndNotProgressing(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, botanist.GardenerNodeAgentManagedResourceName)
+	return nil
+}
+
+// WaitUntilControlPlaneDeploymentsReady waits until the control plane deployments are ready. It checks the health of
+// the gardener-node-agent ManagedResource and verifies that the static pod hashes match the desired hashes.
+func (b *AutonomousBotanist) WaitUntilControlPlaneDeploymentsReady(ctx context.Context) error {
+	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, botanist.GardenerNodeAgentManagedResourceName); err != nil {
+		return fmt.Errorf("failed waiting for gardener-node-agent ManagedResource %s to be healthy and not progressing: %w", botanist.GardenerNodeAgentManagedResourceName, err)
+	}
+
+	// TODO: Compare checksum annotation on node to make sure GNA has actually reconciled the OSC
+	// TODO2: Compare static pod hashes with desired hash (strip .spec.nodeName from .metadata.name) and find the correct hash in our nice internal map.
+
+	return nil
 }
 
 func (b *AutonomousBotanist) deployControlPlaneDeployments(ctx context.Context) error {

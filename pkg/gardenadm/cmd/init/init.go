@@ -261,10 +261,15 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.DeployControlPlaneDeployments,
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, reconcileBackupEntry),
 		})
+		waitUntilControlPlaneDeploymentsReady = g.Add(flow.Task{
+			Name:         "Waiting until control plane components (static pods) are ready",
+			Fn:           b.WaitUntilControlPlaneDeploymentsReady,
+			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
+		})
 		finalizeGardenerNodeAgentBootstrapping = g.Add(flow.Task{
 			Name:         "Finalizing gardener-node-agent bootstrapping (remove cluster-admin access, activate node-agent authorizer)",
 			Fn:           b.FinalizeGardenerNodeAgentBootstrapping,
-			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
+			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until gardener-node-agent lease is renewed",
