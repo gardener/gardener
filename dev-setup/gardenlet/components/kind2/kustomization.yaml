@@ -15,7 +15,7 @@ patches:
       - op: add
         path: /spec/kubeconfigSecretRef
         value:
-          name: seed-local2
+          name: seed-local2-gardener-operator
     target:
       group: seedmanagement.gardener.cloud
       kind: Gardenlet

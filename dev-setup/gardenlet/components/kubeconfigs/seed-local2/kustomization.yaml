@@ -9,3 +9,10 @@ secretGenerator:
   - kubeconfig
   name: seed-local2
   namespace: garden
+# We create a second secret with the same kubeconfig for gardener-operator, since it needs it to install the gardenlet
+# into the seed cluster, but it also automatically deletes it after successful installation. However, we need the
+# kubeconfig secret for the e2e tests.
+- files:
+  - kubeconfig
+  name: seed-local2-gardener-operator
+  namespace: garden
