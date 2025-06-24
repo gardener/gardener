@@ -520,14 +520,16 @@ spec:
 		}).Should(Succeed())
 
 		By("Patch extension managed resource")
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionManagedResource), extensionManagedResource)).To(Succeed())
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(extensionManagedResource), extensionManagedResource)
+		}).To(Succeed())
 		extensionManagedResource.Status.ObservedGeneration = extensionManagedResource.Generation
 		extensionManagedResource.Status.Conditions = []gardencorev1beta1.Condition{
 			{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 			{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 			{Type: resourcesv1alpha1.ResourcesProgressing, Status: gardencorev1beta1.ConditionFalse, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 		}
-		Expect(testClient.Status().Update(ctx, extensionManagedResource)).To(Succeed())
+		Eventually(func() error { return testClient.Status().Update(ctx, extensionManagedResource) }).To(Succeed())
 
 		By("Verify and patch extension before kube-api-server")
 		patchExtensionStatus(testClient, extensionTypeBeforeKAS, testNamespace.Name, gardencorev1beta1.LastOperationStateSucceeded)
@@ -1000,7 +1002,7 @@ func patchExtensionStatus(cl client.Client, name, namespace string, lastOp garde
 	}).Should(Succeed())
 
 	patch := client.MergeFrom(ext.DeepCopy())
-	ExpectWithOffset(1, testClient.Patch(ctx, ext, patch)).To(Succeed())
+	EventuallyWithOffset(1, func() error { return testClient.Patch(ctx, ext, patch) }).To(Succeed())
 
 	patch = client.MergeFrom(ext.DeepCopy())
 	ext.Status = extensionsv1alpha1.ExtensionStatus{
@@ -1012,5 +1014,5 @@ func patchExtensionStatus(cl client.Client, name, namespace string, lastOp garde
 			ObservedGeneration: ext.Generation,
 		},
 	}
-	ExpectWithOffset(1, cl.Status().Patch(ctx, ext, patch)).To(Succeed())
+	EventuallyWithOffset(1, func() error { return cl.Status().Patch(ctx, ext, patch) }).To(Succeed())
 }
