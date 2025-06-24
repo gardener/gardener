@@ -195,7 +195,7 @@ func (b *AutonomousBotanist) filesForStaticControlPlanePods(ctx context.Context)
 			return nil, fmt.Errorf("failed reading object for %q: %w", component.name, err)
 		}
 
-		f, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
+		f, _, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
 		if err != nil {
 			return nil, fmt.Errorf("failed translating object of type %T for %q: %w", component.targetObject, component.name, err)
 		}
