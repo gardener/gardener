@@ -26,5 +26,6 @@ func GetFeatures() []featuregate.Feature {
 		features.RemoveAPIServerProxyLegacyPort,
 		features.IstioTLSTermination,
 		features.DoNotCopyBackupCredentials,
+		features.OpenTelemetryCollector,
 	}
 }
