@@ -225,7 +225,7 @@ func (r *Reconciler) reconcile(
 
 		waitUntilEtcdDruidReady = g.Add(flow.Task{
 			Name:         "Waiting for ETCD Druid to be ready",
-			Fn:           c.istio.Wait,
+			Fn:           c.etcdDruid.Wait,
 			Dependencies: flow.NewTaskIDs(deployEtcdDruid),
 		})
 		_ = g.Add(flow.Task{
