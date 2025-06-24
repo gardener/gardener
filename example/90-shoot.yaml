@@ -252,7 +252,7 @@ spec:
   #       memory: 3Gi
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
-  #   podEvictionTimeout: 2m0s # This field is no-op and will be removed in gardener v1.120
+  #   podEvictionTimeout: 2m0s # This field is no-op and is forbidden to be set starting from Kubernetes 1.33
   #   nodeMonitorGracePeriod: 40s
   #   featureGates:
   #     SomeKubernetesFeature: true
@@ -416,7 +416,7 @@ spec:
     # authenticationMode: token # allowed values: token
 # tolerations:
 # - key: <some-key>
-# Explicitly specify the seed that will run the shoot control plane. Only possible for users having RBAC for 
+# Explicitly specify the seed that will run the shoot control plane. Only possible for users having RBAC for
 # shoots/binding subresource (https://github.com/gardener/gardener/blob/master/docs/concepts/scheduler.md#specseedname-field-in-the-shoot-specification).
 # seedName: my-seed
 # Provide labels of seeds that are eligible to run this shoot - will be evaluated by the scheduler
