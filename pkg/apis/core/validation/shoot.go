@@ -1544,7 +1544,7 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 		// TODO(plkokanov): Remove this check after support for Kubernetes 1.32 is dropped.
 		if podEvictionTimeout := kcm.PodEvictionTimeout; podEvictionTimeout != nil {
 			if k8sGreaterEqual133, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.33"); k8sGreaterEqual133 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionTimeout"), kcm.PodEvictionTimeout, "podEvictionTimeout is no longer supported by Gardener starting from Kubernetes 1.33"))
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionTimeout"), podEvictionTimeout, "podEvictionTimeout is no longer supported by Gardener starting from Kubernetes 1.33"))
 			} else if podEvictionTimeout.Duration <= 0 {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionTimeout"), podEvictionTimeout.Duration, "podEvictionTimeout must be larger than 0"))
 			}
