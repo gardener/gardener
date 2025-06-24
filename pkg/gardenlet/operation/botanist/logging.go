@@ -6,12 +6,14 @@ package botanist
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
+	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	"github.com/gardener/gardener/pkg/component/shared"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/helper"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -104,4 +106,22 @@ func (b *Botanist) DefaultVali() (vali.Interface, error) {
 		nil,
 		b.ComputeValiHost(),
 	)
+}
+
+// DefaultOtelCollector returns a deployer for the OpenTelemetry Collector.
+func (b *Botanist) DefaultOtelCollector() (component.DeployWaiter, error) {
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameOpentelemetryCollector)
+	if err != nil {
+		return nil, err
+	}
+
+	return collector.New(
+		b.SeedClientSet.Client(),
+		b.Shoot.ControlPlaneNamespace,
+		collector.Values{
+			Image: image.String(),
+		},
+		"http://"+constants.ServiceName+":"+strconv.Itoa(constants.ValiPort)+constants.PushEndpoint,
+	), nil
+
 }
