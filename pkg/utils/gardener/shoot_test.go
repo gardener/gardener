@@ -1423,7 +1423,7 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
-	Describe("#DefaultGRForEncryption", func() {
+	Describe("#DefaultGroupResourcesForEncryption", func() {
 		It("should return all default resources", func() {
 			Expect(DefaultGroupResourcesForEncryption()).To(ConsistOf(
 				schema.GroupResource{Group: "", Resource: "secrets"},
