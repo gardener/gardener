@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -144,7 +145,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			// for some reason this error is not of type "Invalid"
 			strings.Contains(err.Error(), "duplicate nodePort") {
 			log.Info("Patching nodePort failed because it is already allocated, enabling auto-remediation", "err", err.Error())
-			return reconcile.Result{Requeue: true}, r.remediateAllocatedNodePorts(ctx, log)
+			return reconcile.Result{Requeue: true}, r.remediateAllocatedNodePorts(ctx, log, key, nodePort, nodePortTunnel)
 		}
 		return reconcile.Result{}, err
 	}
@@ -176,16 +177,21 @@ func (r *Reconciler) getNodesInternalIPs(ctx context.Context, opts ...client.Lis
 	return ips, nil
 }
 
-func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.Logger) error {
+func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.Logger, keyService client.ObjectKey, nodePorts ...int32) error {
 	serviceList := &corev1.ServiceList{}
 	if err := r.Client.List(ctx, serviceList); err != nil {
 		return err
 	}
 
 	for _, service := range serviceList.Items {
+		if client.ObjectKeyFromObject(&service) == keyService {
+			continue
+		}
+
 		var (
-			mustUpdate bool
-			patch      = client.StrategicMergeFrom(service.DeepCopy())
+			mustUpdate    bool
+			patch         = client.StrategicMergeFrom(service.DeepCopy())
+			requiredPorts = sets.New(nodePorts...)
 		)
 
 		for i, port := range service.Spec.Ports {
@@ -193,15 +199,7 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 				log.Info("Found service with nodePort", "serviceCheckedForAllocation", client.ObjectKeyFromObject(&service), "nodePort", port.NodePort)
 			}
 
-			if port.NodePort == nodePortIstioIngressGateway ||
-				port.NodePort == nodePortIstioIngressGatewayZone0 ||
-				port.NodePort == nodePortIstioIngressGatewayZone1 ||
-				port.NodePort == nodePortIstioIngressGatewayZone2 ||
-				port.NodePort == nodePortTunnelIstioIngressGateway ||
-				port.NodePort == nodePortTunnelIstioIngressGatewayZone0 ||
-				port.NodePort == nodePortTunnelIstioIngressGatewayZone1 ||
-				port.NodePort == nodePortTunnelIstioIngressGatewayZone2 ||
-				port.NodePort == nodePortVirtualGardenKubeAPIServer {
+			if requiredPorts.Has(port.NodePort) {
 				var (
 					min, max    = 30000, 32767
 					newNodePort = int32(rand.N(max-min) + min) // #nosec: G115 G404 -- Value range limited in previous line, no cryptographic context.
@@ -209,6 +207,7 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 
 				log.Info("Assigning new nodePort to service which already allocates the nodePort",
 					"service", client.ObjectKeyFromObject(&service),
+					"oldNodePort", port.NodePort,
 					"newNodePort", newNodePort,
 				)
 
