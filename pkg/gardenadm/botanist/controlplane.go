@@ -7,11 +7,14 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -131,17 +134,37 @@ func (b *AutonomousBotanist) DeployControlPlaneDeployments(ctx context.Context) 
 	return nil
 }
 
-// WaitUntilControlPlaneDeploymentsReady waits until the control plane deployments are ready. It checks the health of
-// the gardener-node-agent ManagedResource and verifies that the static pod hashes match the desired hashes.
+// WaitUntilControlPlaneDeploymentsReady waits until the control plane deployments are ready. It checks that the
+// operating system config has been updated for all worker pools. In addition, it verifies that the static pod hashes
+// match the desired hashes.
 func (b *AutonomousBotanist) WaitUntilControlPlaneDeploymentsReady(ctx context.Context) error {
-	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, botanist.GardenerNodeAgentManagedResourceName); err != nil {
-		return fmt.Errorf("failed waiting for gardener-node-agent ManagedResource %s to be healthy and not progressing: %w", botanist.GardenerNodeAgentManagedResourceName, err)
+	timeoutCtx, cancel := context.WithTimeout(ctx, botanist.GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
+	defer cancel()
+
+	if err := retry.Until(timeoutCtx, botanist.IntervalWaitOperatingSystemConfigUpdated, func(ctx context.Context) (done bool, err error) {
+		staticPodList := &corev1.PodList{}
+		if err := b.SeedClientSet.Client().List(ctx, staticPodList, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels{staticpod.LabelKeyIsStaticPod: staticpod.LabelValueIsStaticPod}); err != nil {
+			// kube-apiserver might restart, hence, we should tolerate that it is temporarily not available. That's why
+			// we use retry.MinorError here instead of retry.SevereError.
+			return retry.MinorError(fmt.Errorf("failed listing static pods in namespace %q: %w", b.Shoot.ControlPlaneNamespace, err))
+		}
+
+		staticPodNameToHash := make(map[string]string)
+		for _, pod := range staticPodList.Items {
+			staticPodNameToHash[strings.TrimSuffix(pod.Name, "-"+pod.Spec.NodeName)] = pod.Annotations[staticpod.AnnotationKeyHash]
+		}
+
+		if !maps.Equal(staticPodNameToHash, b.staticPodNameToHash) {
+			b.Logger.Info("Waiting for all static pods to be updated to the desired state", "differences", cmp.Diff(staticPodNameToHash, b.staticPodNameToHash))
+			return retry.MinorError(fmt.Errorf("not all static pods have been updated yet"))
+		}
+
+		return retry.Ok()
+	}); err != nil {
+		return fmt.Errorf("failed waiting for all static pods to be updated to the desired state: %w", err)
 	}
 
-	// TODO: Compare checksum annotation on node to make sure GNA has actually reconciled the OSC
-	// TODO2: Compare static pod hashes with desired hash (strip .spec.nodeName from .metadata.name) and find the correct hash in our nice internal map.
-
-	return nil
+	return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)
 }
 
 func (b *AutonomousBotanist) deployControlPlaneDeployments(ctx context.Context) error {
