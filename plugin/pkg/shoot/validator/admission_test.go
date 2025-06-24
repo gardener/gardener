@@ -4917,6 +4917,20 @@ var _ = Describe("validator", func() {
 						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(latestNonExpiredVersion))
 					})
 
+					It("should default a version prefix of a new image of an existing worker pool to the latest non-preview version", func() {
+						newShoot := shoot.DeepCopy()
+						newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    imageName2,
+							Version: "2.0",
+						}
+
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(Not(HaveOccurred()))
+						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(nonExpiredVersion2))
+					})
+
 					It("should default version of new worker pool to latest non-preview version", func() {
 						newShoot := shoot.DeepCopy()
 						newWorker := newShoot.Spec.Provider.Workers[0].DeepCopy()
