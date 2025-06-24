@@ -187,23 +187,51 @@ func (b *AutonomousBotanist) populateStaticAdminTokenToAccessTokenSecret(ctx con
 	return b.SeedClientSet.Client().Update(ctx, secret)
 }
 
-func (b *AutonomousBotanist) filesForStaticControlPlanePods(ctx context.Context) ([]extensionsv1alpha1.File, error) {
+type staticPod struct {
+	name  string
+	files []extensionsv1alpha1.File
+	hash  string
+}
+
+type staticPods []staticPod
+
+func (s staticPods) allFiles() []extensionsv1alpha1.File {
 	var files []extensionsv1alpha1.File
+	for _, pod := range s {
+		files = append(files, pod.files...)
+	}
+	return files
+}
+
+func (s staticPods) nameToHashMap() map[string]string {
+	m := make(map[string]string, len(s))
+	for _, pod := range s {
+		m[pod.name] = pod.hash
+	}
+	return m
+}
+
+func (b *AutonomousBotanist) staticControlPlanePods(ctx context.Context) (staticPods, error) {
+	var pods staticPods
 
 	for _, component := range b.staticControlPlaneComponents() {
 		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: component.name, Namespace: b.Shoot.ControlPlaneNamespace}, component.targetObject); err != nil {
 			return nil, fmt.Errorf("failed reading object for %q: %w", component.name, err)
 		}
 
-		f, _, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
+		f, hash, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
 		if err != nil {
 			return nil, fmt.Errorf("failed translating object of type %T for %q: %w", component.targetObject, component.name, err)
 		}
 
-		files = append(files, f...)
+		pods = append(pods, staticPod{
+			name:  component.name,
+			files: f,
+			hash:  hash,
+		})
 	}
 
-	return files, nil
+	return pods, nil
 }
 
 // NewClientSetFromFile creates a client set from the specified kubeconfig file.

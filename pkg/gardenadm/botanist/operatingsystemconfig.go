@@ -78,12 +78,13 @@ func (b *AutonomousBotanist) appendAdminKubeconfigToFiles(files []extensionsv1al
 }
 
 func (b *AutonomousBotanist) deployOperatingSystemConfig(ctx context.Context) (*operatingsystemconfig.Data, string, error) {
-	files, err := b.filesForStaticControlPlanePods(ctx)
+	pods, err := b.staticControlPlanePods(ctx)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
 	}
+	b.staticPodNameToHash = pods.nameToHashMap()
 
-	files, err = b.appendAdminKubeconfigToFiles(files)
+	files, err := b.appendAdminKubeconfigToFiles(pods.allFiles())
 	if err != nil {
 		return nil, "", fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
 	}
