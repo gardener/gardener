@@ -206,7 +206,7 @@ $(LOGCHECK): $(TOOLS_PKG_PATH)/logcheck/go.* $(shell find $(TOOLS_PKG_PATH)/logc
 	cd $(TOOLS_PKG_PATH)/logcheck;GOTOOLCHAIN=auto CGO_ENABLED=1 go build -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
 else
 $(LOGCHECK): go.mod
-	GOTOOLCHAIN=auto CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/logcheck/plugin
+	cd $(shell go list -f '{{ .Dir }}' github.com/gardener/gardener/hack/tools/logcheck); GOTOOLCHAIN=auto CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin ./plugin
 endif
 
 $(MOCKGEN): $(call tool_version_file,$(MOCKGEN),$(MOCKGEN_VERSION))
@@ -222,7 +222,7 @@ $(PROTOC): $(call tool_version_file,$(PROTOC),$(PROTOC_VERSION))
 	@PROTOC_VERSION=$(PROTOC_VERSION) $(TOOLS_PKG_PATH)/install-protoc.sh
 
 $(TYPOS): $(call tool_version_file,$(TYPOS),$(TYPOS_VERSION))
-	@TYPOS_VERSION=$(TYPOS_VERSION) $(TOOLS_PKG_PATH)/install-typos.sh
+	@TYPOS_VERSION=$(TYPOS_VERSION) bash $(TOOLS_PKG_PATH)/install-typos.sh
 
 $(PROTOC_GEN_GOGO): $(call tool_version_file,$(PROTOC_GEN_GOGO),$(CODE_GENERATOR_VERSION))
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
