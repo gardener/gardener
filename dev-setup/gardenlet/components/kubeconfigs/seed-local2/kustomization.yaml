@@ -13,6 +13,6 @@ secretGenerator:
 # into the seed cluster, but it also automatically deletes it after successful installation. However, we need the
 # kubeconfig secret for the e2e tests.
 - files:
-  - kubeconfig
+  - kubeconfig=kubeconfig-gardener-operator
   name: seed-local2-gardener-operator
   namespace: garden
