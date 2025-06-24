@@ -132,7 +132,7 @@ func RequiredGardenExtensionsReady(ctx context.Context, log logr.Logger, c clien
 			}
 
 			if extensionCheckErr != nil {
-				log.Error(err, "Extension installation not successful", "kind", kindType)
+				log.Error(extensionCheckErr, "Extension installation not successful", "kind", kindType)
 				continue
 			}
 
