@@ -212,7 +212,7 @@ func (r *Reconciler) reconcile(
 		})
 		deployIstio = g.Add(flow.Task{
 			Name: "Deploying Istio",
-			Fn:   c.istio.Deploy,
+			Fn:   component.OpWait(c.istio).Deploy,
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
@@ -227,11 +227,6 @@ func (r *Reconciler) reconcile(
 			Name:         "Waiting for ETCD Druid to be ready",
 			Fn:           c.istio.Wait,
 			Dependencies: flow.NewTaskIDs(deployEtcdDruid),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting for Istio to be ready",
-			Fn:           c.istio.Wait,
-			Dependencies: flow.NewTaskIDs(deployIstio),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling DNSRecords for virtual garden cluster and ingress controller",
