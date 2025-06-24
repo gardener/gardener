@@ -68,9 +68,11 @@ var _ = Describe("VPA", func() {
 		pathGenericKubeconfig            = "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig"
 
 		runtimeKubernetesVersion = semver.MustParse("1.28.0")
+		featureGates             = make(map[string]bool)
 		values                   = Values{
 			SecretNameServerCA:       secretNameCA,
 			RuntimeKubernetesVersion: runtimeKubernetesVersion,
+			FeatureGates:             featureGates,
 		}
 
 		c         client.Client
@@ -196,6 +198,7 @@ var _ = Describe("VPA", func() {
 				AdmissionController:      valuesAdmissionController,
 				Recommender:              valuesRecommender,
 				Updater:                  valuesUpdater,
+				FeatureGates:             featureGates,
 			})
 			return vpa
 		}
@@ -1772,6 +1775,85 @@ var _ = Describe("VPA", func() {
 			BeforeEach(func() {
 				vpa = vpaFor(component.ClusterTypeShoot, false)
 				managedResourceName = "shoot-core-vpa"
+			})
+
+			Context("when deploying with feature gates", func() {
+				var (
+					getContainerArgs = func(deployment *appsv1.Deployment, containerName string) []string {
+						for _, c := range deployment.Spec.Template.Spec.Containers {
+							if c.Name == containerName {
+								return c.Args
+							}
+						}
+						return []string{}
+					}
+				)
+
+				Context("without entries", func() {
+					BeforeEach(func() {
+						vpa = vpaFor(component.ClusterTypeShoot, false)
+						Expect(vpa.Deploy(ctx)).To(Succeed())
+					})
+
+					It("should omit --feature-gates argument in vpa-admission-controller container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-admission-controller"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "admission-controller")
+						Expect(args).ShouldNot(ContainElement(HavePrefix("--feature-gates=")))
+					})
+
+					It("should omit --feature-gates argument in vpa-updater container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-updater"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "updater")
+						Expect(args).ShouldNot(ContainElement(HavePrefix("--feature-gates=")))
+					})
+
+					It("should omit --feature-gates argument in vpa-recommender container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "recommender")
+						Expect(args).ShouldNot(ContainElement(HavePrefix("--feature-gates=")))
+					})
+				})
+
+				Context("with InPlaceOrRecreate enabled", func() {
+					BeforeEach(func() {
+						featureGates["InPlaceOrRecreate"] = true
+						vpa = vpaFor(component.ClusterTypeShoot, false)
+						Expect(vpa.Deploy(ctx)).To(Succeed())
+					})
+					AfterEach(func() {
+						delete(featureGates, "InPlaceOrRecreate")
+					})
+
+					It("should add InPlaceOrRecreate=true feature gate to vpa-admission-controller container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-admission-controller"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "admission-controller")
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
+					})
+
+					It("should add InPlaceOrRecreate=true feature gate to vpa-updater container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-updater"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "updater")
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
+					})
+
+					It("should add InPlaceOrRecreate=true feature gate to vpa-recommender container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "recommender")
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
+					})
+				})
 			})
 
 			Context("when deploying ServiceMonitors", func() {
