@@ -215,11 +215,11 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 				service.Spec.Ports[i].NodePort = newNodePort
 				mustUpdate = true
 			}
+		}
 
-			if mustUpdate {
-				if err := r.Client.Patch(ctx, &service, patch); err != nil {
-					return err
-				}
+		if mustUpdate {
+			if err := r.Client.Patch(ctx, &service, patch); err != nil {
+				return err
 			}
 		}
 	}
