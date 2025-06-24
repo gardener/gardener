@@ -1369,7 +1369,7 @@ metadata:
 manifests:
   kustomize:
     paths:
-      - dev-setup/extensions/networking-calico
-      - dev-setup/extensions/networking-cilium
+      - dev-setup/extensions/networking-calico/overlays/operator
+      - dev-setup/extensions/networking-cilium/overlays/operator
 deploy:
   kubectl: {}
