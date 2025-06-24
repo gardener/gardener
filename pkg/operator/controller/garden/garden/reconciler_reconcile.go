@@ -596,8 +596,9 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilGardenerAPIServerReady),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying Plutono",
-			Fn:   c.plutono.Deploy,
+			Name:         "Deploying Plutono",
+			Fn:           c.plutono.Deploy,
+			Dependencies: flow.NewTaskIDs(generateObservabilityIngressPassword),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying perses-operator",
