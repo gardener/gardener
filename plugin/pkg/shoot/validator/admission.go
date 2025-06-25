@@ -2015,12 +2015,12 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []g
 		if oldWorker.Machine.Image.Name == worker.Machine.Image.Name {
 			// image name was not changed -> keep version from the new worker if specified, otherwise use the old worker image version
 			if len(worker.Machine.Image.Version) != 0 {
-				return worker.Machine.Image, nil
+				return getDefaultMachineImage(images, worker.Machine.Image, worker.Machine.Architecture, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
 			}
 			return oldWorker.Machine.Image, nil
 		} else if len(worker.Machine.Image.Version) != 0 {
 			// image name was changed -> keep version from new worker if specified, otherwise default the image version
-			return worker.Machine.Image, nil
+			return getDefaultMachineImage(images, worker.Machine.Image, worker.Machine.Architecture, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
 		}
 	}
 
