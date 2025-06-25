@@ -617,8 +617,10 @@ func (k *kubeAPIServer) SetPodNetworkCIDRs(pods []net.IPNet) {
 }
 
 func (k *kubeAPIServer) SetSeedPodNetwork(pods string) {
-	_, ipnet, _ := net.ParseCIDR(pods)
-	k.values.VPN.SeedPodNetwork = *ipnet
+	_, ipnet, err := net.ParseCIDR(pods)
+	if err == nil {
+		k.values.VPN.SeedPodNetwork = *ipnet
+	}
 }
 
 func (k *kubeAPIServer) SetServiceNetworkCIDRs(services []net.IPNet) {
