@@ -900,32 +900,16 @@ var _ = Describe("CloudProfile", func() {
 						{Capabilities: core.Capabilities{"key1": {"value1"}}},
 					},
 				}
-				capabilitiesDefinition := []core.CapabilityDefinition{
-					{Name: "key1", Values: []string{"value1"}},
-				}
 
-				result := gardenerutils.GetVersionCapabilitySets(version, capabilitiesDefinition)
+				result := gardenerutils.GetVersionCapabilitySets(version)
 				Expect(result).To(Equal(version.CapabilitySets))
 			})
 
-			It("should return a default capability set if none are defined and only one architecture is supported", func() {
+			It("should return a default capability set if none are defined", func() {
 				version := core.MachineImageVersion{}
-				capabilitiesDefinition := []core.CapabilityDefinition{
-					{Name: "architecture", Values: []string{"amd64"}},
-				}
 
-				result := gardenerutils.GetVersionCapabilitySets(version, capabilitiesDefinition)
-				Expect(result).To(Equal([]core.CapabilitySet{{Capabilities: core.Capabilities{"architecture": {"amd64"}}}}))
-			})
-
-			It("should return an empty slice if no capability sets are defined and multiple architectures are supported", func() {
-				version := core.MachineImageVersion{}
-				capabilitiesDefinition := []core.CapabilityDefinition{
-					{Name: "architecture", Values: []string{"amd64", "arm64"}},
-				}
-
-				result := gardenerutils.GetVersionCapabilitySets(version, capabilitiesDefinition)
-				Expect(result).To(BeEmpty())
+				result := gardenerutils.GetVersionCapabilitySets(version)
+				Expect(result).To(Equal([]core.CapabilitySet{{Capabilities: core.Capabilities{}}}))
 			})
 		})
 

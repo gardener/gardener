@@ -454,39 +454,22 @@ func ValidateCapabilities(capabilities core.Capabilities, capabilitiesDefinition
 	return allErrs
 }
 
-// GetVersionCapabilitySets returns the CapabilitySets for a given machine image version or adds the default capabilitySet if none is defined.
-func GetVersionCapabilitySets(version core.MachineImageVersion, capabilitiesDefinitions []core.CapabilityDefinition) []core.CapabilitySet {
-	versionCapabilitySets := version.CapabilitySets
-	if len(versionCapabilitySets) != 0 {
-		return versionCapabilitySets
+// GetVersionCapabilitySets returns the defined CapabilitySets for a given machine image version.
+func GetVersionCapabilitySets(version core.MachineImageVersion) []core.CapabilitySet {
+	if len(version.CapabilitySets) == 0 {
+		// If no capability sets are defined, assume all capabilities are supported.
+		return []core.CapabilitySet{{Capabilities: core.Capabilities{}}}
 	}
-
-	// find architecture Capability in capabilitiesDefinitions
-	// the architecture capability must exist in every cloud profile
-	var supportedArchitectures []string
-	for _, capabilityDefinition := range capabilitiesDefinitions {
-		if capabilityDefinition.Name == v1beta1constants.ArchitectureName {
-			supportedArchitectures = capabilityDefinition.Values
-			break
-		}
-	}
-
-	// capabilitySets in the machine image version may be omitted if only a single architecture is allowed
-	// if so the capabilityDefinitions are used as default
-	if len(supportedArchitectures) == 1 {
-		versionCapabilitySets = []core.CapabilitySet{{Capabilities: ApplyDefaultCapabilities(nil, capabilitiesDefinitions)}}
-	}
-
-	return versionCapabilitySets
+	return version.CapabilitySets
 }
 
 // AreCapabilitiesEqual checks if two capabilities are semantically equal.
-// It compares the keys and values of the capabilities maps.
-func AreCapabilitiesEqual(a, b core.Capabilities, capabilitiesDefinitions []core.CapabilityDefinition) bool {
-	defaultedA := ApplyDefaultCapabilities(maps.Clone(a), capabilitiesDefinitions)
-	defaultedB := ApplyDefaultCapabilities(maps.Clone(b), capabilitiesDefinitions)
+func AreCapabilitiesEqual(a, b core.Capabilities, definitions []core.CapabilityDefinition) bool {
+	// Apply default capabilities based on definitions.
+	defaultedA := ApplyDefaultCapabilities(maps.Clone(a), definitions)
+	defaultedB := ApplyDefaultCapabilities(maps.Clone(b), definitions)
 
-	// Check if all keys and values in `a` exist in `b` and vice versa
+	// Check if both are subsets of each other.
 	return areCapabilitiesSubsetOf(defaultedA, defaultedB) && areCapabilitiesSubsetOf(defaultedB, defaultedA)
 }
 
