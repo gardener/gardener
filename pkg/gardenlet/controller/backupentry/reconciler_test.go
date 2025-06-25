@@ -345,7 +345,6 @@ var _ = Describe("Controller", func() {
 				"security.gardener.cloud/purpose":                   "workload-identity-token-requestor",
 				"workloadidentity.security.gardener.cloud/provider": "local",
 			}
-			extensionSecret.Data = map[string][]byte{"config": []byte("null")}
 			extensionSecret.Type = "Opaque"
 		})
 
@@ -355,7 +354,7 @@ var _ = Describe("Controller", func() {
 			Expect(result).To(Equal(reconcile.Result{}))
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
-			Expect(extensionSecret.Data).To(Equal(map[string][]byte{"config": []byte("null")}))
+			Expect(extensionSecret.Data).To(BeEmpty())
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
 			Expect(extensionBackupEntry.Spec).To(MatchFields(IgnoreExtras, Fields{
@@ -403,7 +402,8 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should reconcile the extension BackupEntry if the secret data has changed", func() {
-			extensionSecret.Data = map[string][]byte{"dash": []byte("bash")}
+			// the workloadIdentity.spec.targetSystem.providerConfig=nil will cause the `config` data key to be removed from the secret
+			extensionSecret.Data = map[string][]byte{"config": []byte("null")}
 			Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
 			Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())
 

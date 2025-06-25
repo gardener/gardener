@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"maps"
-	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -207,5 +207,5 @@ func (s *Secret) Reconcile(ctx context.Context, c client.Client) error {
 func (s *Secret) Equal(other *corev1.Secret) bool {
 	copySecret := other.DeepCopy()
 	s.reconcileSecret(copySecret, false)
-	return reflect.DeepEqual(other, copySecret)
+	return apiequality.Semantic.DeepEqual(other, copySecret)
 }
