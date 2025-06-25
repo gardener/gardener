@@ -38,15 +38,7 @@ In this case, `gardenlet` needs to be deployed manually, meaning that its [Helm 
 
 ## Procedure Overview
 
-1. Prepare the garden cluster:
-    1. [Create a bootstrap token secret in the `kube-system` namespace of the garden cluster](#create-a-bootstrap-token-secret-in-the-kube-system-namespace-of-the-garden-cluster)
-    2. [Create RBAC roles for the gardenlet to allow bootstrapping in the garden cluster](#create-rbac-roles-for-the-gardenlet-to-allow-bootstrapping-in-the-garden-cluster)
-2. [Prepare the gardenlet Helm chart](#prepare-the-gardenlet-helm-chart).
-3. [Automatically register shoot cluster as a seed cluster](#automatically-register-shoot-cluster-as-a-seed-cluster).
-4. [Deploy the gardenlet](#deploy-the-gardenlet)
-5. [Check that the gardenlet is successfully deployed](#check-that-the-gardenlet-is-successfully-deployed)
-
-## Create a Bootstrap Token Secret in the `kube-system` Namespace of the Garden Cluster
+### Create a Bootstrap Token Secret in the `kube-system` Namespace of the Garden Cluster
 
 The gardenlet needs to talk to the [Gardener API server](../concepts/apiserver.md) residing in the garden cluster.
 
@@ -87,7 +79,7 @@ stringData:
 
 When you later prepare the gardenlet Helm chart, a `kubeconfig` based on this token is shared with the gardenlet upon deployment.
 
-## Prepare the gardenlet Helm Chart
+### Prepare the gardenlet Helm Chart
 
 This section only describes the minimal configuration, using the global configuration values of the gardenlet Helm chart.
 For an overview over all values, see the [configuration values](../../charts/gardener/gardenlet/values.yaml).
@@ -142,14 +134,14 @@ We refer to the global configuration values as _gardenlet configuration_ in the 
         namespace: garden
     ```
 
-### Updating the Garden Cluster CA
+#### Updating the Garden Cluster CA
 
 The kubeconfig created by the gardenlet in step 4 will not be recreated as long as it exists, even if a new bootstrap kubeconfig is provided.
 To enable rotation of the garden cluster CA certificate, a new bundle can be provided via the `gardenClientConnection.gardenClusterCACert` field.
 If the provided bundle differs from the one currently in the gardenlet's kubeconfig secret then it will be updated.
 To remove the CA completely (e.g. when switching to a publicly trusted endpoint), this field can be set to either `none` or `null`.
 
-## Prepare Seed Specification
+### Prepare Seed Specification
 
 When gardenlet  starts, it tries to register a `Seed` resource in the garden cluster based on the specification provided in `seedConfig` in its configuration.
 
@@ -203,7 +195,7 @@ In contrast to labels, annotations in the `seedConfig` are added to existing ann
 Thus, custom annotations that are added to the `Seed` object during runtime are not removed by gardenlet on restarts.
 Furthermore, if an annotation is removed from the `seedConfig`, gardenlet does **not** remove it from the `Seed` object.
 
-### Optional: Enable HA Mode
+#### Optional: Enable HA Mode
 
 You may consider running `gardenlet` with multiple replicas, especially if the seed cluster is configured to host [HA shoot control planes](../usage/high-availability/shoot_high_availability.md).
 Therefore, the following Helm chart values define the degree of high availability you want to achieve for the `gardenlet` deployment.
@@ -213,7 +205,7 @@ replicaCount: 2 # or more if a higher failure tolerance is required.
 failureToleranceType: zone # One of `zone` or `node` - defines how replicas are spread.
 ```
 
-### Optional: Enable Backup and Restore
+#### Optional: Enable Backup and Restore
 
 The seed cluster can be set up with backup and restore for the main `etcds` of shoot clusters.
 
@@ -250,7 +242,7 @@ seedConfig:
         namespace: garden
 ```
 
-### Optional: Enable Self-Upgrades
+#### Optional: Enable Self-Upgrades
 
 In order to take off the continuous task of deploying gardenlet's Helm chart in case you want to upgrade its version, it supports self-upgrades.
 The way this works is that it pulls information (its configuration and deployment values) from a `seedmanagement.gardener.cloud/v1alpha1.Gardenlet` resource in the garden cluster.
@@ -273,7 +265,7 @@ Please replace the `ref` placeholder with the URL to the OCI repository containi
 > [!NOTE]
 > If you don't configure this `selfUpgrade` section in the initial deployment, you can also do it later, or you directly create the corresponding `seedmanagement.gardener.cloud/v1alpha1.Gardenlet` resource in the garden cluster.
 
-## Deploy the gardenlet
+### Deploy the gardenlet
 
 The `gardenlet-values.yaml` looks something like this (with backup for shoot clusters enabled):
 
@@ -348,7 +340,7 @@ This Helm chart creates:
 - The secret (`garden`/`gardenlet-bootstrap-kubeconfig`) containing the bootstrap `kubeconfig`.
 - The gardenlet deployment in the `garden` namespace.
 
-## Check that the gardenlet Is Successfully Deployed
+### Check that the gardenlet Is Successfully Deployed
 
 1. Check that the gardenlets certificate bootstrap was successful.
 
