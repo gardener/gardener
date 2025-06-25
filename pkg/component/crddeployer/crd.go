@@ -49,7 +49,7 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 
 	for _, resource := range c.crdNameToManifest {
 		fns = append(fns, func(ctx context.Context) error {
-			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, resource, func() error { return nil })
+			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, resource.DeepCopy(), func() error { return nil })
 			return err
 		})
 	}
