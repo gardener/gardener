@@ -36,7 +36,6 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, osc *extensions
 
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
 		extensionUnits, inPlaceUpdates := a.handleReconcileOSC(osc)
-		// provider-local does not add any additional units or additional files
 		return nil, extensionUnits, nil, inPlaceUpdates, nil
 
 	default:

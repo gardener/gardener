@@ -16,7 +16,7 @@ gardener:
       - 172.18.255.1
     bastion:
       listenAddresses:
-      - 172.18.255.24
+      - 172.18.255.22
   repositoryRoot: "."
   garden:
     deployed: false

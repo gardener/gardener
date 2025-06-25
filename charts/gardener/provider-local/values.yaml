@@ -38,7 +38,7 @@ controllers:
     zone0IP: "172.18.255.10"
     zone1IP: "172.18.255.11"
     zone2IP: "172.18.255.12"
-    bastionIP: "172.18.255.24"
+    bastionIP: "172.18.255.22"
   backupbucket:
     localDir: "/dev/local-backupbuckets"
     containerMountPath: "/etc/gardener/local-backupbuckets"

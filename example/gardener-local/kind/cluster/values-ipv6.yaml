@@ -5,7 +5,7 @@ gardener:
       - ::1
     bastion:
       listenAddresses:
-      - ::24
+      - ::22
 
 networking:
   ipFamily: ipv6

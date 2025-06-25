@@ -24,7 +24,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, predicates ...predicate.P
 		r.HostIP = "172.18.255.1"
 	}
 	if r.BastionIP == "" {
-		r.BastionIP = "172.18.255.24"
+		r.BastionIP = "172.18.255.22"
 	}
 
 	return builder.

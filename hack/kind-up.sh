@@ -296,9 +296,9 @@ if [[ "$MULTI_ZONAL" == "true" ]]; then
 fi
 
 if [[ "$CLUSTER_NAME" != "*local2*" ]] ; then
-  LOOPBACK_IP_ADDRESSES+=(172.18.255.24)
+  LOOPBACK_IP_ADDRESSES+=(172.18.255.22)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::24)
+    LOOPBACK_IP_ADDRESSES+=(::22)
   fi
 fi
 
