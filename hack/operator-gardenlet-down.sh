@@ -30,12 +30,5 @@ parse_flags() {
 parse_flags "$@"
 
 skaffold --kubeconfig "$PATH_GARDEN_KUBECONFIG" delete -m gardenlet
-
-kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" delete \
-  gardenlet/"$GARDENLET_NAME" \
-  seed/"$GARDENLET_NAME" \
-  --ignore-not-found \
-  --wait \
-  --timeout 5m
-
+kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" delete seed/"$GARDENLET_NAME" --ignore-not-found --wait --timeout 5m
 kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" -n garden delete deployment gardenlet --ignore-not-found

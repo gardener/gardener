@@ -32,5 +32,5 @@ make operator-gardenlet-up SKAFFOLD_PROFILE=multi-node2
 
 make test-e2e-local-migration-ha-single-zone
 
-make operator-gardenlet-down SKAFFOLD_PROFILE=multi-node2 GARDENLET_NAME=local2
+make operator-gardenlet-down SKAFFOLD_PROFILE=multi-node2 GARDENLET_NAME=local2 KUBECONFIG="$GARDENER_LOCAL2_KUBECONFIG"
 make operator-seed-down SKAFFOLD_PROFILE=multi-node
