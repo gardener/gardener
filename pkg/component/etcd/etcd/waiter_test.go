@@ -370,9 +370,18 @@ var _ = Describe("#CheckEtcdObject", func() {
 		Expect(CheckEtcdObject(obj)).To(MatchError("gardener operation \"reconcile\" is not yet picked up by etcd-druid"))
 	})
 
-	It("should not return error if replicas is set to 0, even if AllMembersUpdated condition and readiness are not true ", func() {
+	It("should not return error if replicas is set to 0, even if AllMembersUpdated condition and readiness are not true", func() {
 		obj.SetGeneration(1)
 		obj.Spec.Replicas = 0
+		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionFalse}}
+		obj.Status.Ready = ptr.To(false)
+		Expect(CheckEtcdObject(obj)).To(Succeed())
+	})
+
+	It("should not return error if runtime component creation is disabled, even if AllMembersUpdated condition and readiness are not true", func() {
+		obj.SetGeneration(1)
+		obj.Annotations = map[string]string{"druid.gardener.cloud/disable-etcd-runtime-component-creation": ""}
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionFalse}}
 		obj.Status.Ready = ptr.To(false)
