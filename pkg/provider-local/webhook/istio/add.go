@@ -6,6 +6,7 @@ package istio
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -46,7 +47,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 
 	logger = logger.WithValues("provider", provider)
 
-	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(&mutator{client: mgr.GetClient()}, types...).Build()
+	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(&mutator{}, types...).Build()
 	if err != nil {
 		return nil, err
 	}
@@ -54,13 +55,15 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 	logger.Info("Creating webhook", "name", WebhookName)
 
 	return &extensionswebhook.Webhook{
-		Name:              WebhookName,
-		Provider:          provider,
-		Types:             types,
-		Target:            extensionswebhook.TargetSeed,
-		Path:              WebhookName,
-		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
-		NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+		Name:     WebhookName,
+		Provider: provider,
+		Types:    types,
+		Target:   extensionswebhook.TargetSeed,
+		Path:     WebhookName,
+		Webhook:  &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
+		NamespaceSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: corev1.LabelMetadataName, Operator: metav1.LabelSelectorOpIn, Values: []string{"virtual-garden-istio-ingress", "istio-ingress"}},
+		}},
 		ObjectSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 			{Key: v1beta1constants.LabelApp, Operator: metav1.LabelSelectorOpIn, Values: []string{"istio-ingressgateway"}},
 		}},

@@ -13,9 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type mutator struct {
-	client client.Client
-}
+type mutator struct{}
 
 func (m *mutator) Mutate(_ context.Context, newObj, _ client.Object) error {
 	if newObj.GetDeletionTimestamp() != nil {
@@ -30,5 +28,6 @@ func (m *mutator) Mutate(_ context.Context, newObj, _ client.Object) error {
 	if ptr.Deref(deployment.Spec.Replicas, 0) < 3 {
 		deployment.Spec.Replicas = ptr.To[int32](3)
 	}
+
 	return nil
 }
