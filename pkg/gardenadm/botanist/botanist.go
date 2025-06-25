@@ -55,6 +55,7 @@ type AutonomousBotanist struct {
 	operatingSystemConfigSecret       *corev1.Secret
 	gardenerResourceManagerServiceIPs []string
 	staticPodNameToHash               map[string]string
+	useEtcdManagedByDruid             bool
 }
 
 // Extension contains the resources needed for an extension registration.
