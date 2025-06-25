@@ -156,4 +156,4 @@ This happens for this single seed cluster only, so any managed seed running on t
 
 `gardenClusterCACert` is deprecated and should not be set. In this case, `gardenlet` will update the garden cluster CA certificate automatically from the garden cluster.
 
-If seed managed by a `Gardenlet` resource loses access to the garden cluster for some reason, you can re-establish the connection by using the [Forceful Re-Deployment](#forceful-re-deployment) feature.
+If a seed managed by a `Gardenlet` resource loses permanent access to the garden cluster for some reason, you can re-establish the connection by using the [Forceful Re-Deployment](#forceful-re-deployment) feature.
