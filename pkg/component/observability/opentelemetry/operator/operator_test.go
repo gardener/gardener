@@ -123,11 +123,6 @@ var _ = Describe("OpenTelemetry Operator", func() {
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
-					APIGroups: []string{"config.openshift.io"},
-					Resources: []string{"infrastructures", "infrastructures/status"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
 					APIGroups: []string{"coordination.k8s.io"},
 					Resources: []string{"leases"},
 					Verbs:     []string{"create", "get", "list", "update"},
@@ -167,11 +162,6 @@ var _ = Describe("OpenTelemetry Operator", func() {
 					Resources: []string{"poddisruptionbudgets"},
 					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
-				{
-					APIGroups: []string{"route.openshift.io"},
-					Resources: []string{"routes", "routes/custom-host"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
@@ -201,11 +191,6 @@ var _ = Describe("OpenTelemetry Operator", func() {
 					APIGroups: []string{""},
 					Resources: []string{"configmaps"},
 					Verbs:     []string{"list", "patch", "create", "get", "watch"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"configmaps/status"},
-					Verbs:     []string{"get", "update", "patch"},
 				},
 				{
 					APIGroups: []string{""},

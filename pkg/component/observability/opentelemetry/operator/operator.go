@@ -178,11 +178,6 @@ func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
-				APIGroups: []string{"config.openshift.io"},
-				Resources: []string{"infrastructures", "infrastructures/status"},
-				Verbs:     []string{"get", "list", "watch"},
-			},
-			{
 				APIGroups: []string{"coordination.k8s.io"},
 				Resources: []string{"leases"},
 				Verbs:     []string{"create", "get", "list", "update"},
@@ -222,11 +217,6 @@ func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 				Resources: []string{"poddisruptionbudgets"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
-			{
-				APIGroups: []string{"route.openshift.io"},
-				Resources: []string{"routes", "routes/custom-host"},
-				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-			},
 		},
 	}
 }
@@ -262,11 +252,6 @@ func (o *openTelemetryOperator) role() *rbacv1.Role {
 				APIGroups: []string{""},
 				Resources: []string{"configmaps"},
 				Verbs:     []string{"list", "patch", "create", "get", "watch"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"configmaps/status"},
-				Verbs:     []string{"get", "update", "patch"},
 			},
 			{
 				APIGroups: []string{""},
