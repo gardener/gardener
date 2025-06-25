@@ -638,7 +638,7 @@ var _ = Describe("Virtual", func() {
 		}
 		roleReadGardenerInfoConfigMap = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:system:read-gardener-system-public-configmaps",
+				Name:      "gardener.cloud:system:read-gardener-system-public",
 				Namespace: "gardener-system-public",
 			},
 			Rules: []rbacv1.PolicyRule{{
@@ -650,13 +650,13 @@ var _ = Describe("Virtual", func() {
 		}
 		roleBindingReadGardenerInfoConfigMap = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:system:read-gardener-system-public-configmaps",
+				Name:      "gardener.cloud:system:read-gardener-system-public",
 				Namespace: "gardener-system-public",
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "Role",
-				Name:     "gardener.cloud:system:read-gardener-system-public-configmaps",
+				Name:     "gardener.cloud:system:read-gardener-system-public",
 			},
 			Subjects: []rbacv1.Subject{{
 				APIGroup: "rbac.authorization.k8s.io",
