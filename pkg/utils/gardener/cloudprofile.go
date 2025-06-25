@@ -471,11 +471,10 @@ func GetVersionCapabilitySets(version core.MachineImageVersion, capabilitiesDefi
 		}
 	}
 
-	// It is allowed not to define capabilitySets in the machine image version if there is only one architecture
+	// capabilitySets in the machine image version may be omitted if only a single architecture is allowed
 	// if so the capabilityDefinitions are used as default
 	if len(supportedArchitectures) == 1 {
-		capabilities := make(core.Capabilities)
-		versionCapabilitySets = []core.CapabilitySet{{Capabilities: ApplyDefaultCapabilities(capabilities, capabilitiesDefinitions)}}
+		versionCapabilitySets = []core.CapabilitySet{{Capabilities: ApplyDefaultCapabilities(nil, capabilitiesDefinitions)}}
 	}
 
 	return versionCapabilitySets
@@ -488,14 +487,7 @@ func AreCapabilitiesEqual(a, b core.Capabilities, capabilitiesDefinitions []core
 	defaultedB := ApplyDefaultCapabilities(maps.Clone(b), capabilitiesDefinitions)
 
 	// Check if all keys and values in `a` exist in `b` and vice versa
-	if !areCapabilitiesSubsetOf(defaultedA, defaultedB) {
-		return false
-	}
-	if !areCapabilitiesSubsetOf(defaultedB, defaultedA) {
-		return false
-	}
-
-	return true
+	return areCapabilitiesSubsetOf(defaultedA, defaultedB) && areCapabilitiesSubsetOf(defaultedB, defaultedA)
 }
 
 // areCapabilitiesSubsetOf verifies if all keys and values in `source` exist in `target`.
