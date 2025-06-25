@@ -251,20 +251,35 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.Shoot.Components.Extensions.ControlPlane.Wait,
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
-		_ = g.Add(flow.Task{
+		deployEtcdDruid = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",
 			Fn:           b.DeployEtcdDruid,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
+		deployEtcds = g.Add(flow.Task{
+			Name:         "Deploying main and events ETCDs",
+			Fn:           b.DeployEtcd,
+			Dependencies: flow.NewTaskIDs(deployEtcdDruid, reconcileBackupEntry),
+		})
+		waitUntilEtcdsReady = g.Add(flow.Task{
+			Name:         "Waiting until main and event ETCDs have been reconciled",
+			Fn:           b.WaitUntilEtcdsReconciled,
+			Dependencies: flow.NewTaskIDs(deployEtcds),
+		})
 		deployControlPlaneDeployments = g.Add(flow.Task{
 			Name:         "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
 			Fn:           b.DeployControlPlaneDeployments,
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, reconcileBackupEntry),
+			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilEtcdsReady),
 		})
 		waitUntilControlPlaneDeploymentsReady = g.Add(flow.Task{
 			Name:         "Waiting until control plane components (static pods) are ready",
 			Fn:           b.WaitUntilControlPlaneDeploymentsReady,
 			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Finalizing ETCD bootstrap transition (cleanup bootstrap ETCD left-overs)",
+			Fn:           b.FinalizeEtcdBootstrapTransition,
+			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
 		})
 		finalizeGardenerNodeAgentBootstrapping = g.Add(flow.Task{
 			Name:         "Finalizing gardener-node-agent bootstrapping (remove cluster-admin access, activate node-agent authorizer)",
