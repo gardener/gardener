@@ -60,7 +60,10 @@ var _ = Describe("Translator", func() {
 			})
 
 			It("should successfully translate a deployment w/o volumes", func() {
-				Expect(Translate(ctx, fakeClient, deployment, nil)).To(HaveExactElements(extensionsv1alpha1.File{
+				files, hash, err := Translate(ctx, fakeClient, deployment, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).NotTo(BeEmpty())
+				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
@@ -68,6 +71,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo
@@ -99,7 +103,10 @@ status: {}
 			})
 
 			It("should successfully translate and mutate a deployment", func() {
-				Expect(Translate(ctx, fakeClient, deployment, foobarThePod)).To(HaveExactElements(extensionsv1alpha1.File{
+				files, hash, err := Translate(ctx, fakeClient, deployment, foobarThePod)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).NotTo(BeEmpty())
+				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
@@ -108,6 +115,7 @@ metadata:
   annotations:
     bar: baz
     foo: bar
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     foo: bar
@@ -216,7 +224,10 @@ kind: Config
 					}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, deployment, nil)).To(ConsistOf(
+				files, hash, err := Translate(ctx, fakeClient, deployment, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).NotTo(BeEmpty())
+				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
 						Permissions: ptr.To[uint32](0640),
@@ -225,6 +236,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo
@@ -340,7 +352,10 @@ kind: Config
 			})
 
 			It("should successfully translate a statefulSet w/o volumes", func() {
-				Expect(Translate(ctx, fakeClient, statefulSet, nil)).To(HaveExactElements(extensionsv1alpha1.File{
+				files, hash, err := Translate(ctx, fakeClient, statefulSet, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).NotTo(BeEmpty())
+				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
@@ -348,6 +363,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo
@@ -386,7 +402,10 @@ status: {}
 			})
 
 			It("should successfully translate and mutate a statefulSet", func() {
-				Expect(Translate(ctx, fakeClient, statefulSet, foobarThePod)).To(HaveExactElements(extensionsv1alpha1.File{
+				files, hash, err := Translate(ctx, fakeClient, statefulSet, foobarThePod)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).NotTo(BeEmpty())
+				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
@@ -395,6 +414,7 @@ metadata:
   annotations:
     bar: baz
     foo: bar
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     foo: bar
@@ -510,7 +530,10 @@ kind: Config
 					}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, statefulSet, nil)).To(ConsistOf(
+				files, hash, err := Translate(ctx, fakeClient, statefulSet, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).NotTo(BeEmpty())
+				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
 						Permissions: ptr.To[uint32](0640),
@@ -519,6 +542,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo
@@ -629,7 +653,10 @@ kind: Config
 			})
 
 			It("should successfully translate a pod w/o volumes", func() {
-				Expect(Translate(ctx, fakeClient, pod, nil)).To(HaveExactElements(extensionsv1alpha1.File{
+				files, hash, err := Translate(ctx, fakeClient, pod, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).NotTo(BeEmpty())
+				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
@@ -637,6 +664,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo
@@ -666,7 +694,10 @@ status: {}
 			})
 
 			It("should successfully translate and mutate a pod", func() {
-				Expect(Translate(ctx, fakeClient, pod, foobarThePod)).To(HaveExactElements(extensionsv1alpha1.File{
+				files, hash, err := Translate(ctx, fakeClient, pod, foobarThePod)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).NotTo(BeEmpty())
+				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
 					Permissions: ptr.To[uint32](0640),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
@@ -675,6 +706,7 @@ metadata:
   annotations:
     bar: baz
     foo: bar
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     foo: bar
@@ -781,7 +813,10 @@ kind: Config
 					}}},
 				}
 
-				Expect(Translate(ctx, fakeClient, pod, nil)).To(ConsistOf(
+				files, hash, err := Translate(ctx, fakeClient, pod, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).NotTo(BeEmpty())
+				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
 						Permissions: ptr.To[uint32](0640),
@@ -790,6 +825,7 @@ kind: Pod
 metadata:
   annotations:
     bar: baz
+    gardener.cloud/config.mirror: ` + hash + `
   creationTimestamp: null
   labels:
     baz: foo

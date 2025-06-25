@@ -24,7 +24,7 @@ import (
 
 // Translate translates the given object into a list of files containing static pod manifests as well as ConfigMaps and
 // Secrets that can be injected into an OperatingSystemConfig.
-func Translate(ctx context.Context, c client.Client, o client.Object, mutate func(*corev1.Pod)) ([]extensionsv1alpha1.File, error) {
+func Translate(ctx context.Context, c client.Client, o client.Object, mutate func(*corev1.Pod)) ([]extensionsv1alpha1.File, string, error) {
 	switch obj := o.(type) {
 	case *appsv1.Deployment:
 		return translatePodTemplate(ctx, c, obj.ObjectMeta, obj.Spec.Template, mutate)
@@ -43,37 +43,49 @@ func Translate(ctx context.Context, c client.Client, o client.Object, mutate fun
 	case *corev1.Pod:
 		return translatePodTemplate(ctx, c, obj.ObjectMeta, corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: obj.Labels, Annotations: obj.Annotations}, Spec: obj.Spec}, mutate)
 	default:
-		return nil, fmt.Errorf("unsupported object type %T", o)
+		return nil, "", fmt.Errorf("unsupported object type %T", o)
 	}
 }
 
-func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav1.ObjectMeta, podTemplate corev1.PodTemplateSpec, mutate func(*corev1.Pod)) ([]extensionsv1alpha1.File, error) {
+const (
+	// LabelKeyIsStaticPod is the label key used to mark static pods.
+	LabelKeyIsStaticPod = "static-pod"
+	// LabelValueIsStaticPod is the label value used to mark static pods.
+	LabelValueIsStaticPod = "true"
+	// AnnotationKeyHash is the label key used to store the hash of the static pod manifest.
+	AnnotationKeyHash = "gardener.cloud/config.mirror"
+)
+
+func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav1.ObjectMeta, podTemplate corev1.PodTemplateSpec, mutate func(*corev1.Pod)) ([]extensionsv1alpha1.File, string, error) {
 	pod := &corev1.Pod{ObjectMeta: podTemplate.ObjectMeta, Spec: podTemplate.Spec}
 	pod.Name = objectMeta.Name
 	pod.Namespace = metav1.NamespaceSystem
-	metav1.SetMetaDataLabel(&podTemplate.ObjectMeta, "static-pod", "true")
+	metav1.SetMetaDataLabel(&pod.ObjectMeta, LabelKeyIsStaticPod, LabelValueIsStaticPod)
 
 	translateSpec(&pod.Spec)
 
 	filesFromVolumes, err := translateVolumes(ctx, c, pod, objectMeta.Namespace)
 	if err != nil {
-		return nil, fmt.Errorf("failed translating volumes for static pod %s: %w", client.ObjectKeyFromObject(pod), err)
+		return nil, "", fmt.Errorf("failed translating volumes for static pod %s: %w", client.ObjectKeyFromObject(pod), err)
 	}
 
 	if mutate != nil {
 		mutate(pod)
 	}
 
+	hash := utils.ComputeChecksum(pod)
+	metav1.SetMetaDataAnnotation(&pod.ObjectMeta, AnnotationKeyHash, hash)
+
 	staticPodYAML, err := kubernetesutils.Serialize(pod, c.Scheme())
 	if err != nil {
-		return nil, fmt.Errorf("failed serializing static pod manifest for %s to YAML: %w", client.ObjectKeyFromObject(pod), err)
+		return nil, "", fmt.Errorf("failed serializing static pod manifest for %s to YAML: %w", client.ObjectKeyFromObject(pod), err)
 	}
 
 	return append([]extensionsv1alpha1.File{{
 		Path:        filepath.Join(kubelet.FilePathKubernetesManifests, pod.Name+".yaml"),
 		Permissions: ptr.To[uint32](0640),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(staticPodYAML))}},
-	}}, filesFromVolumes...), nil
+	}}, filesFromVolumes...), hash, nil
 }
 
 func translateSpec(spec *corev1.PodSpec) {

@@ -7,11 +7,14 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -128,7 +131,40 @@ func (b *AutonomousBotanist) DeployControlPlaneDeployments(ctx context.Context) 
 		return fmt.Errorf("failed deploying ManagedResource containing Secret with OperatingSystemConfig for gardener-node-agent: %w", err)
 	}
 
-	return managedresources.WaitUntilHealthyAndNotProgressing(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, botanist.GardenerNodeAgentManagedResourceName)
+	return nil
+}
+
+// WaitUntilControlPlaneDeploymentsReady waits until the control plane deployments are ready. It checks that the
+// operating system config has been updated for all worker pools. In addition, it verifies that the static pod hashes
+// match the desired hashes.
+func (b *AutonomousBotanist) WaitUntilControlPlaneDeploymentsReady(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, botanist.GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
+	defer cancel()
+
+	if err := retry.Until(timeoutCtx, botanist.IntervalWaitOperatingSystemConfigUpdated, func(ctx context.Context) (done bool, err error) {
+		staticPodList := &corev1.PodList{}
+		if err := b.SeedClientSet.Client().List(ctx, staticPodList, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels{staticpod.LabelKeyIsStaticPod: staticpod.LabelValueIsStaticPod}); err != nil {
+			// kube-apiserver might restart, hence, we should tolerate that it is temporarily not available. That's why
+			// we use retry.MinorError here instead of retry.SevereError.
+			return retry.MinorError(fmt.Errorf("failed listing static pods in namespace %q: %w", b.Shoot.ControlPlaneNamespace, err))
+		}
+
+		staticPodNameToHash := make(map[string]string)
+		for _, pod := range staticPodList.Items {
+			staticPodNameToHash[strings.TrimSuffix(pod.Name, "-"+pod.Spec.NodeName)] = pod.Annotations[staticpod.AnnotationKeyHash]
+		}
+
+		if !maps.Equal(staticPodNameToHash, b.staticPodNameToHash) {
+			b.Logger.Info("Waiting for all static pods to be updated to the desired state", "differences", cmp.Diff(staticPodNameToHash, b.staticPodNameToHash))
+			return retry.MinorError(fmt.Errorf("not all static pods have been updated yet"))
+		}
+
+		return retry.Ok()
+	}); err != nil {
+		return fmt.Errorf("failed waiting for all static pods to be updated to the desired state: %w", err)
+	}
+
+	return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)
 }
 
 func (b *AutonomousBotanist) deployControlPlaneDeployments(ctx context.Context) error {
@@ -187,23 +223,51 @@ func (b *AutonomousBotanist) populateStaticAdminTokenToAccessTokenSecret(ctx con
 	return b.SeedClientSet.Client().Update(ctx, secret)
 }
 
-func (b *AutonomousBotanist) filesForStaticControlPlanePods(ctx context.Context) ([]extensionsv1alpha1.File, error) {
+type staticPod struct {
+	name  string
+	files []extensionsv1alpha1.File
+	hash  string
+}
+
+type staticPods []staticPod
+
+func (s staticPods) allFiles() []extensionsv1alpha1.File {
 	var files []extensionsv1alpha1.File
+	for _, pod := range s {
+		files = append(files, pod.files...)
+	}
+	return files
+}
+
+func (s staticPods) nameToHashMap() map[string]string {
+	m := make(map[string]string, len(s))
+	for _, pod := range s {
+		m[pod.name] = pod.hash
+	}
+	return m
+}
+
+func (b *AutonomousBotanist) staticControlPlanePods(ctx context.Context) (staticPods, error) {
+	var pods staticPods
 
 	for _, component := range b.staticControlPlaneComponents() {
 		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: component.name, Namespace: b.Shoot.ControlPlaneNamespace}, component.targetObject); err != nil {
 			return nil, fmt.Errorf("failed reading object for %q: %w", component.name, err)
 		}
 
-		f, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
+		f, hash, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
 		if err != nil {
 			return nil, fmt.Errorf("failed translating object of type %T for %q: %w", component.targetObject, component.name, err)
 		}
 
-		files = append(files, f...)
+		pods = append(pods, staticPod{
+			name:  component.name,
+			files: f,
+			hash:  hash,
+		})
 	}
 
-	return files, nil
+	return pods, nil
 }
 
 // NewClientSetFromFile creates a client set from the specified kubeconfig file.
