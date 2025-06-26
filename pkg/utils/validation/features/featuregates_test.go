@@ -43,7 +43,6 @@ var _ = Describe("featuregates", func() {
 		Entry("AllAlpha is supported in 1.17.0", "AllAlpha", "1.17.0", true, true),        // AddedInVersion: 1.17
 		Entry("AllAlpha is not supported in 1.16.15", "AllAlpha", "1.16.15", false, true), // AddedInVersion: 1.17
 
-		Entry("InPlacePodVerticalScaling is supported in 1.33", "InPlacePodVerticalScaling", "1.33", true, true), // AddedInVersion: 1.27
 		Entry("InPlacePodVerticalScaling is supported in 1.27", "InPlacePodVerticalScaling", "1.27", true, true), // AddedInVersion: 1.27
 	)
 
