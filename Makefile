@@ -474,9 +474,9 @@ ci-e2e-kind: $(KIND) $(YQ)
 ci-e2e-kind-migration: $(KIND) $(YQ)
 	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) GARDENER_LOCAL2_KUBECONFIG=$(GARDENER_LOCAL2_KUBECONFIG) ./hack/ci-e2e-kind-migration.sh
 ci-e2e-kind-migration-ha-single-zone: $(KIND) $(YQ)
-	GARDENER_LOCAL_KUBECONFIG=$(VIRTUAL_GARDEN_KUBECONFIG) GARDENER_LOCAL2_KUBECONFIG=$(GARDENER_LOCAL_MULTI_NODE2_KUBECONFIG) SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-migration-ha-single-zone.sh
+	GARDENER_LOCAL_KUBECONFIG=$(VIRTUAL_GARDEN_KUBECONFIG) GARDENER_LOCAL2_KUBECONFIG=$(GARDENER_LOCAL_MULTI_NODE2_KUBECONFIG) SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-migration-ha-multi-node.sh
 ci-e2e-kind-ha-single-zone: $(KIND) $(YQ)
-	./hack/ci-e2e-kind-ha-single-zone.sh
+	./hack/ci-e2e-kind-ha-multi-node.sh
 ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-ha-multi-zone.sh
 ci-e2e-kind-operator: $(KIND) $(YQ)
