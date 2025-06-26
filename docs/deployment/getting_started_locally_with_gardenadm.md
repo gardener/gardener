@@ -49,7 +49,7 @@ export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
 Use the following command to prepare the `gardenadm` high-touch scenario:
 
 ```shell
-make gardenadm-high-touch-up
+make gardenadm-up
 ```
 
 This will first build the needed images, deploy 2 machine pods using the [`gardener-extension-provider-local-node` image](../../pkg/provider-local/node), install the `gardenadm` binary on both of them, and copy the needed manifests to the `/gardenadm/resources` directory.
@@ -158,14 +158,15 @@ Command is work in progress
 Based on the described setup, you can execute the e2e test suite for `gardenadm`:
 
 ```shell
-make gardenadm-high-touch-up gardenadm-medium-touch-up
+make gardenadm-up SCENARIO=high-touch
+make gardenadm-up SCENARIO=medium-touch
 make test-e2e-local-gardenadm
 ```
 
 You can also selectively run the e2e tests for one of the scenarios:
 
 ```shell
-make gardenadm-high-touch-up
+make gardenadm-up SCENARIO=high-touch
 ./hack/test-e2e-local.sh gardenadm --label-filter="high-touch" ./test/e2e/gardenadm/...
 ```
 
