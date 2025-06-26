@@ -9,7 +9,7 @@
 // +k8s:defaulter-gen=TypeMeta
 // +k8s:protobuf-gen=package
 
-//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/authentication-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../docs/api-reference/authentication.md
+//go:generate gen-crd-api-reference-docs -api-dir github.com/gardener/gardener/pkg/apis/authentication/v1alpha1 -config ../../../../hack/api-reference/authentication-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../docs/api-reference/authentication.md
 
 // Package v1alpha1 is a version of the API.
 // "authentication.gardener.cloud/v1alpha1" API is already used for CRD registration and must not be served by the API server.
