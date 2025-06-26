@@ -6,6 +6,7 @@ package shoot
 
 import (
 	. "github.com/onsi/ginkgo/v2"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -41,8 +42,16 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability"), func() {
 			ItShouldWaitForShootToBeDeleted(s)
 		}
 
-		Context("Shoot with workers", Ordered, func() {
+		Context("Shoot with workers", Ordered, Serial, func() {
 			test(NewTestContext().ForShoot(DefaultShoot(shootName)))
+		})
+
+		Context("Shoot with workers and overlapping CIDR ranges", Ordered, Serial, func() {
+			shoot := DefaultShoot(shootName)
+			shoot.Spec.Networking.Pods = ptr.To("10.1.0.0/16")
+			shoot.Spec.Networking.Services = ptr.To("10.2.0.0/16")
+
+			test(NewTestContext().ForShoot(shoot))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
