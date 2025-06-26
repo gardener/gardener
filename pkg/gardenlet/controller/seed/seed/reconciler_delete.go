@@ -311,7 +311,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
 		})
 		destroyVPACRDs = g.Add(flow.Task{
-			Name:         "Destroying VPA=related custom resource definitions",
+			Name:         "Destroying VPA-related custom resource definitions",
 			Fn:           component.OpDestroyAndWait(c.vpaCRD).Destroy,
 			SkipIf:       seedIsGarden || !vpaEnabled(seed.GetInfo().Spec.Settings),
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
