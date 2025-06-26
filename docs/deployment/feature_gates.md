@@ -28,7 +28,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  |         |
 | NodeAgentAuthorizer                      | `false` | `Alpha` | `1.109` | `1.115` |
 | NodeAgentAuthorizer                      | `true`  | `Beta`  | `1.116` |         |
-| CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` |         |
+| CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` | `1.120` |
 | CredentialsRotationWithoutWorkersRollout | `true`  | `Beta`  | `1.121` |         |
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
 | IstioTLSTermination                      | `false` | `Alpha` | `1.114` |         |
@@ -45,7 +45,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | KonnectivityTunnel                           |         | `Removed`    | `1.27`  |         |
 | MountHostCADirectories                       | `false` | `Alpha`      | `1.11`  | `1.25`  |
 | MountHostCADirectories                       | `true`  | `Beta`       | `1.26`  | `1.27`  |
-| MountHostCADirectories                       | `true`  | `GA`         | `1.27`  |         |
+| MountHostCADirectories                       | `true`  | `GA`         | `1.27`  | `1.29`  |
 | MountHostCADirectories                       |         | `Removed`    | `1.30`  |         |
 | DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha`      | `1.28`  | `1.31`  |
 | DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`       | `1.32`  | `1.35`  |
@@ -122,11 +122,11 @@ The following tables are a summary of the feature gates that you can set on diff
 | CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `GA`         | `1.69`  | `1.72`  |
 | CopyEtcdBackupsDuringControlPlaneMigration   |         | `Removed`    | `1.73`  |         |
 | ManagedIstio                                 | `false` | `Alpha`      | `1.5`   | `1.18`  |
-| ManagedIstio                                 | `true`  | `Beta`       | `1.19`  |         |
+| ManagedIstio                                 | `true`  | `Beta`       | `1.19`  | `1.47`  |
 | ManagedIstio                                 | `true`  | `Deprecated` | `1.48`  | `1.69`  |
 | ManagedIstio                                 |         | `Removed`    | `1.70`  |         |
 | APIServerSNI                                 | `false` | `Alpha`      | `1.7`   | `1.18`  |
-| APIServerSNI                                 | `true`  | `Beta`       | `1.19`  |         |
+| APIServerSNI                                 | `true`  | `Beta`       | `1.19`  | `1.47`  |
 | APIServerSNI                                 | `true`  | `Deprecated` | `1.48`  | `1.72`  |
 | APIServerSNI                                 |         | `Removed`    | `1.73`  |         |
 | HAControlPlanes                              | `false` | `Alpha`      | `1.49`  | `1.70`  |
@@ -149,7 +149,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | WorkerlessShoots                             | `true`  | `Beta`       | `1.79`  | `1.85`  |
 | WorkerlessShoots                             | `true`  | `GA`         | `1.86`  | `1.87`  |
 | WorkerlessShoots                             |         | `Removed`    | `1.88`  |         |
-| MachineControllerManagerDeployment           | `false` | `Alpha`      | `1.73`  |         |
+| MachineControllerManagerDeployment           | `false` | `Alpha`      | `1.73`  | `1.80`  |
 | MachineControllerManagerDeployment           | `true`  | `Beta`       | `1.81`  | `1.81`  |
 | MachineControllerManagerDeployment           | `true`  | `GA`         | `1.82`  | `1.91`  |
 | MachineControllerManagerDeployment           |         | `Removed`    | `1.92`  |         |
@@ -182,7 +182,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | HVPAForShootedSeed                           | `false` | `Alpha`      | `0.32`  | `1.105` |
 | HVPAForShootedSeed                           | `false` | `Deprecated` | `1.106` | `1.108` |
 | HVPAForShootedSeed                           |         | `Removed`    | `1.109` |         |
-| IPv6SingleStack                              | `false` | `Alpha`      | `1.63`  |         |
+| IPv6SingleStack                              | `false` | `Alpha`      | `1.63`  | `1.106` |
 | IPv6SingleStack                              |         | `Removed`    | `1.107` |         |
 | ShootManagedIssuer                           | `false` | `Alpha`      | `1.93`  | `1.110` |
 | ShootManagedIssuer                           |         | `Removed`    | `1.111` |         |
