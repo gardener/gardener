@@ -53,8 +53,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Describe("Shoot Logging Tests", Label("observability"), func() {
 			// Since Vali does not support IPv6, Vali does not get deployed during the IPv6 tests.
 			// Thus, we need to skip the logging tests that case.
-			// TODO(Rado): Remove this once Vali has been replaced.
-			// TODO(Rado): Enable deployment of the logging stack when Vali is replaced.
+			// TODO(rrhubenov): Remove this once Vali has been replaced.
+			// TODO(rrhubenov): Enable deployment of the logging stack when Vali is replaced.
 			// They have been disabled via example/gardener-local/gardenlet/values-ipv6.yaml
 			if os.Getenv("IPFAMILY") == "ipv6" {
 				return
