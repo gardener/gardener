@@ -117,7 +117,7 @@ func VerifyBastion(s *ShootContext) {
 			Eventually(ctx, s.GardenKomega.ObjectList(bastionList)).
 				WithPolling(5 * time.Second).
 				Should(HaveField("Items", BeEmpty()))
-		}, SpecTimeout(15*time.Minute))
+		}, SpecTimeout(5*time.Minute))
 
 		var bastionSSHKey *rsa.PrivateKey
 		It("should create the Bastion", func(ctx SpecContext) {
