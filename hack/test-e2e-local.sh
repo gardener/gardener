@@ -96,6 +96,7 @@ case $TYPE in
       e2e-fd-hib.local
       e2e-upd-node.local
       e2e-upd-node-wl.local
+      e2e-upd-node-ovr.local
       e2e-upgrade.local
       e2e-upgrade-wl.local
       e2e-upg-ha.local
