@@ -86,7 +86,7 @@ type components struct {
 	fluentCRD        component.DeployWaiter
 	prometheusCRD    component.DeployWaiter
 	persesCRD        component.DeployWaiter
-	openTelemetryCRD component.Deployer
+	openTelemetryCRD component.DeployWaiter
 
 	backupBucket            component.DeployWaiter
 	clusterIdentity         component.DeployWaiter

@@ -388,7 +388,7 @@ func (r *Reconciler) delete(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for opentelemetry-operator",
-			Fn:           c.openTelemetryCRD.Destroy,
+			Fn:           component.OpWait(c.openTelemetryCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
