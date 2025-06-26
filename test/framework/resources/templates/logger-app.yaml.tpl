@@ -5,6 +5,11 @@ metadata:
   name: {{ .LoggerName }}
   namespace: {{ .HelmDeployNamespace }}
   labels:
+{{ if .AdditionalLabels }}
+  {{- range $key, $value := .AdditionalLabels }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+{{ end }}
     app: {{ .AppLabel }}
 spec:
   replicas: 1
@@ -14,6 +19,11 @@ spec:
   template:
     metadata:
       labels:
+    {{ if .AdditionalLabels }}
+      {{- range $key, $value := .AdditionalLabels }}
+        {{ $key }}: {{ $value }}
+      {{- end }}
+    {{ end }}
         app: {{ .AppLabel }}
     spec:
       containers:

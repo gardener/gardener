@@ -5,14 +5,21 @@
 package shoot
 
 import (
+	"bytes"
 	"flag"
+	"fmt"
+	"html/template"
+	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/Masterminds/sprig/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,6 +27,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/utils/access"
@@ -36,6 +44,7 @@ import (
 // in an Eventually statement to implement retries for making e2e less susceptible for intermittent failures.
 
 var (
+	templatesDir      = filepath.Join("..", "..", "framework", "resources", "templates")
 	projectNamespace  string
 	existingShootName string
 )
@@ -245,6 +254,16 @@ func ItShouldInitializeSeedClient(s *ShootContext) {
 	}, SpecTimeout(time.Minute))
 }
 
+// ItShouldComputeControlPlaneNamespace computes the control plane namespace for the shoot and stores it in ShootContext.ControlPlaneNamespace.
+// It's hard to determine what the namespace of the control-plane will be before shoot creation, thus to compute it we need to first create the Shoot.
+func ItShouldComputeControlPlaneNamespace(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Compute Control Plane Namespace", func(_ SpecContext) {
+		s.WithControlPlaneNamespace(s.Shoot.Status.TechnicalID)
+	}, SpecTimeout(time.Minute))
+}
+
 // ItShouldAnnotateShoot sets the given annotation within the shoot metadata to the specified value and patches the shoot object
 func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
 	GinkgoHelper()
@@ -301,5 +320,63 @@ func ItShouldCompareMachinePodNamesAfter(s *ShootContext, machinePodNamesBeforeT
 		}
 
 		Expect(machinePodNamesBeforeTest.UnsortedList()).To(ConsistOf(machinePodNamesAfterTest.UnsortedList()))
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldRenderAndDeployTemplateToShoot finds a template via the given template name. Afterwards, it renders is via the
+// given values and deploys the resources to the shoot.
+func ItShouldRenderAndDeployTemplateToShoot(s *ShootContext, templateName string, values any) {
+	GinkgoHelper()
+
+	It("Render and deploy template to shoot", func(ctx SpecContext) {
+		Eventually(ctx, func() error {
+			templatesDirAbs, err := filepath.Abs(templatesDir)
+			if err != nil {
+				return err
+			}
+
+			templateFilepath := filepath.Join(templatesDirAbs, templateName)
+			if _, err := os.Stat(templateFilepath); err != nil {
+				return err
+			}
+
+			tpl, err := template.
+				New(templateName).
+				Funcs(sprig.HtmlFuncMap()).
+				ParseFiles(templateFilepath)
+			if err != nil {
+				return err
+			}
+
+			var writer bytes.Buffer
+			if err = tpl.Execute(&writer, values); err != nil {
+				return err
+			}
+
+			manifestReader := kubernetes.NewManifestReader(writer.Bytes())
+			return s.ShootClientSet.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldWaitForPodsInShootToBeReady waits for all pods matching the namespace and labels to be in a Ready state.
+func ItShouldWaitForPodsInShootToBeReady(s *ShootContext, namespace string, podLabels labels.Selector) {
+	GinkgoHelper()
+
+	It("Wait for pods in Shoot to be ready", func(ctx SpecContext) {
+		Eventually(ctx, func() error {
+			podList := &corev1.PodList{}
+			if err := s.ShootClient.List(ctx, podList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: podLabels}); err != nil {
+				return err
+			}
+
+			for _, pod := range podList.Items {
+				if health.IsPodReady(&pod) {
+					return fmt.Errorf("pod %s/%s is not running", pod.Namespace, pod.Name)
+				}
+			}
+
+			return nil
+		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }

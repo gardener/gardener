@@ -5,6 +5,7 @@
 package shoot
 
 import (
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -21,7 +22,7 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	Describe("Create and Delete Unprivileged Shoot", Ordered, Label("unprivileged", "basic"), func() {
+	Describe("Create and Delete Unprivileged Shoot. Test expected shoot logs", Ordered, Label("unprivileged", "basic", "observability"), func() {
 		var s *ShootContext
 
 		BeforeTestSetup(func() {
@@ -48,6 +49,18 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		ItShouldCreateShoot(s)
 		ItShouldWaitForShootToBeReconciledAndHealthy(s)
 		ItShouldInitializeShootClient(s)
+
+		Describe("Shoot Logging Tests", Label("observability"), func() {
+			// Since Vali does not support IPv6, Vali does not get deployed during the IPv6 tests.
+			// Thus, we need to skip the logging tests that case.
+			// TODO(rrhubenov): Remove this once Vali has been replaced.
+			// TODO(rrhubenov): Enable deployment of the logging stack when Vali is replaced.
+			// They have been disabled via example/gardener-local/gardenlet/values-ipv6.yaml
+			if os.Getenv("IPFAMILY") == "ipv6" {
+				return
+			}
+			ShootLogging(s)
+		})
 
 		It("should allow creating pod in the kube-system namespace", func(ctx SpecContext) {
 			pod := newPodForNamespace(metav1.NamespaceSystem)
