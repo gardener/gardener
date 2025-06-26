@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -1817,6 +1818,7 @@ rules:
 						Version:                     version,
 					})
 
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
 					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
 						Enabled: false,
 					}
@@ -1880,6 +1882,7 @@ rules:
 						Version:                     version,
 					})
 
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
 					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
 						Enabled: false,
 					}
@@ -1944,6 +1947,7 @@ rules:
 						Version:                        version,
 					})
 
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
 					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
 						Enabled: true,
 					}
@@ -2011,9 +2015,13 @@ rules:
 						Version:                        version,
 					})
 
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					expectedAuthenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
+					Expect(err).ToNot(HaveOccurred())
+
 					configMapAuthentication = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
-						Data:       map[string]string{"config.yaml": string(authenticationConfig)},
+						Data:       map[string]string{"config.yaml": string(expectedAuthenticationConfig)},
 					}
 					Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
 
@@ -2072,9 +2080,98 @@ rules:
 						Version:                        version,
 					})
 
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					expectedAuthenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
+					Expect(err).ToNot(HaveOccurred())
+
 					configMapAuthentication = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
-						Data:       map[string]string{"config.yaml": string(authenticationConfig)},
+						Data:       map[string]string{"config.yaml": string(expectedAuthenticationConfig)},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(Succeed())
+					Expect(configMapAuthentication).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuthentication.Name,
+							Namespace:       configMapAuthentication.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAuthentication.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource when version v1alpha1 is used", func() {
+					var (
+						authenticationConfigInput = &apiserverv1alpha1.AuthenticationConfiguration{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: "apiserver.config.k8s.io/v1alpha1",
+								Kind:       "AuthenticationConfiguration",
+							},
+							JWT: []apiserverv1alpha1.JWTAuthenticator{
+								{
+									Issuer: apiserverv1alpha1.Issuer{
+										URL:       "https://foo.com",
+										Audiences: []string{"example-client-id"},
+									},
+									ClaimMappings: apiserverv1alpha1.ClaimMappings{
+										Username: apiserverv1alpha1.PrefixedClaimOrExpression{
+											Claim:  "username",
+											Prefix: ptr.To("foo:"),
+										},
+									},
+								},
+							},
+						}
+						authenticationConfigOutput = &apiserverv1beta1.AuthenticationConfiguration{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: "apiserver.config.k8s.io/v1beta1",
+								Kind:       "AuthenticationConfiguration",
+							},
+							JWT: []apiserverv1beta1.JWTAuthenticator{
+								{
+									Issuer: apiserverv1beta1.Issuer{
+										URL:          "https://foo.com",
+										Audiences:    []string{"example-client-id"},
+										DiscoveryURL: ptr.To(""),
+									},
+									ClaimMappings: apiserverv1beta1.ClaimMappings{
+										Username: apiserverv1beta1.PrefixedClaimOrExpression{
+											Claim:  "username",
+											Prefix: ptr.To("foo:"),
+										},
+									},
+								},
+							},
+						}
+						version = semver.MustParse("1.32.0")
+					)
+
+					authenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
+					Expect(err).ToNot(HaveOccurred())
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+							FeatureGates: map[string]bool{
+								"AnonymousAuthConfigurableEndpoints": false,
+							},
+						},
+						AnonymousAuthenticationEnabled: ptr.To(true),
+						AuthenticationConfiguration:    ptr.To(string(authenticationConfig)),
+						Version:                        version,
+					})
+
+					expectedAuthenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigOutput)
+					Expect(err).ToNot(HaveOccurred())
+
+					configMapAuthentication = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
+						Data:       map[string]string{"config.yaml": string(expectedAuthenticationConfig)},
 					}
 					Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
 
@@ -3996,9 +4093,13 @@ anonymous: null
 						Version:                     version,
 					})
 
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					expectedAuthenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
+					Expect(err).ToNot(HaveOccurred())
+
 					configMapAuthentication = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
-						Data:       map[string]string{"config.yaml": string(authenticationConfig)},
+						Data:       map[string]string{"config.yaml": string(expectedAuthenticationConfig)},
 					}
 					Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
 
