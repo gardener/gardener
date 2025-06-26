@@ -388,7 +388,7 @@
       ],
     },
     {
-      // Do not use docker for images from gardener registry except those which do not work with github-releases.
+      // Use Docker only for images from the Gardener registry that don't work with GitHub releases.
       matchDatasources: [
         'docker',
       ],
@@ -403,7 +403,7 @@
       ],
     },
     {
-      // Do not use github-releases for external dependencies except those we copy.
+      // Use GitHub releases only for external dependencies we mirror.
       matchDatasources: [
         'github-releases',
       ],
@@ -416,6 +416,7 @@
         '!/credativ/.+/',
         '!/envoyproxy/.+/',
         '!/fluent/.+/',
+        '!/perses/.+/',
       ],
     },
     {
