@@ -265,6 +265,9 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
+	if cloudProfileSpec == nil {
+		return nil
+	}
 
 	if err := gardenerutils.ValidateCloudProfileChanges(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot, oldShoot); err != nil {
 		return err

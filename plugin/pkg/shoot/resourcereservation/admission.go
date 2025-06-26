@@ -157,6 +157,9 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
+	if cloudProfileSpec == nil {
+		return nil
+	}
 	machineTypeMap := buildMachineTypeMap(cloudProfileSpec)
 
 	allErrs := field.ErrorList{}

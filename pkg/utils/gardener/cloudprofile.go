@@ -90,7 +90,7 @@ func BuildV1beta1CloudProfileReference(shoot *gardencorev1beta1.Shoot) *gardenco
 func GetCloudProfileSpec(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, shoot *core.Shoot) (*gardencorev1beta1.CloudProfileSpec, error) {
 	cloudProfileReference := BuildCoreCloudProfileReference(shoot)
 	if cloudProfileReference == nil {
-		return nil, fmt.Errorf("no cloudprofile reference has been provided")
+		return nil, nil
 	}
 	switch cloudProfileReference.Kind {
 	case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
