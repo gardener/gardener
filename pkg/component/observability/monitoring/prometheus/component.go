@@ -231,12 +231,14 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 	var (
 		role               *rbacv1.Role
 		roleBinding        *rbacv1.RoleBinding
+		gardenRoleBinding  *rbacv1.RoleBinding
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
 	if p.values.ClusterType == component.ClusterTypeShoot {
 		role = p.role()
 		roleBinding = p.roleBinding()
+		gardenRoleBinding = p.gardenRoleBinding()
 	} else {
 		clusterRoleBinding = p.clusterRoleBinding()
 	}
@@ -252,6 +254,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		clusterRoleBinding,
 		role,
 		roleBinding,
+		gardenRoleBinding,
 		p.secretAdditionalScrapeConfigs(),
 		p.secretAdditionalAlertmanagerConfigs(),
 		p.secretRemoteWriteBasicAuth(),
