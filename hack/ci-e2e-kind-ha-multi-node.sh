@@ -26,5 +26,5 @@ trap "
 " EXIT
 
 make operator-seed-up SKAFFOLD_PROFILE=multi-node
-make test-e2e-local-ha-single-zone
+make test-e2e-local-ha-multi-node
 make operator-seed-down SKAFFOLD_PROFILE=multi-node
