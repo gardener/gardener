@@ -538,7 +538,7 @@ This can performed by fetching the two Gardener versions from the  **[GitHub Gar
 >**`GARDENER_NEXT_RELEASE`** -- This env variable refers to the target revision/branch (or a specific release) to be upgraded to after successful installation of **`GARDENER_PREVIOUS_RELEASE`**. By default, it considers the local HEAD revision, builds code, and installs Gardener from the current revision where the Gardener upgrade tests triggered.
 
 - `make ci-e2e-kind-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
-- `make ci-e2e-kind-ha-single-zone-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
+- `make ci-e2e-kind-ha-multi-node-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
 - `make ci-e2e-kind-ha-multi-zone-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
 
 ### Purpose of Upgrade Tests
