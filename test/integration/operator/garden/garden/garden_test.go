@@ -161,7 +161,7 @@ var _ = Describe("Garden controller tests", func() {
 		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &druidcorev1alpha1.Etcd{} }}).AddToManager(mgr)).To(Succeed())
 		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &extensionsv1alpha1.Extension{} }}).AddToManager(mgr)).To(Succeed())
 
-		// Etcd and Extension CRDs are not available from the start, so we need to deploy them manually at first, so these controllers can start.
+		// Etcd and Extension CRDs are not available from the start, so we need to deploy them manually at first, so the operation annotation controllers can start.
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 		applier := kubernetes.NewApplier(testClient, mapper)

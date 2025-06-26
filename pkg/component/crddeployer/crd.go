@@ -6,6 +6,7 @@ package crddeployer
 
 import (
 	"context"
+	"strings"
 
 	"golang.org/x/exp/maps"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -31,7 +32,13 @@ type crdDeployer struct {
 
 // New returns a new instance of DeployWaiter for CRDs.
 func New(client client.Client, applier kubernetes.Applier, manifests []string, confirmDeletion bool) (component.DeployWaiter, error) {
-	crdNameToManifest, err := generateNameToCRDMap(manifests)
+	// Split manifests into individual object manifests, in case multiple CRDs are provided in a single string.
+	var splitManifests []string
+	for _, manifest := range manifests {
+		splitManifests = append(splitManifests, strings.Split(manifest, "\n---\n")...)
+	}
+
+	crdNameToManifest, err := generateNameToCRDMap(splitManifests)
 	if err != nil {
 		return nil, err
 	}

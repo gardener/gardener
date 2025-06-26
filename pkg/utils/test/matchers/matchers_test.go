@@ -26,12 +26,4 @@ var _ = Describe("NotContainAny", func() {
 		Entry("should match when actual does contain any of wanted elements", []string{"apple", "banana", "cherry"}, []string{"apple", "grape"}, true),
 		Entry("should match when actual does contain all of wanted elements", []string{"apple", "banana", "cherry"}, []string{"apple", "banana"}, true),
 	)
-
-	Describe("Match", func() {
-		It("should return an error if the actual value is not a slice of strings", func() {
-			_, err := ContainAnyOf("apple").Match(42)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("ContainAnyOf expects a []string"))
-		})
-	})
 })

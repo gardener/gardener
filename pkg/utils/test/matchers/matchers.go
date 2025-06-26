@@ -6,8 +6,8 @@ package matchers
 
 import (
 	"context"
-	"fmt"
 
+	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -174,47 +174,11 @@ func expectedObjects(objs []client.Object, scheme *runtime.Scheme) map[string]cl
 
 // ContainAnyOf returns a Gomega matcher that checks if the actual slice does contain at least of the wanted strings.
 func ContainAnyOf(wanted ...string) types.GomegaMatcher {
-	return &containAnyMatcher{wanted: wanted}
-}
+	var matchers []types.GomegaMatcher
 
-type containAnyMatcher struct {
-	wanted []string
-}
+	for _, element := range wanted {
+		matchers = append(matchers, ContainElement(element))
+	}
 
-// Match checks if the actual slice does not contain any of the forbidden strings.
-func (matcher *containAnyMatcher) Match(actual interface{}) (bool, error) {
-	actualSlice, ok := actual.([]string)
-	if !ok {
-		return false, fmt.Errorf("ContainAnyOf expects a []string")
-	}
-	for _, wants := range matcher.wanted {
-		for _, val := range actualSlice {
-			if val == wants {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
-
-// FailureMessage returns a formatted failure message if the actual slice contains none of the wanted strings.
-func (matcher *containAnyMatcher) FailureMessage(actual interface{}) string {
-	return fmt.Sprintf("Expected\n\t%#v\nto contain any of\n\t%#v\n", actual, matcher.wanted)
-}
-
-// NegatedFailureMessage returns a message indicating that there is at least one of the strings in the actual slice.
-func (matcher *containAnyMatcher) NegatedFailureMessage(actual interface{}) string {
-	actualSlice, ok := actual.([]string)
-	if !ok {
-		return fmt.Sprintf("ContainAnyOf expects a []string, but got %#v", actual)
-	}
-	foundStrings := []string{}
-	for _, wants := range matcher.wanted {
-		for _, val := range actualSlice {
-			if val == wants {
-				foundStrings = append(foundStrings, wants)
-			}
-		}
-	}
-	return fmt.Sprintf("Expected\n\t%#v\nto not contain any of\n\t%#v, but found \n\t%#v\n", actualSlice, matcher.wanted, foundStrings)
+	return Or(matchers...)
 }

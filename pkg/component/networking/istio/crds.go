@@ -6,7 +6,6 @@ package istio
 
 import (
 	_ "embed"
-	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -17,8 +16,7 @@ import (
 
 var (
 	//go:embed charts/istio/istio-crds/crd-all.gen.yaml
-	crds      string
-	splitCRDs = strings.Split(crds, "\n---\n")
+	crds string
 )
 
 // NewCRD can be used to deploy istio CRDs.
@@ -26,5 +24,5 @@ func NewCRD(
 	client client.Client,
 	applier kubernetes.Applier,
 ) (component.DeployWaiter, error) {
-	return crddeployer.New(client, applier, splitCRDs, false)
+	return crddeployer.New(client, applier, []string{crds}, false)
 }
