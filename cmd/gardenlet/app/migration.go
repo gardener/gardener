@@ -300,10 +300,11 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 		return true
 	}
 
-	waitUntilCleanedUp := func(ctx context.Context, namespace string) error {
+	waitUntilCleanedUp := func(ctx context.Context, log logr.Logger, namespace string) error {
 		return retry.UntilTimeout(ctx, 10*time.Second, 10*time.Minute, func(ctx context.Context) (done bool, err error) {
 			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "prometheus-shoot-0"}}
 			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
+				log.Error(err, "Failed to get prometheus-shoot-0 pod", "namespace", namespace)
 				return retry.MinorError(err)
 			}
 
@@ -316,11 +317,14 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 			}
 
 			if !hasInitContainer {
-				return retry.MinorError(fmt.Errorf("prometheus-shoot-0 pod does not have the cleanup-obsolete-folder init container"))
+				err := fmt.Errorf("prometheus-shoot-0 pod does not have the cleanup-obsolete-folder init container")
+				log.Error(err, "Pod prometheus-shoot-0 is not cleaned up", "namespace", namespace)
+				return retry.MinorError(err)
 			}
 
 			if err := health.CheckPod(pod); err != nil {
-				return retry.MinorError(fmt.Errorf("prometheus-shoot-0 pod is not healthy: %w", err))
+				log.Error(err, "Pod prometheus-shoot-0 is not healthy", "namespace", namespace)
+				return retry.MinorError(err)
 			}
 
 			return retry.Ok()
@@ -405,7 +409,7 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 				return fmt.Errorf("failed to patch Prometheus resource for cluster %s: %w", cluster.Name, err)
 			}
 
-			if err := waitUntilCleanedUp(ctx, cluster.Name); err != nil {
+			if err := waitUntilCleanedUp(ctx, log, cluster.Name); err != nil {
 				return fmt.Errorf("failed to wait until Prometheus statefulset for cluster %s is cleaned up: %w", cluster.Name, err)
 			}
 
