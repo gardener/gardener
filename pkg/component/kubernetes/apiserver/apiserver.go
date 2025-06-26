@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	k8sapiserver "k8s.io/apiserver/pkg/apis/apiserver"
 	apiserverv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
@@ -698,6 +699,7 @@ func init() {
 	utilruntime.Must(apiserverv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(apiserverv1beta1.AddToScheme(scheme))
 	utilruntime.Must(apiserverv1.AddToScheme(scheme))
+	utilruntime.Must(k8sapiserver.AddToScheme(scheme))
 
 	var (
 		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
@@ -706,6 +708,7 @@ func init() {
 			Strict: false,
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
+			k8sapiserver.SchemeGroupVersion,
 			apiserverv1alpha1.SchemeGroupVersion,
 			apiserverv1alpha1.ConfigSchemeGroupVersion,
 			apiserverv1beta1.SchemeGroupVersion,
