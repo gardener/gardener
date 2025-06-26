@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apiserver/pkg/apis/apiserver"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,7 +53,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 
 	authenticationConfig := ptr.Deref(k.values.AuthenticationConfiguration, "")
 
-	authenticationConfiguration := &apiserverv1beta1.AuthenticationConfiguration{
+	authenticationConfigurationV1Beta1 := &apiserverv1beta1.AuthenticationConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiserverv1beta1.ConfigSchemeGroupVersion.String(),
 			Kind:       "AuthenticationConfiguration",
@@ -60,22 +61,26 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 	}
 
 	if len(authenticationConfig) > 0 {
+		authenticationConfiguration := &apiserver.AuthenticationConfiguration{}
 		if err := runtime.DecodeInto(ConfigCodec, []byte(authenticationConfig), authenticationConfiguration); err != nil {
+			return err
+		}
+		if err := apiserverv1beta1.Convert_apiserver_AuthenticationConfiguration_To_v1beta1_AuthenticationConfiguration(authenticationConfiguration, authenticationConfigurationV1Beta1, nil); err != nil {
 			return err
 		}
 	}
 
 	if k.values.OIDC != nil {
-		authenticationConfiguration.JWT = ConfigureJWTAuthenticators(k.values.OIDC)
+		authenticationConfigurationV1Beta1.JWT = ConfigureJWTAuthenticators(k.values.OIDC)
 	}
 
-	if k.anonymousAuthConfigurableEndpointsFeatureGateEnabled() && authenticationConfiguration.Anonymous == nil {
-		authenticationConfiguration.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
+	if k.anonymousAuthConfigurableEndpointsFeatureGateEnabled() && authenticationConfigurationV1Beta1.Anonymous == nil {
+		authenticationConfigurationV1Beta1.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
 			Enabled: ptr.Deref(k.values.AnonymousAuthenticationEnabled, false),
 		}
 	}
 
-	data, err := runtime.Encode(ConfigCodec, authenticationConfiguration)
+	data, err := runtime.Encode(ConfigCodec, authenticationConfigurationV1Beta1)
 	if err != nil {
 		return fmt.Errorf("unable to encode authentication configuration: %w", err)
 	}
