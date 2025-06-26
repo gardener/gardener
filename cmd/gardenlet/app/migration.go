@@ -17,6 +17,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -327,6 +328,21 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 	}
 
 	log.Info("Clean up obsolete Prometheus folders")
+
+	// check if the Cluster resource is available in the seed cluster
+	gvk := schema.GroupVersionKind{
+		Group:   "extensions.gardener.cloud",
+		Version: "v1alpha1",
+		Kind:    "Cluster",
+	}
+
+	if _, err := seedClient.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version); err != nil {
+		if meta.IsNoMatchError(err) {
+			log.Info("The Cluster resource is not available in the extensions.gardener.cloud/v1alpha1 API group")
+			return nil
+		}
+		return fmt.Errorf("failed to check if the Cluster resource is available in the extensions.gardener.cloud/v1alpha1 API group: %w", err)
+	}
 
 	clusterList := &extensionsv1alpha1.ClusterList{}
 	if err := seedClient.List(ctx, clusterList); err != nil {
