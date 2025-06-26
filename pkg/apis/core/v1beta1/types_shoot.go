@@ -732,6 +732,7 @@ const (
 
 // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 type VerticalPodAutoscaler struct {
+	KubernetesConfig `json:",inline" protobuf:"bytes,19,opt,name=kubernetesConfig"`
 	// Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.
 	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
 	// EvictAfterOOMThreshold defines the threshold that will lead to pod eviction in case it OOMed in less than the given

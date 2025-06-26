@@ -339,6 +339,8 @@ spec:
   #   ignoreDaemonsetsUtilization: false
   #   verbosity: 2
   # verticalPodAutoscaler:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
   #   enabled: true
   #   evictAfterOOMThreshold: 10m0s
   #   evictionRateBurst: 1

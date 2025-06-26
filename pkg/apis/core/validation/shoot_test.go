@@ -3141,10 +3141,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 
 			DescribeTable("verticalPod autoscaler values",
-				func(verticalPodAutoscaler core.VerticalPodAutoscaler, matcher gomegatypes.GomegaMatcher) {
-					Expect(ValidateVerticalPodAutoscaler(verticalPodAutoscaler, nil)).To(matcher)
+				func(verticalPodAutoscaler core.VerticalPodAutoscaler, version string, matcher gomegatypes.GomegaMatcher) {
+					Expect(ValidateVerticalPodAutoscaler(verticalPodAutoscaler, version, nil)).To(matcher)
 				},
-				Entry("valid", core.VerticalPodAutoscaler{}, BeEmpty()),
+				Entry("valid", core.VerticalPodAutoscaler{}, "", BeEmpty()),
 				Entry("invalid negative durations", core.VerticalPodAutoscaler{
 					EvictAfterOOMThreshold:                   &negativeDuration,
 					UpdaterInterval:                          &negativeDuration,
@@ -3159,7 +3159,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MemoryHistogramDecayHalfLife:             &negativeDuration,
 					MemoryAggregationInterval:                &negativeDuration,
 					MemoryAggregationIntervalCount:           ptr.To[int64](-1),
-				}, ConsistOf(
+				}, "", ConsistOf(
 					field.Invalid(field.NewPath("evictAfterOOMThreshold"), negativeDuration.Duration.String(), "must be non-negative"),
 					field.Invalid(field.NewPath("updaterInterval"), negativeDuration.Duration.String(), "must be non-negative"),
 					field.Invalid(field.NewPath("recommenderInterval"), negativeDuration.Duration.String(), "must be non-negative"),
@@ -3173,6 +3173,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 					field.Invalid(field.NewPath("memoryHistogramDecayHalfLife"), negativeDuration.Duration.String(), "must be non-negative"),
 					field.Invalid(field.NewPath("memoryAggregationInterval"), negativeDuration.Duration.String(), "must be non-negative"),
 					field.Invalid(field.NewPath("memoryAggregationIntervalCount"), int64(-1), "must be greater than or equal to 0").WithOrigin("minimum"),
+				)),
+				Entry("feature gates supported after 1.33", core.VerticalPodAutoscaler{
+					KubernetesConfig: core.KubernetesConfig{FeatureGates: map[string]bool{"InPlaceOrRecreate": true}},
+				}, "1.33", BeEmpty()),
+				Entry("feature gates unsupported before 1.33", core.VerticalPodAutoscaler{
+					KubernetesConfig: core.KubernetesConfig{FeatureGates: map[string]bool{"InPlaceOrRecreate": true}},
+				}, "1.32", ConsistOf(
+					field.Invalid(field.NewPath("featureGate"), "InPlaceOrRecreate", "for Kubernetes versions < 1.33, feature gate is not supported"),
 				)),
 			)
 		})

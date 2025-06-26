@@ -23,6 +23,7 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -257,6 +258,11 @@ func (v *vpa) computeUpdaterArgs() []string {
 
 	if v.values.ClusterType == component.ClusterTypeShoot {
 		out = append(out, "--kubeconfig="+gardenerutils.PathGenericKubeconfig)
+	}
+
+	if len(v.values.FeatureGates) > 0 {
+		featureGates := kubernetesutils.FeatureGatesToCommandLineParameter(v.values.FeatureGates)
+		out = append(out, featureGates)
 	}
 
 	return out
