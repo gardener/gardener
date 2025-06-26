@@ -3234,7 +3234,7 @@ disable it, then reconciliation will fail.</p>
 </tr>
 <tr>
 <td>
-<code>FeatureGates</code></br>
+<code>featureGates</code></br>
 <em>
 map[string]bool
 </em>

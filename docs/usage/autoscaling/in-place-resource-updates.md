@@ -13,7 +13,7 @@ On the `Vertical Pod Autoscaler` side, with Release [1.4.0](https://github.com/k
 
 ### Kubernetes
 
-With Kubernetes _1.33_ the `InPlacePodVerticalScaling` feature gate, enabling the `in-place` resources updates is enabled by default to all related components and __do not__ require additonal intrumentation. Prior versions, from _1.27+_ require the `InPlacePodVerticalScaling` feature gate __to be enabled__ on both _kube-apiserver_ and _kubelet_.
+With Kubernetes _1.33_ the `InPlacePodVerticalScaling` feature gate, enabling the `in-place` resources updates is enabled by default to all related components and __do not__ require additional intrumentation. Prior versions, from _1.27+_ require the `InPlacePodVerticalScaling` feature gate __to be enabled__ on both _kube-apiserver_ and _kubelet_.
 
 ### Vertical Pod Autoscaling
 
