@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rolloutspeedup
+package istio
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,18 +18,20 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
-// WebhookName is the name of the rollout-speedup webhook. It modifies the API server deployments (kube-apiserver and
-// garden-apiserver) to make sure that a rolling update happens faster.
-const WebhookName = "rollout-speedup"
+// WebhookName is the name of the istio-must-run-on-control-plane webhook. It ensures that the istio-ingressgateway
+// pods run on the control plane node. This is a temporary workaround to make sure that the virtual garden is reachable
+// from outside (if they only run on worker nodes, the pods cannot be reached from outside via 172.18.255.3:443).
+// TODO(rfranzke): Remove this webhook once the istio-ingressgateway pods can run on worker nodes.
+const WebhookName = "istio-must-run-on-control-plane"
 
 var (
-	logger = log.Log.WithName("local-rollout-speedup-webhook")
+	logger = log.Log.WithName("local-istio-must-run-on-control-plane-webhook")
 
 	// DefaultAddOptions are the default AddOptions for AddToManager.
 	DefaultAddOptions = AddOptions{}
 )
 
-// AddOptions are options to apply when adding the local exposure webhook to the manager.
+// AddOptions are options to apply when adding the webhook to the manager.
 type AddOptions struct{}
 
 // AddToManagerWithOptions creates a webhook with the given options and adds it to the manager.
@@ -37,7 +39,6 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 	logger.Info("Adding webhook to manager")
 
 	var (
-		name     = "rollout-speedup"
 		provider = local.Type
 		types    = []extensionswebhook.Type{
 			{Obj: &appsv1.Deployment{}},
@@ -51,18 +52,20 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		return nil, err
 	}
 
-	logger.Info("Creating webhook", "name", name)
+	logger.Info("Creating webhook", "name", WebhookName)
 
 	return &extensionswebhook.Webhook{
-		Name:              name,
-		Provider:          provider,
-		Types:             types,
-		Target:            extensionswebhook.TargetSeed,
-		Path:              name,
-		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
-		NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
+		Name:     WebhookName,
+		Provider: provider,
+		Types:    types,
+		Target:   extensionswebhook.TargetSeed,
+		Path:     WebhookName,
+		Webhook:  &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
+		NamespaceSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: corev1.LabelMetadataName, Operator: metav1.LabelSelectorOpIn, Values: []string{"virtual-garden-istio-ingress", "istio-ingress"}},
+		}},
 		ObjectSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-			{Key: v1beta1constants.LabelRole, Operator: metav1.LabelSelectorOpIn, Values: []string{v1beta1constants.LabelAPIServer}},
+			{Key: v1beta1constants.LabelApp, Operator: metav1.LabelSelectorOpIn, Values: []string{"istio-ingressgateway"}},
 		}},
 	}, nil
 }

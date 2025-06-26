@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rolloutspeedup
+package istio
 
 import (
 	"context"
@@ -25,17 +25,8 @@ func (m *mutator) Mutate(_ context.Context, newObj, _ client.Object) error {
 		return fmt.Errorf("expected deployment, got %T", newObj)
 	}
 
-	// 3 and 5 are the magic numbers 🪄
-	if deployment.Spec.MinReadySeconds > 5 {
-		deployment.Spec.MinReadySeconds = 5
-	}
-	deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = ptr.To[int64](3)
-
-	for i, container := range deployment.Spec.Template.Spec.Containers {
-		if container.ReadinessProbe != nil {
-			deployment.Spec.Template.Spec.Containers[i].ReadinessProbe.InitialDelaySeconds = 3
-			deployment.Spec.Template.Spec.Containers[i].ReadinessProbe.PeriodSeconds = 5
-		}
+	if ptr.Deref(deployment.Spec.Replicas, 0) < 3 {
+		deployment.Spec.Replicas = ptr.To[int32](3)
 	}
 
 	return nil
