@@ -327,28 +327,24 @@ kind-operator-multi-node-down kind-operator-multi-zone-down: $(KIND)
 	# We need root privileges to clean the backup bucket directory, see https://github.com/gardener/gardener/issues/6752
 	docker run --rm --user root:root -v $(REPO_ROOT)/dev/local-backupbuckets:/dev/local-backupbuckets alpine rm -rf /dev/local-backupbuckets/garden-*
 
-# speed-up skaffold deployments by building all images concurrently
-export SKAFFOLD_BUILD_CONCURRENCY = 0
-# build the images for the platform matching the nodes of the active kubernetes cluster,
-# even in `skaffold build`, which doesn't enable this by default
-export SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS = true
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev gardenadm%up: export SKAFFOLD_DEFAULT_REPO = garden.local.gardener.cloud:5001
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev gardenadm%up: export SKAFFOLD_PUSH = true
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev gardenadm%up: export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev gardenadm%up: export GARDENER_VERSION = $(VERSION)
-# use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up gardenadm%up: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
-# set ldflags for skaffold
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev gardenadm%up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh k8s.io/component-base $(REPO_ROOT)/VERSION Gardener $(BUILD_DATE))
+export SKAFFOLD_BUILD_CONCURRENCY = 0 # speed-up skaffold deployments by building all images concurrently
+export SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS = true # build the images for the platform matching the nodes of the active kubernetes cluster, even in `skaffold build`, which doesn't enable this by default
+export SKAFFOLD_DEFAULT_REPO = garden.local.gardener.cloud:5001
+export SKAFFOLD_PUSH = true
+export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)
+export GARDENER_VERSION = $(VERSION)
+export SKAFFOLD_LABEL = "skaffold.dev/run-id=gardener-local" # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
+
+%up %dev %debug: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh k8s.io/component-base $(REPO_ROOT)/VERSION Gardener $(BUILD_DATE))
 # skaffold dev and debug clean up deployed modules by default, disable this
-gardener%dev gardener%debug gardenlet%dev gardenlet%debug operator-dev operator-debug operator-seed-dev: export SKAFFOLD_CLEANUP = false
-# skaffold dev triggers new builds and deployments immediately on file changes by default,
-# this is too heavy in a large project like gardener, so trigger new builds and deployments manually instead.
-gardener%dev gardenlet%dev operator-dev operator-seed-dev: export SKAFFOLD_TRIGGER = manual
+%dev %debug: export SKAFFOLD_CLEANUP = false
+# skaffold dev triggers new builds and deployments immediately on file changes by default, this is too heavy in a large
+# project like gardener, so trigger new builds and deployments manually instead.
+%dev: export SKAFFOLD_TRIGGER = manual
 # Artifacts might be already built when you decide to start debugging.
 # However, these artifacts do not include the gcflags which `skaffold debug` sets automatically, so delve would not work.
 # Disabling the skaffold cache for debugging ensures that you run artifacts with gcflags required for debugging.
-gardener%debug gardenlet%debug operator-debug: export SKAFFOLD_CACHE_ARTIFACTS = false
+%debug: export SKAFFOLD_CACHE_ARTIFACTS = false
 
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
