@@ -218,7 +218,7 @@ var _ = Describe("Controller", func() {
 			extensionSecret.Data = gardenSecret.Data
 		})
 
-		It("should create the extension secret and extension BackupBucket if it doesn't exist yet", func() {
+		It("should create the extension secret and extension BackupBucket if then do not exist yet", func() {
 			result, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(reconcile.Result{}))
@@ -339,13 +339,22 @@ var _ = Describe("Controller", func() {
 			extensionSecret.Type = "Opaque"
 		})
 
-		It("should create the extension secret and extension BackupBucket if it doesn't exist yet", func() {
+		It("should create the extension secret and extension BackupBucket if they do not exist yet", func() {
 			result, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(reconcile.Result{}))
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
 			Expect(extensionSecret.Data).To(BeEmpty())
+			Expect(extensionSecret.Labels).To(Equal(map[string]string{
+				"security.gardener.cloud/purpose":                   "workload-identity-token-requestor",
+				"workloadidentity.security.gardener.cloud/provider": "local",
+			}))
+			Expect(extensionSecret.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/context-object", `{"kind":"BackupBucket","apiVersion":"core.gardener.cloud/v1beta1","name":"foo","uid":""}`))
+			Expect(extensionSecret.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/name", workloadIdentity.Name))
+			Expect(extensionSecret.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/namespace", workloadIdentity.Namespace))
+			Expect(extensionSecret.Annotations).To(HaveKey("gardener.cloud/timestamp"))
+			Expect(extensionSecret.Type).To(BeEquivalentTo("Opaque"))
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
 			Expect(extensionBackupBucket.Spec).To(Equal(extensionsv1alpha1.BackupBucketSpec{
@@ -363,6 +372,7 @@ var _ = Describe("Controller", func() {
 
 		It("should not reconcile the extension BackupBucket if the secret data or extension spec hasn't changed", func() {
 			Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
+			delete(extensionBackupBucket.Annotations, "gardener.cloud/operation")
 			Expect(seedClient.Create(ctx, extensionBackupBucket)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, request)
@@ -370,7 +380,7 @@ var _ = Describe("Controller", func() {
 			Expect(result).To(Equal(reconcile.Result{}))
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
-			Expect(extensionBackupBucket.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+			Expect(extensionBackupBucket.Annotations).NotTo(HaveKey("gardener.cloud/operation"))
 		})
 
 		It("should reconcile the extension secret and extension BackupBucket if the secret currently doesn't have a timestamp", func() {
@@ -383,18 +393,24 @@ var _ = Describe("Controller", func() {
 			Expect(result).To(Equal(reconcile.Result{}))
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
+			Expect(extensionSecret.Labels).To(Equal(map[string]string{
+				"security.gardener.cloud/purpose":                   "workload-identity-token-requestor",
+				"workloadidentity.security.gardener.cloud/provider": "local",
+			}))
 			Expect(extensionSecret.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/context-object", `{"kind":"BackupBucket","apiVersion":"core.gardener.cloud/v1beta1","name":"foo","uid":""}`))
 			Expect(extensionSecret.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/name", workloadIdentity.Name))
 			Expect(extensionSecret.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/namespace", workloadIdentity.Namespace))
+			Expect(extensionSecret.Annotations).To(HaveKey("gardener.cloud/timestamp"))
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
-			Expect(extensionBackupBucket.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
+			Expect(extensionBackupBucket.Annotations).To(HaveKeyWithValue("gardener.cloud/operation", "reconcile"))
 		})
 
 		It("should reconcile the extension BackupBucket if the secret data has changed", func() {
 			// the workloadIdentity.spec.targetSystem.providerConfig=nil will cause the `config` data key to be removed from the secret
 			extensionSecret.Data = map[string][]byte{"config": []byte("null")}
 			Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
+			delete(extensionBackupBucket.Annotations, "gardener.cloud/operation")
 			Expect(seedClient.Create(ctx, extensionBackupBucket)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, request)
@@ -402,38 +418,7 @@ var _ = Describe("Controller", func() {
 			Expect(result).To(Equal(reconcile.Result{}))
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
-			Expect(extensionBackupBucket.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
-		})
-
-		It("should reconcile the extension BackupBucket if the secret update timestamp is after the extension last update time", func() {
-			time := fakeClock.Now().Add(time.Second).UTC().Format(time.RFC3339Nano)
-			metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, "gardener.cloud/timestamp", time)
-			Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
-			Expect(seedClient.Create(ctx, extensionBackupBucket)).To(Succeed())
-
-			result, err := reconciler.Reconcile(ctx, request)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{}))
-
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
-			Expect(extensionBackupBucket.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
-		})
-
-		It("should reconcile the extension BackupBucket if it's been 12hrs after the extension's last reconciliation", func() {
-			Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
-			extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				Type:           gardencorev1beta1.LastOperationTypeReconcile,
-				LastUpdateTime: metav1.NewTime(now.Add(-13 * time.Hour)),
-			}
-			Expect(seedClient.Create(ctx, extensionBackupBucket)).To(Succeed())
-
-			result, err := reconciler.Reconcile(ctx, request)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{}))
-
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
-			Expect(extensionBackupBucket.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
+			Expect(extensionBackupBucket.Annotations).To(HaveKeyWithValue("gardener.cloud/operation", "reconcile"))
 		})
 	})
 })
