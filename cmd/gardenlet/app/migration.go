@@ -27,6 +27,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -331,6 +332,34 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 		})
 	}
 
+	shouldSkipCluster := func(ctx context.Context, log logr.Logger, cluster *extensionsv1alpha1.Cluster) (bool, error) {
+		shoot, err := extensions.ShootFromCluster(cluster)
+		if err != nil {
+			return false, fmt.Errorf("failed to extract Shoot from Cluster %s: %w", cluster.Name, err)
+		}
+
+		if shoot.DeletionTimestamp != nil {
+			log.Info("Cluster is being deleted, it should be skipped", "cluster", cluster.Name)
+			return true, nil
+		}
+
+		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: cluster.Name}}
+		if err := seedClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+			if apierrors.IsNotFound(err) {
+				log.Info("Namespace for cluster not found, cluster should be skipped", "cluster", cluster.Name)
+				return true, nil
+			}
+			return false, fmt.Errorf("failed to get Namespace for cluster %s: %w", cluster.Name, err)
+		}
+
+		if namespace.DeletionTimestamp != nil {
+			log.Info("Namespace for cluster is being deleted, cluster should be skipped", "cluster", cluster.Name)
+			return true, nil
+		}
+
+		return false, nil
+	}
+
 	log.Info("Clean up obsolete Prometheus folders")
 
 	// check if the Cluster resource is available in the seed cluster
@@ -355,6 +384,16 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 
 	for _, cluster := range clusterList.Items {
 		tasks = append(tasks, func(ctx context.Context) error {
+			skip, err := shouldSkipCluster(ctx, log, &cluster)
+			if err != nil {
+				return err
+			}
+
+			if skip {
+				log.Info("Skip cleanup for cluster", "cluster", cluster.Name)
+				return nil
+			}
+
 			if err := unignoreManagedResource(ctx, log, cluster.Name); err != nil {
 				return err
 			}
