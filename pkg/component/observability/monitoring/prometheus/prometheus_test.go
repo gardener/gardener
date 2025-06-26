@@ -96,6 +96,7 @@ honor_labels: true`
 		clusterRoleBinding                  *rbacv1.ClusterRoleBinding
 		role                                *rbacv1.Role
 		roleBinding                         *rbacv1.RoleBinding
+		gardenRoleBinding                   *rbacv1.RoleBinding
 		prometheusFor                       func([]alertmanager, bool) *monitoringv1.Prometheus
 		vpa                                 *vpaautoscalingv1.VerticalPodAutoscaler
 		ingress                             *networkingv1.Ingress
@@ -247,6 +248,27 @@ honor_labels: true`
 				APIGroup: rbacv1.GroupName,
 				Kind:     "Role",
 				Name:     "prometheus-" + name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+			}},
+		}
+		gardenRoleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + namespace,
+				Namespace: v1beta1constants.GardenNamespace,
+				Labels: map[string]string{
+					"role": "monitoring",
+					"name": name,
+					"app":  "prometheus",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     "prometheus-shoot",
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
@@ -710,6 +732,7 @@ honor_labels: true`
 						service,
 						role,
 						roleBinding,
+						gardenRoleBinding,
 						prometheusFor(nil, true),
 						vpa,
 						prometheusRule,

@@ -155,3 +155,23 @@ func (p *prometheusOperator) clusterRolePrometheus() *rbacv1.ClusterRole {
 		},
 	}
 }
+
+func (p *prometheusOperator) rolePrometheusShoot() *rbacv1.Role {
+	return &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "prometheus-shoot",
+			Namespace: p.namespace,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{
+					"services",
+					"endpoints",
+					"pods",
+				},
+				Verbs: []string{"get", "list", "watch"},
+			},
+		},
+	}
+}

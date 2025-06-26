@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
@@ -126,6 +127,26 @@ func (p *prometheus) roleBinding() *rbacv1.RoleBinding {
 			APIGroup: rbacv1.GroupName,
 			Kind:     "Role",
 			Name:     "prometheus-" + p.values.Name,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      p.name(),
+			Namespace: p.namespace,
+		}},
+	}
+}
+
+func (p *prometheus) gardenRoleBinding() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "prometheus-" + p.namespace,
+			Namespace: v1beta1constants.GardenNamespace,
+			Labels:    p.getLabels(),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     "prometheus-shoot",
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,

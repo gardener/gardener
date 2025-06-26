@@ -63,6 +63,7 @@ func (p *prometheusOperator) Deploy(ctx context.Context) error {
 		p.clusterRole(),
 		p.clusterRoleBinding(),
 		p.clusterRolePrometheus(),
+		p.rolePrometheusShoot(),
 	)
 	if err != nil {
 		return err
