@@ -303,6 +303,14 @@ var _ = Describe("Machines", func() {
 			It("when enabling node local dns via specification", func() {
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}
 			})
+
+			It("when a manual worker node rollout is triggered", func() {
+				now := metav1.Now()
+				c.Shoot.Status.ManualWorkerPoolRollout = &gardencorev1beta1.ManualWorkerPoolRollout{
+					LastInitiationTime:     &now,
+					PendingWorkersRollouts: []gardencorev1beta1.PendingWorkersRollout{{Name: p.Name, LastInitiationTime: &now}},
+				}
+			})
 		})
 	})
 

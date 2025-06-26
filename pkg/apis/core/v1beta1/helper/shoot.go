@@ -263,6 +263,20 @@ func GetShootETCDEncryptionKeyRotationPhase(credentials *gardencorev1beta1.Shoot
 	return ""
 }
 
+// MutateShootWorkerPoolRollout mutates the .status.manualWorkerPoolRollout field based on the provided mutation function.
+// If any field is nil, it gets initialized.
+func MutateShootWorkerPoolRollout(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ManualWorkerPoolRollout)) {
+	if f == nil {
+		return
+	}
+
+	if shoot.Status.ManualWorkerPoolRollout == nil {
+		shoot.Status.ManualWorkerPoolRollout = &gardencorev1beta1.ManualWorkerPoolRollout{}
+	}
+
+	f(shoot.Status.ManualWorkerPoolRollout)
+}
+
 // MutateShootETCDEncryptionKeyRotation mutates the .status.credentials.rotation.etcdEncryptionKey field based on the
 // provided mutation function. If the field is nil then it is initialized.
 func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ETCDEncryptionKeyRotation)) {

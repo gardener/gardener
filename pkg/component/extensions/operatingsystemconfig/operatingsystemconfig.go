@@ -87,6 +87,8 @@ type Interface interface {
 	SetCABundle(string)
 	// SetCredentialsRotationStatus sets the credentials rotation status
 	SetCredentialsRotationStatus(*gardencorev1beta1.ShootCredentialsRotation)
+	// SetManualWorkerRolloutStatus sets the manual worker rollout status
+	SetManualWorkerRolloutStatus(*gardencorev1beta1.ManualWorkerPoolRollout)
 	// SetSSHPublicKeys sets the SSHPublicKeys value.
 	SetSSHPublicKeys([]string)
 	// WorkerPoolNameToOperatingSystemConfigsMap returns a map whose key is a worker pool name and whose value is a structure
@@ -106,6 +108,8 @@ type Values struct {
 	Workers []gardencorev1beta1.Worker
 	// CredentialsRotationStatus
 	CredentialsRotationStatus *gardencorev1beta1.ShootCredentialsRotation
+	// ManualWorkerPoolRolloutStatus
+	ManualWorkerPoolRolloutStatus *gardencorev1beta1.ManualWorkerPoolRollout
 
 	// InitValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
 	InitValues
@@ -661,6 +665,10 @@ func (o *operatingSystemConfig) SetCredentialsRotationStatus(status *gardencorev
 	o.values.CredentialsRotationStatus = status
 }
 
+func (o *operatingSystemConfig) SetManualWorkerRolloutStatus(status *gardencorev1beta1.ManualWorkerPoolRollout) {
+	o.values.ManualWorkerPoolRolloutStatus = status
+}
+
 // SetSSHPublicKeys sets the SSHPublicKeys value.
 func (o *operatingSystemConfig) SetSSHPublicKeys(keys []string) {
 	o.values.SSHPublicKeys = keys
@@ -1023,7 +1031,7 @@ func calculateKeyForVersion(
 		// TODO(MichaelEischer): Remove KeyV1 after support for Kubernetes 1.30 is dropped
 		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
 	case 2:
-		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration), nil
+		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, values.ManualWorkerPoolRolloutStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration), nil
 	default:
 		return "", fmt.Errorf("unsupported osc key hash version %v", version)
 	}
@@ -1054,6 +1062,7 @@ func KeyV1(workerPoolName string, kubernetesVersion *semver.Version, criConfig *
 func KeyV2(
 	kubernetesVersion *semver.Version,
 	credentialsRotation *gardencorev1beta1.ShootCredentialsRotation,
+	manualWorkerPoolRollout *gardencorev1beta1.ManualWorkerPoolRollout,
 	worker *gardencorev1beta1.Worker,
 	nodeLocalDNSEnabled bool,
 	kubeletConfiguration *gardencorev1beta1.KubeletConfig,
@@ -1092,6 +1101,13 @@ func KeyV2(
 			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(worker.Name, credentialsRotation.ServiceAccountKey.PendingWorkersRollouts, credentialsRotation.ServiceAccountKey.LastInitiationTime); lastInitiationTime != nil {
 				data = append(data, lastInitiationTime.String())
 			}
+		}
+	}
+
+	if manualWorkerPoolRollout != nil {
+		//TODO(Rado): Figure out why this is not an isuse for the other annotations using this function
+		if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(worker.Name, manualWorkerPoolRollout.PendingWorkersRollouts, nil); lastInitiationTime != nil {
+			data = append(data, lastInitiationTime.String())
 		}
 	}
 
