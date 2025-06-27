@@ -26,10 +26,6 @@ const (
 	// DNS hosted zone id.
 	DNSZone = "dns.gardener.cloud/zone"
 
-	// APIServerFQDNPrefix is the part of a FQDN which will be used to construct the domain name for the kube-apiserver of
-	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the apiserver domain would be
-	// 'api.cluster.example.com'.
-	APIServerFQDNPrefix = "api"
 	// IngressPrefix is the part of a FQDN which will be used to construct the domain name for an ingress controller of
 	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the ingress domain would be
 	// '*.<IngressPrefix>.cluster.example.com'.
@@ -76,12 +72,6 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 	}
 
 	return
-}
-
-// GetAPIServerDomain returns the fully qualified domain name for the api-server of a Shoot or Virtual Garden cluster. The
-// end result is 'api.<domain>'.
-func GetAPIServerDomain(domain string) string {
-	return fmt.Sprintf("%s.%s", APIServerFQDNPrefix, domain)
 }
 
 // GenerateDNSProviderName creates a name for the dns provider out of the passed `secretName` and `providerType`.

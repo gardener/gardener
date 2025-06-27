@@ -36,6 +36,7 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -67,6 +68,7 @@ var (
 	shootName             string
 	gardenNamespaceShoot  string
 	gardenNamespaceGarden *corev1.Namespace
+	gardenNamespaceSeed   *corev1.Namespace
 	seed                  *gardencorev1beta1.Seed
 	err                   error
 )
@@ -150,7 +152,7 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("Create garden namespace for test")
+	By("Create garden namespace for garden")
 	gardenNamespaceGarden = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
@@ -158,12 +160,40 @@ var _ = BeforeSuite(func() {
 	}
 
 	Expect(testClient.Create(ctx, gardenNamespaceGarden)).To(Succeed())
-	log.Info("Created Namespace for test", "namespaceName", gardenNamespaceGarden.Name)
+	log.Info("Created Namespace for garden", "namespaceName", gardenNamespaceGarden.Name)
 
 	DeferCleanup(func() {
 		By("Delete garden namespace")
 		Expect(testClient.Delete(ctx, gardenNamespaceGarden)).To(Or(Succeed(), BeNotFoundError()))
 	})
+
+	By("Create garden namespace for seed")
+	gardenNamespaceSeed = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "garden-",
+		},
+	}
+
+	Expect(testClient.Create(ctx, gardenNamespaceSeed)).To(Succeed())
+	log.Info("Created Namespace for seed", "namespaceName", gardenNamespaceSeed.Name)
+
+	DeferCleanup(func() {
+		By("Delete garden namespace")
+		Expect(testClient.Delete(ctx, gardenNamespaceSeed)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	By("Ensure gardenlet-kubeconfig secret is created")
+	gardenletKubeconfig, err := gardenletbootstraputil.CreateGardenletKubeconfigWithToken(restConfig, "foobar")
+	Expect(err).NotTo(HaveOccurred())
+
+	gardenletKubeconfigSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gardenlet-kubeconfig",
+			Namespace: gardenNamespaceSeed.Name,
+		},
+		Data: map[string][]byte{"kubeconfig": gardenletKubeconfig},
+	}
+	Expect(testClient.Create(ctx, gardenletKubeconfigSecret)).To(Succeed())
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -223,6 +253,7 @@ var _ = BeforeSuite(func() {
 	Expect((&managedseed.Reconciler{
 		Config:                cfg,
 		GardenNamespaceGarden: gardenNamespaceGarden.Name,
+		GardenNamespaceSeed:   gardenNamespaceSeed.Name,
 		GardenNamespaceShoot:  gardenNamespaceShoot,
 		ShootClientMap:        shootClientMap,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())

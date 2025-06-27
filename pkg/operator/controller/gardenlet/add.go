@@ -6,6 +6,7 @@ package gardenlet
 
 import (
 	"context"
+	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
@@ -42,6 +43,12 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
+	}
+	if r.GardenNamespace == "" {
+		r.GardenNamespace = v1beta1constants.GardenNamespace
+	}
+	if r.DefaultGardenClusterAddress == "" {
+		return fmt.Errorf("DefaultGardenClusterAddress address is not set")
 	}
 	if r.GardenNamespaceTarget == "" {
 		r.GardenNamespaceTarget = v1beta1constants.GardenNamespace

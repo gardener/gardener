@@ -5,6 +5,9 @@
 package helper
 
 import (
+	"slices"
+	"strings"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
@@ -184,4 +187,33 @@ func GetDNSProviders(garden *operatorv1alpha1.Garden) []operatorv1alpha1.DNSProv
 	}
 
 	return nil
+}
+
+// GetAPIServerSNIDomains returns the domains which match a SNI domain pattern.
+func GetAPIServerSNIDomains(domains []string, sni operatorv1alpha1.SNI) []string {
+	var sniDomains []string
+
+	for _, domainPattern := range sni.DomainPatterns {
+		// Handle wildcard domains
+		if strings.HasPrefix(domainPattern, "*.") {
+			patternWithoutWildcard := domainPattern[1:]
+			for _, domain := range domains {
+				if strings.HasSuffix(domain, patternWithoutWildcard) {
+					subDomain := strings.TrimSuffix(domain, patternWithoutWildcard)
+					// The wildcard is for one subdomain level only, so the subdomain should not contain any dots.
+					if len(subDomain) > 0 && !strings.Contains(subDomain, ".") {
+						sniDomains = append(sniDomains, domain)
+					}
+				}
+			}
+			continue
+		}
+
+		// Handle exact domains
+		if slices.Contains(domains, domainPattern) {
+			sniDomains = append(sniDomains, domainPattern)
+		}
+	}
+
+	return sniDomains
 }

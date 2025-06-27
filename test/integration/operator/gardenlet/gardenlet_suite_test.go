@@ -130,8 +130,9 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&gardenlet.Reconciler{
-		HelmRegistry:          fakeRegistry,
-		GardenNamespaceTarget: testNamespace.Name,
+		HelmRegistry:                fakeRegistry,
+		GardenNamespaceTarget:       testNamespace.Name,
+		DefaultGardenClusterAddress: "foo",
 	}).AddToManager(ctx, mgr, mgr)).To(Succeed())
 
 	By("Start manager")

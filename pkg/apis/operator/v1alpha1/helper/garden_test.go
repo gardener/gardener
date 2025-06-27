@@ -236,4 +236,15 @@ var _ = Describe("helper", func() {
 		Entry("no DNS providers", &operatorv1alpha1.Garden{Spec: operatorv1alpha1.GardenSpec{DNS: &operatorv1alpha1.DNSManagement{}}}, nil),
 		Entry("with DNS providers", &operatorv1alpha1.Garden{Spec: operatorv1alpha1.GardenSpec{DNS: &operatorv1alpha1.DNSManagement{Providers: []operatorv1alpha1.DNSProvider{{Name: "provider-1"}, {Name: "provider-2"}}}}}, []operatorv1alpha1.DNSProvider{{Name: "provider-1"}, {Name: "provider-2"}}),
 	)
+
+	Describe("GetAPIServerSNIDomains", func() {
+		It("should return the correct SNI domains", func() {
+			domains := []string{"foo.bar", "bar.foo.bar", "foo.foo.bar", "foo.bar.foo.bar", "api.bar"}
+			sni := operatorv1alpha1.SNI{
+				DomainPatterns: []string{"api.bar", "*.foo.bar"},
+			}
+
+			Expect(GetAPIServerSNIDomains(domains, sni)).To(Equal([]string{"api.bar", "bar.foo.bar", "foo.foo.bar"}))
+		})
+	})
 })

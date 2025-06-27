@@ -53,6 +53,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
+	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
@@ -65,6 +66,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 // Name is a const for the name of this component.
@@ -221,6 +223,10 @@ func (g *garden) Start(ctx context.Context) error {
 	log.Info("Getting rest config for garden")
 	gardenRESTConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&g.config.GardenClientConnection.ClientConnectionConfiguration, g.kubeconfigBootstrapResult.Kubeconfig)
 	if err != nil {
+		return err
+	}
+
+	if err := g.overwriteGardenHostWhenDeployedInRuntimeCluster(ctx, log, gardenRESTConfig); err != nil {
 		return err
 	}
 
@@ -532,6 +538,51 @@ func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, garde
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
+}
+
+const virtualGardenService = "virtual-garden-" + v1beta1constants.DeploymentNameKubeAPIServer
+
+// overwriteGardenHostWhenDeployedInRuntimeCluster overwrites the garden REST config host to the internal service host
+// if the gardenlet is deployed in the runtime cluster of the garden and L7 load balancing is not active.
+func (g *garden) overwriteGardenHostWhenDeployedInRuntimeCluster(ctx context.Context, log logr.Logger, gardenRESTConfig *rest.Config) error {
+	seedIsGarden, err := gardenlet.SeedIsGarden(ctx, g.mgr.GetClient())
+	if err != nil {
+		return fmt.Errorf("failed to check whether seed is garden: %w", err)
+	}
+
+	if !seedIsGarden {
+		return nil
+	}
+
+	// Verify that virtual-garden-kube-apiserver service exists before we consider overwriting the garden REST config host.
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: v1beta1constants.GardenNamespace,
+			Name:      virtualGardenService,
+		},
+	}
+	if err := g.mgr.GetClient().Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{}); apierrors.IsNotFound(err) {
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to check whether %q service exists: %w", client.ObjectKeyFromObject(service), err)
+	}
+
+	// Only overwrite the garden REST config host if the mutual TLS service does not exist, which means that L7 load
+	// balancing is not active. If it is active, we keep the original host that the gardenlet requests are load balanced.
+	mtlsService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: v1beta1constants.GardenNamespace,
+			Name:      virtualGardenService + kubeapiserverexposure.MutualTLSServiceNameSuffix,
+		},
+	}
+	if err := g.mgr.GetClient().Get(ctx, client.ObjectKeyFromObject(mtlsService), &corev1.Service{}); apierrors.IsNotFound(err) {
+		gardenRESTConfig.Host = fmt.Sprintf("https://%s.%s.svc.cluster.local", virtualGardenService, v1beta1constants.GardenNamespace)
+		log.Info("Seed is deployed in garden runtime cluster and L7 is not active. Overwriting host in garden rest config", "host", gardenRESTConfig.Host)
+	} else if err != nil {
+		return fmt.Errorf("failed to check whether %q service exists: %w", client.ObjectKeyFromObject(mtlsService), err)
+	}
+
+	return nil
 }
 
 func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
