@@ -301,7 +301,6 @@ func (in *Backup) DeepCopyInto(out *Backup) {
 		*out = new(string)
 		**out = **in
 	}
-	out.SecretRef = in.SecretRef
 	if in.CredentialsRef != nil {
 		in, out := &in.CredentialsRef, &out.CredentialsRef
 		*out = new(v1.ObjectReference)
