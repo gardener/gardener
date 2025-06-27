@@ -554,16 +554,19 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 		return nil, fmt.Errorf("failed getting additional scrape configs: %w", err)
 	}
 
-	var storageClassName *string
-	volumeSize := "10Gi"
-	retentionSize := "5GB"
-	if mon := r.Config.Monitoring; mon != nil && mon.Seed != nil {
-		if storage := mon.Seed.PrometheusCache.Storage; storage != nil && storage.Capacity != nil {
+	var (
+		volumeSize       = "10Gi"
+		retentionSize    = "5GB"
+		storageClassName *string
+	)
+
+	if monitoring := r.Config.Monitoring; monitoring != nil && monitoring.Seed != nil {
+		if storage := monitoring.Seed.PrometheusCache.Storage; storage != nil && storage.Capacity != nil {
 			volumeSize = storage.Capacity.String()
 			storageClassName = storage.ClassName
 		}
-		if !mon.Seed.PrometheusCache.Retention.IsZero() {
-			retentionSize = mon.Seed.PrometheusCache.Retention.String()
+		if !monitoring.Seed.PrometheusCache.Retention.IsZero() {
+			retentionSize = monitoring.Seed.PrometheusCache.Retention.String()
 		}
 	}
 
@@ -591,16 +594,19 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 }
 
 func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (component.DeployWaiter, error) {
-	var storageClassName *string
-	volumeSize := "100Gi"
-	retentionSize := "85GB"
-	if mon := r.Config.Monitoring; mon != nil && mon.Seed != nil {
-		if storage := mon.Seed.PrometheusSeed.Storage; storage != nil && storage.Capacity != nil {
+	var (
+		volumeSize       = "100Gi"
+		retentionSize    = "85GB"
+		storageClassName *string
+	)
+
+	if monitoring := r.Config.Monitoring; monitoring != nil && monitoring.Seed != nil {
+		if storage := monitoring.Seed.PrometheusSeed.Storage; storage != nil && storage.Capacity != nil {
 			volumeSize = storage.Capacity.String()
 			storageClassName = storage.ClassName
 		}
-		if !mon.Seed.PrometheusSeed.Retention.IsZero() {
-			retentionSize = mon.Seed.PrometheusSeed.Retention.String()
+		if !monitoring.Seed.PrometheusSeed.Retention.IsZero() {
+			retentionSize = monitoring.Seed.PrometheusSeed.Retention.String()
 		}
 	}
 
@@ -629,16 +635,19 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 }
 
 func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed, seedIsGarden bool, secretsManager secretsmanager.Interface, globalMonitoringSecret, wildcardCertSecret, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
-	var storageClassName *string
-	volumeSize := "20Gi"
-	retentionSize := "15GB"
-	if mon := r.Config.Monitoring; mon != nil && mon.Seed != nil {
-		if storage := mon.Seed.PrometheusAggregate.Storage; storage != nil && storage.Capacity != nil {
+	var (
+		volumeSize       = "20Gi"
+		retentionSize    = "15GB"
+		storageClassName *string
+	)
+
+	if monitoring := r.Config.Monitoring; monitoring != nil && monitoring.Seed != nil {
+		if storage := monitoring.Seed.PrometheusAggregate.Storage; storage != nil && storage.Capacity != nil {
 			volumeSize = storage.Capacity.String()
 			storageClassName = storage.ClassName
 		}
-		if !mon.Seed.PrometheusAggregate.Retention.IsZero() {
-			retentionSize = mon.Seed.PrometheusAggregate.Retention.String()
+		if !monitoring.Seed.PrometheusAggregate.Retention.IsZero() {
+			retentionSize = monitoring.Seed.PrometheusAggregate.Retention.String()
 		}
 	}
 

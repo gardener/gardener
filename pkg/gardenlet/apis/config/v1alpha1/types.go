@@ -674,7 +674,6 @@ type MonitoringConfig struct {
 	// Shoot is optional and contains settings for the shoot monitoring stack.
 	// +optional
 	Shoot *ShootMonitoringConfig `json:"shoot,omitempty"`
-
 	// Seed is optional and contains settings for the seed monitoring stack.
 	// +optional
 	Seed *SeedMonitoringConfig `json:"seed,omitempty"`
@@ -683,18 +682,23 @@ type MonitoringConfig struct {
 // SeedMonitoringConfig contains settings for the seed monitoring stack.
 type SeedMonitoringConfig struct {
 	// PrometheusCache contains configuration for the Prometheus cache component.
-	PrometheusCache PrometheusConfig `json:"prometheusCache"`
+	// +optional
+	PrometheusCache PrometheusConfig `json:"prometheusCache,omitempty"`
 	// PrometheusAggregate contains configuration for the Prometheus aggregate component.
-	PrometheusAggregate PrometheusConfig `json:"prometheusAggregate"`
+	// +optional
+	PrometheusAggregate PrometheusConfig `json:"prometheusAggregate,omitempty"`
 	// PrometheusSeed contains configuration for the Prometheus seed component.
-	PrometheusSeed PrometheusConfig `json:"prometheusSeed"`
+	// +optional
+	PrometheusSeed PrometheusConfig `json:"prometheusSeed,omitempty"`
 }
 
 // PrometheusConfig contains configuration for Prometheus components in the Garden cluster.
 type PrometheusConfig struct {
 	// Retention is the retention size for the Prometheus data.
+	// +optional
 	Retention resource.Quantity `json:"retention,omitempty"`
 	// Storage is the storage configuration for Prometheus.
+	// +optional
 	Storage *Storage `json:"storage,omitempty"`
 }
 

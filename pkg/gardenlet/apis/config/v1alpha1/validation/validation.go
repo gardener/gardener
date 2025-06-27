@@ -133,10 +133,10 @@ func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfig
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(nodeTolerationCfg.DefaultUnreachableTolerationSeconds, 0), nodeTolerationConfigPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
-	if mon := cfg.Monitoring; mon != nil && mon.Seed != nil {
-		allErrs = append(allErrs, validatePrometheusMonitoringConfiguration(mon.Seed.PrometheusSeed, fldPath.Child("monitoring", "seed", "prometheusSeed"))...)
-		allErrs = append(allErrs, validatePrometheusMonitoringConfiguration(mon.Seed.PrometheusAggregate, fldPath.Child("monitoring", "seed", "prometheusAggregate"))...)
-		allErrs = append(allErrs, validatePrometheusMonitoringConfiguration(mon.Seed.PrometheusCache, fldPath.Child("monitoring", "seed", "prometheusCache"))...)
+	if monitoring := cfg.Monitoring; monitoring != nil && monitoring.Seed != nil {
+		allErrs = append(allErrs, validatePrometheusMonitoringConfiguration(monitoring.Seed.PrometheusSeed, fldPath.Child("monitoring", "seed", "prometheusSeed"))...)
+		allErrs = append(allErrs, validatePrometheusMonitoringConfiguration(monitoring.Seed.PrometheusAggregate, fldPath.Child("monitoring", "seed", "prometheusAggregate"))...)
+		allErrs = append(allErrs, validatePrometheusMonitoringConfiguration(monitoring.Seed.PrometheusCache, fldPath.Child("monitoring", "seed", "prometheusCache"))...)
 	}
 
 	return allErrs

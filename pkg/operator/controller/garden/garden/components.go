@@ -1353,13 +1353,18 @@ func (r *Reconciler) newAlertmanager(log logr.Logger, garden *operatorv1alpha1.G
 }
 
 func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (prometheus.Interface, error) {
-	replicas := 1
+	var (
+		capacity         = "200Gi"
+		retentionSize    = "190GB"
+		storageClassName *string
+		replicas         int32
+	)
+
+	replicas = 1
 	if cp := garden.Spec.VirtualCluster.ControlPlane; cp != nil && cp.HighAvailability != nil {
 		replicas = 2
 	}
-	capacity := "200Gi"
-	retentionSize := "190GB"
-	var storageClassName *string
+
 	if monitoring := r.Config.Controllers.Garden.Monitoring; monitoring != nil && monitoring.PrometheusGarden != nil {
 		retentionSize = monitoring.PrometheusGarden.Retention.String()
 		if monitoring.PrometheusGarden.Storage != nil {
@@ -1373,7 +1378,7 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, capacity)),
 		StorageClassName:  storageClassName,
-		Replicas:          int32(replicas),
+		Replicas:          replicas,
 		Retention:         ptr.To(monitoringv1.Duration("10d")),
 		RetentionSize:     monitoringv1.ByteSize(retentionSize),
 		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
@@ -1423,13 +1428,18 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 		return nil, err
 	}
 
-	replicas := 1
+	var (
+		capacity         = "100Gi"
+		retentionSize    = "80GB"
+		storageClassName *string
+		replicas         int32
+	)
+
+	replicas = 1
 	if cp := garden.Spec.VirtualCluster.ControlPlane; cp != nil && cp.HighAvailability != nil {
 		replicas = 2
 	}
-	capacity := "100Gi"
-	retentionSize := "80GB"
-	var storageClassName *string
+
 	if monitoring := r.Config.Controllers.Garden.Monitoring; monitoring != nil && monitoring.PrometheusLongterm != nil {
 		retentionSize = monitoring.PrometheusLongterm.Retention.String()
 		if monitoring.PrometheusLongterm.Storage != nil {
@@ -1443,7 +1453,7 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, capacity)),
 		StorageClassName:  storageClassName,
-		Replicas:          int32(replicas),
+		Replicas:          replicas,
 		RetentionSize:     monitoringv1.ByteSize(retentionSize),
 		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
 		RuntimeVersion:    r.RuntimeVersion,

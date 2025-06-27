@@ -100,14 +100,17 @@ type GardenControllerConfig struct {
 	// +optional
 	ETCDConfig *gardenletconfigv1alpha1.ETCDConfig `json:"etcdConfig,omitempty"`
 	// Monitoring contains the configuration for the monitoring components of the runtime cluster.
+	// +optional
 	Monitoring *GardenMonitoring `json:"monitoring,omitempty"`
 }
 
 // PrometheusConfig contains configuration for Prometheus components in the Garden cluster.
 type PrometheusConfig struct {
 	// Retention is the retention size for the Prometheus data.
+	// +optional
 	Retention resource.Quantity `json:"retention,omitempty"`
 	// Storage is the storage configuration for Prometheus.
+	// +optional
 	Storage *Storage `json:"storage,omitempty"`
 }
 
@@ -135,16 +138,20 @@ type GardenMonitoring struct {
 // SeedMonitoring contains the configuration for the monitoring components of the seed cluster.
 type SeedMonitoring struct {
 	// PrometheusCache contains the configuration for the Prometheus cache components in the seed cluster.
+	// +optional
 	PrometheusCache *PrometheusConfig `json:"prometheusCache,omitempty"`
 	// PrometheusSeed contains the configuration for the Prometheus components in the seed cluster.
+	// +optional
 	PrometheusSeed *PrometheusConfig `json:"prometheusSeed,omitempty"`
 	// PrometheusAggretate contains the configuration for the Prometheus aggregate components in the seed cluster.
+	// +optional
 	PrometheusAggretate *PrometheusConfig `json:"prometheusAggretate,omitempty"`
 }
 
 // GardenletMonitoring contains the configuration for the monitoring components of the gardenlet.
 type GardenletMonitoring struct {
 	// Seed contains the configuration for the monitoring components of the seed cluster.
+	// +optional
 	Seed SeedMonitoring `json:"seed,omitempty"`
 }
 
@@ -154,6 +161,7 @@ type GardenletDeployerControllerConfig struct {
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// Monitoring contains the configuration for the monitoring components of the runtime cluster.
+	// +optional
 	Monitoring *GardenletMonitoring `json:"monitoring,omitempty"`
 }
 
