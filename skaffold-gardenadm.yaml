@@ -321,6 +321,7 @@ build:
             - pkg/utils/managedresources/builder
             - pkg/utils/net
             - pkg/utils/oci
+            - pkg/utils/publicip
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
