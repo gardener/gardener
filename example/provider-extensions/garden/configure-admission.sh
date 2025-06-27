@@ -47,9 +47,9 @@ for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.na
       RELEASE=$CONTROLLER_DEPLOYMENT_RELEASE
     else
       echo "Could not find \"$CONTROLLER_DEPLOYMENT_RELEASE\" release in the set of github repository releases of \"$p\"."
-      echo "Using latest release instead."
+      echo "Using latest release \"$RELEASE\" instead."
     fi
-    echo "Trying to deploy $ADMISSION_NAME with $RELEASE ..."
+    echo "Trying to deploy $ADMISSION_NAME with $RELEASE..."
     ADMISSION_GIT_ROOT=$(mktemp -d)
     ADMISSION_FILE=$(mktemp)
     curl --fail -L -o "$ADMISSION_FILE" "https://github.com/gardener/gardener-extension-$p/archive/refs/tags/$RELEASE.tar.gz"
