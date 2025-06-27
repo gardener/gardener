@@ -212,16 +212,6 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istioProxyProtocolEnvoyFilter = func() string {
-			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter.yaml")
-			return string(data)
-		}
-
-		istioProxyProtocolEnvoyFilterDual = func() string {
-			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_dual_proxy_protocol.yaml")
-			return string(data)
-		}
-
 		istioProxyProtocolEnvoyFilterSNI = func() string {
 			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_sni.yaml")
 			return string(data)
@@ -229,16 +219,6 @@ var _ = Describe("istiod", func() {
 
 		istioProxyProtocolEnvoyFilterVPN = func() string {
 			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_vpn.yaml")
-			return string(data)
-		}
-
-		istioProxyProtocolGateway = func() string {
-			data, _ := os.ReadFile("./test_charts/proxyprotocol_gateway.yaml")
-			return string(data)
-		}
-
-		istioProxyProtocolVirtualService = func() string {
-			data, _ := os.ReadFile("./test_charts/proxyprotocol_virtualservice.yaml")
 			return string(data)
 		}
 
@@ -420,20 +400,8 @@ var _ = Describe("istiod", func() {
 				expectedIstioManifests = append(expectedIstioManifests, istioStripTrailingDotEnvoyFilter())
 			}
 
-			if igw[0].TerminateLoadBalancerProxyProtocol && !igw[0].ProxyProtocolEnabled {
+			if igw[0].TerminateLoadBalancerProxyProtocol {
 				expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolEnvoyFilterSNI(), istioProxyProtocolEnvoyFilterVPN())
-			}
-
-			if igw[0].TerminateLoadBalancerProxyProtocol && igw[0].ProxyProtocolEnabled {
-				expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolEnvoyFilterDual(), istioProxyProtocolEnvoyFilterSNI(), istioProxyProtocolEnvoyFilterVPN())
-			}
-
-			if !igw[0].TerminateLoadBalancerProxyProtocol && igw[0].ProxyProtocolEnabled {
-				expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolEnvoyFilter())
-			}
-
-			if igw[0].ProxyProtocolEnabled {
-				expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolGateway(), istioProxyProtocolVirtualService())
 			}
 
 			if igw[0].VPNEnabled {
@@ -465,21 +433,9 @@ var _ = Describe("istiod", func() {
 			}
 		}
 
-		Context("with proxy protocol in apiserver-proxy and with proxy protocol termination", func() {
+		Context("with proxy protocol termination", func() {
 			BeforeEach(func() {
 				igw[0].TerminateLoadBalancerProxyProtocol = true
-				igw[0].ProxyProtocolEnabled = true
-			})
-
-			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(nil, nil)
-			})
-		})
-
-		Context("without proxy protocol in apiserver-proxy and proxy protocol termination", func() {
-			BeforeEach(func() {
-				igw[0].TerminateLoadBalancerProxyProtocol = true
-				igw[0].ProxyProtocolEnabled = false
 			})
 
 			It("should successfully deploy all resources", func() {
@@ -711,40 +667,8 @@ var _ = Describe("istiod", func() {
 			})
 		})
 
-		Context("Proxy Protocol disabled", func() {
-			BeforeEach(func() {
-				for i := range igw {
-					igw[i].ProxyProtocolEnabled = false
-				}
-
-				istiod = NewIstio(
-					c,
-					renderer,
-					Values{
-						Istiod: IstiodValues{
-							Enabled:           true,
-							Image:             "foo/bar",
-							Namespace:         deployNS,
-							PriorityClassName: v1beta1constants.PriorityClassNameSeedSystemCritical,
-							TrustDomain:       "foo.local",
-							Zones:             []string{"a", "b", "c"},
-						},
-						IngressGateway: igw,
-					},
-				)
-			})
-
-			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(nil, nil)
-			})
-		})
-
 		Context("istiod disabled", func() {
 			BeforeEach(func() {
-				for i := range igw {
-					igw[i].ProxyProtocolEnabled = false
-				}
-
 				istiod = NewIstio(
 					c,
 					renderer,
@@ -1014,7 +938,6 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string,
 			},
 			Namespace:                          namespace,
 			PriorityClassName:                  v1beta1constants.PriorityClassNameSeedSystemCritical,
-			ProxyProtocolEnabled:               true,
 			TerminateLoadBalancerProxyProtocol: false,
 			VPNEnabled:                         true,
 		},
