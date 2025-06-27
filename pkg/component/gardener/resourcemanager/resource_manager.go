@@ -1668,7 +1668,6 @@ func GetPodKubeAPIServerLoadBalancingMutatingWebhook(namespaceSelector *metav1.L
 			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
 		}},
 		NamespaceSelector:       namespaceSelector,
-		ObjectSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{gardenerutils.NetworkPolicyLabel(labelSelectorPrefix+"kube-apiserver", 443): v1beta1constants.LabelNetworkPolicyAllowed}},
 		ClientConfig:            buildClientConfigFn(secretServerCA, podkubeapiserverloadbalancing.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
