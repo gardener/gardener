@@ -48,6 +48,9 @@ type AutonomousBotanist struct {
 	FS         afero.Afero
 	Extensions []Extension
 
+	// Bastion is only set for `gardenadm bootstrap`.
+	Bastion *Bastion
+
 	operatingSystemConfigSecret       *corev1.Secret
 	gardenerResourceManagerServiceIPs []string
 	staticPodNameToHash               map[string]string
@@ -132,6 +135,8 @@ func NewAutonomousBotanist(
 	}
 
 	if !autonomousBotanist.Shoot.RunsControlPlane() {
+		autonomousBotanist.Bastion = autonomousBotanist.DefaultBastion()
+
 		// For `gardenadm bootstrap`, we don't initialize the control plane machines with a "full OSC".
 		// Instead, we provide a small alternative OSC, that only fetches the `gardenadm` binary from the registry.
 		autonomousBotanist.Shoot.Components.Extensions.OperatingSystemConfig, err = autonomousBotanist.ControlPlaneBootstrapOperatingSystemConfig()

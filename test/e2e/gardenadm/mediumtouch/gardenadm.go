@@ -43,6 +43,10 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			session = Run("bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/medium-touch")
 		})
 
+		It("should auto-detect the system's public IPs", func(ctx SpecContext) {
+			Eventually(ctx, session.Err).Should(gbytes.Say("Using auto-detected public IP addresses as bastion ingress CIDRs"))
+		}, SpecTimeout(time.Minute))
+
 		It("should find the cloud provider secret", func(ctx SpecContext) {
 			cloudProviderSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloudprovider", Namespace: technicalID}}
 			Eventually(ctx, Object(cloudProviderSecret)).Should(HaveField("ObjectMeta.Labels", HaveKeyWithValue("gardener.cloud/purpose", "cloudprovider")))
@@ -66,6 +70,17 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		It("should deploy machine-controller-manager", func(ctx SpecContext) {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: technicalID}}
 			Eventually(ctx, Object(deployment)).Should(BeHealthy(health.CheckDeployment))
+		}, SpecTimeout(time.Minute))
+
+		It("should deploy a bastion with the detected public IPs", func(ctx SpecContext) {
+			bastion := &extensionsv1alpha1.Bastion{ObjectMeta: metav1.ObjectMeta{Name: "gardenadm-bootstrap", Namespace: technicalID}}
+			Eventually(ctx, Object(bastion)).Should(And(
+				HaveField("Spec.Ingress", Not(Or(
+					ContainElement(HaveField("IPBlock.CIDR", "0.0.0.0/0")),
+					ContainElement(HaveField("IPBlock.CIDR", "::/0")),
+				))),
+				BeHealthy(health.CheckExtensionObject),
+			), "should be healthy and not have default (open) ingress CIDRs")
 		}, SpecTimeout(time.Minute))
 
 		It("should deploy a control plane machine", func(ctx SpecContext) {
