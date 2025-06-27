@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -449,7 +450,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								Name:            Druid,
 								Image:           b.image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
-								Args:            getDruidDeployArgs(b.etcdConfig, webhookServerTLSCertMountPath),
+								Args:            getDruidDeployArgs(b.etcdConfig, b.namespace, webhookServerTLSCertMountPath),
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -576,7 +577,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
 
-func getDruidDeployArgs(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, webhookServerTLSMountPath string) []string {
+func getDruidDeployArgs(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, namespace string, webhookServerTLSMountPath string) []string {
 	args := []string{
 		"--enable-leader-election=true",
 		"--disable-etcd-serviceaccount-automount=true",
@@ -589,6 +590,7 @@ func getDruidDeployArgs(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, webhookS
 		"--enable-backup-compaction=" + strconv.FormatBool(*etcdConfig.BackupCompactionController.EnableBackupCompaction),
 		"--compaction-workers=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.Workers, 10),
 		"--etcd-events-threshold=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.EventsThreshold, 10),
+		fmt.Sprintf("--reconciler-service-account=%s%s:%s", serviceaccount.ServiceAccountUsernamePrefix, namespace, druidServiceAccountName),
 	}
 
 	if etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration != nil {
