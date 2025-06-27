@@ -1112,6 +1112,31 @@ If the above-mentioned issue gets resolved and there is a native support for det
 > [!NOTE]  
 > The EndpointSlice Hints webhook is disabled when the runtime Kubernetes version is >= 1.32. Instead, the `ServiceTrafficDistribution` feature is used. See more details in [Topology-Aware Traffic Routing](../operations/topology_aware_routing.md).
 
+#### Pod Kube API Server Load Balancing
+
+This webhook is used in the context of [L7 load balancing for kube-apiservers](../operations/kube_apiserver_loadbalancing.md).
+It facilitates access of control plane components to the kube-apiserver via istio ingress gateway which is the Gardener l7 load balancer.
+
+For those control plane pods which use the generic token kubeconfig the webhook adds these items:
+- It adds a network policy label to allow the pods to access the internal istio ingress gateway service which is responsible for "its" kube-apiserver.
+- It adds a host alias which resolves the cluster externally resolvable kube-apiserver host to the internal istio ingress gateway service cluster IP address.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    networking.resources.gardener.cloud/to-istio-ingress-istio-ingressgateway-internal-tcp-9443: allowed  # added by webhook
+spec:
+  hostAliases:
+    - hostnames:  # added by webhook
+        - api.local.local.internal.local.gardener.cloud # added by webhook
+      ip: 10.2.15.178 # added by webhook
+```
+
+For mutating pods, the webhook needs to know the namespace of the istio ingress gateway responsible for the kube-apiserver and its host names.
+These values are stored in `istio-internal-load-balancing` configmap in the same namespace as the pod being mutated.
+
 ### Validating Webhooks
 
 #### Unconfirmed Deletion Prevention For Custom Resources And Definitions

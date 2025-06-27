@@ -41,7 +41,7 @@ volumes:
 		if volume.Secret != nil && strings.HasPrefix(volume.Secret.SecretName, v1beta1constants.SecretNameGenericTokenKubeconfig) {
 			usesGenericKubeconfig = true
 			h.Logger.Info("Pod uses generic kubeconfig", "pod", client.ObjectKeyFromObject(pod), "secretName", volume.Secret.SecretName)
-			break volumes
+			break
 		}
 
 		if volume.Projected != nil {
@@ -66,6 +66,10 @@ volumes:
 		return fmt.Errorf("failed to get istio-internal-load-balancing configmap %q: %w", client.ObjectKeyFromObject(configMap), err)
 	}
 
+	if configMap.Data[resourcemanagerconfigv1alpha1.HostsConfigMapKey] == "" {
+		return fmt.Errorf("%q key in configmap %q provides an empty value", resourcemanagerconfigv1alpha1.HostsConfigMapKey, client.ObjectKeyFromObject(configMap))
+	}
+
 	hosts := strings.Split(configMap.Data[resourcemanagerconfigv1alpha1.HostsConfigMapKey], ",")
 	istioNamespace := configMap.Data[resourcemanagerconfigv1alpha1.IstioNamespaceConfigMapKey]
 
@@ -85,7 +89,7 @@ volumes:
 	if pod.Labels == nil {
 		pod.Labels = make(map[string]string)
 	}
-	pod.Labels[gardenerutils.NetworkPolicyLabel("all-istio-ingresses-istio-ingressgateway-internal", 9443)] = v1beta1constants.LabelNetworkPolicyAllowed
+	pod.Labels[gardenerutils.NetworkPolicyLabel(istioNamespace+"-"+v1beta1constants.InternalSNIIngressServiceName, 9443)] = v1beta1constants.LabelNetworkPolicyAllowed
 	h.Logger.V(1).Info("Added network policy label for all istio ingresses to pod", "pod", client.ObjectKeyFromObject(pod))
 
 	return nil

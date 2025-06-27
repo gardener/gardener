@@ -1135,9 +1135,6 @@ var _ = Describe("ResourceManager", func() {
 						NamespaceSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"foobar": "barfoo"},
 						},
-						ObjectSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed"},
-						},
 						ClientConfig: admissionregistrationv1.WebhookClientConfig{
 							Service: &admissionregistrationv1.ServiceReference{
 								Name:      "gardener-resource-manager",
@@ -1163,9 +1160,6 @@ var _ = Describe("ResourceManager", func() {
 						}},
 						NamespaceSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"barbaz": "bazbar"},
-						},
-						ObjectSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443": "allowed"},
 						},
 						ClientConfig: admissionregistrationv1.WebhookClientConfig{
 							Service: &admissionregistrationv1.ServiceReference{

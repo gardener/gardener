@@ -12,7 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("PodKubeAPIServerLoadBalancing tests", func() {
@@ -23,9 +25,6 @@ var _ = Describe("PodKubeAPIServerLoadBalancing tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
 				Namespace:    testNamespace.Name,
-				Labels: map[string]string{
-					"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
-				},
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
@@ -49,7 +48,7 @@ var _ = Describe("PodKubeAPIServerLoadBalancing tests", func() {
 			Expect(testClient.Create(ctx, pod)).To(Succeed())
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
 			Expect(pod.Spec.HostAliases).To(BeEmpty())
-			Expect(pod.Labels).To(Equal(map[string]string{"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed"}))
+			Expect(pod.Labels).To(BeEmpty())
 		})
 	})
 
@@ -76,7 +75,7 @@ var _ = Describe("PodKubeAPIServerLoadBalancing tests", func() {
 				Expect(testClient.Create(ctx, pod)).To(Succeed())
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
 				Expect(pod.Spec.HostAliases).To(BeEmpty())
-				Expect(pod.Labels).To(Equal(map[string]string{"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed"}))
+				Expect(pod.Labels).To(BeEmpty())
 			})
 		})
 
@@ -120,17 +119,9 @@ var _ = Describe("PodKubeAPIServerLoadBalancing tests", func() {
 				Expect(pod.Spec.HostAliases[0].Hostnames).To(ConsistOf("api.example.com", "api2.example.com"))
 
 				Expect(pod.Labels).To(HaveKeyWithValue(
-					"networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-internal-tcp-9443",
+					gardenerutils.NetworkPolicyLabel(testNamespace.Name+"-"+v1beta1constants.InternalSNIIngressServiceName, 9443),
 					"allowed",
 				))
-			})
-
-			It("should not patch the pod if it has no access to kube-apiserver", func() {
-				pod.Labels = nil
-				Expect(testClient.Create(ctx, pod)).To(Succeed())
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-				Expect(pod.Spec.HostAliases).To(BeEmpty())
-				Expect(pod.Labels).To(BeEmpty())
 			})
 
 			It("should fail if the istio-ingressgateway service is not found", func() {

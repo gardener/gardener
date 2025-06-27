@@ -29,12 +29,16 @@ var _ = Describe("Handler", func() {
 		handler *Handler
 		pod     *corev1.Pod
 
-		testNamespace = "foo-namespace"
+		testNamespace  string
+		istioNamespace string
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		log = logr.Discard()
+
+		testNamespace = "foo-namespace"
+		istioNamespace = "istio-gateway"
 
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
@@ -65,7 +69,7 @@ var _ = Describe("Handler", func() {
 					},
 					Data: map[string]string{
 						resourcemanagerconfigv1alpha1.HostsConfigMapKey:          "api.example.com,api2.example.com",
-						resourcemanagerconfigv1alpha1.IstioNamespaceConfigMapKey: "istio-gateway",
+						resourcemanagerconfigv1alpha1.IstioNamespaceConfigMapKey: istioNamespace,
 					},
 				}
 				Expect(targetClient.Create(ctx, configMap)).To(Succeed())
@@ -101,7 +105,7 @@ var _ = Describe("Handler", func() {
 				It("should add host aliases and network policy label to the pod", func() {
 					istioService := &corev1.Service{
 						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "istio-gateway",
+							Namespace: istioNamespace,
 							Name:      "istio-ingressgateway-internal",
 						},
 						Spec: corev1.ServiceSpec{
@@ -122,7 +126,7 @@ var _ = Describe("Handler", func() {
 					Expect(pod.Spec.HostAliases[1].Hostnames).To(ConsistOf("api.example.com", "api2.example.com"))
 
 					Expect(pod.Labels).To(HaveKeyWithValue(
-						"networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-internal-tcp-9443",
+						"networking.resources.gardener.cloud/to-"+istioNamespace+"-istio-ingressgateway-internal-tcp-9443",
 						"allowed",
 					))
 				})
