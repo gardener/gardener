@@ -20,11 +20,15 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/publicip"
 )
 
 // NewCommand creates a new cobra.Command.
 func NewCommand(globalOpts *cmd.Options) *cobra.Command {
-	opts := &Options{Options: globalOpts}
+	opts := &Options{
+		Options:          globalOpts,
+		PublicIPDetector: publicip.IpifyDetector{},
+	}
 
 	cmd := &cobra.Command{
 		Use:   "bootstrap",
