@@ -19,4 +19,6 @@ RUN systemctl enable run-userdata.service
 
 RUN runc --version ; containerd --version
 
+RUN chmod 755 /etc/sysctl.d/
+
 ENTRYPOINT ["/usr/local/bin/entrypoint", "/sbin/init"]
