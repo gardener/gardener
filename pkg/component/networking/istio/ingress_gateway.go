@@ -43,7 +43,6 @@ type IngressGatewayValues struct {
 	Namespace                          string
 	PriorityClassName                  string
 	TrustDomain                        string
-	ProxyProtocolEnabled               bool
 	TerminateLoadBalancerProxyProtocol bool
 	VPNEnabled                         bool
 	Zones                              []string
@@ -95,7 +94,6 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"istiodNamespace":                    istioIngressGateway.IstiodNamespace,
 			"loadBalancerIP":                     istioIngressGateway.LoadBalancerIP,
 			"serviceName":                        v1beta1constants.DefaultSNIIngressServiceName,
-			"proxyProtocolEnabled":               istioIngressGateway.ProxyProtocolEnabled,
 			"terminateLoadBalancerProxyProtocol": istioIngressGateway.TerminateLoadBalancerProxyProtocol,
 			"terminateAPIServerTLS":              enableAPIServerTLSTermination,
 			"vpn": map[string]any{
