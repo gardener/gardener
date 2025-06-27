@@ -97,7 +97,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.ControlPlane.KubeAPIServerIngress = b.DefaultKubeAPIServerIngress()
 	o.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService()
 	o.Shoot.Components.ControlPlane.KubeAPIServerSNI = b.DefaultKubeAPIServerSNI()
 	o.Shoot.Components.ControlPlane.KubeAPIServer, err = b.DefaultKubeAPIServer(ctx)

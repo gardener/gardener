@@ -185,28 +185,3 @@ func mapToReservedKubeApiServerRange(ip net.IP) string {
 	prefix := prefixIp.To4()
 	return net.IPv4(prefix[0], ip[1], ip[2], ip[3]).String()
 }
-
-// DefaultKubeAPIServerIngress returns a deployer for the kube-apiserver ingress.
-// TODO(oliver-goetz): Remove this method when Gardener v1.115.0 is released.
-func (b *Botanist) DefaultKubeAPIServerIngress() component.Deployer {
-	return kubeapiserverexposure.NewIngress(
-		b.SeedClientSet.Client(),
-		b.Shoot.ControlPlaneNamespace,
-		kubeapiserverexposure.IngressValues{
-			ServiceName: v1beta1constants.DeploymentNameKubeAPIServer,
-			Host:        b.ComputeKubeAPIServerHost(),
-			IstioIngressGatewayLabelsFunc: func() map[string]string {
-				return b.DefaultIstioLabels()
-			},
-			IstioIngressGatewayNamespaceFunc: func() string {
-				return b.DefaultIstioNamespace()
-			},
-		})
-}
-
-// DeployKubeAPIServerIngress deploys the ingress for the kube-apiserver.
-// TODO(oliver-goetz): Remove this method when Gardener v1.115.0 is released.
-func (b *Botanist) DeployKubeAPIServerIngress(ctx context.Context) error {
-	// This is now part of the SNI deployer in kubeapiserverexposure.
-	return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Destroy(ctx)
-}

@@ -187,12 +187,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement),
 		})
-		// TODO(oliver-goetz): Remove this step when Gardener v1.115.0 is released.
-		_ = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server ingress with trusted certificate in the Seed cluster",
-			Fn:           botanist.DeployKubeAPIServerIngress,
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
-		})
 		deployReferencedResources = g.Add(flow.Task{
 			Name:         "Deploying referenced resources",
 			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
