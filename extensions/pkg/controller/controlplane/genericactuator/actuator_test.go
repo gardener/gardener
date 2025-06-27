@@ -50,7 +50,6 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/test"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -61,8 +60,7 @@ const (
 	renderedContent         = "renderedContent"
 	providerName            = "provider-test"
 
-	caNameControlPlane         = "ca-" + providerName + "-controlplane"
-	caNameControlPlaneExposure = caNameControlPlane + "-exposure"
+	caNameControlPlane = "ca-" + providerName + "-controlplane"
 
 	seedVersion  = "1.28.0"
 	shootVersion = "1.28.0"
@@ -96,13 +94,7 @@ var _ = Describe("Actuator", func() {
 		ctx                    = context.TODO()
 		webhookServerNamespace = "extension-foo-12345"
 
-		cp         *extensionsv1alpha1.ControlPlane
-		cpExposure = &extensionsv1alpha1.ControlPlane{
-			ObjectMeta: metav1.ObjectMeta{Name: "control-plane-exposure", Namespace: namespace},
-			Spec: extensionsv1alpha1.ControlPlaneSpec{
-				Purpose: getPurposeExposure(),
-			},
-		}
+		cp *extensionsv1alpha1.ControlPlane
 
 		cluster = &extensionscontroller.Cluster{
 			Shoot: &gardencorev1beta1.Shoot{
@@ -155,10 +147,6 @@ var _ = Describe("Actuator", func() {
 			caNameControlPlane:                       "3e6425b85bb75f33df7c16387b6999eb0f2d3c3e0a81afb4739626c69a79887b",
 			"cloud-controller-manager":               "47448ddc1d8c7b02d20125b4f0914acf8402ee9d763d5bdd48634fcbf8d75b1d",
 		}
-		exposureChecksums = map[string]string{
-			caNameControlPlaneExposure: "98637da60735fb6f44615e032c30b3f5fc12d0af5df057fa2741aa97554db9a3",
-			"lb-readvertiser":          "c9157ced4dfc92686c2bf62e2f1a9f0d12f6d9ac1d835b877d9651b126b56e67",
-		}
 
 		configChartValues = map[string]any{
 			"cloudProviderConfig": `[Global]`,
@@ -180,12 +168,7 @@ var _ = Describe("Actuator", func() {
 			"foo": "bar",
 		}
 
-		controlPlaneExposureChartValues = map[string]any{
-			"replicas": 1,
-		}
-
-		shootAccessSecretsFunc         func(string) []*gardenerutils.AccessSecret
-		exposureShootAccessSecretsFunc func(string) []*gardenerutils.AccessSecret
+		shootAccessSecretsFunc func(string) []*gardenerutils.AccessSecret
 
 		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
 		logger      = log.Log.WithName("test")
@@ -214,9 +197,6 @@ var _ = Describe("Actuator", func() {
 
 		shootAccessSecretsFunc = func(namespace string) []*gardenerutils.AccessSecret {
 			return []*gardenerutils.AccessSecret{gardenerutils.NewShootAccessSecret("new-cp", namespace)}
-		}
-		exposureShootAccessSecretsFunc = func(namespace string) []*gardenerutils.AccessSecret {
-			return []*gardenerutils.AccessSecret{gardenerutils.NewShootAccessSecret("new-cp-exposure", namespace)}
 		}
 
 		cpSecretKey = client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameCloudProvider}
@@ -464,26 +444,23 @@ webhooks:
 
 			// Create actuator
 			a := &actuator{
-				providerName:                   providerName,
-				secretConfigsFunc:              getSecretsConfigs,
-				shootAccessSecretsFunc:         shootAccessSecretsFunc,
-				exposureSecretConfigsFunc:      nil,
-				exposureShootAccessSecretsFunc: nil,
-				configChart:                    configChart,
-				controlPlaneChart:              ccmChart,
-				controlPlaneShootChart:         ccmShootChart,
-				controlPlaneShootCRDsChart:     cpShootCRDsChart,
-				storageClassesChart:            storageClassesChart,
-				controlPlaneExposureChart:      nil,
-				vp:                             vp,
-				chartRendererFactory:           crf,
-				imageVector:                    imageVector,
-				configName:                     configName,
-				atomicShootWebhookConfig:       atomicWebhookConfig,
-				webhookServerNamespace:         webhookServerNamespace,
-				gardenerClientset:              gardenerClientset,
-				client:                         c,
-				newSecretsManager:              newSecretsManager,
+				providerName:               providerName,
+				secretConfigsFunc:          getSecretsConfigs,
+				shootAccessSecretsFunc:     shootAccessSecretsFunc,
+				configChart:                configChart,
+				controlPlaneChart:          ccmChart,
+				controlPlaneShootChart:     ccmShootChart,
+				controlPlaneShootCRDsChart: cpShootCRDsChart,
+				storageClassesChart:        storageClassesChart,
+				vp:                         vp,
+				chartRendererFactory:       crf,
+				imageVector:                imageVector,
+				configName:                 configName,
+				atomicShootWebhookConfig:   atomicWebhookConfig,
+				webhookServerNamespace:     webhookServerNamespace,
+				gardenerClientset:          gardenerClientset,
+				client:                     c,
+				newSecretsManager:          newSecretsManager,
 			}
 
 			// Call Reconcile method and check the result
@@ -565,26 +542,23 @@ webhooks:
 
 			// Create actuator
 			a := &actuator{
-				providerName:                   providerName,
-				secretConfigsFunc:              getSecretsConfigs,
-				shootAccessSecretsFunc:         shootAccessSecretsFunc,
-				exposureSecretConfigsFunc:      nil,
-				exposureShootAccessSecretsFunc: nil,
-				configChart:                    configChart,
-				controlPlaneChart:              ccmChart,
-				controlPlaneShootChart:         nil,
-				controlPlaneShootCRDsChart:     cpShootCRDsChart,
-				storageClassesChart:            nil,
-				controlPlaneExposureChart:      nil,
-				vp:                             vp,
-				chartRendererFactory:           nil,
-				imageVector:                    nil,
-				configName:                     configName,
-				atomicShootWebhookConfig:       atomicWebhookConfig,
-				webhookServerNamespace:         webhookServerNamespace,
-				gardenerClientset:              gardenerClientset,
-				client:                         client,
-				newSecretsManager:              newSecretsManager,
+				providerName:               providerName,
+				secretConfigsFunc:          getSecretsConfigs,
+				shootAccessSecretsFunc:     shootAccessSecretsFunc,
+				configChart:                configChart,
+				controlPlaneChart:          ccmChart,
+				controlPlaneShootChart:     nil,
+				controlPlaneShootCRDsChart: cpShootCRDsChart,
+				storageClassesChart:        nil,
+				vp:                         vp,
+				chartRendererFactory:       nil,
+				imageVector:                nil,
+				configName:                 configName,
+				atomicShootWebhookConfig:   atomicWebhookConfig,
+				webhookServerNamespace:     webhookServerNamespace,
+				gardenerClientset:          gardenerClientset,
+				client:                     client,
+				newSecretsManager:          newSecretsManager,
 			}
 
 			// Call Delete method and check the result
@@ -598,133 +572,6 @@ webhooks:
 		Entry("should delete secrets and charts (no shoot CRDs chart)", cloudProviderConfigName, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, false),
 	)
 
-	DescribeTable("#ReconcileExposure",
-		func() {
-			// Create mock client
-			c := mockclient.NewMockClient(ctrl)
-
-			// Create mock Gardener clientset and chart applier
-			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
-			gardenerClientset.EXPECT().Version().Return(seedVersion)
-			chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
-			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier)
-
-			// Create mock charts
-			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
-			cpExposureChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion, controlPlaneExposureChartValues).Return(nil)
-
-			// Create mock values provider
-			vp := extensionsmockgenericactuator.NewMockValuesProvider(ctrl)
-			vp.EXPECT().GetControlPlaneExposureChartValues(ctx, cpExposure, cluster, gomock.Any(), exposureChecksums).Return(controlPlaneExposureChartValues, nil)
-
-			// Handle shoot access secrets and legacy secret cleanup
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
-					obj.SetResourceVersion("0")
-				})
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-				Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      exposureShootAccessSecretsFunc(namespace)[0].Secret.Name,
-							Namespace: namespace,
-							Annotations: map[string]string{
-								"serviceaccount.resources.gardener.cloud/name":      exposureShootAccessSecretsFunc(namespace)[0].ServiceAccountName,
-								"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
-							},
-							Labels: map[string]string{
-								"resources.gardener.cloud/purpose": "token-requestor",
-								"resources.gardener.cloud/class":   "shoot",
-							},
-							ResourceVersion: "0",
-						},
-						Type: corev1.SecretTypeOpaque,
-					}))
-				})
-
-			// Create actuator
-			a := &actuator{
-				providerName:                   providerName,
-				secretConfigsFunc:              nil,
-				shootAccessSecretsFunc:         nil,
-				exposureSecretConfigsFunc:      getSecretsConfigsExposure,
-				exposureShootAccessSecretsFunc: exposureShootAccessSecretsFunc,
-				configChart:                    nil,
-				controlPlaneChart:              nil,
-				controlPlaneShootChart:         nil,
-				controlPlaneShootCRDsChart:     nil,
-				storageClassesChart:            nil,
-				controlPlaneExposureChart:      cpExposureChart,
-				vp:                             vp,
-				chartRendererFactory:           nil,
-				imageVector:                    imageVector,
-				configName:                     "",
-				atomicShootWebhookConfig:       nil,
-				webhookServerNamespace:         "",
-				gardenerClientset:              gardenerClientset,
-				client:                         c,
-				newSecretsManager:              newSecretsManager,
-			}
-
-			// Call Reconcile method and check the result
-			requeue, err := a.Reconcile(ctx, logger, cpExposure, cluster)
-			Expect(requeue).To(BeFalse())
-			Expect(err).NotTo(HaveOccurred())
-
-			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
-				"ca-provider-test-controlplane-exposure-3dcf5fed", "ca-provider-test-controlplane-exposure-bundle-20af429f",
-				"lb-readvertiser-aa3c2451",
-			)
-		},
-		Entry("should deploy secrets and apply charts with correct parameters"),
-	)
-
-	DescribeTable("#DeleteExposure",
-		func() {
-			// Create mock clients
-			client := mockclient.NewMockClient(ctrl)
-
-			// Create mock Gardener clientset and chart applier
-			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
-
-			// Create mock charts
-			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
-			cpExposureChart.EXPECT().Delete(ctx, client, namespace).Return(nil)
-
-			// Handle shoot access secrets and legacy secret cleanup
-			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
-
-			// Create actuator
-			a := &actuator{
-				providerName:                   providerName,
-				secretConfigsFunc:              nil,
-				shootAccessSecretsFunc:         nil,
-				exposureSecretConfigsFunc:      getSecretsConfigsExposure,
-				exposureShootAccessSecretsFunc: exposureShootAccessSecretsFunc,
-				configChart:                    nil,
-				controlPlaneChart:              nil,
-				controlPlaneShootChart:         nil,
-				controlPlaneShootCRDsChart:     nil,
-				storageClassesChart:            nil,
-				controlPlaneExposureChart:      cpExposureChart,
-				vp:                             nil,
-				chartRendererFactory:           nil,
-				imageVector:                    nil,
-				configName:                     "",
-				atomicShootWebhookConfig:       nil,
-				webhookServerNamespace:         "",
-				gardenerClientset:              gardenerClientset,
-				client:                         client,
-				newSecretsManager:              newSecretsManager,
-			}
-
-			// Call Delete method and check the result
-			Expect(a.Delete(ctx, logger, cpExposure, cluster)).To(Succeed())
-
-			expectSecretsManagedBySecretsManager(fakeClient, "all secrets managed by SecretsManager should get cleaned up")
-		},
-		Entry("should delete secrets and charts"),
-	)
 })
 
 func clientGet(result client.Object) any {
@@ -737,12 +584,6 @@ func clientGet(result client.Object) any {
 		}
 		return nil
 	}
-}
-
-func getPurposeExposure() *extensionsv1alpha1.Purpose {
-	purpose := new(extensionsv1alpha1.Purpose)
-	*purpose = extensionsv1alpha1.Exposure
-	return purpose
 }
 
 func getSecretsConfigs(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
@@ -763,28 +604,6 @@ func getSecretsConfigs(namespace string) []extensionssecretsmanager.SecretConfig
 				CertType:   secretsutils.ServerCert,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
-		},
-	}
-}
-
-func getSecretsConfigsExposure(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
-	return []extensionssecretsmanager.SecretConfigWithOptions{
-		{
-			Config: &secretsutils.CertificateSecretConfig{
-				Name:       caNameControlPlaneExposure,
-				CommonName: caNameControlPlaneExposure,
-				CertType:   secretsutils.CACert,
-			},
-			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
-		},
-		{
-			Config: &secretsutils.CertificateSecretConfig{
-				Name:       "lb-readvertiser",
-				CommonName: "lb-readvertiser",
-				DNSNames:   kubernetesutils.DNSNamesForService("lb-readvertiser", namespace),
-				CertType:   secretsutils.ServerCert,
-			},
-			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlaneExposure)},
 		},
 	}
 }
