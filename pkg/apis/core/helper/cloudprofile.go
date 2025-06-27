@@ -280,3 +280,32 @@ func CapabilityDefinitionsToCapabilities(capabilityDefinitions []core.Capability
 	}
 	return capabilities
 }
+
+// GetCapabilitiesWithAppliedDefaults returns new capabilities with applied defaults from the capability definitions.
+func GetCapabilitiesWithAppliedDefaults(capabilities core.Capabilities, capabilitiesDefinitions []core.CapabilityDefinition) core.Capabilities {
+	result := make(core.Capabilities, len(capabilitiesDefinitions))
+	for _, capabilityDefinition := range capabilitiesDefinitions {
+		if values, ok := capabilities[capabilityDefinition.Name]; ok {
+			result[capabilityDefinition.Name] = values
+		} else {
+			result[capabilityDefinition.Name] = capabilityDefinition.Values
+		}
+	}
+	return result
+}
+
+// GetCapabilitySetsWithAppliedDefaults returns new capability sets with applied defaults from the capability definitions.
+func GetCapabilitySetsWithAppliedDefaults(capabilitySets []core.CapabilitySet, capabilitiesDefinitions []core.CapabilityDefinition) []core.CapabilitySet {
+	if len(capabilitySets) == 0 {
+		// If no capability sets are defined, assume all capabilities are supported.
+		return []core.CapabilitySet{{Capabilities: GetCapabilitiesWithAppliedDefaults(core.Capabilities{}, capabilitiesDefinitions)}}
+	}
+
+	result := make([]core.CapabilitySet, len(capabilitySets))
+	for i, capabilitySet := range capabilitySets {
+		result[i] = core.CapabilitySet{
+			Capabilities: GetCapabilitiesWithAppliedDefaults(capabilitySet.Capabilities, capabilitiesDefinitions),
+		}
+	}
+	return result
+}

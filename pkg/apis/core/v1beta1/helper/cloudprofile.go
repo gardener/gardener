@@ -555,3 +555,32 @@ func ArchitectureSupportedByImageVersion(version gardencorev1beta1.MachineImageV
 	supportedArchitectures := GetArchitecturesFromImageVersion(version)
 	return slices.Contains(supportedArchitectures, architecture)
 }
+
+// GetCapabilitiesWithAppliedDefaults returns new capabilities with applied defaults from the capability definitions.
+func GetCapabilitiesWithAppliedDefaults(capabilities gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) gardencorev1beta1.Capabilities {
+	result := make(gardencorev1beta1.Capabilities, len(capabilitiesDefinitions))
+	for _, capabilityDefinition := range capabilitiesDefinitions {
+		if values, ok := capabilities[capabilityDefinition.Name]; ok {
+			result[capabilityDefinition.Name] = values
+		} else {
+			result[capabilityDefinition.Name] = capabilityDefinition.Values
+		}
+	}
+	return result
+}
+
+// GetCapabilitySetsWithAppliedDefaults returns new capability sets with applied defaults from the capability definitions.
+func GetCapabilitySetsWithAppliedDefaults(capabilitySets []gardencorev1beta1.CapabilitySet, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) []gardencorev1beta1.CapabilitySet {
+	if len(capabilitySets) == 0 {
+		// If no capability sets are defined, assume all capabilities are supported.
+		return []gardencorev1beta1.CapabilitySet{{Capabilities: GetCapabilitiesWithAppliedDefaults(gardencorev1beta1.Capabilities{}, capabilitiesDefinitions)}}
+	}
+
+	result := make([]gardencorev1beta1.CapabilitySet, len(capabilitySets))
+	for i, capabilitySet := range capabilitySets {
+		result[i] = gardencorev1beta1.CapabilitySet{
+			Capabilities: GetCapabilitiesWithAppliedDefaults(capabilitySet.Capabilities, capabilitiesDefinitions),
+		}
+	}
+	return result
+}
