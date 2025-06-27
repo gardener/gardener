@@ -338,6 +338,19 @@ var _ = Describe("ResourceManager", func() {
 			ManagedResourceLabels:                     map[string]string{"foo": "bar"},
 			NodeAgentAuthorizerEnabled:                true,
 			NodeAgentAuthorizerAuthorizeWithSelectors: ptr.To(true),
+			PodKubeAPIServerLoadBalancingWebhook: PodKubeAPIServerLoadBalancingWebhook{
+				Enabled: false,
+				Configs: []PodKubeAPIServerLoadBalancingWebhookConfig{
+					{
+						KubeAPIServerNamePrefix: "",
+						NamespaceSelector:       map[string]string{"foobar": "barfoo"},
+					},
+					{
+						KubeAPIServerNamePrefix: "virtual-garden-",
+						NamespaceSelector:       map[string]string{"barbaz": "bazbar"},
+					},
+				},
+			},
 		}
 		resourceManager = New(c, deployNamespace, sm, cfg)
 		resourceManager.SetSecrets(secrets)
@@ -480,6 +493,7 @@ var _ = Describe("ResourceManager", func() {
 
 			if responsibilityMode == ForSource {
 				config.Webhooks.EndpointSliceHints.Enabled = true
+				config.Webhooks.PodKubeAPIServerLoadBalancing.Enabled = true
 			}
 
 			if responsibilityMode == ForTarget || responsibilityMode == ForSourceAndTarget {
@@ -1109,6 +1123,58 @@ var _ = Describe("ResourceManager", func() {
 			case ForSource:
 				obj.Webhooks = append(obj.Webhooks,
 					admissionregistrationv1.MutatingWebhook{
+						Name: "pod-kube-apiserver-load-balancing.resources.gardener.cloud",
+						Rules: []admissionregistrationv1.RuleWithOperations{{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{""},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"pods"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE"},
+						}},
+						NamespaceSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"foobar": "barfoo"},
+						},
+						ClientConfig: admissionregistrationv1.WebhookClientConfig{
+							Service: &admissionregistrationv1.ServiceReference{
+								Name:      "gardener-resource-manager",
+								Namespace: deployNamespace,
+								Path:      ptr.To("/webhooks/pod-kube-apiserver-load-balancing"),
+							},
+						},
+						AdmissionReviewVersions: []string{"v1beta1", "v1"},
+						FailurePolicy:           &failurePolicyFail,
+						MatchPolicy:             &matchPolicyExact,
+						SideEffects:             &sideEffect,
+						TimeoutSeconds:          ptr.To[int32](10),
+					},
+					admissionregistrationv1.MutatingWebhook{
+						Name: "pod-virtual-garden-kube-apiserver-load-balancing.resources.gardener.cloud",
+						Rules: []admissionregistrationv1.RuleWithOperations{{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{""},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"pods"},
+							},
+							Operations: []admissionregistrationv1.OperationType{"CREATE"},
+						}},
+						NamespaceSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"barbaz": "bazbar"},
+						},
+						ClientConfig: admissionregistrationv1.WebhookClientConfig{
+							Service: &admissionregistrationv1.ServiceReference{
+								Name:      "gardener-resource-manager",
+								Namespace: deployNamespace,
+								Path:      ptr.To("/webhooks/pod-kube-apiserver-load-balancing"),
+							},
+						},
+						AdmissionReviewVersions: []string{"v1beta1", "v1"},
+						FailurePolicy:           &failurePolicyFail,
+						MatchPolicy:             &matchPolicyExact,
+						SideEffects:             &sideEffect,
+						TimeoutSeconds:          ptr.To[int32](10),
+					},
+					admissionregistrationv1.MutatingWebhook{
 						Name: "endpoint-slice-hints.resources.gardener.cloud",
 						Rules: []admissionregistrationv1.RuleWithOperations{{
 							Rule: admissionregistrationv1.Rule{
@@ -1356,7 +1422,61 @@ webhooks:
     resources:
     - pods
   sideEffects: None
-  timeoutSeconds: 2
+  timeoutSeconds: 2`
+			if cfg.PodKubeAPIServerLoadBalancingWebhook.Enabled {
+				out += `
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/pod-kube-apiserver-load-balancing
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: pod-kube-apiserver-load-balancing.resources.gardener.cloud
+  namespaceSelector:
+    matchLabels:
+      foobar: barfoo
+  objectSelector:
+    matchLabels:
+      networking.resources.gardener.cloud/to-kube-apiserver-tcp-443: allowed
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/pod-kube-apiserver-load-balancing
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: pod-virtual-garden-kube-apiserver-load-balancing.resources.gardener.cloud
+  namespaceSelector:
+    matchLabels:
+      barbaz: bazbar
+  objectSelector:
+    matchLabels:
+      networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+  sideEffects: None
+  timeoutSeconds: 10`
+			}
+			out += `
 - admissionReviewVersions:
   - v1beta1
   - v1
@@ -2365,6 +2485,7 @@ subjects:
 				cfg.EndpointSliceHintsEnabled = true
 				cfg.SchedulingProfile = nil
 				cfg.ResponsibilityMode = ForSource
+				cfg.PodKubeAPIServerLoadBalancingWebhook.Enabled = true
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -2812,6 +2933,7 @@ subjects:
 		Context("target equals source cluster", func() {
 			BeforeEach(func() {
 				cfg.ResponsibilityMode = ForSource
+				cfg.PodKubeAPIServerLoadBalancingWebhook.Enabled = true
 				cfg.WatchedNamespace = nil
 				resourceManager = New(c, deployNamespace, sm, cfg)
 			})

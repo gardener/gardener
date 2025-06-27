@@ -5,6 +5,8 @@
 package gardener_test
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -98,6 +100,24 @@ var _ = Describe("NetworkPolicy", func() {
 	Describe("#NetworkPolicyLabel", func() {
 		It("should return the expected value", func() {
 			Expect(NetworkPolicyLabel("foo", 1234)).To(Equal("networking.resources.gardener.cloud/to-foo-tcp-1234"))
+		})
+	})
+
+	Describe("#ShortenNetworkPolicyLabelKeyIfTooLong", func() {
+		It("should return the original key if it is within the length limit", func() {
+			labelKey, shortened := ShortenNetworkPolicyLabelKeyIfTooLong("networking.resources.gardener.cloud/to-foo-tcp-1234")
+			Expect(shortened).To(BeFalse())
+			Expect(labelKey).To(Equal("networking.resources.gardener.cloud/to-foo-tcp-1234"))
+		})
+
+		It("should shorten the key if it exceeds the length limit", func() {
+			longLabelKey := "networking.resources.gardener.cloud/to-a-very-long-namespace-with-a-very-long-service-name-that-exceeds-the-limit-tcp-1234"
+			labelKey, shortened := ShortenNetworkPolicyLabelKeyIfTooLong(longLabelKey)
+			Expect(shortened).To(BeTrue())
+			Expect(len(strings.TrimPrefix(labelKey, "networking.resources.gardener.cloud/"))).To(BeNumerically("<=", 63))
+
+			labelKey2, _ := ShortenNetworkPolicyLabelKeyIfTooLong(longLabelKey)
+			Expect(labelKey2).To(Equal(labelKey))
 		})
 	})
 })
