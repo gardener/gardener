@@ -8,23 +8,33 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClient client.Client) error {
@@ -49,7 +59,7 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 		return fmt.Errorf("failed deleting nginx ingress controller resource lock configmaps: %w", err)
 	}
 
-	return nil
+	return cleanupPrometheusObsoleteFolders(ctx, log, g.mgr.GetClient())
 }
 
 // TODO: Remove this function when Kubernetes 1.27 support gets dropped.
@@ -198,4 +208,236 @@ func cleanupNginxConfigMaps(ctx context.Context, client client.Client) error {
 			},
 		},
 	)
+}
+
+// TODO(vicwicker): Remove this after v1.125 has been released.
+func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seedClient client.Client) error {
+	var tasks []flow.TaskFn
+
+	getManagedResourceWithPatch := func(ctx context.Context, namespace string) (*resourcesv1alpha1.ManagedResource, client.Patch, error) {
+		managedResource := &resourcesv1alpha1.ManagedResource{}
+		if err := seedClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "prometheus-shoot"}, managedResource); err != nil {
+			return nil, nil, err
+		}
+
+		return managedResource, client.MergeFrom(managedResource.DeepCopy()), nil
+	}
+
+	unignoreManagedResource := func(ctx context.Context, log logr.Logger, cluster string) error {
+		managedResource, managedResourcePatch, err := getManagedResourceWithPatch(ctx, cluster)
+		if err != nil {
+			// tolerate if the managed resource does not exist, e.g., it might have been deleted
+			if apierrors.IsNotFound(err) {
+				log.Info("ManagedResource for Prometheus not found, nothing to unignore", "cluster", cluster)
+				return nil
+			}
+			return fmt.Errorf("failed to get ManagedResource for Prometheus for cluster %s, it won't be unignored: %w", cluster, err)
+		}
+
+		if value, ok := managedResource.Annotations[resourcesv1alpha1.Ignore]; ok && value == "true" {
+			delete(managedResource.Annotations, resourcesv1alpha1.Ignore)
+			if err := seedClient.Patch(ctx, managedResource, managedResourcePatch); err != nil {
+				return fmt.Errorf("failed to unignore ManagedResource for Prometheus for cluster %s: %w", cluster, err)
+			}
+		}
+
+		return nil
+	}
+
+	getPrometheusWithPatch := func(ctx context.Context, namespace string) (*monitoringv1.Prometheus, client.Patch, error) {
+		prometheus := &monitoringv1.Prometheus{}
+		if err := seedClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot"}, prometheus); err != nil {
+			return nil, nil, err
+		}
+
+		return prometheus, client.MergeFrom(prometheus.DeepCopy()), nil
+	}
+
+	needsInitContainer := func(prometheus *monitoringv1.Prometheus) bool {
+		for _, initContainer := range prometheus.Spec.InitContainers {
+			if initContainer.Name == "cleanup-obsolete-folder" {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	waitUntilCleanedUp := func(ctx context.Context, log logr.Logger, namespace string) error {
+		return retry.UntilTimeout(ctx, 10*time.Second, 10*time.Minute, func(ctx context.Context) (done bool, err error) {
+			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "prometheus-shoot-0"}}
+			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
+				log.Error(err, "Failed to get prometheus-shoot-0 pod", "namespace", namespace)
+				return retry.MinorError(err)
+			}
+
+			var hasInitContainer bool
+			for _, initContainer := range pod.Spec.InitContainers {
+				if initContainer.Name == "cleanup-obsolete-folder" {
+					hasInitContainer = true
+					break
+				}
+			}
+
+			if !hasInitContainer {
+				err := fmt.Errorf("prometheus-shoot-0 pod does not have the cleanup-obsolete-folder init container")
+				log.Error(err, "Pod prometheus-shoot-0 is not cleaned up", "namespace", namespace)
+				return retry.MinorError(err)
+			}
+
+			if err := health.CheckPod(pod); err != nil {
+				log.Error(err, "Pod prometheus-shoot-0 is not healthy", "namespace", namespace)
+				return retry.MinorError(err)
+			}
+
+			return retry.Ok()
+		})
+	}
+
+	shouldSkipCluster := func(ctx context.Context, log logr.Logger, cluster *extensionsv1alpha1.Cluster) (bool, error) {
+		shoot, err := extensions.ShootFromCluster(cluster)
+		if err != nil {
+			return false, fmt.Errorf("failed to extract Shoot from Cluster %s: %w", cluster.Name, err)
+		}
+
+		if shoot.DeletionTimestamp != nil {
+			log.Info("Cluster is being deleted, it should be skipped", "cluster", cluster.Name)
+			return true, nil
+		}
+
+		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: cluster.Name}}
+		if err := seedClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+			if apierrors.IsNotFound(err) {
+				log.Info("Namespace for cluster not found, cluster should be skipped", "cluster", cluster.Name)
+				return true, nil
+			}
+			return false, fmt.Errorf("failed to get Namespace for cluster %s: %w", cluster.Name, err)
+		}
+
+		if namespace.DeletionTimestamp != nil {
+			log.Info("Namespace for cluster is being deleted, cluster should be skipped", "cluster", cluster.Name)
+			return true, nil
+		}
+
+		return false, nil
+	}
+
+	log.Info("Clean up obsolete Prometheus folders")
+
+	// check if the Cluster resource is available in the seed cluster
+	gvk := schema.GroupVersionKind{
+		Group:   "extensions.gardener.cloud",
+		Version: "v1alpha1",
+		Kind:    "Cluster",
+	}
+
+	if _, err := seedClient.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version); err != nil {
+		if meta.IsNoMatchError(err) {
+			log.Info("The Cluster resource is not available in the extensions.gardener.cloud/v1alpha1 API group")
+			return nil
+		}
+		return fmt.Errorf("failed to check if the Cluster resource is available in the extensions.gardener.cloud/v1alpha1 API group: %w", err)
+	}
+
+	clusterList := &extensionsv1alpha1.ClusterList{}
+	if err := seedClient.List(ctx, clusterList); err != nil {
+		return fmt.Errorf("failed to list clusters while cleaning up Prometheus obsolete folders: %w", err)
+	}
+
+	for _, cluster := range clusterList.Items {
+		tasks = append(tasks, func(ctx context.Context) error {
+			skip, err := shouldSkipCluster(ctx, log, &cluster)
+			if err != nil {
+				return err
+			}
+
+			if skip {
+				log.Info("Skip cleanup for cluster", "cluster", cluster.Name)
+				return nil
+			}
+
+			if err := unignoreManagedResource(ctx, log, cluster.Name); err != nil {
+				return err
+			}
+
+			managedResource, managedResourcePatch, err := getManagedResourceWithPatch(ctx, cluster.Name)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					log.Info("ManagedResource for Prometheus not found, skipping cleanup", "cluster", cluster.Name)
+					return nil
+				}
+				return fmt.Errorf("failed to get ManagedResource for Prometheus for cluster %s: %w", cluster.Name, err)
+			}
+
+			prometheus, prometheusPatch, err := getPrometheusWithPatch(ctx, cluster.Name)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					log.Info("Prometheus resource not found, skipping cleanup", "cluster", cluster.Name)
+					return nil
+				}
+				return fmt.Errorf("failed to get Prometheus resource for cluster %s: %w", cluster.Name, err)
+			}
+
+			if value, ok := prometheus.Annotations[resourcesv1alpha1.PrometheusObsoleteFolderCleanedUp]; ok && value == "true" {
+				// migration already done, nothing to do
+				return nil
+			}
+
+			// ignore the managed resource temporarily to prevent it from reverting the Prometheus patches
+			managedResource.Annotations[resourcesv1alpha1.Ignore] = "true"
+			if err := seedClient.Patch(ctx, managedResource, managedResourcePatch); err != nil {
+				return fmt.Errorf("failed to ignore ManagedResource for Prometheus for cluster %s: %w", cluster.Name, err)
+			}
+
+			log.Info("Clean up obsolete Prometheus folders", "cluster", cluster.Name)
+
+			if needsInitContainer(prometheus) {
+				prometheus.Spec.InitContainers = append(prometheus.Spec.InitContainers, corev1.Container{
+					Name:            "cleanup-obsolete-folder",
+					Image:           *prometheus.Spec.Image,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"sh", "-c", "rm -rf /prometheus/prometheus-; rm -rf /prometheus/prometheus-db/prometheus-"},
+					VolumeMounts: []corev1.VolumeMount{{
+						Name:      "prometheus-db",
+						MountPath: "/prometheus",
+					}},
+				})
+			}
+
+			prometheus.Spec.Replicas = ptr.To(int32(1))
+			if err := seedClient.Patch(ctx, prometheus, prometheusPatch); err != nil {
+				if err := unignoreManagedResource(ctx, log, cluster.Name); err != nil {
+					log.Error(err, "Failed to unignore ManagedResource for Prometheus after error", "cluster", cluster.Name)
+				}
+				return fmt.Errorf("failed to patch Prometheus resource for cluster %s: %w", cluster.Name, err)
+			}
+
+			if err := waitUntilCleanedUp(ctx, log, cluster.Name); err != nil {
+				if err := unignoreManagedResource(ctx, log, cluster.Name); err != nil {
+					log.Error(err, "Failed to unignore ManagedResource for Prometheus after error", "cluster", cluster.Name)
+				}
+				return fmt.Errorf("failed to wait until Prometheus statefulset for cluster %s is cleaned up: %w", cluster.Name, err)
+			}
+
+			prometheus, prometheusPatch, err = getPrometheusWithPatch(ctx, cluster.Name)
+			if err != nil {
+				if err := unignoreManagedResource(ctx, log, cluster.Name); err != nil {
+					log.Error(err, "Failed to unignore ManagedResource for Prometheus after error", "cluster", cluster.Name)
+				}
+				return fmt.Errorf("failed to get Prometheus resource after cleanup for cluster %s: %w", cluster.Name, err)
+			}
+
+			prometheus.Annotations[resourcesv1alpha1.PrometheusObsoleteFolderCleanedUp] = "true"
+			if err := seedClient.Patch(ctx, prometheus, prometheusPatch); err != nil {
+				if err := unignoreManagedResource(ctx, log, cluster.Name); err != nil {
+					log.Error(err, "Failed to unignore ManagedResource for Prometheus after error", "cluster", cluster.Name)
+				}
+				return fmt.Errorf("failed to mark Prometheus resource as cleaned up for cluster %s: %w", cluster.Name, err)
+			}
+
+			return unignoreManagedResource(ctx, log, cluster.Name)
+		})
+	}
+
+	return flow.Parallel(tasks...)(ctx)
 }
