@@ -13,6 +13,8 @@ rules:
   - backupbuckets/status
   - backupentries
   - backupentries/status
+  - bastions
+  - bastions/status
   - clusters
   - controlplanes
   - controlplanes/status

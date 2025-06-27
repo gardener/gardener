@@ -45,6 +45,7 @@ import (
 	localbackupbucket "github.com/gardener/gardener/pkg/provider-local/controller/backupbucket"
 	localbackupentry "github.com/gardener/gardener/pkg/provider-local/controller/backupentry"
 	"github.com/gardener/gardener/pkg/provider-local/controller/backupoptions"
+	localbastion "github.com/gardener/gardener/pkg/provider-local/controller/bastion"
 	localcontrolplane "github.com/gardener/gardener/pkg/provider-local/controller/controlplane"
 	localdnsrecord "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
 	localextensionshootcontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/shoot"
@@ -92,6 +93,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 		// options for the health care controller
 		healthCheckCtrlOpts = &extensionscmdcontroller.ControllerOptions{
+			MaxConcurrentReconciles: 5,
+		}
+
+		// options for the bastion controller
+		bastionCtrlOpts = &extensionscmdcontroller.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
 
@@ -166,6 +172,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			restOpts,
 			mgrOpts,
 			generalOpts,
+			extensionscmdcontroller.PrefixOption("bastion-", bastionCtrlOpts),
 			extensionscmdcontroller.PrefixOption("controlplane-", controlPlaneCtrlOpts),
 			extensionscmdcontroller.PrefixOption("dnsrecord-", dnsRecordCtrlOpts),
 			extensionscmdcontroller.PrefixOption("infrastructure-", infraCtrlOpts),
@@ -263,6 +270,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			}
 
 			log.Info("Adding controllers to manager")
+			bastionCtrlOpts.Completed().Apply(&localbastion.DefaultAddOptions.Controller)
 			controlPlaneCtrlOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.Controller)
 			dnsRecordCtrlOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions)
 			healthCheckCtrlOpts.Completed().Apply(&localhealthcheck.DefaultAddOptions.Controller)
@@ -279,6 +287,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			prometheusWebhookOptions.Completed().Apply(&prometheuswebhook.DefaultAddOptions)
 
 			reconcileOpts.Completed().Apply(&localbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation, &localbackupbucket.DefaultAddOptions.ExtensionClass)
+			reconcileOpts.Completed().Apply(&localbastion.DefaultAddOptions.IgnoreOperationAnnotation, &localbastion.DefaultAddOptions.ExtensionClass)
 			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation, &localcontrolplane.DefaultAddOptions.ExtensionClass)
 			reconcileOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation, &localdnsrecord.DefaultAddOptions.ExtensionClass)
 			reconcileOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation, &localinfrastructure.DefaultAddOptions.ExtensionClass)

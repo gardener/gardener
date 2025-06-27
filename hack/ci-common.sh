@@ -14,7 +14,7 @@ export_artifacts() {
   echo "> Exporting events of kind cluster '$cluster_name' > '$ARTIFACTS/$cluster_name'"
   export_events_for_cluster "$ARTIFACTS/$cluster_name"
 
-  export_resource_yamls_for seeds shoots etcds leases
+  export_resource_yamls_for seeds shoots bastions.operations.gardener.cloud etcds leases
   export_events_for_shoots
 
   # dump logs from shoot machine pods (similar to `kind export logs`)
@@ -29,14 +29,14 @@ export_artifacts() {
       kubectl -n "$namespace" get pod "$node" --show-managed-fields -oyaml >"$node_dir/pod.yaml" || true
 
       # relevant systemd units
-      for unit in gardener-node-agent kubelet containerd containerd-configuration-local-setup; do
+      for unit in gardener-node-agent kubelet containerd containerd-configuration-local-setup ssh; do
         kubectl -n "$namespace" exec "$node" -- journalctl --no-pager -u $unit.service >"$node_dir/$unit.log" || true
       done
       kubectl -n "$namespace" exec "$node" -- journalctl --no-pager >"$node_dir/journal.log" || true
 
       # container logs
       kubectl cp "$namespace/$node":/var/log "$node_dir" || true
-    done < <(kubectl -n "$namespace" get po -l app=machine -oname | cut -d/ -f2)
+    done < <(kubectl -n "$namespace" get po -l 'app in (machine,bastion)' -oname | cut -d/ -f2)
   done < <(kubectl get ns -l gardener.cloud/role=shoot -oname | cut -d/ -f2; kubectl get ns -l export-artifacts=true -oname | cut -d/ -f2)
 
   echo "> Exporting /etc/hosts"
