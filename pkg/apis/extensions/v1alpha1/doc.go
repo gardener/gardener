@@ -4,7 +4,7 @@
 
 // +k8s:deepcopy-gen=package
 
-//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/extensions-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../docs/api-reference/extensions.md
+//go:generate gen-crd-api-reference-docs -api-dir github.com/gardener/gardener/pkg/apis/extensions/v1alpha1 -config ../../../../hack/api-reference/extensions-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../docs/api-reference/extensions.md
 
 // Package v1alpha1 is the v1alpha1 version of the API.
 // +groupName=extensions.gardener.cloud
