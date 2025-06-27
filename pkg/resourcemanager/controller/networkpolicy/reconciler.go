@@ -27,8 +27,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -453,8 +453,6 @@ func policyIDFor(serviceName string, port networkingv1.NetworkPolicyPort) string
 	return fmt.Sprintf("%s-%s-%s", serviceName, strings.ToLower(string(*port.Protocol)), port.Port.String())
 }
 
-const labelSelectorKeyPrefix = "networking.resources.gardener.cloud/"
-
 func matchLabelsForServiceAndNamespace(podLabelSelector string, service *corev1.Service, namespaceName string) map[string]string {
 	var infix string
 
@@ -468,12 +466,11 @@ func matchLabelsForServiceAndNamespace(podLabelSelector string, service *corev1.
 		infix += "-"
 	}
 
-	return map[string]string{labelSelectorKeyPrefix + "to-" + infix + podLabelSelector: v1beta1constants.LabelNetworkPolicyAllowed}
+	return map[string]string{resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "to-" + infix + podLabelSelector: v1beta1constants.LabelNetworkPolicyAllowed}
 }
 
 func shortenPodSelectorKeysIfTooLong(podLabelSelector metav1.LabelSelector) (metav1.LabelSelector, bool) {
 	var (
-		maxLabelKeyLength       = 63
 		mutatedPodLabelSelector = podLabelSelector.DeepCopy()
 		mutated                 bool
 	)
@@ -481,8 +478,7 @@ func shortenPodSelectorKeysIfTooLong(podLabelSelector metav1.LabelSelector) (met
 	// We only use matchLabels for the pod selector in this reconciler, so we can ignore match expressions.
 	for k, v := range podLabelSelector.MatchLabels {
 		// The values for the selectors are always "allowed", so we only need to check the keys.
-		if keyWithoutPrefix := strings.TrimPrefix(k, labelSelectorKeyPrefix); len(keyWithoutPrefix) > maxLabelKeyLength {
-			newKey := labelSelectorKeyPrefix + keyWithoutPrefix[:maxLabelKeyLength-6] + "-" + utils.ComputeSHA256Hex([]byte(keyWithoutPrefix))[:5]
+		if newKey, shortened := gardenerutils.ShortenNetworkPolicyLabelKeyIfTooLong(k); shortened {
 			mutatedPodLabelSelector.MatchLabels[newKey] = v
 			delete(mutatedPodLabelSelector.MatchLabels, k)
 			mutated = true

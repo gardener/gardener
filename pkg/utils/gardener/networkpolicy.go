@@ -7,6 +7,7 @@ package gardener
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -14,6 +15,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // InjectNetworkPolicyAnnotationsForScrapeTargets injects the provided ports into the
@@ -67,5 +69,19 @@ func InjectNetworkPolicyNamespaceSelectors(service *corev1.Service, selectors ..
 // NetworkPolicyLabel returns the network policy label for a component initiating the connection to a service with the
 // given name and TCP port.
 func NetworkPolicyLabel(serviceName string, port int32) string {
-	return fmt.Sprintf("networking.resources.gardener.cloud/to-%s-tcp-%d", serviceName, port)
+	labelKey, _ := ShortenNetworkPolicyLabelKeyIfTooLong(fmt.Sprintf("%sto-%s-tcp-%d", resourcesv1alpha1.NetworkPolicyLabelKeyPrefix, serviceName, port))
+	return labelKey
+}
+
+// ShortenNetworkPolicyLabelKeyIfTooLong shortens the given label key if it exceeds the maximum length for Kubernetes label keys.
+func ShortenNetworkPolicyLabelKeyIfTooLong(labelKey string) (string, bool) {
+	const maxLabelKeyLength = 63
+
+	if keyWithoutPrefix := strings.TrimPrefix(labelKey, resourcesv1alpha1.NetworkPolicyLabelKeyPrefix); len(keyWithoutPrefix) > maxLabelKeyLength {
+		newKey := resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + keyWithoutPrefix[:maxLabelKeyLength-6] + "-" + utils.ComputeSHA256Hex([]byte(keyWithoutPrefix))[:5]
+
+		return newKey, true
+	}
+
+	return labelKey, false
 }
