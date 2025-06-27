@@ -37,7 +37,7 @@ func NewOpenTelemetryOperator(
 	)
 
 	if !enabled {
-		deployer = component.OpDestroyWithoutWait(deployer)
+		deployer = component.OpDestroyAndWait(deployer)
 	}
 
 	return deployer, nil
