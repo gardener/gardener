@@ -71,8 +71,9 @@ func (p *prometheus) prometheus(ctx context.Context, cortexConfigMap *corev1.Con
 					VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 						EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "prometheus-db"},
 						Spec: corev1.PersistentVolumeClaimSpec{
-							AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-							Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: p.values.StorageCapacity}},
+							AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+							Resources:        corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: p.values.StorageCapacity}},
+							StorageClassName: p.values.StorageClassName,
 						},
 					},
 				},

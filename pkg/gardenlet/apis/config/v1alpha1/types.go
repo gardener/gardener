@@ -674,6 +674,43 @@ type MonitoringConfig struct {
 	// Shoot is optional and contains settings for the shoot monitoring stack.
 	// +optional
 	Shoot *ShootMonitoringConfig `json:"shoot,omitempty"`
+	// Seed is optional and contains settings for the seed monitoring stack.
+	// +optional
+	Seed *SeedMonitoringConfig `json:"seed,omitempty"`
+}
+
+// SeedMonitoringConfig contains settings for the seed monitoring stack.
+type SeedMonitoringConfig struct {
+	// PrometheusCache contains configuration for the Prometheus cache component.
+	// +optional
+	PrometheusCache PrometheusConfig `json:"prometheusCache,omitempty"`
+	// PrometheusAggregate contains configuration for the Prometheus aggregate component.
+	// +optional
+	PrometheusAggregate PrometheusConfig `json:"prometheusAggregate,omitempty"`
+	// PrometheusSeed contains configuration for the Prometheus seed component.
+	// +optional
+	PrometheusSeed PrometheusConfig `json:"prometheusSeed,omitempty"`
+}
+
+// PrometheusConfig contains configuration for Prometheus components in the Garden cluster.
+type PrometheusConfig struct {
+	// Retention is the retention size for the Prometheus data.
+	// +optional
+	Retention resource.Quantity `json:"retention,omitempty"`
+	// Storage is the storage configuration for Prometheus.
+	// +optional
+	Storage *Storage `json:"storage,omitempty"`
+}
+
+// Storage contains storage configuration.
+type Storage struct {
+	// Capacity is the storage capacity for the volumes.
+	// +kubebuilder:default=`10Gi`
+	// +optional
+	Capacity *resource.Quantity `json:"capacity,omitempty"`
+	// ClassName is the name of a storage class.
+	// +optional
+	ClassName *string `json:"className,omitempty"`
 }
 
 // ShootMonitoringConfig contains settings for the shoot monitoring stack.
