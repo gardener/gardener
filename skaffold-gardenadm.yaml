@@ -324,6 +324,7 @@ build:
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
+            - pkg/utils/ssh
             - pkg/utils/structuredmap
             - pkg/utils/time
             - pkg/utils/timewindow
