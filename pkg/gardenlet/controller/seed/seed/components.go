@@ -320,11 +320,6 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 		{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt32(vpnseedserver.GatewayPort)},
 	}
 
-	proxyProtocolEnabled := !features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort)
-	if proxyProtocolEnabled {
-		servicePorts = append(servicePorts, corev1.ServicePort{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt32(8443)})
-	}
-
 	istioDeployer, err := sharedcomponent.NewIstio(
 		ctx,
 		r.SeedClientSet.Client(),
@@ -339,7 +334,6 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 		seed.GetLoadBalancerServiceExternalTrafficPolicy(),
 		r.Config.SNI.Ingress.ServiceExternalIP,
 		servicePorts,
-		proxyProtocolEnabled,
 		seed.GetLoadBalancerServiceProxyProtocolTermination(),
 		true,
 		seed.GetInfo().Spec.Provider.Zones,

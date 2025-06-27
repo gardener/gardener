@@ -162,7 +162,6 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 				},
 				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
 					APIServerClusterIP: b.APIServerClusterIP,
-					UseProxyProtocol:   !features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort),
 				},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: b.IstioNamespace(),

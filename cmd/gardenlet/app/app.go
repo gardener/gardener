@@ -373,7 +373,7 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
-	if err := g.runMigrations(ctx, log, gardenCluster.GetClient()); err != nil {
+	if err := g.runMigrations(ctx, log); err != nil {
 		return err
 	}
 

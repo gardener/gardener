@@ -71,20 +71,6 @@ const (
 	// alpha: v1.113.0
 	InPlaceNodeUpdates featuregate.Feature = "InPlaceNodeUpdates"
 
-	// RemoveAPIServerProxyLegacyPort disables the proxy port (8443) on the istio-ingressgateway Services. It was previously
-	// used by the apiserver-proxy to route client traffic on the kubernetes Service to the corresponding API server using
-	// the TCP proxy protocol.
-	// As soon as a shoot has been reconciled by gardener v1.113+ the apiserver-proxy is reconfigured to use HTTP CONNECT
-	// on the tls-tunnel port (8132) instead, i.e., it reuses the reversed VPN path to connect to the correct API server.
-	// Operators can choose to remove the legacy apiserver-proxy port as soon as all shoots have switched to the new
-	// apiserver-proxy configuration. They might want to do so if they activate the ACL extension, which is vulnerable to
-	// proxy protocol headers of untrusted clients on the apiserver-proxy port.
-	// owner: @Wieneo @timebertt
-	// alpha: v1.113.0
-	// beta: v1.119.0
-	// GA: v1.122.0
-	RemoveAPIServerProxyLegacyPort featuregate.Feature = "RemoveAPIServerProxyLegacyPort"
-
 	// IstioTLSTermination enables TLS termination for the Istio Ingress Gateway instead of TLS termination at the kube-apiserver.
 	// It allows load-balancing of requests to the kube-apiserver on request level instead of connection level.
 	// owner: @oliver-goetz
@@ -140,7 +126,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	NodeAgentAuthorizer:                      {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CredentialsRotationWithoutWorkersRollout: {Default: true, PreRelease: featuregate.Beta},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
-	RemoveAPIServerProxyLegacyPort:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},
 	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha},
 	DoNotCopyBackupCredentials:               {Default: true, PreRelease: featuregate.Beta},

@@ -34,7 +34,6 @@ kubernetesVersion: "1.30.0"
 apiServerRequestHeaderUserName: X-Remote-User
 apiServerRequestHeaderGroup: X-Remote-Group
 apiServerAuthenticationDynamicMetadataKey: authenticated-kube-apiserver-host
-proxyProtocolEnabled: false
 terminateAPIServerTLS: false
 terminateLoadBalancerProxyProtocol: false
 vpn:
