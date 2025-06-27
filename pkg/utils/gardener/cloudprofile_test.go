@@ -893,38 +893,19 @@ var _ = Describe("CloudProfile", func() {
 
 		})
 
-		Describe("#GetVersionCapabilitySets", func() {
-			It("should return the defined capability sets if present", func() {
-				version := core.MachineImageVersion{
-					CapabilitySets: []core.CapabilitySet{
-						{Capabilities: core.Capabilities{"key1": {"value1"}}},
-					},
-				}
-
-				result := gardenerutils.GetVersionCapabilitySets(version)
-				Expect(result).To(Equal(version.CapabilitySets))
-			})
-
-			It("should return a default capability set if none are defined", func() {
-				version := core.MachineImageVersion{}
-
-				result := gardenerutils.GetVersionCapabilitySets(version)
-				Expect(result).To(Equal([]core.CapabilitySet{{Capabilities: core.Capabilities{}}}))
-			})
-		})
-
 		Describe("#AreCapabilitiesEqual", func() {
-			capabilitiesDefinition := []core.CapabilityDefinition{
-				{Name: "key1", Values: []string{"value1", "value2"}},
-				{Name: "key2", Values: []string{"valueA", "valueB"}},
-				{Name: "architecture", Values: []string{"amd64"}},
-			}
 
 			It("should return true for equal capabilities", func() {
-				a := core.Capabilities{"key1": {"value1"}}
-				b := core.Capabilities{"key1": {"value1"}}
+				a := core.Capabilities{
+					"key1": {"value1"},
+					"key2": {"valueA", "valueB"},
+				}
+				b := core.Capabilities{
+					"key1": {"value1"},
+					"key2": {"valueA", "valueB"},
+				}
 
-				result := gardenerutils.AreCapabilitiesEqual(a, b, capabilitiesDefinition)
+				result := gardenerutils.AreCapabilitiesEqual(a, b)
 				Expect(result).To(BeTrue())
 			})
 
@@ -932,54 +913,22 @@ var _ = Describe("CloudProfile", func() {
 				a := core.Capabilities{"key1": {"value1"}}
 				b := core.Capabilities{"key2": {"value1"}}
 
-				result := gardenerutils.AreCapabilitiesEqual(a, b, capabilitiesDefinition)
+				result := gardenerutils.AreCapabilitiesEqual(a, b)
 				Expect(result).To(BeFalse())
 			})
 
 			It("should return false for capabilities with different values", func() {
-				a := core.Capabilities{"key1": {"value1"}}
-				b := core.Capabilities{"key1": {"value2"}}
-
-				result := gardenerutils.AreCapabilitiesEqual(a, b, capabilitiesDefinition)
-				Expect(result).To(BeFalse())
-			})
-
-			It("should return true for capabilities with different values that are equal to those in the capabilitiesDefinition", func() {
-				a := core.Capabilities{"key1": {"value1", "value2"}}
-				b := core.Capabilities{"key2": {"valueA", "valueB"}}
-
-				result := gardenerutils.AreCapabilitiesEqual(a, b, capabilitiesDefinition)
-				Expect(result).To(BeTrue())
-			})
-		})
-
-		Describe("#ApplyDefaultCapabilities", func() {
-			var capabilitiesDefinition []core.CapabilityDefinition
-			BeforeEach(func() {
-				capabilitiesDefinition = []core.CapabilityDefinition{
-					{Name: "key1", Values: []string{"value1", "value2"}},
-					{Name: "key2", Values: []string{"valueA", "valueB"}},
-					{Name: "architecture", Values: []string{"amd64"}},
+				a := core.Capabilities{
+					"key1": {"value1"},
+					"key2": {"valueA", "valueB"},
 				}
-			})
-			It("should set default capabilities if none are defined", func() {
-				capabilities := core.Capabilities{}
+				b := core.Capabilities{
+					"key1": {"value2"},
+					"key2": {"valueA", "valueB"},
+				}
 
-				result := gardenerutils.ApplyDefaultCapabilities(capabilities, capabilitiesDefinition)
-				Expect(result).To(Equal(core.Capabilities{
-					"key1":         {"value1", "value2"},
-					"key2":         {"valueA", "valueB"},
-					"architecture": {"amd64"},
-				}))
-			})
-
-			It("should not overwrite existing capabilities and add missing capabilities from the definition", func() {
-				capabilities := core.Capabilities{"key1": {"value1"}}
-
-				result := gardenerutils.ApplyDefaultCapabilities(capabilities, capabilitiesDefinition)
-				Expect(result["key1"]).To(Equal(capabilities["key1"]))
-				Expect([]string(result["key2"])).To(Equal([]string{"valueA", "valueB"})) // Convert to []string
-				Expect([]string(result["architecture"])).To(Equal([]string{"amd64"}))    // Convert to []string
+				result := gardenerutils.AreCapabilitiesEqual(a, b)
+				Expect(result).To(BeFalse())
 			})
 		})
 	})

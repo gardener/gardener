@@ -454,23 +454,10 @@ func ValidateCapabilities(capabilities core.Capabilities, capabilitiesDefinition
 	return allErrs
 }
 
-// GetVersionCapabilitySets returns the defined CapabilitySets for a given machine image version.
-func GetVersionCapabilitySets(version core.MachineImageVersion) []core.CapabilitySet {
-	if len(version.CapabilitySets) == 0 {
-		// If no capability sets are defined, assume all capabilities are supported.
-		return []core.CapabilitySet{{Capabilities: core.Capabilities{}}}
-	}
-	return version.CapabilitySets
-}
-
 // AreCapabilitiesEqual checks if two capabilities are semantically equal.
-func AreCapabilitiesEqual(a, b core.Capabilities, definitions []core.CapabilityDefinition) bool {
-	// Apply default capabilities based on definitions.
-	defaultedA := ApplyDefaultCapabilities(maps.Clone(a), definitions)
-	defaultedB := ApplyDefaultCapabilities(maps.Clone(b), definitions)
-
+func AreCapabilitiesEqual(a, b core.Capabilities) bool {
 	// Check if both are subsets of each other.
-	return areCapabilitiesSubsetOf(defaultedA, defaultedB) && areCapabilitiesSubsetOf(defaultedB, defaultedA)
+	return areCapabilitiesSubsetOf(a, b) && areCapabilitiesSubsetOf(b, a)
 }
 
 // areCapabilitiesSubsetOf verifies if all keys and values in `source` exist in `target`.
@@ -487,19 +474,4 @@ func areCapabilitiesSubsetOf(source, target core.Capabilities) bool {
 		}
 	}
 	return true
-}
-
-// ApplyDefaultCapabilities sets the default capabilities based on a capabilitiesDefinition for a machine type or machine image.
-func ApplyDefaultCapabilities(capabilities core.Capabilities, capabilitiesDefinitions []core.CapabilityDefinition) core.Capabilities {
-	if len(capabilities) == 0 {
-		capabilities = make(core.Capabilities)
-	}
-
-	for _, def := range capabilitiesDefinitions {
-		if _, exists := capabilities[def.Name]; !exists {
-			capabilities[def.Name] = def.Values
-		}
-	}
-
-	return capabilities
 }

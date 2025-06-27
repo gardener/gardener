@@ -1504,5 +1504,80 @@ var _ = Describe("CloudProfile Helper", func() {
 			Entry("Should be false for unsupported architecture", []string{"amd64", "arm64"}, "ia-64", false),
 			Entry("Should be true for supported architecture", []string{"amd64", "arm64"}, "arm64", true),
 		)
+
+		Describe("#GetCapabilitiesWithAppliedDefaults", func() {
+			It("should apply default values when capabilities are nil", func() {
+				var capabilities gardencorev1beta1.Capabilities
+				capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
+					{Name: "capability1", Values: []string{"value1", "value2"}},
+					{Name: "architecture", Values: []string{"amd64"}},
+				}
+
+				result := GetCapabilitiesWithAppliedDefaults(capabilities, capabilityDefinitions)
+
+				Expect(result).To(Equal(gardencorev1beta1.Capabilities{
+					"capability1":  []string{"value1", "value2"},
+					"architecture": []string{"amd64"},
+				}))
+			})
+
+			It("should retain existing values and apply defaults for missing capabilities", func() {
+				capabilities := gardencorev1beta1.Capabilities{
+					"capability1": []string{"value1"},
+				}
+				capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
+					{Name: "capability1", Values: []string{"value1", "value2"}},
+					{Name: "architecture", Values: []string{"amd64"}},
+				}
+
+				result := GetCapabilitiesWithAppliedDefaults(capabilities, capabilityDefinitions)
+
+				Expect(result).To(Equal(gardencorev1beta1.Capabilities{
+					"capability1":  []string{"value1"},
+					"architecture": []string{"amd64"},
+				}))
+			})
+		})
+
+		Describe("#GetCapabilitySetsWithAppliedDefaults", func() {
+			It("should apply defaults when capability sets are empty", func() {
+				var capabilitySets []gardencorev1beta1.CapabilitySet
+				capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
+					{Name: "capability1", Values: []string{"value1", "value2"}},
+					{Name: "architecture", Values: []string{"amd64"}},
+				}
+
+				result := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilityDefinitions)
+
+				Expect(result).To(HaveLen(1))
+				Expect(result[0].Capabilities).To(Equal(gardencorev1beta1.Capabilities{
+					"capability1":  []string{"value1", "value2"},
+					"architecture": []string{"amd64"},
+				}))
+			})
+
+			It("should retain existing values and apply defaults for missing capabilities in sets", func() {
+				capabilitySets := []gardencorev1beta1.CapabilitySet{
+					{Capabilities: gardencorev1beta1.Capabilities{"capability1": []string{"value1"}}},
+					{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{"arm64"}}},
+				}
+				capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
+					{Name: "capability1", Values: []string{"value1", "value2"}},
+					{Name: "architecture", Values: []string{"amd64", "arm64"}},
+				}
+
+				result := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilityDefinitions)
+
+				Expect(result).To(HaveLen(2))
+				Expect(result[0].Capabilities).To(Equal(gardencorev1beta1.Capabilities{
+					"capability1":  []string{"value1"},
+					"architecture": []string{"amd64", "arm64"},
+				}))
+				Expect(result[1].Capabilities).To(Equal(gardencorev1beta1.Capabilities{
+					"capability1":  []string{"value1", "value2"},
+					"architecture": []string{"arm64"},
+				}))
+			})
+		})
 	})
 })

@@ -517,4 +517,79 @@ var _ = Describe("CloudProfile Helper", func() {
 		Entry("without capabilities", nil),
 		Entry("with capabilities", "architecture", "network"),
 	)
+
+	Describe("#GetCapabilitiesWithAppliedDefaults", func() {
+		It("should apply default values when capabilities are nil", func() {
+			var capabilities core.Capabilities
+			capabilityDefinitions := []core.CapabilityDefinition{
+				{Name: "capability1", Values: []string{"value1", "value2"}},
+				{Name: "architecture", Values: []string{"amd64"}},
+			}
+
+			result := GetCapabilitiesWithAppliedDefaults(capabilities, capabilityDefinitions)
+
+			Expect(result).To(Equal(core.Capabilities{
+				"capability1":  []string{"value1", "value2"},
+				"architecture": []string{"amd64"},
+			}))
+		})
+
+		It("should retain existing values and apply defaults for missing capabilities", func() {
+			capabilities := core.Capabilities{
+				"capability1": []string{"value1"},
+			}
+			capabilityDefinitions := []core.CapabilityDefinition{
+				{Name: "capability1", Values: []string{"value1", "value2"}},
+				{Name: "architecture", Values: []string{"amd64"}},
+			}
+
+			result := GetCapabilitiesWithAppliedDefaults(capabilities, capabilityDefinitions)
+
+			Expect(result).To(Equal(core.Capabilities{
+				"capability1":  []string{"value1"},
+				"architecture": []string{"amd64"},
+			}))
+		})
+	})
+
+	Describe("#GetCapabilitySetsWithAppliedDefaults", func() {
+		It("should apply defaults when capability sets are empty", func() {
+			var capabilitySets []core.CapabilitySet
+			capabilityDefinitions := []core.CapabilityDefinition{
+				{Name: "capability1", Values: []string{"value1", "value2"}},
+				{Name: "architecture", Values: []string{"amd64"}},
+			}
+
+			result := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilityDefinitions)
+
+			Expect(result).To(HaveLen(1))
+			Expect(result[0].Capabilities).To(Equal(core.Capabilities{
+				"capability1":  []string{"value1", "value2"},
+				"architecture": []string{"amd64"},
+			}))
+		})
+
+		It("should retain existing values and apply defaults for missing capabilities in sets", func() {
+			capabilitySets := []core.CapabilitySet{
+				{Capabilities: core.Capabilities{"capability1": []string{"value1"}}},
+				{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
+			}
+			capabilityDefinitions := []core.CapabilityDefinition{
+				{Name: "capability1", Values: []string{"value1", "value2"}},
+				{Name: "architecture", Values: []string{"amd64", "arm64"}},
+			}
+
+			result := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilityDefinitions)
+
+			Expect(result).To(HaveLen(2))
+			Expect(result[0].Capabilities).To(Equal(core.Capabilities{
+				"capability1":  []string{"value1"},
+				"architecture": []string{"amd64", "arm64"},
+			}))
+			Expect(result[1].Capabilities).To(Equal(core.Capabilities{
+				"capability1":  []string{"value1", "value2"},
+				"architecture": []string{"arm64"},
+			}))
+		})
+	})
 })
