@@ -48,7 +48,10 @@ const (
 	// the Seed cluster of a core.gardener.cloud/{v1alpha1,v1beta1} Shoot
 	// referred in the status.
 	ShootStatusSeedName = "status.seedName"
-
+	// ShootStatusTechnicalId is the field selector path for finding
+	// the technicalID of a core.gardener.cloud/{v1alpha1,v1beta1} Shoot
+	// referred in the status.
+	ShootStatusTechnicalID = "status.technicalID"
 	// NamespacedCloudProfileParentRefName is the field selector path for finding
 	// the parent CloudProfile of a core.gardener.cloud/v1beta1 NamespacedCloudProfile.
 	NamespacedCloudProfileParentRefName = "spec.parent.name"
