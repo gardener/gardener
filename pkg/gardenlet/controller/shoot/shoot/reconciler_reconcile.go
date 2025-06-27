@@ -511,7 +511,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 					if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
 						var encryptedResources []string
 						if o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil {
-							encryptedResources = shared.GetResourcesForEncryptionFromConfig(o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.EncryptionConfig)
+							encryptedResources = shared.StringifyGroupResources(shared.GetResourcesForEncryptionFromConfig(o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.EncryptionConfig))
 						}
 
 						shoot.Status.EncryptedResources = encryptedResources
