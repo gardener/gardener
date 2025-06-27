@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/persesoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
@@ -596,6 +597,11 @@ var _ = Describe("Seed controller tests", func() {
 							"perses.perses.dev",
 							"persesdashboards.perses.dev",
 							"persesdatasources.perses.dev",
+							// opentelemetry-operator
+							"opentelemetrycollectors.opentelemetry.io",
+							"instrumentations.opentelemetry.io",
+							"opampbridges.opentelemetry.io",
+							"targetallocators.opentelemetry.io",
 						}
 					)
 
@@ -658,6 +664,8 @@ var _ = Describe("Seed controller tests", func() {
 						Expect(err).NotTo(HaveOccurred())
 						persesCRD, err := persesoperator.NewCRDs(testClient, applier)
 						Expect(err).NotTo(HaveOccurred())
+						openTelemetryCRD, err := oteloperator.NewCRDs(testClient, applier)
+						Expect(err).NotTo(HaveOccurred())
 
 						Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 						Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
@@ -666,6 +674,7 @@ var _ = Describe("Seed controller tests", func() {
 						Expect(fluentCRD.Deploy(ctx)).To(Succeed())
 						Expect(prometheusCRD.Deploy(ctx)).To(Succeed())
 						Expect(persesCRD.Deploy(ctx)).To(Succeed())
+						Expect(openTelemetryCRD.Deploy(ctx)).To(Succeed())
 
 						DeferCleanup(func() {
 							Expect(applier.DeleteManifest(ctx, managedResourceCRDReader)).To(Succeed())
@@ -678,6 +687,7 @@ var _ = Describe("Seed controller tests", func() {
 							Expect(fluentCRD.Destroy(ctx)).To(Succeed())
 							Expect(prometheusCRD.Destroy(ctx)).To(Succeed())
 							Expect(persesCRD.Destroy(ctx)).To(Succeed())
+							Expect(openTelemetryCRD.Destroy(ctx)).To(Succeed())
 						})
 					}
 
@@ -706,6 +716,7 @@ var _ = Describe("Seed controller tests", func() {
 							"fluent-operator-custom-resources",
 							"prometheus-operator",
 							"perses-operator",
+							"opentelemetry-operator",
 						)
 					} else {
 						expectedManagedResources = append(expectedManagedResources,
@@ -779,7 +790,7 @@ var _ = Describe("Seed controller tests", func() {
 						Eventually(func() error {
 							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-						}).WithTimeout(25 * time.Second).Should(BeNotFoundError())
+						}).WithTimeout(35 * time.Second).Should(BeNotFoundError())
 
 						// We should wait for the CRD to be deleted since it is a cluster-scoped resource so that we do not interfere
 						// with other test cases.

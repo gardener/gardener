@@ -75,6 +75,7 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	longtermprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/longterm"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
@@ -90,13 +91,14 @@ import (
 )
 
 type components struct {
-	etcdCRD       component.DeployWaiter
-	vpaCRD        component.DeployWaiter
-	istioCRD      component.DeployWaiter
-	fluentCRD     component.DeployWaiter
-	extensionCRD  component.DeployWaiter
-	prometheusCRD component.DeployWaiter
-	persesCRD     component.DeployWaiter
+	etcdCRD          component.DeployWaiter
+	vpaCRD           component.DeployWaiter
+	istioCRD         component.DeployWaiter
+	fluentCRD        component.DeployWaiter
+	extensionCRD     component.DeployWaiter
+	prometheusCRD    component.DeployWaiter
+	persesCRD        component.DeployWaiter
+	openTelemetryCRD component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
 	runtimeSystem           component.DeployWaiter
@@ -135,6 +137,7 @@ type components struct {
 	plutono                       plutono.Interface
 	vali                          component.Deployer
 	prometheusOperator            component.DeployWaiter
+	openTelemetryOperator         component.DeployWaiter
 	alertManager                  alertmanager.Interface
 	prometheusGarden              prometheus.Interface
 	prometheusLongTerm            prometheus.Interface
@@ -179,6 +182,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	if err != nil {
+		return
+	}
+	c.openTelemetryCRD, err = oteloperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
 	if err != nil {
 		return
 	}
@@ -314,6 +321,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.prometheusOperator, err = r.newPrometheusOperator()
+	if err != nil {
+		return
+	}
+	c.openTelemetryOperator, err = r.newOpenTelemetryOperator()
 	if err != nil {
 		return
 	}
@@ -1507,6 +1518,15 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 			WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
 		},
 	), nil
+}
+
+func (r *Reconciler) newOpenTelemetryOperator() (component.DeployWaiter, error) {
+	return sharedcomponent.NewOpenTelemetryOperator(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		true,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+	)
 }
 
 func domainNames(domains []operatorv1alpha1.DNSDomain) []string {

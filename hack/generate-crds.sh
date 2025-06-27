@@ -80,11 +80,18 @@ get_group_package () {
   "dashboard.gardener.cloud")
     echo "github.com/gardener/terminal-controller-manager/api/v1alpha1"
     ;;
+  "opentelemetry.io_v1alpha1")
+    echo "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
+    ;;
+  "opentelemetry.io_v1beta1")
+    echo "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
+    ;;
   *)
     >&2 echo "unknown group $1"
     return 1
   esac
 }
+
 
 generate_all_groups () {
   generate_group extensions.gardener.cloud
@@ -98,6 +105,7 @@ generate_all_groups () {
   generate_group perses.dev_v1alpha1
   generate_group machine.sapcloud.io
   generate_group dashboard.gardener.cloud
+  generate_group opentelemetry.io
 }
 
 generate_group () {
