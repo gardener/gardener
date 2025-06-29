@@ -23,11 +23,14 @@ import (
 )
 
 var _ = Describe("#Secret", func() {
-	var (
-		fakeClient      client.Client
+	const (
 		secretName      = "foo"
 		secretNamespace = "namespace"
-		ctx             context.Context
+	)
+
+	var (
+		fakeClient client.Client
+		ctx        context.Context
 	)
 
 	BeforeEach(func() {
@@ -263,5 +266,59 @@ var _ = Describe("#Secret", func() {
 
 		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(got), got)).To(Succeed())
 		Expect(got.Data).ToNot(HaveKey("config"))
+	})
+
+	It("should compare existing secret with the generated one", func() {
+		existing := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: secretNamespace,
+				Annotations: map[string]string{
+					"foo": "bar",
+					"workloadidentity.security.gardener.cloud/context-object": `{"kind":"Shoot","apiVersion":"core.gardener.cloud/v1beta1","name":"shoot-name","namespace":"shoot-namespace","uid":"12345678-94af-4960-9774-0e9987654321"}`,
+					"workloadidentity.security.gardener.cloud/name":           "wi-foo",
+					"workloadidentity.security.gardener.cloud/namespace":      "wi-ns",
+				},
+				Labels: map[string]string{
+					"security.gardener.cloud/purpose":                   "workload-identity-token-requestor",
+					"workloadidentity.security.gardener.cloud/provider": "provider",
+					"foo": "bar",
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"config": []byte(`{"foo":"bar"}`),
+				"token":  []byte("token"),
+				"foo":    []byte("bar"),
+			},
+		}
+
+		secret, err := workloadidentity.NewSecret(
+			secretName,
+			secretNamespace,
+			workloadidentity.For("wi-foo", "wi-ns", "provider"),
+			workloadidentity.WithLabels(map[string]string{"foo": "bar"}),
+			workloadidentity.WithAnnotations(map[string]string{"foo": "bar"}),
+			workloadidentity.WithProviderConfig(&runtime.RawExtension{
+				Raw: []byte(`{"foo":"bar"}`),
+			}),
+			workloadidentity.WithContextObject(securityv1alpha1.ContextObject{
+				Kind:       "Shoot",
+				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				Name:       "shoot-name",
+				Namespace:  ptr.To("shoot-namespace"),
+				UID:        "12345678-94af-4960-9774-0e9987654321",
+			}),
+		)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(secret.Equal(existing)).To(BeTrue())
+
+		By("Adding data fields should keep equality")
+		existing.Data["equal"] = []byte("value")
+		Expect(secret.Equal(existing)).To(BeTrue())
+
+		By("deleting workloadidentity relevant annotation should make secrets differ")
+		delete(existing.Annotations, "workloadidentity.security.gardener.cloud/name")
+		Expect(secret.Equal(existing)).To(BeFalse())
 	})
 })

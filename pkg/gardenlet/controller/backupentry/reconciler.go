@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -35,6 +36,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 var (
@@ -155,9 +157,9 @@ func (r *Reconciler) reconcileBackupEntry(
 		return nil
 	}
 
-	gardenSecret, err := r.getGardenSecret(gardenCtx, backupBucket)
+	gardenCredentials, err := r.getGardenCredentials(gardenCtx, backupBucket)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get credentials referred in core BackupBucket: %w", err)
 	}
 
 	if err := r.SeedClient.Get(seedCtx, client.ObjectKeyFromObject(extensionSecret), extensionSecret); err != nil {
@@ -167,11 +169,22 @@ func (r *Reconciler) reconcileBackupEntry(
 		// if the extension secret doesn't exist yet, create it
 		mustReconcileExtensionSecret = true
 	} else {
-		// if the backupBucket secret data has changed, reconcile extension backupEntry and extension secret
-		if !reflect.DeepEqual(extensionSecret.Data, gardenSecret.Data) {
-			mustReconcileExtensionBackupEntry = true
-			mustReconcileExtensionSecret = true
+		switch credentials := gardenCredentials.(type) {
+		case *corev1.Secret:
+			// if the backupBucket secret data has changed, reconcile extension backupEntry and extension secret
+			if !reflect.DeepEqual(extensionSecret.Data, credentials.Data) {
+				mustReconcileExtensionBackupEntry = true
+				mustReconcileExtensionSecret = true
+			}
+		case *securityv1alpha1.WorkloadIdentity:
+			if secretChanged, err := workloadIdentitySecretChanged(backupEntry, extensionSecret, credentials); err != nil {
+				return err
+			} else if secretChanged {
+				mustReconcileExtensionBackupEntry = true
+				mustReconcileExtensionSecret = true
+			}
 		}
+
 		// if the timestamp is not present yet (needed for existing secrets), reconcile the secret
 		if _, timestampPresent := extensionSecret.Annotations[v1beta1constants.GardenerTimestamp]; !timestampPresent {
 			mustReconcileExtensionSecret = true
@@ -179,7 +192,7 @@ func (r *Reconciler) reconcileBackupEntry(
 	}
 
 	if mustReconcileExtensionSecret {
-		if err := r.reconcileBackupEntryExtensionSecret(seedCtx, extensionSecret, gardenSecret); err != nil {
+		if err := r.reconcileBackupEntryExtensionSecret(seedCtx, extensionSecret, gardenCredentials, backupEntry); err != nil {
 			return err
 		}
 	}
@@ -198,9 +211,11 @@ func (r *Reconciler) reconcileBackupEntry(
 		BackupBucketProviderStatus: backupBucket.Status.ProviderStatus,
 	}
 
-	secretLastUpdateTime, err := time.Parse(time.RFC3339Nano, extensionSecret.Annotations[v1beta1constants.GardenerTimestamp])
-	if err != nil {
-		return err
+	secretLastUpdateTime := time.Time{}
+	if lastUpdateTime, ok := extensionSecret.Annotations[v1beta1constants.GardenerTimestamp]; ok {
+		if secretLastUpdateTime, err = time.Parse(time.RFC3339Nano, lastUpdateTime); err != nil {
+			return err
+		}
 	}
 
 	// truncate the secret timestamp because extension.Status.LastOperation.LastUpdateTime
@@ -214,8 +229,9 @@ func (r *Reconciler) reconcileBackupEntry(
 		// if the extension BackupEntry doesn't exist yet, create it
 		mustReconcileExtensionBackupEntry = true
 	} else if !reflect.DeepEqual(extensionBackupEntry.Spec, extensionBackupEntrySpec) ||
-		(extensionBackupEntry.Status.LastOperation != nil && extensionBackupEntry.Status.LastOperation.LastUpdateTime.Time.UTC().Before(secretLastUpdateTime)) {
-		// if the spec of the extensionBackupEntry has changed or it has not been reconciled after the last updation of secret, reconcile it
+		(extensionBackupEntry.Status.LastOperation != nil && extensionBackupEntry.Status.LastOperation.LastUpdateTime.Time.UTC().Before(secretLastUpdateTime)) ||
+		secretLastUpdateTime.IsZero() {
+		// if the spec of the extensionBackupEntry has changed or it has not been reconciled after the last update of secret, , or secret last update timestamp is zero - reconcile it
 		mustReconcileExtensionBackupEntry = true
 	} else if extensionBackupEntry.Status.LastOperation == nil {
 		// if the extension did not record a lastOperation yet, record it as error in the backupentry status
@@ -321,12 +337,12 @@ func (r *Reconciler) deleteBackupEntry(
 			return reconcile.Result{}, nil
 		}
 
-		gardenSecret, err := r.getGardenSecret(gardenCtx, backupBucket)
+		gardenCredentials, err := r.getGardenCredentials(gardenCtx, backupBucket)
 		if err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("could not get credentials referred in core backup bucket: %w", err)
 		}
 
-		if err := r.reconcileBackupEntryExtensionSecret(seedCtx, extensionSecret, gardenSecret); err != nil {
+		if err := r.reconcileBackupEntryExtensionSecret(seedCtx, extensionSecret, gardenCredentials, backupEntry); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -638,34 +654,39 @@ func (r *Reconciler) checkIfBackupBucketIsHealthy(ctx context.Context, backupBuc
 	return nil
 }
 
-func (r *Reconciler) getGardenSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) (*corev1.Secret, error) {
-	if backupBucket.Spec.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && backupBucket.Spec.CredentialsRef.Kind == "WorkloadIdentity" {
-		return nil, errors.New("WorkloadIdentity is not yet supported for backup credentials") // TODO(vpnachev): Add support for Workload Identity.
-	}
-
-	gardenSecretRef := &corev1.SecretReference{Namespace: backupBucket.Spec.CredentialsRef.Namespace, Name: backupBucket.Spec.CredentialsRef.Name}
+func (r *Reconciler) getGardenCredentials(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) (client.Object, error) {
 	if backupBucket.Status.GeneratedSecretRef != nil {
-		gardenSecretRef = backupBucket.Status.GeneratedSecretRef
+		return kubernetesutils.GetSecretByReference(ctx, r.GardenClient, backupBucket.Status.GeneratedSecretRef)
 	}
-
-	gardenSecret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, gardenSecretRef)
-	if err != nil {
-		return nil, fmt.Errorf("could not get secret referred in core backup bucket: %w", err)
-	}
-
-	return gardenSecret, nil
+	return kubernetesutils.GetCredentialsByObjectReference(ctx, r.GardenClient, *backupBucket.Spec.CredentialsRef)
 }
 
-func (r *Reconciler) reconcileBackupEntryExtensionSecret(ctx context.Context, extensionSecret, gardenSecret *corev1.Secret) error {
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
-		metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().Format(time.RFC3339Nano))
-		extensionSecret.Data = gardenSecret.DeepCopy().Data
-		return nil
-	}); err != nil {
-		return fmt.Errorf("could not reconcile extension secret in seed: %w", err)
+func (r *Reconciler) reconcileBackupEntryExtensionSecret(ctx context.Context, extensionSecret *corev1.Secret, backupCredentials client.Object, backupEntry *gardencorev1beta1.BackupEntry) error {
+	now := r.Clock.Now().UTC().Format(time.RFC3339Nano)
+	switch credentials := backupCredentials.(type) {
+	case *corev1.Secret:
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
+			metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, now)
+			extensionSecret.Data = credentials.Data
+			return nil
+		})
+		return err
+	case *securityv1alpha1.WorkloadIdentity:
+		s, err := workloadidentity.NewSecret(
+			extensionSecret.Name,
+			extensionSecret.Namespace,
+			workloadidentity.For(credentials.GetName(), credentials.GetNamespace(), credentials.Spec.TargetSystem.Type),
+			workloadidentity.WithProviderConfig(credentials.Spec.TargetSystem.ProviderConfig),
+			workloadidentity.WithContextObject(securityv1alpha1.ContextObject{APIVersion: backupEntry.APIVersion, Kind: backupEntry.Kind, Namespace: ptr.To(backupEntry.GetNamespace()), Name: backupEntry.GetName(), UID: backupEntry.GetUID()}),
+			workloadidentity.WithAnnotations(map[string]string{v1beta1constants.GardenerTimestamp: now}),
+		)
+		if err != nil {
+			return err
+		}
+		return s.Reconcile(ctx, r.SeedClient)
+	default:
+		return fmt.Errorf("unsupported credentials type GVK: %q", backupCredentials.GetObjectKind().GroupVersionKind().String())
 	}
-
-	return nil
 }
 
 // reconcileBackupEntryExtension deploys the BackupEntry extension resource in Seed with the required secret.
@@ -719,4 +740,21 @@ func removeGardenerOperationAnnotation(ctx context.Context, c client.Client, be 
 	patch := client.MergeFrom(be.DeepCopy())
 	delete(be.GetAnnotations(), v1beta1constants.GardenerOperation)
 	return c.Patch(ctx, be, patch)
+}
+
+func workloadIdentitySecretChanged(backupEntry *gardencorev1beta1.BackupEntry, secretToCompareTo *corev1.Secret, workloadIdentity *securityv1alpha1.WorkloadIdentity) (bool, error) {
+	opts := []workloadidentity.SecretOption{
+		workloadidentity.For(workloadIdentity.GetName(), workloadIdentity.GetNamespace(), workloadIdentity.Spec.TargetSystem.Type),
+		workloadidentity.WithProviderConfig(workloadIdentity.Spec.TargetSystem.ProviderConfig),
+		workloadidentity.WithContextObject(securityv1alpha1.ContextObject{APIVersion: backupEntry.APIVersion, Kind: backupEntry.Kind, Namespace: ptr.To(backupEntry.GetNamespace()), Name: backupEntry.GetName(), UID: backupEntry.GetUID()}),
+	}
+	if val, ok := secretToCompareTo.Annotations[v1beta1constants.GardenerTimestamp]; ok {
+		opts = append(opts, workloadidentity.WithAnnotations(map[string]string{v1beta1constants.GardenerTimestamp: val}))
+	}
+	s, err := workloadidentity.NewSecret(secretToCompareTo.Name, secretToCompareTo.Namespace, opts...)
+	if err != nil {
+		return false, err
+	}
+
+	return !s.Equal(secretToCompareTo), nil
 }

@@ -6,6 +6,7 @@ package genericactuator_test
 
 import (
 	"context"
+	"maps"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -17,11 +18,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	extensionsmockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator/mock"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
@@ -37,7 +40,7 @@ const (
 var _ = Describe("Actuator", func() {
 	var (
 		ctx = context.Background()
-		log = logf.Log.WithName("test")
+		log logr.Logger
 
 		ctrl *gomock.Controller
 		mgr  *mockmanager.MockManager
@@ -55,6 +58,9 @@ var _ = Describe("Actuator", func() {
 	)
 
 	BeforeEach(func() {
+		logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+		log = logf.Log.WithName("test")
+
 		ctrl = gomock.NewController(GinkgoT())
 
 		backupEntry = &extensionsv1alpha1.BackupEntry{
@@ -145,6 +151,115 @@ var _ = Describe("Actuator", func() {
 				Expect(fakeClient.Get(ctx, etcdBackupSecretKey, actual)).To(Succeed())
 				Expect(actual.Annotations).To(HaveKeyWithValue("backup.gardener.cloud/created-by", backupEntry.Name))
 				Expect(actual.Data).To(Equal(etcdBackupSecretData))
+			})
+
+			Context("#WorkloadIdentity", func() {
+				var existingEtcdBackupSecret *corev1.Secret
+
+				BeforeEach(func() {
+					backupEntrySecret.Annotations = map[string]string{
+						"workloadidentity.security.gardener.cloud/context-object": `{"kind":"BackupEntry","apiVersion":"core.gardener.cloud/v1beta1","name":"bar","namespace":"test","uid":""}`,
+						"workloadidentity.security.gardener.cloud/namespace":      "test-namespace",
+						"workloadidentity.security.gardener.cloud/name":           "test-workload-identity",
+					}
+					backupEntrySecret.Labels = map[string]string{
+						"security.gardener.cloud/purpose":                   "workload-identity-token-requestor",
+						"workloadidentity.security.gardener.cloud/provider": "test",
+					}
+					backupEntrySecret.Data["config"] = []byte("config")
+					backupEntrySecret.Data["to-be-deleted1"] = []byte("value")
+					backupEntrySecret.Data["token"] = []byte("to-be-replaced")
+
+					existingEtcdBackupSecret = etcdBackupSecret.DeepCopy()
+					existingEtcdBackupSecret.Data = map[string][]byte{
+						"to-be-deleted2": []byte("value"),
+						"token":          []byte("to-be-preserved"),
+					}
+					existingEtcdBackupSecret.Annotations = map[string]string{
+						"workloadidentity.security.gardener.cloud/token-renew-timestamp": "renew",
+						"to-be-deleted": "to-be-deleted",
+					}
+					existingEtcdBackupSecret.Labels = map[string]string{
+						"to-be-deleted": "to-be-deleted",
+					}
+
+					fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(seedNamespace, backupEntrySecret, existingEtcdBackupSecret).Build()
+					mgr.EXPECT().GetClient().Return(fakeClient)
+					passedData := map[string][]byte{
+						"bucketName": []byte(bucketName),
+						"config":     backupEntrySecret.Data["config"],
+					}
+					expectedData := maps.Clone(passedData)
+					expectedData["mock"] = []byte("true")
+					backupEntryDelegate.EXPECT().GetETCDSecretData(ctx, gomock.AssignableToTypeOf(logr.Logger{}), backupEntry, passedData).Return(expectedData, nil)
+					a = genericactuator.NewActuator(mgr, backupEntryDelegate)
+				})
+
+				It("should update already existing secret with workload identity details", func() {
+					Expect(a.Reconcile(ctx, log, backupEntry)).To(Succeed())
+
+					actual := &corev1.Secret{}
+					Expect(fakeClient.Get(ctx, etcdBackupSecretKey, actual)).To(Succeed())
+
+					Expect(actual.Annotations).To(HaveLen(5))
+					Expect(actual.Annotations).To(HaveKeyWithValue("backup.gardener.cloud/created-by", backupEntry.Name))
+					Expect(actual.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/name", "test-workload-identity"))
+					Expect(actual.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/namespace", "test-namespace"))
+					Expect(actual.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/context-object", `{"kind":"BackupEntry","apiVersion":"core.gardener.cloud/v1beta1","name":"bar","namespace":"test","uid":""}`))
+					Expect(actual.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/token-renew-timestamp", "renew"))
+					Expect(actual.Annotations).ToNot(HaveKey("to-be-deleted"))
+
+					Expect(actual.Labels).To(HaveLen(2))
+					Expect(actual.Labels).To(HaveKeyWithValue("security.gardener.cloud/purpose", "workload-identity-token-requestor"))
+					Expect(actual.Labels).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/provider", "test"))
+					Expect(actual.Labels).ToNot(HaveKey("to-be-deleted"))
+
+					Expect(actual.Data).To(HaveLen(4))
+					Expect(actual.Data).To(HaveKeyWithValue("config", []byte("config")))
+					Expect(actual.Data).To(HaveKeyWithValue("token", []byte("to-be-preserved")))
+					Expect(actual.Data).To(HaveKeyWithValue("mock", []byte("true")))
+					Expect(actual.Data).To(HaveKeyWithValue("bucketName", []byte(bucketName)))
+					Expect(actual.Data).ToNot(HaveKey("to-be-deleted1"))
+					Expect(actual.Data).ToNot(HaveKey("to-be-deleted2"))
+				})
+
+				It("should fail to reconcile the secret due to missing WorkloadIdentity name ", func() {
+					delete(backupEntrySecret.Annotations, "workloadidentity.security.gardener.cloud/name")
+					Expect(fakeClient.Update(ctx, backupEntrySecret)).To(Succeed())
+
+					err := a.Reconcile(ctx, log, backupEntry)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("BackupEntry is set to use workload identity but WorkloadIdentity's name is missing"))
+				})
+
+				It("should fail to reconcile the secret due to missing WorkloadIdentity namespace ", func() {
+					delete(backupEntrySecret.Annotations, "workloadidentity.security.gardener.cloud/namespace")
+					Expect(fakeClient.Update(ctx, backupEntrySecret)).To(Succeed())
+
+					err := a.Reconcile(ctx, log, backupEntry)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("BackupEntry is set to use workload identity but WorkloadIdentity's namespace is missing"))
+				})
+
+				It("should fail to reconcile the secret due to missing WorkloadIdentity provider type ", func() {
+					delete(backupEntrySecret.Labels, "workloadidentity.security.gardener.cloud/provider")
+					Expect(fakeClient.Update(ctx, backupEntrySecret)).To(Succeed())
+
+					err := a.Reconcile(ctx, log, backupEntry)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("BackupEntry is set to use workload identity but WorkloadIdentity's provider type missing"))
+				})
+
+				It("should not set token data key when the etcd secret ", func() {
+					delete(existingEtcdBackupSecret.Data, "token")
+					Expect(fakeClient.Update(ctx, existingEtcdBackupSecret)).To(Succeed())
+
+					Expect(a.Reconcile(ctx, log, backupEntry)).To(Succeed())
+
+					actual := &corev1.Secret{}
+					Expect(fakeClient.Get(ctx, etcdBackupSecretKey, actual)).To(Succeed())
+					Expect(actual.Data).ToNot(HaveKey("token"))
+				})
 			})
 		})
 

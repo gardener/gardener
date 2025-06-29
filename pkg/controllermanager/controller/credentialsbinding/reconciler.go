@@ -26,6 +26,7 @@ import (
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles CredentialsBinding.
@@ -61,20 +62,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, r.reconcile(ctx, credentialsBinding, log)
 }
 
-func (r *Reconciler) getCredentialsFromRef(ctx context.Context, ref corev1.ObjectReference) (client.Object, error) {
-	var obj client.Object
-	switch ref.GroupVersionKind() {
-	case corev1.SchemeGroupVersion.WithKind("Secret"):
-		obj = &corev1.Secret{}
-	case securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity"):
-		obj = &securityv1alpha1.WorkloadIdentity{}
-	default:
-		return nil, fmt.Errorf("unsupported credentials reference: %s, %s", ref.Namespace+"/"+ref.Name, ref.GroupVersionKind().String())
-	}
-
-	return obj, r.Client.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, obj)
-}
-
 func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *securityv1alpha1.CredentialsBinding, log logr.Logger) error {
 	if !controllerutil.ContainsFinalizer(credentialsBinding, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
@@ -85,7 +72,7 @@ func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *security
 
 	// Add the Gardener finalizer to the referenced Secret/WorkloadIdentity
 	// to protect it from deletion as long as the CredentialsBinding resource exists.
-	credential, err := r.getCredentialsFromRef(ctx, credentialsBinding.CredentialsRef)
+	credential, err := kubernetesutils.GetCredentialsByObjectReference(ctx, r.Client, credentialsBinding.CredentialsRef)
 	if err != nil {
 		return err
 	}
@@ -162,7 +149,7 @@ func (r *Reconciler) delete(ctx context.Context, credentialsBinding *securityv1a
 	}
 
 	if mayReleaseCredentials {
-		credential, err := r.getCredentialsFromRef(ctx, credentialsBinding.CredentialsRef)
+		credential, err := kubernetesutils.GetCredentialsByObjectReference(ctx, r.Client, credentialsBinding.CredentialsRef)
 		kind := credential.GetObjectKind().GroupVersionKind().Kind
 		if err == nil {
 			// Remove shoot provider label and 'referred by a credentials binding' label

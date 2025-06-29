@@ -12,7 +12,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/security"
 	"github.com/gardener/gardener/pkg/apiserver/registry/security/workloadidentity"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	workloadidentityutils "github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
@@ -31,13 +31,17 @@ type WorkloadIdentityStorage struct {
 func NewStorage(
 	optsGetter generic.RESTOptionsGetter,
 	tokenIssuer workloadidentityutils.TokenIssuer,
-	coreInformerFactory gardencoreinformers.SharedInformerFactory,
+	shootListers gardencorev1beta1listers.ShootLister,
+	seedLister gardencorev1beta1listers.SeedLister,
+	projectLister gardencorev1beta1listers.ProjectLister,
+	backupBucketLister gardencorev1beta1listers.BackupBucketLister,
+	backupEntryLister gardencorev1beta1listers.BackupEntryLister,
 ) WorkloadIdentityStorage {
 	workloadIdentityRest := NewREST(optsGetter)
 
 	return WorkloadIdentityStorage{
 		WorkloadIdentity: workloadIdentityRest,
-		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, tokenIssuer, coreInformerFactory),
+		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, tokenIssuer, shootListers, seedLister, projectLister, backupBucketLister, backupEntryLister),
 	}
 }
 
