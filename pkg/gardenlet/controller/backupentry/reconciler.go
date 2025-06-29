@@ -157,9 +157,9 @@ func (r *Reconciler) reconcileBackupEntry(
 		return nil
 	}
 
-	gardenCredentials, err := kubernetesutils.GetCredentialsByObjectReference(gardenCtx, r.GardenClient, *backupBucket.Spec.CredentialsRef)
+	gardenCredentials, err := r.getGardenCredentials(gardenCtx, backupBucket)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get credentials referred in core BackupBucket: %w", err)
 	}
 
 	if err := r.SeedClient.Get(seedCtx, client.ObjectKeyFromObject(extensionSecret), extensionSecret); err != nil {
@@ -337,9 +337,9 @@ func (r *Reconciler) deleteBackupEntry(
 			return reconcile.Result{}, nil
 		}
 
-		gardenCredentials, err := kubernetesutils.GetCredentialsByObjectReference(gardenCtx, r.GardenClient, *backupBucket.Spec.CredentialsRef)
+		gardenCredentials, err := r.getGardenCredentials(gardenCtx, backupBucket)
 		if err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("could not get credentials referred in core backup bucket: %w", err)
 		}
 
 		if err := r.reconcileBackupEntryExtensionSecret(seedCtx, extensionSecret, gardenCredentials, backupEntry); err != nil {
@@ -652,6 +652,13 @@ func (r *Reconciler) checkIfBackupBucketIsHealthy(ctx context.Context, backupBuc
 	}
 
 	return nil
+}
+
+func (r *Reconciler) getGardenCredentials(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) (client.Object, error) {
+	if backupBucket.Status.GeneratedSecretRef != nil {
+		return kubernetesutils.GetSecretByReference(ctx, r.GardenClient, backupBucket.Status.GeneratedSecretRef)
+	}
+	return kubernetesutils.GetCredentialsByObjectReference(ctx, r.GardenClient, *backupBucket.Spec.CredentialsRef)
 }
 
 func (r *Reconciler) reconcileBackupEntryExtensionSecret(ctx context.Context, extensionSecret *corev1.Secret, backupCredentials client.Object, backupEntry *gardencorev1beta1.BackupEntry) error {

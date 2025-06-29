@@ -221,7 +221,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, request)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("unsupported credentials reference: garden/backup-cm, /v1, Kind=ConfigMap"))
+			Expect(err).To(MatchError("could not get credentials referred in core BackupBucket: unsupported credentials reference: garden/backup-cm, /v1, Kind=ConfigMap"))
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
 	})
@@ -320,6 +320,35 @@ var _ = Describe("Controller", func() {
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
 			Expect(extensionBackupEntry.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
+		})
+
+		It("should use the backupBucket.status.generatedSecret as credentials", func() {
+			generatedGardenSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "generated-secret",
+					Namespace: gardenNamespaceName,
+				},
+				Data: map[string][]byte{
+					"generatedSecret1": []byte("generatedValue1"),
+					"generatedSecret2": []byte("generatedValue2"),
+				},
+			}
+			backupBucket.Status.GeneratedSecretRef = &corev1.SecretReference{
+				Namespace: gardenNamespaceName,
+				Name:      "generated-secret",
+			}
+			Expect(gardenClient.Create(ctx, generatedGardenSecret)).To(Succeed())
+			Expect(gardenClient.Status().Update(ctx, backupBucket)).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(reconcile.Result{}))
+
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
+			Expect(extensionSecret.Data).To(Equal(map[string][]byte{
+				"generatedSecret1": []byte("generatedValue1"),
+				"generatedSecret2": []byte("generatedValue2"),
+			}))
 		})
 	})
 
