@@ -242,7 +242,7 @@ var _ = Describe("Controller", func() {
 			extensionSecret.Data = gardenSecret.Data
 		})
 
-		It("should create the extension secret and extension BackupEntry if it doesn't exist yet", func() {
+		It("should create the extension secret and extension BackupEntry if they do not exist yet", func() {
 			result, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(reconcile.Result{}))
@@ -377,7 +377,7 @@ var _ = Describe("Controller", func() {
 			extensionSecret.Type = "Opaque"
 		})
 
-		It("should create the extension secret and extension BackupEntry if it doesn't exist yet", func() {
+		It("should create the extension secret and extension BackupEntry if they do not exist yet", func() {
 			result, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(reconcile.Result{}))

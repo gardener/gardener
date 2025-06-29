@@ -218,7 +218,7 @@ var _ = Describe("Controller", func() {
 			extensionSecret.Data = gardenSecret.Data
 		})
 
-		It("should create the extension secret and extension BackupBucket if then do not exist yet", func() {
+		It("should create the extension secret and extension BackupBucket if they do not exist yet", func() {
 			result, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(reconcile.Result{}))
@@ -326,6 +326,7 @@ var _ = Describe("Controller", func() {
 			}
 			Expect(gardenClient.Create(ctx, backupBucket)).To(Succeed())
 			Expect(gardenClient.Create(ctx, workloadIdentity)).To(Succeed())
+
 			extensionSecret.Annotations = map[string]string{
 				"gardener.cloud/timestamp":                                now.Format(time.RFC3339Nano),
 				"workloadidentity.security.gardener.cloud/context-object": `{"kind":"BackupBucket","apiVersion":"core.gardener.cloud/v1beta1","name":"foo","uid":""}`,
@@ -410,7 +411,7 @@ var _ = Describe("Controller", func() {
 			// the workloadIdentity.spec.targetSystem.providerConfig=nil will cause the `config` data key to be removed from the secret
 			extensionSecret.Data = map[string][]byte{"config": []byte("null")}
 			Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
-			delete(extensionBackupBucket.Annotations, "gardener.cloud/operation")
+			Expect(extensionBackupBucket.Annotations).ToNot(HaveKey("gardener.cloud/operation"))
 			Expect(seedClient.Create(ctx, extensionBackupBucket)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, request)
