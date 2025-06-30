@@ -6280,6 +6280,7 @@ func Convert_core_SeedSettingTopologyAwareRouting_To_v1beta1_SeedSettingTopology
 
 func autoConvert_v1beta1_SeedSettingVerticalPodAutoscaler_To_core_SeedSettingVerticalPodAutoscaler(in *SeedSettingVerticalPodAutoscaler, out *core.SeedSettingVerticalPodAutoscaler, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
@@ -6290,6 +6291,7 @@ func Convert_v1beta1_SeedSettingVerticalPodAutoscaler_To_core_SeedSettingVertica
 
 func autoConvert_core_SeedSettingVerticalPodAutoscaler_To_v1beta1_SeedSettingVerticalPodAutoscaler(in *core.SeedSettingVerticalPodAutoscaler, out *SeedSettingVerticalPodAutoscaler, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
