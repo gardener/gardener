@@ -2015,7 +2015,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
-				It("should deny using none encryptable resources", func() {
+				It("should deny using non-encryptable resources", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"apiserveripinfo", "serviceipallocations", "servicenodeportallocations"},
 					}
@@ -2039,7 +2039,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
-				It("should deny using specific group", func() {
+				It("should deny using specific groups", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"foo.extensions", "events.events.k8s.io"},
 					}
@@ -2075,7 +2075,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
-				It("should deny resoureces with '.' suffix", func() {
+				It("should deny resources with '.' suffix", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"configmaps.", "deployment.apps.", "services"},
 					}
