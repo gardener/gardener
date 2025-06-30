@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("NotContainAny", func() {
+var _ = Describe("ContainAnyOf", func() {
 	DescribeTable("MatchTable",
 		func(actual []string, wanted []string, shouldMatch bool) {
 			match, err := ContainAnyOf(wanted...).Match(actual)
