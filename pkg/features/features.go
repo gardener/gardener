@@ -102,6 +102,7 @@ const (
 	// Credentials that were already copied will be labeled with "secret.backup.gardener.cloud/status=previously-managed" and would have to be cleaned up by operators.
 	// owner: @dimityrmirchev
 	// alpha: v1.121.0
+	// beta: v1.123.0
 	DoNotCopyBackupCredentials featuregate.Feature = "DoNotCopyBackupCredentials"
 )
 
@@ -141,7 +142,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	RemoveAPIServerProxyLegacyPort:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},
 	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha},
-	DoNotCopyBackupCredentials:               {Default: false, PreRelease: featuregate.Alpha},
+	DoNotCopyBackupCredentials:               {Default: true, PreRelease: featuregate.Beta},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

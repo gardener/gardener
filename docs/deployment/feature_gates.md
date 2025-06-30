@@ -33,7 +33,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
 | IstioTLSTermination                      | `false` | `Alpha` | `1.114` |         |
 | CloudProfileCapabilities                 | `false` | `Alpha` | `1.117` |         |
-| DoNotCopyBackupCredentials               | `false` | `Alpha` | `1.121` |         |
+| DoNotCopyBackupCredentials               | `false` | `Alpha` | `1.121` | `1.122` |
+| DoNotCopyBackupCredentials               | `true`  | `Beta`  | `1.123` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
