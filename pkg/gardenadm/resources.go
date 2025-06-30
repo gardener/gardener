@@ -15,14 +15,35 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
+
+var decoder runtime.Decoder
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must((&runtime.SchemeBuilder{
+		kubernetes.AddGardenSchemeToScheme,
+		operatorv1alpha1.AddToScheme,
+	}).AddToScheme(scheme))
+
+	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder(
+		gardencorev1.SchemeGroupVersion,
+		gardencorev1beta1.SchemeGroupVersion,
+		operatorv1alpha1.SchemeGroupVersion,
+		securityv1alpha1.SchemeGroupVersion,
+		corev1.SchemeGroupVersion,
+	)
+}
 
 // Resources contains the Kubernetes and Gardener resources read from the manifests.
 type Resources struct {
@@ -42,12 +63,6 @@ type Resources struct {
 // reading or decoding.
 func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
 	resources := Resources{Seed: &gardencorev1beta1.Seed{}}
-	decoder := serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder(
-		gardencorev1.SchemeGroupVersion,
-		gardencorev1beta1.SchemeGroupVersion,
-		securityv1alpha1.SchemeGroupVersion,
-		corev1.SchemeGroupVersion,
-	)
 
 	if err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -111,6 +126,11 @@ func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
 
 			case *gardencorev1.ControllerDeployment:
 				resources.ControllerDeployments = append(resources.ControllerDeployments, typedObj)
+
+			case *operatorv1alpha1.Extension:
+				controllerRegistration, controllerDeployment := operator.ControllerRegistrationForExtension(typedObj)
+				resources.ControllerRegistrations = append(resources.ControllerRegistrations, controllerRegistration)
+				resources.ControllerDeployments = append(resources.ControllerDeployments, controllerDeployment)
 
 			case *corev1.Secret:
 				resources.Secrets = append(resources.Secrets, typedObj)

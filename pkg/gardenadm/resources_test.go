@@ -33,6 +33,8 @@ var _ = Describe("Resources", func() {
 			createControllerRegistration(fsys, "ext2")
 			createControllerDeployment(fsys, "ext1")
 			createControllerDeployment(fsys, "ext2")
+			createExtension(fsys, "ext3")
+			createExtension(fsys, "ext4")
 			createSecret(fsys, "secret1")
 			createSecret(fsys, "secret2")
 			createSecretBinding(fsys, "secretBinding")
@@ -46,12 +48,16 @@ var _ = Describe("Resources", func() {
 			Expect(resources.CloudProfile.Name).To(Equal("cpfl"))
 			Expect(resources.Project.Name).To(Equal("project"))
 			Expect(resources.Shoot.Name).To(Equal("shoot"))
-			Expect(resources.ControllerRegistrations).To(HaveLen(2))
+			Expect(resources.ControllerRegistrations).To(HaveLen(4))
 			Expect(resources.ControllerRegistrations[0].Name).To(Equal("ext1"))
 			Expect(resources.ControllerRegistrations[1].Name).To(Equal("ext2"))
-			Expect(resources.ControllerDeployments).To(HaveLen(2))
+			Expect(resources.ControllerRegistrations[2].Name).To(Equal("ext3"))
+			Expect(resources.ControllerRegistrations[3].Name).To(Equal("ext4"))
+			Expect(resources.ControllerDeployments).To(HaveLen(4))
 			Expect(resources.ControllerDeployments[0].Name).To(Equal("ext1"))
 			Expect(resources.ControllerDeployments[1].Name).To(Equal("ext2"))
+			Expect(resources.ControllerDeployments[2].Name).To(Equal("ext3"))
+			Expect(resources.ControllerDeployments[3].Name).To(Equal("ext4"))
 			Expect(resources.Secrets).To(HaveLen(2))
 			Expect(resources.Secrets[0].Name).To(Equal("secret1"))
 			Expect(resources.Secrets[1].Name).To(Equal("secret2"))
@@ -202,6 +208,25 @@ func createControllerDeployment(fsys fstest.MapFS, name string) {
 kind: ControllerDeployment
 metadata:
   name: ` + name + `
+`)}
+}
+
+func createExtension(fsys fstest.MapFS, name string) {
+	fsys["extension-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: ` + name + `
+spec:
+  deployment:
+    extension:
+      helm:
+        ociRepository:
+          ref: garden.local/extension/` + name + `:v0.0.0
+  resources:
+    - kind: Infrastructure
+      type: ` + name + `
+    - kind: Extension
+      type: ` + name + `
 `)}
 }
 
