@@ -88,7 +88,6 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 		if parsedVersion.LessThan(semver.MustParse("1.34.0")) {
 			stillRequired = true
 		}
-
 	}
 	if stillDesired, err := b.isNodeLocalDNSStillDesired(ctx); err != nil {
 		return err
@@ -155,7 +154,8 @@ func (b *Botanist) computeWorkerPoolsForNodeLocalDNS(ctx context.Context) ([]nod
 	return workerPools, nil
 }
 
-func (b *Botanist) SetShootClient(ctx context.Context) (kubernetes.Interface, error) {
+// SetShootClient sets the Shoot client for the Botanist.
+func (b *Botanist) SetShootClient() (kubernetes.Interface, error) {
 	if b.ShootClientSet == nil {
 		return nil, fmt.Errorf("ShootClientSet is nil")
 	}
