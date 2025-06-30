@@ -49,7 +49,7 @@ for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.na
       echo "Could not find \"$CONTROLLER_DEPLOYMENT_RELEASE\" release in the set of github repository releases of \"$p\"."
       echo "Using latest release \"$RELEASE\" instead."
     fi
-    echo "Trying to deploy $ADMISSION_NAME with $RELEASE..."
+    echo "Trying to $command $ADMISSION_NAME with $RELEASE..."
     ADMISSION_GIT_ROOT=$(mktemp -d)
     ADMISSION_FILE=$(mktemp)
     curl --fail -L -o "$ADMISSION_FILE" "https://github.com/gardener/gardener-extension-$p/archive/refs/tags/$RELEASE.tar.gz"
@@ -76,7 +76,7 @@ for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.na
       kubectl --kubeconfig "$garden_kubeconfig" wait --for=condition=available deployment -l app.kubernetes.io/name=gardener-extension-"$ADMISSION_NAME" -n garden --timeout 5m
     fi
     rm -rf "$ADMISSION_FILE" "$ADMISSION_GIT_ROOT"
-    echo "Successfully deployed $ADMISSION_NAME:$RELEASE."
+    echo "Successful execution of '$command' operation for $ADMISSION_NAME:$RELEASE."
   else
     echo "Github repository releases of \"$p\" not found."
   fi
