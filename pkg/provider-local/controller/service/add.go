@@ -36,24 +36,32 @@ type AddOptions struct {
 	Zone1IP string
 	// Zone2IP is the IP address to be used for the zone 2 istio ingress gateway.
 	Zone2IP string
+	// BastionIP is the bastion IP.
+	BastionIP string
 }
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
-	var istioIngressGatewayPredicates []predicate.Predicate
+	var predicates []predicate.Predicate
 	for _, zone := range []*string{
 		nil,
 		ptr.To("0"),
 		ptr.To("1"),
 		ptr.To("2"),
 	} {
-		predicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchExpressions: matchExpressionsIstioIngressGateway(zone)})
+		istioPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchExpressions: matchExpressionsIstioIngressGateway(zone)})
 		if err != nil {
 			return err
 		}
-		istioIngressGatewayPredicates = append(istioIngressGatewayPredicates, predicate)
+		predicates = append(predicates, istioPredicate)
 	}
+
+	bastionPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{"app": "bastion"}})
+	if err != nil {
+		return err
+	}
+	predicates = append(predicates, bastionPredicate)
 
 	isMultiZone, err := HasNodesInMultipleZones(ctx, mgr.GetAPIReader())
 	if err != nil {
@@ -66,7 +74,8 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		Zone1IP:     opts.Zone1IP,
 		Zone2IP:     opts.Zone2IP,
 		IsMultiZone: isMultiZone,
-	}).AddToManager(mgr, predicate.Or(istioIngressGatewayPredicates...))
+		BastionIP:   opts.BastionIP,
+	}).AddToManager(mgr, predicate.Or(predicates...))
 }
 
 // AddToManager adds a controller with the default Options.

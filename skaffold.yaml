@@ -655,10 +655,12 @@ build:
             - cmd/gardener-extension-provider-local/app
             - cmd/utils
             - extensions/pkg/apis/config/v1alpha1
+            - extensions/pkg/bastion
             - extensions/pkg/controller
             - extensions/pkg/controller/backupbucket
             - extensions/pkg/controller/backupentry
             - extensions/pkg/controller/backupentry/genericactuator
+            - extensions/pkg/controller/bastion
             - extensions/pkg/controller/cmd
             - extensions/pkg/controller/controlplane
             - extensions/pkg/controller/controlplane/genericactuator
@@ -772,6 +774,7 @@ build:
             - pkg/provider-local/controller/backupbucket
             - pkg/provider-local/controller/backupentry
             - pkg/provider-local/controller/backupoptions
+            - pkg/provider-local/controller/bastion
             - pkg/provider-local/controller/controlplane
             - pkg/provider-local/controller/dnsrecord
             - pkg/provider-local/controller/extension/seed

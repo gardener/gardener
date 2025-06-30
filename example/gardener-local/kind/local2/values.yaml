@@ -5,6 +5,8 @@ gardener:
     istio:
       listenAddresses:
       - 172.18.255.2
+    bastion:
+      listenAddresses: []
 
 registry:
   deployed: false
