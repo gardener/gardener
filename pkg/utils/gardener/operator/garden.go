@@ -8,10 +8,10 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,6 +32,8 @@ import (
 
 // IsServedByGardenerAPIServer returns true if the passed resources is served by the Gardener API Server.
 func IsServedByGardenerAPIServer(resource string) bool {
+	groupResource := schema.ParseGroupResource(resource)
+
 	for _, groupName := range []string{
 		authentication.GroupName,
 		gardencore.GroupName,
@@ -40,7 +42,7 @@ func IsServedByGardenerAPIServer(resource string) bool {
 		settings.GroupName,
 		seedmanagement.GroupName,
 	} {
-		if strings.HasSuffix(resource, groupName) {
+		if groupName == groupResource.Group {
 			return true
 		}
 	}
