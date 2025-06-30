@@ -235,6 +235,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:     component.OpWait(c.persesCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
+		deployOpenTelemetryCRD = g.Add(flow.Task{
+			Name:   "Deploy OpenTelemetry-related custom resource definitions",
+			Fn:     component.OpWait(c.openTelemetryCRD).Deploy,
+			SkipIf: seedIsGarden,
+		})
 		syncPointCRDs = flow.NewTaskIDs(
 			deployMachineCRD,
 			deployExtensionCRD,
@@ -244,8 +249,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployFluentCRD,
 			deployPrometheusCRD,
 			deployPersesCRD,
+			deployOpenTelemetryCRD,
 		)
-
 		// TODO(shreyas-s-rao): Remove this in v1.123.0.
 		_ = g.Add(flow.Task{
 			Name: "Updating etcd VPA target references",
@@ -427,6 +432,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name:         "Deploying kube-state-metrics",
 			Fn:           c.kubeStateMetrics.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying OpenTelemetry Operator",
+			Fn:           c.openTelemetryOperator.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+			SkipIf:       seedIsGarden,
 		})
 		deployFluentOperator = g.Add(flow.Task{
 			Name:         "Deploying Fluent Operator",
