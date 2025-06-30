@@ -190,10 +190,7 @@ func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	daemonSets, vpas, err := n.computePoolResourcesData()
-	if err != nil {
-		return err
-	}
+	daemonSets, vpas := n.computePoolResourcesData()
 
 	objects := []client.Object{n.serviceAccount, n.configMap, n.service}
 	for i := range daemonSets {
@@ -274,7 +271,6 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 	for _, pool := range n.values.WorkerPools {
 		annotationKey := fmt.Sprintf("node-local-dns-cleanup-required-for-%s", pool.Name)
 		if cluster.Shoot.Annotations[annotationKey] == "true" {
-
 			// Create the cleanup DaemonSet
 			cleanupDaemonSet, err := n.createCleanupDaemonSetForWorkerPool(pool.Name)
 			if err != nil {
@@ -295,7 +291,7 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 			if err := n.values.ShootClientSet.Client().Delete(ctx, cleanupDaemonSet); err != nil {
 				return fmt.Errorf("failed to delete cleanup DaemonSet for worker pool %s: %w", pool.Name, err)
 			}
-			n.values.Log.Info("Cleanup DaemonSet deleted", "workerPool", pool.Name, "delete annotation", annotationKey)
+			n.values.Log.Info("Cleanup DaemonSet deleted", "workerPool", pool.Name, "deleteAnnotation", annotationKey)
 			// Remove the annotation after successful cleanup
 			delete(cluster.Shoot.Annotations, annotationKey)
 		}
@@ -451,7 +447,7 @@ ip6.arpa:53 {
 	return nil
 }
 
-func (n *nodeLocalDNS) computePoolResourcesData() ([]*appsv1.DaemonSet, []*vpaautoscalingv1.VerticalPodAutoscaler, error) {
+func (n *nodeLocalDNS) computePoolResourcesData() ([]*appsv1.DaemonSet, []*vpaautoscalingv1.VerticalPodAutoscaler) {
 	var (
 		maxUnavailable       = intstr.FromString("10%")
 		hostPathFileOrCreate = corev1.HostPathFileOrCreate
@@ -671,7 +667,7 @@ func (n *nodeLocalDNS) computePoolResourcesData() ([]*appsv1.DaemonSet, []*vpaau
 		}
 	}
 
-	return daemonSets, vpas, nil
+	return daemonSets, vpas
 }
 
 func selectIPAddress(addresses []string, preferIPv6 bool) string {

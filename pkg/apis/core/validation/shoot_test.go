@@ -5891,7 +5891,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("node-local-dns update", func() {
-			It("should forbid toggling the node-local-dns if one of the worker has pool updateStrategy AutoInPlaceUpdate/ManualInPlaceUpdate", func() {
+			It("the node-local-dns setting cannot be changed if the shoot has at least one worker pool with an update strategy of either AutoInPlaceUpdate or ManualInPlaceUpdate, and is running a Kubernetes version below 1.34.0.", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
 				shoot.Spec.Provider.Workers[1].Name = "worker-2"
@@ -5908,7 +5908,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.systemComponents.nodeLocalDNS"),
-					"Detail": Equal("node-local-dns setting can not be changed if shoot has at least one worker pool with update strategy AutoInPlaceUpdate/ManualInPlaceUpdate"),
+					"Detail": Equal("the node-local-dns setting cannot be changed if the shoot has at least one worker pool with an update strategy of either AutoInPlaceUpdate or ManualInPlaceUpdate, and is running a Kubernetes version below 1.34.0."),
 				}))))
 
 				shoot.Spec.SystemComponents = &core.SystemComponents{
@@ -5923,7 +5923,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.systemComponents.nodeLocalDNS"),
-					"Detail": Equal("node-local-dns setting can not be changed if shoot has at least one worker pool with update strategy AutoInPlaceUpdate/ManualInPlaceUpdate"),
+					"Detail": Equal("the node-local-dns setting cannot be changed if the shoot has at least one worker pool with an update strategy of either AutoInPlaceUpdate or ManualInPlaceUpdate, and is running a Kubernetes version below 1.34.0."),
 				}))))
 			})
 
@@ -5935,6 +5935,25 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Enabled: false,
 					},
 				}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.SystemComponents.NodeLocalDNS.Enabled = true
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should allow toggling the node-local-dns if one of the worker pool has updateStrategy AutoInPlaceUpdate/ManualInPlaceUpdate and k8s version >= 1.34.0", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
+				shoot.Spec.Provider.Workers[1].Name = "worker-2"
+				shoot.Spec.Provider.Workers[1].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				shoot.Spec.SystemComponents = &core.SystemComponents{
+					NodeLocalDNS: &core.NodeLocalDNS{
+						Enabled: false,
+					},
+				}
+				shoot.Spec.Kubernetes.KubeAPIServer = nil
+				shoot.Spec.Kubernetes.Version = "1.34.0"
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.SystemComponents.NodeLocalDNS.Enabled = true

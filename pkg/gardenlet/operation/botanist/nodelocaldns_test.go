@@ -10,11 +10,13 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -26,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("NodeLocalDNS", func() {
@@ -49,6 +52,21 @@ var _ = Describe("NodeLocalDNS", func() {
 					Version: "1.30.1",
 				},
 				Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}},
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{
+						{
+							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+								Version: ptr.To("1.30.1"),
+							},
+							Name: "worker-aaaa",
+							Machine: gardencorev1beta1.Machine{
+								Type: "machine-type",
+							},
+							Minimum: 1,
+							Maximum: 3,
+						},
+					},
+				},
 			},
 		})
 	})
@@ -87,9 +105,24 @@ var _ = Describe("NodeLocalDNS", func() {
 
 		BeforeEach(func() {
 			nodelocaldns = mocknodelocaldns.NewMockInterface(ctrl)
+			shootClient := mockclient.NewMockClient(ctrl)
 			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-
+			kubernetesClient.EXPECT().Client().Return(shootClient).AnyTimes()
+			shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
+				*list = corev1.NodeList{Items: []corev1.Node{
+					{ObjectMeta: metav1.ObjectMeta{
+						Name:   "node",
+						Labels: map[string]string{v1beta1constants.LabelNodeLocalDNS: strconv.FormatBool(true)},
+					}},
+				}}
+				return nil
+			}).AnyTimes()
+			shootClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			shootClient.EXPECT().Scheme().Return(kubernetes.ShootScheme).AnyTimes()
+			nodelocaldns.EXPECT().SetWorkerPools(gomock.Any())
+			nodelocaldns.EXPECT().SetShootClientSet(gomock.Any())
+			nodelocaldns.EXPECT().SetLogger(gomock.Any())
 			botanist.ShootClientSet = kubernetesClient
 			botanist.Shoot.Components = &shootpkg.Components{
 				SystemComponents: &shootpkg.SystemComponents{
@@ -141,6 +174,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		Context("node-local-dns disabled", func() {
 			BeforeEach(func() {
 				botanist.Shoot.NodeLocalDNSEnabled = false
+				botanist.Shoot.KubernetesVersion, _ = semver.NewVersion("1.30.1")
 				nodelocaldns.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
 			})
 
@@ -154,9 +188,12 @@ var _ = Describe("NodeLocalDNS", func() {
 					}
 					Expect(c.Create(ctx, &node)).To(Succeed())
 
-					kubernetesClient.EXPECT().Client().Return(c).Times(2)
+					kubernetesClient.EXPECT().Client().Return(c).AnyTimes()
+
+					nodelocaldns.EXPECT().Destroy(ctx).Return(nil)
 
 					Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())
+
 				})
 
 				It("label disabled", func() {
@@ -168,7 +205,7 @@ var _ = Describe("NodeLocalDNS", func() {
 					}
 					Expect(c.Create(ctx, &node)).To(Succeed())
 
-					kubernetesClient.EXPECT().Client().Return(c).Times(2)
+					kubernetesClient.EXPECT().Client().Return(c).AnyTimes()
 
 					nodelocaldns.EXPECT().Destroy(ctx)
 
@@ -177,7 +214,7 @@ var _ = Describe("NodeLocalDNS", func() {
 			})
 
 			It("should fail when the destroy function fails", func() {
-				kubernetesClient.EXPECT().Client().Return(c).Times(2)
+				kubernetesClient.EXPECT().Client().Return(c).AnyTimes()
 
 				nodelocaldns.EXPECT().Destroy(ctx).Return(fakeErr)
 
@@ -185,7 +222,7 @@ var _ = Describe("NodeLocalDNS", func() {
 			})
 
 			It("should successfully destroy", func() {
-				kubernetesClient.EXPECT().Client().Return(c).Times(2)
+				kubernetesClient.EXPECT().Client().Return(c).AnyTimes()
 
 				nodelocaldns.EXPECT().Destroy(ctx)
 

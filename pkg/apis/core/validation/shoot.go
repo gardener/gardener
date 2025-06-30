@@ -25,8 +25,10 @@ import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -36,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -737,12 +740,27 @@ func validateNodeLocalDNSUpdate(newSpec, oldSpec *core.ShootSpec, fldPath *field
 		allErrs                = field.ErrorList{}
 		oldNodeLocalDNSEnabled = oldSpec.SystemComponents != nil && oldSpec.SystemComponents.NodeLocalDNS != nil && oldSpec.SystemComponents.NodeLocalDNS.Enabled
 		newNodeLocalDNSEnabled = newSpec.SystemComponents != nil && newSpec.SystemComponents.NodeLocalDNS != nil && newSpec.SystemComponents.NodeLocalDNS.Enabled
+		parsedVersion          *semver.Version
+		err                    error
 	)
+	scheme := runtime.NewScheme()
+	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
 
 	if oldNodeLocalDNSEnabled != newNodeLocalDNSEnabled {
 		for _, worker := range oldSpec.Provider.Workers {
-			if helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("systemComponents", "nodeLocalDNS"), "node-local-dns setting can not be changed if shoot has at least one worker pool with update strategy AutoInPlaceUpdate/ManualInPlaceUpdate"))
+			if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
+				parsedVersion, err = semver.NewVersion(*worker.Kubernetes.Version)
+				if err != nil {
+					return field.ErrorList{field.Invalid(fldPath, *worker.Kubernetes.Version, fmt.Sprintf("failed to parse Kubernetes version: %v for worker %q", err, worker.Name))}
+				}
+			} else {
+				parsedVersion, err = semver.NewVersion(oldSpec.Kubernetes.Version)
+				if err != nil {
+					return field.ErrorList{field.Invalid(fldPath, oldSpec.Kubernetes.Version, fmt.Sprintf("failed to parse Kubernetes version: %v", err))}
+				}
+			}
+			if helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) && parsedVersion.LessThan(semver.MustParse("1.34.0")) {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("systemComponents", "nodeLocalDNS"), "the node-local-dns setting cannot be changed if the shoot has at least one worker pool with an update strategy of either AutoInPlaceUpdate or ManualInPlaceUpdate, and is running a Kubernetes version below 1.34.0."))
 				break
 			}
 		}
