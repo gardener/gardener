@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -27,190 +26,8 @@ var _ = Describe("RBAC", func() {
 			clusterRoleBindingSelfNodeClientYAML   string
 		)
 
-		When("NodeAgentAuthorizer feature gate is disabled", func() {
-			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, false))
-
-				clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
-  name: gardener-node-agent
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - nodes
-  - nodes/status
-  verbs:
-  - get
-  - list
-  - watch
-  - patch
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - events
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - patch
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-  - watch
-  - delete
-`
-
-				clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  creationTimestamp: null
-  name: gardener-node-agent
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener-node-agent
-subjects:
-- kind: ServiceAccount
-  name: gardener-node-agent
-  namespace: kube-system
-- apiGroup: rbac.authorization.k8s.io
-  kind: Group
-  name: gardener.cloud:node-agents
-`
-
-				roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  creationTimestamp: null
-  name: gardener-node-agent
-  namespace: kube-system
-rules:
-- apiGroups:
-  - ""
-  resourceNames:
-  - gardener-node-agent
-  - gardener-valitail
-  - osc-secret1
-  - osc-secret2
-  resources:
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - coordination.k8s.io
-  resources:
-  - leases
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-`
-
-				roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  creationTimestamp: null
-  name: gardener-node-agent
-  namespace: kube-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: gardener-node-agent
-subjects:
-- kind: Group
-  name: system:bootstrappers
-- kind: ServiceAccount
-  name: gardener-node-agent
-  namespace: kube-system
-- apiGroup: rbac.authorization.k8s.io
-  kind: Group
-  name: gardener.cloud:node-agents
-`
-
-				clusterRoleBindingNodeBootstrapperYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  creationTimestamp: null
-  name: system:node-bootstrapper
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:node-bootstrapper
-subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: Group
-  name: system:bootstrappers
-`
-
-				clusterRoleBindingNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  creationTimestamp: null
-  name: system:certificates.k8s.io:certificatesigningrequests:nodeclient
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:certificates.k8s.io:certificatesigningrequests:nodeclient
-subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: Group
-  name: system:bootstrappers
-`
-				clusterRoleBindingSelfNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  creationTimestamp: null
-  name: system:certificates.k8s.io:certificatesigningrequests:selfnodeclient
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:certificates.k8s.io:certificatesigningrequests:selfnodeclient
-subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: Group
-  name: system:nodes
-`
-			})
-
-			It("should generate the expected RBAC resources", func() {
-				dataMap, err := RBACResourcesData([]string{"osc-secret1", "osc-secret2"})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(dataMap).To(HaveKey("data.yaml.br"))
-				compressedData := dataMap["data.yaml.br"]
-				data, err := test.BrotliDecompression(compressedData)
-				Expect(err).NotTo(HaveOccurred())
-
-				manifests := strings.Split(string(data), "---\n")
-				Expect(manifests).To(ConsistOf(
-					clusterRoleYAML,
-					clusterRoleBindingYAML,
-					roleYAML,
-					roleBindingYAML,
-					clusterRoleBindingNodeBootstrapperYAML,
-					clusterRoleBindingNodeClientYAML,
-					clusterRoleBindingSelfNodeClientYAML,
-				))
-			})
-		})
-
-		When("NodeAgentAuthorizer feature gate is enabled", func() {
-			BeforeEach(func() {
-				clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+		BeforeEach(func() {
+			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
@@ -247,7 +64,7 @@ rules:
   - get
 `
 
-				clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+			clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
@@ -262,7 +79,39 @@ subjects:
   namespace: kube-system
 `
 
-				roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+			roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: gardener-node-agent
+  namespace: kube-system
+rules:
+- apiGroups:
+  - ""
+  resourceNames:
+  - gardener-node-agent
+  - gardener-valitail
+  - osc-secret1
+  - osc-secret2
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+`
+
+			roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   creationTimestamp: null
@@ -279,28 +128,71 @@ subjects:
   name: gardener-node-agent
   namespace: kube-system
 `
-			})
 
-			It("should generate the expected RBAC resources", func() {
-				dataMap, err := RBACResourcesData([]string{"osc-secret1", "osc-secret2"})
-				Expect(err).NotTo(HaveOccurred())
+			clusterRoleBindingNodeBootstrapperYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: system:node-bootstrapper
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:node-bootstrapper
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:bootstrappers
+`
 
-				Expect(dataMap).To(HaveKey("data.yaml.br"))
-				compressedData := dataMap["data.yaml.br"]
-				data, err := test.BrotliDecompression(compressedData)
-				Expect(err).NotTo(HaveOccurred())
+			clusterRoleBindingNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: system:certificates.k8s.io:certificatesigningrequests:nodeclient
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:certificates.k8s.io:certificatesigningrequests:nodeclient
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:bootstrappers
+`
+			clusterRoleBindingSelfNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: system:certificates.k8s.io:certificatesigningrequests:selfnodeclient
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:certificates.k8s.io:certificatesigningrequests:selfnodeclient
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:nodes
+`
+		})
 
-				manifests := strings.Split(string(data), "---\n")
-				Expect(manifests).To(ConsistOf(
-					clusterRoleYAML,
-					clusterRoleBindingYAML,
-					roleYAML,
-					roleBindingYAML,
-					clusterRoleBindingNodeBootstrapperYAML,
-					clusterRoleBindingNodeClientYAML,
-					clusterRoleBindingSelfNodeClientYAML,
-				))
-			})
+		It("should generate the expected RBAC resources", func() {
+			dataMap, err := RBACResourcesData([]string{"osc-secret1", "osc-secret2"})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(dataMap).To(HaveKey("data.yaml.br"))
+			compressedData := dataMap["data.yaml.br"]
+			data, err := test.BrotliDecompression(compressedData)
+			Expect(err).NotTo(HaveOccurred())
+
+			manifests := strings.Split(string(data), "---\n")
+			Expect(manifests).To(ConsistOf(
+				clusterRoleYAML,
+				clusterRoleBindingYAML,
+				roleYAML,
+				roleBindingYAML,
+				clusterRoleBindingNodeBootstrapperYAML,
+				clusterRoleBindingNodeClientYAML,
+				clusterRoleBindingSelfNodeClientYAML,
+			))
 		})
 	})
 })

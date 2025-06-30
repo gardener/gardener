@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
@@ -39,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -501,29 +499,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		Describe("#Deploy", func() {
-			It("should successfully deploy the shoot access secret for the gardener-node-agent when NodeAgentAuthorizer feature gate is disabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, false))
-				DeferCleanup(test.WithVars(
-					&OriginalConfigFn, originalConfigFn,
-				))
-
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-				secret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "shoot-access-gardener-node-agent", Namespace: namespace}, secret)).To(Succeed())
-				Expect(secret.Labels).To(Equal(map[string]string{
-					"resources.gardener.cloud/purpose": "token-requestor",
-					"resources.gardener.cloud/class":   "shoot",
-				}))
-				Expect(secret.Annotations).To(Equal(map[string]string{
-					"serviceaccount.resources.gardener.cloud/name":                      "gardener-node-agent",
-					"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
-					"serviceaccount.resources.gardener.cloud/token-expiration-duration": "720h",
-					"token-requestor.resources.gardener.cloud/target-secret-name":       "gardener-node-agent",
-					"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
-				}))
-			})
-
 			It("should successfully create the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
@@ -930,8 +905,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 			})
 
-			It("should properly restore the extensions state if it exists when NodeAgentAuthorizer feature gate is disabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, false))
+			It("should properly restore the extensions state if it exists", func() {
 				defer test.WithVars(
 					&InitConfigFn, initConfigFn,
 					&OriginalConfigFn, originalConfigFn,
@@ -944,26 +918,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 				mockStatusWriter := mockclient.NewMockStatusWriter(ctrl)
 
 				mc.EXPECT().Status().Return(mockStatusWriter).AnyTimes()
-
-				mc.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-access-gardener-node-agent"}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-				mc.EXPECT().Create(ctx, &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "shoot-access-gardener-node-agent",
-						Namespace: namespace,
-						Annotations: map[string]string{
-							"serviceaccount.resources.gardener.cloud/name":                      "gardener-node-agent",
-							"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
-							"serviceaccount.resources.gardener.cloud/token-expiration-duration": "720h",
-							"token-requestor.resources.gardener.cloud/target-secret-name":       "gardener-node-agent",
-							"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
-						},
-						Labels: map[string]string{
-							"resources.gardener.cloud/purpose": "token-requestor",
-							"resources.gardener.cloud/class":   "shoot",
-						},
-					},
-					Type: corev1.SecretTypeOpaque,
-				})
 
 				for i := range expected {
 					var state []byte
