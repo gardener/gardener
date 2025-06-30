@@ -187,7 +187,7 @@ type SettingVerticalPodAutoscaler struct {
 	Enabled *bool `json:"enabled,omitempty"`
 	// FeatureGates is a map of feature gates for the vpa components.
 	// +optional
-	FeatureGates map[string]bool `json"featureGates,omitempty"`
+	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 }
 
 // SettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.

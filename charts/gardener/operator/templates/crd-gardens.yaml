@@ -288,6 +288,12 @@ spec:
                               cluster already has another, manually/custom managed VPA deployment. If this is not the case, but you still
                               disable it, then reconciliation will fail.
                             type: boolean
+                          featureGates:
+                            additionalProperties:
+                              type: boolean
+                            description: FeatureGates is a map of feature gates for
+                              the vpa components.
+                            type: object
                         type: object
                     type: object
                   volume:
