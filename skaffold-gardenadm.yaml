@@ -843,14 +843,16 @@ manifests:
       - host:
           command:
             - bash
-            - dev-setup/extensions/provider-local/components/controllerregistration/generate-patch-controllerdeployment-prow.sh
+            - dev-setup/extensions/provider-local/components/extension/generate-patch-extension-prow.sh
 resourceSelector:
-  # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
+  # instruct skaffold to inject the built image reference into the image fields in our Extension object
   allow:
-    - groupKind: ControllerDeployment.core.gardener.cloud
+    - groupKind: Extension.operator.gardener.cloud
       image:
-        - .helm.ociRepository.ref
-        - .helm.values.imageVectorOverwrite.images.*.ref
+        - .spec.deployment.extension.helm.ociRepository.ref
+        - .spec.deployment.extension.values.imageVectorOverwrite.images.*.ref
+        - .spec.deployment.admission.runtimeCluster.helm.ociRepository.ref
+        - .spec.deployment.admission.virtualCluster.helm.ociRepository.ref
     - groupKind: CloudProfile.core.gardener.cloud
       image:
         - .*
