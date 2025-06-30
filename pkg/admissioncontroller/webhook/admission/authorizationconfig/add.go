@@ -68,7 +68,7 @@ func NewHandler(log logr.Logger, apiReader, c client.Reader, decoder admission.D
 			return gardencorehelper.GetShootAuthorizationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 		},
 		SkipValidationOnShootUpdate: func(shoot, oldShoot *gardencore.Shoot) bool {
-			return sets.New[string](getKubeconfigAuthorizerNamesFromShoot(shoot)...).Equal(sets.New[string](getKubeconfigAuthorizerNamesFromShoot(oldShoot)...))
+			return sets.New(getKubeconfigAuthorizerNamesFromShoot(shoot)...).Equal(sets.New(getKubeconfigAuthorizerNamesFromShoot(oldShoot)...))
 		},
 		AdmitConfig: admitConfig,
 	}
