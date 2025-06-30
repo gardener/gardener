@@ -41,7 +41,7 @@ var _ = Describe("#bootstrapCluster", func() {
 
 	It("should return an error because the garden version cannot be parsed", func() {
 		fakeDiscoveryClient.FakedServerVersion.GitVersion = ""
-		Expect(bootstrapCluster(ctx, fakeClient, fakeDiscoveryClient, sm)).To(MatchError(ContainSubstring("Invalid Semantic Version")))
+		Expect(bootstrapCluster(ctx, fakeClient, fakeDiscoveryClient, sm)).To(MatchError(ContainSubstring("invalid semantic version")))
 	})
 
 	It("should return an error because the garden version is too low", func() {
