@@ -71,5 +71,5 @@ func NewCRD(client client.Client, applier kubernetes.Applier, includeGeneralCRDs
 		crds = append(crds, shootCRDs...)
 	}
 
-	return crddeployer.New(client, applier, crds, false)
+	return crddeployer.New(client, applier, crds, true)
 }

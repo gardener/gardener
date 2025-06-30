@@ -6,14 +6,17 @@ package crddeployer
 
 import (
 	"context"
+	"strings"
 
 	"golang.org/x/exp/maps"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -23,13 +26,19 @@ import (
 type crdDeployer struct {
 	client            client.Client
 	applier           kubernetes.Applier
-	crdNameToManifest map[string]string
+	crdNameToManifest map[string]*unstructured.Unstructured
 	confirmDeletion   bool
 }
 
 // New returns a new instance of DeployWaiter for CRDs.
 func New(client client.Client, applier kubernetes.Applier, manifests []string, confirmDeletion bool) (component.DeployWaiter, error) {
-	crdNameToManifest, err := generateNameToCRDMap(manifests)
+	// Split manifests into individual object manifests, in case multiple CRDs are provided in a single string.
+	var splitManifests []string
+	for _, manifest := range manifests {
+		splitManifests = append(splitManifests, strings.Split(manifest, "\n---\n")...)
+	}
+
+	crdNameToManifest, err := generateNameToCRDMap(splitManifests)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +56,8 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 
 	for _, resource := range c.crdNameToManifest {
 		fns = append(fns, func(ctx context.Context) error {
-			return c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(resource)), kubernetes.DefaultMergeFuncs)
+			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, resource.DeepCopy(), func() error { return nil })
+			return err
 		})
 	}
 
@@ -89,15 +99,15 @@ func (c *crdDeployer) WaitCleanup(ctx context.Context) error {
 	return kubernetesutils.WaitUntilCRDManifestsDestroyed(ctx, c.client, maps.Keys(c.crdNameToManifest)...)
 }
 
-// generateNameToCRDMap returns a map that has the name of the resource as key, and the corresponding manifest as value.
-func generateNameToCRDMap(manifests []string) (map[string]string, error) {
-	crdNameToManifest := make(map[string]string)
+// generateNameToCRDMap returns a map that has the name of the resource as key, and the corresponding object as value.
+func generateNameToCRDMap(manifests []string) (map[string]*unstructured.Unstructured, error) {
+	crdNameToManifest := make(map[string]*unstructured.Unstructured)
 	for _, manifest := range manifests {
 		object, err := kubernetes.NewManifestReader([]byte(manifest)).Read()
 		if err != nil {
 			return nil, err
 		}
-		crdNameToManifest[object.GetName()] = manifest
+		crdNameToManifest[object.GetName()] = object
 	}
 	return crdNameToManifest, nil
 }
