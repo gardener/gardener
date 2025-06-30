@@ -12,7 +12,7 @@ require (
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/docker/cli v28.3.0+incompatible
 	github.com/fluent/fluent-operator/v3 v3.3.0
-	github.com/gardener/cert-management v0.17.5
+	github.com/gardener/cert-management v0.17.7
 	github.com/gardener/dependency-watchdog v1.5.0
 	github.com/gardener/etcd-druid/api v0.30.1
 	github.com/gardener/machine-controller-manager v0.58.0
@@ -102,7 +102,7 @@ require (
 	github.com/PaesslerAG/gval v1.2.4 // indirect
 	github.com/PaesslerAG/jsonpath v0.1.2-0.20240726212847-3a740cf7976f // indirect
 	github.com/alecthomas/units v0.0.0-20240626203959-61d1e3462e30 // indirect
-	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/brunoga/deep v1.2.5 // indirect
@@ -174,7 +174,7 @@ require (
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/miekg/dns v1.1.63 // indirect
+	github.com/miekg/dns v1.1.65 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
