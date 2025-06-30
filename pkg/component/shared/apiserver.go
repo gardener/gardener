@@ -352,11 +352,12 @@ func StringifyGroupResources(resources []schema.GroupResource) []string {
 
 // NormalizeResources returns the list of resources after trimming the suffix '.' if present.
 // This is needed for core resources which can be specified as '<resource>.' as well.
+// TODO: With https://github.com/gardener/gardener/pull/12355 we no longer allow resources with '.' suffix.
+// This function is kept for backwards compatibility and should be removed in the future.
 func NormalizeResources(resources []string) []string {
 	var out []string
 
 	for _, resource := range resources {
-		// For backwards compatibility we always remove the suffix '.'
 		out = append(out, strings.TrimSuffix(resource, "."))
 	}
 
