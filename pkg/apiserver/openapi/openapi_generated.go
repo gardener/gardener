@@ -10020,6 +10020,22 @@ func schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref common.ReferenceCall
 				Description: "VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"featureGates": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FeatureGates contains information about enabled feature gates.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: false,
+										Type:    []string{"boolean"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.",
