@@ -7895,7 +7895,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.kubernetes.version"),
-					"Detail": Equal("failed to parse old control plane kubernetes version: Invalid Semantic Version"),
+					"Detail": Equal("failed to parse old control plane kubernetes version: invalid semantic version"),
 				})),
 			))
 		})
@@ -7907,7 +7907,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.kubernetes.version"),
-					"Detail": Equal("failed to parse new control plane kubernetes version: Invalid Semantic Version"),
+					"Detail": Equal("failed to parse new control plane kubernetes version: invalid semantic version"),
 				})),
 			))
 		})
