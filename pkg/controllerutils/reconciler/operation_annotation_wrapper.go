@@ -16,6 +16,7 @@ import (
 
 type operationAnnotationWrapper struct {
 	reconcile.Reconciler
+
 	client     client.Client
 	newObjFunc func() client.Object
 }

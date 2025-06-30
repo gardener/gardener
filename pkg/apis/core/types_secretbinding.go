@@ -17,6 +17,7 @@ type SecretBinding struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// SecretRef is a reference to a secret object in the same or another namespace.
 	// This field is immutable.
 	SecretRef corev1.SecretReference
@@ -44,6 +45,7 @@ type SecretBindingList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of SecretBindings.
 	Items []SecretBinding
 }

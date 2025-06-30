@@ -18,6 +18,7 @@ type ManagedSeedSet struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec defines the desired identities of ManagedSeeds and Shoots in this set.
 	Spec ManagedSeedSetSpec
 	// Status is the current status of ManagedSeeds and Shoots in this ManagedSeedSet.
@@ -31,6 +32,7 @@ type ManagedSeedSetList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of ManagedSeedSets.
 	Items []ManagedSeedSet
 }

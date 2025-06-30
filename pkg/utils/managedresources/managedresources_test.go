@@ -39,6 +39,7 @@ import (
 
 type errorClient struct {
 	client.Client
+
 	failSecretCreate bool
 	failMRCreate     bool
 	failMRPatch      bool

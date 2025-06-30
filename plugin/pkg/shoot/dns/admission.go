@@ -44,6 +44,7 @@ func Register(plugins *admission.Plugins) {
 // DNS contains listers and admission handler.
 type DNS struct {
 	*admission.Handler
+
 	secretLister  kubecorev1listers.SecretLister
 	projectLister gardencorev1beta1listers.ProjectLister
 	seedLister    gardencorev1beta1listers.SeedLister

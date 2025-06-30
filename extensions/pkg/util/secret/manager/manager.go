@@ -53,6 +53,7 @@ func SecretsManagerForCluster(ctx context.Context, logger logr.Logger, clock clo
 // the Shoot status from the given Cluster object.
 type secretsManager struct {
 	secretsmanager.Interface
+
 	cluster *extensionscontroller.Cluster
 }
 

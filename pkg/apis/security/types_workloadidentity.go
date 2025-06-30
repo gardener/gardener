@@ -21,6 +21,7 @@ type WorkloadIdentity struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec configures the JSON Web Token issued by the Gardener API server.
 	Spec WorkloadIdentitySpec
 	// Status contain the latest observed status of the WorkloadIdentity.
@@ -57,6 +58,7 @@ type WorkloadIdentityList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of WorkloadIdentities.
 	Items []WorkloadIdentity
 }

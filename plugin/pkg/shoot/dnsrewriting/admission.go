@@ -37,6 +37,7 @@ func Register(plugins *admission.Plugins) {
 // DNSRewriting contains required information to process admission requests.
 type DNSRewriting struct {
 	*admission.Handler
+
 	commonSuffixes []string
 }
 

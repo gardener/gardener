@@ -36,6 +36,7 @@ import (
 
 type errorClient struct {
 	client.Client
+
 	err error
 }
 

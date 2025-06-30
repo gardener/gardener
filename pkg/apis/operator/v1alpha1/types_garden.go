@@ -33,6 +33,7 @@ type Garden struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// Spec contains the specification of this garden.
 	Spec GardenSpec `json:"spec,omitempty"`
 	// Status contains the status of this garden.
@@ -334,6 +335,7 @@ type KubeAPIServerConfig struct {
 	// KubeAPIServerConfig contains all configuration values not specific to the virtual garden cluster.
 	// +optional
 	*gardencorev1beta1.KubeAPIServerConfig `json:",inline"`
+
 	// AuditWebhook contains settings related to an audit webhook configuration.
 	// +optional
 	AuditWebhook *AuditWebhook `json:"auditWebhook,omitempty"`
@@ -428,6 +430,7 @@ type KubeControllerManagerConfig struct {
 	// KubeControllerManagerConfig contains all configuration values not specific to the virtual garden cluster.
 	// +optional
 	*gardencorev1beta1.KubeControllerManagerConfig `json:",inline"`
+
 	// CertificateSigningDuration is the maximum length of duration signed certificates will be given. Individual CSRs
 	// may request shorter certs by setting `spec.expirationSeconds`.
 	// +kubebuilder:validation:Type=string
@@ -466,6 +469,7 @@ type Gardener struct {
 // GardenerAPIServerConfig contains configuration settings for the gardener-apiserver.
 type GardenerAPIServerConfig struct {
 	gardencorev1beta1.KubernetesConfig `json:",inline"`
+
 	// AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener),
 	// and, if desired, the corresponding configuration.
 	// +optional
@@ -555,6 +559,7 @@ type ResourceLimit struct {
 // GardenerControllerManagerConfig contains configuration settings for the gardener-controller-manager.
 type GardenerControllerManagerConfig struct {
 	gardencorev1beta1.KubernetesConfig `json:",inline"`
+
 	// DefaultProjectQuotas is the default configuration matching projects are set up with if a quota is not already
 	// specified.
 	// +optional
@@ -580,6 +585,7 @@ type ProjectQuotaConfiguration struct {
 // GardenerSchedulerConfig contains configuration settings for the gardener-scheduler.
 type GardenerSchedulerConfig struct {
 	gardencorev1beta1.KubernetesConfig `json:",inline"`
+
 	// LogLevel is the configured log level for the gardener-scheduler. Must be one of [info,debug,error].
 	// Defaults to info.
 	// +kubebuilder:validation:Enum=info;debug;error

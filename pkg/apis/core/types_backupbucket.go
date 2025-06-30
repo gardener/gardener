@@ -19,6 +19,7 @@ type BackupBucket struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Specification of the Backup Bucket.
 	Spec BackupBucketSpec
 	// Most recently observed status of the Backup Bucket.
@@ -32,6 +33,7 @@ type BackupBucketList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of BackupBucket.
 	Items []BackupBucket
 }

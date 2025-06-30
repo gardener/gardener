@@ -158,6 +158,7 @@ type sni struct {
 
 type envoyFilterAPIServerProxyTemplateValues struct {
 	*APIServerProxy
+
 	IngressGatewayLabels                      map[string]string
 	Name                                      string
 	Namespace                                 string

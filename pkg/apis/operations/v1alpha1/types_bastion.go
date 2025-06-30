@@ -26,6 +26,7 @@ type Bastion struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Specification of the Bastion.
 	Spec BastionSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Most recently observed status of the Bastion.
@@ -41,6 +42,7 @@ type BastionList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of Bastion.
 	Items []Bastion `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

@@ -209,6 +209,7 @@ type ManagedResource struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// Spec contains the specification of this managed resource.
 	Spec ManagedResourceSpec `json:"spec,omitempty"`
 	// Status contains the status of this managed resource.
@@ -272,6 +273,7 @@ type ManagedResourceStatus struct {
 // ObjectReference is a reference to another object.
 type ObjectReference struct {
 	corev1.ObjectReference `json:",inline"`
+
 	// Labels is a map of labels that were used during last update of the resource.
 	Labels map[string]string `json:"labels,omitempty"`
 	// Annotations is a map of annotations that were used during last update of the resource.

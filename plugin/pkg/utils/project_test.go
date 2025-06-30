@@ -68,6 +68,7 @@ var _ = Describe("Project", func() {
 
 type fakeInternalLister struct {
 	gardencorev1beta1listers.ProjectLister
+
 	projects []*gardencorev1beta1.Project
 	err      error
 }

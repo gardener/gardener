@@ -66,6 +66,7 @@ type Interface interface {
 // Values contains configuration values for the gardener-apiserver resources.
 type Values struct {
 	apiserver.Values
+
 	// Autoscaling contains information for configuring autoscaling settings for the API server.
 	Autoscaling AutoscalingConfig
 	// ClusterIdentity is the identity of the garden cluster.

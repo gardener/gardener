@@ -64,6 +64,7 @@ type Values struct {
 // TerminalValues contains the terminal configuration.
 type TerminalValues struct {
 	operatorv1alpha1.DashboardTerminal
+
 	// GardenTerminalSeedHost is the name of a seed hosting the garden terminals.
 	GardenTerminalSeedHost string
 }
@@ -71,6 +72,7 @@ type TerminalValues struct {
 // OIDCValues contains the OIDC configuration.
 type OIDCValues struct {
 	operatorv1alpha1.DashboardOIDC
+
 	// IssuerURL is the issuer URL.
 	IssuerURL string
 	// ClientIDPublic is the public client ID.

@@ -13,6 +13,7 @@ import (
 // Options contains options for this command.
 type Options struct {
 	*cmd.Options
+
 	// WithTokenSecret specifies whether the token secret should be displayed.
 	WithTokenSecret bool
 }

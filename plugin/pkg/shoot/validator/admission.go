@@ -65,6 +65,7 @@ func Register(plugins *admission.Plugins) {
 // ValidateShoot contains listers and admission handler.
 type ValidateShoot struct {
 	*admission.Handler
+
 	authorizer                   authorizer.Authorizer
 	secretLister                 kubecorev1listers.SecretLister
 	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister

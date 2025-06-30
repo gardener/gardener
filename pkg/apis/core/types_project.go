@@ -18,6 +18,7 @@ type Project struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec defines the project properties.
 	Spec ProjectSpec
 	// Most recently observed status of the Project.
@@ -31,6 +32,7 @@ type ProjectList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of Projects.
 	Items []Project
 }
@@ -81,6 +83,7 @@ type ProjectMember struct {
 	// Subject is representing a user name, an email address, or any other identifier of a user, group, or service
 	// account that has a certain role.
 	rbacv1.Subject
+
 	// Roles is a list of roles of this member.
 	Roles []string
 }

@@ -59,6 +59,7 @@ type AccessRestriction struct {
 // allows to specify additional options.
 type AccessRestrictionWithOptions struct {
 	AccessRestriction
+
 	// Options is a map of additional options for the access restriction.
 	// +optional
 	Options map[string]string

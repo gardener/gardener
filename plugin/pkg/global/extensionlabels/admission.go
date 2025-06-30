@@ -43,6 +43,7 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 // ExtensionLabels contains the admission handler
 type ExtensionLabels struct {
 	*admission.Handler
+
 	backupBucketLister           gardencorev1beta1listers.BackupBucketLister
 	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
 	controllerRegistrationLister gardencorev1beta1listers.ControllerRegistrationLister

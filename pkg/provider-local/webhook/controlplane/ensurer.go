@@ -33,6 +33,7 @@ func NewEnsurer(logger logr.Logger) genericmutator.Ensurer {
 
 type ensurer struct {
 	genericmutator.NoopEnsurer
+
 	logger logr.Logger
 }
 

@@ -33,6 +33,7 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 // Resources contains an admission handler and listers.
 type Resources struct {
 	*admission.Handler
+
 	coreClient gardencoreclientset.Interface
 	readyFunc  admission.ReadyFunc
 }

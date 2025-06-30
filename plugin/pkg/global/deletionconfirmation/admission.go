@@ -49,6 +49,7 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 // DeletionConfirmation contains an admission handler and listers.
 type DeletionConfirmation struct {
 	*admission.Handler
+
 	gardenCoreClient versioned.Interface
 	shootLister      gardencorev1beta1listers.ShootLister
 	shootStateLister gardencorev1beta1listers.ShootStateLister

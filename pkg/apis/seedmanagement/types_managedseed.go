@@ -20,6 +20,7 @@ type ManagedSeed struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Specification of the ManagedSeed.
 	Spec ManagedSeedSpec
 	// Most recently observed status of the ManagedSeed.
@@ -33,6 +34,7 @@ type ManagedSeedList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of ManagedSeeds.
 	Items []ManagedSeed
 }
@@ -41,6 +43,7 @@ type ManagedSeedList struct {
 type ManagedSeedTemplate struct {
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Specification of the desired behavior of the ManagedSeed.
 	Spec ManagedSeedSpec
 }

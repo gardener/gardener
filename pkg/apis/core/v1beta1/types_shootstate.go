@@ -19,6 +19,7 @@ type ShootState struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Specification of the ShootState.
 	// +optional
 	Spec ShootStateSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
@@ -32,6 +33,7 @@ type ShootStateList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of ShootStates.
 	Items []ShootState `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
@@ -86,6 +88,7 @@ type ExtensionResourceState struct {
 // ResourceData holds the data of a resource referred to by an extension controller state.
 type ResourceData struct {
 	autoscalingv1.CrossVersionObjectReference `json:",inline" protobuf:"bytes,1,opt,name=ref"`
+
 	// Data of the resource
 	Data runtime.RawExtension `json:"data" protobuf:"bytes,2,opt,name=data"`
 }

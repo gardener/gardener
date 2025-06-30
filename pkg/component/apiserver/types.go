@@ -53,6 +53,7 @@ type Values struct {
 // AdmissionPluginConfig contains information about a specific admission plugin and its corresponding configuration.
 type AdmissionPluginConfig struct {
 	gardencorev1beta1.AdmissionPlugin
+
 	// Kubeconfig is an optional API server connection configuration of this admission plugin. The configs for some
 	// admission plugins like `ImagePolicyWebhook` or `ValidatingAdmissionWebhook` can take a reference to an API server
 	Kubeconfig []byte

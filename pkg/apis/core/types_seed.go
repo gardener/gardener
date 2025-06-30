@@ -20,6 +20,7 @@ type Seed struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec contains the specification of this installation.
 	Spec SeedSpec
 	// Status contains the status of this installation.
@@ -33,6 +34,7 @@ type SeedList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of Seeds.
 	Items []Seed
 }
@@ -41,6 +43,7 @@ type SeedList struct {
 type SeedTemplate struct {
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Specification of the desired behavior of the Seed.
 	Spec SeedSpec
 }

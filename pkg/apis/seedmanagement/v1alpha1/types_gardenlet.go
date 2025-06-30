@@ -22,6 +22,7 @@ type Gardenlet struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Specification of the Gardenlet.
 	// +optional
 	Spec GardenletSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
@@ -38,6 +39,7 @@ type GardenletList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of Gardenlets.
 	Items []Gardenlet `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
@@ -64,6 +66,7 @@ type GardenletSelfDeployment struct {
 	// GardenletDeployment specifies common gardenlet deployment parameters.
 	// +optional
 	GardenletDeployment `json:",inline" protobuf:"bytes,1,opt,name=gardenletDeployment"`
+
 	// Helm is the Helm deployment configuration.
 	Helm GardenletHelm `json:"helm" protobuf:"bytes,2,opt,name=helm"`
 	// ImageVectorOverwrite is the image vector overwrite for the components deployed by this gardenlet.

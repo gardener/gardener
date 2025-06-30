@@ -31,6 +31,7 @@ func Register(plugins *admission.Plugins) {
 // ValidateBackupBucket contains listers and admission handler.
 type ValidateBackupBucket struct {
 	*admission.Handler
+
 	workloadIdentityLister gardensecurityv1alpha1listers.WorkloadIdentityLister
 	readyFunc              admission.ReadyFunc
 }

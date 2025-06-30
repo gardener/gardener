@@ -346,6 +346,7 @@ func (f *fakeGetter) Get(_ context.Context, _ string, _ *metav1.GetOptions) (run
 
 type fakeSecretLister struct {
 	kubecorev1listers.SecretLister
+
 	obj *corev1.Secret
 	err error
 }
@@ -360,6 +361,7 @@ func (f fakeSecretLister) Get(_ string) (*corev1.Secret, error) {
 
 type fakeInternalSecretLister struct {
 	gardencorev1beta1listers.InternalSecretLister
+
 	obj *gardencorev1beta1.InternalSecret
 	err error
 }
@@ -374,6 +376,7 @@ func (f fakeInternalSecretLister) Get(_ string) (*gardencorev1beta1.InternalSecr
 
 type fakeConfigMapLister struct {
 	kubecorev1listers.ConfigMapLister
+
 	obj *corev1.ConfigMap
 	err error
 }

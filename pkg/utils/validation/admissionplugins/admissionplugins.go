@@ -113,9 +113,10 @@ func IsAdmissionPluginSupported(plugin, version string) (bool, error) {
 
 // AdmissionPluginVersionRange represents a version range of type [AddedInVersion, RemovedInVersion).
 type AdmissionPluginVersionRange struct {
+	versionutils.VersionRange
+
 	Forbidden bool
 	Required  bool
-	versionutils.VersionRange
 }
 
 func getAllForbiddenPlugins() []string {

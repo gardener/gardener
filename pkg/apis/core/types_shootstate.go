@@ -18,6 +18,7 @@ type ShootState struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Specification of the ShootState.
 	Spec ShootStateSpec
 }
@@ -29,6 +30,7 @@ type ShootStateList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of ShootStates.
 	Items []ShootState
 }
@@ -73,6 +75,7 @@ type ExtensionResourceState struct {
 // ResourceData holds the data of a resource referred to by an extension controller state.
 type ResourceData struct {
 	autoscalingv1.CrossVersionObjectReference
+
 	// Data of the resource
 	Data runtime.RawExtension
 }

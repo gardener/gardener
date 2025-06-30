@@ -23,6 +23,7 @@ type Shoot struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Specification of the Shoot cluster.
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec ShootSpec
@@ -37,6 +38,7 @@ type ShootList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of Shoots.
 	Items []Shoot
 }
@@ -45,6 +47,7 @@ type ShootList struct {
 type ShootTemplate struct {
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Specification of the desired behavior of the Shoot.
 	Spec ShootSpec
 }
@@ -365,6 +368,7 @@ type Addon struct {
 // KubernetesDashboard describes configuration values for the kubernetes-dashboard addon.
 type KubernetesDashboard struct {
 	Addon
+
 	// AuthenticationMode defines the authentication mode for the kubernetes-dashboard.
 	AuthenticationMode *string
 }
@@ -377,6 +381,7 @@ const (
 // NginxIngress describes configuration values for the nginx-ingress addon.
 type NginxIngress struct {
 	Addon
+
 	// LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress
 	LoadBalancerSourceRanges []string
 	// Config contains custom configuration for the nginx-ingress-controller configuration.
@@ -646,6 +651,7 @@ type KubernetesConfig struct {
 // KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 type KubeAPIServerConfig struct {
 	KubernetesConfig
+
 	// AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener), and, if desired, the corresponding
 	// configuration.
 	AdmissionPlugins []AdmissionPlugin
@@ -877,6 +883,7 @@ type ResourceWatchCacheSize struct {
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
 type KubeControllerManagerConfig struct {
 	KubernetesConfig
+
 	// HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
 	HorizontalPodAutoscalerConfig *HorizontalPodAutoscalerConfig
 	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.
@@ -914,6 +921,7 @@ type HorizontalPodAutoscalerConfig struct {
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.
 type KubeSchedulerConfig struct {
 	KubernetesConfig
+
 	// KubeMaxPDVols allows to configure the `KUBE_MAX_PD_VOLS` environment variable for the kube-scheduler.
 	// Please find more information here: https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits
 	// Note that using this field is considered alpha-/experimental-level and is on your own risk. You should be aware
@@ -940,6 +948,7 @@ const (
 // KubeProxyConfig contains configuration settings for the kube-proxy.
 type KubeProxyConfig struct {
 	KubernetesConfig
+
 	// Mode specifies which proxy mode to use.
 	// defaults to IPTables.
 	Mode *ProxyMode
@@ -967,6 +976,7 @@ const (
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
 	KubernetesConfig
+
 	// ContainerLogMaxSize defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
 	ContainerLogMaxSize *resource.Quantity
 	// ContainerLogMaxFiles is the maximum number of container log files that can be present for a container.

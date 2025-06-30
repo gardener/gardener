@@ -19,6 +19,7 @@ type ManagedSeedSet struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Spec defines the desired identities of ManagedSeeds and Shoots in this set.
 	// +optional
 	Spec ManagedSeedSetSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
@@ -35,6 +36,7 @@ type ManagedSeedSetList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of ManagedSeedSets.
 	Items []ManagedSeedSet `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

@@ -45,6 +45,7 @@ type Worker struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// Specification of the Worker.
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec WorkerSpec `json:"spec"`
@@ -246,6 +247,7 @@ type DataVolume struct {
 type WorkerStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
+
 	// MachineDeployments is a list of created machine deployments. It will be used to e.g. configure
 	// the cluster-autoscaler properly.
 	// +patchMergeKey=name

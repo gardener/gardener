@@ -38,6 +38,7 @@ func Register(plugins *admission.Plugins) {
 // FinalizerRemoval contains listers and admission handler.
 type FinalizerRemoval struct {
 	*admission.Handler
+
 	shootLister gardencorev1beta1listers.ShootLister
 	readyFunc   admission.ReadyFunc
 }

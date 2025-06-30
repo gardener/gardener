@@ -16,6 +16,7 @@ type TokenRequest struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Spec holds configuration settings for the requested token.
 	Spec TokenRequestSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status bears the issued token with additional information back to the client.

@@ -17,6 +17,7 @@ import (
 type Options struct {
 	*cmd.Options
 	cmd.ManifestOptions
+
 	// Kubeconfig is the path to the kubeconfig file pointing to the KinD cluster.
 	Kubeconfig string
 }

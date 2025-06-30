@@ -18,6 +18,7 @@ type ClusterOpenIDConnectPreset struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Spec is the specification of this OpenIDConnect preset.
 	Spec ClusterOpenIDConnectPresetSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 }
@@ -44,6 +45,7 @@ type ClusterOpenIDConnectPresetList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of ClusterOpenIDConnectPresets.
 	Items []ClusterOpenIDConnectPreset `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

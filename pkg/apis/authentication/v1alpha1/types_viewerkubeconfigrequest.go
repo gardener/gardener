@@ -16,6 +16,7 @@ type ViewerKubeconfigRequest struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Spec is the specification of the ViewerKubeconfigRequest.
 	Spec ViewerKubeconfigRequestSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status is the status of the ViewerKubeconfigRequest.

@@ -26,6 +26,7 @@ type Extension struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// Spec contains the specification of this extension.
 	Spec ExtensionSpec `json:"spec,omitempty"`
 	// Status contains the status of this extension.
@@ -39,6 +40,7 @@ type ExtensionList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
+
 	// Items is the list of Extension.
 	Items []Extension `json:"items"`
 }
@@ -72,6 +74,7 @@ type ExtensionDeploymentSpec struct {
 	// DeploymentSpec is the deployment configuration for the extension.
 	// +optional
 	DeploymentSpec `json:",inline"`
+
 	// Values are the deployment values used in the creation of the ControllerDeployment in the virtual garden cluster.
 	// +optional
 	Values *apiextensionsv1.JSON `json:"values,omitempty"`

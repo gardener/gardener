@@ -371,6 +371,7 @@ var _ client.Client = &FallbackClient{}
 // in case the kind of an object is configured in `KindToNamespaces` but the namespace isn't.
 type FallbackClient struct {
 	client.Client
+
 	Reader           client.Reader
 	KindToNamespaces map[string]sets.Set[string]
 }

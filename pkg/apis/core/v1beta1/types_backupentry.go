@@ -21,6 +21,7 @@ type BackupEntry struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Spec contains the specification of the Backup Entry.
 	// +optional
 	Spec BackupEntrySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
@@ -37,6 +38,7 @@ type BackupEntryList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of BackupEntry.
 	Items []BackupEntry `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

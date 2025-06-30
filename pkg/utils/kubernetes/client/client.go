@@ -363,8 +363,9 @@ func cleanCollectionAction(
 }
 
 type cleanerOps struct {
-	cleaners []Cleaner
 	GoneEnsurer
+
+	cleaners []Cleaner
 }
 
 // CleanAndEnsureGone cleans the target resources. Afterwards, it checks, whether the target resource is still
@@ -384,7 +385,7 @@ func (o *cleanerOps) CleanAndEnsureGone(ctx context.Context, c client.Client, ob
 
 // NewCleanOps instantiates new CleanOps with the given Cleaner and GoneEnsurer.
 func NewCleanOps(ensurer GoneEnsurer, cleaner ...Cleaner) CleanOps {
-	return &cleanerOps{cleaner, ensurer}
+	return &cleanerOps{ensurer, cleaner}
 }
 
 var defaultCleanerOps = NewCleanOps(DefaultGoneEnsurer(), DefaultCleaner())

@@ -16,6 +16,7 @@ import (
 // OperatorConfiguration defines the configuration for the Gardener operator.
 type OperatorConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
+
 	// RuntimeClientConnection specifies the kubeconfig file and the client connection settings for the proxy server to
 	// use when communicating with the kube-apiserver of the runtime cluster.
 	RuntimeClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"runtimeClientConnection"`

@@ -77,6 +77,7 @@ func WithSuppressed(err, suppressed error) error {
 // reconciliationError implements ErrorIDer
 type reconciliationError struct {
 	error
+
 	errorID string
 }
 

@@ -40,6 +40,7 @@ func Register(plugins *admission.Plugins) {
 // ValidateNamespacedCloudProfile contains listers and admission handler.
 type ValidateNamespacedCloudProfile struct {
 	*admission.Handler
+
 	cloudProfileLister gardencorev1beta1listers.CloudProfileLister
 	readyFunc          admission.ReadyFunc
 }

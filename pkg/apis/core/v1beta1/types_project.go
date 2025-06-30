@@ -19,6 +19,7 @@ type Project struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Spec defines the project properties.
 	// +optional
 	Spec ProjectSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
@@ -35,6 +36,7 @@ type ProjectList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of Projects.
 	Items []Project `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
@@ -101,6 +103,7 @@ type ProjectMember struct {
 	// Subject is representing a user name, an email address, or any other identifier of a user, group, or service
 	// account that has a certain role.
 	rbacv1.Subject `json:",inline" protobuf:"bytes,1,opt,name=subject"`
+
 	// Role represents the role of this member.
 	// IMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `roles`
 	// list.

@@ -23,6 +23,7 @@ type WorkloadIdentity struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Spec configures the JSON Web Token issued by the Gardener API server.
 	Spec WorkloadIdentitySpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status contain the latest observed status of the WorkloadIdentity.
@@ -61,6 +62,7 @@ type WorkloadIdentityList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of WorkloadIdentities.
 	Items []WorkloadIdentity `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

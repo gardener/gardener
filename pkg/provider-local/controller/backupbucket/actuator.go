@@ -23,6 +23,7 @@ import (
 
 type actuator struct {
 	backupbucket.Actuator
+
 	client      client.Client
 	bbDirectory string
 }

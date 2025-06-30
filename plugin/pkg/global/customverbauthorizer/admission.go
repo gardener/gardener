@@ -65,6 +65,7 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 // CustomVerbAuthorizer contains an admission handler and listers.
 type CustomVerbAuthorizer struct {
 	*admission.Handler
+
 	cloudProfileLister gardencorev1beta1listers.CloudProfileLister
 	authorizer         authorizer.Authorizer
 	readyFunc          admission.ReadyFunc

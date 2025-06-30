@@ -19,6 +19,7 @@ type ControllerInstallation struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec contains the specification of this installation.
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec ControllerInstallationSpec
@@ -33,6 +34,7 @@ type ControllerInstallationList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of ControllerInstallations.
 	Items []ControllerInstallation
 }

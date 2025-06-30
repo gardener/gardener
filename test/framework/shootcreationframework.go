@@ -69,6 +69,7 @@ type ShootCreationConfig struct {
 type ShootCreationFramework struct {
 	*GardenerFramework
 	TestDescription
+
 	Config *ShootCreationConfig
 
 	Shoot *gardencorev1beta1.Shoot

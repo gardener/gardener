@@ -28,6 +28,7 @@ const DNSRecordResource = "DNSRecord"
 type DNSRecord struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// Specification of the DNSRecord.
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec DNSRecordSpec `json:"spec"`
@@ -60,6 +61,7 @@ type DNSRecordList struct {
 type DNSRecordSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
+
 	// SecretRef is a reference to a secret that contains the cloud provider specific credentials.
 	SecretRef corev1.SecretReference `json:"secretRef"`
 	// Region is the region of this DNS record. If not specified, the region specified in SecretRef will be used.
@@ -85,6 +87,7 @@ type DNSRecordSpec struct {
 type DNSRecordStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
+
 	// Zone is the DNS hosted zone of this DNS record.
 	// +optional
 	Zone *string `json:"zone,omitempty"`

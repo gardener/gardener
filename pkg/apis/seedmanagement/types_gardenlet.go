@@ -20,6 +20,7 @@ type Gardenlet struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Specification of the Gardenlet.
 	Spec GardenletSpec
 	// Most recently observed status of the Gardenlet.
@@ -33,6 +34,7 @@ type GardenletList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of Gardenlets.
 	Items []Gardenlet
 }
@@ -55,6 +57,7 @@ type GardenletSpec struct {
 // the image, etc.
 type GardenletSelfDeployment struct {
 	GardenletDeployment
+
 	// Helm is the Helm deployment configuration for gardenlet.
 	Helm GardenletHelm
 	// ImageVectorOverwrite is the image vector overwrite for the components deployed by this gardenlet.

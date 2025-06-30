@@ -24,6 +24,7 @@ var (
 // Options contains options for this command.
 type Options struct {
 	*cmd.Options
+
 	// TokenValues is the name of the Secret holding the bootstrap token, or the full token of the form
 	// "[a-z0-9]{6}.[a-z0-9]{16}", or the token ID of the form "[a-z0-9]{6}" to delete.
 	TokenValues []string

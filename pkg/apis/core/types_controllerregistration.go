@@ -17,6 +17,7 @@ type ControllerRegistration struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec contains the specification of this registration.
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec ControllerRegistrationSpec
@@ -29,6 +30,7 @@ type ControllerRegistrationList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of ControllerRegistrations.
 	Items []ControllerRegistration
 }

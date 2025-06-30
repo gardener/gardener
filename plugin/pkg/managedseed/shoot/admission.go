@@ -35,6 +35,7 @@ func Register(plugins *admission.Plugins) {
 // Shoot contains listers and admission handler.
 type Shoot struct {
 	*admission.Handler
+
 	shootLister          gardencorev1beta1listers.ShootLister
 	seedManagementClient seedmanagementclientset.Interface
 	readyFunc            admission.ReadyFunc
