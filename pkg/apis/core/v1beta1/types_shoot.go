@@ -680,6 +680,7 @@ type ClusterAutoscaler struct {
 	// +optional
 	NewPodScaleUpDelay *metav1.Duration `json:"newPodScaleUpDelay,omitempty" protobuf:"bytes,11,opt,name=newPodScaleUpDelay"`
 	// MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: MaxScaleDownParallelism when that is set).
+	//
 	// Deprecated: This field is deprecated. Setting this field will be forbidden starting from Kubernetes 1.33 and will be removed once gardener drops support for kubernetes v1.32.
 	// This cluster-autoscaler field is deprecated upstream, use --max-scale-down-parallelism instead.
 	// TODO(Kostov6): Drop this field after support for Kubernetes 1.32 is dropped.
