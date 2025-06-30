@@ -387,7 +387,7 @@ images:
   - name: perses
     sourceRepository: github.com/perses/perses
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/persesdev/perses
-    tag: "v0.51.0"
+    tag: "v0.51.1"
     labels:
       - name: gardener.cloud/cve-categorisation
         value:
