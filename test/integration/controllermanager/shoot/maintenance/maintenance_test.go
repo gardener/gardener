@@ -1508,6 +1508,40 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					return shoot132.Spec.Kubernetes.Version
 				}).Should(Equal("1.33.0"))
 			})
+
+			It("Kubernetes version should be updated: force update minor version(>= v1.33) and set spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete to nil", func() {
+				shoot132.Spec.Kubernetes.Version = "1.32.0"
+				shoot132.Spec.Kubernetes.ClusterAutoscaler = &gardencorev1beta1.ClusterAutoscaler{
+					MaxEmptyBulkDelete: ptr.To(int32(10)),
+				}
+
+				By("Create k8s v1.32 Shoot")
+				Expect(testClient.Create(ctx, shoot132)).To(Succeed())
+				log.Info("Created shoot with k8s v1.32 for test", "shoot", client.ObjectKeyFromObject(shoot))
+
+				DeferCleanup(func() {
+					By("Delete Shoot with k8s v1.32")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot132))).To(Succeed())
+				})
+
+				By("Expire Shoot's kubernetes version in the CloudProfile")
+				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot132.Spec.CloudProfileName, "1.32.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+				By("Wait until manager has observed the CloudProfile update")
+				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot132.Spec.CloudProfileName, "1.32.0", &expirationDateInThePast)
+
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot132, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				Eventually(func(g Gomega) string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot132), shoot132)).To(Succeed())
+					g.Expect(shoot132.Status.LastMaintenance).NotTo(BeNil())
+					g.Expect(shoot132.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.32.0\" to \"1.33.0\". Reason: Kubernetes version expired - force update required, .spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete is set to nil. Reason: The field was deprecated in favour of `.spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism` and can no longer be enabled for Shoot clusters using Kubernetes version 1.33+"))
+					g.Expect(shoot132.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot132.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+					g.Expect(shoot132.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(BeNil())
+					return shoot132.Spec.Kubernetes.Version
+				}).Should(Equal("1.33.0"))
+			})
 		})
 
 		Context("Workerless Shoot", func() {
