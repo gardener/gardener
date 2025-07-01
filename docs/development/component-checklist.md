@@ -127,7 +127,7 @@ This document provides a checklist for them that you can walk through.
 
 9. **Use strict mode when decoding data** ([example](https://github.com/gardener/gardener/blob/485c25124ea536e4610c627109017dd34d434921/pkg/provider-local/controller/worker/actuator.go#L52))
 
-   Stict mode forces [additional verifications](https://github.com/kubernetes-sigs/json/blob/cfa47c3a1cc8ff0eff148aa9ec5b0226d0909e87/json.go#L89-L91) on the decoded data such as:
+   Strict mode forces [additional verifications](https://github.com/kubernetes-sigs/json/blob/cfa47c3a1cc8ff0eff148aa9ec5b0226d0909e87/json.go#L89-L91) on the decoded data such as:
    - ensures no duplicate fields
    - ensures no unknown fields when decoding into typed structs
 
