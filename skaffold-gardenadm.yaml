@@ -36,6 +36,7 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -307,6 +308,7 @@ build:
             - pkg/utils/flow
             - pkg/utils/gardener
             - pkg/utils/gardener/gardenlet
+            - pkg/utils/gardener/operator
             - pkg/utils/gardener/secretsrotation
             - pkg/utils/gardener/tokenrequest
             - pkg/utils/imagevector
@@ -844,14 +846,16 @@ manifests:
       - host:
           command:
             - bash
-            - dev-setup/extensions/provider-local/components/controllerregistration/generate-patch-controllerdeployment-prow.sh
+            - dev-setup/extensions/provider-local/components/extension/generate-patch-extension-prow.sh
 resourceSelector:
-  # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
+  # instruct skaffold to inject the built image reference into the image fields in our Extension object
   allow:
-    - groupKind: ControllerDeployment.core.gardener.cloud
+    - groupKind: Extension.operator.gardener.cloud
       image:
-        - .helm.ociRepository.ref
-        - .helm.values.imageVectorOverwrite.images.*.ref
+        - .spec.deployment.extension.helm.ociRepository.ref
+        - .spec.deployment.extension.values.imageVectorOverwrite.images.*.ref
+        - .spec.deployment.admission.runtimeCluster.helm.ociRepository.ref
+        - .spec.deployment.admission.virtualCluster.helm.ociRepository.ref
     - groupKind: CloudProfile.core.gardener.cloud
       image:
         - .*

@@ -5,9 +5,14 @@
 package operator
 
 import (
+	"slices"
 	"strings"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
@@ -69,4 +74,56 @@ func IsControllerInstallationInVirtualRequired(extension *operatorv1alpha1.Exten
 func IsExtensionInRuntimeRequired(extension *operatorv1alpha1.Extension) bool {
 	requiredCondition := v1beta1helper.GetCondition(extension.Status.Conditions, operatorv1alpha1.ExtensionRequiredRuntime)
 	return requiredCondition != nil && requiredCondition.Status == gardencorev1beta1.ConditionTrue
+}
+
+// ControllerRegistrationForExtension returns the ControllerRegistration and ControllerDeployment objects for the given
+// Extension.
+func ControllerRegistrationForExtension(extension *operatorv1alpha1.Extension) (*gardencorev1beta1.ControllerRegistration, *gardencorev1.ControllerDeployment) {
+	resources := make([]gardencorev1beta1.ControllerResource, 0, len(extension.Spec.Resources))
+	for _, resource := range extension.Spec.Resources {
+		resource.AutoEnable = slices.DeleteFunc(slices.Clone(resource.AutoEnable), func(clusterType gardencorev1beta1.ClusterType) bool {
+			return clusterType == operatorv1alpha1.ClusterTypeGarden
+		})
+		resource.ClusterCompatibility = slices.DeleteFunc(slices.Clone(resource.ClusterCompatibility), func(clusterType gardencorev1beta1.ClusterType) bool {
+			return clusterType == operatorv1alpha1.ClusterTypeGarden
+		})
+		resources = append(resources, resource)
+	}
+
+	var (
+		controllerDeployment = &gardencorev1.ControllerDeployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: extension.Name,
+			},
+			Helm: &gardencorev1.HelmControllerDeployment{
+				Values:        extension.Spec.Deployment.ExtensionDeployment.Values,
+				OCIRepository: extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository,
+			},
+			InjectGardenKubeconfig: extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig,
+		}
+
+		controllerRegistration = &gardencorev1beta1.ControllerRegistration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: extension.Name,
+			},
+			Spec: gardencorev1beta1.ControllerRegistrationSpec{
+				Resources: resources,
+				Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
+					Policy:       extension.Spec.Deployment.ExtensionDeployment.Policy,
+					SeedSelector: extension.Spec.Deployment.ExtensionDeployment.SeedSelector,
+					DeploymentRefs: []gardencorev1beta1.DeploymentRef{
+						{
+							Name: controllerDeployment.Name,
+						},
+					},
+				},
+			},
+		}
+	)
+
+	if v, ok := extension.Annotations[v1beta1constants.AnnotationPodSecurityEnforce]; ok {
+		metav1.SetMetaDataAnnotation(&controllerRegistration.ObjectMeta, v1beta1constants.AnnotationPodSecurityEnforce, v)
+	}
+
+	return controllerRegistration, controllerDeployment
 }
