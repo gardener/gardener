@@ -294,6 +294,8 @@ cat <<EOF | sudo tee -a /etc/hosts
 172.18.255.1 api.e2e-auth-one.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-auth-two.local.external.local.gardener.cloud
 172.18.255.1 api.e2e-auth-two.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-layer4-lb.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-layer4-lb.local.external.local.gardener.cloud
 172.18.255.1 gu-local--e2e-rotate.ingress.local.seed.local.gardener.cloud
 172.18.255.1 gu-local--e2e-rotate-wl.ingress.local.seed.local.gardener.cloud
 172.18.255.1 gu-local--e2e-rot-noroll.ingress.local.seed.local.gardener.cloud
