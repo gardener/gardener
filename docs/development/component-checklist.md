@@ -125,6 +125,12 @@ This document provides a checklist for them that you can walk through.
 
    <sub>[*] It is required because if a component deployed in the Shoot cluster does not specify a Seccomp profile and cannot run with the `RuntimeDefault` Seccomp profile, then enabling the `.spec.kubernetes.kubelet.seccompDefault` field in the Shoot spec would break the corresponding component.</sub>
 
+9. **Use strict mode when decoding data** [example](https://github.com/gardener/gardener/blob/485c25124ea536e4610c627109017dd34d434921/pkg/provider-local/controller/worker/actuator.go#L52)
+
+   Stict mode forces [additional verifications](https://github.com/kubernetes-sigs/json/blob/cfa47c3a1cc8ff0eff148aa9ec5b0226d0909e87/json.go#L89-L91) on the decoded data such as:
+   - ensures no duplicate fields
+   - ensures no unknown fields when decoding into typed structs
+
 ## High Availability / Stability
 
 1. **Specify the component type label for high availability** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L241))
