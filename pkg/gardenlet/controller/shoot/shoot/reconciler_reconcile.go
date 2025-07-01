@@ -856,7 +856,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name:         "Checking if we have dual-stack pod CIDRs in nodes",
 			Fn:           botanist.CheckPodCIDRsInNodes,
-			SkipIf:       o.Shoot.IsWorkerless,
+			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
 		_ = g.Add(flow.Task{
