@@ -1195,6 +1195,8 @@ type Maintenance struct {
 	// Instead, they are rolled out during the shoot's maintenance time window. There is one exception that will trigger
 	// an immediate roll out which is changes to the Spec.Hibernation.Enabled field.
 	ConfineSpecUpdateRollout *bool
+	// AutoRotate contains information about which credentials should be automatically rotated.
+	AutoRotate *MaintenanceAutoRotate
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
@@ -1203,6 +1205,18 @@ type MaintenanceAutoUpdate struct {
 	KubernetesVersion bool
 	// MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).
 	MachineImageVersion *bool
+}
+
+// MaintenanceAutoRotate contains information about which credentials should be automatically rotated.
+type MaintenanceAutoRotate struct {
+	// ETCDEncryptionKey indicates whether the etcd encryption key may be automatically rotated (default: false).
+	ETCDEncryptionKey *bool
+	// ObservabilityPasswords indicates whether the observability passwords may be automatically rotated (default: false).
+	ObservabilityPasswords *bool
+	// SSHKeypairForWorkerNodes indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).
+	SSHKeypairForWorkerNodes *bool
+	// RotationPeriod is the period between a completed rotation and the start of a new rotation for a specific credential (default: 7d).
+	RotationPeriod *metav1.Duration
 }
 
 // MaintenanceTimeWindow contains information about the time window for maintenance operations.
