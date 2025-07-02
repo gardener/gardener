@@ -42,6 +42,7 @@ type delegateFactory struct {
 
 type actuator struct {
 	worker.Actuator
+
 	workerDelegate *delegateFactory
 }
 

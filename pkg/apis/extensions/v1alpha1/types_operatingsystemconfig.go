@@ -29,6 +29,7 @@ type OperatingSystemConfig struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// Specification of the OperatingSystemConfig.
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec OperatingSystemConfigSpec `json:"spec"`
@@ -65,11 +66,12 @@ type OperatingSystemConfigList struct {
 
 // OperatingSystemConfigSpec is the spec for a OperatingSystemConfig resource.
 type OperatingSystemConfigSpec struct {
+	// DefaultSpec is a structure containing common fields used by all extension resources.
+	DefaultSpec `json:",inline"`
+
 	// CRI config is a structure contains configurations of the CRI library
 	// +optional
 	CRIConfig *CRIConfig `json:"criConfig,omitempty"`
-	// DefaultSpec is a structure containing common fields used by all extension resources.
-	DefaultSpec `json:",inline"`
 	// Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
 	// gets sent to the `Worker` extension controller to bootstrap a VM, or it is downloaded by the
 	// gardener-node-agent already running on a bootstrapped VM.
@@ -191,6 +193,7 @@ type FileContentImageRef struct {
 type OperatingSystemConfigStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
+
 	// ExtensionUnits is a list of additional systemd units provided by the extension.
 	// +patchMergeKey=name
 	// +patchStrategy=merge

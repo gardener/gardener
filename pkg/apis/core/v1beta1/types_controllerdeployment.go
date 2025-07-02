@@ -20,6 +20,7 @@ type ControllerDeployment struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Type is the deployment type.
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
@@ -38,6 +39,7 @@ type ControllerDeploymentList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of ControllerDeployments.
 	Items []ControllerDeployment `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

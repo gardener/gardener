@@ -18,6 +18,7 @@ type Quota struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Spec defines the Quota constraints.
 	// +optional
 	Spec QuotaSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
@@ -31,6 +32,7 @@ type QuotaList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of Quotas.
 	Items []Quota `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

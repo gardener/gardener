@@ -101,6 +101,7 @@ type Interface interface {
 // Extension contains information about the desired Extension resources as well as configuration information.
 type Extension struct {
 	extensionsv1alpha1.Extension
+
 	// Timeout is the maximum waiting time for the Extension status to report readiness.
 	Timeout time.Duration
 	// Lifecycle defines when an extension resource should be updated during different operations.

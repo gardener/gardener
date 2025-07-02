@@ -260,9 +260,10 @@ func IsAPISupported(api, version string) (bool, string, error) {
 // RequiredForWorkerless defines whether this APIVersion is required for Workerless Shoots.
 // If an API is required for both Shoot types, then both booleans need to be set to true.
 type APIVersionRange struct {
+	versionutils.VersionRange
+
 	Required              bool
 	RequiredForWorkerless bool
-	versionutils.VersionRange
 }
 
 // SupportedVersionRange returns the supported version range for the given API.

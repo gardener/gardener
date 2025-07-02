@@ -34,6 +34,7 @@ func Register(plugins *admission.Plugins) {
 // MutateSeed contains listers and admission handler.
 type MutateSeed struct {
 	*admission.Handler
+
 	managedSeedLister seedmanagementv1alpha1listers.ManagedSeedLister
 	shootLister       gardencorev1beta1listers.ShootLister
 	readyFunc         admission.ReadyFunc

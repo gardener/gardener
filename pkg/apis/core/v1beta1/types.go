@@ -53,6 +53,7 @@ type AccessRestriction struct {
 // allows to specify additional options.
 type AccessRestrictionWithOptions struct {
 	AccessRestriction `json:",inline" protobuf:"bytes,1,opt,name=accessRestriction"`
+
 	// Options is a map of additional options for the access restriction.
 	// +optional
 	Options map[string]string `json:"options,omitempty" protobuf:"bytes,2,rep,name=options"`

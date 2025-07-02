@@ -53,6 +53,7 @@ func Register(plugins *admission.Plugins) {
 // ManagedSeed contains listers and admission handler.
 type ManagedSeed struct {
 	*admission.Handler
+
 	shootLister              gardencorev1beta1listers.ShootLister
 	secretBindingLister      gardencorev1beta1listers.SecretBindingLister
 	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister

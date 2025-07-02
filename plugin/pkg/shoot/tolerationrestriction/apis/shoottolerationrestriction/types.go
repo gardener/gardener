@@ -15,6 +15,7 @@ import (
 // Configuration provides configuration for the ShootTolerationRestriction admission controller.
 type Configuration struct {
 	metav1.TypeMeta
+
 	// Defaults is the Garden cluster-wide default tolerations list.
 	Defaults []core.Toleration
 	// Whitelist is the Garden cluster-wide whitelist of tolerations.

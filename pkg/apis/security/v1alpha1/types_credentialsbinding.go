@@ -18,6 +18,7 @@ type CredentialsBinding struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Provider defines the provider type of the CredentialsBinding.
 	// This field is immutable.
 	Provider CredentialsBindingProvider `json:"provider" protobuf:"bytes,2,opt,name=provider"`
@@ -45,6 +46,7 @@ type CredentialsBindingList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of CredentialsBindings.
 	Items []CredentialsBinding `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

@@ -16,6 +16,7 @@ type TokenRequest struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec holds configuration settings for the requested token.
 	Spec TokenRequestSpec
 	// Status bears the issued token with additional information back to the client.

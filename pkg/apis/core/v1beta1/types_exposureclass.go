@@ -18,6 +18,7 @@ type ExposureClass struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Handler is the name of the handler which applies the control plane endpoint exposure strategy.
 	// This field is immutable.
 	Handler string `json:"handler" protobuf:"bytes,2,opt,name=handler"`
@@ -35,6 +36,7 @@ type ExposureClassList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of ExposureClasses.
 	Items []ExposureClass `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

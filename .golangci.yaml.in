@@ -12,7 +12,11 @@ linters:
     - unconvert
     - unparam
     - whitespace
+    - embeddedstructfieldcheck
   settings:
+    embeddedstructfieldcheck:
+      # Checks that sync.Mutex and sync.RWMutex are not used as embedded fields.
+      forbid-mutex: true
     importas:
       alias:
         # External imported packages

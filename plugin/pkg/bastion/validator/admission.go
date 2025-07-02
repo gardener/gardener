@@ -36,6 +36,7 @@ func Register(plugins *admission.Plugins) {
 // Bastion contains listers and admission handler.
 type Bastion struct {
 	*admission.Handler
+
 	coreClient gardencoreclientset.Interface
 	readyFunc  admission.ReadyFunc
 }

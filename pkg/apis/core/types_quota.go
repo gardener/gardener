@@ -17,6 +17,7 @@ type Quota struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec defines the Quota constraints.
 	Spec QuotaSpec
 }
@@ -28,6 +29,7 @@ type QuotaList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of Quotas.
 	Items []Quota
 }

@@ -19,6 +19,7 @@ import (
 // Options contains options for this command.
 type Options struct {
 	*cmd.Options
+
 	// Token contains the token ID and secret.
 	Token Token
 	// Description is the description for the bootstrap token.

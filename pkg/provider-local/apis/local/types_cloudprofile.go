@@ -14,6 +14,7 @@ import (
 // resource.
 type CloudProfileConfig struct {
 	metav1.TypeMeta
+
 	// MachineImages is the list of machine images that are understood by the controller. It maps
 	// logical names and versions to provider-specific identifiers.
 	MachineImages []MachineImages

@@ -17,6 +17,7 @@ type ControllerRegistration struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Spec contains the specification of this registration.
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec ControllerRegistrationSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
@@ -30,6 +31,7 @@ type ControllerRegistrationList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of ControllerRegistrations.
 	Items []ControllerRegistration `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

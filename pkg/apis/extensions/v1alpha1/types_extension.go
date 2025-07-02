@@ -26,6 +26,7 @@ type Extension struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// Specification of the Extension.
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec ExtensionSpec `json:"spec"`

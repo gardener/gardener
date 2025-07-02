@@ -21,6 +21,7 @@ type BackupEntry struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec contains the specification of the Backup Entry.
 	Spec BackupEntrySpec
 	// Status contains the most recently observed status of the Backup Entry.
@@ -34,6 +35,7 @@ type BackupEntryList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of BackupEntry.
 	Items []BackupEntry
 }

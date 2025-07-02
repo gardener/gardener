@@ -21,6 +21,7 @@ import (
 // FakeDiscovery is used to tests, more specifically - chart applier.
 type FakeDiscovery struct {
 	*fakediscovery.FakeDiscovery
+
 	lock          sync.Mutex
 	GroupListFn   func() *metav1.APIGroupList
 	ResourceMapFn func() map[string]*metav1.APIResourceList

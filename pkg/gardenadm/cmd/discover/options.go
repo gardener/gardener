@@ -15,6 +15,7 @@ import (
 // Options contains options for this command.
 type Options struct {
 	*cmd.Options
+
 	// Kubeconfig is the path to the kubeconfig file pointing to the garden cluster.
 	Kubeconfig string
 }

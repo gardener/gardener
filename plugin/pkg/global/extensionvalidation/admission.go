@@ -43,6 +43,7 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 // ExtensionValidator contains listers and admission handler.
 type ExtensionValidator struct {
 	*admission.Handler
+
 	controllerRegistrationLister gardencorev1beta1listers.ControllerRegistrationLister
 	backupBucketLister           gardencorev1beta1listers.BackupBucketLister
 	readyFunc                    admission.ReadyFunc

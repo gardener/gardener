@@ -46,6 +46,7 @@ type ShootConfig struct {
 type ShootFramework struct {
 	*GardenerFramework
 	TestDescription
+
 	Config *ShootConfig
 
 	SeedClient  kubernetes.Interface

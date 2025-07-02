@@ -19,6 +19,7 @@ type BackupBucket struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Specification of the Backup Bucket.
 	Spec BackupBucketSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Most recently observed status of the Backup Bucket.
@@ -33,6 +34,7 @@ type BackupBucketList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of BackupBucket.
 	Items []BackupBucket `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

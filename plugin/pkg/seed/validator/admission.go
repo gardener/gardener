@@ -35,6 +35,7 @@ func Register(plugins *admission.Plugins) {
 // ValidateSeed contains listers and admission handler.
 type ValidateSeed struct {
 	*admission.Handler
+
 	seedLister             gardencorev1beta1listers.SeedLister
 	shootLister            gardencorev1beta1listers.ShootLister
 	workloadIdentityLister gardensecurityv1alpha1listers.WorkloadIdentityLister

@@ -84,6 +84,7 @@ type Interface interface {
 // Values contains configuration values for the kube-apiserver resources.
 type Values struct {
 	apiserver.Values
+
 	// AnonymousAuthenticationEnabled states whether anonymous authentication is enabled.
 	AnonymousAuthenticationEnabled *bool
 	// APIAudiences are identifiers of the API. The service account token authenticator will validate that tokens used
@@ -151,13 +152,14 @@ type AuthenticationWebhook struct {
 
 // AuthorizationWebhook contains configuration for the authorization webhook.
 type AuthorizationWebhook struct {
+	// WebhookConfiguration is the actual webhook configuration.
+	apiserverv1beta1.WebhookConfiguration
+
 	// Name is the name of the webhook.
 	Name string
 	// Kubeconfig contains the webhook configuration in kubeconfig format. The API server will query the remote service
 	// to determine access on the API server's secure port.
 	Kubeconfig []byte
-	// WebhookConfiguration is the actual webhook configuration.
-	apiserverv1beta1.WebhookConfiguration
 }
 
 // AutoscalingConfig contains information for configuring autoscaling settings for the API server.

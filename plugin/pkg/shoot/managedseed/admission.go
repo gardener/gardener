@@ -37,6 +37,7 @@ func Register(plugins *admission.Plugins) {
 // ManagedSeed contains listers and admission handler.
 type ManagedSeed struct {
 	*admission.Handler
+
 	coreClient           gardencoreclientset.Interface
 	seedManagementClient seedmanagementclientset.Interface
 	readyFunc            admission.ReadyFunc

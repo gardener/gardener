@@ -16,6 +16,7 @@ import (
 // Options contains options for this command.
 type Options struct {
 	*cmd.Options
+
 	// ControlPlaneAddress is the address of the control plane to which the node should be joined.
 	ControlPlaneAddress string
 	// BootstrapToken is the bootstrap token to use for joining the node.

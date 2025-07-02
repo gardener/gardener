@@ -583,6 +583,22 @@ If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <table>
 <tr>
 <td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>binaryPath</code></br>
 <em>
 string
@@ -604,22 +620,6 @@ ContainerRuntimeWorkerPool
 <td>
 <p>WorkerPool identifies the worker pool of the Shoot.
 For each worker pool and type, Gardener deploys a ContainerRuntime CRD.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>DefaultSpec</code></br>
-<em>
-<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
-DefaultSpec
-</a>
-</em>
-</td>
-<td>
-<p>
-(Members of <code>DefaultSpec</code> are embedded into this type.)
-</p>
-<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 </table>
@@ -1386,20 +1386,6 @@ If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <table>
 <tr>
 <td>
-<code>criConfig</code></br>
-<em>
-<a href="#extensions.gardener.cloud/v1alpha1.CRIConfig">
-CRIConfig
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CRI config is a structure contains configurations of the CRI library</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>DefaultSpec</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
@@ -1412,6 +1398,20 @@ DefaultSpec
 (Members of <code>DefaultSpec</code> are embedded into this type.)
 </p>
 <p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>criConfig</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CRIConfig">
+CRIConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CRI config is a structure contains configurations of the CRI library</p>
 </td>
 </tr>
 <tr>
@@ -2328,6 +2328,22 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <tbody>
 <tr>
 <td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>binaryPath</code></br>
 <em>
 string
@@ -2349,22 +2365,6 @@ ContainerRuntimeWorkerPool
 <td>
 <p>WorkerPool identifies the worker pool of the Shoot.
 For each worker pool and type, Gardener deploys a ContainerRuntime CRD.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>DefaultSpec</code></br>
-<em>
-<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
-DefaultSpec
-</a>
-</em>
-</td>
-<td>
-<p>
-(Members of <code>DefaultSpec</code> are embedded into this type.)
-</p>
-<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 </tbody>
@@ -4175,20 +4175,6 @@ string
 <tbody>
 <tr>
 <td>
-<code>criConfig</code></br>
-<em>
-<a href="#extensions.gardener.cloud/v1alpha1.CRIConfig">
-CRIConfig
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CRI config is a structure contains configurations of the CRI library</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>DefaultSpec</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
@@ -4201,6 +4187,20 @@ DefaultSpec
 (Members of <code>DefaultSpec</code> are embedded into this type.)
 </p>
 <p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>criConfig</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CRIConfig">
+CRIConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CRI config is a structure contains configurations of the CRI library</p>
 </td>
 </tr>
 <tr>

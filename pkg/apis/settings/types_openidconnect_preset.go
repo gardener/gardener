@@ -33,6 +33,7 @@ type OpenIDConnectPresetList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of OpenIDConnectPresets.
 	Items []OpenIDConnectPreset
 }

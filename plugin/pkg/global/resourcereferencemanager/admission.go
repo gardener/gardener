@@ -69,6 +69,7 @@ func Register(plugins *admission.Plugins) {
 // ReferenceManager contains listers and admission handler.
 type ReferenceManager struct {
 	*admission.Handler
+
 	gardenCoreClient             versioned.Interface
 	gardenSecurityClient         versionedsecurity.Interface
 	kubeClient                   kubernetes.Interface

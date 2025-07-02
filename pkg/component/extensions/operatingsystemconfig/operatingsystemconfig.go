@@ -98,6 +98,11 @@ type Interface interface {
 
 // Values contains the values used to create an OperatingSystemConfig resource.
 type Values struct {
+	// InitValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
+	InitValues
+	// OriginalValues are configuration values required for the 'reconcile' OperatingSystemConfigPurpose.
+	OriginalValues
+
 	// Namespace is the namespace for the OperatingSystemConfig resource.
 	Namespace string
 	// KubernetesVersion is the version for the kubelets of all worker pools.
@@ -106,11 +111,6 @@ type Values struct {
 	Workers []gardencorev1beta1.Worker
 	// CredentialsRotationStatus
 	CredentialsRotationStatus *gardencorev1beta1.ShootCredentialsRotation
-
-	// InitValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
-	InitValues
-	// OriginalValues are configuration values required for the 'reconcile' OperatingSystemConfigPurpose.
-	OriginalValues
 }
 
 // InitValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.

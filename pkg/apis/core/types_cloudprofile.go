@@ -24,6 +24,7 @@ type CloudProfile struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec defines the provider environment properties.
 	Spec CloudProfileSpec
 }
@@ -35,6 +36,7 @@ type CloudProfileList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of CloudProfiles.
 	Items []CloudProfile
 }
@@ -80,6 +82,7 @@ type CloudProfileSpec struct {
 type SeedSelector struct {
 	// LabelSelector is optional and can be used to select seeds by their label settings
 	metav1.LabelSelector
+
 	// ProviderTypes contains a list of allowed provider types used by the Gardener scheduler to restricting seeds by
 	// their provider type and enable cross-provider scheduling.
 	// By default, Shoots are only scheduled on Seeds having the same provider type.
@@ -108,6 +111,7 @@ type MachineImage struct {
 // MachineImageVersion is an expirable version with list of supported container runtimes and interfaces
 type MachineImageVersion struct {
 	ExpirableVersion
+
 	// CRI list of supported container runtime and interfaces supported by this version
 	CRI []CRI
 	// Architectures is the list of CPU architectures of the machine image in this version.

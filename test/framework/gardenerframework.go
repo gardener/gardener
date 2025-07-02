@@ -33,6 +33,7 @@ type GardenerConfig struct {
 type GardenerFramework struct {
 	*CommonFramework
 	TestDescription
+
 	GardenClient kubernetes.Interface
 
 	ProjectNamespace string

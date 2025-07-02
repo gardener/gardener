@@ -13,6 +13,7 @@ import (
 // Configuration provides configuration for the ShootDNSRewriting admission controller.
 type Configuration struct {
 	metav1.TypeMeta
+
 	// CommonSuffixes are expected to be the suffix of a fully qualified domain name.
 	// Each suffix should contain at least one or two dots ('.') to prevent accidental clashes.
 	CommonSuffixes []string

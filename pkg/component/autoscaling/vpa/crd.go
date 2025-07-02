@@ -36,6 +36,7 @@ func init() {
 
 type vpaCRD struct {
 	component.DeployWaiter
+
 	applier  kubernetes.Applier
 	registry *managedresources.Registry
 }

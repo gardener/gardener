@@ -15,6 +15,7 @@ import (
 
 type gardenlet struct {
 	kubernetes.ChartApplier
+
 	values map[string]any
 }
 

@@ -23,6 +23,7 @@ type ClusterOpenIDConnectPreset struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec is the specification of this OpenIDConnect preset.
 	Spec ClusterOpenIDConnectPresetSpec
 }
@@ -47,6 +48,7 @@ type ClusterOpenIDConnectPresetList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of ClusterOpenIDConnectPresets.
 	Items []ClusterOpenIDConnectPreset
 }

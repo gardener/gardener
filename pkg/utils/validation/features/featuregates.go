@@ -329,9 +329,10 @@ func IsFeatureGateSupported(featureGate, version string) (bool, error) {
 
 // FeatureGateVersionRange represents a version range of type [AddedInVersion, RemovedInVersion).
 type FeatureGateVersionRange struct {
+	versionutils.VersionRange
+
 	Default                  bool
 	LockedToDefaultInVersion string
-	versionutils.VersionRange
 }
 
 func isFeatureLockedToDefault(featureGate, version string) (bool, error) {

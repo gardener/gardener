@@ -28,6 +28,7 @@ type Network struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// Specification of the Network.
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec NetworkSpec `json:"spec"`
@@ -61,6 +62,7 @@ type NetworkList struct {
 type NetworkSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
+
 	// PodCIDR defines the CIDR that will be used for pods. This field is immutable.
 	PodCIDR string `json:"podCIDR"`
 	// ServiceCIDR defines the CIDR that will be used for services. This field is immutable.
@@ -75,6 +77,7 @@ type NetworkSpec struct {
 type NetworkStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
+
 	// IPFamilies specifies the IP protocol versions that actually are used for shoot networking.
 	// During dual-stack migration, this field may differ from the spec.
 	// +optional

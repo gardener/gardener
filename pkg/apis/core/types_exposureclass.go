@@ -17,6 +17,7 @@ type ExposureClass struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Handler is the name of the handler which applies the control plane endpoint exposure strategy.
 	// This field is immutable.
 	Handler string
@@ -32,6 +33,7 @@ type ExposureClassList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of ExposureClasses.
 	Items []ExposureClass
 }

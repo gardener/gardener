@@ -24,6 +24,7 @@ import (
 // For more information, see the ManagedSeed's '.spec.gardenlet.mergeWithParent' field.
 type GardenletConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
+
 	// GardenClientConnection specifies the kubeconfig file and the client connection settings
 	// for the proxy server to use when communicating with the garden apiserver.
 	// +optional
@@ -90,6 +91,7 @@ type GardenletConfiguration struct {
 // for the proxy server to use when communicating with the garden apiserver.
 type GardenClientConnection struct {
 	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
+
 	// GardenClusterAddress is the external address that the gardenlets can use to remotely connect to the Garden
 	// cluster. It is needed in case the gardenlet deploys itself into ManagedSeeds.
 	// +optional

@@ -17,6 +17,7 @@ type NamespacedCloudProfile struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec defines the provider environment properties.
 	Spec NamespacedCloudProfileSpec
 	// Most recently observed status of the NamespacedCloudProfile.
@@ -30,6 +31,7 @@ type NamespacedCloudProfileList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of NamespacedCloudProfiles.
 	Items []NamespacedCloudProfile
 }

@@ -15,6 +15,7 @@ type KubeconfigRequest struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Spec is the specification of the KubeconfigRequest.
 	Spec KubeconfigRequestSpec
 	// Status is the status of the KubeconfigRequest.

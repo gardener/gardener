@@ -170,6 +170,7 @@ func (s *ShootContext) WithControlPlaneNamespace(namespace string) *ShootContext
 // A ProjectContext can be initialized using TestContext.ForProject.
 type ProjectContext struct {
 	TestContext
+
 	Project *gardencorev1beta1.Project
 }
 

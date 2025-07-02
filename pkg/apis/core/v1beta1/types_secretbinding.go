@@ -18,6 +18,7 @@ type SecretBinding struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// SecretRef is a reference to a secret object in the same or another namespace.
 	// This field is immutable.
 	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"`
@@ -48,6 +49,7 @@ type SecretBindingList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of SecretBindings.
 	Items []SecretBinding `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

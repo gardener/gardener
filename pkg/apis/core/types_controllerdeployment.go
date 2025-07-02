@@ -22,6 +22,7 @@ type ControllerDeployment struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+
 	// Type is the deployment type.
 	// This field correlates with the Type field in the v1beta1 API version.
 	// It is only set if a custom type (other than helm) is configured in the v1beta1 API version and the object is
@@ -48,6 +49,7 @@ type ControllerDeploymentList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
+
 	// Items is the list of ControllerDeployments.
 	Items []ControllerDeployment
 }

@@ -26,6 +26,7 @@ type CloudProfile struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Spec defines the provider environment properties.
 	// +optional
 	Spec CloudProfileSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
@@ -39,6 +40,7 @@ type CloudProfileList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
 	// Items is the list of CloudProfiles.
 	Items []CloudProfile `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
@@ -100,6 +102,7 @@ type SeedSelector struct {
 	// LabelSelector is optional and can be used to select seeds by their label settings
 	// +optional
 	metav1.LabelSelector `json:",inline,omitempty" protobuf:"bytes,1,opt,name=labelSelector"`
+
 	// Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.
 	// +optional
 	ProviderTypes []string `json:"providerTypes,omitempty" protobuf:"bytes,2,rep,name=providerTypes"`
@@ -133,6 +136,7 @@ type MachineImage struct {
 // MachineImageVersion is an expirable version with list of supported container runtimes and interfaces
 type MachineImageVersion struct {
 	ExpirableVersion `json:",inline" protobuf:"bytes,1,opt,name=expirableVersion"`
+
 	// CRI list of supported container runtime and interfaces supported by this version
 	// +optional
 	CRI []CRI `json:"cri,omitempty" protobuf:"bytes,2,rep,name=cri"`

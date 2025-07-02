@@ -53,6 +53,7 @@ func Register(plugins *admission.Plugins) {
 // ResourceReservation contains required information to process admission requests.
 type ResourceReservation struct {
 	*admission.Handler
+
 	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
 	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
 	readyFunc                    admission.ReadyFunc
