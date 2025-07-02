@@ -410,12 +410,9 @@ const (
 	// OperationRotateServiceAccountKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the service account signing key shall be completed.
 	OperationRotateServiceAccountKeyComplete = "rotate-serviceaccount-key-complete"
-	// OperationRotateETCDEncryptionKeyStart is a constant for an annotation on a Shoot indicating that the
+	// OperationRotateETCDEncryptionKey is a constant for an annotation on a Shoot indicating that the
 	// rotation of the ETCD encryption key shall be started.
-	OperationRotateETCDEncryptionKeyStart = "rotate-etcd-encryption-key-start"
-	// OperationRotateETCDEncryptionKeyComplete is a constant for an annotation on a Shoot indicating that the
-	// rotation of the ETCD encryption key shall be completed.
-	OperationRotateETCDEncryptionKeyComplete = "rotate-etcd-encryption-key-complete"
+	OperationRotateETCDEncryptionKey = "rotate-etcd-encryption-key"
 	// OperationRotateRolloutWorkers is a constant for an annotation triggering the rollout of one or more worker pools
 	// (comma-separated) when the certificate authorities or service account signing key credentials rotation is in
 	// WaitingForWorkersRollout phase.

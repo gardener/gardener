@@ -79,15 +79,14 @@ var (
 		v1beta1constants.OperationRotateCredentialsStart,
 		v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateCredentialsComplete,
-		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
-		v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
+		v1beta1constants.OperationRotateETCDEncryptionKey,
 		v1beta1constants.OperationRotateServiceAccountKeyStart,
 		v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	)
 	forbiddenShootOperationsWhenEncryptionChangeIsRollingOut = sets.New(
 		v1beta1constants.OperationRotateCredentialsStart,
-		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+		v1beta1constants.OperationRotateETCDEncryptionKey,
 	)
 	availableShootPurposes = sets.New(
 		string(core.ShootPurposeEvaluation),
@@ -2653,22 +2652,22 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 
 	switch maintenanceOperation {
 	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
-		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(operation) {
+		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey).Has(operation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
-		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(operation) {
+		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete).Has(operation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	}
 
 	switch operation {
 	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
-		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(maintenanceOperation) {
+		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey).Has(maintenanceOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
-		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(maintenanceOperation) {
+		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete).Has(maintenanceOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	}
@@ -2743,16 +2742,12 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
 		}
 
-	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
+	case v1beta1constants.OperationRotateETCDEncryptionKey:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if shoot was not yet created successfully or is not ready for reconciliation"))
 		}
 		if phase := helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
-		}
-	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
-		if helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}
 	}
 

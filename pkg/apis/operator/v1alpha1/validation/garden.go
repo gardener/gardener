@@ -675,7 +675,7 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
 		}
 
-	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
+	case v1beta1constants.OperationRotateETCDEncryptionKey:
 		if garden.DeletionTimestamp != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if garden has deletion timestamp"))
 		}
@@ -684,13 +684,6 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 		}
 		if !resourcesToEncrypt.Equal(encryptedResources) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation because a previous encryption configuration change is currently being rolled out"))
-		}
-	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if garden has deletion timestamp"))
-		}
-		if helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}
 
 	case v1beta1constants.OperationRotateObservabilityCredentials:

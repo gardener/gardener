@@ -603,7 +603,6 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(shoot, &now)
 		completeRotationServiceAccountKey(shoot, &now)
-		completeRotationETCDEncryptionKey(shoot, &now)
 
 	case v1beta1constants.OperationRotateCAStart:
 		mustRemoveOperationAnnotation = true
@@ -638,9 +637,6 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	case v1beta1constants.OperationRotateETCDEncryptionKey:
 		mustRemoveOperationAnnotation = true
 		helper.StartRotationETCDEncryptionKey(shoot, &now)
-	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationETCDEncryptionKey(shoot, &now)
 	}
 
 	if operation := shoot.Annotations[v1beta1constants.GardenerOperation]; strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
@@ -822,11 +818,10 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 	}
 
 	switch v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) {
-	case gardencorev1beta1.RotationPreparing:
-		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
-			rotation.Phase = gardencorev1beta1.RotationPrepared
-			rotation.LastInitiationFinishedTime = &now
-		})
+	// TODO: Remove rotation prepared case in a future release.
+	// It is added to forcefully complete the etcd encryption key rotation.
+	case gardencorev1beta1.RotationPreparing, gardencorev1beta1.RotationPrepared:
+		completeRotationETCDEncryptionKey(shoot, &now)
 
 	case gardencorev1beta1.RotationCompleting:
 		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
@@ -1138,6 +1133,7 @@ func completeRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *meta
 	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationCompleting
 		rotation.LastCompletionTriggeredTime = now
+		rotation.LastInitiationFinishedTime = now
 	})
 }
 
