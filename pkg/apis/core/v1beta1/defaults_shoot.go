@@ -10,7 +10,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -290,33 +289,36 @@ func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
 
 // SetDefaults_Worker sets default values for Worker objects.
 func SetDefaults_Worker(obj *Worker) {
-	if obj.MaxSurge == nil {
-		obj.MaxSurge = &DefaultWorkerMaxSurge
-	}
-	if obj.MaxUnavailable == nil {
-		obj.MaxUnavailable = &DefaultWorkerMaxUnavailable
-	}
-	if obj.SystemComponents == nil {
-		obj.SystemComponents = &WorkerSystemComponents{
-			Allow: DefaultWorkerSystemComponentsAllow,
-		}
-	}
 	if obj.UpdateStrategy == nil {
 		obj.UpdateStrategy = ptr.To(AutoRollingUpdate)
 	}
 
 	if *obj.UpdateStrategy == AutoInPlaceUpdate || *obj.UpdateStrategy == ManualInPlaceUpdate {
+		if obj.MaxSurge == nil {
+			obj.MaxSurge = &DefaultInPlaceWorkerMaxSurge
+		}
+		if obj.MaxUnavailable == nil {
+			obj.MaxUnavailable = &DefaultInPlaceWorkerMaxUnavailable
+		}
 		if obj.MachineControllerManagerSettings == nil {
 			obj.MachineControllerManagerSettings = &MachineControllerManagerSettings{}
 		}
 		if obj.MachineControllerManagerSettings.DisableHealthTimeout == nil {
 			obj.MachineControllerManagerSettings.DisableHealthTimeout = ptr.To(true)
 		}
+	} else {
+		if obj.MaxSurge == nil {
+			obj.MaxSurge = &DefaultWorkerMaxSurge
+		}
 
-		// In case of manual in-place update, we set the MaxSurge to 0 and MaxUnavailable to 1.
-		if *obj.UpdateStrategy == ManualInPlaceUpdate {
-			obj.MaxSurge = ptr.To(intstr.FromInt32(0))
-			obj.MaxUnavailable = ptr.To(intstr.FromInt32(1))
+		if obj.MaxUnavailable == nil {
+			obj.MaxUnavailable = &DefaultWorkerMaxUnavailable
+		}
+	}
+
+	if obj.SystemComponents == nil {
+		obj.SystemComponents = &WorkerSystemComponents{
+			Allow: DefaultWorkerSystemComponentsAllow,
 		}
 	}
 }
