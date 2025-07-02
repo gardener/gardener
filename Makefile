@@ -402,7 +402,7 @@ garden-down: $(KUBECTL)
 	./dev-setup/garden.sh down
 
 # seed-{up,down}
-seed-%: export SKAFFOLD_FILENAME = skaffold-operator-garden.yaml
+seed-%: export SKAFFOLD_FILENAME = skaffold-seed.yaml
 seed-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./dev-setup/seed.sh up
 seed-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
@@ -413,7 +413,7 @@ seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./dev-setup/seed.sh down
 
 # TODO(rfranzke): Rename `operator-seed-%` to `gardener-%` once the legacy Helm chart-based setup is refactored.
-operator-seed-%: export SKAFFOLD_FILENAME = skaffold-operator-garden.yaml
+operator-seed-%: export SKAFFOLD_FILENAME = skaffold-seed.yaml
 operator-seed-up: SKAFFOLD_MODE=run
 operator-seed-dev: SKAFFOLD_MODE=dev
 operator-seed-dev: export SKAFFOLD_PROFILE=dev
