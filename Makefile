@@ -286,7 +286,7 @@ kind-operator-multi-node-up kind-operator-multi-node-down kind-operator-multi-zo
 # CLUSTER_VALUES
 kind-up kind-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
 kind2-up kind2-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local2/values.yaml
-kind-operator-multi-node-up kind-operator-multi-node-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/operator-multi-node/values.yaml
+kind-operator-multi-node-up kind-operator-multi-node-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-node/values.yaml
 kind-operator-multi-zone-up kind-operator-multi-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-zone/values.yaml
 kind-multi-node2-up kind-multi-node2-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-node2/values.yaml
 # ADDITIONAL_PARAMETERS
