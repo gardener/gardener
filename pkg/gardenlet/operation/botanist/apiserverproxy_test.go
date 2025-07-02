@@ -5,13 +5,17 @@
 package botanist_test
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -19,10 +23,12 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("APIServerProxy", func() {
 	var (
+		ctx   = context.Background()
 		shoot *gardencorev1beta1.Shoot
 
 		botanist *Botanist
@@ -83,5 +89,23 @@ var _ = Describe("APIServerProxy", func() {
 		Expect(comp).ToNot(BeNil())
 
 		botanist.Shoot.Components.SystemComponents.APIServerProxy = comp
+	})
+
+	Describe("#DeployAPIServerProxy", func() {
+		It("should deploy apiserverproxy and remove ShootAPIServerProxyUsesHTTPProxy constraint", func() {
+			Expect(botanist.Shoot.UpdateInfoStatus(ctx, botanist.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
+				condition := v1beta1helper.GetOrInitConditionWithClock(botanist.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootAPIServerProxyUsesHTTPProxy)
+				condition = v1beta1helper.UpdatedConditionWithClock(botanist.Clock, condition, gardencorev1beta1.ConditionTrue, "APIServerProxyUsesHTTPProxy", "The API server proxy was reconfigured to use the HTTP proxy method.")
+				shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
+				return nil
+			})).To(Succeed())
+
+			Expect(botanist.DeployAPIServerProxy(ctx)).To(Succeed())
+			Expect(botanist.GardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+
+			Expect(shoot.Status.Constraints).NotTo(ContainCondition(
+				OfType(gardencorev1beta1.ShootAPIServerProxyUsesHTTPProxy),
+			))
+		})
 	})
 })
