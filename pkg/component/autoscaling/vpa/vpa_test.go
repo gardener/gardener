@@ -68,7 +68,7 @@ var _ = Describe("VPA", func() {
 		pathGenericKubeconfig            = "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig"
 
 		runtimeKubernetesVersion = semver.MustParse("1.28.0")
-		featureGates             = make(map[string]bool)
+		featureGates             map[string]bool
 		values                   = Values{
 			SecretNameServerCA:       secretNameCA,
 			RuntimeKubernetesVersion: runtimeKubernetesVersion,
@@ -1822,6 +1822,7 @@ var _ = Describe("VPA", func() {
 
 				Context("with InPlaceOrRecreate enabled", func() {
 					BeforeEach(func() {
+						featureGates = make(map[string]bool)
 						featureGates["InPlaceOrRecreate"] = true
 						vpa = vpaFor(component.ClusterTypeShoot, false)
 						Expect(vpa.Deploy(ctx)).To(Succeed())

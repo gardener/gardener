@@ -436,10 +436,10 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secr
 
 func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	var (
-		featureGates = make(map[string]bool)
+		featureGates map[string]bool
 	)
 
-	if garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates != nil {
+	if garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler != nil {
 		featureGates = garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates
 	}
 

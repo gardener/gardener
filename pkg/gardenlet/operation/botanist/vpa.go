@@ -50,7 +50,7 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 			PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane200,
 			Replicas:          ptr.To(b.Shoot.GetReplicas(1)),
 		}
-		featureGates = make(map[string]bool)
+		featureGates map[string]bool
 	)
 
 	if vpaConfig := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler; vpaConfig != nil {

@@ -285,9 +285,6 @@ func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
 	if obj.MemoryAggregationIntervalCount == nil {
 		obj.MemoryAggregationIntervalCount = ptr.To(DefaultMemoryAggregationIntervalCount)
 	}
-	if obj.FeatureGates == nil {
-		obj.FeatureGates = make(map[string]bool)
-	}
 }
 
 // SetDefaults_Worker sets default values for Worker objects.

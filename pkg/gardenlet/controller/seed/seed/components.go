@@ -728,10 +728,10 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 
 func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSettings, secretsManager secretsmanager.Interface, isGardenCluster bool) (component.DeployWaiter, error) {
 	var (
-		featureGates = make(map[string]bool)
+		featureGates map[string]bool
 	)
 
-	if settings.VerticalPodAutoscaler.FeatureGates != nil {
+	if settings.VerticalPodAutoscaler != nil {
 		featureGates = settings.VerticalPodAutoscaler.FeatureGates
 	}
 
