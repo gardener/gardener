@@ -385,18 +385,16 @@ gardenlet-kind2-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) delete -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	$(SKAFFOLD) delete -m gardenlet,$(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME)
 
+# operator-{up,dev,debug,down}
 operator-%: export SKAFFOLD_FILENAME = skaffold-operator.yaml
-
 operator-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) run --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh)
+	./dev-setup/operator.sh up
 operator-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) dev
+	./dev-setup/operator.sh dev
 operator-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) debug
+	./dev-setup/operator.sh debug
 operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(KUBECTL) annotate garden --all confirmation.gardener.cloud/deletion=true
-	$(KUBECTL) delete garden --all --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete
+	./dev-setup/operator.sh down
 
 operator-seed-% operator-gardenlet-%: export SKAFFOLD_FILENAME = skaffold-operator-garden.yaml
 operator-seed-% operator-gardenlet-%: export SKAFFOLD_PROFILE = multi-zone
