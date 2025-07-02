@@ -4940,7 +4940,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("starting ETCD encryption key rotation",
 				func(allowed bool, encryptionResources []string, status core.ShootStatus) {
-					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key")
 					if encryptionResources != nil {
 						shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 							EncryptionConfig: &core.EncryptionConfig{
@@ -5077,72 +5077,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}),
 			)
 
-			DescribeTable("completing ETCD encryption key rotation",
-				func(allowed bool, status core.ShootStatus) {
-					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-complete")
-					shoot.Status = status
-
-					matcher := BeEmpty()
-					if !allowed {
-						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
-						})))
-					}
-
-					Expect(ValidateShoot(shoot)).To(matcher)
-				},
-
-				Entry("rotation phase is prepare", false, core.ShootStatus{
-					LastOperation: &core.LastOperation{
-						Type: core.LastOperationTypeReconcile,
-					},
-					Credentials: &core.ShootCredentials{
-						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationPreparing,
-							},
-						},
-					},
-				}),
-				Entry("rotation phase is prepared", true, core.ShootStatus{
-					LastOperation: &core.LastOperation{
-						Type: core.LastOperationTypeReconcile,
-					},
-					Credentials: &core.ShootCredentials{
-						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationPrepared,
-							},
-						},
-					},
-				}),
-				Entry("rotation phase is complete", false, core.ShootStatus{
-					LastOperation: &core.LastOperation{
-						Type: core.LastOperationTypeReconcile,
-					},
-					Credentials: &core.ShootCredentials{
-						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationCompleting,
-							},
-						},
-					},
-				}),
-				Entry("rotation phase is completed", false, core.ShootStatus{
-					LastOperation: &core.LastOperation{
-						Type: core.LastOperationTypeReconcile,
-					},
-					Credentials: &core.ShootCredentials{
-						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationCompleted,
-							},
-						},
-					},
-				}),
-			)
-
 			It("should return an error if the operation annotation is invalid", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "foo-bar")
 				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -5159,23 +5093,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should return an error if maintenance annotation is not allowed in this context", func() {
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-complete")
-				shoot.Status = core.ShootStatus{
-					LastOperation: &core.LastOperation{
-						Type:  core.LastOperationTypeCreate,
-						State: core.LastOperationStateSucceeded,
-					},
-				}
-				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-				}))))
-			})
-
 			It("should return an error if both operation annotations have the same value", func() {
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-start")
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key")
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key")
 				shoot.Status = core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type:  core.LastOperationTypeCreate,
@@ -5195,7 +5115,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should return nothing if both operation annotations are valid and do not have the same value", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-serviceaccount-key-start")
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key")
 				shoot.Status = core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type:  core.LastOperationTypeCreate,
@@ -5219,8 +5139,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					if sets.New(v1beta1constants.OperationRotateCredentialsComplete,
 						v1beta1constants.OperationRotateCAComplete,
-						v1beta1constants.OperationRotateServiceAccountKeyComplete,
-						v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(maintenanceOpAnnotation) {
+						v1beta1constants.OperationRotateServiceAccountKeyComplete).Has(maintenanceOpAnnotation) {
 						shoot.Status.Credentials = &core.ShootCredentials{
 							Rotation: &core.ShootCredentialsRotation{
 								CertificateAuthorities: &core.CARotation{
@@ -5250,22 +5169,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-ca-start-without-workers-rollout", "rotate-credentials-start", "rotate-ca-start-without-workers-rollout", "operation 'rotate-ca-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 				Entry("rotate-serviceaccount-key-start", "rotate-credentials-start", "rotate-serviceaccount-key-start", "operation 'rotate-serviceaccount-key-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-credentials-start", "rotate-serviceaccount-key-start-without-workers-rollout", "operation 'rotate-serviceaccount-key-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-credentials-start'"),
-				Entry("rotate-etcd-encryption-key-start", "rotate-credentials-start", "rotate-etcd-encryption-key-start", "operation 'rotate-etcd-encryption-key-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
+				Entry("rotate-etcd-encryption-key", "rotate-credentials-start", "rotate-etcd-encryption-key", "operation 'rotate-etcd-encryption-key' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 
 				Entry("rotate-ca-complete", "rotate-credentials-complete", "rotate-ca-complete", "operation 'rotate-ca-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-credentials-complete", "rotate-serviceaccount-key-complete", "operation 'rotate-serviceaccount-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
-				Entry("rotate-etcd-encryption-key-complete", "rotate-credentials-complete", "rotate-etcd-encryption-key-complete", "operation 'rotate-etcd-encryption-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
 
 				Entry("rotate-credentials-start", "rotate-ca-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-ca-start'"),
 				Entry("rotate-credentials-start", "rotate-serviceaccount-key-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-serviceaccount-key-start'"),
-				Entry("rotate-credentials-start", "rotate-etcd-encryption-key-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-start'"),
+				Entry("rotate-credentials-start", "rotate-etcd-encryption-key", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-etcd-encryption-key'"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-ca-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-ca-start'"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-serviceaccount-key-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-serviceaccount-key-start'"),
-				Entry("rotate-credentials-start-without-workers-rollout", "rotate-etcd-encryption-key-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-start'"),
+				Entry("rotate-credentials-start-without-workers-rollout", "rotate-etcd-encryption-key", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-etcd-encryption-key'"),
 
 				Entry("rotate-credentials-complete", "rotate-ca-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-ca-complete'"),
 				Entry("rotate-credentials-complete", "rotate-serviceaccount-key-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-serviceaccount-key-complete'"),
-				Entry("rotate-credentials-complete", "rotate-etcd-encryption-key-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-complete'"),
 			)
 
 			DescribeTable("forbid certain rotation operations when shoot is hibernated",
@@ -5292,8 +5209,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-credentials-start", "rotate-credentials-start"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
 				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
-				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
-				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
+				Entry("rotate-etcd-encryption-key", "rotate-etcd-encryption-key"),
 				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
 				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
@@ -5420,8 +5336,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-credentials-start", "rotate-credentials-start"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
 				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
-				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
-				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
+				Entry("rotate-etcd-encryption-key", "rotate-etcd-encryption-key"),
 				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
 				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
@@ -5439,8 +5354,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-credentials-start", "rotate-credentials-start"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
 				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
-				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
-				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
+				Entry("rotate-etcd-encryption-key", "rotate-etcd-encryption-key"),
 				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
 				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
@@ -5461,8 +5375,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-credentials-start", "rotate-credentials-start"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
 				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
-				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
-				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
+				Entry("rotate-etcd-encryption-key", "rotate-etcd-encryption-key"),
 				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
 				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
