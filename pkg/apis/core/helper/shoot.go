@@ -99,6 +99,30 @@ func ShootEnablesSSHAccess(shoot *core.Shoot) bool {
 		(shoot.Spec.Provider.WorkersSettings == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled)
 }
 
+// IsETCDEncryptionKeyRotationEnabled checks if etcd encryption key rotation is enabled in the maintenance window.
+func IsETCDEncryptionKeyRotationEnabled(shoot *core.Shoot) bool {
+	return shoot.Spec.Maintenance != nil &&
+		shoot.Spec.Maintenance.AutoRotate != nil &&
+		shoot.Spec.Maintenance.AutoRotate.ETCDEncryptionKey != nil &&
+		*shoot.Spec.Maintenance.AutoRotate.ETCDEncryptionKey
+}
+
+// IsSSHKeypairRotationEnabled checks if ssh keypair for worker nodes rotation is enabled in the maintenance window.
+func IsSSHKeypairRotationEnabled(shoot *core.Shoot) bool {
+	return shoot.Spec.Maintenance != nil &&
+		shoot.Spec.Maintenance.AutoRotate != nil &&
+		shoot.Spec.Maintenance.AutoRotate.SSHKeypairForWorkerNodes != nil &&
+		*shoot.Spec.Maintenance.AutoRotate.SSHKeypairForWorkerNodes
+}
+
+// IsObservabilityPasswordsRotationEnabled checks if observability passwords rotation is enabled in the maintenance window.
+func IsObservabilityPasswordsRotationEnabled(shoot *core.Shoot) bool {
+	return shoot.Spec.Maintenance != nil &&
+		shoot.Spec.Maintenance.AutoRotate != nil &&
+		shoot.Spec.Maintenance.AutoRotate.ObservabilityPasswords != nil &&
+		*shoot.Spec.Maintenance.AutoRotate.ObservabilityPasswords
+}
+
 // GetShootCARotationPhase returns the specified shoot CA rotation phase or an empty string
 func GetShootCARotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
 	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.CertificateAuthorities != nil {
