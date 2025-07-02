@@ -859,7 +859,7 @@ The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and
 ### Setting Up the KinD Cluster (runtime cluster)
 
 ```shell
-make kind-operator-multi-zone-up
+make kind-multi-zone-up
 ```
 
 This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/multi-zone/kubeconfig` file.
@@ -960,5 +960,5 @@ Please see [here](../deployment/getting_started_locally.md#alternative-way-to-se
 
 ```shell
 make operator-down
-make kind-operator-multi-zone-down
+make kind-multi-zone-down
 ```

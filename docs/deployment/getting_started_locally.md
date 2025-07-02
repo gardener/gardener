@@ -401,7 +401,7 @@ EOF
 You can bring up `gardener-operator` with this command:
 
 ```shell
-make kind-operator-multi-zone-up operator-up
+make kind-multi-zone-up operator-up
 ```
 
 Afterwards, you can create your local `Garden` and install `gardenlet` into the KinD cluster with this command:
@@ -436,7 +436,7 @@ make operator-seed-dev
 Finally, please use this command to tear down your environment:
 
 ```shell
-make kind-operator-multi-zone-down
+make kind-multi-zone-down
 ```
 
 This setup supports creating shoots and managed seeds the same way as explained in the previous chapters.
