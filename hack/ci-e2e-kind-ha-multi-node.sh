@@ -25,6 +25,6 @@ trap "
   ( make kind-operator-multi-node-down )
 " EXIT
 
-make operator-seed-up SKAFFOLD_PROFILE=multi-node
+make operator-seed-up
 make test-e2e-local-ha-multi-node
-make operator-seed-down SKAFFOLD_PROFILE=multi-node
+make operator-seed-down

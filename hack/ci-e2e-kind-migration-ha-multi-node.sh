@@ -27,10 +27,10 @@ trap "
   ( make kind-multi-node2-down )
 " EXIT
 
-make operator-seed-up SKAFFOLD_PROFILE=multi-node
-make operator-gardenlet-up SKAFFOLD_PROFILE=multi-node2
+make operator-seed-up
+make seed-up KUBECONFIG="$GARDENER_LOCAL2_KUBECONFIG"
 
 make test-e2e-local-migration-ha-multi-node
 
-make operator-gardenlet-down SKAFFOLD_PROFILE=multi-node2 GARDENLET_NAME=local2 KUBECONFIG="$GARDENER_LOCAL2_KUBECONFIG"
-make operator-seed-down SKAFFOLD_PROFILE=multi-node
+make seed-down KUBECONFIG="$GARDENER_LOCAL2_KUBECONFIG"
+make operator-seed-down

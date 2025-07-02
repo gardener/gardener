@@ -37,10 +37,10 @@ function copy_kubeconfig_from_kubeconfig_env_var() {
 function gardener_up() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make operator-seed-up SKAFFOLD_PROFILE=multi-node
+    make operator-seed-up
     ;;
   zone)
-    make operator-seed-up SKAFFOLD_PROFILE=multi-zone
+    make operator-seed-up
     ;;
   *)
     make gardener-up
@@ -51,10 +51,10 @@ function gardener_up() {
 function gardener_down() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make operator-seed-down SKAFFOLD_PROFILE=multi-node
+    make operator-seed-down
     ;;
   zone)
-    make operator-seed-down SKAFFOLD_PROFILE=multi-zone
+    make operator-seed-down
     ;;
   *)
     make gardener-down

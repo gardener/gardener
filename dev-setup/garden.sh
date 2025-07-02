@@ -6,23 +6,9 @@
 set -o errexit
 set -o pipefail
 
-function detect_scenario() {
-  nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.labels.topology\.kubernetes\.io/zone}' | tr ' ' '\n' | sort -u)
-  if [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
-    echo "multi-node"
-  elif [[ $(echo "$nodes" | wc -l) -eq 3 ]]; then
-    echo "multi-zone"
-  else
-    return 1
-  fi
-}
+source "$(dirname "$0")/scenario.sh"
 
-SCENARIO="$(detect_scenario)"
-if [[ -z "$SCENARIO" ]]; then
-  echo "Error: Unable to detect scenario. Please ensure you have a valid Kubernetes cluster with correctly labeled nodes with their availability zone." >&2
-  exit 1
-fi
-echo "DETECTED SCENARIO: $SCENARIO"
+detect_scenario
 
 COMMAND="${1:-up}"
 VALID_COMMANDS=("up down")
