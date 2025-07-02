@@ -668,16 +668,21 @@ profiles:
           dateTime:
             format: "20060102150405"
           name: timestamp
-  - name: multi-zone
+  - name: single-node
     manifests:
       kustomize:
         paths:
-          - dev-setup/gardenlet/overlays/multi-zone
+          - dev-setup/gardenlet/overlays/single-node
   - name: multi-node
     manifests:
       kustomize:
         paths:
           - dev-setup/gardenlet/overlays/multi-node
+  - name: multi-zone
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenlet/overlays/multi-zone
   - name: multi-node2
     manifests:
       kustomize:

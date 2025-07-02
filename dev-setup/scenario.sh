@@ -28,6 +28,9 @@ function detect_scenario() {
 
 function skaffold_profile() {
   case "$1" in
+    single-node)
+      export SKAFFOLD_PROFILE="single-node"
+      ;;
     multi-node)
       export SKAFFOLD_PROFILE="multi-node"
       ;;
