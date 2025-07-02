@@ -17,6 +17,7 @@ import (
 type Config struct {
 	// ClientConfig is the standard SSH client config.
 	ssh.ClientConfig
+
 	// DialContext is used for opening TCP connections to the remote host. Defaults to a net.Dialer with 30s timeout.
 	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 }
