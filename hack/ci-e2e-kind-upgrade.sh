@@ -65,7 +65,7 @@ function gardener_down() {
 function kind_up() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make kind-operator-multi-node-up
+    make kind-multi-node-up
     ;;
   zone)
     make kind-operator-multi-zone-up
@@ -79,7 +79,7 @@ function kind_up() {
 function kind_down() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make kind-operator-multi-node-down
+    make kind-multi-node-down
     ;;
   zone)
     make kind-operator-multi-zone-down
