@@ -32,7 +32,7 @@ case "$COMMAND" in
       -p "$SCENARIO" \
       -m gardenadm,provider-local-node,provider-local \
       -q \
-      --cache-artifacts="$($(dirname "$0")/../hack/get-skaffold-cache-artifacts.sh gardenadm)" \
+      --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh gardenadm)" \
       |\
     skaffold render \
       -p "$SCENARIO" \

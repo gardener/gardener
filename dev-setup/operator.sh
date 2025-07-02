@@ -12,7 +12,7 @@ VALID_COMMANDS=("up" "dev" "debug" "down")
 case "$COMMAND" in
   up)
     skaffold run \
-      --cache-artifacts="$($(dirname "$0")/../hack/get-skaffold-cache-artifacts.sh)"
+      --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh)"
    ;;
 
   dev)
