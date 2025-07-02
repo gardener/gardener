@@ -83,6 +83,22 @@ Last Maintenance:
 
 Please refer to the [Shoot Kubernetes and Operating System Versioning in Gardener](../shoot-operations/shoot_versions.md) topic for more information about Kubernetes and machine image versions in Gardener.
 
+## Automatic Credentials Rotation
+
+The `.spec.maintenance.autoRotate` field in the shoot specification allows you to control whether/when automatic rotations of Kubernetes patch and machine image versions are performed.
+
+```yaml
+spec:
+  maintenance:
+    autoRotate:
+      etcdEncryptionKey: true
+      observabilityPasswords: true
+      sshKeypairForWorkerNodes: true
+      rotationPeriod: 168h
+```
+
+During the daily maintenance, the Gardener Controller Manager starts the rotation for specific credentials if the Shoot opted-in for automatic rotation for the given credential and the set period has passed since the last rotation completion.
+
 ## Cluster Reconciliation
 
 Gardener administrators/operators can configure the gardenlet in a way that it only reconciles shoot clusters during their maintenance time windows.

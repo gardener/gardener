@@ -171,6 +171,8 @@ kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operatio
 
 > You can check the `.status.credentials.rotation.observability` field in the `Shoot` to see when the rotation was last initiated and last completed.
 
+See [Automatic Credentials Rotation](../shoot/shoot_maintenance.md#automatic-credentials-rotation) for how to enable `auto rotation` for observability passwords.
+
 ### SSH Key Pair for Worker Nodes
 
 Gardener generates an SSH key pair whose public key is propagated to all worker nodes of the `Shoot`.
@@ -193,12 +195,14 @@ kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operatio
 
 The old key is stored in a `Secret` with the name `<shoot-name>.ssh-keypair.old` in the project namespace in the garden cluster and has the same data keys as the regular `Secret`.
 
+See [Automatic Credentials Rotation](../shoot/shoot_maintenance.md#automatic-credentials-rotation) for how to enable `auto rotation` for the ssh key pair.
+
 ### ETCD Encryption Key
 
 This key is used to encrypt the data of `Secret` resources inside etcd (see [upstream Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)).
 
 The encryption key has no expiration date.
-There is no automatic rotation, and **it is the responsibility of the end-user to regularly rotate the encryption key.**
+**It is the responsibility of the end-user to regularly rotate the encryption key.**
 
 The rotation happens in three stages:
 
@@ -207,27 +211,22 @@ The rotation happens in three stages:
 - In stage three, the old encryption is dropped from the bundle.
 
 Technically, the `Preparing` phase indicates the stages one and two.
-Once it is completed, the `Prepared` phase indicates readiness for stage three.
 The `Completing` phase indicates stage three, and the `Completed` phase states that the rotation process has finished.
 
 > You can check the `.status.credentials.rotation.etcdEncryptionKey` field in the `Shoot` to see when the rotation was last initiated, last completed, and in which phase it currently is.
 
-In order to start the rotation (stage one), you have to annotate the shoot with the `rotate-etcd-encryption-key-start` operation:
+In order to start the rotation (stage one), you have to annotate the shoot with the `rotate-etcd-encryption-key` operation:
 
 ```bash
-kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-etcd-encryption-key-start
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-etcd-encryption-key
 ```
 
 This will trigger a `Shoot` reconciliation and performs the stages one and two.
-After it is completed, the `.status.credentials.rotation.etcdEncryptionKey.phase` is set to `Prepared`.
-Now you can complete the rotation by annotating the shoot with the `rotate-etcd-encryption-key-complete` operation:
-
-```bash
-kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-etcd-encryption-key-complete
-```
-
+After it is completed, the `.status.credentials.rotation.etcdEncryptionKey.phase` is set to `Completing`.
 This will trigger another `Shoot` reconciliation and performs stage three.
 After it is completed, the `.status.credentials.rotation.etcdEncryptionKey.phase` is set to `Completed`.
+
+See [Automatic Credentials Rotation](../shoot/shoot_maintenance.md#automatic-credentials-rotation) for how to enable `auto rotation` for the etcd encryption key.
 
 ### `ServiceAccount` Token Signing Key
 
