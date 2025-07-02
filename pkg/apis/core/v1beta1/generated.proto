@@ -2015,6 +2015,29 @@ message Maintenance {
   // an immediate roll out which is changes to the Spec.Hibernation.Enabled field.
   // +optional
   optional bool confineSpecUpdateRollout = 3;
+
+  // AutoRotate contains information about which credentials should be automatically rotated.
+  // +optional
+  optional MaintenanceAutoRotate autoRotate = 4;
+}
+
+// MaintenanceAutoRotate contains information about which credentials should be automatically rotated.
+message MaintenanceAutoRotate {
+  // ETCDEncryptionKey indicates whether the etcd encryption key may be automatically rotated (default: false).
+  // +optional
+  optional bool etcdEncryptionKey = 1;
+
+  // ObservabilityPasswords indicates whether the observability passwords may be automatically rotated (default: false).
+  // +optional
+  optional bool observabilityPasswords = 2;
+
+  // SSHKeypairForWorkerNodes indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).
+  // +optional
+  optional bool sshKeypairForWorkerNodes = 3;
+
+  // RotationPeriod is the period between a completed rotation and the start of a new rotation for a specific credential (default: 7d).
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration rotationPeriod = 4;
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.

@@ -8895,6 +8895,89 @@ Instead, they are rolled out during the shoot&rsquo;s maintenance time window. T
 an immediate roll out which is changes to the Spec.Hibernation.Enabled field.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>autoRotate</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MaintenanceAutoRotate">
+MaintenanceAutoRotate
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AutoRotate contains information about which credentials should be automatically rotated.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.MaintenanceAutoRotate">MaintenanceAutoRotate
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Maintenance">Maintenance</a>)
+</p>
+<p>
+<p>MaintenanceAutoRotate contains information about which credentials should be automatically rotated.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>etcdEncryptionKey</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ETCDEncryptionKey indicates whether the etcd encryption key may be automatically rotated (default: false).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>observabilityPasswords</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ObservabilityPasswords indicates whether the observability passwords may be automatically rotated (default: false).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sshKeypairForWorkerNodes</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SSHKeypairForWorkerNodes indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>rotationPeriod</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RotationPeriod is the period between a completed rotation and the start of a new rotation for a specific credential (default: 7d).</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MaintenanceAutoUpdate">MaintenanceAutoUpdate
