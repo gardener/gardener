@@ -6,6 +6,10 @@
 set -o errexit
 set -o pipefail
 
+source "$(dirname "$0")/scenario.sh"
+
+detect_scenario
+
 COMMAND="${1:-up}"
 VALID_COMMANDS=("up" "dev" "debug" "down")
 

@@ -7,10 +7,12 @@ set -o errexit
 set -o pipefail
 
 function detect_scenario() {
-  nodes=$(kubectl get nodes)
+  nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n')
   zones=$(kubectl get nodes -o jsonpath='{.items[*].metadata.labels.topology\.kubernetes\.io/zone}' | tr ' ' '\n' | sort -u)
 
-  if grep -q "gardener-local-multi-node2" <<< "$nodes"; then
+  if [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
+    export SCENARIO="single-node"
+  elif grep -q "gardener-local-multi-node2" <<< "$nodes"; then
     export SCENARIO="multi-node2"
   elif [[ $(echo "$zones" | wc -l) -eq 1 ]]; then
     export SCENARIO="multi-node"

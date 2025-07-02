@@ -1003,11 +1003,20 @@ deploy:
               tag: '{{.IMAGE_TAG_local_skaffold_gardener_admission_controller}}@{{.IMAGE_DIGEST_local_skaffold_gardener_admission_controller}}'
           nodeToleration.defaultNotReadyTolerationSeconds: "60"
           nodeToleration.defaultUnreachableTolerationSeconds: "60"
-          replicaCount: "2"
+          replicaCount: 2
           config.featureGates.IstioTLSTermination: true
         createNamespace: true
         wait: true
 profiles:
+  - name: single-node
+    activation:
+      - env: SCENARIO=single-node
+    patches:
+      - op: replace
+        path: /deploy/helm/releases/0/setValueTemplates/replicaCount
+        value: 1
+  - name: multi-node
+  - name: multi-zone
   - name: debug
     activation:
       - command: debug
@@ -1018,8 +1027,6 @@ profiles:
           config.leaderElection.leaderElect: false
           config.server.healthProbes.enable: false
           replicaCount: 1
-  - name: multi-zone
-  - name: multi-node
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
