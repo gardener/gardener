@@ -439,12 +439,12 @@ subjects:
   kind: Group
   name: system:authenticated
 
-# Role with role binding allowing all authenticated users to read the gardener-system-public/gardener-info configmap
+# Role with role binding allowing all authenticated users to read public resources in the gardener-system-public namespace
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: gardener.cloud:system:read-gardener-info-configmap
+  name: gardener.cloud:system:read-gardener-system-public
   namespace: gardener-system-public
   labels:
     app: gardener
@@ -458,6 +458,7 @@ rules:
   - configmaps
   resourceNames:
   - gardener-info
+  - kube-root-ca.crt
   verbs:
   - get
   - list
@@ -466,7 +467,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: gardener.cloud:system:read-gardener-info-configmap
+  name: gardener.cloud:system:read-gardener-system-public
   namespace: gardener-system-public
   labels:
     app: gardener
@@ -476,7 +477,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: gardener.cloud:system:read-gardener-info-configmap
+  name: gardener.cloud:system:read-gardener-system-public
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: Group

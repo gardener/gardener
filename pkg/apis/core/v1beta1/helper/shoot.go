@@ -690,3 +690,9 @@ func GetBackupConfigForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1b
 	}
 	return ControlPlaneWorkerPoolForShoot(shoot).ControlPlane.Backup
 }
+
+// GetAPIServerDomain returns the fully qualified domain name for the api-server of a Shoot or Virtual Garden cluster. The
+// end result is 'api.<domain>'.
+func GetAPIServerDomain(domain string) string {
+	return fmt.Sprintf("%s.%s", v1beta1constants.APIServerFQDNPrefix, domain)
+}

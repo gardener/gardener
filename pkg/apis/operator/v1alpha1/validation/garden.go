@@ -29,6 +29,7 @@ import (
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -275,15 +276,29 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetes", "version"), virtualCluster.Kubernetes.Version, kubernetesversion.SupportedVersions))
 	}
 
-	if kubeAPIServer := virtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil && kubeAPIServer.KubeAPIServerConfig != nil {
+	if kubeAPIServer := virtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
 		path := fldPath.Child("kubernetes", "kubeAPIServer")
 
-		coreKubeAPIServerConfig := &gardencore.KubeAPIServerConfig{}
-		if err := gardenCoreScheme.Convert(kubeAPIServer.KubeAPIServerConfig, coreKubeAPIServerConfig, nil); err != nil {
-			allErrs = append(allErrs, field.InternalError(path, err))
+		if kubeAPIServer.KubeAPIServerConfig != nil {
+			coreKubeAPIServerConfig := &gardencore.KubeAPIServerConfig{}
+			if err := gardenCoreScheme.Convert(kubeAPIServer.KubeAPIServerConfig, coreKubeAPIServerConfig, nil); err != nil {
+				allErrs = append(allErrs, field.InternalError(path, err))
+			}
+
+			allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, gardenerutils.DefaultGroupResourcesForEncryption(), path)...)
 		}
 
-		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, gardenerutils.DefaultGroupResourcesForEncryption(), path)...)
+		// The API server domain of the virtual cluster which is derived from the primary (immutable) DNS name does not
+		// match any SNI domain pattern. It is used by gardenlets to connect to the virtual cluster API server, and they
+		// expect a certificate signed by the Garden CA.
+		if kubeAPIServer.SNI != nil && len(virtualCluster.DNS.Domains) > 0 {
+			for i, domainPattern := range kubeAPIServer.SNI.DomainPatterns {
+				apiServerDomain := v1beta1helper.GetAPIServerDomain(virtualCluster.DNS.Domains[0].Name)
+				if len(helper.GetAPIServerSNIDomains([]string{apiServerDomain}, operatorv1alpha1.SNI{DomainPatterns: []string{domainPattern}})) > 0 {
+					allErrs = append(allErrs, field.Forbidden(path.Child("sni", "domainPatterns").Index(i), fmt.Sprintf("domain patterns of SNI must not match the first API server domain of the virtual cluster configuration (%s)", apiServerDomain)))
+				}
+			}
+		}
 	}
 
 	if kubeControllerManager := virtualCluster.Kubernetes.KubeControllerManager; kubeControllerManager != nil && kubeControllerManager.KubeControllerManagerConfig != nil {

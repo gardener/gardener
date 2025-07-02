@@ -10,7 +10,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // UpdateAdvertisedAddresses updates the shoot.status.advertisedAddresses with the list of
@@ -37,7 +36,7 @@ func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedA
 	if b.Shoot.ExternalClusterDomain != nil && len(*b.Shoot.ExternalClusterDomain) > 0 {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
 			Name: v1beta1constants.AdvertisedAddressExternal,
-			URL:  "https://" + gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+			URL:  "https://" + v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 		})
 	}
 
@@ -51,7 +50,7 @@ func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedA
 	if len(b.Shoot.InternalClusterDomain) > 0 {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
 			Name: v1beta1constants.AdvertisedAddressInternal,
-			URL:  "https://" + gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			URL:  "https://" + v1beta1helper.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		})
 	}
 

@@ -713,7 +713,7 @@ func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDepl
 	}
 
 	if len(domain) != 0 {
-		serviceHost = gardenerutils.GetAPIServerDomain(domain)
+		serviceHost = v1beta1helper.GetAPIServerDomain(domain)
 	}
 
 	if len(serviceHost) != 0 {
