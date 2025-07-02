@@ -268,8 +268,8 @@ test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
 kind-multi-node2-up kind-multi-node2-down: export KUBECONFIG = $(GARDENER_LOCAL_MULTI_NODE2_KUBECONFIG)
-kind-operator-multi-node-up kind-operator-multi-node-down kind-operator-multi-zone-up kind-operator-multi-zone-down operator%up operator-dev operator-debug operator%down operator-seed-dev test-e2e-local-operator ci-e2e-kind-operator ci-e2e-kind-operator-seed: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
-operator-seed-% test-e2e-local-operator-seed test-e2e-local-ha-% ci-e2e-kind-ha-% ci-e2e-kind-ha-%-upgrade test-e2e-local-migration-ha-multi-node operator-gardenlet-%: export VIRTUAL_GARDEN_KUBECONFIG = $(REPO_ROOT)/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+kind-operator-multi-node-up kind-operator-multi-node-down kind-operator-multi-zone-up kind-operator-multi-zone-down operator%up operator-dev operator-debug operator%down operator-seed-dev test-e2e-local-operator ci-e2e-kind-operator ci-e2e-kind-operator-seed garden-up garden-down: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
+garden-up garden-down operator-seed-% test-e2e-local-operator-seed test-e2e-local-ha-% ci-e2e-kind-ha-% ci-e2e-kind-ha-%-upgrade test-e2e-local-migration-ha-multi-node operator-gardenlet-%: export VIRTUAL_GARDEN_KUBECONFIG = $(REPO_ROOT)/dev-setup/kubeconfigs/virtual-garden/kubeconfig
 test-e2e-local-operator-seed test-e2e-local-ha-% test-e2e-local-migration-ha-multi-node ci-e2e-kind-ha-% ci-e2e-kind-ha-%-upgrade: export KUBECONFIG = $(VIRTUAL_GARDEN_KUBECONFIG)
 # CLUSTER_NAME
 kind-up kind-down: export CLUSTER_NAME = gardener-local
@@ -396,6 +396,12 @@ operator-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
 operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./dev-setup/operator.sh down
 
+# garden-{up,down}
+garden-up: $(KUBECTL)
+	./dev-setup/garden.sh up
+garden-down: $(KUBECTL)
+	./dev-setup/garden.sh down
+
 operator-seed-% operator-gardenlet-%: export SKAFFOLD_FILENAME = skaffold-operator-garden.yaml
 operator-seed-% operator-gardenlet-%: export SKAFFOLD_PROFILE = multi-zone
 
@@ -403,7 +409,7 @@ operator-seed-up operator-gardenlet-up: SKAFFOLD_MODE=run
 operator-seed-dev: SKAFFOLD_MODE=dev
 operator-seed-dev: export SKAFFOLD_PROFILE=dev
 operator-seed-up operator-seed-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up
-	$(SKAFFOLD) run -m garden
+	$(MAKE) garden-up
 	$(SKAFFOLD) run -m garden-config --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
 		--status-check=false --platform="linux/$(SYSTEM_ARCH)" 	# deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 	$(MAKE) operator-gardenlet-up

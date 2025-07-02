@@ -1,47 +1,6 @@
 apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
-  name: garden
-profiles:
-  - name: multi-zone
-    manifests:
-      kustomize:
-        paths:
-          - dev-setup/garden/overlays/multi-zone
-  - name: multi-node
-    manifests:
-      kustomize:
-        paths:
-          - dev-setup/garden/overlays/multi-node
-deploy:
-  kubectl:
-    hooks:
-      after:
-        - host:
-            command:
-              - bash
-              - -ec
-              # We deliberately only wait for the last operation to be 'Reconcile Succeeded' in order to be able to
-              # faster deploy the gardenlet.
-              - TIMEOUT=900 hack/usage/wait-for.sh garden local
-        - host:
-            command:
-              - bash
-              - -ec
-              # Check that the admission component of provider-local extension is healthy - it may run webhooks for the
-              # resources that we are about to create in below 'garden-config' Skaffold config. This will fail in case
-              # the webhook server is down or not yet available.
-              - TIMEOUT=60 SKIP_LAST_OPERATION_CHECK=true ./hack/usage/wait-for.sh extop provider-local AdmissionHealthy
-        - host:
-            command:
-              - bash
-              - -ec
-              - hack/usage/generate-virtual-garden-admin-kubeconf.sh > $VIRTUAL_GARDEN_KUBECONFIG
-  statusCheck: false # enabled status check would watch all deployments in the garden namespace
----
-apiVersion: skaffold/v4beta12
-kind: Config
-metadata:
   name: garden-config
 build:
   artifacts:

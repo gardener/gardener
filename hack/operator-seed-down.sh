@@ -28,20 +28,10 @@ parse_flags() {
 
 parse_flags "$@"
 
-kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" annotate project local garden confirmation.gardener.cloud/deletion=true
-
 # cleanup gardenlet and seed
 "$(dirname "$0")/operator-gardenlet-down.sh" \
   --path-kind-kubeconfig "$PATH_KIND_KUBECONFIG" \
   --path-garden-kubeconfig "$PATH_GARDEN_KUBECONFIG"
 
 # cleanup garden
-kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" annotate garden local confirmation.gardener.cloud/deletion=true
-skaffold --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m garden
-kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete secrets -n garden virtual-garden-etcd-main-backup-local
-# wait for garden deletion
-kubectl wait --for=delete garden local --timeout=300s
-# wait for provider-local to get uninstalled
-kubectl wait --for=condition=RequiredRuntime="False" extensions.operator.gardener.cloud provider-local --timeout=120s
-kubectl wait --for=condition=RequiredVirtual="False" extensions.operator.gardener.cloud provider-local --timeout=30s
-kubectl wait --for=condition=Installed="False"       extensions.operator.gardener.cloud provider-local --timeout=30s
+"$(dirname "$0")/../dev-setup/garden.sh" down
