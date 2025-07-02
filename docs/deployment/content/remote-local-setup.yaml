@@ -374,11 +374,11 @@ spec:
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
           for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
           new_pane "make kind-operator-multi-zone-up" <<"EOF"
-            sync_kubeconfig example/gardener-local/kind/operator & sleep 1
+            sync_kubeconfig example/gardener-local/kind/multi-zone & sleep 1
             nice make kind-operator-multi-zone-down kind-operator-multi-zone-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
           EOF
           new_pane "make operator-up" <<"EOF"
-            export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig
+            export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig
             nice make operator-up
           EOF
           new_window "lifecycle" "Create" <<"EOF"
@@ -432,15 +432,15 @@ spec:
           tmux select-pane -T top; rm -f ~/.config/procps/toprc
           for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
           new_pane "make kind-operator-multi-zone-up" <<"EOF"
-            sync_kubeconfig example/gardener-local/kind/operator & sleep 1
+            sync_kubeconfig example/gardener-local/kind/multi-zone & sleep 1
             nice make kind-operator-multi-zone-down kind-operator-multi-zone-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
           EOF
           new_pane "make operator-up" <<"EOF"
-            export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig
+            export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig
             nice make operator-up
           EOF
           new_pane "make operator-seed-up" <<"EOF"
-            export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig
+            export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig
             nice make operator-seed-up
           EOF
           new_window "garden" "garden" Enter <<"EOF"

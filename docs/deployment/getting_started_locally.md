@@ -410,7 +410,7 @@ Afterwards, you can create your local `Garden` and install `gardenlet` into the 
 make operator-seed-up
 ```
 
-You find the kubeconfig for the KinD cluster at `./example/gardener-local/kind/operator/kubeconfig`.
+You find the kubeconfig for the KinD cluster at `./example/gardener-local/kind/multi-zone/kubeconfig`.
 The one for the virtual garden is accessible at `./dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
 
 > [!IMPORTANT]
