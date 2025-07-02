@@ -797,7 +797,7 @@ For the sake of illustration only, assume that there are two etcd pods `etcd-0` 
 * The `etcd-druid` will have to periodically check the health of both the `primary` and `hot-standby` nodes and ensure that these are up and running.
 * There will be a potential delay in determining that a `primary` etcd instance is no longer healthy, thereby increasing the delay in switching to the `hot-standby` etcd instance, causing longer downtime. It is also possible that at the same time `hot-standby` has also went down or is otherwise unhealthy, resulting in a complete downtime. The amount of time it will take to recover from such a situation would be several minutes (time to start etcd pod + time to restore either from full snapshot or apply delta snapshots).
 * Synchronization is always via backup-bucket, which will be less frequent as compared to an `active-active` etcd cluster where there is real-time synchronization done for any updates by the leader to majority or all of its followers.<!-- If the primary crashes, the time. -->
-* During the switchover from `primary` to `hot-standby`, if the `hot-standby` etcd is in the process of applying delta snaphots or restoring from a new full snapshot, then `hot-standby` should ensure that the backup-restore container sets the readiness probe to indicate that it is not ready yet, causing additional downtime.
+* During the switchover from `primary` to `hot-standby`, if the `hot-standby` etcd is in the process of applying delta snapshots or restoring from a new full snapshot, then `hot-standby` should ensure that the backup-restore container sets the readiness probe to indicate that it is not ready yet, causing additional downtime.
 </details>
 
 <details>
