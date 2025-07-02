@@ -761,6 +761,43 @@ var _ = Describe("Strategy", func() {
 			})
 		})
 	})
+
+	Context("StatusStrategy", func() {
+		BeforeEach(func() {
+			strategy = NewStatusStrategy()
+		})
+
+		Context("etcd encryption key rotation", func() {
+			DescribeTable("etcd encryption key rotation",
+				func(etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, shouldIncreaseGeneration bool) {
+					oldShoot := &core.Shoot{
+						Spec: core.ShootSpec{},
+						Status: core.ShootStatus{
+							Credentials: &core.ShootCredentials{
+								Rotation: &core.ShootCredentialsRotation{},
+							},
+						},
+					}
+
+					newShoot := oldShoot.DeepCopy()
+					newShoot.Status.Credentials.Rotation.ETCDEncryptionKey = etcdEncryptionKeyRotation
+
+					strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+					expectedGeneration := oldShoot.Generation
+					if shouldIncreaseGeneration {
+						expectedGeneration++
+					}
+					Expect(newShoot.Generation).To(Equal(expectedGeneration))
+				},
+
+				Entry("rotation status is nil", nil, false),
+				Entry("rotation phase is empty", &core.ETCDEncryptionKeyRotation{}, false),
+				Entry("rotation phase is completing", &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting}, true),
+				Entry("rotation phase is not completing", &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleted}, false),
+			)
+		})
+	})
 })
 
 var _ = Describe("ToSelectableFields", func() {

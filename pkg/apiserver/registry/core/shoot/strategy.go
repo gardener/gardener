@@ -228,6 +228,8 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 	if lastOperation := newShoot.Status.LastOperation; lastOperation != nil && lastOperation.Type == core.LastOperationTypeMigrate &&
 		(lastOperation.State == core.LastOperationStateSucceeded || lastOperation.State == core.LastOperationStateAborted) {
 		newShoot.Generation = oldShoot.Generation + 1
+	} else if etcdEncryptionKeyRotationPhase := gardencorehelper.GetShootETCDEncryptionKeyRotationPhase(newShoot.Status.Credentials); etcdEncryptionKeyRotationPhase == core.RotationCompleting {
+		newShoot.Generation = oldShoot.Generation + 1
 	}
 }
 
