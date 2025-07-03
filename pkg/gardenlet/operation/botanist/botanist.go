@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // DefaultInterval is the default interval for retry operations.
@@ -228,6 +229,12 @@ func (b *Botanist) CanEnableNodeAgentAuthorizerWebhook(ctx context.Context) (boo
 	// This is not possible in the initial kube-apiserver deployment (due to above order).
 	// Hence, we have to deploy kube-apiserver a second time - this time with the NodeAgentAuthorizer feature getting enabled.
 	// From then on, all subsequent reconciliations can always enable it and only one deployment is needed.
+	// TODO(oliver-goetz): Remove this two-step deployment once we only support Kubernetes 1.32+ (in this version, the
+	//  structured authorization feature has been promoted to GA).
+	if versionutils.ConstraintK8sGreaterEqual132.Check(b.Shoot.KubernetesVersion) {
+		return true, nil
+	}
+
 	return b.IsGardenerResourceManagerReady(ctx)
 }
 
