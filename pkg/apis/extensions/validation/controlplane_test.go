@@ -62,20 +62,6 @@ var _ = Describe("ControlPlane validation tests", func() {
 			}))))
 		})
 
-		It("should forbid unsupported purpose values", func() {
-			cpCopy := cp.DeepCopy()
-
-			p := extensionsv1alpha1.Purpose("does-not-exist")
-			cpCopy.Spec.Purpose = &p
-
-			errorList := ValidateControlPlane(cpCopy)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.purpose"),
-			}))))
-		})
-
 		It("should allow valid cp resources", func() {
 			errorList := ValidateControlPlane(cp)
 
@@ -101,13 +87,11 @@ var _ = Describe("ControlPlane validation tests", func() {
 			}))))
 		})
 
-		It("should prevent updating the type, purpose or region", func() {
+		It("should prevent updating the type or region", func() {
 			newControlPlane := prepareControlPlaneForUpdate(cp)
 
-			p := extensionsv1alpha1.Normal
 			newControlPlane.Spec.Type = "changed-type"
 			newControlPlane.Spec.Region = "changed-region"
-			newControlPlane.Spec.Purpose = &p
 
 			errorList := ValidateControlPlaneUpdate(newControlPlane, cp)
 
@@ -117,9 +101,6 @@ var _ = Describe("ControlPlane validation tests", func() {
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.region"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.purpose"),
 			}))))
 		})
 

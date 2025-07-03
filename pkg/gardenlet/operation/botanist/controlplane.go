@@ -19,7 +19,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -154,29 +153,17 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 }
 
 // DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
-func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) extensionscontrolplane.Interface {
-	values := &extensionscontrolplane.Values{
-		Name:      b.Shoot.GetInfo().Name,
-		Namespace: b.Shoot.ControlPlaneNamespace,
-		Purpose:   purpose,
-	}
-
-	// TODO(theoddora): Remove this after v1.123.0 was released when the Purpose field (exposure/normal) is removed.
-	switch purpose {
-	case extensionsv1alpha1.Normal:
-		values.Type = b.Shoot.GetInfo().Spec.Provider.Type
-		values.ProviderConfig = b.Shoot.GetInfo().Spec.Provider.ControlPlaneConfig
-		values.Region = b.Shoot.GetInfo().Spec.Region
-
-	case extensionsv1alpha1.Exposure:
-		values.Type = b.Seed.GetInfo().Spec.Provider.Type
-		values.Region = b.Seed.GetInfo().Spec.Provider.Region
-	}
-
+func (b *Botanist) DefaultControlPlane() extensionscontrolplane.Interface {
 	return extensionscontrolplane.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
-		values,
+		&extensionscontrolplane.Values{
+			Name:           b.Shoot.GetInfo().Name,
+			Namespace:      b.Shoot.ControlPlaneNamespace,
+			Type:           b.Shoot.GetInfo().Spec.Provider.Type,
+			ProviderConfig: b.Shoot.GetInfo().Spec.Provider.ControlPlaneConfig,
+			Region:         b.Shoot.GetInfo().Spec.Region,
+		},
 		extensionscontrolplane.DefaultInterval,
 		extensionscontrolplane.DefaultSevereThreshold,
 		extensionscontrolplane.DefaultTimeout,
