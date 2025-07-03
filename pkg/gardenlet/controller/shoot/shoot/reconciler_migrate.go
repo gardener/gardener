@@ -112,7 +112,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		o.Shoot.Networks = networks
 	}
 
-	nodeAgentAuthorizerWebhookReady, err := botanist.IsGardenerResourceManagerReady(ctx)
+	canEnableNodeAgentAuthorizerWebhook, err := botanist.CanEnableNodeAgentAuthorizerWebhook(ctx)
 	if err != nil {
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
@@ -152,7 +152,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		wakeUpKubeAPIServer = g.Add(flow.Task{
 			Name: "Scaling Kubernetes API Server up and waiting until ready",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.WakeUpKubeAPIServer(ctx, nodeAgentAuthorizerWebhookReady && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer))
+				return botanist.WakeUpKubeAPIServer(ctx, canEnableNodeAgentAuthorizerWebhook && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer))
 			}),
 			SkipIf:       !wakeupRequired,
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, initializeSecretsManagement),
@@ -180,7 +180,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.WakeUpKubeAPIServer(ctx, true)
 			}),
-			SkipIf:       !wakeupRequired || nodeAgentAuthorizerWebhookReady || !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer),
+			SkipIf:       !wakeupRequired || canEnableNodeAgentAuthorizerWebhook || !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer),
 			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
 		})
 		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
