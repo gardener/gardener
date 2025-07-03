@@ -39,7 +39,7 @@ import (
 const (
 	etcdEncryptionKey      = "etcd-encryption-key"
 	sshKeypair             = "ssh-keypair"
-	observabilityPasswords = "observability-passwords"
+	observabilityPasswords = "observability-passwords" // #nosec G101 -- No credential.
 )
 
 // Reconciler reconciles Shoots and maintains them by updating versions or triggering operations.
