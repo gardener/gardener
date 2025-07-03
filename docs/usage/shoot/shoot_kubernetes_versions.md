@@ -13,6 +13,7 @@ For Kubernetes specific upgrade notes the upstream Kubernetes release notes, [ch
 
 - A new `deny-all` `NetworkPolicy` is deployed into the `kube-system` namespace of the `Shoot` cluster. `Shoot` owners that run workloads in the `kube-system` namespace are required to explicitly allow their expected `Ingress` and `Egress` traffic in `kube-system` via `NetworkPolicies`.
 - The `Shoot`'s field `.spec.kubernetes.kubeControllerManager.podEvictionTimeout` is forbidden. `Shoot` owners should use the `.spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `.spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds` fields.
+- The `Shoot`'s field `.spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete` is forbidden. `Shoot` owners should use the `.spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism` field.
 
 ## Upgrading to Kubernetes `v1.32`
 

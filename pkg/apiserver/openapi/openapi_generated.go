@@ -2442,7 +2442,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					},
 					"maxEmptyBulkDelete": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: MaxScaleDownParallelism when that is set). Deprecated: This field is deprecated and will be removed once gardener drops support for Kubernetes v1.32. This cluster-autoscaler field is deprecated upstream, use --max-scale-down-parallelism instead.",
+							Description: "MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: MaxScaleDownParallelism when that is set).\n\nDeprecated: This field is deprecated. Setting this field will be forbidden starting from Kubernetes 1.33 and will be removed once gardener drops support for kubernetes v1.32. This cluster-autoscaler field is deprecated upstream, use --max-scale-down-parallelism instead.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

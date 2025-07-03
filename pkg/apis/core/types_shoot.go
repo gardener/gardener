@@ -548,8 +548,10 @@ type ClusterAutoscaler struct {
 	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
 	NewPodScaleUpDelay *metav1.Duration
 	// MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: MaxScaleDownParallelism when that is set).
-	// Deprecated: This field is deprecated and will be removed once gardener drops support for kubernetes v1.32.
+	//
+	// Deprecated: This field is deprecated. Setting this field will be forbidden starting from Kubernetes 1.33 and will be removed once gardener drops support for kubernetes v1.32.
 	// This cluster-autoscaler field is deprecated upstream, use --max-scale-down-parallelism instead.
+	// TODO(Kostov6): Drop this field after support for Kubernetes 1.32 is dropped.
 	MaxEmptyBulkDelete *int32
 	// MaxScaleDownParallelism specifies the maximum number of nodes (both empty and needing drain) that can be deleted in parallel.
 	// Default: 10 or MaxEmptyBulkDelete when that is set

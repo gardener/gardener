@@ -253,7 +253,7 @@ var _ = Describe("Warnings", func() {
 			shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{
 				MaxEmptyBulkDelete: ptr.To(int32(5)),
 			}
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field. The field has been deprecated and will not be supported by gardener from Kubernetes 1.33. Instead, use the spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism field.")))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.33. Instead, use the spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism field.")))
 		})
 
 		It("should return a warning when enableAnonymousAuthentication is set", func() {
