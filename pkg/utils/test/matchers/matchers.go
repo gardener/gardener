@@ -7,6 +7,7 @@ package matchers
 import (
 	"context"
 
+	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -169,4 +170,15 @@ func expectedObjects(objs []client.Object, scheme *runtime.Scheme) map[string]cl
 	}
 
 	return objects
+}
+
+// ContainAnyOf returns a Gomega matcher that checks if the actual slice contains at least of the wanted strings.
+func ContainAnyOf(wanted ...string) types.GomegaMatcher {
+	var matchers []types.GomegaMatcher
+
+	for _, element := range wanted {
+		matchers = append(matchers, ContainElement(element))
+	}
+
+	return Or(matchers...)
 }

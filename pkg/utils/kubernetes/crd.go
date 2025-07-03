@@ -32,9 +32,11 @@ var (
 	// amount of CRDs) in case we create a lot of CRDs in parallel (which happens at Garden or Seed creation), since
 	// they are processed sequentially.
 	WaitTimeout = 2 * time.Minute
+	// IntervalWait specifies the interval between tries to confirm for CRDs to become ready or to be deleted. Exposed for testing.
+	IntervalWait = 1 * time.Second
 )
 
-// WaitUntilCRDManifestsReady takes names of CRDs and waits for them to get ready with a timeout of 15 seconds.
+// WaitUntilCRDManifestsReady takes names of CRDs and waits for them to get ready with a timeout, specified by `WaitTimeout`
 func WaitUntilCRDManifestsReady(ctx context.Context, c client.Client, crdNames ...string) error {
 	var fns []flow.TaskFn
 	for _, crdName := range crdNames {
@@ -42,7 +44,7 @@ func WaitUntilCRDManifestsReady(ctx context.Context, c client.Client, crdNames .
 			timeoutCtx, cancel := context.WithTimeout(ctx, WaitTimeout)
 			defer cancel()
 
-			return retry.Until(timeoutCtx, 1*time.Second, func(ctx context.Context) (done bool, err error) {
+			return retry.Until(timeoutCtx, IntervalWait, func(ctx context.Context) (done bool, err error) {
 				crd := &apiextensionsv1.CustomResourceDefinition{}
 
 				if err := c.Get(ctx, client.ObjectKey{Name: crdName}, crd); err != nil {
@@ -62,7 +64,7 @@ func WaitUntilCRDManifestsReady(ctx context.Context, c client.Client, crdNames .
 	return flow.Parallel(fns...)(ctx)
 }
 
-// WaitUntilCRDManifestsDestroyed takes CRD names and waits for them to be gone with a timeout of 15 seconds.
+// WaitUntilCRDManifestsDestroyed takes CRD names and waits for them to be gone with a timeout, specified by `WaitTimeout`.
 func WaitUntilCRDManifestsDestroyed(ctx context.Context, c client.Client, crdNames ...string) error {
 	var fns []flow.TaskFn
 
@@ -76,7 +78,7 @@ func WaitUntilCRDManifestsDestroyed(ctx context.Context, c client.Client, crdNam
 		fns = append(fns, func(ctx context.Context) error {
 			timeoutCtx, cancel := context.WithTimeout(ctx, WaitTimeout)
 			defer cancel()
-			return WaitUntilResourceDeleted(timeoutCtx, c, crd, 1*time.Second)
+			return WaitUntilResourceDeleted(timeoutCtx, c, crd, IntervalWait)
 		})
 	}
 	return flow.Parallel(fns...)(ctx)

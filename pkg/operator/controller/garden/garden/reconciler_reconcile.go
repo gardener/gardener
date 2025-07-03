@@ -212,7 +212,7 @@ func (r *Reconciler) reconcile(
 		})
 		deployIstio = g.Add(flow.Task{
 			Name: "Deploying Istio",
-			Fn:   c.istio.Deploy,
+			Fn:   component.OpWait(c.istio).Deploy,
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
@@ -225,13 +225,8 @@ func (r *Reconciler) reconcile(
 
 		waitUntilEtcdDruidReady = g.Add(flow.Task{
 			Name:         "Waiting for ETCD Druid to be ready",
-			Fn:           c.istio.Wait,
+			Fn:           c.etcdDruid.Wait,
 			Dependencies: flow.NewTaskIDs(deployEtcdDruid),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting for Istio to be ready",
-			Fn:           c.istio.Wait,
-			Dependencies: flow.NewTaskIDs(deployIstio),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling DNSRecords for virtual garden cluster and ingress controller",
@@ -601,8 +596,9 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilGardenerAPIServerReady),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying Plutono",
-			Fn:   c.plutono.Deploy,
+			Name:         "Deploying Plutono",
+			Fn:           c.plutono.Deploy,
+			Dependencies: flow.NewTaskIDs(generateObservabilityIngressPassword),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying perses-operator",
@@ -636,43 +632,88 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 	var (
 		g = flow.NewGraph("Garden runtime setup")
 
-		_ = g.Add(flow.Task{
+		deployFluentCRDs = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for fluent-operator",
-			Fn:   component.OpWait(c.fluentCRD).Deploy,
+			Fn:   c.fluentCRD.Deploy,
 		})
-		_ = g.Add(flow.Task{
+		deployPrometheusCRDs = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for prometheus-operator",
-			Fn:   component.OpWait(c.prometheusCRD).Deploy,
+			Fn:   c.prometheusCRD.Deploy,
 		})
-		_ = g.Add(flow.Task{
+		deployPersesCRDs = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for perses-operator",
-			Fn:   component.OpWait(c.persesCRD).Deploy,
+			Fn:   c.persesCRD.Deploy,
 		})
-		_ = g.Add(flow.Task{
+		deployExtensionCRDs = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for extensions",
-			Fn:   component.OpWait(c.extensionCRD).Deploy,
+			Fn:   c.extensionCRD.Deploy,
 		})
 		deployEtcdCRD = g.Add(flow.Task{
 			Name: "Deploying ETCD-related custom resource definitions",
-			Fn:   component.OpWait(c.etcdCRD).Deploy,
+			Fn:   c.etcdCRD.Deploy,
 		})
 		deployVPACRD = g.Add(flow.Task{
 			Name:   "Deploying custom resource definitions for VPA",
-			Fn:     component.OpWait(c.vpaCRD).Deploy,
+			Fn:     c.vpaCRD.Deploy,
 			SkipIf: !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 		})
 		deployIstioCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for Istio",
-			Fn:   component.OpWait(c.istioCRD).Deploy,
+			Fn:   c.istioCRD.Deploy,
 		})
 		deployOpenTelemetryCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for OpenTelemetry",
-			Fn:   component.OpWait(c.openTelemetryCRD).Deploy,
+			Fn:   c.openTelemetryCRD.Deploy,
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for fluent-operator",
+			Fn:           c.fluentCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployFluentCRDs),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for extensions",
+			Fn:           c.extensionCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployExtensionCRDs),
+		})
+
+		waitForEtcdCRD = g.Add(flow.Task{
+			Name:         "Waiting for ETCD-related custom resource definitions",
+			Fn:           c.etcdCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployEtcdCRD),
+		})
+
+		waitForVPACRD = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for VPA",
+			Fn:           c.vpaCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployVPACRD),
+		})
+
+		waitForIstioCRD = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for Istio",
+			Fn:           c.istioCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployIstioCRD),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for prometheus-operator",
+			Fn:           c.prometheusCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployPrometheusCRDs),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for perses-operator",
+			Fn:           c.persesCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployPersesCRDs),
+		})
+		waitForOpenTelemetryCRD = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for OpenTelemetry",
+			Fn:           c.openTelemetryCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployOpenTelemetryCRD),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
 			Fn:           c.gardenerResourceManager.Deploy,
-			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, deployIstioCRD, deployOpenTelemetryCRD),
+			Dependencies: flow.NewTaskIDs(waitForEtcdCRD, waitForVPACRD, waitForIstioCRD, waitForOpenTelemetryCRD),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting for gardener-resource-manager to be healthy",
