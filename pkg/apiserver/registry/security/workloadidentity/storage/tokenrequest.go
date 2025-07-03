@@ -22,13 +22,17 @@ import (
 	securityapi "github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	securityvalidation "github.com/gardener/gardener/pkg/apis/security/validation"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 // TokenRequestREST implements a RESTStorage for a token request.
 type TokenRequestREST struct {
-	coreInformerFactory gardencoreinformers.SharedInformerFactory
+	shootListers       gardencorev1beta1listers.ShootLister
+	seedLister         gardencorev1beta1listers.SeedLister
+	projectLister      gardencorev1beta1listers.ProjectLister
+	backupBucketLister gardencorev1beta1listers.BackupBucketLister
+	backupEntryLister  gardencorev1beta1listers.BackupEntryLister
 
 	workloadIdentityGetter getter
 	tokenIssuer            workloadidentity.TokenIssuer
@@ -166,12 +170,20 @@ func (r *TokenRequestREST) GroupVersionKind(schema.GroupVersion) schema.GroupVer
 func NewTokenRequestREST(
 	storage getter,
 	tokenIssuer workloadidentity.TokenIssuer,
-	coreInformerFactory gardencoreinformers.SharedInformerFactory,
+	shootListers gardencorev1beta1listers.ShootLister,
+	seedLister gardencorev1beta1listers.SeedLister,
+	projectLister gardencorev1beta1listers.ProjectLister,
+	backupBucketLister gardencorev1beta1listers.BackupBucketLister,
+	backupEntryLister gardencorev1beta1listers.BackupEntryLister,
 ) *TokenRequestREST {
 	return &TokenRequestREST{
 		workloadIdentityGetter: storage,
 
-		tokenIssuer:         tokenIssuer,
-		coreInformerFactory: coreInformerFactory,
+		tokenIssuer:        tokenIssuer,
+		shootListers:       shootListers,
+		seedLister:         seedLister,
+		projectLister:      projectLister,
+		backupBucketLister: backupBucketLister,
+		backupEntryLister:  backupEntryLister,
 	}
 }

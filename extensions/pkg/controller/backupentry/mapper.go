@@ -34,15 +34,19 @@ func SecretToBackupEntryMapper(reader client.Reader, predicates []predicate.Pred
 
 		var requests []reconcile.Request
 		for _, backupEntry := range backupEntryList.Items {
-			if backupEntry.Spec.SecretRef.Name == obj.GetName() && backupEntry.Spec.SecretRef.Namespace == obj.GetNamespace() {
-				if predicateutils.EvalGeneric(&backupEntry, predicates...) {
-					requests = append(requests, reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Name: backupEntry.Name,
-						},
-					})
-				}
+			if backupEntry.Spec.SecretRef.Name != obj.GetName() || backupEntry.Spec.SecretRef.Namespace != obj.GetNamespace() {
+				continue
 			}
+
+			if !predicateutils.EvalGeneric(&backupEntry, predicates...) {
+				continue
+			}
+
+			requests = append(requests, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name: backupEntry.Name,
+				},
+			})
 		}
 
 		return requests
@@ -75,13 +79,15 @@ func NamespaceToBackupEntryMapper(reader client.Reader, predicates []predicate.P
 			}
 
 			expectedTechnicalID, expectedUID := ExtractShootDetailsFromBackupEntryName(backupEntry.Name)
-			if namespace.Name == expectedTechnicalID && shootUID == expectedUID {
-				requests = append(requests, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name: backupEntry.Name,
-					},
-				})
+			if namespace.Name != expectedTechnicalID || shootUID != expectedUID {
+				continue
 			}
+
+			requests = append(requests, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name: backupEntry.Name,
+				},
+			})
 		}
 		return requests
 	}

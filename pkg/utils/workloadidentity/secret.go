@@ -11,6 +11,7 @@ import (
 	"maps"
 
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -140,54 +141,71 @@ func WithContextObject(contextObject securityv1alpha1.ContextObject) SecretOptio
 	}
 }
 
+// reconcileSecret applies in-place the required modifications on the provided
+// <secret>. If <cleanDataKeys> is set, it deletes all data keys from the secret
+// except <token>, otherwise all data keys are preserved.
+func (s *Secret) reconcileSecret(secret *corev1.Secret, cleanDataKeys bool) {
+	secret.Type = corev1.SecretTypeOpaque
+
+	// preserve the renew timestamp if present but overwrite all other annotations
+	if v, ok := secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp]; ok {
+		secret.Annotations = utils.MergeStringMaps(s.annotations, map[string]string{
+			securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp: v,
+		})
+	} else {
+		secret.Annotations = s.annotations
+	}
+
+	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityNamespace, s.workloadIdentityNamespace)
+	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityName, s.workloadIdentityName)
+	if len(s.workloadIdentityContextObject) > 0 {
+		metav1.SetMetaDataAnnotation(&secret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityContextObject, string(s.workloadIdentityContextObject))
+	} else {
+		delete(secret.Annotations, securityv1alpha1constants.AnnotationWorkloadIdentityContextObject)
+	}
+
+	secret.Labels = utils.MergeStringMaps(s.labels, map[string]string{
+		securityv1alpha1constants.LabelPurpose:                  securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor,
+		securityv1alpha1constants.LabelWorkloadIdentityProvider: s.workloadIdentityProviderType,
+	})
+
+	if secret.Data == nil {
+		secret.Data = make(map[string][]byte)
+	}
+
+	if cleanDataKeys {
+		// preserve the data token key if present but overwrite all other data keys
+		maps.DeleteFunc(secret.Data, func(k string, _ []byte) bool {
+			return k != securityv1alpha1constants.DataKeyToken
+		})
+	}
+
+	if len(s.workloadIdentityProviderConfig) > 0 {
+		secret.Data[securityv1alpha1constants.DataKeyConfig] = s.workloadIdentityProviderConfig
+	} else {
+		delete(secret.Data, securityv1alpha1constants.DataKeyConfig)
+	}
+}
+
 // Reconcile creates or patches the workload identity secret. Based on the struct configuration, it adds
 // annotations and labels that are recognized by the token requestor controller for workload identities.
 func (s *Secret) Reconcile(ctx context.Context, c client.Client) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, s.secret, func() error {
-		s.secret.Type = corev1.SecretTypeOpaque
-
-		// preserve the renew timestamp if present but overwrite all other annotations
-		if v, ok := s.secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp]; ok {
-			s.secret.Annotations = utils.MergeStringMaps(s.annotations, map[string]string{
-				securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp: v,
-			})
-		} else {
-			s.secret.Annotations = s.annotations
-		}
-
-		metav1.SetMetaDataAnnotation(&s.secret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityNamespace, s.workloadIdentityNamespace)
-		metav1.SetMetaDataAnnotation(&s.secret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityName, s.workloadIdentityName)
-		if len(s.workloadIdentityContextObject) > 0 {
-			metav1.SetMetaDataAnnotation(&s.secret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityContextObject, string(s.workloadIdentityContextObject))
-		} else {
-			delete(s.secret.Annotations, securityv1alpha1constants.AnnotationWorkloadIdentityContextObject)
-		}
-
-		s.secret.Labels = utils.MergeStringMaps(s.labels, map[string]string{
-			securityv1alpha1constants.LabelPurpose:                  securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor,
-			securityv1alpha1constants.LabelWorkloadIdentityProvider: s.workloadIdentityProviderType,
-		})
-
-		if s.secret.Data == nil {
-			s.secret.Data = make(map[string][]byte)
-		}
-
-		// preserve the data token key if present but overwrite all other data keys
-		maps.DeleteFunc(s.secret.Data, func(k string, _ []byte) bool {
-			return k != securityv1alpha1constants.DataKeyToken
-		})
-
-		if len(s.workloadIdentityProviderConfig) > 0 {
-			s.secret.Data[securityv1alpha1constants.DataKeyConfig] = s.workloadIdentityProviderConfig
-		} else {
-			delete(s.secret.Data, securityv1alpha1constants.DataKeyConfig)
-		}
-
+		s.reconcileSecret(s.secret, true)
 		return nil
 	},
 		// The token-requestor might concurrently update the secret token key to populate the token.
 		// Hence, we need to use optimistic locking here to ensure we don't accidentally overwrite the concurrent update.
 		// ref https://github.com/gardener/gardener/issues/6092#issuecomment-1156244514
-		controllerutils.MergeFromOption{MergeFromOption: client.MergeFromWithOptimisticLock{}})
+		controllerutils.MergeFromOption{MergeFromOption: client.MergeFromWithOptimisticLock{}},
+	)
 	return err
+}
+
+// Equal generates a workload identity secret based on the <other> Secret
+// and compare them if they are deeply equal.
+func (s *Secret) Equal(other *corev1.Secret) bool {
+	copySecret := other.DeepCopy()
+	s.reconcileSecret(copySecret, false)
+	return apiequality.Semantic.DeepEqual(other, copySecret)
 }
