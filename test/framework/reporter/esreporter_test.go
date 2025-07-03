@@ -57,7 +57,7 @@ var _ = Describe("processReport tests", func() {
 	})
 
 	It("should setup test suite metadata correctly", func() {
-		expectedIndex := append([]byte(fmt.Sprintf(`{ "index": { "_index": "%s", "_type": "_doc" } }`, indexName)), []byte("\n")...)
+		expectedIndex := append([]byte(fmt.Sprintf(`{ "index": { "_index": "%s" } }`, indexName)), []byte("\n")...)
 		mockReport.PreRunStats.SpecsThatWillRun = 0
 
 		reporter.processReport(mockReport)
