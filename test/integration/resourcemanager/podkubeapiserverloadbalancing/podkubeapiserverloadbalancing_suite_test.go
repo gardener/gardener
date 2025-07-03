@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seccompprofile_test
+package podkubeapiserverloadbalancing_test
 
 import (
 	"context"
@@ -31,40 +31,40 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podkubeapiserverloadbalancing"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestSeccompProfile(t *testing.T) {
+func TestPodKubeAPIServerLoadBalancing(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ResourceManager SeccompProfile Suite")
+	RunSpecs(t, "Test Integration ResourceManager PodKubeAPIServerLoadBalancing Suite")
 }
 
-const testID = "seccompprofile-webhook-test"
+const testName = "podkubeapiserverloadbalancing-webhook-test"
 
 var (
 	ctx = context.Background()
 	log logr.Logger
 
-	testEnv    *envtest.Environment
 	restConfig *rest.Config
+	testEnv    *envtest.Environment
 	testClient client.Client
 
 	testNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
+	// determine a unique testID
+	testID := testName + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
-
-	// determine a unique namespace name to add a corresponding namespaceSelector to the webhook config
-	testNamespaceName := testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
 	By("Start test environment")
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			MutatingWebhooks: getMutatingWebhookConfigurations(testNamespaceName),
+			MutatingWebhooks: getMutatingWebhookConfigurations(testID),
 		},
 	}
 
@@ -86,7 +86,7 @@ var _ = BeforeSuite(func() {
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			Name: testNamespaceName,
+			Name: testID,
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
@@ -115,8 +115,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register webhook")
-	Expect((&seccompprofile.Handler{
-		Logger: log,
+	Expect((&podkubeapiserverloadbalancing.Handler{
+		Logger:       log,
+		TargetClient: testClient,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
@@ -139,27 +140,28 @@ var _ = BeforeSuite(func() {
 	})
 })
 
-func getMutatingWebhookConfigurations(namespaceName string) []*admissionregistrationv1.MutatingWebhookConfiguration {
-	return []*admissionregistrationv1.MutatingWebhookConfiguration{
+func getMutatingWebhookConfigurations(testID string) []*admissionregistrationv1.MutatingWebhookConfiguration {
+	webhookConfig := []*admissionregistrationv1.MutatingWebhookConfiguration{
 		{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: admissionregistrationv1.SchemeGroupVersion.String(),
 				Kind:       "MutatingWebhookConfiguration",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener-resource-manager",
+				Name: "gardener-resource-manager-" + testID,
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.NewSeccompProfileMutatingWebhook("", &metav1.LabelSelector{
-					MatchLabels: map[string]string{corev1.LabelMetadataName: namespaceName},
-				}, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
-					return admissionregistrationv1.WebhookClientConfig{
-						Service: &admissionregistrationv1.ServiceReference{
-							Path: &path,
-						},
-					}
-				}),
+				resourcemanager.NewPodKubeAPIServerLoadBalancingMutatingWebhook(
+					&metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: testID}}, "", nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+						return admissionregistrationv1.WebhookClientConfig{
+							Service: &admissionregistrationv1.ServiceReference{
+								Path: &path,
+							},
+						}
+					}),
 			},
 		},
 	}
+
+	return webhookConfig
 }

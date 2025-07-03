@@ -175,7 +175,7 @@ func getMutatingWebhookConfigurations(namespaceName string) []*admissionregistra
 				Name: "gardener-resource-manager",
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.GetSystemComponentsConfigMutatingWebhook(
+				resourcemanager.NewSystemComponentsConfigMutatingWebhook(
 					&metav1.LabelSelector{
 						MatchLabels: map[string]string{corev1.LabelMetadataName: namespaceName},
 					}, &metav1.LabelSelector{

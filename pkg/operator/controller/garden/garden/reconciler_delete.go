@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/garden/system/virtual"
 	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
+	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
@@ -235,6 +236,11 @@ func (r *Reconciler) delete(
 			Fn:           func(ctx context.Context) error { return r.cleanupGenericTokenKubeconfig(ctx, secretsManager) },
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),
 		})
+		cleanupIstioInternalLoadBalancingConfigMap = g.Add(flow.Task{
+			Name:         "Cleaning up Istio internal load balancing ConfigMap",
+			Fn:           r.cleanupIstioInternalLoadBalancingConfigMap,
+			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),
+		})
 		invalidateClient = g.Add(flow.Task{
 			Name: "Invalidate client for virtual garden",
 			Fn: func(_ context.Context) error {
@@ -244,6 +250,7 @@ func (r *Reconciler) delete(
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
 			cleanupGenericTokenKubeconfig,
+			cleanupIstioInternalLoadBalancingConfigMap,
 			destroyVirtualGardenGardenerResourceManager,
 			destroyKubeAPIServerSNI,
 			destroyKubeAPIServerService,
@@ -547,4 +554,15 @@ func (r *Reconciler) cleanupGarbageCollectableResources(ctx context.Context) err
 	}
 
 	return nil
+}
+
+func (r *Reconciler) cleanupIstioInternalLoadBalancingConfigMap(ctx context.Context) error {
+	return kubeapiserverexposure.ReconcileIstioInternalLoadBalancingConfigMap(
+		ctx,
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		"",
+		[]string{},
+		false,
+	)
 }

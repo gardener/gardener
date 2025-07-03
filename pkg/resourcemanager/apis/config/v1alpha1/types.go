@@ -239,6 +239,8 @@ type ResourceManagerWebhookConfiguration struct {
 	KubernetesServiceHost KubernetesServiceHostWebhookConfig `json:"kubernetesServiceHost"`
 	// SystemComponentsConfig is the configuration for the system-components-config webhook.
 	SystemComponentsConfig SystemComponentsConfigWebhookConfig `json:"systemComponentsConfig"`
+	// PodKubeAPIServerLoadBalancing is the configuration for the pod-kube-apiserver-load-balancing webhook.
+	PodKubeAPIServerLoadBalancing PodKubeAPIServerLoadBalancingWebhookConfig `json:"podKubeAPIServerLoadBalancing"`
 	// PodSchedulerName is the configuration for the pod-scheduler-name webhook.
 	PodSchedulerName PodSchedulerNameWebhookConfig `json:"podSchedulerName"`
 	// PodTopologySpreadConstraints is the configuration for the pod-topology-spread-constraints webhook.
@@ -306,6 +308,12 @@ type SystemComponentsConfigWebhookConfig struct {
 	PodTolerations []corev1.Toleration `json:"podTolerations,omitempty"`
 }
 
+// PodKubeAPIServerLoadBalancingWebhookConfig is the configuration for the pod-kube-apiserver-load-balancing webhook.
+type PodKubeAPIServerLoadBalancingWebhookConfig struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool `json:"enabled"`
+}
+
 // PodSchedulerNameWebhookConfig is the configuration for the pod-scheduler-name webhook.
 type PodSchedulerNameWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
@@ -353,4 +361,11 @@ const (
 	DefaultResourceClass = "resources"
 	// AllResourceClass is used as resource class when all values for resource classes should be covered.
 	AllResourceClass = "*"
+
+	// HostsConfigMapKey defines the key in the configmap that contains the kube-apiserver hosts.
+	HostsConfigMapKey = "hosts"
+	// IstioNamespaceConfigMapKey defines the key in the configmap that contains the namespace of the istio-ingressgateway service.
+	IstioNamespaceConfigMapKey = "istio-namespace"
+	// IstioInternalLoadBalancingConfigMapName defines the name of the configmap that contains the kube-apiserver hosts and istio namespace.
+	IstioInternalLoadBalancingConfigMapName = "istio-internal-load-balancing"
 )

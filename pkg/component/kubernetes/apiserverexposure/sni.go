@@ -9,6 +9,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"strings"
 	"text/template"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -587,4 +589,30 @@ func (s *sni) istioGatewayConfigurations() ([]istioGatewayConfiguration, error) 
 // This cluster is only available if Istio TLS termination is enabled for the shoot.
 func GetAPIServerProxyTargetClusterName(controlPlaneNamespace string) string {
 	return fmt.Sprintf("%s--kube-apiserver-socket", controlPlaneNamespace)
+}
+
+// ReconcileIstioInternalLoadBalancingConfigMap reconciles the configmap for istio internal load balancing.
+func ReconcileIstioInternalLoadBalancingConfigMap(ctx context.Context, c client.Client, namespace, istioNamespace string, hosts []string, istioTLSTerminationActive bool) error {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      resourcemanagerconfigv1alpha1.IstioInternalLoadBalancingConfigMapName,
+		},
+	}
+
+	if !istioTLSTerminationActive {
+		return client.IgnoreNotFound(c.Delete(ctx, configMap))
+	}
+
+	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, c, configMap, func() error {
+		configMap.Data = map[string]string{
+			resourcemanagerconfigv1alpha1.HostsConfigMapKey:          strings.Join(hosts, ","),
+			resourcemanagerconfigv1alpha1.IstioNamespaceConfigMapKey: istioNamespace,
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to reconcile configmap %q: %w", client.ObjectKeyFromObject(configMap), err)
+	}
+
+	return nil
 }

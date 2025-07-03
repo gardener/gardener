@@ -376,6 +376,7 @@ build:
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
             - pkg/resourcemanager/webhook/kubernetesservicehost
+            - pkg/resourcemanager/webhook/podkubeapiserverloadbalancing
             - pkg/resourcemanager/webhook/podschedulername
             - pkg/resourcemanager/webhook/podtopologyspreadconstraints
             - pkg/resourcemanager/webhook/projectedtokenmount
@@ -528,6 +529,7 @@ build:
             - pkg/resourcemanager/webhook/highavailabilityconfig
             - pkg/resourcemanager/webhook/kubernetesservicehost
             - pkg/resourcemanager/webhook/nodeagentauthorizer
+            - pkg/resourcemanager/webhook/podkubeapiserverloadbalancing
             - pkg/resourcemanager/webhook/podschedulername
             - pkg/resourcemanager/webhook/podtopologyspreadconstraints
             - pkg/resourcemanager/webhook/projectedtokenmount

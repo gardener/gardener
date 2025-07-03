@@ -41,6 +41,7 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -56,12 +57,15 @@ import (
 	gardenerdashboard "github.com/gardener/gardener/pkg/component/gardener/dashboard"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
+	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -180,6 +184,12 @@ func (r *Reconciler) reconcile(
 				return r.generateGenericTokenKubeconfig(ctx, garden, secretsManager)
 			},
 		})
+		reconcileIstioInternalLoadBalancingConfigMap = g.Add(flow.Task{
+			Name: "Reconcile Istio internal load balancing ConfigMap",
+			Fn: func(ctx context.Context) error {
+				return r.reconcileIstioInternalLoadbalancingConfigMap(ctx, garden, c.istio.GetValues().IngressGateway)
+			},
+		})
 		generateObservabilityIngressPassword = g.Add(flow.Task{
 			Name: "Generating observability ingress password",
 			Fn: func(ctx context.Context) error {
@@ -221,6 +231,7 @@ func (r *Reconciler) reconcile(
 			deployEtcdDruid,
 			deployIstio,
 			deployNginxIngressController,
+			reconcileIstioInternalLoadBalancingConfigMap,
 		)
 
 		waitUntilEtcdDruidReady = g.Add(flow.Task{
@@ -1348,4 +1359,21 @@ func (r *Reconciler) waitUntilRequiredExtensionsReady(ctx context.Context, log l
 
 		return retry.Ok()
 	})
+}
+
+func (r *Reconciler) reconcileIstioInternalLoadbalancingConfigMap(ctx context.Context, garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) error {
+	if len(ingressGatewayValues) != 1 {
+		return fmt.Errorf("exactly one Istio Ingress Gateway is required for the Istio internal load balancing config")
+	}
+
+	return kubeapiserverexposure.ReconcileIstioInternalLoadBalancingConfigMap(
+		ctx,
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		ingressGatewayValues[0].Namespace,
+		[]string{
+			v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
+		},
+		features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
+	)
 }

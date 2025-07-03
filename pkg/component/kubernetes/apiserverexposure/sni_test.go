@@ -767,6 +767,24 @@ var _ = Describe("#SNI", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
 		})
 	})
+
+	Describe("#ReconcileIstioInternalLoadBalancingConfigMap", func() {
+		It("should create, update and delete the configmap", func() {
+			configMap := &corev1.ConfigMap{}
+
+			Expect(ReconcileIstioInternalLoadBalancingConfigMap(ctx, c, namespace, istioNamespace, []string{"foo-host", "bar-host"}, true)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "istio-internal-load-balancing"}, configMap)).To(Succeed())
+			Expect(configMap.Data).To(Equal(map[string]string{"hosts": "foo-host,bar-host", "istio-namespace": istioNamespace}))
+
+			Expect(ReconcileIstioInternalLoadBalancingConfigMap(ctx, c, namespace, "bar-namespace", []string{"bar-host"}, true)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "istio-internal-load-balancing"}, configMap)).To(Succeed())
+			Expect(configMap.Data).To(Equal(map[string]string{"hosts": "bar-host", "istio-namespace": "bar-namespace"}))
+
+			Expect(ReconcileIstioInternalLoadBalancingConfigMap(ctx, c, namespace, "", []string{}, false)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "istio-internal-load-balancing"}, configMap)).To(BeNotFoundError())
+		})
+	})
+
 })
 
 func validateManagedResourceAndGetData(ctx context.Context, c client.Client, expectedManagedResource *resourcesv1alpha1.ManagedResource) []byte {

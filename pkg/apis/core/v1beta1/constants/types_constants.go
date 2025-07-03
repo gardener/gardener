@@ -657,6 +657,8 @@ const (
 	DefaultSNIIngressServiceName = "istio-ingressgateway"
 	// DefaultIngressGatewayAppLabelValue is the ingress gateway value for the app label.
 	DefaultIngressGatewayAppLabelValue = "istio-ingressgateway"
+	// InternalSNIIngressServiceName is the internal sni ingress service name.
+	InternalSNIIngressServiceName = DefaultSNIIngressServiceName + "-internal"
 
 	// DataTypeSecret is a constant for a value of the 'Type' field in 'GardenerResourceData' structs describing that
 	// the data is a secret.

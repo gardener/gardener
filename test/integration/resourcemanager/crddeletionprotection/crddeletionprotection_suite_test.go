@@ -143,7 +143,7 @@ func getValidatingWebhookConfig() *admissionregistrationv1.ValidatingWebhookConf
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "gardener-resource-manager",
 		},
-		Webhooks: resourcemanager.GetCRDDeletionProtectionValidatingWebhooks(nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+		Webhooks: resourcemanager.NewCRDDeletionProtectionValidatingWebhooks(nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
 			return admissionregistrationv1.WebhookClientConfig{
 				Service: &admissionregistrationv1.ServiceReference{
 					Path: &path,

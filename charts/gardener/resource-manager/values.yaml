@@ -117,6 +117,8 @@ global:
       kubernetesServiceHost:
         enabled: false
       # host: api.example.com
+      podKubeAPIServerLoadBalancing:
+        enabled: false
       podSchedulerName:
         enabled: false
       # schedulerName: foo-scheduler
