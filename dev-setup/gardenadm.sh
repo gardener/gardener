@@ -10,7 +10,7 @@ COMMAND="${1:-up}"
 VALID_COMMANDS=("up" "down")
 
 SCENARIO="${SCENARIO:-high-touch}"
-VALID_SCENARIOS=("high-touch" "medium-touch")
+VALID_SCENARIOS=("high-touch" "medium-touch" "connect")
 
 valid_scenario=false
 for scenario in "${VALID_SCENARIOS[@]}"; do
@@ -26,32 +26,38 @@ fi
 
 case "$COMMAND" in
   up)
-    # Prepare resources and generate manifests.
-    # The manifests are copied to the high-touch machine pods or can be passed to the `--config-dir` flag of `gardenadm bootstrap`.
-    skaffold build \
-      -p "$SCENARIO" \
-      -m gardenadm,provider-local-node,provider-local \
-      -q \
-      --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh gardenadm)" \
-      |\
-    skaffold render \
-      -p "$SCENARIO" \
-      -m provider-local-node,provider-local \
-      -o "$(dirname "$0")/gardenadm/resources/generated/$SCENARIO/manifests.yaml" \
-      --build-artifacts \
-      -
+    if [[ "$SCENARIO" != "connect" ]]; then
+      # Prepare resources and generate manifests.
+      # The manifests are copied to the high-touch machine pods or can be passed to the `--config-dir` flag of `gardenadm bootstrap`.
+      skaffold build \
+        -p "$SCENARIO" \
+        -m gardenadm,provider-local-node,provider-local \
+        -q \
+        --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh gardenadm)" \
+        |\
+      skaffold render \
+        -p "$SCENARIO" \
+        -m provider-local-node,provider-local \
+        -o "$(dirname "$0")/gardenadm/resources/generated/$SCENARIO/manifests.yaml" \
+        --build-artifacts \
+        -
 
-    if [[ "$SCENARIO" == "high-touch" ]]; then
-      skaffold run \
-        -n gardenadm-high-touch \
-        -m provider-local-node,machine
+      if [[ "$SCENARIO" == "high-touch" ]]; then
+        skaffold run \
+          -n gardenadm-high-touch \
+          -m provider-local-node,machine
+      fi
+    else
+      make operator-up garden-up \
+        -f "$(dirname "$0")/../Makefile" \
+        KUBECONFIG="$KUBECONFIG"
     fi
     ;;
 
   down)
     skaffold delete \
       -n "gardenadm-$SCENARIO"
-   ;;
+    ;;
 
   *)
     echo "Error: Invalid command '${COMMAND}'. Valid options are: ${VALID_COMMANDS[*]}." >&2
