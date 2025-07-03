@@ -36,7 +36,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5
 	github.com/perses/perses-operator v0.2.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.83.0
-	github.com/prometheus/blackbox_exporter v0.26.0
+	github.com/prometheus/blackbox_exporter v0.27.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/common v0.65.0
 	github.com/robfig/cron v1.2.0
@@ -174,7 +174,7 @@ require (
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/miekg/dns v1.1.65 // indirect
+	github.com/miekg/dns v1.1.66 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -265,7 +265,7 @@ require (
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250324211829-b45e905df463 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250324211829-b45e905df463 // indirect
-	google.golang.org/grpc v1.71.0 // indirect
+	google.golang.org/grpc v1.72.2 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
