@@ -706,8 +706,8 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 			Dependencies: flow.NewTaskIDs(deployPersesCRDs),
 		})
 		waitForOpenTelemetryCRD = g.Add(flow.Task{
-			Name: "Waiting for custom resource definitions for OpenTelemetry",
-			Fn:   c.openTelemetryCRD.Wait,
+			Name:         "Waiting for custom resource definitions for OpenTelemetry",
+			Fn:           c.openTelemetryCRD.Wait,
 			Dependencies: flow.NewTaskIDs(deployOpenTelemetryCRD),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
