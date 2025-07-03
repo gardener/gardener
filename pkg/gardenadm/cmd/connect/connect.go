@@ -47,6 +47,6 @@ gardenadm connect`,
 }
 
 func run(_ context.Context, opts *Options) error {
-	opts.Log.Info("Not implemented")
+	opts.Log.Info("Command is work in progress")
 	return nil
 }
