@@ -47,9 +47,8 @@ func (o *Options) Validate() error {
 	}
 
 	for _, cidr := range o.BastionIngressCIDRs {
-		_, _, err := net.ParseCIDR(cidr)
-		if err != nil {
-			return err
+		if _, _, err := net.ParseCIDR(cidr); err != nil {
+			return fmt.Errorf("invalid bastion ingress CIDR %q: %w", cidr, err)
 		}
 	}
 
