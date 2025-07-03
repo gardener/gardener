@@ -35,8 +35,8 @@ import (
 const (
 	// Explicitly use one version below the latest supported minor version
 	// so that Kubernetes version update test can be performed.
-	kubernetesTargetVersion = "1.31.1"
-	kubernetesSourceVersion = "1.30.0"
+	kubernetesTargetVersion = "1.32.0"
+	kubernetesSourceVersion = "1.31.1"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
