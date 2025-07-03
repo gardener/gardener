@@ -124,6 +124,32 @@ var _ = Describe("BackupBucket", func() {
 			Expect(actual).To(DeepEqual(expectedBackupBucket))
 		})
 
+		It("should successfully update the BackupBucket providerConfig", func() {
+			existing := expectedBackupBucket.DeepCopy()
+			existing.ResourceVersion = ""
+			existing.Spec.ProviderConfig = &runtime.RawExtension{
+				Raw: []byte(`{"apiVersion":"local.extensions.gardener.cloud/v1alpha1","foo":{"bar":"dash"},"kind":"BackupBucketConfig"}`),
+			}
+			Expect(fakeClient.Create(ctx, existing)).To(Succeed())
+
+			providerConfig := []byte(`{"apiVersion":"local.extensions.gardener.cloud/v1alpha1","foo":{"bar":"baz"},"kind":"BackupBucketConfig"}`)
+			values.Config.ProviderConfig = &runtime.RawExtension{
+				Raw: providerConfig,
+			}
+			deployer = New(log, fakeClient, values, 50*time.Millisecond, 200*time.Millisecond)
+
+			Expect(deployer.Deploy(ctx)).To(Succeed())
+
+			actual := &gardencorev1beta1.BackupBucket{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(existing), actual)).To(Succeed())
+
+			expectedBackupBucket.ResourceVersion = "2"
+			expectedBackupBucket.Spec.ProviderConfig = &runtime.RawExtension{Raw: providerConfig}
+			metav1.SetMetaDataAnnotation(&expectedBackupBucket.ObjectMeta, "gardener.cloud/operation", "reconcile")
+			metav1.SetMetaDataAnnotation(&expectedBackupBucket.ObjectMeta, "gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339Nano))
+			Expect(actual).To(DeepEqual(expectedBackupBucket))
+		})
+
 		When("seed is present and region is overridden", func() {
 			BeforeEach(func() {
 				backupConfig.Region = ptr.To("overridden-region")
