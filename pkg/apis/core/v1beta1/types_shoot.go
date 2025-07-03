@@ -1894,8 +1894,12 @@ type SSHAccess struct {
 var (
 	// DefaultWorkerMaxSurge is the default value for Worker MaxSurge.
 	DefaultWorkerMaxSurge = intstr.FromInt32(1)
+	// DefaultInPlaceWorkerMaxSurge is the default value for In-Place Worker MaxSurge.
+	DefaultInPlaceWorkerMaxSurge = intstr.FromInt32(0)
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
 	DefaultWorkerMaxUnavailable = intstr.FromInt32(0)
+	// DefaultInPlaceWorkerMaxUnavailable is the default value for In-Place Worker MaxUnavailable.
+	DefaultInPlaceWorkerMaxUnavailable = intstr.FromInt32(1)
 	// DefaultWorkerSystemComponentsAllow is the default value for Worker AllowSystemComponents
 	DefaultWorkerSystemComponentsAllow = true
 )
