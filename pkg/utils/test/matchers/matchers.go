@@ -172,7 +172,7 @@ func expectedObjects(objs []client.Object, scheme *runtime.Scheme) map[string]cl
 	return objects
 }
 
-// ContainAnyOf returns a Gomega matcher that checks if the actual slice does contain at least of the wanted strings.
+// ContainAnyOf returns a Gomega matcher that checks if the actual slice contains at least of the wanted strings.
 func ContainAnyOf(wanted ...string) types.GomegaMatcher {
 	var matchers []types.GomegaMatcher
 
