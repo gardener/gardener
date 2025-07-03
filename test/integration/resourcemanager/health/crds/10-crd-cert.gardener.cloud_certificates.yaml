@@ -29,6 +29,11 @@ spec:
       jsonPath: .status.state
       name: STATUS
       type: string
+    - description: Issuance date (not valid before this date)
+      jsonPath: .status.issuanceDate
+      name: ISSUANCE_DATE
+      priority: 500
+      type: string
     - description: Expiration date (not valid anymore after this date)
       jsonPath: .status.expirationDate
       name: EXPIRATION_DATE
@@ -89,7 +94,7 @@ spec:
                   ACME issuer may choose to ignore the requested duration, just like any other
                   requested attribute.
                   If unset, this defaults to 90 days (2160h).
-                  Must be greater than twice of the renewal window
+                  Must be at least twice the renewal window.
                   Value must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration.
                 type: string
               ensureRenewedAfter:
@@ -351,6 +356,9 @@ spec:
                 type: array
               expirationDate:
                 description: ExpirationDate shows the notAfter validity date.
+                type: string
+              issuanceDate:
+                description: IssuanceDate shows the notBefore validity date.
                 type: string
               issuerRef:
                 description: IssuerRef is the used issuer.
