@@ -88,7 +88,7 @@ type backupBucket struct {
 
 // Deploy uses the garden client to create or update the BackupBucket resource in the Garden.
 func (b *backupBucket) Deploy(ctx context.Context) error {
-	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.client, b.backupBucket, func() error {
+	_, err := controllerutils.CreateOrGetAndMergePatch(ctx, b.client, b.backupBucket, func() error {
 		metav1.SetMetaDataAnnotation(&b.backupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&b.backupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, b.values.Clock.Now().UTC().Format(time.RFC3339Nano))
 
