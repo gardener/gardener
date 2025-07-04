@@ -168,7 +168,7 @@ var _ = Describe("StartRotation", func() {
 			expectedShoot.Status.Credentials.Rotation.ETCDEncryptionKey = &gardencorev1beta1.ETCDEncryptionKeyRotation{
 				Phase:                       gardencorev1beta1.RotationPreparing,
 				LastInitiationTime:          &now,
-				LastInitiationFinishedTime:  &now,
+				LastInitiationFinishedTime:  nil,
 				LastCompletionTriggeredTime: nil,
 			}
 			StartRotationETCDEncryptionKey(shoot, &now)

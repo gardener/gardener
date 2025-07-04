@@ -94,7 +94,7 @@ func (v *ETCDEncryptionKeyVerifier) ExpectPreparingStatus(g Gomega) {
 	etcdEncryptionKeyRotation := v.GetETCDEncryptionKeyRotation()
 	g.Expect(etcdEncryptionKeyRotation.Phase).To(Equal(gardencorev1beta1.RotationPreparing))
 	g.Expect(time.Now().UTC().Sub(etcdEncryptionKeyRotation.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
-	g.Expect(time.Now().UTC().Sub(etcdEncryptionKeyRotation.LastInitiationFinishedTime.UTC())).To(BeNumerically("<=", time.Minute))
+	g.Expect(etcdEncryptionKeyRotation.LastInitiationFinishedTime).To(BeNil())
 	g.Expect(etcdEncryptionKeyRotation.LastCompletionTriggeredTime).To(BeNil())
 }
 
