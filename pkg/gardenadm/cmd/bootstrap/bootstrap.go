@@ -15,16 +15,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/publicip"
 )
 
 // NewCommand creates a new cobra.Command.
 func NewCommand(globalOpts *cmd.Options) *cobra.Command {
-	opts := &Options{Options: globalOpts}
+	opts := &Options{
+		Options:          globalOpts,
+		PublicIPDetector: publicip.IpifyDetector{},
+	}
 
 	cmd := &cobra.Command{
 		Use:   "bootstrap",
@@ -191,7 +196,18 @@ func run(ctx context.Context, opts *Options) error {
 		// TODO(timebertt): add b.Shoot.Components.Extensions.Worker.Wait when
 		//  https://github.com/gardener/machine-controller-manager/issues/994 has been implemented
 
+		deployBastion = g.Add(flow.Task{
+			Name: "Deploying and connecting to bastion host",
+			Fn: func(ctx context.Context) error {
+				b.Bastion.Values.IngressCIDRs = opts.BastionIngressCIDRs
+				return component.OpWait(b.Bastion).Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
+		})
+		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
+
 		_ = deployWorker
+		_ = deployBastion
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{

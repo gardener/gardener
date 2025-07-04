@@ -71,6 +71,7 @@ build:
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
             - pkg/component/extensions/backupentry
+            - pkg/component/extensions/bastion
             - pkg/component/extensions/containerruntime
             - pkg/component/extensions/controlplane
             - pkg/component/extensions/crds
@@ -324,9 +325,11 @@ build:
             - pkg/utils/managedresources/builder
             - pkg/utils/net
             - pkg/utils/oci
+            - pkg/utils/publicip
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
+            - pkg/utils/ssh
             - pkg/utils/structuredmap
             - pkg/utils/time
             - pkg/utils/timewindow

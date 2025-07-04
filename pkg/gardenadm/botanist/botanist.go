@@ -28,6 +28,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/component/extensions/bastion"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -47,6 +48,9 @@ type AutonomousBotanist struct {
 	DBus       dbus.DBus
 	FS         afero.Afero
 	Extensions []Extension
+
+	// Bastion is only set for `gardenadm bootstrap`.
+	Bastion *bastion.Bastion
 
 	operatingSystemConfigSecret       *corev1.Secret
 	gardenerResourceManagerServiceIPs []string
@@ -132,6 +136,8 @@ func NewAutonomousBotanist(
 	}
 
 	if !autonomousBotanist.Shoot.RunsControlPlane() {
+		autonomousBotanist.Bastion = autonomousBotanist.DefaultBastion()
+
 		// For `gardenadm bootstrap`, we don't initialize the control plane machines with a "full OSC".
 		// Instead, we provide a small alternative OSC, that only fetches the `gardenadm` binary from the registry.
 		autonomousBotanist.Shoot.Components.Extensions.OperatingSystemConfig, err = autonomousBotanist.ControlPlaneBootstrapOperatingSystemConfig()

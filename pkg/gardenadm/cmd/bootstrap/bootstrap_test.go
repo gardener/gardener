@@ -54,6 +54,7 @@ var _ = Describe("Bootstrap", func() {
 		BeforeEach(func() {
 			Expect(command.Flags().Set("kubeconfig", "some-path-to-kubeconfig")).To(Succeed())
 			Expect(command.Flags().Set("config-dir", "some-path-to-config-dir")).To(Succeed())
+			Expect(command.Flags().Set("bastion-ingress-cidr", "1.2.3.4/32,2001:db8::1/128")).To(Succeed())
 		})
 
 		Describe("safety check", func() {
