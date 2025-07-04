@@ -912,18 +912,28 @@ var _ = Describe("#TokenRequest", func() {
 			payload, err := base64.RawURLEncoding.DecodeString(encodedPayload)
 			Expect(err).ToNot(HaveOccurred())
 
-			gardenerClaims := map[string](map[string](map[string]string)){}
+			gardenerClaims := map[string]any{}
 			Expect(json.Unmarshal(payload, &gardenerClaims)).To(Succeed())
 			Expect(gardenerClaims).To(HaveKey("gardener.cloud"))
-			Expect(gardenerClaims["gardener.cloud"]).To(HaveKey("seed"))
 
-			seedClaims := gardenerClaims["gardener.cloud"]["seed"]
+			gardenerCloud, ok := (gardenerClaims["gardener.cloud"]).(map[string]any)
+			Expect(ok).To(BeTrue())
+
+			Expect(gardenerCloud).To(HaveKey("seed"))
+			seedClaims, ok := (gardenerCloud["seed"]).(map[string]any)
+			Expect(ok).To(BeTrue())
+
 			Expect(seedClaims).To(HaveLen(2))
 			Expect(seedClaims).To(Not(HaveKey("namespace")))
-			Expect(seedClaims).To(And(
-				HaveKeyWithValue("name", seedName),
-				HaveKeyWithValue("uid", string(seedUID)),
-			))
+			Expect(seedClaims).To(And(HaveKey("name"), HaveKey("uid")))
+
+			name, ok := (seedClaims["name"]).(string)
+			Expect(ok).To(BeTrue())
+			Expect(name).To(Equal(seedName))
+
+			uid, ok := (seedClaims["uid"]).(string)
+			Expect(ok).To(BeTrue())
+			Expect(uid).To(Equal(string(seedUID)))
 		})
 	})
 })
