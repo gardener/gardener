@@ -187,11 +187,13 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.DeployWorker,
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady, waitUntilOperatingSystemConfigReady, deployMachineControllerManager),
 		})
-		// The Machine objects won't get ready yet because there will not be any Node objects.
-		// TODO(timebertt): add b.Shoot.Components.Extensions.Worker.Wait when
-		//  https://github.com/gardener/machine-controller-manager/issues/994 has been implemented
+		waitUntilWorkerReady = g.Add(flow.Task{
+			Name:         "Waiting until shoot worker nodes have been reconciled",
+			Fn:           b.Shoot.Components.Extensions.Worker.Wait,
+			Dependencies: flow.NewTaskIDs(deployWorker),
+		})
 
-		_ = deployWorker
+		_ = waitUntilWorkerReady
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
