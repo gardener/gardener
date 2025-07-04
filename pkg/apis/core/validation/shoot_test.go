@@ -4413,9 +4413,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationPrepared,
-							},
 						},
 					},
 				}),
@@ -4429,27 +4426,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 								Phase: core.RotationPrepared,
 							},
 							ServiceAccountKey: &core.ServiceAccountKeyRotation{
-								Phase: core.RotationPreparing,
-							},
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationPrepared,
-							},
-						},
-					},
-				}),
-				Entry("etcd key rotation phase is preparing", false, core.ShootStatus{
-					LastOperation: &core.LastOperation{
-						Type: core.LastOperationTypeReconcile,
-					},
-					Credentials: &core.ShootCredentials{
-						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.CARotation{
-								Phase: core.RotationPrepared,
-							},
-							ServiceAccountKey: &core.ServiceAccountKeyRotation{
-								Phase: core.RotationPrepared,
-							},
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPreparing,
 							},
 						},
@@ -4467,9 +4443,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationPrepared,
-							},
 						},
 					},
 				}),
@@ -4483,9 +4456,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 								Phase: core.RotationCompleting,
 							},
 							ServiceAccountKey: &core.ServiceAccountKeyRotation{
-								Phase: core.RotationPrepared,
-							},
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationPrepared,
 							},
 						},
@@ -4503,27 +4473,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationCompleting,
 							},
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationPrepared,
-							},
-						},
-					},
-				}),
-				Entry("etcd key rotation phase is completing", false, core.ShootStatus{
-					LastOperation: &core.LastOperation{
-						Type: core.LastOperationTypeReconcile,
-					},
-					Credentials: &core.ShootCredentials{
-						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.CARotation{
-								Phase: core.RotationPrepared,
-							},
-							ServiceAccountKey: &core.ServiceAccountKeyRotation{
-								Phase: core.RotationPrepared,
-							},
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationCompleting,
-							},
 						},
 					},
 				}),
@@ -4539,9 +4488,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationPrepared,
 							},
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationPrepared,
-							},
 						},
 					},
 				}),
@@ -4555,27 +4501,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 								Phase: core.RotationPrepared,
 							},
 							ServiceAccountKey: &core.ServiceAccountKeyRotation{
-								Phase: core.RotationCompleted,
-							},
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationPrepared,
-							},
-						},
-					},
-				}),
-				Entry("etcd key rotation phase is completed", false, core.ShootStatus{
-					LastOperation: &core.LastOperation{
-						Type: core.LastOperationTypeReconcile,
-					},
-					Credentials: &core.ShootCredentials{
-						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.CARotation{
-								Phase: core.RotationPrepared,
-							},
-							ServiceAccountKey: &core.ServiceAccountKeyRotation{
-								Phase: core.RotationPrepared,
-							},
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
 								Phase: core.RotationCompleted,
 							},
 						},
