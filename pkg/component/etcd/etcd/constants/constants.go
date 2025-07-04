@@ -34,5 +34,5 @@ var (
 	StaticPodPortEtcdEventsBackupRestore int32 = 8081
 	// StaticPodPortEtcdEventsWrapper is the port exposed by the etcd-wrapper container in etcd-events when it runs as
 	// static pod.
-	StaticPodPortEtcdEventsWrapper int32 = 9095
+	StaticPodPortEtcdEventsWrapper int32 = 9096
 )

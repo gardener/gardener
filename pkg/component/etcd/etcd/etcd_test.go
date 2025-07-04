@@ -382,7 +382,7 @@ var _ = Describe("Etcd", func() {
 					obj.Spec.Backup.Port = ptr.To[int32](8081)
 					obj.Spec.Etcd.ClientPort = ptr.To[int32](2382)
 					obj.Spec.Etcd.ServerPort = ptr.To[int32](2383)
-					obj.Spec.Etcd.WrapperPort = ptr.To[int32](9095)
+					obj.Spec.Etcd.WrapperPort = ptr.To[int32](9096)
 				}
 			}
 
