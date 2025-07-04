@@ -211,7 +211,7 @@ func AddIstioIngressGateway(
 // In case the zone name is too long the first five characters of the hash of the zone are used as zone identifiers.
 func GetIstioNamespaceForZone(defaultNamespace string, zone string) string {
 	const format = "%s--%s"
-	if ns := fmt.Sprintf(format, defaultNamespace, zone); len(ns) <= validation.DNS1035LabelMaxLength {
+	if ns := fmt.Sprintf(format, defaultNamespace, zone); len(ns) <= validation.DNS1035LabelMaxLength && zone == strings.ToLower(zone) {
 		return ns
 	}
 	// Use the first five characters of the hash of the zone
