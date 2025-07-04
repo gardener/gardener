@@ -861,7 +861,6 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		[]corev1.ServicePort{
 			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
 		},
-		false,
 		nil,
 		false,
 		garden.Spec.RuntimeCluster.Provider.Zones,

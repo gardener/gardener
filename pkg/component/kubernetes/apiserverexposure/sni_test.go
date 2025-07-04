@@ -86,7 +86,6 @@ var _ = Describe("#SNI", func() {
 
 		apiServerProxyValues = &APIServerProxy{
 			APIServerClusterIP: "1.1.1.1",
-			UseProxyProtocol:   true,
 		}
 		namespace = "test-namespace"
 		istioLabels = map[string]string{"foo": "bar"}
@@ -358,7 +357,7 @@ var _ = Describe("#SNI", func() {
 				},
 			}
 
-			if (apiServerProxyValues != nil && apiServerProxyValues.UseProxyProtocol) || istioTLSTermination {
+			if istioTLSTermination {
 				mrData := validateManagedResourceAndGetData(ctx, c, expectedManagedResourceSNI)
 
 				var envoyFilterObjectsMetas []metav1.ObjectMeta
@@ -373,10 +372,6 @@ var _ = Describe("#SNI", func() {
 					actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)
 					// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
 					envoyFilterObjectsMetas = append(envoyFilterObjectsMetas, actualEnvoyFilter.ObjectMeta)
-				}
-
-				if apiServerProxyValues != nil && apiServerProxyValues.UseProxyProtocol {
-					Expect(envoyFilterObjectsMetas).To(ContainElement(expectedEnvoyFilterObjectMetaAPIServerProxy))
 				}
 
 				if istioTLSTermination {

@@ -112,7 +112,6 @@ type SNIValues struct {
 // APIServerProxy contains values for the APIServer proxy protocol configuration.
 type APIServerProxy struct {
 	APIServerClusterIP string
-	UseProxyProtocol   bool
 }
 
 // IstioIngressGateway contains the values for istio ingress gateway configuration.
@@ -221,7 +220,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	if values.APIServerProxy != nil && (values.APIServerProxy.UseProxyProtocol || values.IstioTLSTermination) {
+	if values.APIServerProxy != nil && values.IstioTLSTermination {
 		envoyFilter := s.emptyEnvoyFilterAPIServerProxy()
 
 		apiServerClusterIPPrefixLen, err := netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
@@ -301,9 +300,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 			filename := fmt.Sprintf("envoyfilter__%s__%s.yaml", envoyFilter.Namespace, envoyFilter.Name)
 			registry.AddSerialized(filename, envoyFilterIstioTLSTermination.Bytes())
 		}
-	}
 
-	if (values.APIServerProxy != nil && values.APIServerProxy.UseProxyProtocol) || values.IstioTLSTermination {
 		serializedObjects, err := registry.SerializedObjects()
 		if err != nil {
 			return err

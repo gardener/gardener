@@ -39,7 +39,6 @@ type istioTestValues struct {
 	externalTrafficPolicy              *corev1.ServiceExternalTrafficPolicy
 	serviceExternalIP                  *string
 	servicePorts                       []corev1.ServicePort
-	proxyProtocolEnabled               bool
 	terminateLoadBalancerProxyProtocol bool
 	vpnEnabled                         bool
 	zones                              []string
@@ -71,7 +70,6 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.externalTrafficPolicy,
 		testValues.serviceExternalIP,
 		testValues.servicePorts,
-		testValues.proxyProtocolEnabled,
 		&testValues.terminateLoadBalancerProxyProtocol,
 		testValues.vpnEnabled,
 		testValues.zones,
@@ -129,7 +127,6 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 				NetworkPolicyLabels:                networkPolicyLabels,
 				Namespace:                          "shared-istio-test-some-istio-ingress",
 				PriorityClassName:                  testValues.priorityClassName,
-				ProxyProtocolEnabled:               testValues.proxyProtocolEnabled,
 				TerminateLoadBalancerProxyProtocol: testValues.terminateLoadBalancerProxyProtocol,
 				VPNEnabled:                         testValues.vpnEnabled,
 				EnforceSpreadAcrossHosts:           testValues.enforceSpreadAcrossHosts,
@@ -183,7 +180,6 @@ func checkAdditionalIstioGateway(cl client.Client,
 		NetworkPolicyLabels:                ingressValues[0].NetworkPolicyLabels,
 		Namespace:                          namespace,
 		PriorityClassName:                  ingressValues[0].PriorityClassName,
-		ProxyProtocolEnabled:               ingressValues[0].ProxyProtocolEnabled,
 		TerminateLoadBalancerProxyProtocol: ingressValues[0].TerminateLoadBalancerProxyProtocol,
 		VPNEnabled:                         true,
 		Zones:                              zones,
@@ -223,7 +219,6 @@ var _ = Describe("Istio", func() {
 			externalTrafficPolicy:              &trafficPolicy,
 			serviceExternalIP:                  ptr.To("1.2.3.4"),
 			servicePorts:                       []corev1.ServicePort{{Port: 443}},
-			proxyProtocolEnabled:               false,
 			terminateLoadBalancerProxyProtocol: proxyProtocolLB,
 			vpnEnabled:                         vpnEnabled,
 			zones:                              zones,

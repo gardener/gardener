@@ -15,6 +15,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -91,15 +92,19 @@ var _ = Describe("APIServerProxy", func() {
 	})
 
 	Describe("#DeployAPIServerProxy", func() {
-		It("should deploy apiserverproxy and set ShootAPIServerProxyUsesHTTPProxy constraint", func() {
-			Expect(botanist.DeployAPIServerProxy(ctx)).To(Succeed())
+		It("should deploy apiserverproxy and remove ShootAPIServerProxyUsesHTTPProxy constraint", func() {
+			Expect(botanist.Shoot.UpdateInfoStatus(ctx, botanist.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
+				condition := v1beta1helper.GetOrInitConditionWithClock(botanist.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootAPIServerProxyUsesHTTPProxy)
+				condition = v1beta1helper.UpdatedConditionWithClock(botanist.Clock, condition, gardencorev1beta1.ConditionTrue, "APIServerProxyUsesHTTPProxy", "The API server proxy was reconfigured to use the HTTP proxy method.")
+				shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
+				return nil
+			})).To(Succeed())
 
+			Expect(botanist.DeployAPIServerProxy(ctx)).To(Succeed())
 			Expect(botanist.GardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 
-			Expect(shoot.Status.Constraints).To(ContainCondition(
+			Expect(shoot.Status.Constraints).NotTo(ContainCondition(
 				OfType(gardencorev1beta1.ShootAPIServerProxyUsesHTTPProxy),
-				WithStatus(gardencorev1beta1.ConditionTrue),
-				WithReason("APIServerProxyUsesHTTPProxy"),
 			))
 		})
 	})
