@@ -120,7 +120,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return result, nil
 	}
 
-	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, garden, operationType)
+	if err := r.updateStatusOperationSuccess(ctx, garden, operationType); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if etcdEncryptionKeyRotationPhase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationCompleting {
+		return reconcile.Result{RequeueAfter: 1 * time.Nanosecond}, nil
+	}
+
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, nil
 }
 
 func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
