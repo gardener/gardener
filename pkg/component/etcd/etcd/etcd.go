@@ -160,6 +160,7 @@ type Values struct {
 	PriorityClassName           string
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
+	RunsAsStaticPod             bool
 }
 
 // BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
@@ -227,7 +228,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 		}
 		metrics = druidcorev1alpha1.Extensive
-		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
+
+		if !e.values.RunsAsStaticPod {
+			volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
+		}
 	}
 
 	etcdCASecret, serverSecret, clientSecret, err := GenerateClientServerCertificates(
@@ -235,7 +239,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		e.secretsManager,
 		e.values.Role,
 		e.clientServiceDNSNames(),
-		nil,
+		e.clientServiceIPAddresses(),
 	)
 	if err != nil {
 		return err
@@ -323,8 +327,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
-			ServerPort:              ptr.To(etcdconstants.PortEtcdPeer),
-			ClientPort:              ptr.To(etcdconstants.PortEtcdClient),
+			ClientPort:              ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdClient, etcdconstants.StaticPodPortEtcdEventsClient)),
+			ServerPort:              ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdPeer, etcdconstants.StaticPodPortEtcdEventsPeer)),
+			WrapperPort:             ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdWrapper, etcdconstants.StaticPodPortEtcdEventsWrapper)),
 			Metrics:                 &metrics,
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
 			Quota:                   ptr.To(resource.MustParse("8Gi")),
@@ -370,7 +375,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
-			Port:                    ptr.To(etcdconstants.PortBackupRestore),
+			Port:                    ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortBackupRestore, etcdconstants.StaticPodPortEtcdEventsBackupRestore)),
 			Resources:               resourcesBackupRestore,
 			CompactionResources:     resourcesCompactionJob,
 			GarbageCollectionPolicy: &garbageCollectionPolicy,
@@ -401,6 +406,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					ReelectionPeriod:      e.values.BackupConfig.LeaderElection.ReelectionPeriod,
 				}
 			}
+		}
+
+		if e.values.RunsAsStaticPod {
+			e.etcd.Spec.RunAsRoot = ptr.To(true)
+			metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, druidcorev1alpha1.DisableEtcdRuntimeComponentCreationAnnotation, "")
 		}
 
 		if existingEtcd == nil || existingEtcd.Spec.StorageCapacity == nil {
@@ -851,7 +861,21 @@ func (e *etcd) clientServiceDNSNames() []string {
 	// See https://github.com/gardener/etcd-backup-restore/issues/494
 	domainNames = append(domainNames, kubernetesutils.DNSNamesForService(fmt.Sprintf("*.%s-peer", e.etcd.Name), e.namespace)...)
 
+	if e.values.RunsAsStaticPod {
+		domainNames = append(domainNames, "localhost")
+	}
+
 	return domainNames
+}
+
+func (e *etcd) clientServiceIPAddresses() []net.IP {
+	if !e.values.RunsAsStaticPod {
+		return nil
+	}
+	return []net.IP{
+		net.ParseIP("127.0.0.1"),
+		net.ParseIP("::1"),
+	}
 }
 
 func (e *etcd) peerServiceDNSNames() []string {
@@ -1109,6 +1133,13 @@ func GenerateClientServerCertificates(
 	}
 
 	return etcdCASecret, serverSecret, clientSecret, nil
+}
+
+func (e *etcd) defaultPortOrEtcdEventsStaticPodPort(defaultPort, etcdEventsPortWhenRunningAsStaticPod int32) int32 {
+	if e.values.Role == v1beta1constants.ETCDRoleMain || !e.values.RunsAsStaticPod {
+		return defaultPort
+	}
+	return etcdEventsPortWhenRunningAsStaticPod
 }
 
 // Name returns the name of the etcd based on its role.

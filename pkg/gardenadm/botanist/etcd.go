@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -22,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
 	corebackupbucket "github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -154,4 +156,30 @@ func runReconcilerUntilCondition(ctx context.Context, logger logr.Logger, contro
 
 		return retry.Ok()
 	})
+}
+
+// WaitUntilEtcdsReconciled waits until the druid.gardener.cloud/v1alpha1.Etcd resources have been reconciled by
+// etcd-druid.
+func (b *AutonomousBotanist) WaitUntilEtcdsReconciled(ctx context.Context) error {
+	if err := b.WaitUntilEtcdsReady(ctx); err != nil {
+		return fmt.Errorf("failed waiting for etcd to become ready: %w", err)
+	}
+
+	b.useEtcdManagedByDruid = true
+	return nil
+}
+
+// FinalizeEtcdBootstrapTransition cleans up no longer needed directories for the bootstrap etcds. Those are not deleted
+// automatically.
+func (b *AutonomousBotanist) FinalizeEtcdBootstrapTransition(_ context.Context) error {
+	for _, dir := range []string{
+		filepath.Join(string(filepath.Separator), "var", "lib", bootstrapetcd.Name(v1beta1constants.ETCDRoleMain)),
+		filepath.Join(string(filepath.Separator), "var", "lib", bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents)),
+	} {
+		if err := b.FS.RemoveAll(dir); err != nil {
+			return fmt.Errorf("failed cleaning up %s directory: %w", dir, err)
+		}
+	}
+
+	return nil
 }
