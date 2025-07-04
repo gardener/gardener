@@ -247,6 +247,7 @@ func (r *Reconciler) reconcileBackupBucket(
 			metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 			metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().Format(time.RFC3339Nano))
 			metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.AnnotationBackupBucketGeneratedSecretNamespace, r.GardenNamespace)
+			metav1.SetMetaDataLabel(&extensionBackupBucket.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+backupBucket.Spec.Provider.Type, "true")
 
 			extensionBackupBucket.Spec = extensionBackupBucketSpec
 			return nil
