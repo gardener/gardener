@@ -311,7 +311,6 @@ var _ = Describe("validation", func() {
 			resource := core.ControllerResource{
 				Kind:                 extensionsv1alpha1.ExtensionResource,
 				Type:                 "arbitrary",
-				GloballyEnabled:      ptr.To(true),
 				AutoEnable:           []core.ClusterType{core.ClusterTypeShoot},
 				ClusterCompatibility: []core.ClusterType{core.ClusterTypeShoot},
 				ReconcileTimeout:     &metav1.Duration{Duration: 10 * time.Second},
@@ -328,7 +327,6 @@ var _ = Describe("validation", func() {
 
 		It("should forbid to set certain fields for kind != Extension", func() {
 			strategy := core.BeforeKubeAPIServer
-			ctrlResource.GloballyEnabled = ptr.To(true)
 			ctrlResource.AutoEnable = []core.ClusterType{core.ClusterTypeShoot}
 			ctrlResource.ReconcileTimeout = &metav1.Duration{Duration: 10 * time.Second}
 			ctrlResource.Lifecycle = &core.ControllerResourceLifecycle{
@@ -339,9 +337,6 @@ var _ = Describe("validation", func() {
 			errorList := ValidateControllerResources(resources, validModes, fldPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("resources[0].globallyEnabled"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("resources[0].autoEnable"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{

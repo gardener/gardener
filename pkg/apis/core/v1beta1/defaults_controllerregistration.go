@@ -5,7 +5,6 @@
 package v1beta1
 
 import (
-	"slices"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,10 +18,6 @@ func SetDefaults_ControllerResource(obj *ControllerResource) {
 	}
 
 	if obj.Kind == "Extension" {
-		if ptr.Deref(obj.GloballyEnabled, false) && !slices.Contains(obj.AutoEnable, ClusterTypeShoot) {
-			obj.AutoEnable = append(obj.AutoEnable, ClusterTypeShoot)
-		}
-
 		if len(obj.ClusterCompatibility) == 0 {
 			obj.ClusterCompatibility = []ClusterType{ClusterTypeShoot}
 		}

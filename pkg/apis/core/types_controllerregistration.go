@@ -61,10 +61,6 @@ type ControllerResource struct {
 	Kind string
 	// Type is the resource type.
 	Type string
-	// GloballyEnabled determines if this resource is required by all Shoot clusters.
-	// TODO(timuthy): Remove this field in Gardener v1.123.
-	// Deprecated: This field is deprecated and will be removed in Gardener version v1.123. Please use AutoEnable instead.
-	GloballyEnabled *bool
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
 	// This field is defaulted to 3m0s when kind is "Extension".
 	ReconcileTimeout *metav1.Duration

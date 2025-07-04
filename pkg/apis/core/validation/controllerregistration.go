@@ -115,9 +115,6 @@ func ValidateControllerResources(resources []core.ControllerResource, clusterTyp
 		resourceKindToType[resource.Kind] = resource.Type
 
 		if resource.Kind != extensionsv1alpha1.ExtensionResource {
-			if resource.GloballyEnabled != nil {
-				allErrs = append(allErrs, field.Forbidden(idxPath.Child("globallyEnabled"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
-			}
 			if len(resource.AutoEnable) > 0 {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("autoEnable"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
 			}
