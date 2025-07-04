@@ -24,6 +24,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
@@ -170,6 +171,13 @@ var _ = Describe("GardenerMetricsExporter", func() {
 					APIGroups: []string{seedmanagementv1alpha1.GroupName},
 					Resources: []string{
 						"managedseeds",
+					},
+					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{securityv1alpha1.GroupName},
+					Resources: []string{
+						"credentialsbindings",
 					},
 					Verbs: []string{"get", "list", "watch"},
 				},
