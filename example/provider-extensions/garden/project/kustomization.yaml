@@ -5,3 +5,5 @@ resources:
 - project.yaml
 - credentials/infrastructure-secrets.yaml
 - credentials/secretbindings.yaml
+- credentials/infrastructure-workloadidentities.yaml
+- credentials/credentialsbindings.yaml
