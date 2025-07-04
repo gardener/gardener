@@ -21,11 +21,11 @@ function copy_kubeconfig_from_kubeconfig_env_var() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
     cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
-    cp $KIND_KUBECONFIG example/gardener-local/kind/operator/kubeconfig
+    cp $KIND_KUBECONFIG example/gardener-local/kind/multi-zone/kubeconfig
     ;;
   zone)
     cp $KIND_KUBECONFIG dev-setup/gardenlet/components/kubeconfigs/seed-local/kubeconfig
-    cp $KIND_KUBECONFIG example/gardener-local/kind/operator/kubeconfig
+    cp $KIND_KUBECONFIG example/gardener-local/kind/multi-zone/kubeconfig
     ;;
   *)
     cp $KUBECONFIG example/provider-local/seed-kind/base/kubeconfig
@@ -37,10 +37,10 @@ function copy_kubeconfig_from_kubeconfig_env_var() {
 function gardener_up() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make operator-seed-up SKAFFOLD_PROFILE=multi-node
+    make operator-seed-up
     ;;
   zone)
-    make operator-seed-up SKAFFOLD_PROFILE=multi-zone
+    make operator-seed-up
     ;;
   *)
     make gardener-up
@@ -51,10 +51,10 @@ function gardener_up() {
 function gardener_down() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make operator-seed-down SKAFFOLD_PROFILE=multi-node
+    make operator-seed-down
     ;;
   zone)
-    make operator-seed-down SKAFFOLD_PROFILE=multi-zone
+    make operator-seed-down
     ;;
   *)
     make gardener-down
@@ -65,10 +65,10 @@ function gardener_down() {
 function kind_up() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make kind-operator-multi-node-up
+    make kind-multi-node-up
     ;;
   zone)
-    make kind-operator-multi-zone-up
+    make kind-multi-zone-up
     ;;
   *)
     make kind-up
@@ -79,10 +79,10 @@ function kind_up() {
 function kind_down() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node)
-    make kind-operator-multi-node-down
+    make kind-multi-node-down
     ;;
   zone)
-    make kind-operator-multi-zone-down
+    make kind-multi-zone-down
     ;;
   *)
     make kind-down

@@ -859,13 +859,13 @@ The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and
 ### Setting Up the KinD Cluster (runtime cluster)
 
 ```shell
-make kind-operator-multi-zone-up
+make kind-multi-zone-up
 ```
 
-This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/operator/kubeconfig` file.
+This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/multi-zone/kubeconfig` file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
-Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/operator/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig`.
+Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/multi-zone/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig`.
 
 All the following steps assume that you are using this kubeconfig.
 
@@ -960,5 +960,5 @@ Please see [here](../deployment/getting_started_locally.md#alternative-way-to-se
 
 ```shell
 make operator-down
-make kind-operator-multi-zone-down
+make kind-multi-zone-down
 ```

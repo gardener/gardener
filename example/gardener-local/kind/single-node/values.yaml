@@ -1,0 +1,9 @@
+gardener:
+  controlPlane:
+    deployed: true
+    kindIsGardenCluster: false
+    customEtcdStatefulSet: false
+  nginxIngress:
+    deployed: true
+  garden:
+    deployed: true
