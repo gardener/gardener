@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // DefaultInterval is the default interval for retry operations.
@@ -218,14 +219,26 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	return b, nil
 }
 
-// IsGardenerResourceManagerReady checks if gardener-resource-manager is running, so that node-agent-authorizer webhook is accessible.
-func (b *Botanist) IsGardenerResourceManagerReady(ctx context.Context) (bool, error) {
+// CanEnableNodeAgentAuthorizerWebhook checks if gardener-resource-manager is running, so that node-agent-authorizer
+// webhook is accessible.
+func (b *Botanist) CanEnableNodeAgentAuthorizerWebhook(ctx context.Context) (bool, error) {
 	// The reconcile flow deploys the kube-apiserver of the shoot before the gardener-resource-manager (it has to be
 	// this way, otherwise the Gardener components cannot start). However, GRM serves an authorization webhook for the
 	// NodeAgentAuthorizer feature. We can only configure kube-apiserver to consult this webhook when GRM runs, obviously.
 	// This is not possible in the initial kube-apiserver deployment (due to above order).
 	// Hence, we have to deploy kube-apiserver a second time - this time with the NodeAgentAuthorizer feature getting enabled.
 	// From then on, all subsequent reconciliations can always enable it and only one deployment is needed.
+	// TODO(oliver-goetz): Remove this two-step deployment once we only support Kubernetes 1.32+ (in this version, the
+	//  structured authorization feature has been promoted to GA).
+	if versionutils.ConstraintK8sGreaterEqual132.Check(b.Shoot.KubernetesVersion) {
+		return true, nil
+	}
+
+	return b.IsGardenerResourceManagerReady(ctx)
+}
+
+// IsGardenerResourceManagerReady checks if gardener-resource-manager has ready replicas.
+func (b *Botanist) IsGardenerResourceManagerReady(ctx context.Context) (bool, error) {
 	resourceManagerDeployment := &appsv1.Deployment{}
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: b.Shoot.ControlPlaneNamespace}, resourceManagerDeployment); err != nil {
 		if !apierrors.IsNotFound(err) {

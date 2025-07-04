@@ -154,7 +154,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
-	nodeAgentAuthorizerWebhookReady, err := botanist.IsGardenerResourceManagerReady(ctx)
+	canEnableNodeAgentAuthorizerWebhook, err := botanist.CanEnableNodeAgentAuthorizerWebhook(ctx)
 	if err != nil {
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
@@ -334,7 +334,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.DeployKubeAPIServer(ctx, nodeAgentAuthorizerWebhookReady && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer))
+				return botanist.DeployKubeAPIServer(ctx, canEnableNodeAgentAuthorizerWebhook && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer))
 			}).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
 			Dependencies: flow.NewTaskIDs(
 				initializeSecretsManagement,
@@ -387,13 +387,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.DeployKubeAPIServer(ctx, true)
 			}).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
-			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || nodeAgentAuthorizerWebhookReady,
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || canEnableNodeAgentAuthorizerWebhook,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
 		waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server with node-agent-authorizer rolled out",
 			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait,
-			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || o.Shoot.HibernationEnabled || nodeAgentAuthorizerWebhookReady || skipReadiness,
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || o.Shoot.HibernationEnabled || canEnableNodeAgentAuthorizerWebhook || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerWithNodeAgentAuthorizer),
 		})
 		_ = g.Add(flow.Task{

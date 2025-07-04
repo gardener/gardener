@@ -7,6 +7,7 @@ package botanist_test
 import (
 	"context"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -58,12 +59,31 @@ var _ = Describe("Botanist", func() {
 		botanist.SeedClientSet = k8sSeedClient
 		botanist.Shoot = &shootpkg.Shoot{
 			ControlPlaneNamespace: seedNamespace.Name,
+			KubernetesVersion:     semver.MustParse("v1.31.0"),
 		}
 
 		resourceManagerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: seedNamespace.Name}}
 		Expect(seedClient.Create(ctx, resourceManagerDeployment)).To(Succeed())
 		DeferCleanup(func() {
 			Expect(seedClient.Delete(ctx, resourceManagerDeployment)).To(Succeed())
+		})
+	})
+
+	Describe("#CanEnableNodeAgentAuthorizerWebhook", func() {
+		It("should return false if the gardener-resource-manager is not ready", func(ctx context.Context) {
+			Expect(botanist.CanEnableNodeAgentAuthorizerWebhook(ctx)).To(BeFalse())
+		})
+
+		It("should return true even if the gardener-resource-manager is not ready when Kubernetes version is at least 1.32", func(ctx context.Context) {
+			botanist.Shoot.KubernetesVersion = semver.MustParse("1.32.0")
+			Expect(botanist.CanEnableNodeAgentAuthorizerWebhook(ctx)).To(BeTrue())
+		})
+
+		It("should return true if the gardener-resource-manager is ready", func(ctx context.Context) {
+			resourceManagerDeployment.Status.ReadyReplicas = 1
+			Expect(seedClient.Status().Update(ctx, resourceManagerDeployment)).To(Succeed())
+
+			Expect(botanist.CanEnableNodeAgentAuthorizerWebhook(ctx)).To(BeTrue())
 		})
 	})
 
