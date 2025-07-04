@@ -586,24 +586,23 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		startRotationCA(shoot, &now)
 		startRotationServiceAccountKey(shoot, &now)
 		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
-			startRotationSSHKeypair(shoot, &now)
+			helper.StartRotationSSHKeypair(shoot, &now)
 		}
-		startRotationObservability(shoot, &now)
-		startRotationETCDEncryptionKey(shoot, &now)
+		helper.StartRotationObservability(shoot, &now)
+		helper.StartRotationETCDEncryptionKey(shoot, &now)
 	case v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
 		mustRemoveOperationAnnotation = true
 		startRotationCAWithoutWorkersRollout(shoot, &now)
 		startRotationServiceAccountKeyWithoutWorkersRollout(shoot, &now)
 		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
-			startRotationSSHKeypair(shoot, &now)
+			helper.StartRotationSSHKeypair(shoot, &now)
 		}
-		startRotationObservability(shoot, &now)
-		startRotationETCDEncryptionKey(shoot, &now)
+		helper.StartRotationObservability(shoot, &now)
+		helper.StartRotationETCDEncryptionKey(shoot, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(shoot, &now)
 		completeRotationServiceAccountKey(shoot, &now)
-		completeRotationETCDEncryptionKey(shoot, &now)
 
 	case v1beta1constants.OperationRotateCAStart:
 		mustRemoveOperationAnnotation = true
@@ -618,12 +617,12 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	case v1beta1constants.ShootOperationRotateSSHKeypair:
 		mustRemoveOperationAnnotation = true
 		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
-			startRotationSSHKeypair(shoot, &now)
+			helper.StartRotationSSHKeypair(shoot, &now)
 		}
 
 	case v1beta1constants.OperationRotateObservabilityCredentials:
 		mustRemoveOperationAnnotation = true
-		startRotationObservability(shoot, &now)
+		helper.StartRotationObservability(shoot, &now)
 
 	case v1beta1constants.OperationRotateServiceAccountKeyStart:
 		mustRemoveOperationAnnotation = true
@@ -635,12 +634,9 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		mustRemoveOperationAnnotation = true
 		completeRotationServiceAccountKey(shoot, &now)
 
-	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
+	case v1beta1constants.OperationRotateETCDEncryptionKey:
 		mustRemoveOperationAnnotation = true
-		startRotationETCDEncryptionKey(shoot, &now)
-	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationETCDEncryptionKey(shoot, &now)
+		helper.StartRotationETCDEncryptionKey(shoot, &now)
 	}
 
 	if operation := shoot.Annotations[v1beta1constants.GardenerOperation]; strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
@@ -822,11 +818,10 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 	}
 
 	switch v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) {
-	case gardencorev1beta1.RotationPreparing:
-		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
-			rotation.Phase = gardencorev1beta1.RotationPrepared
-			rotation.LastInitiationFinishedTime = &now
-		})
+	// TODO: Remove rotation prepared case in a future release.
+	// It is added to forcefully complete the etcd encryption key rotation.
+	case gardencorev1beta1.RotationPreparing, gardencorev1beta1.RotationPrepared:
+		completeRotationETCDEncryptionKey(shoot, &now)
 
 	case gardencorev1beta1.RotationCompleting:
 		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
@@ -1134,31 +1129,11 @@ func completeRotationServiceAccountKey(shoot *gardencorev1beta1.Shoot, now *meta
 	})
 }
 
-func startRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
-	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
-		rotation.Phase = gardencorev1beta1.RotationPreparing
-		rotation.LastInitiationTime = now
-		rotation.LastInitiationFinishedTime = nil
-		rotation.LastCompletionTriggeredTime = nil
-	})
-}
-
 func completeRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
 	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationCompleting
 		rotation.LastCompletionTriggeredTime = now
-	})
-}
-
-func startRotationSSHKeypair(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
-	v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
-		rotation.LastInitiationTime = now
-	})
-}
-
-func startRotationObservability(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
-	v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ObservabilityRotation) {
-		rotation.LastInitiationTime = now
+		rotation.LastInitiationFinishedTime = now
 	})
 }
 
