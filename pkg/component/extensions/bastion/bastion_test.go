@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package botanist_test
+package bastion_test
 
 import (
 	"context"
@@ -24,11 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	. "github.com/gardener/gardener/pkg/gardenadm/botanist"
-	"github.com/gardener/gardener/pkg/gardenlet/operation"
-	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
-	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	. "github.com/gardener/gardener/pkg/component/extensions/bastion"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -39,7 +35,7 @@ import (
 
 var _ = Describe("Bastion", func() {
 	const (
-		name      = "gardenadm-bootstrap"
+		name      = "test"
 		namespace = "shoot--foo--bar"
 		provider  = "local"
 	)
@@ -66,27 +62,11 @@ var _ = Describe("Bastion", func() {
 
 		DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
 
-		botanist := &AutonomousBotanist{
-			Botanist: &botanistpkg.Botanist{
-				Operation: &operation.Operation{
-					Logger:         logr.Discard(),
-					SeedClientSet:  fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build(),
-					SecretsManager: fakeSecretManager,
-					Shoot: &shoot.Shoot{
-						ControlPlaneNamespace: namespace,
-					},
-				},
-			},
-		}
-		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-			Spec: gardencorev1beta1.ShootSpec{
-				Provider: gardencorev1beta1.Provider{
-					Type: provider,
-				},
-			},
+		b = New(logr.Discard(), fakeClient, fakeSecretManager, &Values{
+			Name:      name,
+			Namespace: namespace,
+			Provider:  provider,
 		})
-
-		b = botanist.DefaultBastion()
 		b.Clock = testclock.NewFakePassiveClock(time.Date(2025, 06, 25, 0, 0, 0, 0, time.UTC))
 		b.WaitInterval = time.Millisecond
 		b.WaitSevereThreshold = 250 * time.Millisecond
