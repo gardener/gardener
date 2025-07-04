@@ -34,3 +34,7 @@ spec:
       registryBurst: 20
       protectKernelDefaults: true
       streamingConnectionIdleTimeout: 5m
+    verticalPodAutoscaler:
+      enabled: true
+      featureGates:
+        InPlaceOrRecreate: false

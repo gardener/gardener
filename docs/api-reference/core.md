@@ -7885,7 +7885,8 @@ ETCD
 <a href="#core.gardener.cloud/v1beta1.KubeControllerManagerConfig">KubeControllerManagerConfig</a>, 
 <a href="#core.gardener.cloud/v1beta1.KubeProxyConfig">KubeProxyConfig</a>, 
 <a href="#core.gardener.cloud/v1beta1.KubeSchedulerConfig">KubeSchedulerConfig</a>, 
-<a href="#core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig</a>, 
+<a href="#core.gardener.cloud/v1beta1.VerticalPodAutoscaler">VerticalPodAutoscaler</a>)
 </p>
 <p>
 <p>KubernetesConfig contains common configuration fields for the control plane components.</p>
@@ -11495,6 +11496,18 @@ is enabled by default because Gardener heavily relies on a VPA being deployed. Y
 your seed cluster already has another, manually/custom managed VPA deployment.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>featureGates</code></br>
+<em>
+map[string]bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FeatureGates is a map of feature gates for the vpa components.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettings">SeedSettings
@@ -14098,6 +14111,21 @@ string
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>KubernetesConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.KubernetesConfig">
+KubernetesConfig
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>KubernetesConfig</code> are embedded into this type.)
+</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>enabled</code></br>

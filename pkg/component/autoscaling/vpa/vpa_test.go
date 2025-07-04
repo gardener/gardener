@@ -78,7 +78,7 @@ var _ = Describe("VPA", func() {
 		vpa       component.DeployWaiter
 		consistOf func(...client.Object) types.GomegaMatcher
 		contain   func(...client.Object) types.GomegaMatcher
-		vpaFor    func(component.ClusterType, bool) component.DeployWaiter
+		vpaFor    func(component.ClusterType, bool, map[string]bool) component.DeployWaiter
 
 		imageAdmissionController = "some-image:for-admission-controller"
 		imageRecommender         = "some-image:for-recommender"
@@ -186,7 +186,7 @@ var _ = Describe("VPA", func() {
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		vpaFor = func(clusterType component.ClusterType, isGardenCluster bool) component.DeployWaiter {
+		vpaFor = func(clusterType component.ClusterType, isGardenCluster bool, featureGates map[string]bool) component.DeployWaiter {
 			vpa = New(c, namespace, sm, Values{
 				ClusterType:              clusterType,
 				IsGardenCluster:          isGardenCluster,
@@ -196,6 +196,7 @@ var _ = Describe("VPA", func() {
 				AdmissionController:      valuesAdmissionController,
 				Recommender:              valuesRecommender,
 				Updater:                  valuesUpdater,
+				FeatureGates:             featureGates,
 			})
 			return vpa
 		}
@@ -1434,14 +1435,14 @@ var _ = Describe("VPA", func() {
 	Describe("#Deploy", func() {
 		Context("cluster type seed", func() {
 			BeforeEach(func() {
-				vpa = vpaFor(component.ClusterTypeSeed, false)
+				vpa = vpaFor(component.ClusterTypeSeed, false, nil)
 				managedResourceName = "vpa"
 			})
 
 			Context("when deploying Services", func() {
 				Context("in a garden cluster", func() {
 					BeforeEach(func() {
-						vpa = vpaFor(component.ClusterTypeSeed, true)
+						vpa = vpaFor(component.ClusterTypeSeed, true, nil)
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 					})
 
@@ -1475,7 +1476,7 @@ var _ = Describe("VPA", func() {
 			Context("when deploying ServiceMonitors", func() {
 				Context("in a garden cluster", func() {
 					BeforeEach(func() {
-						vpa = vpaFor(component.ClusterTypeSeed, true)
+						vpa = vpaFor(component.ClusterTypeSeed, true, nil)
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 					})
 
@@ -1770,14 +1771,92 @@ var _ = Describe("VPA", func() {
 
 		Context("cluster type shoot", func() {
 			BeforeEach(func() {
-				vpa = vpaFor(component.ClusterTypeShoot, false)
+				vpa = vpaFor(component.ClusterTypeShoot, false, nil)
 				managedResourceName = "shoot-core-vpa"
+			})
+
+			Context("when deploying with feature gates", func() {
+				var (
+					getContainerArgs = func(deployment *appsv1.Deployment, containerName string) []string {
+						for _, c := range deployment.Spec.Template.Spec.Containers {
+							if c.Name == containerName {
+								return c.Args
+							}
+						}
+						return []string{}
+					}
+				)
+
+				Context("without entries", func() {
+					BeforeEach(func() {
+						vpa = vpaFor(component.ClusterTypeShoot, false, nil)
+						Expect(vpa.Deploy(ctx)).To(Succeed())
+					})
+
+					It("should omit --feature-gates argument in vpa-admission-controller container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-admission-controller"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "admission-controller")
+						Expect(args).ShouldNot(ContainElement(HavePrefix("--feature-gates=")))
+					})
+
+					It("should omit --feature-gates argument in vpa-updater container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-updater"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "updater")
+						Expect(args).ShouldNot(ContainElement(HavePrefix("--feature-gates=")))
+					})
+
+					It("should omit --feature-gates argument in vpa-recommender container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "recommender")
+						Expect(args).ShouldNot(ContainElement(HavePrefix("--feature-gates=")))
+					})
+				})
+
+				Context("with InPlaceOrRecreate enabled", func() {
+					BeforeEach(func() {
+						featureGates := map[string]bool{
+							"InPlaceOrRecreate": true,
+						}
+						vpa = vpaFor(component.ClusterTypeShoot, false, featureGates)
+						Expect(vpa.Deploy(ctx)).To(Succeed())
+					})
+
+					It("should add InPlaceOrRecreate=true feature gate to vpa-admission-controller container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-admission-controller"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "admission-controller")
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
+					})
+
+					It("should add InPlaceOrRecreate=true feature gate to vpa-updater container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-updater"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "updater")
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
+					})
+
+					It("should add InPlaceOrRecreate=true feature gate to vpa-recommender container", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
+
+						args := getContainerArgs(deployment, "recommender")
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
+					})
+				})
 			})
 
 			Context("when deploying ServiceMonitors", func() {
 				Context("in a garden cluster", func() {
 					BeforeEach(func() {
-						vpa = vpaFor(component.ClusterTypeShoot, true)
+						vpa = vpaFor(component.ClusterTypeShoot, true, nil)
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 					})
 
@@ -1804,7 +1883,7 @@ var _ = Describe("VPA", func() {
 
 				Context("when not deployed in a garden cluster", func() {
 					BeforeEach(func() {
-						vpa = vpaFor(component.ClusterTypeShoot, false)
+						vpa = vpaFor(component.ClusterTypeShoot, false, nil)
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 					})
 

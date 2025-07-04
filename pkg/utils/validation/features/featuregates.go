@@ -138,7 +138,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"IPTablesOwnershipCleanup":                         {Default: true, LockedToDefaultInVersion: "1.28", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.30"}},
 	"ImageMaximumGCAge":                                {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 	"ImageVolume":                                      {VersionRange: versionutils.VersionRange{AddedInVersion: "1.31"}},
-	"InPlacePodVerticalScaling":                        {Default: true},
+	"InPlacePodVerticalScaling":                        {Default: true, VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 	"InPlacePodVerticalScalingAllocatedStatus":         {VersionRange: versionutils.VersionRange{AddedInVersion: "1.32"}},
 	"InPlacePodVerticalScalingExclusiveCPUs":           {VersionRange: versionutils.VersionRange{AddedInVersion: "1.32"}},
 	"InTreePluginAWSUnregister":                        {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.31"}},
