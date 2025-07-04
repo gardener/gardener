@@ -3197,13 +3197,6 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 							Format:      "",
 						},
 					},
-					"globallyEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters. Deprecated: This field is deprecated and will be removed in Gardener version v1.123. Please use AutoEnable instead.",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
 					"reconcileTimeout": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation. This field is defaulted to 3m0s when kind is \"Extension\".",
