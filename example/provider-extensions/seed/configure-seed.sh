@@ -222,12 +222,6 @@ echo "Create host and client keys for SSH reverse tunnel"
 "$SCRIPT_DIR"/../ssh-reverse-tunnel/create-client-keys.sh "$seed_name" "$relay_domain"
 
 echo "Deploying kyverno, SSH reverse tunnel and container registry"
-echo "Checking if kyverno version older than v1.10.0 is deployed"
-if kubectl get deployments --kubeconfig "$seed_kubeconfig" -n kyverno kyverno; then
-  echo "Migrating from previous version of kyverno"
-  kubectl delete deployments --kubeconfig "$seed_kubeconfig" -n kyverno kyverno kyverno-cleanup-controller
-  until [ "$(kubectl --kubeconfig "$seed_kubeconfig" get pods -n kyverno | wc -l)" = "0" ] ; do date; sleep 1; echo ""; done
-fi
 kubectl --server-side=true --force-conflicts=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno
 until kubectl --kubeconfig "$seed_kubeconfig" get clusterpolicies.kyverno.io ; do date; sleep 1; echo ""; done
 kubectl --server-side=true --force-conflicts=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno-policies
