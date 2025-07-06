@@ -21,6 +21,7 @@ const (
 	fieldOwner        = client.FieldOwner("machine-controller-manager-provider-local")
 	labelKeyApp       = "app"
 	labelKeyProvider  = "machine-provider"
+	labelKeyMachine   = "machine"
 	labelValueMachine = "machine"
 	machinePrefix     = "machine-"
 )
@@ -42,6 +43,19 @@ func (d *localDriver) GenerateMachineClassForMigration(_ context.Context, _ *dri
 // InitializeMachine is not implemented.
 func (*localDriver) InitializeMachine(context.Context, *driver.InitializeMachineRequest) (*driver.InitializeMachineResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "InitializeMachine is not yet implemented")
+}
+
+func serviceForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass) *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podName(machine.Name),
+			Namespace: getNamespaceForMachine(machine, machineClass),
+		},
+	}
 }
 
 func podForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass) *corev1.Pod {
