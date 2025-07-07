@@ -225,13 +225,17 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 		return nil, nil, err
 	}
 
+	var dataSourcesKeySuffix string
+	if p.values.OnlyDeployDataSourcesAndDashboards {
+		dataSourcesKeySuffix = "-seed"
+	}
 	dataSourceConfigMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "plutono-datasources",
 			Namespace: p.namespace,
 			Labels:    utils.MergeStringMaps(getLabels(), map[string]string{p.dataSourceLabel(): labelValueTrue}),
 		},
-		Data: map[string]string{"datasources.yaml": p.getDataSource()},
+		Data: map[string]string{"datasources" + dataSourcesKeySuffix + ".yaml": p.getDataSource()},
 	}
 	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
 
@@ -330,7 +334,17 @@ func (p *plutono) getDataSource() string {
 		prometheusSuffix, maxLine = "aggregate", "5000"
 	}
 
-	url := "http://prometheus-" + prometheusSuffix + ":80"
+	var (
+		url                   = "http://prometheus-" + prometheusSuffix + ":80"
+		defaultDataSourceName = "prometheus"
+	)
+
+	// For backwards-compatibility with dashboards contributed by extensions, we need to ensure that the datasource name
+	// is always "prometheus" for the shoot Prometheus. For the others, extension have not contributed any dashboards
+	// yet, so it's safe to rename.
+	if p.values.ClusterType != component.ClusterTypeShoot {
+		defaultDataSourceName += "-" + prometheusSuffix
+	}
 
 	datasource := `apiVersion: 1
 
@@ -344,12 +358,12 @@ deleteDatasources:
 datasources:
 `
 
-	datasource += `- name: prometheus
+	datasource += `- name: ` + defaultDataSourceName + `
   type: prometheus
   access: proxy
   url: ` + url + `
   basicAuth: false
-  isDefault: true
+  isDefault: ` + strconv.FormatBool(!p.values.OnlyDeployDataSourcesAndDashboards) + `
   version: 1
   editable: false
   jsonData:
@@ -381,13 +395,15 @@ datasources:
 `
 	}
 
-	datasource += `- name: vali
+	if !p.values.OnlyDeployDataSourcesAndDashboards {
+		datasource += `- name: vali
   type: vali
   access: proxy
   url: http://logging.` + p.namespace + `.svc:` + strconv.Itoa(valiconstants.ValiPort) + `
   jsonData:
     maxLines: ` + maxLine + `
 `
+	}
 
 	return datasource
 }
@@ -396,6 +412,8 @@ func (p *plutono) emptyDashboardConfigMap() *corev1.ConfigMap {
 	name := "plutono-dashboards"
 	if p.values.IsGardenCluster {
 		name += "-garden"
+	} else if p.values.OnlyDeployDataSourcesAndDashboards {
+		name += "-seed"
 	}
 	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: p.namespace}}
 }

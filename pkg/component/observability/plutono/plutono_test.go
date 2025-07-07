@@ -173,11 +173,16 @@ metadata:
 `
 
 			dataSourceConfigMapYAMLFor = func(values Values) string {
-				url, maxLine := "http://prometheus-shoot:80", "1000"
+				prometheusSuffix, maxLine := "shoot", "1000"
 				if values.IsGardenCluster {
-					url, maxLine = "http://prometheus-garden:80", "5000"
+					prometheusSuffix, maxLine = "garden", "5000"
 				} else if values.ClusterType == comp.ClusterTypeSeed {
-					url, maxLine = "http://prometheus-aggregate:80", "5000"
+					prometheusSuffix, maxLine = "aggregate", "5000"
+				}
+
+				defaultDataSourceName := "prometheus"
+				if values.ClusterType != comp.ClusterTypeShoot {
+					defaultDataSourceName += "-" + prometheusSuffix
 				}
 
 				configMapData := `apiVersion: 1
@@ -191,10 +196,10 @@ metadata:
     # whats available in the database
     datasources:
 `
-				configMapData += `    - name: prometheus
+				configMapData += `    - name: ` + defaultDataSourceName + `
       type: prometheus
       access: proxy
-      url: ` + url + `
+      url: http://prometheus-` + prometheusSuffix + `:80
       basicAuth: false
       isDefault: true
       version: 1
@@ -248,22 +253,18 @@ metadata:
     datasource.monitoring.gardener.cloud/` + clusterLabelKey(values) + `: "true"
     resources.gardener.cloud/garbage-collectable-reference: "true"
 `
+				var configMapNameSuffix string
 				if values.IsGardenCluster {
-					configMap += `  name: plutono-datasources-b320ffed
-  namespace: some-namespace
-`
-					return configMap
+					configMapNameSuffix = "e56271c8"
+				} else if values.ClusterType == comp.ClusterTypeShoot {
+					configMapNameSuffix = "f82429ca"
+				} else {
+					configMapNameSuffix = "46d8c4c5"
 				}
 
-				if values.ClusterType == comp.ClusterTypeShoot {
-					configMap += `  name: plutono-datasources-f82429ca
+				configMap += `  name: plutono-datasources-` + configMapNameSuffix + `
   namespace: some-namespace
 `
-				} else {
-					configMap += `  name: plutono-datasources-427f301b
-  namespace: some-namespace
-`
-				}
 
 				return configMap
 			}
