@@ -63,7 +63,7 @@ const (
 	volumeMountPathDashboardProviders = "/etc/plutono/provisioning/dashboards"
 	volumeMountPathDashboards         = volumeMountPathStorage + "/dashboards"
 	volumeMountPathConfig             = "/usr/local/etc/plutono"
-	volumeMountPathAdminUser          = "/etc/dashboard-refresher/plutono-admin"
+	volumeMountPathAdminUser          = "/etc/data-refresher/plutono-admin"
 )
 
 var (
@@ -104,8 +104,9 @@ type Values struct {
 	ClusterType component.ClusterType
 	// Image is the container image used for plutono.
 	Image string
-	// ImageDashboardRefresher is the container image used for the sidecar responsible for refreshing the dashboards.
-	ImageDashboardRefresher string
+	// ImageDataRefresher is the container image used for the sidecar responsible for refreshing the dashboards and
+	// data sources.
+	ImageDataRefresher string
 	// IngressHost is the host name of plutono.
 	IngressHost string
 	// IncludeIstioDashboards specifies whether to include istio dashboard.
@@ -491,12 +492,12 @@ func (p *plutono) getServiceAccount() *corev1.ServiceAccount {
 	}
 }
 
-const rbacNameDashboardRefresher = name + "-dashboard-refresher"
+const rbacNameDataRefresher = name + "-data-refresher"
 
 func (p *plutono) getRole() *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      rbacNameDashboardRefresher,
+			Name:      rbacNameDataRefresher,
 			Namespace: p.namespace,
 			Labels:    getLabels(),
 		},
@@ -511,14 +512,14 @@ func (p *plutono) getRole() *rbacv1.Role {
 func (p *plutono) getRoleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      rbacNameDashboardRefresher,
+			Name:      rbacNameDataRefresher,
 			Namespace: p.namespace,
 			Labels:    getLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "Role",
-			Name:     rbacNameDashboardRefresher,
+			Name:     rbacNameDataRefresher,
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
@@ -693,7 +694,7 @@ func (p *plutono) getDeployment(providerConfigMap *corev1.ConfigMap, plutonoConf
 func (p *plutono) refresherSidecar(what, label, folder string, volumeMount corev1.VolumeMount) corev1.Container {
 	return corev1.Container{
 		Name:            what + "-refresher",
-		Image:           p.values.ImageDashboardRefresher,
+		Image:           p.values.ImageDataRefresher,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command: []string{
 			"python",

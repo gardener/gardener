@@ -42,10 +42,10 @@ var _ = Describe("Plutono", func() {
 	var (
 		ctx = context.Background()
 
-		managedResourceName     = "plutono"
-		namespace               = "some-namespace"
-		image                   = "some-image:some-tag"
-		imageDashboardRefresher = "some-other-image:some-other-tag"
+		managedResourceName = "plutono"
+		namespace           = "some-namespace"
+		image               = "some-image:some-tag"
+		imageDataRefresher  = "some-other-image:some-other-tag"
 
 		c                 client.Client
 		component         comp.DeployWaiter
@@ -61,9 +61,9 @@ var _ = Describe("Plutono", func() {
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
 
 		values = Values{
-			Image:                   image,
-			ImageDashboardRefresher: imageDashboardRefresher,
-			Replicas:                int32(1),
+			Image:              image,
+			ImageDataRefresher: imageDataRefresher,
+			Replicas:           int32(1),
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -119,7 +119,7 @@ admin_password = ________________________________`),
 
 			role = &rbacv1.Role{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "plutono-dashboard-refresher",
+					Name:      "plutono-data-refresher",
 					Namespace: namespace,
 					Labels:    map[string]string{"component": "plutono"},
 				},
@@ -132,14 +132,14 @@ admin_password = ________________________________`),
 
 			roleBinding = &rbacv1.RoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "plutono-dashboard-refresher",
+					Name:      "plutono-data-refresher",
 					Namespace: namespace,
 					Labels:    map[string]string{"component": "plutono"},
 				},
 				RoleRef: rbacv1.RoleRef{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Role",
-					Name:     "plutono-dashboard-refresher",
+					Name:     "plutono-data-refresher",
 				},
 				Subjects: []rbacv1.Subject{{
 					Kind:      "ServiceAccount",
@@ -343,14 +343,14 @@ metadata:
 									},
 									{
 										Name:            "dashboard-refresher",
-										Image:           values.ImageDashboardRefresher,
+										Image:           values.ImageDataRefresher,
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Command: []string{
 											"python",
 											"-u",
 											"sidecar.py",
-											"--req-username-file=/etc/dashboard-refresher/plutono-admin/username",
-											"--req-password-file=/etc/dashboard-refresher/plutono-admin/password",
+											"--req-username-file=/etc/data-refresher/plutono-admin/username",
+											"--req-password-file=/etc/data-refresher/plutono-admin/password",
 										},
 										Env: []corev1.EnvVar{
 											{Name: "LOG_LEVEL", Value: "INFO"},
@@ -370,7 +370,7 @@ metadata:
 											},
 											{
 												Name:      "admin-user",
-												MountPath: "/etc/dashboard-refresher/plutono-admin",
+												MountPath: "/etc/data-refresher/plutono-admin",
 											},
 										},
 										Resources: corev1.ResourceRequirements{
@@ -385,14 +385,14 @@ metadata:
 									},
 									{
 										Name:            "datasource-refresher",
-										Image:           values.ImageDashboardRefresher,
+										Image:           values.ImageDataRefresher,
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Command: []string{
 											"python",
 											"-u",
 											"sidecar.py",
-											"--req-username-file=/etc/dashboard-refresher/plutono-admin/username",
-											"--req-password-file=/etc/dashboard-refresher/plutono-admin/password",
+											"--req-username-file=/etc/data-refresher/plutono-admin/username",
+											"--req-password-file=/etc/data-refresher/plutono-admin/password",
 										},
 										Env: []corev1.EnvVar{
 											{Name: "LOG_LEVEL", Value: "INFO"},
@@ -412,7 +412,7 @@ metadata:
 											},
 											{
 												Name:      "admin-user",
-												MountPath: "/etc/dashboard-refresher/plutono-admin",
+												MountPath: "/etc/data-refresher/plutono-admin",
 											},
 										},
 										Resources: corev1.ResourceRequirements{
