@@ -65,6 +65,10 @@ type ValuesRecommender struct {
 	// MemoryAggregationWindowLength which in turn is the period for memory usage aggregation by VPA. In other words,
 	// `MemoryAggregationWindowLength = memory-aggregation-interval * memory-aggregation-interval-count`.
 	MemoryAggregationIntervalCount *int64
+	// MaxAllowed specifies the global maximum allowed (maximum amount of resources) that vpa-recommender can recommend for a container.
+	// The VerticalPodAutoscaler-level maximum allowed takes precedence over the global maximum allowed.
+	// For more information, see https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/examples.md#specifying-global-maximum-allowed-resources-to-prevent-pods-from-being-unschedulable.
+	MaxAllowed corev1.ResourceList
 	// Image is the container image.
 	Image string
 	// Interval is the interval how often the recommender should run.
@@ -350,6 +354,13 @@ func (v *vpa) computeRecommenderArgs() []string {
 
 	if v.values.FeatureGates != nil {
 		out = append(out, v.computeFeatureGates())
+	}
+
+	if quantity, ok := v.values.Recommender.MaxAllowed[corev1.ResourceCPU]; ok {
+		out = append(out, fmt.Sprintf("--container-recommendation-max-allowed-cpu=%s", quantity.String()))
+	}
+	if quantity, ok := v.values.Recommender.MaxAllowed[corev1.ResourceMemory]; ok {
+		out = append(out, fmt.Sprintf("--container-recommendation-max-allowed-memory=%s", quantity.String()))
 	}
 
 	return out
