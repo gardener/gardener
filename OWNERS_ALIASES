@@ -4,6 +4,7 @@ aliases:
   gardener-reviewers:
   - acumino
   - ary1992
+  - dimitar-kostadinov
   - ialidzhikov
   - Kostov6
   - LucaBernstein
@@ -16,6 +17,7 @@ aliases:
   - timebertt
   - timuthy
   - tobschli
+  - vitanovs
   gardener-approvers:
   - acumino
   - ary1992
