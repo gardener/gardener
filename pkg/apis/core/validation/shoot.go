@@ -955,8 +955,12 @@ func validateNetworking(networking *core.Networking, workerless bool, fldPath *f
 			return allErrs
 		}
 
+		path := fldPath.Child("type")
 		if len(ptr.Deref(networking.Type, "")) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
+			allErrs = append(allErrs, field.Required(path, "networking type must be provided"))
+		} else if len(metav1validation.ValidateLabelName(v1beta1constants.LabelExtensionNetworkingTypePrefix+ptr.Deref(networking.Type, ""), path)) > 0 {
+			// The original errors returned by ValidateLabelName may be irritating due to the label prefix.
+			allErrs = append(allErrs, field.Invalid(path, networking.Type, "type must be a valid label name"))
 		}
 	}
 

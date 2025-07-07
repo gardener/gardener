@@ -3732,6 +3732,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			It("should forbid specifying a networking type with invalid characters", func() {
+				shoot.Spec.Networking.Type = ptr.To("$/()[]{}")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.networking.type"),
+				}))))
+			})
+
+			It("should forbid specifying a very long networking type", func() {
+				shoot.Spec.Networking.Type = ptr.To("my-extremely-long-networking-type-that-exceeds-the-maximum-length")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.networking.type"),
+				}))))
+			})
+
 			It("should forbid changing the networking type", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Networking.Type = ptr.To("some-other-type")
