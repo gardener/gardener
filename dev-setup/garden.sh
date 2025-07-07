@@ -24,7 +24,7 @@ case "$COMMAND" in
     # down or not yet available.
     TIMEOUT=60 SKIP_LAST_OPERATION_CHECK=true "$(dirname "$0")"/../hack/usage/wait-for.sh extop provider-local AdmissionHealthy
     # Export kubeconfig for the virtual garden cluster
-    "$(dirname "$0")"/../hack/usage/generate-virtual-garden-admin-kubeconf.sh > "$VIRTUAL_GARDEN_KUBECONFIG"
+    "$(dirname "$0")"/../hack/usage/generate-virtual-garden-admin-kubeconf.sh "$KUBECONFIG" > "$VIRTUAL_GARDEN_KUBECONFIG"
     ;;
 
   down)

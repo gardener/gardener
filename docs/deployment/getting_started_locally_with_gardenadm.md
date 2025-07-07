@@ -153,6 +153,28 @@ $ go run ./cmd/gardenadm bootstrap -d ./dev-setup/gardenadm/resources/generated/
 Command is work in progress
 ```
 
+## Connecting the Autonomous Shoot Cluster to Gardener
+
+After you have successfully bootstrapped an autonomous shoot cluster (either via the [high touch](#high-touch-scenario) or the [medium touch](#medium-touch-scenario) scenario), you can connect it to an existing Gardener system.
+For this, you need to have a Gardener running locally in your KinD cluster.
+In order to deploy it, you can run
+
+```shell
+make gardenadm-up SCENARIO=connect
+```
+
+This will deploy [`gardener-operator`](../concepts/operator.md) and create a `Garden` resource (which will then be reconciled and results in a full Gardener deployment).
+Find all information about it [here](getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator).
+Note, that in this setup, no `Seed` will be registered in the Gardener - it's just a plain garden cluster without the ability to create regular shoot clusters.
+
+Once above command is finished, you can connect the autonomous shoot cluster to this Gardener instance:
+
+```shell
+$ kubectl -n gardenadm-high-touch exec -it machine-0 -- bash
+root@machine-0:/# gardenadm connect
+2025-07-03T12:21:49.586Z	INFO	Command is work in progress
+```
+
 ## Running E2E Tests for `gardenadm`
 
 Based on the described setup, you can execute the e2e test suite for `gardenadm`:

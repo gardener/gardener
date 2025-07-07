@@ -6,6 +6,9 @@
 
 set -euo pipefail
 
+# TODO(rfranzke): Remove this once we store the kind/runtime cluster kubeconfig at a fixed location.
+RUNTIME_CLUSTER_KUBECONFIG="${1:-"$(dirname "$0")/../../example/gardener-local/kind/multi-zone/kubeconfig"}"
+
 USER_NAME="admin-user"
 CLUSTER_NAME="virtual-garden"
 
@@ -18,7 +21,7 @@ CLIENT_CA_CERT_FILE="${TMP_DIR}/client-ca.crt"
 CLIENT_CA_KEY_FILE="${TMP_DIR}/client-ca.key"
 KUBECONFIG_FILE="${TMP_DIR}/kubeconfig"
 
-cp "$(dirname "$0")/../../example/gardener-local/kind/multi-zone/kubeconfig" "${KUBECONFIG_FILE}"
+cp "$RUNTIME_CLUSTER_KUBECONFIG" "${KUBECONFIG_FILE}"
 kubectl --kubeconfig "${KUBECONFIG_FILE}" -n garden get secret -l name=ca        -o jsonpath='{..data.ca\.crt}' | base64 -d > "${CLUSTER_CA_CERT_FILE}"
 kubectl --kubeconfig "${KUBECONFIG_FILE}" -n garden get secret -l name=ca-client -o jsonpath='{..data.ca\.crt}' | base64 -d > "${CLIENT_CA_CERT_FILE}"
 kubectl --kubeconfig "${KUBECONFIG_FILE}" -n garden get secret -l name=ca-client -o jsonpath='{..data.ca\.key}' | base64 -d > "${CLIENT_CA_KEY_FILE}"
