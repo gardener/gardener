@@ -1619,6 +1619,16 @@ var _ = Describe("CloudProfile Helper", func() {
 				result := GetCapabilitiesIntersection(capabilities1, capabilities2)
 				Expect(result).To(Equal(expectedIntersection))
 			})
+
+			It("should return the capabilities of only one parameter was provided", func() {
+				capabilities := gardencorev1beta1.Capabilities{
+					"capability1": []string{"value1"},
+					"capability2": []string{"value1", "value2"},
+				}
+
+				result := GetCapabilitiesIntersection(capabilities)
+				Expect(result).To(Equal(capabilities))
+			})
 		})
 
 		Describe("#AreCapabilitiesSupportedByCapabilitySets", func() {
@@ -1634,7 +1644,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				}
 				capabilitySets := []gardencorev1beta1.CapabilitySet{
 					{Capabilities: gardencorev1beta1.Capabilities{
-						"capability1": []string{"value1", "value2"},
+						"capability1": []string{"value2"},
 						"capability2": []string{"value3", "value4"},
 					}},
 					{Capabilities: gardencorev1beta1.Capabilities{
@@ -1653,7 +1663,6 @@ var _ = Describe("CloudProfile Helper", func() {
 				}
 				capabilitySets := []gardencorev1beta1.CapabilitySet{
 					{Capabilities: gardencorev1beta1.Capabilities{
-						"capability1": []string{"value1", "value2"},
 						"capability2": []string{"value3", "value4"},
 					}},
 					{Capabilities: gardencorev1beta1.Capabilities{

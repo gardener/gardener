@@ -586,6 +586,8 @@ func GetCapabilitySetsWithAppliedDefaults(capabilitySets []gardencorev1beta1.Cap
 }
 
 // GetCapabilitiesIntersection returns the intersection of capabilities from a list of capabilities.
+// All Capabilities objects should be defaulted before calling this function.
+// This can be achieved by calling GetCapabilitiesWithAppliedDefaults on each capabilities object.
 func GetCapabilitiesIntersection(capabilitiesList ...gardencorev1beta1.Capabilities) gardencorev1beta1.Capabilities {
 	intersection := make(gardencorev1beta1.Capabilities)
 
@@ -628,7 +630,7 @@ func intersectSlices(slice1, slice2 []string) []string {
 	return intersection
 }
 
-// AreCapabilitiesSupportedByCapabilitySets checks if the given capabilities are supported by at least set of the provided capability sets.
+// AreCapabilitiesSupportedByCapabilitySets checks if the given capabilities are supported by at least one of the provided capability sets.
 func AreCapabilitiesSupportedByCapabilitySets(
 	capabilities gardencorev1beta1.Capabilities, capabilitySets []gardencorev1beta1.CapabilitySet, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition,
 ) bool {
