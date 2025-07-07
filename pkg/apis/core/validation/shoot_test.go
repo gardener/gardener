@@ -3276,6 +3276,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 					core.VerticalPodAutoscaler{MemoryAggregationIntervalCount: ptr.To[int64](-1)},
 					ConsistOf(field.Invalid(field.NewPath("memoryAggregationIntervalCount"), int64(-1), "must be greater than or equal to 0").WithOrigin("minimum")),
 				),
+				Entry("with unsupported maxAllowed resource",
+					core.VerticalPodAutoscaler{MaxAllowed: map[corev1.ResourceName]resource.Quantity{"storage": {}}},
+					ConsistOf(field.NotSupported(field.NewPath("maxAllowed.storage"), corev1.ResourceName("storage"), []corev1.ResourceName{"cpu", "memory"})),
+				),
+				Entry("with invalid maxAllowed resource quantity value",
+					core.VerticalPodAutoscaler{MaxAllowed: map[corev1.ResourceName]resource.Quantity{"cpu": resource.MustParse("-100m"), "memory": resource.MustParse("-100Mi")}},
+					ConsistOf(
+						field.Invalid(field.NewPath("maxAllowed.cpu"), "-100m", "must be greater than or equal to 0"),
+						field.Invalid(field.NewPath("maxAllowed.memory"), "-100Mi", "must be greater than or equal to 0"),
+					),
+				),
 				Entry("with valid fields",
 					core.VerticalPodAutoscaler{
 						EvictAfterOOMThreshold:                   &metav1.Duration{Duration: 5 * time.Minute},
@@ -3291,6 +3302,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 						MemoryHistogramDecayHalfLife:             &metav1.Duration{Duration: 7 * time.Second},
 						MemoryAggregationInterval:                &metav1.Duration{Duration: 22 * time.Minute},
 						MemoryAggregationIntervalCount:           ptr.To[int64](42),
+						MaxAllowed: map[corev1.ResourceName]resource.Quantity{
+							"cpu":    resource.MustParse("8"),
+							"memory": resource.MustParse("32Gi"),
+						},
 					},
 					BeEmpty(),
 				),
