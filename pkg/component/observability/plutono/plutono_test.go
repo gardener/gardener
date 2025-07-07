@@ -871,8 +871,10 @@ func getPodLabels(values Values) map[string]string {
 
 	if values.IsGardenCluster {
 		labels = utils.MergeStringMaps(labels, map[string]string{
-			gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090):   v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("prometheus-longterm", 9091): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090):    v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-longterm", 9091):  v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-aggregate", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 
 		return labels

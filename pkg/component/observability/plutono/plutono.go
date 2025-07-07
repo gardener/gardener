@@ -900,11 +900,21 @@ func (p *plutono) getPodLabels() map[string]string {
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
+	seedSpecificLabels := map[string]string{
+		gardenerutils.NetworkPolicyLabel("prometheus-aggregate", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
+	}
+
 	if p.values.IsGardenCluster {
-		labels = utils.MergeStringMaps(labels, map[string]string{
-			gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090):   v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("prometheus-longterm", 9091): v1beta1constants.LabelNetworkPolicyAllowed,
-		})
+		labels = utils.MergeStringMaps(labels,
+			map[string]string{
+				gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090):   v1beta1constants.LabelNetworkPolicyAllowed,
+				gardenerutils.NetworkPolicyLabel("prometheus-longterm", 9091): v1beta1constants.LabelNetworkPolicyAllowed,
+			},
+			// If the garden is a seed cluster at the same time, we also need to allow Plutono to access the
+			// seed-specific Prometheis.
+			seedSpecificLabels,
+		)
 
 		return labels
 	}
@@ -912,10 +922,8 @@ func (p *plutono) getPodLabels() map[string]string {
 	switch p.values.ClusterType {
 	case component.ClusterTypeSeed:
 		labels = utils.MergeStringMaps(labels, map[string]string{
-			v1beta1constants.LabelRole:                                     v1beta1constants.LabelMonitoring,
-			gardenerutils.NetworkPolicyLabel("prometheus-aggregate", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
-		})
+			v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
+		}, seedSpecificLabels)
 	case component.ClusterTypeShoot:
 		labels = utils.MergeStringMaps(labels, map[string]string{
 			v1beta1constants.GardenRole:                                v1beta1constants.GardenRoleMonitoring,
