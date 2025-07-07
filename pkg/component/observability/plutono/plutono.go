@@ -347,7 +347,7 @@ datasources:
   editable: false
 `
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
-		datasource += `- name: seed-prometheus
+		datasource += `- name: prometheus-seed
   type: prometheus
   access: proxy
   url: http://prometheus-seed:80
