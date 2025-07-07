@@ -4101,6 +4101,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"BadValue": Equal("foo.bar."),
 					})),
 				)),
+				Entry("should not allow extremely long domains", []string{"extremely-long-domain-name-with-repeating-subdomains.extremely-long-domain-name-with-repeating-subdomains.extremely-long-domain-name-with-repeating-subdomains.extremely-long-domain-name-with-repeating-subdomains.extremely-long-domain-name-with-repeating-subdomains.bar"}, ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Detail": ContainSubstring("must be a valid DNS subdomain"),
+					})),
+				)),
+				Entry("should not allow invalid characters", []string{"foo/$()[]{}.bar"}, ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Detail": ContainSubstring("must be a valid DNS subdomain"),
+					})),
+				)),
 			)
 		})
 

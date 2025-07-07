@@ -2586,6 +2586,10 @@ func ValidateCoreDNSRewritingCommonSuffixes(commonSuffixes []string, fldPath *fi
 		} else {
 			suffixes[s] = struct{}{}
 		}
+
+		if len(validation.IsDNS1123Subdomain(strings.TrimSuffix(s, "."))) != 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("commonSuffixes").Index(i), s, "must be a valid DNS subdomain"))
+		}
 	}
 
 	return allErrs
