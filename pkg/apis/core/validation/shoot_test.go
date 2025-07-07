@@ -3285,6 +3285,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 					core.VerticalPodAutoscaler{FeatureGates: map[string]bool{"InPlaceOrRecreate": true}}, "1.32",
 					ConsistOf(field.Invalid(field.NewPath("featureGates"), "InPlaceOrRecreate", "for Kubernetes versions < 1.33, feature gate is not supported")),
 				),
+				Entry("with unsupported maxAllowed resource",
+					core.VerticalPodAutoscaler{MaxAllowed: map[corev1.ResourceName]resource.Quantity{"storage": {}}}, "",
+					ConsistOf(field.NotSupported(field.NewPath("maxAllowed.storage"), corev1.ResourceName("storage"), []corev1.ResourceName{"cpu", "memory"})),
+				),
+				Entry("with invalid maxAllowed resource quantity value",
+					core.VerticalPodAutoscaler{MaxAllowed: map[corev1.ResourceName]resource.Quantity{"cpu": resource.MustParse("-100m"), "memory": resource.MustParse("-100Mi")}}, "",
+					ConsistOf(
+						field.Invalid(field.NewPath("maxAllowed.cpu"), "-100m", "must be greater than or equal to 0"),
+						field.Invalid(field.NewPath("maxAllowed.memory"), "-100Mi", "must be greater than or equal to 0"),
+					),
+				),
 				Entry("with valid fields",
 					core.VerticalPodAutoscaler{
 						EvictAfterOOMThreshold:                   &metav1.Duration{Duration: 5 * time.Minute},
@@ -3301,6 +3312,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 						MemoryAggregationInterval:                &metav1.Duration{Duration: 22 * time.Minute},
 						MemoryAggregationIntervalCount:           ptr.To[int64](42),
 						FeatureGates:                             map[string]bool{"InPlaceOrRecreate": true},
+						MaxAllowed: map[corev1.ResourceName]resource.Quantity{
+							"cpu":    resource.MustParse("8"),
+							"memory": resource.MustParse("32Gi"),
+						},
 					},
 					"1.33",
 					BeEmpty(),
