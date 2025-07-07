@@ -818,7 +818,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 	}
 
 	switch v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) {
-	// TODO: Remove rotation prepared case in a future release.
+	// TODO(AleksandarSavchev): Remove rotation prepared case in gardener `v1.130`
 	// It is added to forcefully complete the etcd encryption key rotation.
 	case gardencorev1beta1.RotationPreparing, gardencorev1beta1.RotationPrepared:
 		completeRotationETCDEncryptionKey(shoot, &now)

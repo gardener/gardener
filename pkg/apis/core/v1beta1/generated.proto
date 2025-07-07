@@ -2016,24 +2016,24 @@ message Maintenance {
   // +optional
   optional bool confineSpecUpdateRollout = 3;
 
-  // AutoRotate contains information about which credentials should be automatically rotated.
+  // CredentialsAutoRotation contains information about which credentials should be automatically rotated.
   // +optional
-  optional MaintenanceAutoRotate autoRotate = 4;
+  optional MaintenanceAutoRotation credentialsAutoRotation = 4;
 }
 
-// MaintenanceAutoRotate contains information about which credentials should be automatically rotated.
-message MaintenanceAutoRotate {
+// MaintenanceAutoRotation contains information about which credentials should be automatically rotated.
+message MaintenanceAutoRotation {
   // ETCDEncryptionKey indicates whether the etcd encryption key may be automatically rotated (default: false).
   // +optional
   optional bool etcdEncryptionKey = 1;
 
-  // ObservabilityPasswords indicates whether the observability passwords may be automatically rotated (default: false).
+  // Observability indicates whether the observability passwords may be automatically rotated (default: false).
   // +optional
-  optional bool observabilityPasswords = 2;
+  optional bool observability = 2;
 
-  // SSHKeypairForWorkerNodes indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).
+  // SSHKeypair indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).
   // +optional
-  optional bool sshKeypairForWorkerNodes = 3;
+  optional bool sshKeypair = 3;
 
   // RotationPeriod is the period between a completed rotation and the start of a new rotation for a specific credential (default: 7d).
   // +optional

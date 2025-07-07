@@ -769,18 +769,20 @@ var _ = Describe("Strategy", func() {
 
 		Context("etcd encryption key rotation", func() {
 			DescribeTable("etcd encryption key rotation",
-				func(etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, shouldIncreaseGeneration bool) {
+				func(oldETCDEncryptionKeyRotation, newETCDEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, shouldIncreaseGeneration bool) {
 					oldShoot := &core.Shoot{
 						Spec: core.ShootSpec{},
 						Status: core.ShootStatus{
 							Credentials: &core.ShootCredentials{
-								Rotation: &core.ShootCredentialsRotation{},
+								Rotation: &core.ShootCredentialsRotation{
+									ETCDEncryptionKey: oldETCDEncryptionKeyRotation,
+								},
 							},
 						},
 					}
 
 					newShoot := oldShoot.DeepCopy()
-					newShoot.Status.Credentials.Rotation.ETCDEncryptionKey = etcdEncryptionKeyRotation
+					newShoot.Status.Credentials.Rotation.ETCDEncryptionKey = newETCDEncryptionKeyRotation
 
 					strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
@@ -791,10 +793,13 @@ var _ = Describe("Strategy", func() {
 					Expect(newShoot.Generation).To(Equal(expectedGeneration))
 				},
 
-				Entry("rotation status is nil", nil, false),
-				Entry("rotation phase is empty", &core.ETCDEncryptionKeyRotation{}, false),
-				Entry("rotation phase is completing", &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting}, true),
-				Entry("rotation phase is not completing", &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleted}, false),
+				Entry("rotation status is nil", nil, nil, false),
+				Entry("rotation phase is empty", nil, &core.ETCDEncryptionKeyRotation{}, false),
+				Entry("rotation phase is completing", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting}, true),
+				Entry("rotation phase has not been updated",
+					&core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting},
+					&core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting}, false),
+				Entry("rotation phase is not completing", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleted}, false),
 			)
 		})
 	})

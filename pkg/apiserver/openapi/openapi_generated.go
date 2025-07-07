@@ -140,7 +140,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType":                                schema_pkg_apis_core_v1beta1_MachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage":                         schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance":                                schema_pkg_apis_core_v1beta1_Maintenance(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotate":                      schema_pkg_apis_core_v1beta1_MaintenanceAutoRotate(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation":                    schema_pkg_apis_core_v1beta1_MaintenanceAutoRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate":                      schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow":                      schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MemorySwapConfiguration":                    schema_pkg_apis_core_v1beta1_MemorySwapConfiguration(ref),
@@ -5996,25 +5996,25 @@ func schema_pkg_apis_core_v1beta1_Maintenance(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
-					"autoRotate": {
+					"credentialsAutoRotation": {
 						SchemaProps: spec.SchemaProps{
-							Description: "AutoRotate contains information about which credentials should be automatically rotated.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotate"),
+							Description: "CredentialsAutoRotation contains information about which credentials should be automatically rotated.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotate", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow"},
 	}
 }
 
-func schema_pkg_apis_core_v1beta1_MaintenanceAutoRotate(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_core_v1beta1_MaintenanceAutoRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "MaintenanceAutoRotate contains information about which credentials should be automatically rotated.",
+				Description: "MaintenanceAutoRotation contains information about which credentials should be automatically rotated.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"etcdEncryptionKey": {
@@ -6024,16 +6024,16 @@ func schema_pkg_apis_core_v1beta1_MaintenanceAutoRotate(ref common.ReferenceCall
 							Format:      "",
 						},
 					},
-					"observabilityPasswords": {
+					"observability": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ObservabilityPasswords indicates whether the observability passwords may be automatically rotated (default: false).",
+							Description: "Observability indicates whether the observability passwords may be automatically rotated (default: false).",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
-					"sshKeypairForWorkerNodes": {
+					"sshKeypair": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SSHKeypairForWorkerNodes indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).",
+							Description: "SSHKeypair indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

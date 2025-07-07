@@ -166,12 +166,12 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
 		}
 
-		if obj.Spec.Maintenance.AutoRotate == nil {
-			obj.Spec.Maintenance.AutoRotate = &MaintenanceAutoRotate{}
+		if obj.Spec.Maintenance.CredentialsAutoRotation == nil {
+			obj.Spec.Maintenance.CredentialsAutoRotation = &MaintenanceAutoRotation{}
 		}
 
-		if obj.Spec.Maintenance.AutoRotate.RotationPeriod == nil {
-			obj.Spec.Maintenance.AutoRotate.RotationPeriod = &metav1.Duration{Duration: 7 * 24 * time.Hour}
+		if obj.Spec.Maintenance.CredentialsAutoRotation.RotationPeriod == nil {
+			obj.Spec.Maintenance.CredentialsAutoRotation.RotationPeriod = &metav1.Duration{Duration: 7 * 24 * time.Hour}
 		}
 
 		if obj.Spec.Provider.WorkersSettings == nil {

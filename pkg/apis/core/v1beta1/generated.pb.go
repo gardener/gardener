@@ -3123,15 +3123,15 @@ func (m *Maintenance) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Maintenance proto.InternalMessageInfo
 
-func (m *MaintenanceAutoRotate) Reset()      { *m = MaintenanceAutoRotate{} }
-func (*MaintenanceAutoRotate) ProtoMessage() {}
-func (*MaintenanceAutoRotate) Descriptor() ([]byte, []int) {
+func (m *MaintenanceAutoRotation) Reset()      { *m = MaintenanceAutoRotation{} }
+func (*MaintenanceAutoRotation) ProtoMessage() {}
+func (*MaintenanceAutoRotation) Descriptor() ([]byte, []int) {
 	return fileDescriptor_ca37af0df9a5bbd2, []int{110}
 }
-func (m *MaintenanceAutoRotate) XXX_Unmarshal(b []byte) error {
+func (m *MaintenanceAutoRotation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MaintenanceAutoRotate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MaintenanceAutoRotation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
 	n, err := m.MarshalToSizedBuffer(b)
 	if err != nil {
@@ -3139,17 +3139,17 @@ func (m *MaintenanceAutoRotate) XXX_Marshal(b []byte, deterministic bool) ([]byt
 	}
 	return b[:n], nil
 }
-func (m *MaintenanceAutoRotate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MaintenanceAutoRotate.Merge(m, src)
+func (m *MaintenanceAutoRotation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MaintenanceAutoRotation.Merge(m, src)
 }
-func (m *MaintenanceAutoRotate) XXX_Size() int {
+func (m *MaintenanceAutoRotation) XXX_Size() int {
 	return m.Size()
 }
-func (m *MaintenanceAutoRotate) XXX_DiscardUnknown() {
-	xxx_messageInfo_MaintenanceAutoRotate.DiscardUnknown(m)
+func (m *MaintenanceAutoRotation) XXX_DiscardUnknown() {
+	xxx_messageInfo_MaintenanceAutoRotation.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MaintenanceAutoRotate proto.InternalMessageInfo
+var xxx_messageInfo_MaintenanceAutoRotation proto.InternalMessageInfo
 
 func (m *MaintenanceAutoUpdate) Reset()      { *m = MaintenanceAutoUpdate{} }
 func (*MaintenanceAutoUpdate) ProtoMessage() {}
@@ -5793,7 +5793,7 @@ func init() {
 	proto.RegisterMapType((Capabilities)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MachineType.CapabilitiesEntry")
 	proto.RegisterType((*MachineTypeStorage)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MachineTypeStorage")
 	proto.RegisterType((*Maintenance)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Maintenance")
-	proto.RegisterType((*MaintenanceAutoRotate)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MaintenanceAutoRotate")
+	proto.RegisterType((*MaintenanceAutoRotation)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MaintenanceAutoRotation")
 	proto.RegisterType((*MaintenanceAutoUpdate)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MaintenanceAutoUpdate")
 	proto.RegisterType((*MaintenanceTimeWindow)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MaintenanceTimeWindow")
 	proto.RegisterType((*MemorySwapConfiguration)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MemorySwapConfiguration")
@@ -13102,9 +13102,9 @@ func (m *Maintenance) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.AutoRotate != nil {
+	if m.CredentialsAutoRotation != nil {
 		{
-			size, err := m.AutoRotate.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.CredentialsAutoRotation.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -13151,7 +13151,7 @@ func (m *Maintenance) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *MaintenanceAutoRotate) Marshal() (dAtA []byte, err error) {
+func (m *MaintenanceAutoRotation) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -13161,12 +13161,12 @@ func (m *MaintenanceAutoRotate) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MaintenanceAutoRotate) MarshalTo(dAtA []byte) (int, error) {
+func (m *MaintenanceAutoRotation) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MaintenanceAutoRotate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MaintenanceAutoRotation) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -13183,9 +13183,9 @@ func (m *MaintenanceAutoRotate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x22
 	}
-	if m.SSHKeypairForWorkerNodes != nil {
+	if m.SSHKeypair != nil {
 		i--
-		if *m.SSHKeypairForWorkerNodes {
+		if *m.SSHKeypair {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
@@ -13193,9 +13193,9 @@ func (m *MaintenanceAutoRotate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x18
 	}
-	if m.ObservabilityPasswords != nil {
+	if m.Observability != nil {
 		i--
-		if *m.ObservabilityPasswords {
+		if *m.Observability {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
@@ -21244,14 +21244,14 @@ func (m *Maintenance) Size() (n int) {
 	if m.ConfineSpecUpdateRollout != nil {
 		n += 2
 	}
-	if m.AutoRotate != nil {
-		l = m.AutoRotate.Size()
+	if m.CredentialsAutoRotation != nil {
+		l = m.CredentialsAutoRotation.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
 }
 
-func (m *MaintenanceAutoRotate) Size() (n int) {
+func (m *MaintenanceAutoRotation) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -21260,10 +21260,10 @@ func (m *MaintenanceAutoRotate) Size() (n int) {
 	if m.ETCDEncryptionKey != nil {
 		n += 2
 	}
-	if m.ObservabilityPasswords != nil {
+	if m.Observability != nil {
 		n += 2
 	}
-	if m.SSHKeypairForWorkerNodes != nil {
+	if m.SSHKeypair != nil {
 		n += 2
 	}
 	if m.RotationPeriod != nil {
@@ -24978,19 +24978,19 @@ func (this *Maintenance) String() string {
 		`AutoUpdate:` + strings.Replace(this.AutoUpdate.String(), "MaintenanceAutoUpdate", "MaintenanceAutoUpdate", 1) + `,`,
 		`TimeWindow:` + strings.Replace(this.TimeWindow.String(), "MaintenanceTimeWindow", "MaintenanceTimeWindow", 1) + `,`,
 		`ConfineSpecUpdateRollout:` + valueToStringGenerated(this.ConfineSpecUpdateRollout) + `,`,
-		`AutoRotate:` + strings.Replace(this.AutoRotate.String(), "MaintenanceAutoRotate", "MaintenanceAutoRotate", 1) + `,`,
+		`CredentialsAutoRotation:` + strings.Replace(this.CredentialsAutoRotation.String(), "MaintenanceAutoRotation", "MaintenanceAutoRotation", 1) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *MaintenanceAutoRotate) String() string {
+func (this *MaintenanceAutoRotation) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&MaintenanceAutoRotate{`,
+	s := strings.Join([]string{`&MaintenanceAutoRotation{`,
 		`ETCDEncryptionKey:` + valueToStringGenerated(this.ETCDEncryptionKey) + `,`,
-		`ObservabilityPasswords:` + valueToStringGenerated(this.ObservabilityPasswords) + `,`,
-		`SSHKeypairForWorkerNodes:` + valueToStringGenerated(this.SSHKeypairForWorkerNodes) + `,`,
+		`Observability:` + valueToStringGenerated(this.Observability) + `,`,
+		`SSHKeypair:` + valueToStringGenerated(this.SSHKeypair) + `,`,
 		`RotationPeriod:` + strings.Replace(fmt.Sprintf("%v", this.RotationPeriod), "Duration", "v11.Duration", 1) + `,`,
 		`}`,
 	}, "")
@@ -45050,7 +45050,7 @@ func (m *Maintenance) Unmarshal(dAtA []byte) error {
 			m.ConfineSpecUpdateRollout = &b
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AutoRotate", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CredentialsAutoRotation", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -45077,10 +45077,10 @@ func (m *Maintenance) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.AutoRotate == nil {
-				m.AutoRotate = &MaintenanceAutoRotate{}
+			if m.CredentialsAutoRotation == nil {
+				m.CredentialsAutoRotation = &MaintenanceAutoRotation{}
 			}
-			if err := m.AutoRotate.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.CredentialsAutoRotation.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -45105,7 +45105,7 @@ func (m *Maintenance) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *MaintenanceAutoRotate) Unmarshal(dAtA []byte) error {
+func (m *MaintenanceAutoRotation) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -45128,10 +45128,10 @@ func (m *MaintenanceAutoRotate) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MaintenanceAutoRotate: wiretype end group for non-group")
+			return fmt.Errorf("proto: MaintenanceAutoRotation: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MaintenanceAutoRotate: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MaintenanceAutoRotation: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -45157,7 +45157,7 @@ func (m *MaintenanceAutoRotate) Unmarshal(dAtA []byte) error {
 			m.ETCDEncryptionKey = &b
 		case 2:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ObservabilityPasswords", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Observability", wireType)
 			}
 			var v int
 			for shift := uint(0); ; shift += 7 {
@@ -45175,10 +45175,10 @@ func (m *MaintenanceAutoRotate) Unmarshal(dAtA []byte) error {
 				}
 			}
 			b := bool(v != 0)
-			m.ObservabilityPasswords = &b
+			m.Observability = &b
 		case 3:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SSHKeypairForWorkerNodes", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field SSHKeypair", wireType)
 			}
 			var v int
 			for shift := uint(0); ; shift += 7 {
@@ -45196,7 +45196,7 @@ func (m *MaintenanceAutoRotate) Unmarshal(dAtA []byte) error {
 				}
 			}
 			b := bool(v != 0)
-			m.SSHKeypairForWorkerNodes = &b
+			m.SSHKeypair = &b
 		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RotationPeriod", wireType)

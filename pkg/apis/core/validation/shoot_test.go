@@ -4007,7 +4007,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			DescribeTable("auto rotation period", func(rotationPeriod *metav1.Duration, isAllowed bool) {
-				shoot.Spec.Maintenance.AutoRotate = &core.MaintenanceAutoRotate{
+				shoot.Spec.Maintenance.CredentialsAutoRotation = &core.MaintenanceAutoRotation{
 					RotationPeriod: rotationPeriod,
 				}
 
@@ -4019,7 +4019,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ContainElements(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":     Equal(field.ErrorTypeInvalid),
-							"Field":    Equal("spec.maintenance.autoRotate.rotationPeriod"),
+							"Field":    Equal("spec.maintenance.credentialsAutoRotation.rotationPeriod"),
 							"Detail":   ContainSubstring("value must be between 30m and 90d"),
 							"BadValue": Equal(rotationPeriod.Duration.String()),
 						}))))

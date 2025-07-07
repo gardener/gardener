@@ -1691,10 +1691,10 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 		}
 	}
 
-	if maintenance.AutoRotate != nil {
-		if maintenance.AutoRotate.RotationPeriod != nil &&
-			(maintenance.AutoRotate.RotationPeriod.Duration < 30*time.Minute || maintenance.AutoRotate.RotationPeriod.Duration > 90*24*time.Hour) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotate", "rotationPeriod"), maintenance.AutoRotate.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
+	if maintenance.CredentialsAutoRotation != nil {
+		if maintenance.CredentialsAutoRotation.RotationPeriod != nil &&
+			(maintenance.CredentialsAutoRotation.RotationPeriod.Duration < 30*time.Minute || maintenance.CredentialsAutoRotation.RotationPeriod.Duration > 90*24*time.Hour) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("credentialsAutoRotation", "rotationPeriod"), maintenance.CredentialsAutoRotation.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
 		}
 	}
 

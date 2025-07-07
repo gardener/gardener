@@ -8897,28 +8897,28 @@ an immediate roll out which is changes to the Spec.Hibernation.Enabled field.</p
 </tr>
 <tr>
 <td>
-<code>autoRotate</code></br>
+<code>credentialsAutoRotation</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.MaintenanceAutoRotate">
-MaintenanceAutoRotate
+<a href="#core.gardener.cloud/v1beta1.MaintenanceAutoRotation">
+MaintenanceAutoRotation
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>AutoRotate contains information about which credentials should be automatically rotated.</p>
+<p>CredentialsAutoRotation contains information about which credentials should be automatically rotated.</p>
 </td>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.MaintenanceAutoRotate">MaintenanceAutoRotate
+<h3 id="core.gardener.cloud/v1beta1.MaintenanceAutoRotation">MaintenanceAutoRotation
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.Maintenance">Maintenance</a>)
 </p>
 <p>
-<p>MaintenanceAutoRotate contains information about which credentials should be automatically rotated.</p>
+<p>MaintenanceAutoRotation contains information about which credentials should be automatically rotated.</p>
 </p>
 <table>
 <thead>
@@ -8942,26 +8942,26 @@ bool
 </tr>
 <tr>
 <td>
-<code>observabilityPasswords</code></br>
+<code>observability</code></br>
 <em>
 bool
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>ObservabilityPasswords indicates whether the observability passwords may be automatically rotated (default: false).</p>
+<p>Observability indicates whether the observability passwords may be automatically rotated (default: false).</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>sshKeypairForWorkerNodes</code></br>
+<code>sshKeypair</code></br>
 <em>
 bool
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>SSHKeypairForWorkerNodes indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).</p>
+<p>SSHKeypair indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).</p>
 </td>
 </tr>
 <tr>

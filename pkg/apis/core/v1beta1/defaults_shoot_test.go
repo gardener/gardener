@@ -607,32 +607,32 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Maintenance.AutoUpdate.MachineImageVersion).To(PointTo(BeFalse()))
 		})
 
-		It("should default the maintenance autoRotate field", func() {
+		It("should default the maintenance credentialsAutoRotation field", func() {
 			SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Maintenance.AutoRotate).NotTo(BeNil())
-			Expect(obj.Spec.Maintenance.AutoRotate.RotationPeriod).To(Equal(&metav1.Duration{Duration: 7 * 24 * time.Hour}))
-			Expect(obj.Spec.Maintenance.AutoRotate.ETCDEncryptionKey).To(BeNil())
-			Expect(obj.Spec.Maintenance.AutoRotate.SSHKeypairForWorkerNodes).To(BeNil())
-			Expect(obj.Spec.Maintenance.AutoRotate.ObservabilityPasswords).To(BeNil())
+			Expect(obj.Spec.Maintenance.CredentialsAutoRotation).NotTo(BeNil())
+			Expect(obj.Spec.Maintenance.CredentialsAutoRotation.RotationPeriod).To(Equal(&metav1.Duration{Duration: 7 * 24 * time.Hour}))
+			Expect(obj.Spec.Maintenance.CredentialsAutoRotation.ETCDEncryptionKey).To(BeNil())
+			Expect(obj.Spec.Maintenance.CredentialsAutoRotation.SSHKeypair).To(BeNil())
+			Expect(obj.Spec.Maintenance.CredentialsAutoRotation.Observability).To(BeNil())
 		})
 
-		It("should not overwrite the already set values for maintenance autoRotate field", func() {
+		It("should not overwrite the already set values for maintenance credentialsAutoRotation field", func() {
 			obj.Spec.Maintenance = &Maintenance{
-				AutoRotate: &MaintenanceAutoRotate{
-					ETCDEncryptionKey:        ptr.To(true),
-					SSHKeypairForWorkerNodes: ptr.To(true),
-					ObservabilityPasswords:   ptr.To(false),
-					RotationPeriod:           &metav1.Duration{Duration: 24 * time.Hour},
+				CredentialsAutoRotation: &MaintenanceAutoRotation{
+					ETCDEncryptionKey: ptr.To(true),
+					SSHKeypair:        ptr.To(true),
+					Observability:     ptr.To(false),
+					RotationPeriod:    &metav1.Duration{Duration: 24 * time.Hour},
 				},
 			}
 			SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Maintenance.AutoRotate).NotTo(BeNil())
-			Expect(obj.Spec.Maintenance.AutoRotate.RotationPeriod).To(Equal(&metav1.Duration{Duration: 24 * time.Hour}))
-			Expect(obj.Spec.Maintenance.AutoRotate.ETCDEncryptionKey).To(Equal(ptr.To(true)))
-			Expect(obj.Spec.Maintenance.AutoRotate.SSHKeypairForWorkerNodes).To(Equal(ptr.To(true)))
-			Expect(obj.Spec.Maintenance.AutoRotate.ObservabilityPasswords).To(Equal(ptr.To(false)))
+			Expect(obj.Spec.Maintenance.CredentialsAutoRotation).NotTo(BeNil())
+			Expect(obj.Spec.Maintenance.CredentialsAutoRotation.RotationPeriod).To(Equal(&metav1.Duration{Duration: 24 * time.Hour}))
+			Expect(obj.Spec.Maintenance.CredentialsAutoRotation.ETCDEncryptionKey).To(Equal(ptr.To(true)))
+			Expect(obj.Spec.Maintenance.CredentialsAutoRotation.SSHKeypair).To(Equal(ptr.To(true)))
+			Expect(obj.Spec.Maintenance.CredentialsAutoRotation.Observability).To(Equal(ptr.To(false)))
 		})
 	})
 

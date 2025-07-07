@@ -228,7 +228,11 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 	if lastOperation := newShoot.Status.LastOperation; lastOperation != nil && lastOperation.Type == core.LastOperationTypeMigrate &&
 		(lastOperation.State == core.LastOperationStateSucceeded || lastOperation.State == core.LastOperationStateAborted) {
 		newShoot.Generation = oldShoot.Generation + 1
-	} else if etcdEncryptionKeyRotationPhase := gardencorehelper.GetShootETCDEncryptionKeyRotationPhase(newShoot.Status.Credentials); etcdEncryptionKeyRotationPhase == core.RotationCompleting {
+	}
+
+	oldETCDEncryptionKeyRotationPhase := gardencorehelper.GetShootETCDEncryptionKeyRotationPhase(oldShoot.Status.Credentials)
+	newETCDEncryptionKeyRotationPhase := gardencorehelper.GetShootETCDEncryptionKeyRotationPhase(newShoot.Status.Credentials)
+	if oldETCDEncryptionKeyRotationPhase != newETCDEncryptionKeyRotationPhase && newETCDEncryptionKeyRotationPhase == core.RotationCompleting {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 }

@@ -1561,9 +1561,9 @@ type Maintenance struct {
 	// an immediate roll out which is changes to the Spec.Hibernation.Enabled field.
 	// +optional
 	ConfineSpecUpdateRollout *bool `json:"confineSpecUpdateRollout,omitempty" protobuf:"varint,3,opt,name=confineSpecUpdateRollout"`
-	// AutoRotate contains information about which credentials should be automatically rotated.
+	// CredentialsAutoRotation contains information about which credentials should be automatically rotated.
 	// +optional
-	AutoRotate *MaintenanceAutoRotate `json:"autoRotate,omitempty" protobuf:"bytes,4,opt,name=autoRotate"`
+	CredentialsAutoRotation *MaintenanceAutoRotation `json:"credentialsAutoRotation,omitempty" protobuf:"bytes,4,opt,name=credentialsAutoRotation"`
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
@@ -1575,17 +1575,17 @@ type MaintenanceAutoUpdate struct {
 	MachineImageVersion *bool `json:"machineImageVersion,omitempty" protobuf:"varint,2,opt,name=machineImageVersion"`
 }
 
-// MaintenanceAutoRotate contains information about which credentials should be automatically rotated.
-type MaintenanceAutoRotate struct {
+// MaintenanceAutoRotation contains information about which credentials should be automatically rotated.
+type MaintenanceAutoRotation struct {
 	// ETCDEncryptionKey indicates whether the etcd encryption key may be automatically rotated (default: false).
 	// +optional
 	ETCDEncryptionKey *bool `json:"etcdEncryptionKey,omitempty" protobuf:"varint,1,opt,name=etcdEncryptionKey"`
-	// ObservabilityPasswords indicates whether the observability passwords may be automatically rotated (default: false).
+	// Observability indicates whether the observability passwords may be automatically rotated (default: false).
 	// +optional
-	ObservabilityPasswords *bool `json:"observabilityPasswords,omitempty" protobuf:"varint,2,opt,name=observabilityPasswords"`
-	// SSHKeypairForWorkerNodes indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).
+	Observability *bool `json:"observability,omitempty" protobuf:"varint,2,opt,name=observability"`
+	// SSHKeypair indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).
 	// +optional
-	SSHKeypairForWorkerNodes *bool `json:"sshKeypairForWorkerNodes,omitempty" protobuf:"varint,3,opt,name=sshKeypairForWorkerNodes"`
+	SSHKeypair *bool `json:"sshKeypair,omitempty" protobuf:"varint,3,opt,name=sshKeypair"`
 	// RotationPeriod is the period between a completed rotation and the start of a new rotation for a specific credential (default: 7d).
 	// +optional
 	RotationPeriod *metav1.Duration `json:"rotationPeriod,omitempty" protobuf:"varint,4,opt,name=rotationPeriod"`

@@ -392,10 +392,10 @@ spec:
     autoUpdate:
       kubernetesVersion: true
       machineImageVersion: true
-    autoRotate:
+    credentialsAutoRotation:
       etcdEncryptionKey: true
-      observabilityPasswords: true
-      sshKeypairForWorkerNodes: true
+      observability: true
+      sshKeypair: true
       rotationPeriod: 168h
   # confineSpecUpdateRollout: false # If set to true then changes/updates to the shoot spec will only be rolled out during
                                     # the maintenance time window
