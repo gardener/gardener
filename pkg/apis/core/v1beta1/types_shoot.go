@@ -820,7 +820,7 @@ type VerticalPodAutoscaler struct {
 	//
 	// Defaults to nil (no maximum).
 	// +optional
-	MaxAllowed corev1.ResourceList `json:"maxAllowed,omitempty"`
+	MaxAllowed corev1.ResourceList `json:"maxAllowed,omitempty" protobuf:"bytes,20,rep,name=maxAllowed,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
 }
 
 const (
