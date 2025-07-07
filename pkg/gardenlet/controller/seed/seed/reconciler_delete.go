@@ -176,13 +176,12 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroy Fluent Operator Custom Resources",
 			Fn:   component.OpDestroyAndWait(c.fluentOperatorCustomResources).Destroy,
 		})
+		destroyPlutono = g.Add(flow.Task{
+			Name: "Destroying plutono",
+			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
+		})
 
 		// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
-		destroyPlutono = g.Add(flow.Task{
-			Name:   "Destroying plutono",
-			Fn:     component.OpDestroyAndWait(c.plutono).Destroy,
-			SkipIf: seedIsGarden,
-		})
 		destroyEtcdDruid = g.Add(flow.Task{
 			Name:   "Destroying etcd druid",
 			Fn:     component.OpDestroyAndWait(c.etcdDruid).Destroy,

@@ -461,7 +461,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name:         "Deploying Plutono",
 			Fn:           c.plutono.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
-			SkipIf:       seedIsGarden,
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Vali",
