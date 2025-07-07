@@ -496,6 +496,7 @@ var _ = Describe("Istio", func() {
 		},
 
 		Entry("short namespace and zone", "default-namespace", "my-zone", Equal("default-namespace--my-zone")),
+		Entry("short namespace and uppercase zone", "default-namespace", "MyUpCaseZone", Equal("default-namespace--38e28")),
 		Entry("empty namespace and zone", "", "", Equal("--")),
 		Entry("empty namespace and valid zone", "", "my-zone", Equal("--my-zone")),
 		Entry("valid namespace and empty zone", "default-namespace", "", Equal("default-namespace--")),
