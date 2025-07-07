@@ -69,6 +69,7 @@ var _ = Describe("KubeAPIServer", func() {
 		podNetworkCIDR        = "10.0.1.0/24"
 		serviceNetworkCIDR    = "10.0.2.0/24"
 		nodeNetworkCIDR       = "10.0.3.0/24"
+		seedPodNetworkCIDR    = "10.1.1.0/24"
 		apiServerClusterIP    = "1.2.3.4"
 		apiServerAddress      = "5.6.7.8"
 	)
@@ -169,6 +170,9 @@ var _ = Describe("KubeAPIServer", func() {
 			Spec: gardencorev1beta1.SeedSpec{
 				Ingress: &gardencorev1beta1.Ingress{
 					Domain: "foo.bar.local",
+				},
+				Networks: gardencorev1beta1.SeedNetworks{
+					Pods: seedPodNetworkCIDR,
 				},
 			},
 		})

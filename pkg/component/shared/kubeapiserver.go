@@ -216,7 +216,7 @@ func DeployKubeAPIServer(
 	nodeNetworkCIDRs []net.IPNet,
 	serviceNetworkCIDRs []net.IPNet,
 	podNetworkCIDRs []net.IPNet,
-	seedPodNetwork string,
+	seedPodNetwork *net.IPNet,
 	resourcesToEncrypt []string,
 	encryptedResources []string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
@@ -306,7 +306,7 @@ func computeKubeAPIServerImages(
 		}
 		result.VPNClient = imageVPNClient.String()
 
-		imageNameEnvoyProxy := imagevector.ContainerImageNameApiserverProxy //TODO: consider using own image e.g. imagevector.ContainerImageNameEnvoyProxy
+		imageNameEnvoyProxy := imagevector.ContainerImageNameEnvoyProxy
 		imageEnvoyProxy, err := imagevector.Containers().FindImage(imageNameEnvoyProxy, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 		if err != nil {
 			return kubeapiserver.Images{}, err

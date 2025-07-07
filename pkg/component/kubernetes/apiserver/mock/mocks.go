@@ -210,15 +210,15 @@ func (mr *MockInterfaceMockRecorder) SetSNIConfig(arg0 any) *gomock.Call {
 }
 
 // SetSeedPodNetwork mocks base method.
-func (m *MockInterface) SetSeedPodNetwork(arg0 string) {
+func (m *MockInterface) SetSeedPodNetwork(ipNet *net.IPNet) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSeedPodNetwork", arg0)
+	m.ctrl.Call(m, "SetSeedPodNetwork", ipNet)
 }
 
 // SetSeedPodNetwork indicates an expected call of SetSeedPodNetwork.
-func (mr *MockInterfaceMockRecorder) SetSeedPodNetwork(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) SetSeedPodNetwork(ipNet any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSeedPodNetwork", reflect.TypeOf((*MockInterface)(nil).SetSeedPodNetwork), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSeedPodNetwork", reflect.TypeOf((*MockInterface)(nil).SetSeedPodNetwork), ipNet)
 }
 
 // SetServerCertificateConfig mocks base method.

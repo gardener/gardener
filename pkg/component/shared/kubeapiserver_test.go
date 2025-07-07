@@ -1156,7 +1156,7 @@ authorizers:
 			nodeNetworkCIDRs               []net.IPNet
 			podNetworkCIDRs                []net.IPNet
 			serviceNetworkCIDRs            []net.IPNet
-			seedPodNetwork                 string
+			seedPodNetwork                 *net.IPNet
 			etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase
 			wantScaleDown                  bool
 		)
@@ -1174,7 +1174,7 @@ authorizers:
 			nodeNetworkCIDRs = []net.IPNet{{IP: net.ParseIP("10.250.0.0"), Mask: net.CIDRMask(24, 32)}}
 			serviceNetworkCIDRs = []net.IPNet{{IP: net.ParseIP("10.0.2.0"), Mask: net.CIDRMask(24, 32)}}
 			podNetworkCIDRs = []net.IPNet{{IP: net.ParseIP("10.0.1.0"), Mask: net.CIDRMask(24, 32)}}
-			seedPodNetwork = "100.64.0.0/12"
+			seedPodNetwork = &net.IPNet{IP: net.ParseIP("100.64.0.0/12"), Mask: net.CIDRMask(24, 32)}
 			wantScaleDown = false
 		})
 

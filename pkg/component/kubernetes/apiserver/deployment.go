@@ -553,7 +553,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 	}
 
 	if k.values.VPN.HighAvailabilityEnabled {
-		return k.handleVPNSettingsHA(deployment, serviceAccount, secretCAVPN, secretHTTPProxyClient, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth, configMapEgressSelector, configMapEnvoyConfig)
+		k.handleVPNSettingsHA(deployment, serviceAccount, secretCAVPN, secretHTTPProxyClient, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth, configMapEgressSelector, configMapEnvoyConfig)
 	} else {
 		k.handleVPNSettingsNonHA(deployment, secretCAVPN, secretHTTPProxyClient, configMapEgressSelector)
 	}
@@ -626,7 +626,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
 	configMapEgressSelector *corev1.ConfigMap,
 	configMapEnvoyConfig *corev1.ConfigMap,
-) error {
+) {
 	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 		serviceName := fmt.Sprintf("%s-%d", vpnseedserver.ServiceName, i)
 
@@ -635,7 +635,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 		})
 	}
 
-	// Only inject Envoy Proxy if Seed and Shoot networks overlap. We need it for the network mapping.
+	// Only inject Envoy Proxy if Seed pods and Shoot networks overlap. Seed pods like Kube-Apiserver(s) talk to shoot pods/nodes/services with potentially clashing IPs.
 	overlap := netutils.OverLapAny(k.values.VPN.SeedPodNetwork, slices.Concat(k.values.VPN.PodNetworkCIDRs, k.values.ServiceNetworkCIDRs, k.values.VPN.NodeNetworkCIDRs)...)
 	if overlap {
 		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
@@ -758,44 +758,6 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			},
 		},
 		{
-			Name: volumeNameCerts,
-			VolumeSource: corev1.VolumeSource{
-				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To[int32](420),
-					Sources: []corev1.VolumeProjection{
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: secretCAVPN.Name,
-								},
-								Items: []corev1.KeyToPath{{
-									Key:  secrets.DataKeyCertificateBundle,
-									Path: fileNameCABundle,
-								}},
-							},
-						},
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: secretHTTPProxy.Name,
-								},
-								Items: []corev1.KeyToPath{
-									{
-										Key:  secrets.DataKeyCertificate,
-										Path: secrets.DataKeyCertificate,
-									},
-									{
-										Key:  secrets.DataKeyPrivateKey,
-										Path: secrets.DataKeyPrivateKey,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
 			Name: volumeNameVPNSeedTLSAuth,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -854,9 +816,46 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 					},
 				},
 			},
+			{
+				Name: volumeNameCerts,
+				VolumeSource: corev1.VolumeSource{
+					Projected: &corev1.ProjectedVolumeSource{
+						DefaultMode: ptr.To[int32](420),
+						Sources: []corev1.VolumeProjection{
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: secretCAVPN.Name,
+									},
+									Items: []corev1.KeyToPath{{
+										Key:  secrets.DataKeyCertificateBundle,
+										Path: fileNameCABundle,
+									}},
+								},
+							},
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: secretHTTPProxy.Name,
+									},
+									Items: []corev1.KeyToPath{
+										{
+											Key:  secrets.DataKeyCertificate,
+											Path: secrets.DataKeyCertificate,
+										},
+										{
+											Key:  secrets.DataKeyPrivateKey,
+											Path: secrets.DataKeyPrivateKey,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		}...)
 	}
-	return nil
 }
 
 func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {

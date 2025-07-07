@@ -816,8 +816,8 @@ images:
         value:
           - type: 'githubTeam'
             teamname: 'gardener/gardener-core-networking-maintainers'
-  # API Server SNI
-  - name: apiserver-proxy
+  # API Server SNI, VPN-SeedServer and Kube-ApiServer Proxy
+  - name: envoy-proxy
     sourceRepository: github.com/envoyproxy/envoy
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/envoyproxy/envoy-distroless
     tag: "v1.34.1"

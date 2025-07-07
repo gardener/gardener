@@ -91,7 +91,7 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 }
 
 func (k *kubeAPIServer) reconcileConfigMapEnvoyConfig(ctx context.Context, configMap *corev1.ConfigMap) error {
-	if !k.values.VPN.Enabled && !k.values.VPN.HighAvailabilityEnabled {
+	if !k.values.VPN.Enabled || !k.values.VPN.HighAvailabilityEnabled {
 		return nil
 	}
 

@@ -87,7 +87,7 @@ func Overlap(a, b net.IPNet) bool {
 	return a.Contains(b.IP) || b.Contains(a.IP)
 }
 
-// OverLapAny checks if any of the given IP networks otherNws overlap with nw.
+// OverLapAny checks if any of the given IP networks overlap with the first parameter.
 func OverLapAny(nw net.IPNet, otherNws ...net.IPNet) bool {
 	for _, otherNw := range otherNws {
 		if Overlap(nw, otherNw) {

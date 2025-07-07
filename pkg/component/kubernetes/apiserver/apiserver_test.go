@@ -2875,7 +2875,6 @@ kind: AuthorizationConfiguration
 					deployAndRead()
 
 					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
-						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
 						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
 						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
 						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
@@ -3098,7 +3097,6 @@ kind: AuthorizationConfiguration
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
-						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
 						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
 						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
 						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,

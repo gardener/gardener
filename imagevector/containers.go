@@ -11,8 +11,6 @@ const (
 	ContainerImageNameAlertmanager = "alertmanager"
 	// ContainerImageNameAlpineConntrack is a constant for an image in the image vector with name 'alpine-conntrack'.
 	ContainerImageNameAlpineConntrack = "alpine-conntrack"
-	// ContainerImageNameApiserverProxy is a constant for an image in the image vector with name 'apiserver-proxy'.
-	ContainerImageNameApiserverProxy = "apiserver-proxy"
 	// ContainerImageNameApiserverProxySidecar is a constant for an image in the image vector with name 'apiserver-proxy-sidecar'.
 	ContainerImageNameApiserverProxySidecar = "apiserver-proxy-sidecar"
 	// ContainerImageNameBlackboxExporter is a constant for an image in the image vector with name 'blackbox-exporter'.
@@ -29,6 +27,8 @@ const (
 	ContainerImageNameCortex = "cortex"
 	// ContainerImageNameDependencyWatchdog is a constant for an image in the image vector with name 'dependency-watchdog'.
 	ContainerImageNameDependencyWatchdog = "dependency-watchdog"
+	// ContainerImageNameEnvoyProxy is a constant for an image in the image vector with name 'envoy-proxy'.
+	ContainerImageNameEnvoyProxy = "envoy-proxy"
 	// ContainerImageNameEtcd is a constant for an image in the image vector with name 'etcd'.
 	ContainerImageNameEtcd = "etcd"
 	// ContainerImageNameEtcdDruid is a constant for an image in the image vector with name 'etcd-druid'.
