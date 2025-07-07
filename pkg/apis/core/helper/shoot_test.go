@@ -190,57 +190,6 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
-	DescribeTable("#IsETCDEncryptionKeyRotationEnabled",
-		func(maintenance *core.Maintenance, expectedResult bool) {
-			shoot := &core.Shoot{
-				Spec: core.ShootSpec{
-					Maintenance: maintenance,
-				},
-			}
-			Expect(IsETCDEncryptionKeyRotationEnabled(shoot)).To(Equal(expectedResult))
-		},
-
-		Entry("should return false maintenance is nil", nil, false),
-		Entry("should return false when autoRotate is nil", &core.Maintenance{}, false),
-		Entry("should return false when etcd encryption key rotation field is nil", &core.Maintenance{AutoRotate: &core.MaintenanceAutoRotate{}}, false),
-		Entry("should return true when etcd encryption key rotation field is se to true", &core.Maintenance{AutoRotate: &core.MaintenanceAutoRotate{ETCDEncryptionKey: ptr.To(true)}}, true),
-		Entry("should return false when etcd encryption key rotation field is se to false", &core.Maintenance{AutoRotate: &core.MaintenanceAutoRotate{ETCDEncryptionKey: ptr.To(false)}}, false),
-	)
-
-	DescribeTable("#IsObservabilityPasswordsRotationEnabled",
-		func(maintenance *core.Maintenance, expectedResult bool) {
-			shoot := &core.Shoot{
-				Spec: core.ShootSpec{
-					Maintenance: maintenance,
-				},
-			}
-			Expect(IsObservabilityPasswordsRotationEnabled(shoot)).To(Equal(expectedResult))
-		},
-
-		Entry("should return false maintenance is nil", nil, false),
-		Entry("should return false when autoRotate is nil", &core.Maintenance{}, false),
-		Entry("should return false when observability passwords rotation field is nil", &core.Maintenance{AutoRotate: &core.MaintenanceAutoRotate{}}, false),
-		Entry("should return true when observability passwords rotation field is se to true", &core.Maintenance{AutoRotate: &core.MaintenanceAutoRotate{ObservabilityPasswords: ptr.To(true)}}, true),
-		Entry("should return false when observability passwords rotation field is se to false", &core.Maintenance{AutoRotate: &core.MaintenanceAutoRotate{ObservabilityPasswords: ptr.To(false)}}, false),
-	)
-
-	DescribeTable("#IsSSHKeypairRotationEnabled",
-		func(maintenance *core.Maintenance, expectedResult bool) {
-			shoot := &core.Shoot{
-				Spec: core.ShootSpec{
-					Maintenance: maintenance,
-				},
-			}
-			Expect(IsSSHKeypairRotationEnabled(shoot)).To(Equal(expectedResult))
-		},
-
-		Entry("should return false maintenance is nil", nil, false),
-		Entry("should return false when autoRotate is nil", &core.Maintenance{}, false),
-		Entry("should return false when ssh key-pair rotation field is nil", &core.Maintenance{AutoRotate: &core.MaintenanceAutoRotate{}}, false),
-		Entry("should return true when ssh key-pair rotation field is se to true", &core.Maintenance{AutoRotate: &core.MaintenanceAutoRotate{SSHKeypairForWorkerNodes: ptr.To(true)}}, true),
-		Entry("should return false when ssh key-pair rotation field is se to false", &core.Maintenance{AutoRotate: &core.MaintenanceAutoRotate{SSHKeypairForWorkerNodes: ptr.To(false)}}, false),
-	)
-
 	DescribeTable("#ShootEnablesSSHAccess",
 		func(workers []core.Worker, workersSettings *core.WorkersSettings, expectedResult bool) {
 			shoot := &core.Shoot{

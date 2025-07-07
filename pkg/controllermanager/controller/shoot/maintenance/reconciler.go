@@ -679,10 +679,10 @@ func computeCredentialsRotationResults(log logr.Logger, shoot *gardencorev1beta1
 	var (
 		maintenanceResults                    = make(map[string]updateResult)
 		ETCDEncryptionKeyRotationPhase        = v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials)
-		etcdEncryptionRotationEnbled          = shoot.Spec.Maintenance.AutoRotate.ETCDEncryptionKey != nil && *shoot.Spec.Maintenance.AutoRotate.ETCDEncryptionKey
-		sshKeypairRotationEnabled             = shoot.Spec.Maintenance.AutoRotate.SSHKeypairForWorkerNodes != nil && *shoot.Spec.Maintenance.AutoRotate.SSHKeypairForWorkerNodes
-		observabilityPasswordsRotationEnabled = shoot.Spec.Maintenance.AutoRotate.ObservabilityPasswords != nil && *shoot.Spec.Maintenance.AutoRotate.ObservabilityPasswords
-		rotationPeriod                        = *shoot.Spec.Maintenance.AutoRotate.RotationPeriod
+		etcdEncryptionRotationEnbled          = v1beta1helper.IsETCDEncryptionKeyRotationEnabled(shoot)
+		sshKeypairRotationEnabled             = v1beta1helper.IsSSHKeypairRotationEnabled(shoot)
+		observabilityPasswordsRotationEnabled = v1beta1helper.IsObservabilityPasswordsRotationEnabled(shoot)
+		rotationPeriod                        = *shoot.Spec.Maintenance.CredentialsAutoRotation.RotationPeriod
 	)
 
 	if etcdEncryptionRotationEnbled && etcdEncryptionKeyRotationPassedRotationPeriod(shoot.Status.Credentials, now.Time, rotationPeriod) {
