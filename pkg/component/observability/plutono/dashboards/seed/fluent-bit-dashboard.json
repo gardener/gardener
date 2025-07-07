@@ -14,7 +14,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": "prometheus-aggregate",
       "description": "Input bytes processing rate of all fluent-bits.",
       "fieldConfig": {
         "defaults": {
@@ -122,7 +122,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": "prometheus-aggregate",
       "description": "Output bytes processing rate of all fluent-bits.",
       "fieldConfig": {
         "defaults": {
@@ -228,7 +228,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": "prometheus-aggregate",
       "description": "Input records processing rate of all fluent-bits.",
       "fieldConfig": {
         "defaults": {
@@ -334,7 +334,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": "prometheus-aggregate",
       "description": "Output records processing rate of all fluent-bits.",
       "fieldConfig": {
         "defaults": {
@@ -442,7 +442,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": "prometheus-aggregate",
       "description": "Output plugin total logs",
       "fieldConfig": {
         "defaults": {
@@ -572,7 +572,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": "prometheus-aggregate",
       "description": "Summary for the all custom fail metrics in the output plugin",
       "fieldConfig": {
         "defaults": {
@@ -1261,7 +1261,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": "prometheus-aggregate",
         "definition": "label_values(pod)",
         "hide": 0,
         "includeAll": true,

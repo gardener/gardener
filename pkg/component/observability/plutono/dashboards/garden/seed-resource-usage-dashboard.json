@@ -1779,7 +1779,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(seed:container_cpu_usage_seconds_total:sum, seed)",
         "description": null,
         "error": null,
