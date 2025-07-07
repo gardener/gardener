@@ -216,7 +216,7 @@ metadata:
 `
 
 				} else if values.ClusterType == comp.ClusterTypeSeed {
-					configMapData += `    - name: seed-prometheus
+					configMapData += `    - name: prometheus-seed
       type: prometheus
       access: proxy
       url: http://prometheus-seed:80
@@ -260,7 +260,7 @@ metadata:
   namespace: some-namespace
 `
 				} else {
-					configMap += `  name: plutono-datasources-be28eaa6
+					configMap += `  name: plutono-datasources-427f301b
   namespace: some-namespace
 `
 				}
