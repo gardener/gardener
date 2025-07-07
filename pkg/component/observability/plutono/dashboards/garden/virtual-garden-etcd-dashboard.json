@@ -43,7 +43,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": "prometheus",
+      "datasource": null,
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -130,7 +130,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -243,7 +243,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -356,7 +356,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -461,7 +461,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -571,7 +571,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -676,7 +676,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -879,7 +879,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "decimals": null,
       "editable": true,
       "error": false,
@@ -994,7 +994,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "prometheus",
+          "datasource": null,
           "description": "One minute rates for all filesystem read operations executed within the container(s).\n\nThe data has the following designation scheme: <pod-name> / <container-name>",
           "fieldConfig": {
             "defaults": {
@@ -1094,7 +1094,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "prometheus",
+          "datasource": null,
           "description": "One minute rates for all filesystem write operations executed within the container(s).\n\nThe data has the following designation scheme: <pod-name> / <container-name>",
           "fieldConfig": {
             "defaults": {
@@ -1212,7 +1212,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "decimals": 0,
       "editable": true,
       "error": false,
@@ -1319,7 +1319,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "editable": true,
       "error": false,
       "fieldConfig": {

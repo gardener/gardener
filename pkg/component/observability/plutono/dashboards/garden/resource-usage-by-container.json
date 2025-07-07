@@ -494,7 +494,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(seed:kube_pod_container_resource_requests_cpu_cores:sum_by_container, seed)",
         "description": null,
         "error": null,
@@ -525,7 +525,7 @@
           "text": "kube-apiserver",
           "value": "kube-apiserver"
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(seed:kube_pod_container_resource_requests_cpu_cores:sum_by_container, container)",
         "description": null,
         "error": null,

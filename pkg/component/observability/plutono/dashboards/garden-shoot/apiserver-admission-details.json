@@ -232,7 +232,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(apiserver_request_total,job)",
         "error": null,
         "hide": 0,
@@ -309,7 +309,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(apiserver_admission_controller_admission_duration_seconds_bucket,name)",
         "error": null,
         "hide": 0,
@@ -336,7 +336,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(apiserver_admission_webhook_admission_duration_seconds_bucket,name)",
         "error": null,
         "hide": 0,
