@@ -12,7 +12,9 @@ import (
 	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	telemetryv1alpha1 "istio.io/api/telemetry/v1alpha1"
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	telemetryv1 "istio.io/client-go/pkg/apis/telemetry/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
@@ -308,7 +310,32 @@ func (i *istiod) Deploy(ctx context.Context) error {
 					),
 				}},
 			},
-		}); err != nil {
+		},
+			&telemetryv1.Telemetry{
+				ObjectMeta: monitoringutils.ConfigObjectMeta("enable-upstream-address", istioIngressGateway.Namespace, prometheusName),
+				Spec: telemetryv1alpha1.Telemetry{
+					Metrics: []*telemetryv1alpha1.Metrics{
+						{
+							Providers: []*telemetryv1alpha1.ProviderRef{
+								{
+									Name: "prometheus",
+								},
+							},
+							Overrides: []*telemetryv1alpha1.MetricsOverrides{
+								{
+									Match: &telemetryv1alpha1.MetricSelector{
+										MetricMatch: &telemetryv1alpha1.MetricSelector_Metric{Metric: telemetryv1alpha1.MetricSelector_ALL_METRICS},
+									},
+									TagOverrides: map[string]*telemetryv1alpha1.MetricsOverrides_TagOverride{
+										"upstream_address": {Value: "upstream.address"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		); err != nil {
 			return err
 		}
 	}
