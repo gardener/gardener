@@ -309,7 +309,7 @@ Hence, if RBAC already allows a request, your webhook authorizer might not get c
 ## OpenID Connect
 
 > [!WARNING]
-> OpenID Connect is deprecated in favor of [Structured Authentication configuration](#structured-authentication). Setting OpenID Connect configurations is forbidden for clusters with Kubernetes version `>= 1.32`. The configuration and the related CRDs `(Cluster)OpenIDConnectPreset` will be removed when the oldest supported version of Kubernetes is `v1.32` in Gardener.
+> OpenID Connect is deprecated in favor of [Structured Authentication configuration](#structured-authentication). Setting OpenID Connect configurations is forbidden for clusters with Kubernetes version `>= 1.32`. The configuration and the related API resources `(Cluster)OpenIDConnectPreset` will be removed when Gardener no longer supports clusters with Kubernetes version `< 1.32`.
 
 The `kube-apiserver` of shoot clusters can be provided with [OpenID Connect configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) via the Shoot spec:
 
