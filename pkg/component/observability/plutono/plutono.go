@@ -208,7 +208,7 @@ func (p *plutono) WaitCleanup(ctx context.Context) error {
 
 func (p *plutono) managedResourceName() string {
 	if p.values.OnlyDeployDataSourcesAndDashboards {
-		return "plutono-" + p.clusterLabelKey() + "-config-only"
+		return "plutono-seed-config-only"
 	}
 	return "plutono"
 }
@@ -879,7 +879,9 @@ func (p *plutono) dataSourceLabel() string {
 func (p *plutono) clusterLabelKey() string {
 	var label string
 
-	if p.values.IsGardenCluster {
+	// If only the dashboards and data sources should be deployed, the ConfigMaps must be labeled with the 'garden' key
+	// (since gardener-operator already deployed Plutono with it).
+	if p.values.OnlyDeployDataSourcesAndDashboards || p.values.IsGardenCluster {
 		label = "garden"
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		label = "seed"
