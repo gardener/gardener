@@ -89,7 +89,7 @@ func (b *Botanist) UpdateDualStackMigrationConditionIfNeeded(ctx context.Context
 	if constraint == nil && len(shoot.Spec.Networking.IPFamilies) == 2 && shoot.Status.Networking != nil && len(shoot.Status.Networking.Nodes) == 1 {
 		if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
 			constraint := v1beta1helper.GetOrInitConditionWithClock(b.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
-			constraint = v1beta1helper.UpdatedConditionWithClock(b.Clock, constraint, gardencorev1beta1.ConditionFalse, "DualStackMigration", "The shoot is migrating to dual-stack networking.")
+			constraint = v1beta1helper.UpdatedConditionWithClock(b.Clock, constraint, gardencorev1beta1.ConditionProgressing, "DualStackMigration", "The shoot is migrating to dual-stack networking.")
 			shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, constraint)
 			return nil
 		}); err != nil {
