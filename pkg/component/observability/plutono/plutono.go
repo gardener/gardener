@@ -43,8 +43,7 @@ import (
 )
 
 const (
-	managedResourceName = "plutono"
-	name                = "plutono"
+	name = "plutono"
 
 	port                          = 3000
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour
@@ -115,6 +114,10 @@ type Values struct {
 	IsWorkerless bool
 	// IsGardenCluster specifies whether the cluster is garden cluster.
 	IsGardenCluster bool
+	// OnlyDeployDataSourcesAndDashboards only leads to deployment of the ConfigMaps for data sources and dashboards.
+	// This is relevant when the Plutono component is already deployed by another component (e.g., gardener-operator),
+	// and the gardenlet wants to contribute seed-specific configuration.
+	OnlyDeployDataSourcesAndDashboards bool
 	// PriorityClassName is the name of the priority class.
 	PriorityClassName string
 	// Replicas is the number of pod replicas for the plutono.
@@ -150,17 +153,7 @@ type plutono struct {
 }
 
 func (p *plutono) Deploy(ctx context.Context) error {
-	plutonoAdminUserSecret, err := p.secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
-		Name:           "plutono-admin",
-		Format:         secretsutils.BasicAuthFormatNormal,
-		Username:       "admin",
-		PasswordLength: 32,
-	}, secretsmanager.Rotate(secretsmanager.InPlace), secretsmanager.Validity(24*time.Hour*30))
-	if err != nil {
-		return err
-	}
-
-	dashboardConfigMap, data, err := p.computeResourcesData(ctx, plutonoAdminUserSecret)
+	dashboardConfigMap, data, err := p.computeResourcesData(ctx)
 	if err != nil {
 		return err
 	}
@@ -168,7 +161,7 @@ func (p *plutono) Deploy(ctx context.Context) error {
 	// dashboards configmap is not deployed as part of MR because it can breach the secret size limit.
 	if dashboardConfigMap != nil {
 		configMap := p.emptyDashboardConfigMap()
-		if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, configMap, func() error {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, configMap, func() error {
 			for k, v := range dashboardConfigMap.Annotations {
 				metav1.SetMetaDataAnnotation(&configMap.ObjectMeta, k, v)
 			}
@@ -185,14 +178,14 @@ func (p *plutono) Deploy(ctx context.Context) error {
 		}
 	}
 
-	return managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, managedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, data)
+	return managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, p.managedResourceName(), false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, data)
 }
 
 func (p *plutono) Destroy(ctx context.Context) error {
 	if err := kubernetesutils.DeleteObject(ctx, p.client, p.emptyDashboardConfigMap()); err != nil {
 		return fmt.Errorf("failed deleting dashboard ConfigMap: %w", err)
 	}
-	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, managedResourceName)
+	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, p.managedResourceName())
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -203,24 +196,65 @@ func (p *plutono) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, managedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, p.managedResourceName())
 }
 
 func (p *plutono) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, managedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, p.managedResourceName())
+}
+
+func (p *plutono) managedResourceName() string {
+	if p.values.OnlyDeployDataSourcesAndDashboards {
+		return "plutono-" + p.clusterLabelKey() + "-config-only"
+	}
+	return "plutono"
 }
 
 func (p *plutono) SetWildcardCertName(secretName *string) {
 	p.values.WildcardCertName = secretName
 }
 
-func (p *plutono) computeResourcesData(ctx context.Context, plutonoAdminUserSecret *corev1.Secret) (*corev1.ConfigMap, map[string][]byte, error) {
-	var (
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, map[string][]byte, error) {
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
+	dashboardConfigMap, err := p.getDashboardConfigMap()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dataSourceConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "plutono-datasources",
+			Namespace: p.namespace,
+			Labels:    utils.MergeStringMaps(getLabels(), map[string]string{p.dataSourceLabel(): labelValueTrue}),
+		},
+		Data: map[string]string{"datasources.yaml": p.getDataSource()},
+	}
+	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
+
+	if p.values.OnlyDeployDataSourcesAndDashboards {
+		data, err := registry.AddAllAndSerialize(dataSourceConfigMap)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return dashboardConfigMap, data, nil
+	}
+
+	plutonoAdminUserSecret, err := p.secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
+		Name:           "plutono-admin",
+		Format:         secretsutils.BasicAuthFormatNormal,
+		Username:       "admin",
+		PasswordLength: 32,
+	}, secretsmanager.Rotate(secretsmanager.InPlace), secretsmanager.Validity(24*time.Hour*30))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var (
 		providerConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "plutono-dashboard-providers",
@@ -239,25 +273,10 @@ func (p *plutono) computeResourcesData(ctx context.Context, plutonoAdminUserSecr
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{dataKeyConfig: []byte(p.getConfig(plutonoAdminUserSecret.Data))},
 		}
-
-		dataSourceConfigMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "plutono-datasources",
-				Namespace: p.namespace,
-				Labels:    utils.MergeStringMaps(getLabels(), map[string]string{p.dataSourceLabel(): labelValueTrue}),
-			},
-			Data: map[string]string{"datasources.yaml": p.getDataSource()},
-		}
 	)
-
-	dashboardConfigMap, err := p.getDashboardConfigMap()
-	if err != nil {
-		return nil, nil, err
-	}
 
 	utilruntime.Must(kubernetesutils.MakeUnique(plutonoConfigSecret))
 	utilruntime.Must(kubernetesutils.MakeUnique(providerConfigMap))
-	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
 
 	ingress, err := p.getIngress(ctx)
 	if err != nil {
@@ -832,28 +851,22 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 }
 
 func (p *plutono) dashboardLabel() string {
-	label := v1beta1constants.LabelPrefixMonitoringDashboard
-
-	if p.values.IsGardenCluster {
-		label += "garden"
-	} else if p.values.ClusterType == component.ClusterTypeSeed {
-		label += "seed"
-	} else if p.values.ClusterType == component.ClusterTypeShoot {
-		label += "shoot"
-	}
-
-	return label
+	return v1beta1constants.LabelPrefixMonitoringDashboard + p.clusterLabelKey()
 }
 
 func (p *plutono) dataSourceLabel() string {
-	label := v1beta1constants.LabelPrefixMonitoringDataSource
+	return v1beta1constants.LabelPrefixMonitoringDataSource + p.clusterLabelKey()
+}
+
+func (p *plutono) clusterLabelKey() string {
+	var label string
 
 	if p.values.IsGardenCluster {
-		label += "garden"
+		label = "garden"
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
-		label += "seed"
+		label = "seed"
 	} else if p.values.ClusterType == component.ClusterTypeShoot {
-		label += "shoot"
+		label = "shoot"
 	}
 
 	return label
