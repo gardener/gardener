@@ -17,12 +17,16 @@ For Kubernetes specific upgrade notes the upstream Kubernetes release notes, [ch
 
 ## Upgrading to Kubernetes `v1.32`
 
-- The `Shoot`'s field `.spec.kubernetes.kubeAPIServer.oidcConfig` is forbidden. `Shoot` owners that have used `oidcConfig` are recommended to configure `StructuredAuthentication`. More information about `StructuredAuthentication` can be found [here](./shoot_access.md#structured-authentication)
+> [!TIP]
+> It is recommended to [migrate from OIDC to `StructuredAuthentication`](shoot_access.md#migrating-from-oidc-to-structured-authentication-config) before updating to Kubernetes v1.32 in order to avoid not being able to revert the change.
+
+- The `Shoot`'s `spec.kubernetes.kubeAPIServer.oidcConfig` field is forbidden.
+  - `Shoot` owners that have used `oidcConfig` or a `(Cluster)OpenIDConnectPreset` resource are recommended to [migrate to `StructuredAuthentication`](shoot_access.md#migrating-from-oidc-to-structured-authentication-config). More information about `StructuredAuthentication` can be found in the [Structured Authentication documentation](./shoot_access.md#structured-authentication).
 
 ## Upgrading to Kubernetes `v1.31`
 
-- The `Shoot`'s field `.spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication` is forbidden.
-- The `Shoot`'s fields `.spec.kubernetes.kubelet.systemReserved` and `.spec.provider.workers[].kubernetes.kubelet.systemReserved` are forbidden. `Shoot` owners should use the `.spec.kubernetes.kubelet.kubeReserved` and `.spec.provider.workers[].kubernetes.kubelet.kubeReserved` fields.
+- The `Shoot`'s `spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication` field is forbidden.
+- The `Shoot`'s `.spec.kubernetes.kubelet.systemReserved` and `.spec.provider.workers[].kubernetes.kubelet.systemReserved` fields are forbidden. `Shoot` owners should use the `.spec.kubernetes.kubelet.kubeReserved` and `.spec.provider.workers[].kubernetes.kubelet.kubeReserved` fields.
 
 ## Upgrading to Kubernetes `v1.30`
 
