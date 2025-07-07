@@ -584,3 +584,70 @@ func GetCapabilitySetsWithAppliedDefaults(capabilitySets []gardencorev1beta1.Cap
 	}
 	return result
 }
+
+// GetCapabilitiesIntersection returns the intersection of capabilities from a list of capabilities.
+func GetCapabilitiesIntersection(capabilitiesList ...gardencorev1beta1.Capabilities) gardencorev1beta1.Capabilities {
+	intersection := make(gardencorev1beta1.Capabilities)
+
+	if len(capabilitiesList) == 0 {
+		return intersection
+	}
+
+	// Initialize intersection with the first capabilities object
+	for key, values := range capabilitiesList[0] {
+		intersection[key] = values
+	}
+
+	// Iterate through the remaining capabilities objects and refine the intersection
+	for _, capabilities := range capabilitiesList[1:] {
+		for key, values := range intersection {
+			intersection[key] = intersectSlices(values, capabilities[key])
+		}
+	}
+
+	return intersection
+}
+
+// intersectSlices returns the intersection of two slices.
+func intersectSlices(slice1, slice2 []string) []string {
+	elementSet := make(map[string]struct{})
+	intersection := []string{}
+
+	// Add elements of the first slice to the map.
+	for _, elem := range slice1 {
+		elementSet[elem] = struct{}{}
+	}
+
+	// Check if elements of the second slice exist in the map.
+	for _, elem := range slice2 {
+		if _, exists := elementSet[elem]; exists {
+			intersection = append(intersection, elem)
+		}
+	}
+
+	return intersection
+}
+
+// AreCapabilitiesSupportedByCapabilitySets checks if the given capabilities are supported by at least set of the provided capability sets.
+func AreCapabilitiesSupportedByCapabilitySets(
+	capabilities gardencorev1beta1.Capabilities, capabilitySets []gardencorev1beta1.CapabilitySet, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition,
+) bool {
+	defaultedCapabilitySets := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilitiesDefinitions)
+	defaultedCapabilities := GetCapabilitiesWithAppliedDefaults(capabilities, capabilitiesDefinitions)
+
+	for _, capabilitySet := range defaultedCapabilitySets {
+		isSupported := true
+		commonCapabilities := GetCapabilitiesIntersection(capabilitySet.Capabilities, defaultedCapabilities)
+		// If the intersection has at least one value for each capability, the capabilities are supported.
+		for _, values := range commonCapabilities {
+			if len(values) == 0 {
+				isSupported = false
+				break
+			}
+		}
+		if isSupported {
+			return true
+		}
+	}
+	return false
+}
