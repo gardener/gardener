@@ -140,7 +140,7 @@ var _ = Describe("VPA", func() {
 		roleBindingLeaderLockingRecommender          *rbacv1.RoleBinding
 		serviceRecommenderFor                        func(component.ClusterType, bool) *corev1.Service
 		shootAccessSecretRecommender                 *corev1.Secret
-		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType, *float64, *float64, *float64, *metav1.Duration, *float64, *float64, *float64, *metav1.Duration, *metav1.Duration, *int64, string) *appsv1.Deployment
+		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType, *float64, *float64, *float64, *metav1.Duration, *float64, *float64, *float64, *metav1.Duration, *metav1.Duration, *int64, string, map[corev1.ResourceName]resource.Quantity) *appsv1.Deployment
 		podDisruptionBudgetRecommender               *policyv1.PodDisruptionBudget
 		vpaRecommender                               *vpaautoscalingv1.VerticalPodAutoscaler
 		serviceMonitorRecommenderFor                 func(clusterType component.ClusterType, isGardenCluster bool) *monitoringv1.ServiceMonitor
@@ -744,6 +744,7 @@ var _ = Describe("VPA", func() {
 			memoryAggregationInterval *metav1.Duration,
 			memoryAggregationIntervalCount *int64,
 			leaderElectionNamespace string,
+			maxAllowed map[corev1.ResourceName]resource.Quantity,
 		) *appsv1.Deployment {
 			var cpuRequest string
 			var memoryRequest string
@@ -846,6 +847,13 @@ var _ = Describe("VPA", func() {
 				obj.Spec.Template.Spec.Containers[0].Args = append(obj.Spec.Template.Spec.Containers[0].Args, "--kubeconfig="+pathGenericKubeconfig)
 
 				Expect(gardenerutils.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretRecommender.Name)).To(Succeed())
+			}
+
+			if quantity, ok := maxAllowed[corev1.ResourceCPU]; ok {
+				obj.Spec.Template.Spec.Containers[0].Args = append(obj.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--container-recommendation-max-allowed-cpu=%s", quantity.String()))
+			}
+			if quantity, ok := maxAllowed[corev1.ResourceMemory]; ok {
+				obj.Spec.Template.Spec.Containers[0].Args = append(obj.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--container-recommendation-max-allowed-memory=%s", quantity.String()))
 			}
 
 			return obj
@@ -1618,7 +1626,7 @@ var _ = Describe("VPA", func() {
 					roleBindingLeaderLockingRecommender.Name = replaceTargetSubstrings(roleBindingLeaderLockingRecommender.Name)
 					roleBindingLeaderLockingRecommender.RoleRef.Name = replaceTargetSubstrings(roleBindingLeaderLockingRecommender.RoleRef.Name)
 
-					deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, namespace)
+					deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, namespace, nil)
 					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
 					expectedObjects = append(expectedObjects,
@@ -1733,6 +1741,10 @@ var _ = Describe("VPA", func() {
 				valuesRecommender.MemoryHistogramDecayHalfLife = &metav1.Duration{Duration: 1337 * time.Minute}
 				valuesRecommender.MemoryAggregationInterval = &metav1.Duration{Duration: 42 * time.Minute}
 				valuesRecommender.MemoryAggregationIntervalCount = ptr.To[int64](99)
+				valuesRecommender.MaxAllowed = map[corev1.ResourceName]resource.Quantity{
+					"cpu":    resource.MustParse("8"),
+					"memory": resource.MustParse("32Gi"),
+				}
 
 				valuesUpdater.Interval = &metav1.Duration{Duration: 4 * time.Hour}
 				valuesUpdater.EvictAfterOOMThreshold = &metav1.Duration{Duration: 5 * time.Hour}
@@ -1801,6 +1813,7 @@ var _ = Describe("VPA", func() {
 					valuesRecommender.MemoryAggregationInterval,
 					valuesRecommender.MemoryAggregationIntervalCount,
 					namespace,
+					valuesRecommender.MaxAllowed,
 				)
 				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
@@ -2066,7 +2079,7 @@ var _ = Describe("VPA", func() {
 
 				deployment = &appsv1.Deployment{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
-				deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "kube-system")
+				deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "kube-system", nil)
 				deploymentRecommender.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentRecommender))
 
@@ -2266,7 +2279,7 @@ var _ = Describe("VPA", func() {
 
 				By("Create vpa-recommender runtime resources")
 				Expect(c.Create(ctx, serviceRecommenderFor(component.ClusterTypeShoot, false))).To(Succeed())
-				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "kube-system"))).To(Succeed())
+				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "kube-system", nil))).To(Succeed())
 				Expect(c.Create(ctx, podDisruptionBudgetRecommender)).To(Succeed())
 				Expect(c.Create(ctx, vpaRecommender)).To(Succeed())
 				Expect(c.Create(ctx, serviceMonitorRecommenderFor(component.ClusterTypeShoot, false))).To(Succeed())
@@ -2289,7 +2302,7 @@ var _ = Describe("VPA", func() {
 
 				By("Verify vpa-recommender runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceRecommenderFor(component.ClusterTypeShoot, false)), &appsv1.Deployment{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "kube-system")), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "kube-system", nil)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetRecommender), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceMonitorRecommenderFor(component.ClusterTypeShoot, false)), &monitoringv1.ServiceMonitor{})).To(BeNotFoundError())
