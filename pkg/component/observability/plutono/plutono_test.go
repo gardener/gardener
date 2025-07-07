@@ -245,6 +245,7 @@ metadata:
   creationTimestamp: null
   labels:
     component: plutono
+    datasource.monitoring.gardener.cloud/` + clusterLabelKey(values) + `: "true"
     resources.gardener.cloud/garbage-collectable-reference: "true"
 `
 				if values.IsGardenCluster {
@@ -268,14 +269,6 @@ metadata:
 			}
 
 			deploymentYAMLFor = func(values Values) *appsv1.Deployment {
-				dataSourceConfigMap, labelKey := "plutono-datasources-be28eaa6", "seed"
-				if values.ClusterType == comp.ClusterTypeShoot {
-					dataSourceConfigMap, labelKey = "plutono-datasources-f82429ca", "shoot"
-				}
-				if values.IsGardenCluster {
-					dataSourceConfigMap, labelKey = "plutono-datasources-b320ffed", "garden"
-				}
-
 				deployment := &appsv1.Deployment{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -364,7 +357,7 @@ metadata:
 											{Name: "RESOURCE", Value: "configmap"},
 											{Name: "NAMESPACE", Value: namespace},
 											{Name: "FOLDER", Value: "/var/lib/plutono/dashboards"},
-											{Name: "LABEL", Value: "dashboard.monitoring.gardener.cloud/" + labelKey},
+											{Name: "LABEL", Value: "dashboard.monitoring.gardener.cloud/" + clusterLabelKey(values)},
 											{Name: "LABEL_VALUE", Value: "true"},
 											{Name: "METHOD", Value: "WATCH"},
 											{Name: "REQ_URL", Value: "http://localhost:3000/api/admin/provisioning/dashboards/reload"},
@@ -390,18 +383,50 @@ metadata:
 											AllowPrivilegeEscalation: ptr.To(false),
 										},
 									},
-								},
-								Volumes: []corev1.Volume{
 									{
-										Name: "datasources",
-										VolumeSource: corev1.VolumeSource{
-											ConfigMap: &corev1.ConfigMapVolumeSource{
-												LocalObjectReference: corev1.LocalObjectReference{
-													Name: dataSourceConfigMap,
-												},
+										Name:            "datasource-refresher",
+										Image:           values.ImageDashboardRefresher,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+										Command: []string{
+											"python",
+											"-u",
+											"sidecar.py",
+											"--req-username-file=/etc/dashboard-refresher/plutono-admin/username",
+											"--req-password-file=/etc/dashboard-refresher/plutono-admin/password",
+										},
+										Env: []corev1.EnvVar{
+											{Name: "LOG_LEVEL", Value: "INFO"},
+											{Name: "RESOURCE", Value: "configmap"},
+											{Name: "NAMESPACE", Value: namespace},
+											{Name: "FOLDER", Value: "/etc/plutono/provisioning/datasources"},
+											{Name: "LABEL", Value: "datasource.monitoring.gardener.cloud/" + clusterLabelKey(values)},
+											{Name: "LABEL_VALUE", Value: "true"},
+											{Name: "METHOD", Value: "WATCH"},
+											{Name: "REQ_URL", Value: "http://localhost:3000/api/admin/provisioning/datasources/reload"},
+											{Name: "REQ_METHOD", Value: "POST"},
+										},
+										VolumeMounts: []corev1.VolumeMount{
+											{
+												Name:      "datasources",
+												MountPath: "/etc/plutono/provisioning/datasources",
+											},
+											{
+												Name:      "admin-user",
+												MountPath: "/etc/dashboard-refresher/plutono-admin",
 											},
 										},
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("5m"),
+												corev1.ResourceMemory: resource.MustParse("85M"),
+											},
+										},
+										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
+										},
 									},
+								},
+								Volumes: []corev1.Volume{
 									{
 										Name: "dashboard-providers",
 										VolumeSource: corev1.VolumeSource{
@@ -434,6 +459,12 @@ metadata:
 											EmptyDir: &corev1.EmptyDirVolumeSource{
 												SizeLimit: ptr.To(resource.MustParse("100Mi")),
 											},
+										},
+									},
+									{
+										Name: "datasources",
+										VolumeSource: corev1.VolumeSource{
+											EmptyDir: &corev1.EmptyDirVolumeSource{},
 										},
 									},
 									{
@@ -624,15 +655,7 @@ status:
 
 			dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: dashboardConfigMapName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed(), "Could not successfully get dashboards configMap")
-
-			labelKey := "seed"
-			if values.ClusterType == comp.ClusterTypeShoot {
-				labelKey = "shoot"
-			}
-			if values.IsGardenCluster {
-				labelKey = "garden"
-			}
-			Expect(dashboardsConfigMap.Labels).To(HaveKeyWithValue("dashboard.monitoring.gardener.cloud/"+labelKey, "true"), "Dashboards configMap does not contain expected key")
+			Expect(dashboardsConfigMap.Labels).To(HaveKeyWithValue("dashboard.monitoring.gardener.cloud/"+clusterLabelKey(values), "true"), "Dashboards configMap does not contain expected key")
 
 			availableDashboards := sets.Set[string]{}
 			for key := range dashboardsConfigMap.Data {
@@ -870,4 +893,14 @@ func getPodLabels(values Values) map[string]string {
 	}
 
 	return labels
+}
+
+func clusterLabelKey(values Values) string {
+	if values.ClusterType == comp.ClusterTypeShoot {
+		return "shoot"
+	}
+	if values.IsGardenCluster {
+		return "garden"
+	}
+	return "seed"
 }
