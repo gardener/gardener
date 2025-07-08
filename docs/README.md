@@ -90,6 +90,7 @@
 ### Autoscaling
 
 * [DNS Autoscaling](usage/autoscaling/dns-autoscaling.md)
+* [In-place Resource Updates](usage/autoscaling/in-place-resource-updates.md)
 * [Shoot Auto-Scaling Configuration](usage/autoscaling/shoot_autoscaling.md)
 * [Shoot Pod Auto-Scaling Best Practices](usage/autoscaling/shoot_pod_autoscaling_best_practices.md)
 

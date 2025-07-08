@@ -1,4 +1,5 @@
 ---
+title: In-place Resource Updates
 description: In-place updates of Pod resources
 ---
 
