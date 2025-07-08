@@ -368,7 +368,7 @@ type SeedSettingVerticalPodAutoscaler struct {
 	//
 	// Defaults to nil (no maximum).
 	// +optional
-	MaxAllowed corev1.ResourceList `json:"maxAllowed,omitempty"`
+	MaxAllowed corev1.ResourceList `json:"maxAllowed,omitempty" protobuf:"bytes,3,rep,name=maxAllowed,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
 }
 
 // SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
