@@ -176,7 +176,7 @@ type SettingLoadBalancerServices struct {
 }
 
 // SettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
-// seed.
+// cluster.
 type SettingVerticalPodAutoscaler struct {
 	// Enabled controls whether the VPA components shall be deployed into this cluster. It is true by default because
 	// the operator (and Gardener) heavily rely on a VPA being deployed. You should only disable this if your runtime
@@ -188,6 +188,13 @@ type SettingVerticalPodAutoscaler struct {
 	// FeatureGates contains information about enabled feature gates.
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
+	// MaxAllowed specifies the global maximum allowed (maximum amount of resources) that vpa-recommender can recommend for a container.
+	// The VerticalPodAutoscaler-level maximum allowed takes precedence over the global maximum allowed.
+	// For more information, see https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/examples.md#specifying-global-maximum-allowed-resources-to-prevent-pods-from-being-unschedulable.
+	//
+	// Defaults to nil (no maximum).
+	// +optional
+	MaxAllowed corev1.ResourceList `json:"maxAllowed,omitempty"`
 }
 
 // SettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
