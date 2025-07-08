@@ -186,6 +186,19 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 				}
 			}
 		}
+		if seedSpec.Settings.VerticalPodAutoscaler != nil {
+			if seedSpec.Settings.VerticalPodAutoscaler.MaxAllowed != nil {
+				allowedResources := sets.New(corev1.ResourceCPU, corev1.ResourceMemory)
+				for resource, quantity := range seedSpec.Settings.VerticalPodAutoscaler.MaxAllowed {
+					resourcePath := fldPath.Child("settings", "verticalPodAutoscaler", "maxAllowed", resource.String())
+					if !allowedResources.Has(resource) {
+						allErrs = append(allErrs, field.NotSupported(resourcePath, resource, allowedResources.UnsortedList()))
+					}
+
+					allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
+				}
+			}
+		}
 		if helper.SeedSettingTopologyAwareRoutingEnabled(seedSpec.Settings) && len(seedSpec.Provider.Zones) <= 1 {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled on multi-zone Seed clusters (with at least two zones in spec.provider.zones)"))
 		}
