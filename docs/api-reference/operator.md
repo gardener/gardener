@@ -3207,7 +3207,7 @@ according to its value enable/disable topology-aware routing for their Services.
 </p>
 <p>
 <p>SettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
-seed.</p>
+cluster.</p>
 </p>
 <table>
 <thead>
@@ -3230,6 +3230,23 @@ bool
 the operator (and Gardener) heavily rely on a VPA being deployed. You should only disable this if your runtime
 cluster already has another, manually/custom managed VPA deployment. If this is not the case, but you still
 disable it, then reconciliation will fail.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxAllowed</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxAllowed specifies the global maximum allowed (maximum amount of resources) that vpa-recommender can recommend for a container.
+The VerticalPodAutoscaler-level maximum allowed takes precedence over the global maximum allowed.
+For more information, see <a href="https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/examples.md#specifying-global-maximum-allowed-resources-to-prevent-pods-from-being-unschedulable">https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/examples.md#specifying-global-maximum-allowed-resources-to-prevent-pods-from-being-unschedulable</a>.</p>
+<p>Defaults to nil (no maximum).</p>
 </td>
 </tr>
 </tbody>
