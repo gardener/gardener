@@ -991,21 +991,23 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 			})
 
-			It("should prevent enabling topology-aware routing on single-zone Seed cluster", func() {
-				seed.Spec.Provider.Zones = []string{"a"}
-				seed.Spec.Settings = &core.SeedSettings{
-					TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{
-						Enabled: true,
-					},
-				}
+			Context("topology-aware routing", func() {
+				It("should prevent enabling topology-aware routing on single-zone Seed cluster", func() {
+					seed.Spec.Provider.Zones = []string{"a"}
+					seed.Spec.Settings = &core.SeedSettings{
+						TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{
+							Enabled: true,
+						},
+					}
 
-				Expect(ValidateSeed(seed)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.settings.topologyAwareRouting.enabled"),
-						"Detail": Equal("topology-aware routing can only be enabled on multi-zone Seed clusters (with at least two zones in spec.provider.zones)"),
-					})),
-				))
+					Expect(ValidateSeed(seed)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.settings.topologyAwareRouting.enabled"),
+							"Detail": Equal("topology-aware routing can only be enabled on multi-zone Seed clusters (with at least two zones in spec.provider.zones)"),
+						})),
+					))
+				})
 			})
 
 			It("should allow enabling topology-aware routing on multi-zone Seed cluster", func() {
