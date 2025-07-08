@@ -334,3 +334,7 @@ func (v *vpa) getPrometheusLabel() string {
 	}
 	return shoot.Label
 }
+
+func (v *vpa) computeFeatureGates() string {
+	return kubernetesutils.FeatureGatesToCommandLineParameter(v.values.FeatureGates)
+}

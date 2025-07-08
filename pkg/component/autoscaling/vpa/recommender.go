@@ -349,8 +349,7 @@ func (v *vpa) computeRecommenderArgs() []string {
 	}
 
 	if v.values.FeatureGates != nil {
-		featureGates := kubernetesutils.FeatureGatesToCommandLineParameter(v.values.FeatureGates)
-		out = append(out, featureGates)
+		out = append(out, v.computeFeatureGates())
 	}
 
 	return out
