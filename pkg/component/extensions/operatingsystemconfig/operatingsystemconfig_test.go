@@ -1787,6 +1787,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 					EphemeralStorage: ptr.To(resource.MustParse("100Gi")),
 				}
 			})
+
+			It("when node-local-dns enabled and changing kubernetesVersion >= 1.34 from below", func() {
+				values.NodeLocalDNSEnabled = true
+				var err error
+				kubernetesVersion = semver.MustParse("1.33")
+				hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				Expect(err).ToNot(HaveOccurred())
+				kubernetesVersion = semver.MustParse("1.34")
+			})
 		})
 	})
 })

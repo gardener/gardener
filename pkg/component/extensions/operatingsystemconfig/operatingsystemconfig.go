@@ -1095,10 +1095,8 @@ func KeyV2(
 		}
 	}
 
-	if kubernetesVersion.LessThan(semver.MustParse("1.34")) {
-		if nodeLocalDNSEnabled {
-			data = append(data, "node-local-dns")
-		}
+	if version.ConstraintK8sLess134.Check(kubernetesVersion) && nodeLocalDNSEnabled {
+		data = append(data, "node-local-dns")
 	}
 
 	data = append(data, gardenerutils.CalculateDataStringForKubeletConfiguration(kubeletConfiguration)...)

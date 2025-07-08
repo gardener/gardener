@@ -15,7 +15,6 @@ import (
 
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	nodelocaldns "github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	logr "github.com/go-logr/logr"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -130,18 +129,6 @@ func (m *MockInterface) SetShootClientSet(arg0 kubernetes.Interface) {
 func (mr *MockInterfaceMockRecorder) SetShootClientSet(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetShootClientSet", reflect.TypeOf((*MockInterface)(nil).SetShootClientSet), arg0)
-}
-
-// SetWorkerPools mocks base method.
-func (m *MockInterface) SetWorkerPools(arg0 []nodelocaldns.WorkerPool) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetWorkerPools", arg0)
-}
-
-// SetWorkerPools indicates an expected call of SetWorkerPools.
-func (mr *MockInterfaceMockRecorder) SetWorkerPools(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorkerPools", reflect.TypeOf((*MockInterface)(nil).SetWorkerPools), arg0)
 }
 
 // Wait mocks base method.
