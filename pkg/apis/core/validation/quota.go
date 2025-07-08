@@ -38,6 +38,10 @@ func ValidateQuotaUpdate(newQuota, oldQuota *core.Quota) field.ErrorList {
 func ValidateQuotaSpec(quotaSpec *core.QuotaSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	if quotaSpec.ClusterLifetimeDays != nil && *quotaSpec.ClusterLifetimeDays < 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterLifetimeDays"), quotaSpec.ClusterLifetimeDays, "must be greater than 0"))
+	}
+
 	scopeRef := quotaSpec.Scope
 	if _, err := helper.QuotaScope(scopeRef); err != nil {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("scope"), scopeRef, []string{"project", "secret", "workloadidentity"}))

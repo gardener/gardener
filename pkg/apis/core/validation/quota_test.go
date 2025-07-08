@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -118,6 +119,17 @@ var _ = Describe("Quota Validation Tests ", func() {
 					"Field": Equal("spec.metrics[key]"),
 				})),
 			))
+		})
+
+		It("should forbid Quota with negative cluster lifetime days", func() {
+			quota.Spec.ClusterLifetimeDays = ptr.To(int32(-1))
+
+			errorList := ValidateQuota(quota)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.clusterLifetimeDays"),
+			}))))
 		})
 
 		It("should allow quota scope referencing WorkloadIdentity", func() {
