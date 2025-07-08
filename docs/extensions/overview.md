@@ -27,7 +27,7 @@ Practically, many extensions provide basic example manifests to start with the r
 
 ### Kinds and Types
 
-Extensions are defined by their Kinds (defined by Gardener - see [resources](../resources)) and Types.
+Extensions are defined by their Kinds (defined by Gardener - see [resources](./resources)) and Types.
 
 For example, the following is an extension resource of Kind `Infrastructure` and Type `local`, which means we need a Gardener extension `local` that reconciles `Infrastructure` resources.
 
