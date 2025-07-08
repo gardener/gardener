@@ -99,6 +99,9 @@ spec:
       enabled: true # a Gardener-managed VPA deployment is enabled
     # featureGates:
     #   SomeKubernetesFeature: true
+    # maxAllowed:
+    #   cpu: 8
+    #   memory: 32Gi
     topologyAwareRouting:
       enabled: true # certain Services deployed in the seed will be topology-aware
 # taints:
