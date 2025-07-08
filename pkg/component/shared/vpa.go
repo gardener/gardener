@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +27,7 @@ func NewVerticalPodAutoscaler(
 	runtimeVersion *semver.Version,
 	secretsManager secretsmanager.Interface,
 	enabled bool,
+	maxAllowed corev1.ResourceList,
 	secretNameServerCA string,
 	priorityClassNameAdmissionController string,
 	priorityClassNameRecommender string,
@@ -69,6 +71,7 @@ func NewVerticalPodAutoscaler(
 				Image:                        imageRecommender.String(),
 				PriorityClassName:            priorityClassNameRecommender,
 				RecommendationMarginFraction: ptr.To(float64(0.05)),
+				MaxAllowed:                   maxAllowed,
 			},
 			Updater: vpa.ValuesUpdater{
 				EvictionTolerance:      ptr.To(float64(1.0)),

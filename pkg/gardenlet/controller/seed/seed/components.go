@@ -741,6 +741,7 @@ func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSe
 		r.SeedVersion,
 		secretsManager,
 		vpaEnabled(settings),
+		v1beta1helper.SeedSettingVerticalPodAutoscalerMaxAllowed(settings),
 		v1beta1constants.SecretNameCASeed,
 		v1beta1constants.PriorityClassNameSeedSystem800,
 		v1beta1constants.PriorityClassNameSeedSystem700,
