@@ -3264,7 +3264,6 @@ func Convert_core_ControllerRegistrationSpec_To_v1beta1_ControllerRegistrationSp
 func autoConvert_v1beta1_ControllerResource_To_core_ControllerResource(in *ControllerResource, out *core.ControllerResource, s conversion.Scope) error {
 	out.Kind = in.Kind
 	out.Type = in.Type
-	out.GloballyEnabled = (*bool)(unsafe.Pointer(in.GloballyEnabled))
 	out.ReconcileTimeout = (*metav1.Duration)(unsafe.Pointer(in.ReconcileTimeout))
 	out.Primary = (*bool)(unsafe.Pointer(in.Primary))
 	out.Lifecycle = (*core.ControllerResourceLifecycle)(unsafe.Pointer(in.Lifecycle))
@@ -3282,7 +3281,6 @@ func Convert_v1beta1_ControllerResource_To_core_ControllerResource(in *Controlle
 func autoConvert_core_ControllerResource_To_v1beta1_ControllerResource(in *core.ControllerResource, out *ControllerResource, s conversion.Scope) error {
 	out.Kind = in.Kind
 	out.Type = in.Type
-	out.GloballyEnabled = (*bool)(unsafe.Pointer(in.GloballyEnabled))
 	out.ReconcileTimeout = (*metav1.Duration)(unsafe.Pointer(in.ReconcileTimeout))
 	out.Primary = (*bool)(unsafe.Pointer(in.Primary))
 	out.Lifecycle = (*ControllerResourceLifecycle)(unsafe.Pointer(in.Lifecycle))

@@ -4733,19 +4733,6 @@ string
 </tr>
 <tr>
 <td>
-<code>globallyEnabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
-Deprecated: This field is deprecated and will be removed in Gardener version v1.123. Please use AutoEnable instead.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>reconcileTimeout</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">

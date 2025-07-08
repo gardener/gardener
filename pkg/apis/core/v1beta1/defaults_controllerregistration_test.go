@@ -67,12 +67,6 @@ var _ = Describe("ControllerRegistration defaulting", func() {
 		})
 
 		Context("kind != Extension", func() {
-			It("should not default the globallyEnabled field", func() {
-				SetObjectDefaults_ControllerRegistration(obj)
-
-				Expect(obj.Spec.Resources[0].GloballyEnabled).To(BeNil())
-			})
-
 			It("should not default the autoEnable field", func() {
 				SetObjectDefaults_ControllerRegistration(obj)
 
@@ -93,52 +87,6 @@ var _ = Describe("ControllerRegistration defaulting", func() {
 		})
 
 		Context("kind == Extension", func() {
-			It("should not default the globallyEnabled field", func() {
-				SetObjectDefaults_ControllerRegistration(obj)
-
-				Expect(obj.Spec.Resources[1].GloballyEnabled).To(BeNil())
-			})
-
-			It("should not overwrite the globallyEnabled field", func() {
-				obj.Spec.Resources[1].GloballyEnabled = ptr.To(true)
-
-				SetObjectDefaults_ControllerRegistration(obj)
-
-				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(ptr.To(true)))
-			})
-
-			It("should not default the globallyEnabled field if autoEnable is set to shoot", func() {
-				obj.Spec.Resources[1].AutoEnable = []ClusterType{"shoot"}
-
-				SetObjectDefaults_ControllerRegistration(obj)
-
-				Expect(obj.Spec.Resources[1].GloballyEnabled).To(BeNil())
-			})
-
-			It("should not default the globallyEnabled field if autoEnable is set to seed", func() {
-				obj.Spec.Resources[1].AutoEnable = []ClusterType{"seed"}
-
-				SetObjectDefaults_ControllerRegistration(obj)
-
-				Expect(obj.Spec.Resources[1].GloballyEnabled).To(BeNil())
-			})
-
-			It("should not change the globallyEnabled field is it was set before", func() {
-				obj.Spec.Resources[1].GloballyEnabled = ptr.To(false)
-				obj.Spec.Resources[1].AutoEnable = []ClusterType{"seed"}
-
-				SetObjectDefaults_ControllerRegistration(obj)
-
-				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(ptr.To(false)))
-			})
-
-			It("should default the autoEnable field to shoot if globallyEnabled is true", func() {
-				obj.Spec.Resources[1].GloballyEnabled = ptr.To(true)
-				SetObjectDefaults_ControllerRegistration(obj)
-
-				Expect(obj.Spec.Resources[1].AutoEnable).To(ConsistOf(ClusterType("shoot")))
-			})
-
 			It("should not overwrite the autoEnable field", func() {
 				obj.Spec.Resources[1].AutoEnable = []ClusterType{"shoot", "seed"}
 
