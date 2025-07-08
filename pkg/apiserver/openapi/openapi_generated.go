@@ -8460,10 +8460,26 @@ func schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref common.Re
 							},
 						},
 					},
+					"maxAllowed": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxAllowed specifies the global maximum allowed (maximum amount of resources) that vpa-recommender can recommend for a container. The VerticalPodAutoscaler-level maximum allowed takes precedence over the global maximum allowed. For more information, see https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/examples.md#specifying-global-maximum-allowed-resources-to-prevent-pods-from-being-unschedulable.\n\nDefaults to nil (no maximum).",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 
