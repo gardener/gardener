@@ -2419,6 +2419,13 @@ spec:
                 description: Args is the set of arguments to pass to the main container's
                   binary.
                 type: object
+              collectorNotReadyGracePeriod:
+                default: 30s
+                description: |-
+                  CollectorNotReadyGracePeriod defines the grace period after which a TargetAllocator stops considering a collector is target assignable.
+                  The default is 30s, which means that if a collector becomes not Ready, the target allocator will wait for 30 seconds before reassigning its targets. The assumption is that the state is temporary, and an expensive target reallocation should be avoided if possible.
+                format: duration
+                type: string
               env:
                 description: Environment variables to set on the generated pods.
                 items:
@@ -4314,9 +4321,9 @@ spec:
                           ('prometheus.io/scrape', 'prometheus.io/port', and 'prometheus.io/path')
                         type: boolean
                       enableMetrics:
-                        description: |-
-                          EnableMetrics specifies if ServiceMonitor or PodMonitor(for sidecar mode) should be created for the service managed by the OpenTelemetry Operator.
-                          The operator.observability.prometheus feature gate must be enabled to use this feature.
+                        description: EnableMetrics specifies if ServiceMonitor or
+                          PodMonitor(for sidecar mode) should be created for the service
+                          managed by the OpenTelemetry Operator.
                         type: boolean
                     type: object
                 type: object
@@ -4727,6 +4734,20 @@ spec:
                   of PrometheusOperator CRDs ( servicemonitor.monitoring.coreos.com/v1
                   and podmonitor.monitoring.coreos.com/v1 ).
                 properties:
+                  allowNamespaces:
+                    description: AllowNamespaces Namespaces to scope the interaction
+                      of the Target Allocator and the apiserver (allow list). This
+                      is mutually exclusive with DenyNamespaces.
+                    items:
+                      type: string
+                    type: array
+                  denyNamespaces:
+                    description: DenyNamespaces Namespaces to scope the interaction
+                      of the Target Allocator and the apiserver (deny list). This
+                      is mutually exclusive with AllowNamespaces.
+                    items:
+                      type: string
+                    type: array
                   enabled:
                     description: Enabled indicates whether to use a PrometheusOperator
                       custom resources as targets or not.
@@ -4942,6 +4963,7 @@ spec:
                     x-kubernetes-map-type: atomic
                 type: object
               replicas:
+                default: 1
                 description: Replicas is the number of pod instances for the underlying
                   replicaset. Set this if you are not using autoscaling.
                 format: int32
@@ -7301,8 +7323,6 @@ spec:
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
-            required:
-            - managementState
             type: object
           status:
             description: TargetAllocatorStatus defines the observed state of Target
