@@ -9,12 +9,12 @@ This is a short guide covering the enablement of `in-place` resource updates in 
 
 ## Compatibility
 
-`In-place` resource updates got introduced as an _alpha_ [feature](https://kubernetes.io/blog/2023/05/12/in-place-pod-resize-alpha/) with Kubernetes _1.27_ and got promoted to _beta_ with _1.33_.
+`In-place` resource updates got introduced as an alpha [feature](https://kubernetes.io/blog/2023/05/12/in-place-pod-resize-alpha/) in Kubernetes 1.27. In Kubernetes 1.33, it got promoted to beta and enabled by default.
 On the `Vertical Pod Autoscaler` side, with Release [1.4.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.4.0), `in-place` resources updates are available as an _alpha_ [feature](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md#in-place-updates-inplaceorrecreate) for `vpa-admission-controller` and `vpa-updater`.
 
 ### Kubernetes
 
-With Kubernetes _1.33_ the `InPlacePodVerticalScaling` feature gate, enabling the `in-place` resources updates is enabled by default to all related components and __do not__ require additional intrumentation. Prior versions, from _1.27+_ require the `InPlacePodVerticalScaling` feature gate __to be enabled__ on both _kube-apiserver_ and _kubelet_.
+With Kubernetes 1.33 the `InPlacePodVerticalScaling` feature gate, enabling the `in-place` resources updates is enabled by default and __does not__ require additional instrumentation. Prior versions, from Kubernetes 1.27+ require the `InPlacePodVerticalScaling` feature gate __to be enabled__ for both _kube-apiserver_ and _kubelet_.
 
 ### Vertical Pod Autoscaling
 
@@ -28,21 +28,28 @@ As described in the [compatibility](#compatibility) section, _alpha_ versions of
 
 Since `Vertical Pod Autoscaler` has it's `InPlaceOrRecreate` feature gate still in _alpha_, and Kubernetes promoted `InPlacePodVerticalScaling` to _beta_ just recently ( in _1.33_ ), we took the decision to allow configuring `in-place` resource updates only on `Shoot`(s) running _1.33+_.
 
-- _Enable_ `InPlaceOrRecreate` feature gate in `Vertical Por Autoscaler` by updating:
-  - `shoot.spec.kubernetes.verticalPodAutoscaler.featureGates` with:
+- Enable `InPlaceOrRecreate` feature gate for `Vertical Por Autoscaler` in the Shoot spec:
 
-      ```yaml
-      InPlaceOrRecreate: true
-      ```
-- Make sure `InPlacePodVerticalScaling` Kubernetes feature gate is not explicitly disabled in:
-  - `shoot.spec.kubernetes.kubeAPIServer.featureGates`
-  - `shoot.spec.kubernetes.kubelet.featureGates`
+  ```yaml
+  spec:
+    kubernetes:
+      verticalPodAutoscaler:
+        InPlaceOrRecreate: true
+  ```
+
+- Make sure `InPlacePodVerticalScaling` Kubernetes feature gate is not explicitly disabled in the Shoot spec for:
+  - kube-apiserver: `.spec.kubernetes.kubeAPIServer.featureGates`
+  - kubelet: `.spec.kubernetes.kubelet.featureGates` or `.spec.provider.workers[].kubernetes.kubelet.featureGates`
 
 ### Seed
+
+> **Disclaimer:** The following configurations are relevant for Gardener `Operators` that have access to `Seed` cluster(s).
 
 For `Seed` clusters, `Vertical Pod Autoscaler` features gates can be managed in `seed.spec.settings.verticalPodAutoscaler.featureGates`. There are no additional Kubernetes versions validation when configuring `Seed` clusters.
 
 ### Garden
+
+> **Disclaimer:** The following configurations are relevant for Gardener `Operators` that have access to `Garden` cluster(s).
 
 For `Garden` clusters, `Vertical Pod Autoscaler` feature gates can be managed in `garden.spec.runtimeCluster.settings.verticalPodAutoscaler.featureGates`. There are no additional Kubernetes versions validation when configuring `Garden` clusters.
 
