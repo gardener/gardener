@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var diskSizeRegex = regexp.MustCompile(`^(\d+)`)
@@ -159,10 +160,8 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 		return "", fmt.Errorf("failed to parse Kubernetes version %q: %w", kubernetesVersion, err)
 	}
 
-	if parsedVersion.LessThan(semver.MustParse("1.34.0")) {
-		if v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
-			data = append(data, "node-local-dns")
-		}
+	if versionutils.ConstraintK8sLess134.Check(parsedVersion) && v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
+		data = append(data, "node-local-dns")
 	}
 
 	var result string
