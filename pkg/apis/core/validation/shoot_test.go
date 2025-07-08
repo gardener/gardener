@@ -5942,7 +5942,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
 
-			It("should allow toggling the node-local-dns if one of the worker pool has updateStrategy AutoInPlaceUpdate/ManualInPlaceUpdate and k8s version >= 1.34.0", func() {
+			It("should allow toggling the node-local-dns if one of the worker pool has updateStrategy AutoInPlaceUpdate/ManualInPlaceUpdate but k8s version >= 1.34.0", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
 				shoot.Spec.Provider.Workers[1].Name = "worker-2"

@@ -120,7 +120,6 @@ var _ = Describe("NodeLocalDNS", func() {
 			}).AnyTimes()
 			shootClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			shootClient.EXPECT().Scheme().Return(kubernetes.ShootScheme).AnyTimes()
-			nodelocaldns.EXPECT().SetWorkerPools(gomock.Any())
 			nodelocaldns.EXPECT().SetShootClientSet(gomock.Any())
 			nodelocaldns.EXPECT().SetLogger(gomock.Any())
 			botanist.ShootClientSet = kubernetesClient
@@ -193,7 +192,6 @@ var _ = Describe("NodeLocalDNS", func() {
 					nodelocaldns.EXPECT().Destroy(ctx).Return(nil)
 
 					Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())
-
 				})
 
 				It("label disabled", func() {
