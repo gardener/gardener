@@ -11482,6 +11482,18 @@ is enabled by default because Gardener heavily relies on a VPA being deployed. Y
 your seed cluster already has another, manually/custom managed VPA deployment.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>featureGates</code></br>
+<em>
+map[string]bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FeatureGates is a map of feature gates for the vpa components.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettings">SeedSettings
