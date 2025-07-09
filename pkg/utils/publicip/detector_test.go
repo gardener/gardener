@@ -81,9 +81,10 @@ var _ = Describe("IpifyDetector", func() {
 		})
 
 		It("should return only the available IP", func() {
-			Expect(detector.DetectPublicIPs(ctx, log)).Error().To(MatchError(
-				MatchRegexp(`.*IPv4.*: foo.*\n.*IPv6.*: context deadline exceeded.*`),
-			))
+			Expect(detector.DetectPublicIPs(ctx, log)).Error().To(MatchError(And(
+				MatchRegexp(`error determining public IPv4 address: .*: foo`),
+				MatchRegexp(`error determining public IPv6 address: .*: context deadline exceeded`),
+			)))
 		})
 	})
 
