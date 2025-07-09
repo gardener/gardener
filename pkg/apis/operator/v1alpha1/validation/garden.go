@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -62,17 +63,8 @@ func ValidateGarden(garden *operatorv1alpha1.Garden, extensions []operatorv1alph
 	allErrs = append(allErrs, validateOperation(garden.Annotations[v1beta1constants.GardenerOperation], garden, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, validateDNS(garden.Spec.DNS, field.NewPath("spec", "dns"))...)
 	allErrs = append(allErrs, validateExtensions(garden.Spec.Extensions, extensions, field.NewPath("spec", "extensions"))...)
-	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.DNS, garden.Spec.RuntimeCluster, field.NewPath("spec", "runtimeCluster"))...)
+	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.DNS, garden.Spec.RuntimeCluster, helper.HighAvailabilityEnabled(garden), field.NewPath("spec", "runtimeCluster"))...)
 	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.DNS, garden.Spec.VirtualCluster, garden.Spec.RuntimeCluster, field.NewPath("spec", "virtualCluster"))...)
-
-	if helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings) {
-		if len(garden.Spec.RuntimeCluster.Provider.Zones) <= 1 {
-			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "runtimeCluster", "settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled on multi-zone garden runtime cluster (with at least two zones in spec.provider.zones)"))
-		}
-		if !helper.HighAvailabilityEnabled(garden) {
-			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "runtimeCluster", "settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled when virtual cluster's high-availability is enabled"))
-		}
-	}
 
 	return allErrs
 }
@@ -181,21 +173,19 @@ func validateDNS(dns *operatorv1alpha1.DNSManagement, fldPath *field.Path) field
 	return allErrs
 }
 
-func validateRuntimeCluster(dns *operatorv1alpha1.DNSManagement, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
+func validateRuntimeCluster(dns *operatorv1alpha1.DNSManagement, runtimeCluster operatorv1alpha1.RuntimeCluster, virtualClusterHAEnabled bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = validateDomains(dns, runtimeCluster.Ingress.Domains, fldPath.Child("ingress", "domains"), allErrs)
-
+	allErrs = append(allErrs, validateDomains(dns, runtimeCluster.Ingress.Domains, fldPath.Child("ingress", "domains"))...)
 	allErrs = append(allErrs, validateRuntimeClusterNetworking(runtimeCluster.Networking, fldPath.Child("networking"))...)
-
-	if runtimeCluster.Settings != nil && runtimeCluster.Settings.VerticalPodAutoscaler != nil {
-		allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(runtimeCluster.Settings.VerticalPodAutoscaler.FeatureGates, fldPath.Child("settings", "verticalPodAutoscaler", "featureGates"))...)
-	}
+	allErrs = append(allErrs, validateRuntimeClusterSettings(runtimeCluster, virtualClusterHAEnabled, fldPath.Child("settings"))...)
 
 	return allErrs
 }
 
-func validateDomains(dns *operatorv1alpha1.DNSManagement, domains []operatorv1alpha1.DNSDomain, path *field.Path, allErrs field.ErrorList) field.ErrorList {
+func validateDomains(dns *operatorv1alpha1.DNSManagement, domains []operatorv1alpha1.DNSDomain, path *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
 	names := sets.New[string]()
 	for i, domain := range domains {
 		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(domain.Name, path.Index(i).Child("name"))...)
@@ -264,10 +254,45 @@ func validateRuntimeClusterNetworking(runtimeNetworking operatorv1alpha1.Runtime
 	return allErrs
 }
 
+func validateRuntimeClusterSettings(runtimeCluster operatorv1alpha1.RuntimeCluster, virtualClusterHAEnabled bool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if runtimeCluster.Settings == nil {
+		return allErrs
+	}
+
+	if runtimeCluster.Settings.VerticalPodAutoscaler != nil {
+		allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(runtimeCluster.Settings.VerticalPodAutoscaler.FeatureGates, fldPath.Child("verticalPodAutoscaler", "featureGates"))...)
+
+		if runtimeCluster.Settings.VerticalPodAutoscaler.MaxAllowed != nil {
+			allowedResources := sets.New(corev1.ResourceCPU, corev1.ResourceMemory)
+			for resource, quantity := range runtimeCluster.Settings.VerticalPodAutoscaler.MaxAllowed {
+				resourcePath := fldPath.Child("verticalPodAutoscaler", "maxAllowed", resource.String())
+				if !allowedResources.Has(resource) {
+					allErrs = append(allErrs, field.NotSupported(resourcePath, resource, allowedResources.UnsortedList()))
+				}
+
+				allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
+			}
+		}
+	}
+
+	if helper.TopologyAwareRoutingEnabled(runtimeCluster.Settings) {
+		if len(runtimeCluster.Provider.Zones) <= 1 {
+			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "runtimeCluster", "settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled on multi-zone garden runtime cluster (with at least two zones in spec.provider.zones)"))
+		}
+		if !virtualClusterHAEnabled {
+			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "runtimeCluster", "settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled when virtual cluster's high-availability is enabled"))
+		}
+	}
+
+	return allErrs
+}
+
 func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster operatorv1alpha1.VirtualCluster, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = validateDomains(dns, virtualCluster.DNS.Domains, fldPath.Child("dns", "domains"), allErrs)
+	allErrs = append(allErrs, validateDomains(dns, virtualCluster.DNS.Domains, fldPath.Child("dns", "domains"))...)
 
 	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil {
 		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, fldPath.Child("etcd", "main", "autoscaling"))...)
