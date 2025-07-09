@@ -1596,7 +1596,7 @@ type MaintenanceCredentialsAutoRotation struct {
 	SSHKeypair *MaintenanceRotationConfig `json:"sshKeypair,omitempty" protobuf:"varint,3,opt,name=sshKeypair"`
 }
 
-// MaintenanceCredentialsAutoRotation contains configuration for automatic rotation.
+// MaintenanceRotationConfig contains configuration for automatic rotation.
 type MaintenanceRotationConfig struct {
 	// Enabled indicates whether automatic rotation should be performed (default: false).
 	// +optional
