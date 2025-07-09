@@ -84,6 +84,12 @@ var (
 		v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	)
+	// TODO(AleksandarSavchev): Remove this variable and the associated validation in gardener `v1.130`
+	// It is used to notify users that the opeations have neeb removed in favour of 'rotate-etcd-encryption-key'
+	removedETCDEncryptionKeyShootOperations = sets.New(
+		"rotate-etcd-encryption-key-start",
+		"rotate-etcd-encryption-key-complete",
+	)
 	forbiddenShootOperationsWhenEncryptionChangeIsRollingOut = sets.New(
 		v1beta1constants.OperationRotateCredentialsStart,
 		v1beta1constants.OperationRotateETCDEncryptionKey,
@@ -2642,7 +2648,9 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	if operation != "" {
-		if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
+		if removedETCDEncryptionKeyShootOperations.Has(operation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is removed in favour of 'rotate-etcd-encryption-key', which performs a complete etcd encryption key rotation"))
+		} else if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(availableShootOperations)))
 		}
 		if helper.IsShootInHibernation(shoot) &&
@@ -2656,7 +2664,9 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	if maintenanceOperation != "" {
-		if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) {
+		if removedETCDEncryptionKeyShootOperations.Has(maintenanceOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is removed in favour of 'rotate-etcd-encryption-key', which performs a complete etcd encryption key rotation"))
+		} else if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, sets.List(availableShootMaintenanceOperations)))
 		}
 		if helper.IsShootInHibernation(shoot) &&

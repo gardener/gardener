@@ -9055,6 +9055,7 @@ MaintenanceRotationConfig
 <a href="#core.gardener.cloud/v1beta1.MaintenanceCredentialsAutoRotation">MaintenanceCredentialsAutoRotation</a>)
 </p>
 <p>
+<p>MaintenanceCredentialsAutoRotation contains configuration for automatic rotation.</p>
 </p>
 <table>
 <thead>

@@ -29,8 +29,8 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenletshoothelper "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstatus"
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -665,11 +665,11 @@ func startCredentialsRotation(shoot *gardencorev1beta1.Shoot, now metav1.Time, c
 	for credential, result := range credentialsRotationUpdate {
 		switch {
 		case credential == etcdEncryptionKey && result.isSuccessful:
-			gardenletshoothelper.StartRotationETCDEncryptionKey(shoot, &now)
+			shootstatus.StartRotationETCDEncryptionKey(shoot, &now)
 		case credential == sshKeypair && result.isSuccessful:
-			gardenletshoothelper.StartRotationSSHKeypair(shoot, &now)
+			shootstatus.StartRotationSSHKeypair(shoot, &now)
 		case credential == observabilityPasswords && result.isSuccessful:
-			gardenletshoothelper.StartRotationObservability(shoot, &now)
+			shootstatus.StartRotationObservability(shoot, &now)
 		}
 	}
 }
@@ -678,14 +678,14 @@ func startCredentialsRotation(shoot *gardencorev1beta1.Shoot, now metav1.Time, c
 func computeCredentialsRotationResults(log logr.Logger, shoot *gardencorev1beta1.Shoot, now metav1.Time) map[string]updateResult {
 	var (
 		maintenanceResults                    = make(map[string]updateResult)
-		ETCDEncryptionKeyRotationPhase        = v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials)
-		etcdEncryptionRotationEnbled          = v1beta1helper.IsETCDEncryptionKeyRotationEnabled(shoot)
+		etcdEncryptionKeyRotationPhase        = v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials)
+		etcdEncryptionRotationEnabled         = v1beta1helper.IsETCDEncryptionKeyRotationEnabled(shoot)
 		sshKeypairRotationEnabled             = v1beta1helper.IsSSHKeypairRotationEnabled(shoot)
 		observabilityPasswordsRotationEnabled = v1beta1helper.IsObservabilityRotationEnabled(shoot)
 	)
 
-	if etcdEncryptionRotationEnbled && etcdEncryptionKeyRotationPassedRotationPeriod(shoot.Status.Credentials, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod) {
-		if len(ETCDEncryptionKeyRotationPhase) == 0 || ETCDEncryptionKeyRotationPhase == gardencorev1beta1.RotationCompleted {
+	if etcdEncryptionRotationEnabled && etcdEncryptionKeyRotationPassedRotationPeriod(shoot.Status.Credentials, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod) {
+		if len(etcdEncryptionKeyRotationPhase) == 0 || etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationCompleted {
 			reason := "Automatic rotation of etcd encryption key configured"
 			log.Info("ETCD encryption key will be rotated", "reason", reason)
 			maintenanceResults[etcdEncryptionKey] = updateResult{

@@ -49,6 +49,7 @@ import (
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstatus"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -586,19 +587,19 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		startRotationCA(shoot, &now)
 		startRotationServiceAccountKey(shoot, &now)
 		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
-			helper.StartRotationSSHKeypair(shoot, &now)
+			shootstatus.StartRotationSSHKeypair(shoot, &now)
 		}
-		helper.StartRotationObservability(shoot, &now)
-		helper.StartRotationETCDEncryptionKey(shoot, &now)
+		shootstatus.StartRotationObservability(shoot, &now)
+		shootstatus.StartRotationETCDEncryptionKey(shoot, &now)
 	case v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
 		mustRemoveOperationAnnotation = true
 		startRotationCAWithoutWorkersRollout(shoot, &now)
 		startRotationServiceAccountKeyWithoutWorkersRollout(shoot, &now)
 		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
-			helper.StartRotationSSHKeypair(shoot, &now)
+			shootstatus.StartRotationSSHKeypair(shoot, &now)
 		}
-		helper.StartRotationObservability(shoot, &now)
-		helper.StartRotationETCDEncryptionKey(shoot, &now)
+		shootstatus.StartRotationObservability(shoot, &now)
+		shootstatus.StartRotationETCDEncryptionKey(shoot, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(shoot, &now)
@@ -617,12 +618,12 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	case v1beta1constants.ShootOperationRotateSSHKeypair:
 		mustRemoveOperationAnnotation = true
 		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
-			helper.StartRotationSSHKeypair(shoot, &now)
+			shootstatus.StartRotationSSHKeypair(shoot, &now)
 		}
 
 	case v1beta1constants.OperationRotateObservabilityCredentials:
 		mustRemoveOperationAnnotation = true
-		helper.StartRotationObservability(shoot, &now)
+		shootstatus.StartRotationObservability(shoot, &now)
 
 	case v1beta1constants.OperationRotateServiceAccountKeyStart:
 		mustRemoveOperationAnnotation = true
@@ -636,7 +637,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 
 	case v1beta1constants.OperationRotateETCDEncryptionKey:
 		mustRemoveOperationAnnotation = true
-		helper.StartRotationETCDEncryptionKey(shoot, &now)
+		shootstatus.StartRotationETCDEncryptionKey(shoot, &now)
 	}
 
 	if operation := shoot.Annotations[v1beta1constants.GardenerOperation]; strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {

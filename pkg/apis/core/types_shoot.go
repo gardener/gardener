@@ -1224,6 +1224,7 @@ type MaintenanceCredentialsAutoRotation struct {
 	SSHKeypair *MaintenanceRotationConfig
 }
 
+// MaintenanceCredentialsAutoRotation contains configuration for automatic rotation.
 type MaintenanceRotationConfig struct {
 	// Enabled indicates whether automatic rotation should be performed (default: false).
 	Enabled *bool

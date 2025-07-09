@@ -124,6 +124,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
+	// ETCD encryption key rotation requires 2 reconciliations to complete. In completing phase
+	// the encrypted data has been decrypted and re-encrypted with the new key, but the old key is still present.
+	// The second reconciliation will remove the old key and set the phase to completed.
 	if etcdEncryptionKeyRotationPhase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationCompleting {
 		return reconcile.Result{RequeueAfter: 1 * time.Nanosecond}, nil
 	}

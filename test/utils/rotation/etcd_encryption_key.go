@@ -151,6 +151,9 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 	}).Should(Succeed(), "etcd encryption config should only have new key")
 }
 
+// etcd encryption key rotation is completed as a single operation (there is no second phase)
+// hence, there is nothing to check in the second part of the credentials rotation
+
 // ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *ETCDEncryptionKeyVerifier) ExpectCompletingStatus(_ Gomega) {}
 

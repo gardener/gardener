@@ -2054,6 +2054,7 @@ message MaintenanceCredentialsAutoRotation {
   optional MaintenanceRotationConfig sshKeypair = 3;
 }
 
+// MaintenanceCredentialsAutoRotation contains configuration for automatic rotation.
 message MaintenanceRotationConfig {
   // Enabled indicates whether automatic rotation should be performed (default: false).
   // +optional

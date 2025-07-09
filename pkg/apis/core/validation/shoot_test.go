@@ -5095,11 +5095,47 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}),
 			)
 
+			It("should return an error if the operation annotation is rotate-etcd-encryption-key-start", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": Equal("operation is removed in favour of 'rotate-etcd-encryption-key', which performs a complete etcd encryption key rotation"),
+				}))))
+			})
+
+			It("should return an error if the operation annotation is rotate-etcd-encryption-key-complete", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-complete")
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": Equal("operation is removed in favour of 'rotate-etcd-encryption-key', which performs a complete etcd encryption key rotation"),
+				}))))
+			})
+
 			It("should return an error if the operation annotation is invalid", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "foo-bar")
 				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+				}))))
+			})
+
+			It("should return an error if the operation annotation is rotate-etcd-encryption-key-start", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+					"Detail": Equal("operation is removed in favour of 'rotate-etcd-encryption-key', which performs a complete etcd encryption key rotation"),
+				}))))
+			})
+
+			It("should return an error if the operation annotation is rotate-etcd-encryption-key-complete", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-complete")
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+					"Detail": Equal("operation is removed in favour of 'rotate-etcd-encryption-key', which performs a complete etcd encryption key rotation"),
 				}))))
 			})
 

@@ -6099,7 +6099,8 @@ func schema_pkg_apis_core_v1beta1_MaintenanceRotationConfig(ref common.Reference
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "MaintenanceCredentialsAutoRotation contains configuration for automatic rotation.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{

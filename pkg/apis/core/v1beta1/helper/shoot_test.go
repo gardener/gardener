@@ -268,7 +268,7 @@ var _ = Describe("Helper", func() {
 			Expect(IsETCDEncryptionKeyRotationEnabled(shoot)).To(Equal(expectedResult))
 		},
 
-		Entry("should return false maintenance is nil", nil, false),
+		Entry("should return false when maintenance is nil", nil, false),
 		Entry("should return false when AutoRotation is nil", &gardencorev1beta1.Maintenance{}, false),
 		Entry("should return false when Credentials field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{}}, false),
 		Entry("should return false when etcd encryption key field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{}}}, false),
@@ -312,7 +312,7 @@ var _ = Describe("Helper", func() {
 			Expect(IsObservabilityRotationEnabled(shoot)).To(Equal(expectedResult))
 		},
 
-		Entry("should return false maintenance is nil", nil, false),
+		Entry("should return false when maintenance is nil", nil, false),
 		Entry("should return false when AutoRotation is nil", &gardencorev1beta1.Maintenance{}, false),
 		Entry("should return false when Credentials field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{}}, false),
 		Entry("should return false when Observability field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{}}}, false),
@@ -356,7 +356,7 @@ var _ = Describe("Helper", func() {
 			Expect(IsSSHKeypairRotationEnabled(shoot)).To(Equal(expectedResult))
 		},
 
-		Entry("should return false maintenance is nil", nil, false),
+		Entry("should return false when maintenance is nil", nil, false),
 		Entry("should return false when AutoRotation is nil", &gardencorev1beta1.Maintenance{}, false),
 		Entry("should return false when Credentials field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{}}, false),
 		Entry("should return false when SSHKeypair field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{}}}, false),
