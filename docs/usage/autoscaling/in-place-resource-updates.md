@@ -1,9 +1,9 @@
 ---
-title: In-place Resource Updates
+title: In-Place Resource Updates
 description: In-place updates of Pod resources
 ---
 
-# In-place updates of Pod resources
+# In-Place Updates of Pod Resources
 
 This is a short guide covering the enablement of `in-place` resource updates in the `Vertical Pod Autoscaler`.
 
@@ -14,21 +14,21 @@ On the `Vertical Pod Autoscaler` side, with Release [1.4.0](https://github.com/k
 
 ### Kubernetes
 
-With Kubernetes 1.33 the `InPlacePodVerticalScaling` feature gate, enabling the `in-place` resources updates is enabled by default and __does not__ require additional instrumentation. Prior versions, from Kubernetes 1.27+ require the `InPlacePodVerticalScaling` feature gate __to be enabled__ for both _kube-apiserver_ and _kubelet_.
+With Kubernetes 1.33, the `InPlacePodVerticalScaling` feature gate, which enables `in-place` resource updates, is enabled by default and __does not__ require additional instrumentation. Prior versions, from Kubernetes 1.27 onwards require the `InPlacePodVerticalScaling` feature gate __to be enabled__ for both _kube-apiserver_ and _kubelet_.
 
 ### Vertical Pod Autoscaling
 
-With [1.4.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.4.0), the `InPlaceOrRecreate` feature gate, enabling `in-place` for `vpa-admission-controller` and `vpa-updater`, got introduced as an _alpha_ feature. To explicitly enable the feature for `Shoot`, `Seed` or `Garden` clusters, the `Vertical Pod Autoscaling` configurations, for the respective cluster types, need to include an additional `InPlaceOrRecreate: true` entry in the `featureGates` map.
+With [1.4.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.4.0), the `InPlaceOrRecreate` feature gate, which enables `in-place` for `vpa-admission-controller` and `vpa-updater`, got introduced as an _alpha_ feature. To explicitly enable the feature for `Shoot`, `Seed` or `Garden` clusters, the `Vertical Pod Autoscaling` configurations, for the respective cluster types need to include an additional `InPlaceOrRecreate: true` entry in the `featureGates` map.
 
 ## Configuration
 
-As described in the [compatibility](#compatibility) section, _alpha_ versions of the `InPlacePodVerticalScaling` Kubernetes feature require additional configuration to get the `in-place` updates enabled. This section covers the components that need to be configured both on `Kubernetes` and `Vertical Pod Autoscaler` sides.
+As described in the [Compatibility](#compatibility) section, _alpha_ versions of the `InPlacePodVerticalScaling` Kubernetes feature require additional configuration to get the `in-place` updates enabled. This section covers the components that need to be configured both on `Kubernetes` and `Vertical Pod Autoscaler` sides.
 
 ### Shoot
 
-Since `Vertical Pod Autoscaler` has it's `InPlaceOrRecreate` feature gate still in _alpha_, and Kubernetes promoted `InPlacePodVerticalScaling` to _beta_ just recently ( in _1.33_ ), we took the decision to allow configuring `in-place` resource updates only on `Shoot`(s) running _1.33+_.
+Since `Vertical Pod Autoscaler` has its `InPlaceOrRecreate` feature gate still in _alpha_, and Kubernetes promoted `InPlacePodVerticalScaling` to _beta_ just recently ( in _1.33_ ), we took the decision to allow configuring `in-place` resource updates only on `Shoot`(s) running _1.33 and onwards_.
 
-- Enable `InPlaceOrRecreate` feature gate for `Vertical Por Autoscaler` in the Shoot spec:
+- Enable the `InPlaceOrRecreate` feature gate for `Vertical Por Autoscaler` in the Shoot spec:
 
   ```yaml
   spec:
@@ -37,7 +37,7 @@ Since `Vertical Pod Autoscaler` has it's `InPlaceOrRecreate` feature gate still 
         InPlaceOrRecreate: true
   ```
 
-- Make sure `InPlacePodVerticalScaling` Kubernetes feature gate is not explicitly disabled in the Shoot spec for:
+- Make sure that the `InPlacePodVerticalScaling` Kubernetes feature gate is not explicitly disabled in the Shoot spec for:
   - kube-apiserver: `.spec.kubernetes.kubeAPIServer.featureGates`
   - kubelet: `.spec.kubernetes.kubelet.featureGates` or `.spec.provider.workers[].kubernetes.kubelet.featureGates`
 
