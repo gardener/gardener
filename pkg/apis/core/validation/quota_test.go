@@ -121,8 +121,8 @@ var _ = Describe("Quota Validation Tests ", func() {
 			))
 		})
 
-		It("should forbid Quota with negative cluster lifetime days", func() {
-			quota.Spec.ClusterLifetimeDays = ptr.To(int32(-1))
+		DescribeTable("cluster lifetime days", func(clusterLifeTimeDays int) {
+			quota.Spec.ClusterLifetimeDays = ptr.To(int32(clusterLifeTimeDays))
 
 			errorList := ValidateQuota(quota)
 
@@ -130,7 +130,10 @@ var _ = Describe("Quota Validation Tests ", func() {
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.clusterLifetimeDays"),
 			}))))
-		})
+		},
+			Entry("should forbid negative cluster lifetime days", -1),
+			Entry("should forbid zero cluster lifetime days", 0),
+		)
 
 		It("should allow quota scope referencing WorkloadIdentity", func() {
 			quota.Spec.Scope = corev1.ObjectReference{
