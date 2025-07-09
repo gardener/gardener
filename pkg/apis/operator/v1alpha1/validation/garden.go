@@ -42,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
-	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -263,18 +262,7 @@ func validateRuntimeClusterSettings(runtimeCluster operatorv1alpha1.RuntimeClust
 
 	if runtimeCluster.Settings.VerticalPodAutoscaler != nil {
 		allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(runtimeCluster.Settings.VerticalPodAutoscaler.FeatureGates, fldPath.Child("verticalPodAutoscaler", "featureGates"))...)
-
-		if runtimeCluster.Settings.VerticalPodAutoscaler.MaxAllowed != nil {
-			allowedResources := sets.New(corev1.ResourceCPU, corev1.ResourceMemory)
-			for resource, quantity := range runtimeCluster.Settings.VerticalPodAutoscaler.MaxAllowed {
-				resourcePath := fldPath.Child("verticalPodAutoscaler", "maxAllowed", resource.String())
-				if !allowedResources.Has(resource) {
-					allErrs = append(allErrs, field.NotSupported(resourcePath, resource, allowedResources.UnsortedList()))
-				}
-
-				allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
-			}
-		}
+		allErrs = append(allErrs, gardencorevalidation.ValidateVerticalPodAutoscalerMaxAllowed(runtimeCluster.Settings.VerticalPodAutoscaler.MaxAllowed, fldPath.Child("verticalPodAutoscaler"))...)
 	}
 
 	if helper.TopologyAwareRoutingEnabled(runtimeCluster.Settings) {
