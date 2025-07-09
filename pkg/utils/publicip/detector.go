@@ -37,13 +37,15 @@ func (i IpifyDetector) DetectPublicIPs(ctx context.Context, parentLog logr.Logge
 		errs error
 	)
 
-	for ipFamily, host := range map[string]string{
-		"IPv4": "api4.ipify.org",
-		"IPv6": "api6.ipify.org",
+	for _, api := range []struct {
+		ipFamily, host string
+	}{
+		{"IPv4", "api4.ipify.org"},
+		{"IPv6", "api6.ipify.org"},
 	} {
-		log := parentLog.WithValues("ipFamily", ipFamily)
+		log := parentLog.WithValues("ipFamily", api.ipFamily)
 
-		if ip, err := i.getPublicIP(ctx, log, ipFamily, host); err != nil {
+		if ip, err := i.getPublicIP(ctx, log, api.ipFamily, api.host); err != nil {
 			log.V(1).Info("No public IP detected or detection failed", "err", err)
 			errs = multierror.Append(errs, err)
 		} else {
