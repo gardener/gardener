@@ -100,3 +100,22 @@ func getNamespaceForMachine(machine *machinev1alpha1.Machine, machineClass *mach
 	}
 	return machineClass.Namespace
 }
+
+func addressesFromStatus(podStatus corev1.PodStatus) []corev1.NodeAddress {
+	if len(podStatus.PodIPs) == 0 {
+		return []corev1.NodeAddress{{
+			Type:    corev1.NodeInternalIP,
+			Address: podStatus.PodIP,
+		}}
+	}
+
+	// the 0th entry must matche the podIP field, so we don't need to add it.
+	addresses := make([]corev1.NodeAddress, 0, len(podStatus.PodIPs))
+	for _, podIP := range podStatus.PodIPs {
+		addresses = append(addresses, corev1.NodeAddress{
+			Type:    corev1.NodeInternalIP,
+			Address: podIP.IP,
+		})
+	}
+	return addresses
+}
