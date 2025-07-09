@@ -458,7 +458,7 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 		r.RuntimeVersion,
 		secretsManager,
 		vpaEnabled(garden.Spec.RuntimeCluster.Settings),
-		nil,
+		helper.VerticalPodAutoscalerMaxAllowed(garden.Spec.RuntimeCluster.Settings),
 		operatorv1alpha1.SecretNameCARuntime,
 		v1beta1constants.PriorityClassNameGardenSystem300,
 		v1beta1constants.PriorityClassNameGardenSystem200,
