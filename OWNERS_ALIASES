@@ -7,7 +7,7 @@ aliases:
   - JuliusSte
   - Kumm-Kai
   - nschad
-  - rgroemmer
+  - RAPSNX
   - robinschneider
   - maboehm
   - timebertt
@@ -19,6 +19,7 @@ aliases:
   - crigertg
   - Wieneo
   gardener-approvers:
+  - RAPSNX
   - Wieneo
   - maboehm
   - timebertt
