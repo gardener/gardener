@@ -3251,10 +3251,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					field.Invalid(field.NewPath("memoryAggregationIntervalCount"), int64(-1), "must be greater than or equal to 0").WithOrigin("minimum"),
 				)),
 				Entry("feature gates supported after 1.33", core.VerticalPodAutoscaler{
-					KubernetesConfig: core.KubernetesConfig{FeatureGates: map[string]bool{"InPlaceOrRecreate": true}},
+					FeatureGates: map[string]bool{"InPlaceOrRecreate": true},
 				}, "1.33", BeEmpty()),
 				Entry("feature gates unsupported before 1.33", core.VerticalPodAutoscaler{
-					KubernetesConfig: core.KubernetesConfig{FeatureGates: map[string]bool{"InPlaceOrRecreate": true}},
+					FeatureGates: map[string]bool{"InPlaceOrRecreate": true},
 				}, "1.32", ConsistOf(
 					field.Invalid(field.NewPath("featureGate"), "InPlaceOrRecreate", "for Kubernetes versions < 1.33, feature gate is not supported"),
 				)),

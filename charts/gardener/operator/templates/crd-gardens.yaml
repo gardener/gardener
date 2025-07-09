@@ -635,8 +635,9 @@ spec:
                           featureGates:
                             additionalProperties:
                               type: boolean
-                            description: FeatureGates contains information about enabled
-                              feature gates.
+                            description: |-
+                              FeatureGates contains information about enabled feature gates.
+                              This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.
                             type: object
                           goAwayChance:
                             description: |-
@@ -1027,8 +1028,9 @@ spec:
                           featureGates:
                             additionalProperties:
                               type: boolean
-                            description: FeatureGates contains information about enabled
-                              feature gates.
+                            description: |-
+                              FeatureGates contains information about enabled feature gates.
+                              This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.
                             type: object
                           logLevel:
                             default: info
@@ -1261,8 +1263,9 @@ spec:
                           featureGates:
                             additionalProperties:
                               type: boolean
-                            description: FeatureGates contains information about enabled
-                              feature gates.
+                            description: |-
+                              FeatureGates contains information about enabled feature gates.
+                              This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.
                             type: object
                           logLevel:
                             default: info
@@ -1507,8 +1510,9 @@ spec:
                           featureGates:
                             additionalProperties:
                               type: boolean
-                            description: FeatureGates contains information about enabled
-                              feature gates.
+                            description: |-
+                              FeatureGates contains information about enabled feature gates.
+                              This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.
                             type: object
                           logging:
                             description: Logging contains configuration for the log
@@ -1821,8 +1825,9 @@ spec:
                           featureGates:
                             additionalProperties:
                               type: boolean
-                            description: FeatureGates contains information about enabled
-                              feature gates.
+                            description: |-
+                              FeatureGates contains information about enabled feature gates.
+                              This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.
                             type: object
                           horizontalPodAutoscaler:
                             description: HorizontalPodAutoscalerConfig contains horizontal

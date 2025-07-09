@@ -1762,6 +1762,7 @@ message Kubernetes {
 // KubernetesConfig contains common configuration fields for the control plane components.
 message KubernetesConfig {
   // FeatureGates contains information about enabled feature gates.
+  // This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.
   // +optional
   map<string, bool> featureGates = 1;
 }
