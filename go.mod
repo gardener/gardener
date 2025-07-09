@@ -281,5 +281,5 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 )
 
-// https://github.com/gardener/machine-controller-manager/pull/1004 (branch gardenadm-bootstrap)
-replace github.com/gardener/machine-controller-manager => github.com/timebertt/machine-controller-manager v0.0.0-20250612074952-60fe36aceadf
+// https://github.com/gardener/machine-controller-manager/pull/1012 (branch machine-address)
+replace github.com/gardener/machine-controller-manager => github.com/maboehm/machine-controller-manager v0.0.0-20250707161637-f1721c0db759
