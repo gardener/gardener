@@ -60,6 +60,17 @@ With this, mirrored images don't have to be pulled again after recreating the cl
 The command also deploys a default [calico](https://github.com/projectcalico/calico) installation as the cluster's CNI implementation with `NetworkPolicy` support (the default `kindnet` CNI doesn't provide `NetworkPolicy` support).
 Furthermore, it deploys the [metrics-server](https://github.com/kubernetes-sigs/metrics-server) in order to support HPA and VPA on the seed cluster.
 
+After a restart of your host, the loopback IP addresses that were created for the kind cluster could be removed.
+To avoid recreating the cluster, there is a script that can be used to easily bring back the addresses.
+```bash
+./hack/kind-setup-loopback-devices.sh --cluster-name gardener-local
+```
+
+> Depending on the cluster you are using for your local dev setup you might have to:
+>  - Replace the value for `--cluster-name` with the name of the kind cluster you are using for your local dev setup.
+>  - Add the `--ip-family <ipv4|ipv6|dual>` flag if you want to setup `ipv6` or `dual` stack IPs (`ipv4` is the default value).
+>  - Add the `--multi-zonal` flag if you want to setup IPs for a multi-zonal cluster.
+
 ## Setting Up IPv6 Single-Stack Networking (optional)
 
 First, ensure that your `/etc/hosts` file contains an entry resolving `garden.local.gardener.cloud` to the IPv6 loopback address:
