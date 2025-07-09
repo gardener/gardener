@@ -48,7 +48,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Seed = &seedpkg.Seed{
-			KubernetesVersion: semver.MustParse("1.28.0"),
+			KubernetesVersion: semver.MustParse("1.29.0"),
 		}
 		botanist.Shoot = &shootpkg.Shoot{
 			Networks:     &shootpkg.Networks{},
@@ -64,8 +64,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 	Describe("#DefaultClusterAutoscaler", func() {
 		BeforeEach(func() {
 			kubernetesClient.EXPECT().Client()
-			kubernetesClient.EXPECT().Version().Return("1.28.0")
-			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.28.0"}}})
+			kubernetesClient.EXPECT().Version().Return("1.29.0")
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.29.0"}}})
 			botanist.Shoot.ControlPlaneNamespace = namespace
 		})
 
