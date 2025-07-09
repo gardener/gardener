@@ -14330,6 +14330,18 @@ MemoryAggregationWindowLength which in turn is the period for memory usage aggre
 (default: 8)</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>featureGates</code></br>
+<em>
+map[string]bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FeatureGates contains information about enabled feature gates.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Volume">Volume

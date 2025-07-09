@@ -10134,6 +10134,22 @@ func schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref common.ReferenceCall
 							Format:      "int64",
 						},
 					},
+					"featureGates": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FeatureGates contains information about enabled feature gates.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: false,
+										Type:    []string{"boolean"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},

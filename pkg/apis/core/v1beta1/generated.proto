@@ -3564,6 +3564,10 @@ message VerticalPodAutoscaler {
   // (default: 8)
   // +optional
   optional int64 memoryAggregationIntervalCount = 18;
+
+  // FeatureGates contains information about enabled feature gates.
+  // +optional
+  map<string, bool> featureGates = 19;
 }
 
 // Volume contains information about the volume type, size, and encryption.
