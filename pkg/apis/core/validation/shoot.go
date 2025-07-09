@@ -1691,10 +1691,21 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 		}
 	}
 
-	if maintenance.CredentialsAutoRotation != nil {
-		if maintenance.CredentialsAutoRotation.RotationPeriod != nil &&
-			(maintenance.CredentialsAutoRotation.RotationPeriod.Duration < 30*time.Minute || maintenance.CredentialsAutoRotation.RotationPeriod.Duration > 90*24*time.Hour) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("credentialsAutoRotation", "rotationPeriod"), maintenance.CredentialsAutoRotation.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
+	if maintenance.AutoRotation != nil && maintenance.AutoRotation.Credentials != nil {
+		credentials := maintenance.AutoRotation.Credentials
+		credentialsPath := fldPath.Child("autoRotation", "credentials")
+
+		if credentials.ETCDEncryptionKey != nil && credentials.ETCDEncryptionKey.RotationPeriod != nil &&
+			(credentials.ETCDEncryptionKey.RotationPeriod.Duration < 30*time.Minute || credentials.ETCDEncryptionKey.RotationPeriod.Duration > 90*24*time.Hour) {
+			allErrs = append(allErrs, field.Invalid(credentialsPath.Child("etcdEncryptionKey", "rotationPeriod"), credentials.ETCDEncryptionKey.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
+		}
+		if credentials.Observability != nil && credentials.Observability.RotationPeriod != nil &&
+			(credentials.Observability.RotationPeriod.Duration < 30*time.Minute || credentials.Observability.RotationPeriod.Duration > 90*24*time.Hour) {
+			allErrs = append(allErrs, field.Invalid(credentialsPath.Child("observability", "rotationPeriod"), credentials.Observability.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
+		}
+		if credentials.SSHKeypair != nil && credentials.SSHKeypair.RotationPeriod != nil &&
+			(credentials.SSHKeypair.RotationPeriod.Duration < 30*time.Minute || credentials.SSHKeypair.RotationPeriod.Duration > 90*24*time.Hour) {
+			allErrs = append(allErrs, field.Invalid(credentialsPath.Child("sshKeypair", "rotationPeriod"), credentials.SSHKeypair.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
 		}
 	}
 

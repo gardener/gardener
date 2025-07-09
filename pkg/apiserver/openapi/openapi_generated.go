@@ -142,6 +142,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance":                                schema_pkg_apis_core_v1beta1_Maintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation":                    schema_pkg_apis_core_v1beta1_MaintenanceAutoRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate":                      schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceCredentialsAutoRotation":         schema_pkg_apis_core_v1beta1_MaintenanceCredentialsAutoRotation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig":                  schema_pkg_apis_core_v1beta1_MaintenanceRotationConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow":                      schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MemorySwapConfiguration":                    schema_pkg_apis_core_v1beta1_MemorySwapConfiguration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring":                                 schema_pkg_apis_core_v1beta1_Monitoring(ref),
@@ -3688,7 +3690,7 @@ func schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref common.Reference
 					},
 					"lastInitiationFinishedTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was completed.",
+							Description: "LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was completed. Deprecated: This field will be removed in gardener `v1.130`. The field is not longer needed with https://github.com/gardener/gardener/pull/12442.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -5996,9 +5998,9 @@ func schema_pkg_apis_core_v1beta1_Maintenance(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
-					"credentialsAutoRotation": {
+					"autoRotation": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CredentialsAutoRotation contains information about which credentials should be automatically rotated.",
+							Description: "AutoRotation contains information about which rotations should be automatically performed.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation"),
 						},
 					},
@@ -6014,41 +6016,20 @@ func schema_pkg_apis_core_v1beta1_MaintenanceAutoRotation(ref common.ReferenceCa
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "MaintenanceAutoRotation contains information about which credentials should be automatically rotated.",
+				Description: "MaintenanceAutoRotation contains information about which rotations should be automatically performed.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"etcdEncryptionKey": {
+					"credentials": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ETCDEncryptionKey indicates whether the etcd encryption key may be automatically rotated (default: false).",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
-					"observability": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Observability indicates whether the observability passwords may be automatically rotated (default: false).",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
-					"sshKeypair": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SSHKeypair indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
-					"rotationPeriod": {
-						SchemaProps: spec.SchemaProps{
-							Description: "RotationPeriod is the period between a completed rotation and the start of a new rotation for a specific credential (default: 7d).",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							Description: "Credentials contains information about which credentials should be automatically rotated.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceCredentialsAutoRotation"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceCredentialsAutoRotation"},
 	}
 }
 
@@ -6078,6 +6059,66 @@ func schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref common.ReferenceCall
 				Required: []string{"kubernetesVersion"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_MaintenanceCredentialsAutoRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MaintenanceCredentialsAutoRotation contains information about which credentials should be automatically rotated.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"etcdEncryptionKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ETCDEncryptionKey configured the automatic rotation for the etcd encryption key.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"),
+						},
+					},
+					"observability": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Observability configured the automatic rotation for the observability credentials.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"),
+						},
+					},
+					"sshKeypair": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SSHKeypair configured the automatic rotation for the ssh keypair for worker nodes.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_MaintenanceRotationConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled indicates whether automatic rotation should be performed (default: false).",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"rotationPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

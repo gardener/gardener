@@ -681,11 +681,10 @@ func computeCredentialsRotationResults(log logr.Logger, shoot *gardencorev1beta1
 		ETCDEncryptionKeyRotationPhase        = v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials)
 		etcdEncryptionRotationEnbled          = v1beta1helper.IsETCDEncryptionKeyRotationEnabled(shoot)
 		sshKeypairRotationEnabled             = v1beta1helper.IsSSHKeypairRotationEnabled(shoot)
-		observabilityPasswordsRotationEnabled = v1beta1helper.IsObservabilityPasswordsRotationEnabled(shoot)
-		rotationPeriod                        = *shoot.Spec.Maintenance.CredentialsAutoRotation.RotationPeriod
+		observabilityPasswordsRotationEnabled = v1beta1helper.IsObservabilityRotationEnabled(shoot)
 	)
 
-	if etcdEncryptionRotationEnbled && etcdEncryptionKeyRotationPassedRotationPeriod(shoot.Status.Credentials, now.Time, rotationPeriod) {
+	if etcdEncryptionRotationEnbled && etcdEncryptionKeyRotationPassedRotationPeriod(shoot.Status.Credentials, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod) {
 		if len(ETCDEncryptionKeyRotationPhase) == 0 || ETCDEncryptionKeyRotationPhase == gardencorev1beta1.RotationCompleted {
 			reason := "Automatic rotation of etcd encryption key configured"
 			log.Info("ETCD encryption key will be rotated", "reason", reason)
@@ -703,7 +702,7 @@ func computeCredentialsRotationResults(log logr.Logger, shoot *gardencorev1beta1
 		}
 	}
 
-	if sshKeypairRotationEnabled && v1beta1helper.ShootEnablesSSHAccess(shoot) && sshKeypairRotationPassedRotationPeriod(shoot.Status.Credentials, now.Time, rotationPeriod) {
+	if sshKeypairRotationEnabled && v1beta1helper.ShootEnablesSSHAccess(shoot) && sshKeypairRotationPassedRotationPeriod(shoot.Status.Credentials, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod) {
 		reason := "Automatic rotation of SSH keypair configured"
 		log.Info("SSH keypair for workers will be rotated", "reason", reason)
 		maintenanceResults[sshKeypair] = updateResult{
@@ -713,7 +712,7 @@ func computeCredentialsRotationResults(log logr.Logger, shoot *gardencorev1beta1
 		}
 	}
 
-	if observabilityPasswordsRotationEnabled && observabilityPasswordsRotationPassedRotationPeriod(shoot.Status.Credentials, now.Time, rotationPeriod) {
+	if observabilityPasswordsRotationEnabled && observabilityPasswordsRotationPassedRotationPeriod(shoot.Status.Credentials, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod) {
 		reason := "Automatic rotation of observability passwords configured"
 		log.Info("Observability passwords will be rotated", "reason", reason)
 		maintenanceResults[observabilityPasswords] = updateResult{

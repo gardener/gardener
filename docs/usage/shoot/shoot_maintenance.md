@@ -85,16 +85,22 @@ Please refer to the [Shoot Kubernetes and Operating System Versioning in Gardene
 
 ## Automatic Credentials Rotation
 
-The `.spec.maintenance.credentialsAutoRotation` field in the shoot specification allows you to control whether/when automatic rotations of Kubernetes patch and machine image versions are performed.
+The `.spec.maintenance.autoRotation` field in the shoot specification allows you to control whether/when automatic rotations are performed. The `.spec.maintenance.autoRotation.credentials` is specificly about credentials rotations
 
 ```yaml
 spec:
   maintenance:
-    autoRotate:
-      etcdEncryptionKey: true
-      observabilityPasswords: true
-      sshKeypairForWorkerNodes: true
-      rotationPeriod: 168h
+    autoRotation:
+      credentials:
+        etcdEncryptionKey:
+          enabled: true # default: false
+          rotationPeriod: 168h # default: 7d(168h)
+        observability:
+          enabled: true # default: false
+          rotationPeriod: 168h # default: 7d(168h)
+        sshKeypair:
+          enabled: true # default: false
+          rotationPeriod: 168h # default: 7d(168h)
 ```
 
 During the daily maintenance, the Gardener Controller Manager starts the rotation for specific credentials if the Shoot opted-in for automatic rotation for the given credential and the set period has passed since the last rotation completion.

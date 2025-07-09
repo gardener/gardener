@@ -307,6 +307,7 @@ type ETCDEncryptionKeyRotation struct {
 	LastInitiationTime *metav1.Time
 	// LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
 	// completed.
+	// Deprecated: This field will be removed in gardener `v1.130`. The field is not longer needed with https://github.com/gardener/gardener/pull/12442.
 	LastInitiationFinishedTime *metav1.Time
 	// LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was
 	// triggered.
@@ -1195,8 +1196,8 @@ type Maintenance struct {
 	// Instead, they are rolled out during the shoot's maintenance time window. There is one exception that will trigger
 	// an immediate roll out which is changes to the Spec.Hibernation.Enabled field.
 	ConfineSpecUpdateRollout *bool
-	// CredentialsAutoRotation contains information about which credentials should be automatically rotated.
-	CredentialsAutoRotation *MaintenanceAutoRotation
+	// AutoRotation contains information about which rotations should be automatically performed.
+	AutoRotation *MaintenanceAutoRotation
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
@@ -1207,15 +1208,26 @@ type MaintenanceAutoUpdate struct {
 	MachineImageVersion *bool
 }
 
-// MaintenanceAutoRotation contains information about which credentials should be automatically rotated.
+// MaintenanceAutoRotation contains information about which rotations should be automatically performed.
 type MaintenanceAutoRotation struct {
-	// ETCDEncryptionKey indicates whether the etcd encryption key may be automatically rotated (default: false).
-	ETCDEncryptionKey *bool
-	// Observability indicates whether the observability passwords may be automatically rotated (default: false).
-	Observability *bool
-	// SSHKeypair indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).
-	SSHKeypair *bool
-	// RotationPeriod is the period between a completed rotation and the start of a new rotation for a specific credential (default: 7d).
+	// Credentials contains information about which credentials should be automatically rotated.
+	Credentials *MaintenanceCredentialsAutoRotation
+}
+
+// MaintenanceCredentialsAutoRotation contains information about which credentials should be automatically rotated.
+type MaintenanceCredentialsAutoRotation struct {
+	// ETCDEncryptionKey configured the automatic rotation for the etcd encryption key.
+	ETCDEncryptionKey *MaintenanceRotationConfig
+	// Observability configured the automatic rotation for the observability credentials.
+	Observability *MaintenanceRotationConfig
+	// SSHKeypair configured the automatic rotation for the ssh keypair for worker nodes.
+	SSHKeypair *MaintenanceRotationConfig
+}
+
+type MaintenanceRotationConfig struct {
+	// Enabled indicates whether automatic rotation should be performed (default: false).
+	Enabled *bool
+	// RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
 	RotationPeriod *metav1.Duration
 }
 

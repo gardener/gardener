@@ -393,6 +393,7 @@ type ETCDEncryptionKeyRotation struct {
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
 	// LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
 	// completed.
+	// Deprecated: This field will be removed in gardener `v1.130`. The field is not longer needed with https://github.com/gardener/gardener/pull/12442.
 	// +optional
 	LastInitiationFinishedTime *metav1.Time `json:"lastInitiationFinishedTime,omitempty" protobuf:"bytes,4,opt,name=lastInitiationFinishedTime"`
 	// LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was
@@ -1561,9 +1562,9 @@ type Maintenance struct {
 	// an immediate roll out which is changes to the Spec.Hibernation.Enabled field.
 	// +optional
 	ConfineSpecUpdateRollout *bool `json:"confineSpecUpdateRollout,omitempty" protobuf:"varint,3,opt,name=confineSpecUpdateRollout"`
-	// CredentialsAutoRotation contains information about which credentials should be automatically rotated.
+	// AutoRotation contains information about which rotations should be automatically performed.
 	// +optional
-	CredentialsAutoRotation *MaintenanceAutoRotation `json:"credentialsAutoRotation,omitempty" protobuf:"bytes,4,opt,name=credentialsAutoRotation"`
+	AutoRotation *MaintenanceAutoRotation `json:"autoRotation,omitempty" protobuf:"bytes,4,opt,name=autoRotation"`
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
@@ -1575,20 +1576,33 @@ type MaintenanceAutoUpdate struct {
 	MachineImageVersion *bool `json:"machineImageVersion,omitempty" protobuf:"varint,2,opt,name=machineImageVersion"`
 }
 
-// MaintenanceAutoRotation contains information about which credentials should be automatically rotated.
+// MaintenanceAutoRotation contains information about which rotations should be automatically performed.
 type MaintenanceAutoRotation struct {
-	// ETCDEncryptionKey indicates whether the etcd encryption key may be automatically rotated (default: false).
+	// Credentials contains information about which credentials should be automatically rotated.
 	// +optional
-	ETCDEncryptionKey *bool `json:"etcdEncryptionKey,omitempty" protobuf:"varint,1,opt,name=etcdEncryptionKey"`
-	// Observability indicates whether the observability passwords may be automatically rotated (default: false).
+	Credentials *MaintenanceCredentialsAutoRotation `json:"credentials,omitempty" protobuf:"bytes,1,opt,name=credentials"`
+}
+
+// MaintenanceCredentialsAutoRotation contains information about which credentials should be automatically rotated.
+type MaintenanceCredentialsAutoRotation struct {
+	// ETCDEncryptionKey configured the automatic rotation for the etcd encryption key.
 	// +optional
-	Observability *bool `json:"observability,omitempty" protobuf:"varint,2,opt,name=observability"`
-	// SSHKeypair indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).
+	ETCDEncryptionKey *MaintenanceRotationConfig `json:"etcdEncryptionKey,omitempty" protobuf:"varint,1,opt,name=etcdEncryptionKey"`
+	// Observability configured the automatic rotation for the observability credentials.
 	// +optional
-	SSHKeypair *bool `json:"sshKeypair,omitempty" protobuf:"varint,3,opt,name=sshKeypair"`
-	// RotationPeriod is the period between a completed rotation and the start of a new rotation for a specific credential (default: 7d).
+	Observability *MaintenanceRotationConfig `json:"observability,omitempty" protobuf:"varint,2,opt,name=observability"`
+	// SSHKeypair configured the automatic rotation for the ssh keypair for worker nodes.
 	// +optional
-	RotationPeriod *metav1.Duration `json:"rotationPeriod,omitempty" protobuf:"varint,4,opt,name=rotationPeriod"`
+	SSHKeypair *MaintenanceRotationConfig `json:"sshKeypair,omitempty" protobuf:"varint,3,opt,name=sshKeypair"`
+}
+
+type MaintenanceRotationConfig struct {
+	// Enabled indicates whether automatic rotation should be performed (default: false).
+	// +optional
+	Enabled *bool `json:"enabled,omitempty" protobuf:"varint,1,opt,name=enabled"`
+	// RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
+	// +optional
+	RotationPeriod *metav1.Duration `json:"rotationPeriod,omitempty" protobuf:"varint,2,opt,name=rotationPeriod"`
 }
 
 // MaintenanceTimeWindow contains information about the time window for maintenance operations.

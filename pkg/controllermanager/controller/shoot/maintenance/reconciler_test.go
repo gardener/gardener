@@ -1209,11 +1209,21 @@ var _ = Describe("Shoot Maintenance", func() {
 				},
 				Spec: gardencorev1beta1.ShootSpec{
 					Maintenance: &gardencorev1beta1.Maintenance{
-						CredentialsAutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
-							ETCDEncryptionKey: ptr.To(true),
-							SSHKeypair:        ptr.To(true),
-							Observability:     ptr.To(true),
-							RotationPeriod:    &metav1.Duration{Duration: 24 * time.Hour},
+						AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+							Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+								ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+									Enabled:        ptr.To(true),
+									RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
+								},
+								SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
+									Enabled:        ptr.To(true),
+									RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
+								},
+								Observability: &gardencorev1beta1.MaintenanceRotationConfig{
+									Enabled:        ptr.To(true),
+									RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
+								},
+							},
 						},
 					},
 					Provider: gardencorev1beta1.Provider{
@@ -1228,9 +1238,9 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should return empty results if no credentials rotation is required", func() {
-			shoot.Spec.Maintenance.CredentialsAutoRotation.ETCDEncryptionKey = ptr.To(false)
-			shoot.Spec.Maintenance.CredentialsAutoRotation.SSHKeypair = ptr.To(false)
-			shoot.Spec.Maintenance.CredentialsAutoRotation.Observability = ptr.To(false)
+			shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.Enabled = ptr.To(false)
+			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.Enabled = ptr.To(false)
+			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.Enabled = ptr.To(false)
 
 			results := computeCredentialsRotationResults(log, shoot, metav1.Time{Time: now})
 
@@ -1313,8 +1323,8 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		DescribeTable("etcd encryption key rotation phase", func(phase gardencorev1beta1.CredentialsRotationPhase, shouldSucceed bool) {
-			shoot.Spec.Maintenance.CredentialsAutoRotation.SSHKeypair = ptr.To(false)
-			shoot.Spec.Maintenance.CredentialsAutoRotation.Observability = ptr.To(false)
+			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.Enabled = ptr.To(false)
+			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.Enabled = ptr.To(false)
 			shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
 				Rotation: &gardencorev1beta1.ShootCredentialsRotation{
 					ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{

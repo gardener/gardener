@@ -993,6 +993,7 @@ message ETCDEncryptionKeyRotation {
 
   // LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
   // completed.
+  // Deprecated: This field will be removed in gardener `v1.130`. The field is not longer needed with https://github.com/gardener/gardener/pull/12442.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
 
@@ -2016,28 +2017,16 @@ message Maintenance {
   // +optional
   optional bool confineSpecUpdateRollout = 3;
 
-  // CredentialsAutoRotation contains information about which credentials should be automatically rotated.
+  // AutoRotation contains information about which rotations should be automatically performed.
   // +optional
-  optional MaintenanceAutoRotation credentialsAutoRotation = 4;
+  optional MaintenanceAutoRotation autoRotation = 4;
 }
 
-// MaintenanceAutoRotation contains information about which credentials should be automatically rotated.
+// MaintenanceAutoRotation contains information about which rotations should be automatically performed.
 message MaintenanceAutoRotation {
-  // ETCDEncryptionKey indicates whether the etcd encryption key may be automatically rotated (default: false).
+  // Credentials contains information about which credentials should be automatically rotated.
   // +optional
-  optional bool etcdEncryptionKey = 1;
-
-  // Observability indicates whether the observability passwords may be automatically rotated (default: false).
-  // +optional
-  optional bool observability = 2;
-
-  // SSHKeypair indicates whether the ssh keypair for worker nodes may be automatically rotated (default: false).
-  // +optional
-  optional bool sshKeypair = 3;
-
-  // RotationPeriod is the period between a completed rotation and the start of a new rotation for a specific credential (default: 7d).
-  // +optional
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration rotationPeriod = 4;
+  optional MaintenanceCredentialsAutoRotation credentials = 1;
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
@@ -2048,6 +2037,31 @@ message MaintenanceAutoUpdate {
   // MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).
   // +optional
   optional bool machineImageVersion = 2;
+}
+
+// MaintenanceCredentialsAutoRotation contains information about which credentials should be automatically rotated.
+message MaintenanceCredentialsAutoRotation {
+  // ETCDEncryptionKey configured the automatic rotation for the etcd encryption key.
+  // +optional
+  optional MaintenanceRotationConfig etcdEncryptionKey = 1;
+
+  // Observability configured the automatic rotation for the observability credentials.
+  // +optional
+  optional MaintenanceRotationConfig observability = 2;
+
+  // SSHKeypair configured the automatic rotation for the ssh keypair for worker nodes.
+  // +optional
+  optional MaintenanceRotationConfig sshKeypair = 3;
+}
+
+message MaintenanceRotationConfig {
+  // Enabled indicates whether automatic rotation should be performed (default: false).
+  // +optional
+  optional bool enabled = 1;
+
+  // RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration rotationPeriod = 2;
 }
 
 // MaintenanceTimeWindow contains information about the time window for maintenance operations.
