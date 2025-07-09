@@ -442,7 +442,6 @@ func completeRotationETCDEncryptionKey(garden *operatorv1alpha1.Garden, now *met
 	helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationCompleting
 		rotation.LastCompletionTriggeredTime = now
-		rotation.LastInitiationFinishedTime = now
 	})
 }
 
