@@ -6,7 +6,9 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"strings"
 
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -22,6 +24,7 @@ import (
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/kube-aggregator/pkg/controllers/autoregister"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -138,7 +141,14 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list client.
 				if utilclient.AreObjectsRemaining(err) {
 					return retry.MinorError(helper.NewErrorWithCodes(err, gardencorev1beta1.ErrorCleanupClusterResources))
 				}
-				return retry.SevereError(err)
+
+				gvk, gvkErr := apiutil.GVKForObject(list, c.Scheme())
+				if gvkErr != nil {
+					return retry.SevereError(fmt.Errorf("could not get GroupVersionKind from object %v: %w", list, gvkErr))
+				}
+				gvk.Kind = strings.TrimSuffix(gvk.Kind, "List")
+
+				return retry.SevereError(fmt.Errorf("failed to clean up resources with kind %s: %w", gvk.Kind, err))
 			}
 			return retry.Ok()
 		})
