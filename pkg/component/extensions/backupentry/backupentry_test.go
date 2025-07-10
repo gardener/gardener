@@ -290,7 +290,6 @@ var _ = Describe("#BackupEntry", func() {
 			obj := expected.DeepCopy()
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339Nano))
-			metav1.SetMetaDataLabel(&obj.ObjectMeta, "provider.extensions.gardener.cloud/"+providerType, "true")
 
 			obj.TypeMeta = metav1.TypeMeta{}
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
