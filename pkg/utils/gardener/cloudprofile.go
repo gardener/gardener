@@ -110,7 +110,7 @@ func GetCloudProfileSpec(cloudProfileLister gardencorev1beta1listers.CloudProfil
 		}
 		return &cloudProfile.Spec, nil
 	}
-	return nil, fmt.Errorf("could not find referenced cloudprofile")
+	return nil, fmt.Errorf("could not find referenced cloud profile with kind %q", cloudProfileReference.Kind)
 }
 
 // ValidateCloudProfileChanges validates that the referenced CloudProfile only changes within the current profile hierarchy
