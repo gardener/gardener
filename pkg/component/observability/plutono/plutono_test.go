@@ -654,7 +654,7 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards", 21)
+					checkDeployedResources("plutono-dashboards", 23)
 				})
 
 				Context("w/ enabled vpa", func() {
@@ -663,7 +663,7 @@ status:
 					})
 
 					It("should successfully deploy all resources", func() {
-						checkDeployedResources("plutono-dashboards", 24)
+						checkDeployedResources("plutono-dashboards", 26)
 					})
 				})
 			})
@@ -679,12 +679,12 @@ status:
 					})
 
 					It("should successfully deploy all resources", func() {
-						checkDeployedResources("plutono-dashboards-garden", 29)
+						checkDeployedResources("plutono-dashboards-garden", 31)
 					})
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards-garden", 26)
+					checkDeployedResources("plutono-dashboards-garden", 28)
 				})
 			})
 		})
