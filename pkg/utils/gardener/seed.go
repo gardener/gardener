@@ -79,13 +79,10 @@ func hasExactUsages(usages, requiredUsages []certificatesv1.KeyUsage) bool {
 		return false
 	}
 
-	usageMap := map[certificatesv1.KeyUsage]struct{}{}
-	for _, u := range usages {
-		usageMap[u] = struct{}{}
-	}
+	usageMap := sets.New(usages...)
 
 	for _, u := range requiredUsages {
-		if _, ok := usageMap[u]; !ok {
+		if !usageMap.Has(u) {
 			return false
 		}
 	}
