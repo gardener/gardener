@@ -1620,7 +1620,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				Expect(result).To(Equal(expectedIntersection))
 			})
 
-			It("should return the capabilities of only one parameter was provided", func() {
+			It("should return the capabilities of a single parameter provided", func() {
 				capabilities := gardencorev1beta1.Capabilities{
 					"capability1": []string{"value1"},
 					"capability2": []string{"value1", "value2"},
