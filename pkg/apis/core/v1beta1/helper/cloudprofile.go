@@ -6,6 +6,7 @@ package helper
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -596,9 +597,7 @@ func GetCapabilitiesIntersection(capabilitiesList ...gardencorev1beta1.Capabilit
 	}
 
 	// Initialize intersection with the first capabilities object
-	for key, values := range capabilitiesList[0] {
-		intersection[key] = values
-	}
+	maps.Copy(intersection, capabilitiesList[0])
 
 	// Iterate through the remaining capabilities objects and refine the intersection
 	for _, capabilities := range capabilitiesList[1:] {
@@ -612,22 +611,10 @@ func GetCapabilitiesIntersection(capabilitiesList ...gardencorev1beta1.Capabilit
 
 // intersectSlices returns the intersection of two slices.
 func intersectSlices(slice1, slice2 []string) []string {
-	elementSet := make(map[string]struct{})
-	intersection := []string{}
+	elementSet1 := sets.New(slice1...)
+	elementSet2 := sets.New(slice2...)
 
-	// Add elements of the first slice to the map.
-	for _, elem := range slice1 {
-		elementSet[elem] = struct{}{}
-	}
-
-	// Check if elements of the second slice exist in the map.
-	for _, elem := range slice2 {
-		if _, exists := elementSet[elem]; exists {
-			intersection = append(intersection, elem)
-		}
-	}
-
-	return intersection
+	return elementSet1.Intersection(elementSet2).UnsortedList()
 }
 
 // AreCapabilitiesSupportedByCapabilitySets checks if the given capabilities are supported by at least one of the provided capability sets.
