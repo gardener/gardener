@@ -3256,7 +3256,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("feature gates unsupported before 1.33", core.VerticalPodAutoscaler{
 					FeatureGates: map[string]bool{"InPlaceOrRecreate": true},
 				}, "1.32", ConsistOf(
-					field.Invalid(field.NewPath("featureGate"), "InPlaceOrRecreate", "for Kubernetes versions < 1.33, feature gate is not supported"),
+					field.Forbidden(field.NewPath("featureGates.InPlaceOrRecreate"), "not supported in Kubernetes version 1.32"),
 				)),
 			)
 		})
