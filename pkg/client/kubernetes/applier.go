@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
@@ -249,9 +250,7 @@ func nestedFloat64OrInt64(obj map[string]any, fields ...string) (int64, bool) {
 func CopyApplierOptions(in MergeFuncs) MergeFuncs {
 	out := make(MergeFuncs, len(in))
 
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 
 	return out
 }

@@ -7,6 +7,7 @@ package seed
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
@@ -447,9 +448,7 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 			if err != nil {
 				return nil, nil, err
 			}
-			for k, v := range dwdConfig {
-				dependencyWatchdogWeederConfiguration.ServicesAndDependantSelectors[k] = v
-			}
+			maps.Copy(dependencyWatchdogWeederConfiguration.ServicesAndDependantSelectors, dwdConfig)
 		}
 
 		dwdWeederValues.WeederConfig = dependencyWatchdogWeederConfiguration

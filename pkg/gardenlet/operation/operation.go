@@ -7,6 +7,7 @@ package operation
 import (
 	"context"
 	"fmt"
+	"maps"
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
@@ -205,9 +206,7 @@ func (b *Builder) Build(
 		return nil, err
 	}
 	secrets := make(map[string]*corev1.Secret, len(secretsMap))
-	for k, v := range secretsMap {
-		secrets[k] = v
-	}
+	maps.Copy(secrets, secretsMap)
 	operation.secrets = secrets
 
 	garden, err := b.gardenFunc(ctx, secrets)
