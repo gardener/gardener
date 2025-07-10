@@ -49,6 +49,8 @@ rules:
   - events
   - namespaces
   - resourcequotas
+  - services
+  - endpoints
   verbs:
   - create
   - delete
@@ -227,6 +229,8 @@ rules:
   - events
   - namespaces
   - resourcequotas
+  - services
+  - endpoints
   verbs:
   - get
   - list
