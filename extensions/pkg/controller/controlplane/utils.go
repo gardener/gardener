@@ -5,6 +5,8 @@
 package controlplane
 
 import (
+	"maps"
+
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/gardener/gardener/pkg/utils"
@@ -14,9 +16,7 @@ import (
 func MergeSecretMaps(a, b map[string]*corev1.Secret) map[string]*corev1.Secret {
 	x := make(map[string]*corev1.Secret, len(a))
 	for _, m := range []map[string]*corev1.Secret{a, b} {
-		for k, v := range m {
-			x[k] = v
-		}
+		maps.Copy(x, m)
 	}
 	return x
 }
