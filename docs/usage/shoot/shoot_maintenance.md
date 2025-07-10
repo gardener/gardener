@@ -85,7 +85,7 @@ Please refer to the [Shoot Kubernetes and Operating System Versioning in Gardene
 
 ## Automatic Credentials Rotation
 
-The `.spec.maintenance.autoRotation` field in the shoot specification allows you to control whether/when automatic rotations are performed. The `.spec.maintenance.autoRotation.credentials` is specificly about credentials rotations
+The `.spec.maintenance.autoRotation` field in the shoot specification allows you to control whether/when automatic rotations are performed. The `.spec.maintenance.autoRotation.credentials` is specifically about credentials rotations
 
 ```yaml
 spec:

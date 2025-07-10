@@ -85,7 +85,7 @@ var (
 		v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	)
 	// TODO(AleksandarSavchev): Remove this variable and the associated validation in gardener `v1.130`
-	// It is used to notify users that the opeations have neeb removed in favour of 'rotate-etcd-encryption-key'
+	// It is used to notify users that the operations have neeb removed in favour of 'rotate-etcd-encryption-key'
 	removedETCDEncryptionKeyShootOperations = sets.New(
 		"rotate-etcd-encryption-key-start",
 		"rotate-etcd-encryption-key-complete",
