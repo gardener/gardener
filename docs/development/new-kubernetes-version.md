@@ -99,12 +99,16 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
 
 ### Adapting Gardener
 
-<!-- // TODO(marc1404): Reference `compare-k8s-feature-gates.sh` script once it has been fixed (https://github.com/gardener/gardener/issues/11198). -->
 - Allow instantiation of a Kubernetes client for the new minor version and update the `README.md`:
   - See [this](https://github.com/gardener/gardener/pull/11197/commits/223bdc0ebdf79f02ac1e50fabe2b92bec3fc1e36) and [this](https://github.com/gardener/gardener/pull/11197/commits/8f1f73c6a0ce74ec952e817451244c4fa86e6bc8) example commit.
   - The list of supported versions is meanwhile maintained [here](../../pkg/utils/validation/kubernetesversion/version.go) in the `SupportedVersions` variable.
 - Maintain the Kubernetes feature gates used for validation of `Shoot` resources:
   - The feature gates are maintained in [this](../../pkg/utils/validation/features/featuregates.go) file.
+  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-feature-gates.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-feature-gates.sh v1.33 v1.34`).
+  - It will present 3 lists of feature gates: those added and those removed in `<new-version>` compared to `<old-version>` and feature gates that got locked to default in `<new-version>`.
+  - Add all added feature gates to the map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
+  - For any removed feature gates, add `<new-version>` as `RemovedInVersion` to the already existing feature gate in the map.
+  - For feature gates locked to default, add `<new-version>` as `LockedToDefaultInVersion` and the corresponding `LockedValue` to the already existing feature gate in the map.
   - See [this](https://github.com/gardener/gardener/pull/9689/commits) example PR how it handles feature gate maintenance by using `compare-k8s-feature-gates.sh`
 - Maintain the Kubernetes `kube-apiserver` admission plugins used for validation of `Shoot` resources:
   - The admission plugins are maintained in [this](../../pkg/utils/validation/admissionplugins/admissionplugins.go) file.
