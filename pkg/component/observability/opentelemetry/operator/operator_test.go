@@ -289,6 +289,9 @@ var _ = Describe("OpenTelemetry Operator", func() {
 										corev1.ResourceMemory: resource.MustParse("64Mi"),
 									},
 								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+								},
 							},
 						},
 					},

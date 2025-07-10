@@ -356,6 +356,9 @@ func (o *openTelemetryOperator) deployment() *appsv1.Deployment {
 									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 						},
 					},
 				},
