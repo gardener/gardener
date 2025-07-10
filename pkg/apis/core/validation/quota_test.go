@@ -5,6 +5,8 @@
 package validation_test
 
 import (
+	"github.com/gardener/gardener/pkg/apis/core"
+	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -14,9 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
-
-	"github.com/gardener/gardener/pkg/apis/core"
-	. "github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
 var _ = Describe("Quota Validation Tests ", func() {
@@ -121,18 +120,20 @@ var _ = Describe("Quota Validation Tests ", func() {
 			))
 		})
 
-		DescribeTable("cluster lifetime days", func(clusterLifeTimeDays int) {
-			quota.Spec.ClusterLifetimeDays = ptr.To(int32(clusterLifeTimeDays))
+		DescribeTable("cluster lifetime days", func(clusterLifeTimeDays *int32) {
+			quota.Spec.ClusterLifetimeDays = clusterLifeTimeDays
 
 			errorList := ValidateQuota(quota)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.clusterLifetimeDays"),
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("spec.clusterLifetimeDays"),
+				"BadValue": Equal(clusterLifeTimeDays),
+				"Detail":   ContainSubstring("must be greater than 0"),
 			}))))
 		},
-			Entry("should forbid negative cluster lifetime days", -1),
-			Entry("should forbid zero cluster lifetime days", 0),
+			Entry("should forbid negative cluster lifetime days", ptr.To[int32](-1)),
+			Entry("should forbid zero cluster lifetime days", ptr.To[int32](0)),
 		)
 
 		It("should allow quota scope referencing WorkloadIdentity", func() {
