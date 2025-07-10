@@ -28,10 +28,10 @@ var _ = Describe("ScrapeConfigs", func() {
 							"match[]": {
 								`{__name__=~"metering:.+", __name__!~"metering:.+(over_time|_seconds|:this_month)"}`,
 								`{__name__=~"seed:(.+):(.+)"}`,
-								`{job="kube-state-metrics",namespace=~"garden|extension-.+"}`,
+								`{job="kube-state-metrics",namespace=~"garden|extension-.+|istio-(.+)"}`,
 								`{job="kube-state-metrics",namespace=~"shoot-.+",pod=~"kube-apiserver-.+"}`,
 								`{job="kube-state-metrics",namespace=""}`,
-								`{job="cadvisor",namespace=~"garden|extension-.+"}`,
+								`{job="cadvisor",namespace=~"garden|extension-.+|istio-(.+)"}`,
 								`{job="etcd-druid",namespace="garden"}`,
 							},
 						},

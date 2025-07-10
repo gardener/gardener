@@ -71,6 +71,8 @@ var (
 	seedDashboards embed.FS
 	//go:embed dashboards/shoot
 	shootDashboards embed.FS
+	//go:embed dashboards/garden-seed
+	gardenAndSeedDashboards embed.FS
 	//go:embed dashboards/garden-shoot
 	gardenAndShootDashboards embed.FS
 	//go:embed dashboards/common
@@ -79,6 +81,7 @@ var (
 	gardenDashboardsPath         = filepath.Join("dashboards", "garden")
 	seedDashboardsPath           = filepath.Join("dashboards", "seed")
 	shootDashboardsPath          = filepath.Join("dashboards", "shoot")
+	gardenAndSeedDashboardsPath  = filepath.Join("dashboards", "garden-seed")
 	gardenAndShootDashboardsPath = filepath.Join("dashboards", "garden-shoot")
 	commonDashboardsPath         = filepath.Join("dashboards", "common")
 	commonVpaDashboardsPath      = filepath.Join(commonDashboardsPath, "vpa")
@@ -386,12 +389,20 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 	configMap.Labels = utils.MergeStringMaps(getLabels(), map[string]string{p.dashboardLabel(): dashboardLabelValue})
 
 	if p.values.IsGardenCluster {
-		requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
+		requiredDashboards = map[string]embed.FS{
+			gardenDashboardsPath:         gardenDashboards,
+			gardenAndSeedDashboardsPath:  gardenAndSeedDashboards,
+			gardenAndShootDashboardsPath: gardenAndShootDashboards,
+		}
 		if p.values.VPAEnabled {
 			requiredDashboards[commonVpaDashboardsPath] = commonDashboards
 		}
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
-		requiredDashboards = map[string]embed.FS{seedDashboardsPath: seedDashboards, commonDashboardsPath: commonDashboards}
+		requiredDashboards = map[string]embed.FS{
+			seedDashboardsPath:          seedDashboards,
+			gardenAndSeedDashboardsPath: gardenAndSeedDashboards,
+			commonDashboardsPath:        commonDashboards,
+		}
 		if !p.values.IncludeIstioDashboards {
 			ignorePaths.Insert("istio")
 		}
