@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
@@ -97,22 +98,45 @@ type staticControlPlaneComponent struct {
 }
 
 func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlaneComponent {
-	mutateAPIServerPodFn := func(pod *corev1.Pod) {
-		for _, ip := range b.gardenerResourceManagerServiceIPs {
-			pod.Spec.HostAliases = append(pod.Spec.HostAliases, corev1.HostAlias{
-				IP:        ip,
-				Hostnames: []string{resourcemanagerconstants.ServiceName},
-			})
+	var (
+		components []staticControlPlaneComponent
+
+		mutateAPIServerPodFn = func(pod *corev1.Pod) {
+			for _, ip := range b.gardenerResourceManagerServiceIPs {
+				pod.Spec.HostAliases = append(pod.Spec.HostAliases, corev1.HostAlias{
+					IP:        ip,
+					Hostnames: []string{resourcemanagerconstants.ServiceName},
+				})
+			}
 		}
+		mutateETCDPodFn = func(pod *corev1.Pod) {
+			// The pod name of the etcd pod must match `etcd-<role>-0`. However, when running as static pod, its pod name is
+			// `etcd-<role>-<node-name>`. Hence, let's mutate it here for now (this might not be the final solution
+			// depending on how support for highly-available etcd clusters will be implemented in the future).
+			pod.Spec.Hostname = pod.Name + "-0"
+			for i := range pod.Spec.Containers {
+				kubernetesutils.AddEnvVar(&pod.Spec.Containers[i], corev1.EnvVar{Name: "POD_NAME", Value: pod.Spec.Hostname}, true)
+			}
+		}
+	)
+
+	if !b.useEtcdManagedByDruid {
+		components = append(components,
+			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleMain), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
+			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleEvents), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
+		)
+	} else {
+		components = append(components,
+			staticControlPlaneComponent{func(_ context.Context) error { return nil }, "etcd-" + v1beta1constants.ETCDRoleMain, &appsv1.StatefulSet{}, mutateETCDPodFn},
+			staticControlPlaneComponent{func(_ context.Context) error { return nil }, "etcd-" + v1beta1constants.ETCDRoleEvents, &appsv1.StatefulSet{}, mutateETCDPodFn},
+		)
 	}
 
-	return []staticControlPlaneComponent{
-		{b.deployETCD(v1beta1constants.ETCDRoleMain), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
-		{b.deployETCD(v1beta1constants.ETCDRoleEvents), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
-		{b.deployKubeAPIServer, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}, mutateAPIServerPodFn},
-		{b.DeployKubeControllerManager, v1beta1constants.DeploymentNameKubeControllerManager, &appsv1.Deployment{}, nil},
-		{b.Shoot.Components.ControlPlane.KubeScheduler.Deploy, v1beta1constants.DeploymentNameKubeScheduler, &appsv1.Deployment{}, nil},
-	}
+	return append(components,
+		staticControlPlaneComponent{b.deployKubeAPIServer, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}, mutateAPIServerPodFn},
+		staticControlPlaneComponent{b.DeployKubeControllerManager, v1beta1constants.DeploymentNameKubeControllerManager, &appsv1.Deployment{}, nil},
+		staticControlPlaneComponent{b.Shoot.Components.ControlPlane.KubeScheduler.Deploy, v1beta1constants.DeploymentNameKubeScheduler, &appsv1.Deployment{}, nil},
+	)
 }
 
 // DeployControlPlaneDeployments deploys the deployments for the static control plane components. It also updates the
