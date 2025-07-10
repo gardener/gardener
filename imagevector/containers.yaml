@@ -158,8 +158,10 @@ images:
     repository: registry.k8s.io/kube-proxy
   - name: machine-controller-manager
     sourceRepository: github.com/gardener/machine-controller-manager
-    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager
-    tag: "v0.58.0"
+    # Use the image from https://github.com/gardener/machine-controller-manager/pull/1012, or build it locally using:
+    # make docker-image IMAGE_REPOSITORY=garden.local.gardener.cloud:5001/machine-controller-manager IMAGE_TAG=machine-address PLATFORM=linux/arm64 PUSH=true
+    repository: ghcr.io/maboehm/machine-controller-manager
+    tag: "machine-address"
     labels:
       - name: gardener.cloud/cve-categorisation
         value:

@@ -37,5 +37,6 @@ func (d *localDriver) GetMachineStatus(ctx context.Context, req *driver.GetMachi
 	return &driver.GetMachineStatusResponse{
 		ProviderID: pod.Name,
 		NodeName:   pod.Name,
+		Addresses:  addressesFromStatus(pod.Status),
 	}, nil
 }
