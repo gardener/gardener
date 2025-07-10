@@ -34,7 +34,8 @@ Since `Vertical Pod Autoscaler` has its `InPlaceOrRecreate` feature gate still i
   spec:
     kubernetes:
       verticalPodAutoscaler:
-        InPlaceOrRecreate: true
+        featureGates:
+          InPlaceOrRecreate: true
   ```
 
 - Make sure that the `InPlacePodVerticalScaling` Kubernetes feature gate is not explicitly disabled in the Shoot spec for:
