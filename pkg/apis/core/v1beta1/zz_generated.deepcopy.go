@@ -405,7 +405,6 @@ func (in *BackupBucketSpec) DeepCopyInto(out *BackupBucketSpec) {
 		*out = new(runtime.RawExtension)
 		(*in).DeepCopyInto(*out)
 	}
-	out.SecretRef = in.SecretRef
 	if in.SeedName != nil {
 		in, out := &in.SeedName, &out.SeedName
 		*out = new(string)
