@@ -109,7 +109,7 @@ func (g *gardenerDashboard) deployment(
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
 								"--optimize-for-size",
-								"server.mjs",
+								"server.js",
 							},
 							Env: []corev1.EnvVar{
 								{
