@@ -159,9 +159,11 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 	)
 
 	if oldOSC.Spec.InPlaceUpdates != nil && newOSC.Spec.InPlaceUpdates != nil {
-		if currentOSVersion != nil && *currentOSVersion != newOSC.Spec.InPlaceUpdates.OperatingSystemVersion {
-			changes.InPlaceUpdates.OperatingSystem = true
+		isOsVersionUpToDate, err := IsOsVersionUpToDate(currentOSVersion, newOSC)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compute OS version change: %w", err)
 		}
+		changes.InPlaceUpdates.OperatingSystem = !isOsVersionUpToDate
 
 		if oldOSC.Spec.InPlaceUpdates.KubeletVersion != newOSC.Spec.InPlaceUpdates.KubeletVersion {
 			changes.InPlaceUpdates.Kubelet.MinorVersion, err = CheckIfMinorVersionUpdate(oldOSC.Spec.InPlaceUpdates.KubeletVersion, newOSC.Spec.InPlaceUpdates.KubeletVersion)
@@ -233,6 +235,20 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 	changes.lock.Lock()
 	defer changes.lock.Unlock()
 	return changes, changes.persist()
+}
+
+// IsOsVersionUpToDate checks if the current OS version is up to date with the version specified in the new OSC.
+func IsOsVersionUpToDate(currentOSVersion *string, newOSC *extensionsv1alpha1.OperatingSystemConfig) (bool, error) {
+	if currentOSVersion == nil {
+		return false, fmt.Errorf("current OS version is nil")
+	}
+
+	osVersionUpToDate, err := versionutils.CompareVersions(*currentOSVersion, "=", newOSC.Spec.InPlaceUpdates.OperatingSystemVersion)
+	if err != nil {
+		return false, fmt.Errorf("failed comparing current OS version %q with OS version in the new OSC %q: %w", *currentOSVersion, newOSC.Spec.InPlaceUpdates.OperatingSystemVersion, err)
+	}
+
+	return osVersionUpToDate, nil
 }
 
 func getKubeletConfig(osc *extensionsv1alpha1.OperatingSystemConfig) (*kubeletconfigv1beta1.KubeletConfiguration, error) {
