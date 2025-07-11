@@ -70,15 +70,21 @@ func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 	configs := component.ResourceConfigs{
 		{Obj: clusterRole, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRole(clusterRole) }},
 		{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRoleBinding(clusterRoleBinding, clusterRole, updater) }},
-		{Obj: clusterRoleInPlace, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRoleInPlace(clusterRoleInPlace) }},
-		{Obj: clusterRoleBindingInPlace, Class: component.Application, MutateFn: func() {
-			v.reconcileUpdaterClusterRoleBindingInPlace(clusterRoleBindingInPlace, clusterRoleInPlace, updater)
-		}},
 		{Obj: roleLeaderLocking, Class: component.Application, MutateFn: func() { v.reconcileUpdaterRoleLeaderLocking(roleLeaderLocking) }},
 		{Obj: roleBindingLeaderLocking, Class: component.Application, MutateFn: func() {
 			v.reconcileUpdaterRoleBindingLeaderLocking(roleBindingLeaderLocking, roleLeaderLocking, updater)
 		}},
 		{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileUpdaterVPA(vpa, deployment) }},
+	}
+
+	if isEnabled, ok := v.values.FeatureGates["InPlaceOrRecreate"]; ok && isEnabled {
+		inPlaceConfigs := component.ResourceConfigs{
+			{Obj: clusterRoleInPlace, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRoleInPlace(clusterRoleInPlace) }},
+			{Obj: clusterRoleBindingInPlace, Class: component.Application, MutateFn: func() {
+				v.reconcileUpdaterClusterRoleBindingInPlace(clusterRoleBindingInPlace, clusterRoleInPlace, updater)
+			}},
+		}
+		configs = append(configs, inPlaceConfigs...)
 	}
 
 	if v.values.ClusterType == component.ClusterTypeSeed {
