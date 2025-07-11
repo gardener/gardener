@@ -981,15 +981,14 @@ func (r *Reconciler) updateOSInPlace(ctx context.Context, log logr.Logger, oscCh
 	patch := client.MergeFrom(node.DeepCopy())
 	metav1.SetMetaDataAnnotation(&node.ObjectMeta, annotationUpdatingOperatingSystemVersion, osc.Spec.InPlaceUpdates.OperatingSystemVersion)
 	if err := r.Client.Patch(ctx, node, patch); err != nil {
-		log.Error(err, "Failed to patch node with annotation for OS update", "node", node.Name)
-		return err
+		return fmt.Errorf("failed to patch node with annotation for OS update: %w", err)
 	}
 
+	log.Info("Executing update script", "command", osc.Status.InPlaceUpdates.OSUpdate.Command, "args", strings.Join(osc.Status.InPlaceUpdates.OSUpdate.Args, " "))
 	if err := retryutils.UntilTimeout(ctx, OSUpdateRetryInterval, OSUpdateRetryTimeout, func(ctx context.Context) (bool, error) {
-		log.Info("Executing update script", "command", osc.Status.InPlaceUpdates.OSUpdate.Command, "args", strings.Join(osc.Status.InPlaceUpdates.OSUpdate.Args, " "))
-
 		if output, err2 := ExecCommandCombinedOutput(ctx, osc.Status.InPlaceUpdates.OSUpdate.Command, osc.Status.InPlaceUpdates.OSUpdate.Args...); err2 != nil {
 			if retriableErrorPatternRegex.MatchString(string(output)) {
+				log.Error(err2, "Retriable error detected while executing OS update command: retrying", "output", strings.ReplaceAll(string(output), "\n", " "))
 				return retryutils.MinorError(fmt.Errorf("retriable error detected: %w, output: %s", err2, string(output)))
 			} else if nonRetriableErrorPatternRegex.MatchString(string(output)) {
 				return retryutils.SevereError(fmt.Errorf("non-retriable error detected: %w, output: %s", err2, string(output)))
@@ -1025,7 +1024,7 @@ func (r *Reconciler) patchNodeUpdateSuccessful(ctx context.Context, log logr.Log
 }
 
 func (r *Reconciler) patchNodeUpdateFailed(ctx context.Context, log logr.Logger, node *corev1.Node, reason string) error {
-	log.Info("Marking the node with in-place update failed label", "node", node.Name, "reason", reason)
+	log.Info("Marking the node with in-place update failed label", "node", node.Name, "reason", strings.ReplaceAll(reason, "\n", " "))
 
 	patch := client.MergeFrom(node.DeepCopy())
 	metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed)
