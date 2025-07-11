@@ -120,8 +120,8 @@ var _ = Describe("VPA", func() {
 		serviceAccountUpdater            *corev1.ServiceAccount
 		clusterRoleUpdater               *rbacv1.ClusterRole
 		clusterRoleBindingUpdater        *rbacv1.ClusterRoleBinding
-		clusterRoleUpdaterResizer        *rbacv1.ClusterRole
-		clusterRoleBindingUpdaterResizer *rbacv1.ClusterRoleBinding
+		clusterRoleUpdaterInPlace        *rbacv1.ClusterRole
+		clusterRoleBindingUpdaterInPlace *rbacv1.ClusterRoleBinding
 		roleLeaderLockingUpdater         *rbacv1.Role
 		roleBindingLeaderLockingUpdater  *rbacv1.RoleBinding
 		shootAccessSecretUpdater         *corev1.Secret
@@ -254,19 +254,14 @@ var _ = Describe("VPA", func() {
 				Namespace: namespace,
 			}},
 		}
-		clusterRoleUpdaterResizer = &rbacv1.ClusterRole{
+		clusterRoleUpdaterInPlace = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:vpa:target:resizer",
+				Name: "gardener.cloud:vpa:target:vpa-updater-in-place",
 				Labels: map[string]string{
 					"gardener.cloud/role": "vpa",
 				},
 			},
 			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{"apps", "extensions"},
-					Resources: []string{"replicasets"},
-					Verbs:     []string{"get"},
-				},
 				{
 					APIGroups: []string{""},
 					Resources: []string{"pods", "pods/resize"},
@@ -274,9 +269,9 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
-		clusterRoleBindingUpdaterResizer = &rbacv1.ClusterRoleBinding{
+		clusterRoleBindingUpdaterInPlace = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:vpa:target:resizer",
+				Name: "gardener.cloud:vpa:target:vpa-updater-in-place-binding",
 				Labels: map[string]string{
 					"gardener.cloud/role": "vpa",
 				},
@@ -287,7 +282,7 @@ var _ = Describe("VPA", func() {
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "ClusterRole",
-				Name:     "gardener.cloud:vpa:target:resizer",
+				Name:     "gardener.cloud:vpa:target:vpa-updater-in-place",
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      "ServiceAccount",
@@ -1589,9 +1584,9 @@ var _ = Describe("VPA", func() {
 					clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
 					clusterRoleBindingUpdater.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.Name)
 					clusterRoleBindingUpdater.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.RoleRef.Name)
-					clusterRoleUpdaterResizer.Name = replaceTargetSubstrings(clusterRoleUpdaterResizer.Name)
-					clusterRoleBindingUpdaterResizer.Name = replaceTargetSubstrings(clusterRoleBindingUpdaterResizer.Name)
-					clusterRoleBindingUpdaterResizer.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdaterResizer.RoleRef.Name)
+					clusterRoleUpdaterInPlace.Name = replaceTargetSubstrings(clusterRoleUpdaterInPlace.Name)
+					clusterRoleBindingUpdaterInPlace.Name = replaceTargetSubstrings(clusterRoleBindingUpdaterInPlace.Name)
+					clusterRoleBindingUpdaterInPlace.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdaterInPlace.RoleRef.Name)
 					roleLeaderLockingUpdater.Name = replaceTargetSubstrings(roleLeaderLockingUpdater.Name)
 					roleBindingLeaderLockingUpdater.Name = replaceTargetSubstrings(roleBindingLeaderLockingUpdater.Name)
 					roleBindingLeaderLockingUpdater.RoleRef.Name = replaceTargetSubstrings(roleBindingLeaderLockingUpdater.RoleRef.Name)
@@ -1603,8 +1598,8 @@ var _ = Describe("VPA", func() {
 						serviceAccountUpdater,
 						clusterRoleUpdater,
 						clusterRoleBindingUpdater,
-						clusterRoleUpdaterResizer,
-						clusterRoleBindingUpdaterResizer,
+						clusterRoleUpdaterInPlace,
+						clusterRoleBindingUpdaterInPlace,
 						roleLeaderLockingUpdater,
 						roleBindingLeaderLockingUpdater,
 						deploymentUpdater,
@@ -1988,7 +1983,7 @@ var _ = Describe("VPA", func() {
 
 				By("Verify vpa-updater application resources")
 				clusterRoleBindingUpdater.Subjects[0].Namespace = "kube-system"
-				clusterRoleBindingUpdaterResizer.Subjects[0].Namespace = "kube-system"
+				clusterRoleBindingUpdaterInPlace.Subjects[0].Namespace = "kube-system"
 				roleLeaderLockingUpdater.Namespace = "kube-system"
 				roleBindingLeaderLockingUpdater.Namespace = "kube-system"
 				roleBindingLeaderLockingUpdater.Subjects[0].Namespace = "kube-system"
@@ -1996,8 +1991,8 @@ var _ = Describe("VPA", func() {
 				Expect(managedResource).To(contain(
 					clusterRoleUpdater,
 					clusterRoleBindingUpdater,
-					clusterRoleUpdaterResizer,
-					clusterRoleBindingUpdaterResizer,
+					clusterRoleUpdaterInPlace,
+					clusterRoleBindingUpdaterInPlace,
 					roleLeaderLockingUpdater,
 					roleBindingLeaderLockingUpdater,
 				))

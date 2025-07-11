@@ -58,8 +58,8 @@ func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 	var (
 		clusterRole               = v.emptyClusterRole("evictioner")
 		clusterRoleBinding        = v.emptyClusterRoleBinding("evictioner")
-		clusterRoleResizer        = v.emptyClusterRole("resizer")
-		clusterRoleBindingResizer = v.emptyClusterRoleBinding("resizer")
+		clusterRoleInPlace        = v.emptyClusterRole("vpa-updater-in-place")
+		clusterRoleBindingInPlace = v.emptyClusterRoleBinding("vpa-updater-in-place-binding")
 		roleLeaderLocking         = v.emptyRole("leader-locking-vpa-updater")
 		roleBindingLeaderLocking  = v.emptyRoleBinding("leader-locking-vpa-updater")
 		deployment                = v.emptyDeployment(updater)
@@ -70,9 +70,9 @@ func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 	configs := component.ResourceConfigs{
 		{Obj: clusterRole, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRole(clusterRole) }},
 		{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRoleBinding(clusterRoleBinding, clusterRole, updater) }},
-		{Obj: clusterRoleResizer, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRoleResizer(clusterRoleResizer) }},
-		{Obj: clusterRoleBindingResizer, Class: component.Application, MutateFn: func() {
-			v.reconcileUpdaterClusterRoleBindingResizer(clusterRoleBindingResizer, clusterRoleResizer, updater)
+		{Obj: clusterRoleInPlace, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRoleInPlace(clusterRoleInPlace) }},
+		{Obj: clusterRoleBindingInPlace, Class: component.Application, MutateFn: func() {
+			v.reconcileUpdaterClusterRoleBindingInPlace(clusterRoleBindingInPlace, clusterRoleInPlace, updater)
 		}},
 		{Obj: roleLeaderLocking, Class: component.Application, MutateFn: func() { v.reconcileUpdaterRoleLeaderLocking(roleLeaderLocking) }},
 		{Obj: roleBindingLeaderLocking, Class: component.Application, MutateFn: func() {
@@ -134,14 +134,9 @@ func (v *vpa) reconcileUpdaterClusterRoleBinding(clusterRoleBinding *rbacv1.Clus
 	}}
 }
 
-func (v *vpa) reconcileUpdaterClusterRoleResizer(clusterRole *rbacv1.ClusterRole) {
+func (v *vpa) reconcileUpdaterClusterRoleInPlace(clusterRole *rbacv1.ClusterRole) {
 	clusterRole.Labels = getRoleLabel()
 	clusterRole.Rules = []rbacv1.PolicyRule{
-		{
-			APIGroups: []string{"apps", "extensions"},
-			Resources: []string{"replicasets"},
-			Verbs:     []string{"get"},
-		},
 		{
 			APIGroups: []string{""},
 			Resources: []string{"pods", "pods/resize"},
@@ -150,7 +145,7 @@ func (v *vpa) reconcileUpdaterClusterRoleResizer(clusterRole *rbacv1.ClusterRole
 	}
 }
 
-func (v *vpa) reconcileUpdaterClusterRoleBindingResizer(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccountName string) {
+func (v *vpa) reconcileUpdaterClusterRoleBindingInPlace(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccountName string) {
 	clusterRoleBinding.Labels = getRoleLabel()
 	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
 	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
