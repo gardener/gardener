@@ -2714,7 +2714,7 @@ spec:
                     type: array
                   minReplicas:
                     description: MinReplicas sets a lower bound to the autoscaling
-                      feature.  Set this if your are using autoscaling. It must be
+                      feature.  Set this if you are using autoscaling. It must be
                       at least 1
                     format: int32
                     type: integer
@@ -4955,9 +4955,9 @@ spec:
                           ('prometheus.io/scrape', 'prometheus.io/port', and 'prometheus.io/path')
                         type: boolean
                       enableMetrics:
-                        description: |-
-                          EnableMetrics specifies if ServiceMonitor or PodMonitor(for sidecar mode) should be created for the service managed by the OpenTelemetry Operator.
-                          The operator.observability.prometheus feature gate must be enabled to use this feature.
+                        description: EnableMetrics specifies if ServiceMonitor or
+                          PodMonitor(for sidecar mode) should be created for the service
+                          managed by the OpenTelemetry Operator.
                         type: boolean
                     type: object
                 type: object
@@ -5438,6 +5438,7 @@ spec:
                     type: integer
                 type: object
               replicas:
+                default: 1
                 description: Replicas is the number of pod instances for the underlying
                   replicaset. Set this if you are not using autoscaling.
                 format: int32
@@ -5704,6 +5705,11 @@ spec:
                 description: |-
                   ServiceAccount indicates the name of an existing service account to use with this instance. When set,
                   the operator will not automatically create a ServiceAccount.
+                type: string
+              serviceName:
+                description: |-
+                  ServiceName is the name of the Service to be used.
+                  If not specified, it will default to "<name>-headless".
                 type: string
               shareProcessNamespace:
                 description: ShareProcessNamespace indicates if the pod's containers
@@ -6644,6 +6650,13 @@ spec:
                     - consistent-hashing
                     - per-node
                     type: string
+                  collectorNotReadyGracePeriod:
+                    default: 30s
+                    description: |-
+                      CollectorNotReadyGracePeriod defines the grace period after which a TargetAllocator stops considering a collector is target assignable.
+                      The default is 30s, which means that if a collector becomes not Ready, the target allocator will wait for 30 seconds before reassigning its targets. The assumption is that the state is temporary, and an expensive target reallocation should be avoided if possible.
+                    format: duration
+                    type: string
                   enabled:
                     description: Enabled indicates whether to use a target allocation
                       mechanism for Prometheus targets or not.
@@ -6804,9 +6817,9 @@ spec:
                               ('prometheus.io/scrape', 'prometheus.io/port', and 'prometheus.io/path')
                             type: boolean
                           enableMetrics:
-                            description: |-
-                              EnableMetrics specifies if ServiceMonitor or PodMonitor(for sidecar mode) should be created for the service managed by the OpenTelemetry Operator.
-                              The operator.observability.prometheus feature gate must be enabled to use this feature.
+                            description: EnableMetrics specifies if ServiceMonitor
+                              or PodMonitor(for sidecar mode) should be created for
+                              the service managed by the OpenTelemetry Operator.
                             type: boolean
                         type: object
                     type: object
@@ -7076,6 +7089,20 @@ spec:
                       PrometheusCR defines the configuration for the retrieval of PrometheusOperator CRDs ( servicemonitor.monitoring.coreos.com/v1 and podmonitor.monitoring.coreos.com/v1 )  retrieval.
                       All CR instances which the ServiceAccount has access to will be retrieved. This includes other namespaces.
                     properties:
+                      allowNamespaces:
+                        description: AllowNamespaces Namespaces to scope the interaction
+                          of the Target Allocator and the apiserver (allow list).
+                          This is mutually exclusive with DenyNamespaces.
+                        items:
+                          type: string
+                        type: array
+                      denyNamespaces:
+                        description: DenyNamespaces Namespaces to scope the interaction
+                          of the Target Allocator and the apiserver (deny list). This
+                          is mutually exclusive with AllowNamespaces.
+                        items:
+                          type: string
+                        type: array
                       enabled:
                         description: Enabled indicates whether to use a PrometheusOperator
                           custom resources as targets or not.
@@ -10277,8 +10304,23 @@ spec:
                 x-kubernetes-list-type: atomic
             required:
             - config
-            - managementState
             type: object
+            x-kubernetes-validations:
+            - message: the OpenTelemetry Collector mode is set to sidecar, which does
+                not support the attribute 'tolerations'
+              rule: '!(self.mode == ''sidecar'' && size(self.tolerations) > 0) ||
+                !has(self.tolerations)'
+            - message: the OpenTelemetry Collector mode is set to sidecar, which does
+                not support the attribute 'priorityClassName'
+              rule: '!(self.mode == ''sidecar'' && self.priorityClassName != '''')
+                || !has(self.priorityClassName)'
+            - message: the OpenTelemetry Collector mode is set to sidecar, which does
+                not support the attribute 'affinity'
+              rule: '!(self.mode == ''sidecar'' && self.affinity != null) || !has(self.affinity)'
+            - message: the OpenTelemetry Collector mode is set to sidecar, which does
+                not support the attribute 'additionalContainers'
+              rule: '!(self.mode == ''sidecar'' && size(self.additionalContainers)
+                > 0) || !has(self.additionalContainers)'
           status:
             description: OpenTelemetryCollectorStatus defines the observed state of
               OpenTelemetryCollector.

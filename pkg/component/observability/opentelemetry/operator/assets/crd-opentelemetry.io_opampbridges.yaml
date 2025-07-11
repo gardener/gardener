@@ -975,6 +975,20 @@ spec:
                 description: ComponentsAllowed is a list of allowed OpenTelemetry
                   components for each pipeline type (receiver, processor, etc.)
                 type: object
+              description:
+                description: Description allows the customization of the non identifying
+                  attributes for the OpAMP Bridge.
+                properties:
+                  non_identifying_attributes:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      NonIdentifyingAttributes are a map of key-value pairs that may be specified to provide
+                      extra information about the agent to the OpAMP server.
+                    type: object
+                required:
+                - non_identifying_attributes
+                type: object
               endpoint:
                 description: OpAMP backend Server endpoint
                 type: string
