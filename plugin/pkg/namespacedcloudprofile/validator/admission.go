@@ -326,6 +326,9 @@ func validateNamespacedCloudProfileExtendedMachineImages(machineVersion gardenco
 	if len(ptr.Deref(machineVersion.KubeletVersionConstraint, "")) > 0 {
 		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("kubeletVersionConstraint"), "must not provide a kubelet version constraint to an extended machine image in NamespacedCloudProfile"))
 	}
+	if machineVersion.InPlaceUpdates != nil {
+		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("inPlaceUpdates"), "must not provide inPlaceUpdates to an extended machine image in NamespacedCloudProfile"))
+	}
 
 	return allErrs
 }
