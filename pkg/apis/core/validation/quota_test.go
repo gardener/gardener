@@ -5,8 +5,6 @@
 package validation_test
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
-	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -16,6 +14,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	. "github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
 var _ = Describe("Quota Validation Tests ", func() {
@@ -91,7 +92,10 @@ var _ = Describe("Quota Validation Tests ", func() {
 
 		It("should forbid Quota specification with empty or invalid keys", func() {
 			quota.ObjectMeta = metav1.ObjectMeta{}
-			quota.Spec.Scope = corev1.ObjectReference{}
+			quota.Spec.Scope = corev1.ObjectReference{
+				Kind:       "Foo",
+				APIVersion: "invalid.gardener.cloud/v1beta1",
+			}
 			quota.Spec.Metrics["key"] = resource.MustParse("-100")
 
 			errorList := ValidateQuota(quota)
@@ -106,8 +110,10 @@ var _ = Describe("Quota Validation Tests ", func() {
 					"Field": Equal("metadata.namespace"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("spec.scope"),
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"BadValue": Equal("invalid.gardener.cloud/v1beta1, Kind=Foo"),
+					"Detail":   ContainSubstring("supported values: \"core.gardener.cloud/v1beta1, Kind=Project\", \"/v1, Kind=Secret\", \"security.gardener.cloud/v1alpha1, Kind=WorkloadIdentity\""),
+					"Field":    Equal("spec.scope"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),

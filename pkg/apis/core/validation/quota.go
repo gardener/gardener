@@ -43,8 +43,8 @@ func ValidateQuotaSpec(quotaSpec *core.QuotaSpec, fldPath *field.Path) field.Err
 	}
 
 	scopeRef := quotaSpec.Scope
-	if scope, err := helper.QuotaScope(scopeRef); err != nil {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("scope"), scope, []string{"project", "secret", "workloadidentity"}))
+	if _, err := helper.QuotaScope(scopeRef); err != nil {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("scope"), scopeRef.GroupVersionKind().String(), []string{helper.ProjectGVK.String(), helper.SecretGVK.String(), helper.WorkloadIdentityGVK.String()}))
 	}
 
 	metricsFldPath := fldPath.Child("metrics")

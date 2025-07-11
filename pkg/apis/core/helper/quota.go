@@ -11,16 +11,25 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+var (
+	// ProjectGVK is the GroupVersionKind for Gardener Project resources.
+	ProjectGVK = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "Project"}
+	// SecretGVK is the GroupVersionKind for Kubernetes Secret resources.
+	SecretGVK = schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
+	// WorkloadIdentityGVK is the GroupVersionKind for Gardener WorkloadIdentity resources.
+	WorkloadIdentityGVK = schema.GroupVersionKind{Group: "security.gardener.cloud", Version: "v1alpha1", Kind: "WorkloadIdentity"}
+)
+
 // QuotaScope returns the scope of a quota scope reference.
 func QuotaScope(scopeRef corev1.ObjectReference) (string, error) {
-	if gvk := schema.FromAPIVersionAndKind(scopeRef.APIVersion, scopeRef.Kind); gvk.Group == "core.gardener.cloud" && gvk.Kind == "Project" {
+	switch schema.FromAPIVersionAndKind(scopeRef.APIVersion, scopeRef.Kind) {
+	case ProjectGVK:
 		return "project", nil
-	}
-	if scopeRef.APIVersion == "v1" && scopeRef.Kind == "Secret" {
+	case SecretGVK:
 		return "credentials", nil
-	}
-	if gvk := schema.FromAPIVersionAndKind(scopeRef.APIVersion, scopeRef.Kind); gvk.Group == "security.gardener.cloud" && gvk.Kind == "WorkloadIdentity" {
+	case WorkloadIdentityGVK:
 		return "credentials", nil
+	default:
+		return "", errors.New("unknown quota scope")
 	}
-	return "", errors.New("unknown quota scope")
 }
