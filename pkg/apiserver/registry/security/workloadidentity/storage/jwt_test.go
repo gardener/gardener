@@ -7,11 +7,13 @@ package storage
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/utils/ptr"
@@ -21,6 +23,7 @@ import (
 	securityapi "github.com/gardener/gardener/pkg/apis/security"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardenv1betainformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
@@ -646,6 +649,29 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(ctxObjects.seed).ToNot(BeNil())
 			Expect(ctxObjects.seed.GetName()).To(Equal(seedName))
 			Expect(ctxObjects.seed.GetUID()).To(Equal(seedUID))
+
+			By("delete the shoot")
+			Expect(shootInformer.Informer().GetStore().Delete(shoot)).To(Succeed())
+
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ctxObjects).ToNot(BeNil())
+
+			Expect(ctxObjects.backupEntry).ToNot(BeNil())
+			Expect(ctxObjects.backupEntry.GetName()).To(Equal(backupEntryName))
+			Expect(ctxObjects.backupEntry.GetNamespace()).To(Equal(namespaceName))
+			Expect(ctxObjects.backupEntry.GetUID()).To(Equal(backupEntryUID))
+
+			Expect(ctxObjects.backupBucket).ToNot(BeNil())
+			Expect(ctxObjects.backupBucket.GetName()).To(Equal(backupBucketName))
+			Expect(ctxObjects.backupBucket.GetUID()).To(Equal(backupBucketUID))
+
+			Expect(ctxObjects.seed).ToNot(BeNil())
+			Expect(ctxObjects.seed.GetName()).To(Equal(seedName))
+			Expect(ctxObjects.seed.GetUID()).To(Equal(seedUID))
+
+			Expect(ctxObjects.shoot).To(BeNil())
+			Expect(ctxObjects.project).To(BeNil())
 		})
 
 		It("should fail to resolve with backupEntry context object", func() {
@@ -700,7 +726,7 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(err.Error()).To(Equal("seed.core.gardener.cloud \"test-seed\" not found"))
 			Expect(ctxObjects).To(BeNil())
 
-			By("shoot does not exist")
+			By("project does not exist")
 			backupEntry.OwnerReferences = []metav1.OwnerReference{{
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Kind:       "Shoot",
@@ -709,15 +735,6 @@ var _ = Describe("#TokenRequest", func() {
 			}}
 			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntry)).To(Succeed())
 			Expect(seedInformer.Informer().GetStore().Add(seed)).To(Succeed())
-			Expect(shootInformer.Informer().GetStore().Delete(shoot)).To(Succeed())
-
-			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeNotFoundError())
-			Expect(err.Error()).To(Equal("shoot.core.gardener.cloud \"test-shoot\" not found"))
-			Expect(ctxObjects).To(BeNil())
-
-			By("project does not exist")
 			Expect(shootInformer.Informer().GetStore().Add(shoot)).To(Succeed())
 			Expect(projectInformer.Informer().GetStore().Delete(project)).To(Succeed())
 
@@ -725,6 +742,16 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("Project.core.gardener.cloud \"<unknown>\" not found"))
+			Expect(ctxObjects).To(BeNil())
+
+			By("getting the shoot returns error other than notFound")
+			Expect(projectInformer.Informer().GetStore().Add(project)).To(Succeed())
+			expectedError := errors.New("expect getting shoot to fail")
+			r.shootListers = &fakeShootLister{err: expectedError}
+
+			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(expectedError))
 			Expect(ctxObjects).To(BeNil())
 		})
 
@@ -854,3 +881,29 @@ var _ = Describe("#TokenRequest", func() {
 		})
 	})
 })
+
+type fakeShootLister struct {
+	err error
+}
+type fakeShootNamespaceLister struct {
+	err error
+}
+
+var (
+	_ gardencorev1beta1listers.ShootLister          = (*fakeShootLister)(nil)
+	_ gardencorev1beta1listers.ShootNamespaceLister = (*fakeShootNamespaceLister)(nil)
+)
+
+func (*fakeShootLister) List(_ labels.Selector) (ret []*gardencorev1beta1.Shoot, err error) {
+	return []*gardencorev1beta1.Shoot{}, nil
+}
+func (f *fakeShootLister) Shoots(_ string) gardencorev1beta1listers.ShootNamespaceLister {
+	return &fakeShootNamespaceLister{err: f.err}
+}
+
+func (*fakeShootNamespaceLister) List(_ labels.Selector) (ret []*gardencorev1beta1.Shoot, err error) {
+	return []*gardencorev1beta1.Shoot{}, nil
+}
+func (f *fakeShootNamespaceLister) Get(_ string) (*gardencorev1beta1.Shoot, error) {
+	return nil, f.err
+}

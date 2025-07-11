@@ -9,6 +9,7 @@ import (
 	"slices"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -222,18 +223,18 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 
 		if shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry); shootName != "" {
 			shoot, err := r.shootListers.Shoots(backupEntry.GetNamespace()).Get(shootName)
-			if err != nil {
-				return nil, err
-			}
+			if err == nil {
+				shootTechnicalID, shootUID := gardenerutils.ExtractShootDetailsFromBackupEntryName(ctxObj.Name)
+				if shootTechnicalID == shoot.Status.TechnicalID && shootUID == shoot.GetUID() {
+					ctxObjects.shoot = shoot.GetObjectMeta()
 
-			shootTechnicalID, shootUID := gardenerutils.ExtractShootDetailsFromBackupEntryName(ctxObj.Name)
-			if shootTechnicalID == shoot.Status.TechnicalID && shootUID == shoot.GetUID() {
-				ctxObjects.shoot = shoot.GetObjectMeta()
-
-				if project, err = admissionutils.ProjectForNamespaceFromLister(r.projectLister, shoot.Namespace); err != nil {
-					return nil, err
+					if project, err = admissionutils.ProjectForNamespaceFromLister(r.projectLister, shoot.Namespace); err != nil {
+						return nil, err
+					}
+					ctxObjects.project = project.GetObjectMeta()
 				}
-				ctxObjects.project = project.GetObjectMeta()
+			} else if !apierrors.IsNotFound(err) {
+				return nil, err
 			}
 		}
 
