@@ -56,6 +56,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -164,9 +165,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// If the node-agent has restarted after OS update, we need to persist the change in oscChanges.
-	if osc.Spec.InPlaceUpdates != nil && ptr.Deref(osVersion, "") == osc.Spec.InPlaceUpdates.OperatingSystemVersion {
-		if err := oscChanges.completeOSUpdate(); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed completing OS update: %w", err)
+	if osc.Spec.InPlaceUpdates != nil {
+		if osVersionUpToDate, err := IsOsVersionUpToDate(osVersion, osc); err != nil {
+			return reconcile.Result{}, err
+		} else if osVersionUpToDate {
+			if err := oscChanges.completeOSUpdate(); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed completing OS update: %w", err)
+			}
 		}
 	}
 
@@ -672,22 +677,31 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 		return nil
 	}
 
-	// This means that the OS was not updated in-place and it rolled back to the previous version but a newer version is not yet applied.
-	if lastAttemptedUpdateVersion, osUpdateAnnotationExists := node.Annotations[annotationUpdatingOperatingSystemVersion]; osUpdateAnnotationExists &&
-		osc.Spec.InPlaceUpdates != nil && osVersion != nil && osc.Spec.InPlaceUpdates.OperatingSystemVersion != *osVersion &&
-		lastAttemptedUpdateVersion == osc.Spec.InPlaceUpdates.OperatingSystemVersion {
-		reason, ok := node.Annotations[machinev1alpha1.AnnotationKeyMachineUpdateFailedReason]
-		// If there is already a annotatoin with the update failed reason, don't overwrite it.
-		if !ok {
-			if err := r.patchNodeUpdateFailed(ctx, log, node, fmt.Sprintf("OS update might have failed and rolled back to the previous version. Desired version: %q, Current version: %q", osc.Spec.InPlaceUpdates.OperatingSystemVersion, *osVersion)); err != nil {
-				return err
-			}
+	if osc.Spec.InPlaceUpdates == nil {
+		return nil
+	}
 
-			// No point in requeuing the node for the same version, wait for the newer version to be applied.
-			return reconcile.TerminalError(fmt.Errorf("OS update might have failed and rolled back to the previous version. Desired version: %q, Current version: %q", osc.Spec.InPlaceUpdates.OperatingSystemVersion, *osVersion))
+	// This means that the OS was not updated in-place and it rolled back to the previous version but a newer version is not yet applied.
+	if lastAttemptedUpdateVersion, osUpdateAnnotationExists := node.Annotations[annotationUpdatingOperatingSystemVersion]; osUpdateAnnotationExists && oscChanges.InPlaceUpdates.OperatingSystem {
+		lastAttemptedUpdateVersionIsSameAsDesired, err := versionutils.CompareVersions(lastAttemptedUpdateVersion, "=", osc.Spec.InPlaceUpdates.OperatingSystemVersion)
+		if err != nil {
+			return fmt.Errorf("failed comparing last attempted update version %q with desired OS version %q: %w", lastAttemptedUpdateVersion, osc.Spec.InPlaceUpdates.OperatingSystemVersion, err)
 		}
 
-		return reconcile.TerminalError(fmt.Errorf("OS update has failed with error: %s", reason))
+		if lastAttemptedUpdateVersionIsSameAsDesired {
+			reason, ok := node.Annotations[machinev1alpha1.AnnotationKeyMachineUpdateFailedReason]
+			// If there is already a annotation with the update failed reason, don't overwrite it.
+			if !ok {
+				if err := r.patchNodeUpdateFailed(ctx, log, node, fmt.Sprintf("OS update might have failed and rolled back to the previous version. Desired version: %q, Current version: %q", osc.Spec.InPlaceUpdates.OperatingSystemVersion, *osVersion)); err != nil {
+					return err
+				}
+
+				// No point in requeuing the node for the same version, wait for the newer version to be applied.
+				return reconcile.TerminalError(fmt.Errorf("OS update might have failed and rolled back to the previous version. Desired version: %q, Current version: %q", osc.Spec.InPlaceUpdates.OperatingSystemVersion, *osVersion))
+			}
+
+			return reconcile.TerminalError(fmt.Errorf("OS update has failed with error: %s", reason))
+		}
 	}
 
 	if err := r.updateOSInPlace(ctx, log, oscChanges, osc, node); err != nil {
