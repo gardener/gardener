@@ -938,28 +938,31 @@ var _ = Describe("#TokenRequest", func() {
 	})
 })
 
-type fakeShootLister struct {
-	err error
-}
-type fakeShootNamespaceLister struct {
-	err error
-}
-
 var (
 	_ gardencorev1beta1listers.ShootLister          = (*fakeShootLister)(nil)
 	_ gardencorev1beta1listers.ShootNamespaceLister = (*fakeShootNamespaceLister)(nil)
 )
 
+type fakeShootLister struct {
+	err error
+}
+
 func (*fakeShootLister) List(_ labels.Selector) (ret []*gardencorev1beta1.Shoot, err error) {
 	return []*gardencorev1beta1.Shoot{}, nil
 }
+
 func (f *fakeShootLister) Shoots(_ string) gardencorev1beta1listers.ShootNamespaceLister {
 	return &fakeShootNamespaceLister{err: f.err}
+}
+
+type fakeShootNamespaceLister struct {
+	err error
 }
 
 func (*fakeShootNamespaceLister) List(_ labels.Selector) (ret []*gardencorev1beta1.Shoot, err error) {
 	return []*gardencorev1beta1.Shoot{}, nil
 }
+
 func (f *fakeShootNamespaceLister) Get(_ string) (*gardencorev1beta1.Shoot, error) {
 	return nil, f.err
 }
