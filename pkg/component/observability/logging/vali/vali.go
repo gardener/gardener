@@ -370,7 +370,7 @@ func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
 									Port: networkingv1.ServiceBackendPort{Number: kubeRBACProxyPort},
 								},
 							},
-							Path:     "/vali/api/v1/push",
+							Path:     valiconstants.PushEndpoint,
 							PathType: &pathType,
 						}},
 					},
@@ -812,7 +812,7 @@ func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
 				},
 			},
 			{
-				NonResourceURLs: []string{"/vali/api/v1/push"},
+				NonResourceURLs: []string{valiconstants.PushEndpoint},
 				Verbs:           []string{"create"},
 			},
 		},

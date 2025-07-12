@@ -137,6 +137,7 @@ type ControlPlane struct {
 	Prometheus               prometheus.Interface
 	ResourceManager          resourcemanager.Interface
 	Vali                     vali.Interface
+	OtelCollector            component.DeployWaiter
 	VerticalPodAutoscaler    vpa.Interface
 	VPNSeedServer            vpnseedserver.Interface
 }
