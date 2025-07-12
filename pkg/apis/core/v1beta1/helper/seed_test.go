@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -130,8 +131,8 @@ var _ = Describe("Helper", func() {
 	)
 
 	DescribeTable("#SeedSettingExcessCapacityReservationEnabled",
-		func(settings *gardencorev1beta1.SeedSettings, expectation bool) {
-			Expect(SeedSettingExcessCapacityReservationEnabled(settings)).To(Equal(expectation))
+		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
+			Expect(SeedSettingExcessCapacityReservationEnabled(settings)).To(Equal(expected))
 		},
 
 		Entry("setting is nil", nil, true),
@@ -139,6 +140,30 @@ var _ = Describe("Helper", func() {
 		Entry("excess capacity reservation 'enabled' is nil", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: nil}}, true),
 		Entry("excess capacity reservation 'enabled' is false", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: ptr.To(false)}}, false),
 		Entry("excess capacity reservation 'enabled' is true", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: ptr.To(true)}}, true),
+	)
+
+	DescribeTable("#SeedSettingVerticalPodAutoscalerEnabled",
+		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
+			Expect(SeedSettingVerticalPodAutoscalerEnabled(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, true),
+		Entry("no vertical pod autocaler setting", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("vertical pod autoscaler enabled", &gardencorev1beta1.SeedSettings{VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{Enabled: true}}, true),
+		Entry("vertical pod autoscaler disabled", &gardencorev1beta1.SeedSettings{VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{Enabled: false}}, false),
+	)
+
+	DescribeTable("#SeedSettingVerticalPodAutoscalerMaxAllowed",
+		func(settings *gardencorev1beta1.SeedSettings, expected corev1.ResourceList) {
+			Expect(SeedSettingVerticalPodAutoscalerMaxAllowed(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, nil),
+		Entry("no vertical pod autocaler setting", &gardencorev1beta1.SeedSettings{}, nil),
+		Entry("vertical pod autocaler max allowed setting exists",
+			&gardencorev1beta1.SeedSettings{VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{MaxAllowed: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2")}}},
+			corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2")},
+		),
 	)
 
 	DescribeTable("#SeedSettingDependencyWatchdogWeederEnabled",

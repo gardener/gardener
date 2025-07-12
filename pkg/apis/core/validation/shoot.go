@@ -1299,6 +1299,24 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 	if count := autoScaler.MemoryAggregationIntervalCount; count != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*count, fldPath.Child("memoryAggregationIntervalCount"))...)
 	}
+	allErrs = append(allErrs, ValidateVerticalPodAutoscalerMaxAllowed(autoScaler.MaxAllowed, fldPath)...)
+
+	return allErrs
+}
+
+// ValidateVerticalPodAutoscalerMaxAllowed validates the given VerticalPodAutoscaler's MaxAllowed field.
+func ValidateVerticalPodAutoscalerMaxAllowed(maxAllowed corev1.ResourceList, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allowedResources := sets.New(corev1.ResourceCPU, corev1.ResourceMemory)
+	for resource, quantity := range maxAllowed {
+		resourcePath := fldPath.Child("maxAllowed", resource.String())
+		if !allowedResources.Has(resource) {
+			allErrs = append(allErrs, field.NotSupported(resourcePath, resource, allowedResources.UnsortedList()))
+		}
+
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
+	}
 
 	return allErrs
 }
