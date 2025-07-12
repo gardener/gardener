@@ -1904,7 +1904,8 @@ string
 <em>(Optional)</em>
 <p>CloudProfileName is a name of a CloudProfile object.
 Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
-Until removed, this field is synced with the <code>CloudProfile</code> field.</p>
+Until Kubernetes v1.33, this field is synced with the <code>CloudProfile</code> field.
+Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.</p>
 </td>
 </tr>
 <tr>
@@ -12846,7 +12847,8 @@ string
 <em>(Optional)</em>
 <p>CloudProfileName is a name of a CloudProfile object.
 Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
-Until removed, this field is synced with the <code>CloudProfile</code> field.</p>
+Until Kubernetes v1.33, this field is synced with the <code>CloudProfile</code> field.
+Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.</p>
 </td>
 </tr>
 <tr>
@@ -13575,7 +13577,8 @@ string
 <em>(Optional)</em>
 <p>CloudProfileName is a name of a CloudProfile object.
 Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
-Until removed, this field is synced with the <code>CloudProfile</code> field.</p>
+Until Kubernetes v1.33, this field is synced with the <code>CloudProfile</code> field.
+Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.</p>
 </td>
 </tr>
 <tr>

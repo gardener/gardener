@@ -21,7 +21,7 @@ import (
 var _ = Describe("Warnings", func() {
 	Describe("#GetWarnings", func() {
 		var (
-			ctx                         = context.TODO()
+			ctx                         = context.Background()
 			shoot                       *core.Shoot
 			credentialsRotationInterval = time.Hour
 		)
@@ -259,6 +259,25 @@ var _ = Describe("Warnings", func() {
 		It("should return a warning when enableAnonymousAuthentication is set", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
 			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.32 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")))
+		})
+
+		Describe("shoot.spec.cloudProfileName", func() {
+			It("should not return a warning when cloudProfileName is set and the Kubernetes version is < v1.33", func() {
+				shoot.Spec.Kubernetes.Version = "1.32.3"
+				shoot.Spec.CloudProfileName = ptr.To("local-profile")
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
+			})
+
+			It("should return a warning when cloudProfileName is set and the Kubernetes version is >= v1.33", func() {
+				shoot.Spec.Kubernetes.Version = "1.33.1"
+				shoot.Spec.CloudProfileName = ptr.To("local-profile")
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.cloudProfileName field. The field is deprecated")))
+			})
+
+			It("should not return a warning when cloudProfileName is empty and the Kubernetes version is >= v1.33", func() {
+				shoot.Spec.Kubernetes.Version = "1.33.1"
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
+			})
 		})
 	})
 })

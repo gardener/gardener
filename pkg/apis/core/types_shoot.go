@@ -58,7 +58,8 @@ type ShootSpec struct {
 	Addons *Addons
 	// CloudProfileName is a name of a CloudProfile object.
 	// Deprecated: This field will be removed in a future version of Gardener. Use `CloudProfile` instead.
-	// Until removed, this field is synced with the `CloudProfile` field.
+	// Until Kubernetes v1.33, this field is synced with the `CloudProfile` field.
+	// Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.
 	CloudProfileName *string
 	// DNS contains information about the DNS settings of the Shoot.
 	DNS *DNS

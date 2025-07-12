@@ -204,6 +204,21 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
+	// Set the .spec.cloudProfileName field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.34.
+	// Gardener forbids setting the field for Shoots with K8s 1.34+. See https://github.com/gardener/gardener/pull/11816
+	{
+		oldK8sLess134 := versionutils.ConstraintK8sLess134.Check(oldShootKubernetesVersion)
+		newK8sGreaterEqual134 := versionutils.ConstraintK8sGreaterEqual134.Check(shootKubernetesVersion)
+		if oldK8sLess134 && newK8sGreaterEqual134 {
+			if maintainedShoot.Spec.CloudProfileName != nil {
+				maintainedShoot.Spec.CloudProfileName = nil
+
+				reason := ".spec.cloudProfileName is set to nil. Reason: The field was deprecated in favour of `.spec.cloudProfile` and can no longer be set for Shoot clusters using Kubernetes version 1.34+"
+				operations = append(operations, reason)
+			}
+		}
+	}
+
 	// Now it's time to update worker pool kubernetes version if specified
 	for i, pool := range maintainedShoot.Spec.Provider.Workers {
 		if pool.Kubernetes == nil || pool.Kubernetes.Version == nil {
