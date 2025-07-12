@@ -166,6 +166,21 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
 		}
 
+		if obj.Spec.Maintenance.AutoRotation != nil && obj.Spec.Maintenance.AutoRotation.Credentials != nil {
+			if obj.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey != nil &&
+				obj.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod == nil {
+				obj.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod = &metav1.Duration{Duration: 7 * 24 * time.Hour}
+			}
+			if obj.Spec.Maintenance.AutoRotation.Credentials.Observability != nil &&
+				obj.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod == nil {
+				obj.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod = &metav1.Duration{Duration: 7 * 24 * time.Hour}
+			}
+			if obj.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair != nil &&
+				obj.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod == nil {
+				obj.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod = &metav1.Duration{Duration: 7 * 24 * time.Hour}
+			}
+		}
+
 		if obj.Spec.Provider.WorkersSettings == nil {
 			obj.Spec.Provider.WorkersSettings = &WorkersSettings{}
 		}

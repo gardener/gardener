@@ -101,9 +101,6 @@ func getWarningsForIncompleteCredentialsRotation(shoot *core.Shoot, credentialsR
 	if rotation.CertificateAuthorities != nil && completionDue(rotation.CertificateAuthorities.LastInitiationFinishedTime, rotation.CertificateAuthorities.LastCompletionTriggeredTime, recommendedCompletionInterval) {
 		warnings = append(warnings, completionWarning("certificate authorities", recommendedCompletionInterval))
 	}
-	if rotation.ETCDEncryptionKey != nil && completionDue(rotation.ETCDEncryptionKey.LastInitiationFinishedTime, rotation.ETCDEncryptionKey.LastCompletionTriggeredTime, recommendedCompletionInterval) {
-		warnings = append(warnings, completionWarning("ETCD encryption key", recommendedCompletionInterval))
-	}
 	if rotation.ServiceAccountKey != nil && completionDue(rotation.ServiceAccountKey.LastInitiationFinishedTime, rotation.ServiceAccountKey.LastCompletionTriggeredTime, recommendedCompletionInterval) {
 		warnings = append(warnings, completionWarning("ServiceAccount token signing key", recommendedCompletionInterval))
 	}

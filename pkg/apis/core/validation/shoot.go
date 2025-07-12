@@ -79,15 +79,20 @@ var (
 		v1beta1constants.OperationRotateCredentialsStart,
 		v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateCredentialsComplete,
-		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
-		v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
+		v1beta1constants.OperationRotateETCDEncryptionKey,
 		v1beta1constants.OperationRotateServiceAccountKeyStart,
 		v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	)
+	// TODO(AleksandarSavchev): Remove this variable and the associated validation in gardener `v1.130`
+	// It is used to notify users that the operations have neeb removed in favour of 'rotate-etcd-encryption-key'
+	removedETCDEncryptionKeyShootOperations = sets.New(
+		"rotate-etcd-encryption-key-start",
+		"rotate-etcd-encryption-key-complete",
+	)
 	forbiddenShootOperationsWhenEncryptionChangeIsRollingOut = sets.New(
 		v1beta1constants.OperationRotateCredentialsStart,
-		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+		v1beta1constants.OperationRotateETCDEncryptionKey,
 	)
 	availableShootPurposes = sets.New(
 		string(core.ShootPurposeEvaluation),
@@ -1692,6 +1697,24 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 		}
 	}
 
+	if maintenance.AutoRotation != nil && maintenance.AutoRotation.Credentials != nil {
+		credentials := maintenance.AutoRotation.Credentials
+		credentialsPath := fldPath.Child("autoRotation", "credentials")
+
+		if credentials.ETCDEncryptionKey != nil && credentials.ETCDEncryptionKey.RotationPeriod != nil &&
+			(credentials.ETCDEncryptionKey.RotationPeriod.Duration < 30*time.Minute || credentials.ETCDEncryptionKey.RotationPeriod.Duration > 90*24*time.Hour) {
+			allErrs = append(allErrs, field.Invalid(credentialsPath.Child("etcdEncryptionKey", "rotationPeriod"), credentials.ETCDEncryptionKey.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
+		}
+		if credentials.Observability != nil && credentials.Observability.RotationPeriod != nil &&
+			(credentials.Observability.RotationPeriod.Duration < 30*time.Minute || credentials.Observability.RotationPeriod.Duration > 90*24*time.Hour) {
+			allErrs = append(allErrs, field.Invalid(credentialsPath.Child("observability", "rotationPeriod"), credentials.Observability.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
+		}
+		if credentials.SSHKeypair != nil && credentials.SSHKeypair.RotationPeriod != nil &&
+			(credentials.SSHKeypair.RotationPeriod.Duration < 30*time.Minute || credentials.SSHKeypair.RotationPeriod.Duration > 90*24*time.Hour) {
+			allErrs = append(allErrs, field.Invalid(credentialsPath.Child("sshKeypair", "rotationPeriod"), credentials.SSHKeypair.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
+		}
+	}
+
 	if maintenance.TimeWindow != nil {
 		maintenanceTimeWindow, err := timewindow.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
 		if err != nil {
@@ -2625,7 +2648,9 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	if operation != "" {
-		if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
+		if removedETCDEncryptionKeyShootOperations.Has(operation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is removed in favour of 'rotate-etcd-encryption-key', which performs a complete etcd encryption key rotation"))
+		} else if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(availableShootOperations)))
 		}
 		if helper.IsShootInHibernation(shoot) &&
@@ -2639,7 +2664,9 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	if maintenanceOperation != "" {
-		if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) {
+		if removedETCDEncryptionKeyShootOperations.Has(maintenanceOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is removed in favour of 'rotate-etcd-encryption-key', which performs a complete etcd encryption key rotation"))
+		} else if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, sets.List(availableShootMaintenanceOperations)))
 		}
 		if helper.IsShootInHibernation(shoot) &&
@@ -2653,22 +2680,22 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 
 	switch maintenanceOperation {
 	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
-		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(operation) {
+		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey).Has(operation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
-		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(operation) {
+		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete).Has(operation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	}
 
 	switch operation {
 	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
-		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(maintenanceOperation) {
+		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey).Has(maintenanceOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
-		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(maintenanceOperation) {
+		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete).Has(maintenanceOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	}
@@ -2711,9 +2738,6 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
 		}
-		if helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
-		}
 
 	case v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
@@ -2743,16 +2767,12 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
 		}
 
-	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
+	case v1beta1constants.OperationRotateETCDEncryptionKey:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if shoot was not yet created successfully or is not ready for reconciliation"))
 		}
 		if phase := helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
-		}
-	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
-		if helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}
 	}
 

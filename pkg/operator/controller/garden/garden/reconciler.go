@@ -120,7 +120,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return result, nil
 	}
 
-	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, garden, operationType)
+	if err := r.updateStatusOperationSuccess(ctx, garden, operationType); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// ETCD encryption key rotation requires 2 reconciliations to complete. In completing phase
+	// the encrypted data has been decrypted and re-encrypted with the new key, but the old key is still present.
+	// The second reconciliation will remove the old key and set the phase to completed.
+	if etcdEncryptionKeyRotationPhase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationCompleting {
+		return reconcile.Result{RequeueAfter: 1 * time.Nanosecond}, nil
+	}
+
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, nil
 }
 
 func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
@@ -195,7 +206,6 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(garden, &now)
 		completeRotationServiceAccountKey(garden, &now)
-		completeRotationETCDEncryptionKey(garden, &now)
 		completeRotationWorkloadIdentityKey(garden, &now)
 
 	case v1beta1constants.OperationRotateCAStart:
@@ -212,12 +222,9 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		mustRemoveOperationAnnotation = true
 		completeRotationServiceAccountKey(garden, &now)
 
-	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
+	case v1beta1constants.OperationRotateETCDEncryptionKey:
 		mustRemoveOperationAnnotation = true
 		startRotationETCDEncryptionKey(garden, &now)
-	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationETCDEncryptionKey(garden, &now)
 
 	case v1beta1constants.OperationRotateObservabilityCredentials:
 		mustRemoveOperationAnnotation = true
@@ -298,11 +305,10 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 	}
 
 	switch helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) {
-	case gardencorev1beta1.RotationPreparing:
-		helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
-			rotation.Phase = gardencorev1beta1.RotationPrepared
-			rotation.LastInitiationFinishedTime = &now
-		})
+	// TODO(AleksandarSavchev): Remove rotation prepared case in gardener `v1.130`
+	// It is added to forcefully complete the etcd encryption key rotation.
+	case gardencorev1beta1.RotationPreparing, gardencorev1beta1.RotationPrepared:
+		completeRotationETCDEncryptionKey(garden, &now)
 
 	case gardencorev1beta1.RotationCompleting:
 		helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
