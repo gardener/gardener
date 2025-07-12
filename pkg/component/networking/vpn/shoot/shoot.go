@@ -634,7 +634,6 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 				corev1.ResourceCPU:    resource.MustParse("100m"),
 				corev1.ResourceMemory: resource.MustParse("100Mi"),
 			},
-			Limits: v.getResourceLimits(),
 		},
 		SecurityContext: &corev1.SecurityContext{
 			Privileged:               ptr.To(false),
@@ -657,9 +656,6 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("10m"),
 				corev1.ResourceMemory: resource.MustParse("10Mi"),
-			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("20Mi"),
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
@@ -809,17 +805,6 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 	return envVariables
 }
 
-func (v *vpnShoot) getResourceLimits() corev1.ResourceList {
-	if v.values.VPAEnabled {
-		return corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("100Mi"),
-		}
-	}
-	return corev1.ResourceList{
-		corev1.ResourceMemory: resource.MustParse("120Mi"),
-	}
-}
-
 func (v *vpnShoot) getVolumeMounts(secrets []vpnSecret) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{}
 	for _, item := range secrets {
@@ -940,9 +925,6 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("30m"),
-				corev1.ResourceMemory: resource.MustParse("32Mi"),
-			},
-			Limits: corev1.ResourceList{
 				corev1.ResourceMemory: resource.MustParse("32Mi"),
 			},
 		},
