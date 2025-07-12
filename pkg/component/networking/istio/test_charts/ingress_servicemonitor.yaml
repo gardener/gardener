@@ -5,7 +5,7 @@ metadata:
   labels:
     prometheus: aggregate
   name: aggregate-istio-ingressgateway
-  namespace: istio-system
+  namespace: test-ingress
 spec:
   endpoints:
   - metricRelabelings:
@@ -14,7 +14,7 @@ spec:
       sourceLabels:
       - __name__
     path: /stats/prometheus
-    port: tls-tunnel
+    port: tcp
     relabelings:
     - action: replace
       regex: (.+)
@@ -22,8 +22,7 @@ spec:
       sourceLabels:
       - __meta_kubernetes_pod_ip
       targetLabel: __address__
-  namespaceSelector:
-    any: true
+  namespaceSelector: {}
   selector:
     matchLabels:
       app: istio-ingressgateway

@@ -38,7 +38,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -235,7 +235,7 @@
     },
     {
       "columns": [],
-      "datasource": "prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -397,7 +397,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -497,7 +497,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -597,7 +597,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -697,7 +697,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -800,7 +800,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -914,7 +914,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "prometheus",
+          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -1014,7 +1014,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "prometheus",
+          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -1115,7 +1115,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "prometheus",
+          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -1216,7 +1216,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "prometheus",
+          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -1310,7 +1310,7 @@
         },
         {
           "columns": [],
-          "datasource": "prometheus",
+          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -1539,7 +1539,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "links": []
@@ -1652,7 +1652,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(istio_tcp_received_bytes_total, destination_service)",
         "description": null,
         "error": null,

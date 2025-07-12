@@ -599,7 +599,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kube State Metrics",
 			Fn:           c.kubeStateMetrics.Deploy,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Gardener Metrics Exporter",

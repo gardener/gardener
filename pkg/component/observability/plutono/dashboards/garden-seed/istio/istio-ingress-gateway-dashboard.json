@@ -24,7 +24,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "seed-prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "links": []
@@ -127,7 +127,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "seed-prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "links": []
@@ -230,7 +230,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "seed-prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "links": []
@@ -333,7 +333,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "seed-prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "links": []
@@ -860,7 +860,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "datasource": "seed-prometheus",
+        "datasource": null,
         "definition": "container_cpu_usage_seconds_total{container=\"istio-proxy\"}",
         "description": null,
         "error": null,

@@ -19,6 +19,7 @@ import (
 	monitoringv1beta1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istiotelemetryv1 "istio.io/client-go/pkg/apis/telemetry/v1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -108,6 +109,7 @@ var (
 		apiextensionsscheme.AddToScheme,
 		istionetworkingv1beta1.AddToScheme,
 		istionetworkingv1alpha3.AddToScheme,
+		istiotelemetryv1.AddToScheme,
 		fluentbitv1alpha2.AddToScheme,
 		monitoringv1.AddToScheme,
 		monitoringv1beta1.AddToScheme,
