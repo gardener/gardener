@@ -39,7 +39,6 @@ func (g *graph) setupBackupBucketWatch(_ context.Context, informer cache.Informe
 			}
 
 			if !apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.SeedName, newBackupBucket.Spec.SeedName) ||
-				!apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.SecretRef, newBackupBucket.Spec.SecretRef) ||
 				!apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.CredentialsRef, newBackupBucket.Spec.CredentialsRef) ||
 				!apiequality.Semantic.DeepEqual(oldBackupBucket.Status.GeneratedSecretRef, newBackupBucket.Status.GeneratedSecretRef) {
 				g.handleBackupBucketCreateOrUpdate(newBackupBucket)
