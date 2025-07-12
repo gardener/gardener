@@ -42,7 +42,7 @@
             "mode": "spectrum"
           },
           "dataFormat": "tsbuckets",
-          "datasource": "prometheus",
+          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -135,7 +135,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(apiserver_request_total,job)",
         "error": null,
         "hide": 0,
@@ -166,7 +166,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(apiserver_watch_events_sizes_bucket,kind)",
         "error": null,
         "hide": 0,

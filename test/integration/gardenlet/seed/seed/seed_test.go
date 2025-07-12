@@ -742,6 +742,7 @@ var _ = Describe("Seed controller tests", func() {
 					} else {
 						expectedManagedResources = append(expectedManagedResources,
 							"nginx-ingress-seed",
+							"plutono-seed-config-only",
 						)
 					}
 					// There are additional parts in the flow that we not check here, which could take time.

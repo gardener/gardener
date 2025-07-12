@@ -9,7 +9,7 @@
   "links": [],
   "panels": [
     {
-      "datasource": "seed-prometheus",
+      "datasource": "prometheus-seed",
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -69,7 +69,7 @@
       "type": "stat"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "prometheus-seed",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -128,7 +128,7 @@
       "type": "stat"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "prometheus-seed",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -183,7 +183,7 @@
       "type": "stat"
     },
     {
-      "datasource": "seed-prometheus",
+      "datasource": "prometheus-seed",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -244,7 +244,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "seed-prometheus",
+      "datasource": "prometheus-seed",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -383,7 +383,7 @@
           "text": "auditlog-seed-controller-manager",
           "value": "auditlog-seed-controller-manager"
         },
-        "datasource": "seed-prometheus",
+        "datasource": "prometheus-seed",
         "definition": "label_values(kube_deployment_metadata_generation{namespace!=\"garden\", namespace!=\"kube-system\"}, deployment)",
         "description": null,
         "error": null,

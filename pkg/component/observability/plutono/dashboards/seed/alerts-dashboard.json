@@ -881,7 +881,7 @@
     "list": [
       {
         "allValue": null,
-        "datasource": "prometheus",
+        "datasource": "prometheus-aggregate",
         "definition": "label_values(ALERTS, project)",
         "hide": 0,
         "includeAll": false,
@@ -902,7 +902,7 @@
       },
       {
         "allValue": null,
-        "datasource": "prometheus",
+        "datasource": "prometheus-aggregate",
         "definition": "label_values(ALERTS{project=~\"$Project\"}, name)",
         "hide": 0,
         "includeAll": false,
@@ -930,7 +930,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": "prometheus-aggregate",
         "definition": "label_values(severity)",
         "hide": 0,
         "includeAll": true,
@@ -983,7 +983,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": "prometheus-aggregate",
         "definition": "label_values(alertstate)",
         "hide": 0,
         "includeAll": true,
@@ -1010,7 +1010,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": "prometheus-aggregate",
         "definition": "label_values(alertname)",
         "hide": 0,
         "includeAll": true,
