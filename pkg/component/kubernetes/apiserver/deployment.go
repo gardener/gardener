@@ -6,7 +6,9 @@ package apiserver
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -25,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	"github.com/gardener/gardener/pkg/component/networking/vpn/envoy"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -37,15 +40,21 @@ import (
 )
 
 const (
-	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"    // #nosec G101 -- No credential.
-	secretNameKubeAggregator         = "kube-aggregator"           // #nosec G101 -- No credential.
-	secretNameHTTPProxy              = "kube-apiserver-http-proxy" // #nosec G101 -- No credential.
-	secretNameHAVPNSeedClient        = "vpn-seed-client"           // #nosec G101 -- No credential.
+	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"           // #nosec G101 -- No credential.
+	secretNameKubeAggregator         = "kube-aggregator"                  // #nosec G101 -- No credential.
+	secretNameHTTPProxyClient        = "kube-apiserver-http-proxy-client" // #nosec G101 -- No credential.
+	secretNameHTTPProxy              = "kube-apiserver-http-proxy"        // #nosec G101 -- No credential.
+	secretNameHAVPNSeedClient        = "vpn-seed-client"                  // #nosec G101 -- No credential.
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
 	ContainerNameKubeAPIServer     = "kube-apiserver"
 	containerNameVPNPathController = "vpn-path-controller"
 	containerNameVPNSeedClient     = "vpn-client"
+
+	// EnvoyPortHAVPN is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
+	EnvoyPortHAVPN = 9443
+	// EnvoyHostHAVPN is the hostname of the envoy proxy when running in HA-VPN mode.
+	EnvoyHostHAVPN = "kube-apiserver-http-proxy"
 
 	volumeNameAuthenticationWebhookKubeconfig = "authentication-webhook-kubeconfig"
 	volumeNameCA                              = "ca"
@@ -54,7 +63,7 @@ const (
 	volumeNameCAKubelet                       = "ca-kubelet"
 	volumeNameCAVPN                           = "ca-vpn"
 	volumeNameEgressSelector                  = "egress-selection-config"
-	volumeNameHTTPProxy                       = "http-proxy"
+	volumeNameHTTPProxyClient                 = "http-proxy"
 	volumeNameKubeAPIServerToKubelet          = "kubelet-client"
 	volumeNameKubeAggregator                  = "kube-aggregator"
 	volumeNameOIDCCABundle                    = "oidc-cabundle"
@@ -66,6 +75,8 @@ const (
 	volumeNameAPIServerAccess                 = "kube-api-access-gardener"
 	volumeNameVPNSeedTLSAuth                  = "vpn-seed-tlsauth"
 	volumeNameDevNetTun                       = "dev-net-tun"
+	volumeNameEnvoyConfig                     = "envoy-config"
+	volumeNameCerts                           = "certs"
 
 	volumeMountPathAuthenticationWebhookKubeconfig = "/etc/kubernetes/webhook/authentication"
 	volumeMountPathCA                              = "/srv/kubernetes/ca"
@@ -74,7 +85,7 @@ const (
 	volumeMountPathCAKubelet                       = "/srv/kubernetes/ca-kubelet"
 	volumeMountPathCAVPN                           = "/srv/kubernetes/ca-vpn"
 	volumeMountPathEgressSelector                  = "/etc/kubernetes/egress"
-	volumeMountPathHTTPProxy                       = "/etc/srv/kubernetes/envoy"
+	volumeMountPathHTTPProxyClient                 = "/etc/srv/kubernetes/envoy"
 	volumeMountPathKubeAPIServerToKubelet          = "/srv/kubernetes/apiserver-kubelet"
 	volumeMountPathKubeAggregator                  = "/srv/kubernetes/aggregator"
 	volumeMountPathServiceAccountKey               = "/srv/kubernetes/service-account-key"
@@ -85,6 +96,8 @@ const (
 	volumeMountPathAPIServerAccess                 = "/var/run/secrets/kubernetes.io/serviceaccount"
 	volumeMountPathVPNSeedTLSAuth                  = "/srv/secrets/tlsauth"
 	volumeMountPathDevNetTun                       = "/dev/net/tun"
+
+	fileNameCABundle = "ca.crt"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
@@ -101,6 +114,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	configMapAdmissionConfigs *corev1.ConfigMap,
 	secretAdmissionKubeconfigs *corev1.Secret,
 	configMapEgressSelector *corev1.ConfigMap,
+	configMapEnvoyConfig *corev1.ConfigMap,
 	secretETCDEncryptionConfiguration *corev1.Secret,
 	secretOIDCCABundle *corev1.Secret,
 	secretServiceAccountKey *corev1.Secret,
@@ -108,6 +122,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretServer *corev1.Secret,
 	secretKubeletClient *corev1.Secret,
 	secretKubeAggregator *corev1.Secret,
+	secretHTTPProxyClient *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
@@ -210,9 +225,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 						// use the nonroot user from a distroless container
 						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
 						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    ptr.To[int64](65532),
-						RunAsGroup:   ptr.To[int64](65532),
-						FSGroup:      ptr.To[int64](65532),
+						RunAsUser:    ptr.To[int64](v1beta1constants.DistrolessNonRootUserId),
+						RunAsGroup:   ptr.To[int64](v1beta1constants.DistrolessNonRootUserId),
+						FSGroup:      ptr.To[int64](v1beta1constants.DistrolessNonRootUserId),
 					},
 					Containers: []corev1.Container{{
 						Name:                     ContainerNameKubeAPIServer,
@@ -375,7 +390,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		}
 		k.handleAuthenticationWebhookSettings(deployment, secretAuthenticationWebhookKubeconfig)
 		k.handleAuthorizationSettings(deployment, configMapAuthorizationConfig, secretAuthorizationWebhooksKubeconfigs)
-		if err := k.handleVPNSettings(deployment, serviceAccount, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
+		if err := k.handleVPNSettings(deployment, serviceAccount, configMapEgressSelector, configMapEnvoyConfig, secretHTTPProxyClient, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
 			return err
 		}
 		if err := k.handleKubeletSettings(deployment, secretKubeletClient); err != nil {
@@ -460,8 +475,8 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 
 func (k *kubeAPIServer) etcdServersOverrides() string {
 	addGroupResourceIfNotPresent := func(groupResources []schema.GroupResource, groupResource schema.GroupResource) []schema.GroupResource {
-		for _, resource := range groupResources {
-			if resource.Group == groupResource.Group && resource.Resource == groupResource.Resource {
+		for _, res := range groupResources {
+			if res.Group == groupResource.Group && res.Resource == groupResource.Resource {
 				return groupResources
 			}
 		}
@@ -474,8 +489,8 @@ func (k *kubeAPIServer) etcdServersOverrides() string {
 	}
 
 	var overrides []string
-	for _, resource := range addGroupResourceIfNotPresent(k.values.ResourcesToStoreInETCDEvents, schema.GroupResource{Resource: "events"}) {
-		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s:%d", resource.Group, resource.Resource, hostName, port))
+	for _, res := range addGroupResourceIfNotPresent(k.values.ResourcesToStoreInETCDEvents, schema.GroupResource{Resource: "events"}) {
+		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s:%d", res.Group, res.Resource, hostName, port))
 	}
 	return strings.Join(overrides, ",")
 }
@@ -522,6 +537,8 @@ func (k *kubeAPIServer) handleVPNSettings(
 	deployment *appsv1.Deployment,
 	serviceAccount *corev1.ServiceAccount,
 	configMapEgressSelector *corev1.ConfigMap,
+	configMapEnvoyConfig *corev1.ConfigMap,
+	secretHTTPProxyClient *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
@@ -536,9 +553,9 @@ func (k *kubeAPIServer) handleVPNSettings(
 	}
 
 	if k.values.VPN.HighAvailabilityEnabled {
-		k.handleVPNSettingsHA(deployment, serviceAccount, secretCAVPN, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
+		k.handleVPNSettingsHA(deployment, serviceAccount, secretCAVPN, secretHTTPProxyClient, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth, configMapEgressSelector, configMapEnvoyConfig)
 	} else {
-		k.handleVPNSettingsNonHA(deployment, secretCAVPN, secretHTTPProxy, configMapEgressSelector)
+		k.handleVPNSettingsNonHA(deployment, secretCAVPN, secretHTTPProxyClient, configMapEgressSelector)
 	}
 
 	return nil
@@ -547,7 +564,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 func (k *kubeAPIServer) handleVPNSettingsNonHA(
 	deployment *appsv1.Deployment,
 	secretCAVPN *corev1.Secret,
-	secretHTTPProxy *corev1.Secret,
+	secretHTTPProxyClient *corev1.Secret,
 	configMapEgressSelector *corev1.ConfigMap,
 ) {
 	deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
@@ -560,8 +577,8 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 			MountPath: volumeMountPathCAVPN,
 		},
 		{
-			Name:      volumeNameHTTPProxy,
-			MountPath: volumeMountPathHTTPProxy,
+			Name:      volumeNameHTTPProxyClient,
+			MountPath: volumeMountPathHTTPProxyClient,
 		},
 		{
 			Name:      volumeNameEgressSelector,
@@ -578,10 +595,10 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 			},
 		},
 		{
-			Name: volumeNameHTTPProxy,
+			Name: volumeNameHTTPProxyClient,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName:  secretHTTPProxy.Name,
+					SecretName:  secretHTTPProxyClient.Name,
 					DefaultMode: ptr.To[int32](0640),
 				},
 			},
@@ -603,8 +620,12 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	deployment *appsv1.Deployment,
 	serviceAccount *corev1.ServiceAccount,
 	secretCAVPN *corev1.Secret,
+	secretHTTPProxyClient *corev1.Secret,
+	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
+	configMapEgressSelector *corev1.ConfigMap,
+	configMapEnvoyConfig *corev1.ConfigMap,
 ) {
 	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 		serviceName := fmt.Sprintf("%s-%d", vpnseedserver.ServiceName, i)
@@ -612,6 +633,33 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
 			gardenerutils.NetworkPolicyLabel(serviceName, vpnseedserver.OpenVPNPort): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
+	}
+
+	// Only inject Envoy Proxy if Seed pods and Shoot networks overlap. Seed pods like Kube-Apiserver(s) talk to shoot pods/nodes/services with potentially clashing IPs.
+	overlap := netutils.OverLapAny(k.values.VPN.SeedPodNetwork, slices.Concat(k.values.VPN.PodNetworkCIDRs, k.values.ServiceNetworkCIDRs, k.values.VPN.NodeNetworkCIDRs)...)
+	if overlap {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
+		deployment.Spec.Template.Spec.HostAliases = append(deployment.Spec.Template.Spec.HostAliases, corev1.HostAlias{
+			IP: "127.0.0.1",
+			Hostnames: []string{
+				EnvoyHostHAVPN,
+			},
+		})
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+			{
+				Name:      volumeNameCAVPN,
+				MountPath: volumeMountPathCAVPN,
+			},
+			{
+				Name:      volumeNameHTTPProxyClient,
+				MountPath: volumeMountPathHTTPProxyClient,
+			},
+			{
+				Name:      volumeNameEgressSelector,
+				MountPath: volumeMountPathEgressSelector,
+			},
+		}...)
+		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedEnvoyProxyContainer())
 	}
 
 	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccount.Name
@@ -728,6 +776,86 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			},
 		},
 	}...)
+
+	if overlap {
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+			{
+				Name: volumeNameHTTPProxyClient,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  secretHTTPProxyClient.Name,
+						DefaultMode: ptr.To[int32](0640),
+					},
+				},
+			},
+			{
+				Name: volumeNameEgressSelector,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: configMapEgressSelector.Name,
+						},
+					},
+				},
+			},
+			{
+				Name: volumeNameEnvoyConfig,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: configMapEnvoyConfig.Name,
+						},
+					},
+				},
+			},
+			{
+				Name: volumeNameCAVPN,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secretCAVPN.Name,
+					},
+				},
+			},
+			{
+				Name: volumeNameCerts,
+				VolumeSource: corev1.VolumeSource{
+					Projected: &corev1.ProjectedVolumeSource{
+						DefaultMode: ptr.To[int32](420),
+						Sources: []corev1.VolumeProjection{
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: secretCAVPN.Name,
+									},
+									Items: []corev1.KeyToPath{{
+										Key:  secrets.DataKeyCertificateBundle,
+										Path: fileNameCABundle,
+									}},
+								},
+							},
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: secretHTTPProxy.Name,
+									},
+									Items: []corev1.KeyToPath{
+										{
+											Key:  secrets.DataKeyCertificate,
+											Path: secrets.DataKeyCertificate,
+										},
+										{
+											Key:  secrets.DataKeyPrivateKey,
+											Path: secrets.DataKeyPrivateKey,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}...)
+	}
 }
 
 func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
@@ -766,23 +894,6 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 }
 
 func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
-	var serviceCIDRs, podCIDRs, nodeCIDRs []string
-	nodeCIDR := ""
-	if len(k.values.VPN.NodeNetworkCIDRs) > 0 {
-		nodeCIDR = k.values.VPN.NodeNetworkCIDRs[0].String()
-		for _, v := range k.values.VPN.NodeNetworkCIDRs {
-			nodeCIDRs = append(nodeCIDRs, v.String())
-		}
-	}
-
-	for _, v := range k.values.ServiceNetworkCIDRs {
-		serviceCIDRs = append(serviceCIDRs, v.String())
-	}
-
-	for _, v := range k.values.VPN.PodNetworkCIDRs {
-		podCIDRs = append(podCIDRs, v.String())
-	}
-
 	container := &corev1.Container{
 		Name:            fmt.Sprintf("%s-%d", containerNameVPNSeedClient, index),
 		Image:           k.values.Images.VPNClient,
@@ -793,28 +904,20 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 				Value: fmt.Sprintf("vpn-seed-server-%d", index),
 			},
 			{
-				Name:  "SERVICE_NETWORK",
-				Value: k.values.ServiceNetworkCIDRs[0].String(),
+				Name:  "SHOOT_POD_NETWORKS",
+				Value: netutils.JoinByComma(k.values.VPN.PodNetworkCIDRs),
 			},
 			{
-				Name:  "POD_NETWORK",
-				Value: k.values.VPN.PodNetworkCIDRs[0].String(),
+				Name:  "SHOOT_SERVICE_NETWORKS",
+				Value: netutils.JoinByComma(k.values.ServiceNetworkCIDRs),
 			},
 			{
-				Name:  "NODE_NETWORK",
-				Value: nodeCIDR,
+				Name:  "SHOOT_NODE_NETWORKS",
+				Value: netutils.JoinByComma(k.values.VPN.NodeNetworkCIDRs),
 			},
 			{
-				Name:  "SERVICE_NETWORKS",
-				Value: strings.Join(serviceCIDRs, ","),
-			},
-			{
-				Name:  "POD_NETWORKS",
-				Value: strings.Join(podCIDRs, ","),
-			},
-			{
-				Name:  "NODE_NETWORKS",
-				Value: strings.Join(nodeCIDRs, ","),
+				Name:  "SEED_POD_NETWORK",
+				Value: k.values.VPN.SeedPodNetwork.String(),
 			},
 			{
 				Name:  "VPN_SERVER_INDEX",
@@ -880,23 +983,6 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 }
 
 func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
-	var serviceCIDRs, podCIDRs, nodeCIDRs []string
-	nodeCIDR := ""
-	if len(k.values.VPN.NodeNetworkCIDRs) > 0 {
-		nodeCIDR = k.values.VPN.NodeNetworkCIDRs[0].String()
-		for _, v := range k.values.VPN.NodeNetworkCIDRs {
-			nodeCIDRs = append(nodeCIDRs, v.String())
-		}
-	}
-
-	for _, v := range k.values.ServiceNetworkCIDRs {
-		serviceCIDRs = append(serviceCIDRs, v.String())
-	}
-
-	for _, v := range k.values.VPN.PodNetworkCIDRs {
-		podCIDRs = append(podCIDRs, v.String())
-	}
-
 	return &corev1.Container{
 		Name:            containerNameVPNPathController,
 		Image:           k.values.Images.VPNClient,
@@ -904,28 +990,20 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		Command:         []string{"/bin/vpn-client", "path-controller"},
 		Env: []corev1.EnvVar{
 			{
-				Name:  "SERVICE_NETWORK",
-				Value: k.values.ServiceNetworkCIDRs[0].String(),
+				Name:  "SHOOT_POD_NETWORKS",
+				Value: netutils.JoinByComma(k.values.VPN.PodNetworkCIDRs),
 			},
 			{
-				Name:  "POD_NETWORK",
-				Value: k.values.VPN.PodNetworkCIDRs[0].String(),
+				Name:  "SHOOT_SERVICE_NETWORKS",
+				Value: netutils.JoinByComma(k.values.ServiceNetworkCIDRs),
 			},
 			{
-				Name:  "NODE_NETWORK",
-				Value: nodeCIDR,
+				Name:  "SHOOT_NODE_NETWORKS",
+				Value: netutils.JoinByComma(k.values.VPN.NodeNetworkCIDRs),
 			},
 			{
-				Name:  "SERVICE_NETWORKS",
-				Value: strings.Join(serviceCIDRs, ","),
-			},
-			{
-				Name:  "POD_NETWORKS",
-				Value: strings.Join(podCIDRs, ","),
-			},
-			{
-				Name:  "NODE_NETWORKS",
-				Value: strings.Join(nodeCIDRs, ","),
+				Name:  "SEED_POD_NETWORK",
+				Value: k.values.VPN.SeedPodNetwork.String(),
 			},
 			{
 				Name:  "IS_HA",
@@ -962,6 +1040,10 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 	}
+}
+
+func (k *kubeAPIServer) vpnSeedEnvoyProxyContainer() *corev1.Container {
+	return envoy.GetEnvoyProxyContainer(k.values.Images.EnvoyProxy)
 }
 
 func (k *kubeAPIServer) handleServiceAccountSigningKeySettings(deployment *appsv1.Deployment) {

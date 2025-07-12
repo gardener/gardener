@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"text/template"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -39,6 +38,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	"github.com/gardener/gardener/pkg/component/networking/vpn/envoy"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -74,11 +74,10 @@ const (
 	fileNameEnvoyConfig = "envoy.yaml"
 	fileNameCABundle    = "ca.crt"
 
-	volumeMountPathDevNetTun   = "/dev/net/tun"
-	volumeMountPathCerts       = "/srv/secrets/vpn-server"
-	volumeMountPathTLSAuth     = "/srv/secrets/tlsauth"
-	volumeMountPathEnvoyConfig = "/etc/envoy"
-	volumeMountPathStatusDir   = "/srv/status"
+	volumeMountPathDevNetTun = "/dev/net/tun"
+	volumeMountPathCerts     = "/srv/secrets/vpn-server"
+	volumeMountPathTLSAuth   = "/srv/secrets/tlsauth"
+	volumeMountPathStatusDir = "/srv/status"
 
 	volumeNameDevNetTun   = "dev-net-tun"
 	volumeNameCerts       = "certs"
@@ -86,21 +85,6 @@ const (
 	volumeNameEnvoyConfig = "envoy-config"
 	volumeNameStatusDir   = "openvpn-status"
 )
-
-var (
-	tplNameEnvoy = "envoy.yaml.tpl"
-	//go:embed templates/envoy.yaml.tpl
-	tplContentEnvoy string
-	tplEnvoy        *template.Template
-)
-
-func init() {
-	var err error
-	tplEnvoy, err = template.
-		New(tplNameEnvoy).
-		Parse(tplContentEnvoy)
-	utilruntime.Must(err)
-}
 
 // Interface contains functions for a vpn-seed-server deployer.
 type Interface interface {
@@ -180,7 +164,7 @@ func (v *vpnSeedServer) GetValues() Values {
 }
 
 func (v *vpnSeedServer) Deploy(ctx context.Context) error {
-	envoyConfig, err := v.getEnvoyConfig()
+	envoyConfig, err := envoy.GetEnvoyConfig()
 	if err != nil {
 		return err
 	}
@@ -285,11 +269,6 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 		ipFamilies = append(ipFamilies, string(v))
 	}
 
-	nodeNetwork := ""
-	if len(v.values.Network.NodeCIDRs) > 0 {
-		nodeNetwork = v.values.Network.NodeCIDRs[0].String()
-	}
-
 	template := &corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
@@ -334,27 +313,15 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 							Value: strings.Join(ipFamilies, ","),
 						},
 						{
-							Name:  "SERVICE_NETWORK",
-							Value: v.values.Network.ServiceCIDRs[0].String(),
-						},
-						{
-							Name:  "POD_NETWORK",
-							Value: v.values.Network.PodCIDRs[0].String(),
-						},
-						{
-							Name:  "NODE_NETWORK",
-							Value: nodeNetwork,
-						},
-						{
-							Name:  "SERVICE_NETWORKS",
+							Name:  "SHOOT_SERVICE_NETWORKS",
 							Value: netutils.JoinByComma(v.values.Network.ServiceCIDRs),
 						},
 						{
-							Name:  "POD_NETWORKS",
+							Name:  "SHOOT_POD_NETWORKS",
 							Value: netutils.JoinByComma(v.values.Network.PodCIDRs),
 						},
 						{
-							Name:  "NODE_NETWORKS",
+							Name:  "SHOOT_NODE_NETWORKS",
 							Value: netutils.JoinByComma(v.values.Network.NodeCIDRs),
 						},
 						{
@@ -478,58 +445,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 	}
 
 	if !v.values.HighAvailabilityEnabled {
-		template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
-			Name:            envoyProxyContainerName,
-			Image:           v.values.ImageAPIServerProxy,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Command: []string{
-				"envoy",
-				"--concurrency",
-				"2",
-				"-c",
-				fmt.Sprintf("%s/%s", volumeMountPathEnvoyConfig, fileNameEnvoyConfig),
-			},
-			ReadinessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt32(EnvoyPort),
-					},
-				},
-			},
-			LivenessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt32(EnvoyPort),
-					},
-				},
-			},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("10m"),
-					corev1.ResourceMemory: resource.MustParse("25M"),
-				},
-			},
-			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
-				Capabilities: &corev1.Capabilities{
-					Drop: []corev1.Capability{
-						"all",
-					},
-				},
-				RunAsUser:    ptr.To(int64(v1beta1constants.EnvoyNonRootUserId)),
-				RunAsNonRoot: ptr.To(true),
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      volumeNameCerts,
-					MountPath: volumeMountPathCerts,
-				},
-				{
-					Name:      volumeNameEnvoyConfig,
-					MountPath: volumeMountPathEnvoyConfig,
-				},
-			},
-		})
+		template.Spec.Containers = append(template.Spec.Containers, *envoy.GetEnvoyProxyContainer(v.values.ImageAPIServerProxy))
 		template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
 			Name: volumeNameEnvoyConfig,
 			VolumeSource: corev1.VolumeSource{
@@ -1038,25 +954,4 @@ func getLabels() map[string]string {
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		v1beta1constants.LabelApp:   deploymentName,
 	}
-}
-
-func (v *vpnSeedServer) getEnvoyConfig() (string, error) {
-	values := map[string]any{
-		"listenAddress":   "0.0.0.0",
-		"listenAddressV6": "::",
-		"dnsLookupFamily": "ALL",
-		"envoyPort":       EnvoyPort,
-		"certChain":       volumeMountPathCerts + `/` + secretsutils.DataKeyCertificate,
-		"privateKey":      volumeMountPathCerts + `/` + secretsutils.DataKeyPrivateKey,
-		"caCert":          volumeMountPathCerts + `/` + fileNameCABundle,
-		"metricsPort":     metricsPort,
-	}
-
-	var envoyConfig strings.Builder
-	err := tplEnvoy.Execute(&envoyConfig, values)
-	if err != nil {
-		return "", err
-	}
-
-	return envoyConfig.String(), nil
 }

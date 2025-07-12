@@ -203,6 +203,15 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 			}, b.Logger)
 	}
 
+	var seedPods *net.IPNet
+	seedPodSpec := b.Seed.GetInfo().Spec.Networks.Pods
+	if seedPodSpec != "" {
+		_, seedPods, err = net.ParseCIDR(seedPodSpec)
+		if err != nil {
+			return fmt.Errorf("failed to parse seed pod network CIDR %q: %w", seedPodSpec, err)
+		}
+	}
+
 	if err := shared.DeployKubeAPIServer(
 		ctx,
 		b.SeedClientSet.Client(),
@@ -215,6 +224,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 		b.Shoot.Networks.Nodes,
 		b.Shoot.Networks.Services,
 		b.Shoot.Networks.Pods,
+		seedPods,
 		b.Shoot.ResourcesToEncrypt,
 		b.Shoot.EncryptedResources,
 		v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),

@@ -15,6 +15,7 @@ import (
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/component/networking/vpn/envoy"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -27,6 +28,8 @@ const (
 	configMapAuthorizationConfigNamePrefix  = "kube-apiserver-authorization-config"
 	configMapEgressSelectorNamePrefix       = "kube-apiserver-egress-selector-config"
 	configMapEgressSelectorDataKey          = "egress-selector-configuration.yaml"
+	configMapEnvoyConfigPrefix              = "kube-apiserver-envoy-config"
+	configMapEnvoyConfigDataKey             = "envoy.yaml"
 )
 
 func (k *kubeAPIServer) emptyConfigMap(name string) *corev1.ConfigMap {
@@ -34,10 +37,17 @@ func (k *kubeAPIServer) emptyConfigMap(name string) *corev1.ConfigMap {
 }
 
 func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, configMap *corev1.ConfigMap) error {
-	if !k.values.VPN.Enabled || k.values.VPN.HighAvailabilityEnabled {
+	if !k.values.VPN.Enabled {
 		// We don't delete the configmap here as we don't know its name (as it's unique). Instead, we rely on the usual
 		// garbage collection for unique secrets/configmaps.
 		return nil
+	}
+
+	proxyHost := vpnseedserver.ServiceName
+	proxyPort := vpnseedserver.EnvoyPort
+	if k.values.VPN.HighAvailabilityEnabled {
+		proxyHost = EnvoyHostHAVPN
+		proxyPort = EnvoyPortHAVPN
 	}
 
 	egressSelectorConfig := &apiserverv1alpha1.EgressSelectorConfiguration{
@@ -48,11 +58,11 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 					ProxyProtocol: apiserverv1alpha1.ProtocolHTTPConnect,
 					Transport: &apiserverv1alpha1.Transport{
 						TCP: &apiserverv1alpha1.TCPTransport{
-							URL: fmt.Sprintf("https://%s:%d", vpnseedserver.ServiceName, vpnseedserver.EnvoyPort),
+							URL: fmt.Sprintf("https://%s:%d", proxyHost, proxyPort),
 							TLSConfig: &apiserverv1alpha1.TLSConfig{
 								CABundle:   fmt.Sprintf("%s/%s", volumeMountPathCAVPN, secretsutils.DataKeyCertificateBundle),
-								ClientCert: fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretsutils.DataKeyCertificate),
-								ClientKey:  fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretsutils.DataKeyPrivateKey),
+								ClientCert: fmt.Sprintf("%s/%s", volumeMountPathHTTPProxyClient, secretsutils.DataKeyCertificate),
+								ClientKey:  fmt.Sprintf("%s/%s", volumeMountPathHTTPProxyClient, secretsutils.DataKeyPrivateKey),
 							},
 						},
 					},
@@ -77,5 +87,21 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 	configMap.Data = map[string]string{configMapEgressSelectorDataKey: string(data)}
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
+	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
+}
+
+func (k *kubeAPIServer) reconcileConfigMapEnvoyConfig(ctx context.Context, configMap *corev1.ConfigMap) error {
+	if !k.values.VPN.Enabled || !k.values.VPN.HighAvailabilityEnabled {
+		return nil
+	}
+
+	envoyConfig, err := envoy.GetEnvoyConfig()
+	if err != nil {
+		return err
+	}
+
+	configMap.Data = map[string]string{configMapEnvoyConfigDataKey: envoyConfig}
+
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }
