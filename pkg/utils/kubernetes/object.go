@@ -7,6 +7,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -129,9 +130,7 @@ func MakeUnique(obj runtime.Object) error {
 			for k, v := range a {
 				out[k] = []byte(v)
 			}
-			for k, v := range b {
-				out[k] = v
-			}
+			maps.Copy(out, b)
 
 			return out
 		}

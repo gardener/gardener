@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -969,12 +970,9 @@ func stringMapToInterfaceMap(in map[string]string) map[string]any {
 // mergeMaps merges the two string maps. If a key is present in both maps, the value in the second map takes precedence
 func mergeMaps(one, two map[string]string) map[string]string {
 	out := make(map[string]string, len(one)+len(two))
-	for k, v := range one {
-		out[k] = v
-	}
-	for k, v := range two {
-		out[k] = v
-	}
+	maps.Copy(out, one)
+	maps.Copy(out, two)
+
 	return out
 }
 

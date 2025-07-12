@@ -6,6 +6,8 @@
 
 package v1alpha1
 
+import "maps"
+
 // OpenIDConnectClientAuthenticationApplyConfiguration represents an declarative configuration of the OpenIDConnectClientAuthentication type for use
 // with apply.
 type OpenIDConnectClientAuthenticationApplyConfiguration struct {
@@ -35,8 +37,6 @@ func (b *OpenIDConnectClientAuthenticationApplyConfiguration) WithExtraConfig(en
 	if b.ExtraConfig == nil && len(entries) > 0 {
 		b.ExtraConfig = make(map[string]string, len(entries))
 	}
-	for k, v := range entries {
-		b.ExtraConfig[k] = v
-	}
+	maps.Copy(b.ExtraConfig, entries)
 	return b
 }

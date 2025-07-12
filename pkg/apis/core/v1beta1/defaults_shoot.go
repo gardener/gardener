@@ -10,6 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -410,16 +411,10 @@ func calculateDefaultNodeCIDRMaskSize(shoot *ShootSpec) *int32 {
 }
 
 func addTolerations(tolerations *[]Toleration, additionalTolerations ...Toleration) {
-	existingTolerations := map[Toleration]struct{}{}
-	for _, toleration := range *tolerations {
-		existingTolerations[toleration] = struct{}{}
-	}
+	existingTolerations := sets.New(*tolerations...)
 
 	for _, toleration := range additionalTolerations {
-		if _, ok := existingTolerations[Toleration{Key: toleration.Key}]; ok {
-			continue
-		}
-		if _, ok := existingTolerations[toleration]; ok {
+		if existingTolerations.Has(Toleration{Key: toleration.Key}) || existingTolerations.Has(toleration) {
 			continue
 		}
 

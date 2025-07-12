@@ -261,7 +261,7 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilities core.
 func validateMachineTypes(machineTypes []core.MachineType, capabilities core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	names := make(map[string]struct{}, len(machineTypes))
+	names := make(sets.Set[string], len(machineTypes))
 
 	for i, machineType := range machineTypes {
 		idxPath := fldPath.Index(i)
@@ -274,11 +274,11 @@ func validateMachineTypes(machineTypes []core.MachineType, capabilities core.Cap
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
 		}
 
-		if _, ok := names[machineType.Name]; ok {
+		if names.Has(machineType.Name) {
 			allErrs = append(allErrs, field.Duplicate(namePath, machineType.Name))
 			break
 		}
-		names[machineType.Name] = struct{}{}
+		names.Insert(machineType.Name)
 
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
@@ -297,7 +297,7 @@ func validateMachineTypes(machineTypes []core.MachineType, capabilities core.Cap
 func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	names := make(map[string]struct{}, len(volumeTypes))
+	names := make(sets.Set[string], len(volumeTypes))
 
 	for i, volumeType := range volumeTypes {
 		idxPath := fldPath.Index(i)
@@ -307,11 +307,11 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
 		}
 
-		if _, ok := names[volumeType.Name]; ok {
+		if names.Has(volumeType.Name) {
 			allErrs = append(allErrs, field.Duplicate(namePath, volumeType.Name))
 			break
 		}
-		names[volumeType.Name] = struct{}{}
+		names.Insert(volumeType.Name)
 
 		if len(volumeType.Class) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("class"), "must provide a class"))

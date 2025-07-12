@@ -7,6 +7,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	"net"
 	"regexp"
@@ -54,18 +55,14 @@ func MergeStringMaps[T any](oldMap map[string]T, newMaps ...map[string]T) map[st
 	if oldMap != nil {
 		out = make(map[string]T, len(oldMap))
 	}
-	for k, v := range oldMap {
-		out[k] = v
-	}
+	maps.Copy(out, oldMap)
 
 	for _, newMap := range newMaps {
 		if newMap != nil && out == nil {
 			out = make(map[string]T)
 		}
 
-		for k, v := range newMap {
-			out[k] = v
-		}
+		maps.Copy(out, newMap)
 	}
 
 	return out
@@ -133,9 +130,7 @@ func Indent(str string, spaces int) string {
 // ShallowCopyMapStringInterface creates a shallow copy of the given map.
 func ShallowCopyMapStringInterface(values map[string]any) map[string]any {
 	copiedValues := make(map[string]any, len(values))
-	for k, v := range values {
-		copiedValues[k] = v
-	}
+	maps.Copy(copiedValues, values)
 	return copiedValues
 }
 
