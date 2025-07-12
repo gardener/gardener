@@ -203,10 +203,13 @@ var _ = Describe("ExtensionLabels tests", func() {
 			}))
 		})
 
-		It("should add the correct label on update", func() {
+		It("should add the correct label on update and remove incorrect labels", func() {
 			workloadIdentity := &security.WorkloadIdentity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-wi",
+					Labels: map[string]string{
+						"provider.extensions.gardener.cloud/" + providerType1: "true",
+					},
 				},
 			}
 			newWorkloadIdentity := workloadIdentity.DeepCopy()

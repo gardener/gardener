@@ -238,6 +238,7 @@ var _ = Describe("Controller", func() {
 					Namespace: extensionSecret.Namespace,
 				},
 			}))
+			Expect(extensionBackupBucket.Labels).To(HaveKeyWithValue("provider.extensions.gardener.cloud/"+backupBucket.Spec.Provider.Type, "true"))
 		})
 
 		It("should not reconcile the extension BackupBucket if the secret data or extension spec hasn't changed", func() {
