@@ -1095,7 +1095,8 @@ func KeyV2(
 		}
 	}
 
-	if nodeLocalDNSEnabled {
+	v, _ := semver.NewVersion("1.34")
+	if kubernetesVersion.LessThan(v) && nodeLocalDNSEnabled {
 		data = append(data, "node-local-dns")
 	}
 

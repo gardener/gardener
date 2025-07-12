@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/Masterminds/semver/v3"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var diskSizeRegex = regexp.MustCompile(`^(\d+)`)
@@ -161,7 +163,12 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 		}
 	}
 
-	if v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
+	parsedVersion, err := semver.NewVersion(kubernetesVersion)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse Kubernetes version %q: %w", kubernetesVersion, err)
+	}
+
+	if versionutils.ConstraintK8sLess134.Check(parsedVersion) && v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
 		data = append(data, "node-local-dns")
 	}
 

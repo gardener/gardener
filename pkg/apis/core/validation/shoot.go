@@ -713,9 +713,19 @@ func validateNodeLocalDNSUpdate(newSpec, oldSpec *core.ShootSpec, fldPath *field
 	)
 
 	if oldNodeLocalDNSEnabled != newNodeLocalDNSEnabled {
+		parsedVersion, err := semver.NewVersion(oldSpec.Kubernetes.Version)
+		if err != nil {
+			return field.ErrorList{field.Invalid(fldPath, oldSpec.Kubernetes.Version, fmt.Sprintf("failed to parse old Kubernetes version %q: %v", oldSpec.Kubernetes.Version, err))}
+		}
+
 		for _, worker := range oldSpec.Provider.Workers {
-			if helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("systemComponents", "nodeLocalDNS"), "node-local-dns setting can not be changed if shoot has at least one worker pool with update strategy AutoInPlaceUpdate/ManualInPlaceUpdate"))
+			workerK8sVersion, err := helper.CalculateEffectiveKubernetesVersion(parsedVersion, worker.Kubernetes)
+			if err != nil {
+				return field.ErrorList{field.Invalid(fldPath, "", fmt.Sprintf("failed to calculate effective Kubernetes version for worker %q: %v", worker.Name, err))}
+			}
+
+			if helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) && versionutils.ConstraintK8sLess134.Check(workerK8sVersion) {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("systemComponents", "nodeLocalDNS"), "the node-local-dns setting cannot be changed if the shoot has at least one worker pool with an update strategy of either AutoInPlaceUpdate or ManualInPlaceUpdate, and is running a Kubernetes version below 1.34.0."))
 				break
 			}
 		}
