@@ -6,6 +6,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/gardener/gardener/imagevector"
@@ -13,8 +14,10 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
+	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	"github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/helper"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -27,31 +30,48 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 
 	grmIsPresent, err := b.IsGardenerResourceManagerReady(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("checking if Gardener Resource Manager is ready failed: %w", err)
 	}
 	b.Shoot.Components.ControlPlane.Vali.WithAuthenticationProxy(grmIsPresent)
 
 	if b.isShootEventLoggerEnabled() && grmIsPresent {
 		if err := b.Shoot.Components.ControlPlane.EventLogger.Deploy(ctx); err != nil {
-			return err
+			return fmt.Errorf("deploying Event Logger failed: %w", err)
 		}
 	} else if !b.isShootEventLoggerEnabled() {
 		if err := b.Shoot.Components.ControlPlane.EventLogger.Destroy(ctx); err != nil {
-			return err
+			return fmt.Errorf("destroying Event Logger failed: %w", err)
+		}
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		if err := b.Shoot.Components.ControlPlane.OtelCollector.Deploy(ctx); err != nil {
+			return fmt.Errorf("deploying OpenTelemetry Collector failed: %w", err)
+		}
+	} else {
+		if err := b.Shoot.Components.ControlPlane.OtelCollector.Destroy(ctx); err != nil {
+			return fmt.Errorf("destroying OpenTelemetry Collector failed: %w", err)
 		}
 	}
 
 	// check if vali is enabled in gardenlet config, default is true
 	if !gardenlethelper.IsValiEnabled(b.Config) {
-		return b.Shoot.Components.ControlPlane.Vali.Destroy(ctx)
+		if err = b.Shoot.Components.ControlPlane.Vali.Destroy(ctx); err != nil {
+			return fmt.Errorf("destroying Vali failed: %w", err)
+		}
+	} else if err = b.Shoot.Components.ControlPlane.Vali.Deploy(ctx); err != nil {
+		return fmt.Errorf("deploying Vali failed: %w", err)
 	}
 
-	return b.Shoot.Components.ControlPlane.Vali.Deploy(ctx)
+	return nil
 }
 
 // DestroySeedLogging will uninstall the logging stack for the Shoot in the Seed clusters.
 func (b *Botanist) DestroySeedLogging(ctx context.Context) error {
 	if err := b.Shoot.Components.ControlPlane.EventLogger.Destroy(ctx); err != nil {
+		return err
+	}
+	if err := b.Shoot.Components.ControlPlane.OtelCollector.Destroy(ctx); err != nil {
 		return err
 	}
 
@@ -121,7 +141,6 @@ func (b *Botanist) DefaultOtelCollector() (component.DeployWaiter, error) {
 		collector.Values{
 			Image: image.String(),
 		},
-		"http://"+constants.ServiceName+":"+strconv.Itoa(constants.ValiPort)+constants.PushEndpoint,
+		"http://"+valiconstants.ServiceName+":"+strconv.Itoa(valiconstants.ValiPort)+valiconstants.PushEndpoint,
 	), nil
-
 }
