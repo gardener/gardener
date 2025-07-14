@@ -520,6 +520,10 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 	}
 
 	if helper.NginxIngressEnabled(addons) {
+		for i, sourceRange := range addons.NginxIngress.LoadBalancerSourceRanges {
+			allErrs = append(allErrs, validation.IsValidCIDR(fldPath.Child("nginxIngress", "loadBalancerSourceRanges").Index(i), sourceRange)...)
+		}
+
 		if policy := addons.NginxIngress.ExternalTrafficPolicy; policy != nil {
 			if !availableNginxIngressExternalTrafficPolicies.Has(string(*policy)) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginxIngress", "externalTrafficPolicy"), *policy, sets.List(availableNginxIngressExternalTrafficPolicies)))

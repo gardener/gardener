@@ -697,6 +697,37 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			It("should allow valid load balancer source ranges for nginx-ingress", func() {
+				shoot.Spec.Addons.NginxIngress.LoadBalancerSourceRanges = []string{"192.168.123.56/32", "2001:db8::/64"}
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid invalid load balancer source ranges for nginx-ingress", func() {
+				shoot.Spec.Addons.NginxIngress.LoadBalancerSourceRanges = []string{"", "invalid-source-range", "192.168.123.56/33", "2001:db.8::/64"}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[0]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[1]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[2]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[3]"),
+					})),
+				))
+			})
+
 			It("should allow external traffic policies 'Cluster' for nginx-ingress", func() {
 				v := corev1.ServiceExternalTrafficPolicyCluster
 				shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
