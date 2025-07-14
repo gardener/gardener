@@ -6065,11 +6065,38 @@ func schema_pkg_apis_core_v1beta1_Maintenance(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"autoRotation": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoRotation contains information about which rotations should be automatically performed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_MaintenanceAutoRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MaintenanceAutoRotation contains information about which rotations should be automatically performed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"credentials": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Credentials contains information about which credentials should be automatically rotated.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceCredentialsAutoRotation"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceCredentialsAutoRotation"},
 	}
 }
 
@@ -6099,6 +6126,61 @@ func schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref common.ReferenceCall
 				Required: []string{"kubernetesVersion"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_MaintenanceCredentialsAutoRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MaintenanceCredentialsAutoRotation contains information about which credentials should be automatically rotated.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"observability": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Observability configures the automatic rotation for the observability credentials.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"),
+						},
+					},
+					"sshKeypair": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SSHKeypair configures the automatic rotation for the ssh keypair for worker nodes.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceRotationConfig"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_MaintenanceRotationConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MaintenanceRotationConfig contains configuration for automatic rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled indicates whether automatic rotation should be performed (default: false).",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"rotationPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

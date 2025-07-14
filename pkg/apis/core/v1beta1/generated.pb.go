@@ -3151,6 +3151,34 @@ func (m *Maintenance) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Maintenance proto.InternalMessageInfo
 
+func (m *MaintenanceAutoRotation) Reset()      { *m = MaintenanceAutoRotation{} }
+func (*MaintenanceAutoRotation) ProtoMessage() {}
+func (*MaintenanceAutoRotation) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{110}
+}
+func (m *MaintenanceAutoRotation) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MaintenanceAutoRotation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *MaintenanceAutoRotation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MaintenanceAutoRotation.Merge(m, src)
+}
+func (m *MaintenanceAutoRotation) XXX_Size() int {
+	return m.Size()
+}
+func (m *MaintenanceAutoRotation) XXX_DiscardUnknown() {
+	xxx_messageInfo_MaintenanceAutoRotation.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MaintenanceAutoRotation proto.InternalMessageInfo
+
 func (m *MaintenanceAutoUpdate) Reset()      { *m = MaintenanceAutoUpdate{} }
 func (*MaintenanceAutoUpdate) ProtoMessage() {}
 func (*MaintenanceAutoUpdate) Descriptor() ([]byte, []int) {
@@ -3178,6 +3206,62 @@ func (m *MaintenanceAutoUpdate) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_MaintenanceAutoUpdate proto.InternalMessageInfo
+
+func (m *MaintenanceCredentialsAutoRotation) Reset()      { *m = MaintenanceCredentialsAutoRotation{} }
+func (*MaintenanceCredentialsAutoRotation) ProtoMessage() {}
+func (*MaintenanceCredentialsAutoRotation) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{112}
+}
+func (m *MaintenanceCredentialsAutoRotation) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MaintenanceCredentialsAutoRotation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *MaintenanceCredentialsAutoRotation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MaintenanceCredentialsAutoRotation.Merge(m, src)
+}
+func (m *MaintenanceCredentialsAutoRotation) XXX_Size() int {
+	return m.Size()
+}
+func (m *MaintenanceCredentialsAutoRotation) XXX_DiscardUnknown() {
+	xxx_messageInfo_MaintenanceCredentialsAutoRotation.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MaintenanceCredentialsAutoRotation proto.InternalMessageInfo
+
+func (m *MaintenanceRotationConfig) Reset()      { *m = MaintenanceRotationConfig{} }
+func (*MaintenanceRotationConfig) ProtoMessage() {}
+func (*MaintenanceRotationConfig) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{113}
+}
+func (m *MaintenanceRotationConfig) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MaintenanceRotationConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *MaintenanceRotationConfig) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MaintenanceRotationConfig.Merge(m, src)
+}
+func (m *MaintenanceRotationConfig) XXX_Size() int {
+	return m.Size()
+}
+func (m *MaintenanceRotationConfig) XXX_DiscardUnknown() {
+	xxx_messageInfo_MaintenanceRotationConfig.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MaintenanceRotationConfig proto.InternalMessageInfo
 
 func (m *MaintenanceTimeWindow) Reset()      { *m = MaintenanceTimeWindow{} }
 func (*MaintenanceTimeWindow) ProtoMessage() {}
@@ -5880,7 +5964,10 @@ func init() {
 	proto.RegisterMapType((Capabilities)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MachineType.CapabilitiesEntry")
 	proto.RegisterType((*MachineTypeStorage)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MachineTypeStorage")
 	proto.RegisterType((*Maintenance)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Maintenance")
+	proto.RegisterType((*MaintenanceAutoRotation)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MaintenanceAutoRotation")
 	proto.RegisterType((*MaintenanceAutoUpdate)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MaintenanceAutoUpdate")
+	proto.RegisterType((*MaintenanceCredentialsAutoRotation)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MaintenanceCredentialsAutoRotation")
+	proto.RegisterType((*MaintenanceRotationConfig)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MaintenanceRotationConfig")
 	proto.RegisterType((*MaintenanceTimeWindow)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MaintenanceTimeWindow")
 	proto.RegisterType((*ManualWorkerPoolRollout)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ManualWorkerPoolRollout")
 	proto.RegisterType((*MemorySwapConfiguration)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MemorySwapConfiguration")
@@ -13323,6 +13410,18 @@ func (m *Maintenance) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.AutoRotation != nil {
+		{
+			size, err := m.AutoRotation.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
 	if m.ConfineSpecUpdateRollout != nil {
 		i--
 		if *m.ConfineSpecUpdateRollout {
@@ -13348,6 +13447,41 @@ func (m *Maintenance) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.AutoUpdate != nil {
 		{
 			size, err := m.AutoUpdate.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MaintenanceAutoRotation) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MaintenanceAutoRotation) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MaintenanceAutoRotation) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Credentials != nil {
+		{
+			size, err := m.Credentials.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -13398,6 +13532,98 @@ func (m *MaintenanceAutoUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	}
 	i--
 	dAtA[i] = 0x8
+	return len(dAtA) - i, nil
+}
+
+func (m *MaintenanceCredentialsAutoRotation) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MaintenanceCredentialsAutoRotation) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MaintenanceCredentialsAutoRotation) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.SSHKeypair != nil {
+		{
+			size, err := m.SSHKeypair.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Observability != nil {
+		{
+			size, err := m.Observability.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MaintenanceRotationConfig) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MaintenanceRotationConfig) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MaintenanceRotationConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.RotationPeriod != nil {
+		{
+			size, err := m.RotationPeriod.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Enabled != nil {
+		i--
+		if *m.Enabled {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x8
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -21726,6 +21952,23 @@ func (m *Maintenance) Size() (n int) {
 	if m.ConfineSpecUpdateRollout != nil {
 		n += 2
 	}
+	if m.AutoRotation != nil {
+		l = m.AutoRotation.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	return n
+}
+
+func (m *MaintenanceAutoRotation) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Credentials != nil {
+		l = m.Credentials.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -21738,6 +21981,39 @@ func (m *MaintenanceAutoUpdate) Size() (n int) {
 	n += 2
 	if m.MachineImageVersion != nil {
 		n += 2
+	}
+	return n
+}
+
+func (m *MaintenanceCredentialsAutoRotation) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Observability != nil {
+		l = m.Observability.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if m.SSHKeypair != nil {
+		l = m.SSHKeypair.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	return n
+}
+
+func (m *MaintenanceRotationConfig) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Enabled != nil {
+		n += 2
+	}
+	if m.RotationPeriod != nil {
+		l = m.RotationPeriod.Size()
+		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
 }
@@ -25554,6 +25830,17 @@ func (this *Maintenance) String() string {
 		`AutoUpdate:` + strings.Replace(this.AutoUpdate.String(), "MaintenanceAutoUpdate", "MaintenanceAutoUpdate", 1) + `,`,
 		`TimeWindow:` + strings.Replace(this.TimeWindow.String(), "MaintenanceTimeWindow", "MaintenanceTimeWindow", 1) + `,`,
 		`ConfineSpecUpdateRollout:` + valueToStringGenerated(this.ConfineSpecUpdateRollout) + `,`,
+		`AutoRotation:` + strings.Replace(this.AutoRotation.String(), "MaintenanceAutoRotation", "MaintenanceAutoRotation", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *MaintenanceAutoRotation) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&MaintenanceAutoRotation{`,
+		`Credentials:` + strings.Replace(this.Credentials.String(), "MaintenanceCredentialsAutoRotation", "MaintenanceCredentialsAutoRotation", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -25565,6 +25852,28 @@ func (this *MaintenanceAutoUpdate) String() string {
 	s := strings.Join([]string{`&MaintenanceAutoUpdate{`,
 		`KubernetesVersion:` + fmt.Sprintf("%v", this.KubernetesVersion) + `,`,
 		`MachineImageVersion:` + valueToStringGenerated(this.MachineImageVersion) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *MaintenanceCredentialsAutoRotation) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&MaintenanceCredentialsAutoRotation{`,
+		`Observability:` + strings.Replace(this.Observability.String(), "MaintenanceRotationConfig", "MaintenanceRotationConfig", 1) + `,`,
+		`SSHKeypair:` + strings.Replace(this.SSHKeypair.String(), "MaintenanceRotationConfig", "MaintenanceRotationConfig", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *MaintenanceRotationConfig) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&MaintenanceRotationConfig{`,
+		`Enabled:` + valueToStringGenerated(this.Enabled) + `,`,
+		`RotationPeriod:` + strings.Replace(fmt.Sprintf("%v", this.RotationPeriod), "Duration", "v11.Duration", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -45953,6 +46262,128 @@ func (m *Maintenance) Unmarshal(dAtA []byte) error {
 			}
 			b := bool(v != 0)
 			m.ConfineSpecUpdateRollout = &b
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AutoRotation", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.AutoRotation == nil {
+				m.AutoRotation = &MaintenanceAutoRotation{}
+			}
+			if err := m.AutoRotation.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MaintenanceAutoRotation) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MaintenanceAutoRotation: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MaintenanceAutoRotation: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Credentials", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Credentials == nil {
+				m.Credentials = &MaintenanceCredentialsAutoRotation{}
+			}
+			if err := m.Credentials.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])
@@ -46044,6 +46475,235 @@ func (m *MaintenanceAutoUpdate) Unmarshal(dAtA []byte) error {
 			}
 			b := bool(v != 0)
 			m.MachineImageVersion = &b
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MaintenanceCredentialsAutoRotation) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MaintenanceCredentialsAutoRotation: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MaintenanceCredentialsAutoRotation: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Observability", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Observability == nil {
+				m.Observability = &MaintenanceRotationConfig{}
+			}
+			if err := m.Observability.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SSHKeypair", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.SSHKeypair == nil {
+				m.SSHKeypair = &MaintenanceRotationConfig{}
+			}
+			if err := m.SSHKeypair.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MaintenanceRotationConfig) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MaintenanceRotationConfig: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MaintenanceRotationConfig: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Enabled", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			b := bool(v != 0)
+			m.Enabled = &b
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RotationPeriod", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.RotationPeriod == nil {
+				m.RotationPeriod = &v11.Duration{}
+			}
+			if err := m.RotationPeriod.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])
