@@ -1361,6 +1361,152 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
+	Describe("#computeCredentialsRotationResults", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: &gardencorev1beta1.Maintenance{
+						AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+							Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+								SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
+									Enabled:        ptr.To(true),
+									RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
+								},
+								Observability: &gardencorev1beta1.MaintenanceRotationConfig{
+									Enabled:        ptr.To(true),
+									RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
+								},
+							},
+						},
+					},
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name: "worker",
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should return empty results if no credentials rotation is required", func() {
+			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.Enabled = ptr.To(false)
+			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.Enabled = ptr.To(false)
+
+			results := computeCredentialsRotationResults(log, shoot, metav1.Time{Time: now})
+
+			Expect(results).To(BeEmpty())
+		})
+
+		It("should return successful results for all credentials rotation", func() {
+			results := computeCredentialsRotationResults(log, shoot, metav1.Time{Time: now})
+
+			Expect(results).To(HaveLen(2))
+			Expect(results["ssh-keypair"]).To(Equal(updateResult{
+				description:  "SSH keypair rotation started",
+				reason:       "Automatic rotation of SSH keypair configured",
+				isSuccessful: true,
+			}))
+			Expect(results["observability-passwords"]).To(Equal(updateResult{
+				description:  "Observability passwords rotation started",
+				reason:       "Automatic rotation of observability passwords configured",
+				isSuccessful: true,
+			}))
+		})
+
+		It("should return successful results only when the rotation period has passed", func() {
+			shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+				Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+					SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{
+						LastCompletionTime: &metav1.Time{Time: now.Add(-48 * time.Hour)},
+					},
+					Observability: &gardencorev1beta1.ObservabilityRotation{
+						LastCompletionTime: &metav1.Time{Time: now.Add(-72 * time.Hour)},
+					},
+				},
+			}
+			results := computeCredentialsRotationResults(log, shoot, metav1.Time{Time: now})
+
+			Expect(results).To(HaveLen(2))
+			Expect(results["ssh-keypair"]).To(Equal(updateResult{
+				description:  "SSH keypair rotation started",
+				reason:       "Automatic rotation of SSH keypair configured",
+				isSuccessful: true,
+			}))
+			Expect(results["observability-passwords"]).To(Equal(updateResult{
+				description:  "Observability passwords rotation started",
+				reason:       "Automatic rotation of observability passwords configured",
+				isSuccessful: true,
+			}))
+		})
+
+		It("should not return results when the rotation period has not passed", func() {
+			shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+				Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+					SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{
+						LastCompletionTime: &metav1.Time{Time: now},
+					},
+					Observability: &gardencorev1beta1.ObservabilityRotation{
+						LastCompletionTime: &metav1.Time{Time: now.Add(-time.Hour)},
+					},
+				},
+			}
+			results := computeCredentialsRotationResults(log, shoot, metav1.Time{Time: now})
+
+			Expect(results).To(BeEmpty())
+		})
+	})
+
+	Describe("#getOperation", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+			}
+		})
+
+		DescribeTable("#getOperation",
+			func(maintenanceAnnotation *string, credentialsRotationUpdate map[string]updateResult, expectedResult string) {
+				if maintenanceAnnotation != nil {
+					shoot.Annotations = map[string]string{
+						"maintenance.gardener.cloud/operation": *maintenanceAnnotation,
+					}
+				}
+
+				result := getOperation(shoot, credentialsRotationUpdate)
+				Expect(result).To(Equal(expectedResult))
+			},
+			Entry("should return reconcile operation when there is no maintenance operation", nil, nil, "reconcile"),
+			Entry("should return reconcile operation when maintenance operation is empty", ptr.To(""), nil, "reconcile"),
+			Entry("should return maintenance operation when it is not empty", ptr.To("foo"), nil, "foo"),
+			Entry("should return rotate-ssh-keypair operation when it is not part of the result updates", ptr.To("rotate-ssh-keypair"),
+				map[string]updateResult{
+					"observability-passwords": {},
+				}, "rotate-ssh-keypair"),
+			Entry("should return rotate-observability-credentials operation when it is not part of the result updates", ptr.To("rotate-observability-credentials"),
+				map[string]updateResult{
+					"etcd-encryption-key": {},
+				}, "rotate-observability-credentials"),
+			Entry("should return reconcile operation when maintenance operation is rotate-ssh-keypair and it is part of results", ptr.To("rotate-ssh-keypair"),
+				map[string]updateResult{
+					"ssh-keypair": {},
+				}, "reconcile"),
+			Entry("should return reconcile operation when maintenance operation is rotate-observability-credentials and it is part of results", ptr.To("rotate-observability-credentials"),
+				map[string]updateResult{
+					"observability-passwords": {},
+				}, "reconcile"),
+		)
+	})
+
 	Describe("#maintainFeatureGatesForShoot", func() {
 		var (
 			shoot                   *gardencorev1beta1.Shoot
