@@ -3256,9 +3256,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("feature gates unsupported before 1.33", core.VerticalPodAutoscaler{
 					FeatureGates: map[string]bool{"InPlaceOrRecreate": true},
 				}, "1.32", ConsistOf(
-					field.Forbidden(field.NewPath("featureGates.InPlaceOrRecreate"), "not supported in Kubernetes version 1.32"),
+					field.Invalid(field.NewPath("featureGates"), "InPlaceOrRecreate", "for Kubernetes versions < 1.33, feature gate is not supported"),
 				)),
 			)
+
+			It("should not allow unknown feature gates", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.VerticalPodAutoscaler = &core.VerticalPodAutoscaler{
+					FeatureGates: map[string]bool{
+						"Foo": true,
+					},
+				}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.verticalPodAutoscaler.featureGates.Foo"),
+						"Detail": Equal("unknown feature gate"),
+					})),
+				))
+			})
 		})
 
 		Context("AuditConfig validation", func() {

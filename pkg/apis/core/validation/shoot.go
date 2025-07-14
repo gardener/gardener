@@ -1300,7 +1300,13 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, versio
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*count, fldPath.Child("memoryAggregationIntervalCount"))...)
 	}
 
-	allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(autoScaler.FeatureGates, version, fldPath.Child("featureGates"))...)
+	allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(autoScaler.FeatureGates, fldPath.Child("featureGates"))...)
+
+	if isEnabled, ok := autoScaler.FeatureGates["InPlaceOrRecreate"]; ok && isEnabled {
+		if k8sGreaterEqual133, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.33"); !k8sGreaterEqual133 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("featureGates"), "InPlaceOrRecreate", "for Kubernetes versions < 1.33, feature gate is not supported"))
+		}
+	}
 
 	return allErrs
 }
