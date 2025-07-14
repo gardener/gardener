@@ -1942,6 +1942,20 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 		}
 	}
 
+	if maintenance.AutoRotation != nil && maintenance.AutoRotation.Credentials != nil {
+		credentials := maintenance.AutoRotation.Credentials
+		credentialsPath := fldPath.Child("autoRotation", "credentials")
+
+		if credentials.Observability != nil && credentials.Observability.RotationPeriod != nil &&
+			(credentials.Observability.RotationPeriod.Duration < 30*time.Minute || credentials.Observability.RotationPeriod.Duration > 90*24*time.Hour) {
+			allErrs = append(allErrs, field.Invalid(credentialsPath.Child("observability", "rotationPeriod"), credentials.Observability.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
+		}
+		if credentials.SSHKeypair != nil && credentials.SSHKeypair.RotationPeriod != nil &&
+			(credentials.SSHKeypair.RotationPeriod.Duration < 30*time.Minute || credentials.SSHKeypair.RotationPeriod.Duration > 90*24*time.Hour) {
+			allErrs = append(allErrs, field.Invalid(credentialsPath.Child("sshKeypair", "rotationPeriod"), credentials.SSHKeypair.RotationPeriod.Duration.String(), "value must be between 30m and 90d"))
+		}
+	}
+
 	if maintenance.TimeWindow != nil {
 		maintenanceTimeWindow, err := timewindow.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
 		if err != nil {
