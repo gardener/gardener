@@ -343,6 +343,7 @@ type PodKubeAPIServerLoadBalancingWebhook struct {
 type PodKubeAPIServerLoadBalancingWebhookConfig struct {
 	KubeAPIServerNamePrefix string
 	NamespaceSelector       map[string]string
+	ObjectSelector          *metav1.LabelSelector
 }
 
 // ResponsibilityMode is a string alias.
@@ -1376,7 +1377,7 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 
 	if r.values.PodKubeAPIServerLoadBalancingWebhook.Enabled {
 		for _, config := range r.values.PodKubeAPIServerLoadBalancingWebhook.Configs {
-			webhooks = append(webhooks, NewPodKubeAPIServerLoadBalancingMutatingWebhook(&metav1.LabelSelector{MatchLabels: config.NamespaceSelector}, config.KubeAPIServerNamePrefix, secretServerCA, buildClientConfigFn))
+			webhooks = append(webhooks, NewPodKubeAPIServerLoadBalancingMutatingWebhook(&metav1.LabelSelector{MatchLabels: config.NamespaceSelector}, config.ObjectSelector, config.KubeAPIServerNamePrefix, secretServerCA, buildClientConfigFn))
 		}
 	}
 
@@ -1656,7 +1657,7 @@ func (r *resourceManager) newProjectedTokenMountMutatingWebhook(namespaceSelecto
 
 // NewPodKubeAPIServerLoadBalancingMutatingWebhook returns the pod-kube-apiserver-load-balancing mutating webhook for
 // the resourcemanager component for reuse between the component and integration tests.
-func NewPodKubeAPIServerLoadBalancingMutatingWebhook(namespaceSelector *metav1.LabelSelector, labelSelectorPrefix string, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+func NewPodKubeAPIServerLoadBalancingMutatingWebhook(namespaceSelector, objectSelector *metav1.LabelSelector, labelSelectorPrefix string, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
 	return admissionregistrationv1.MutatingWebhook{
 		Name: "pod-" + labelSelectorPrefix + "kube-apiserver-load-balancing.resources.gardener.cloud",
 		Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -1668,6 +1669,7 @@ func NewPodKubeAPIServerLoadBalancingMutatingWebhook(namespaceSelector *metav1.L
 			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
 		}},
 		NamespaceSelector:       namespaceSelector,
+		ObjectSelector:          objectSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, podkubeapiserverloadbalancing.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
