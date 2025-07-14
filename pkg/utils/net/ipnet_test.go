@@ -101,3 +101,69 @@ var _ = DescribeTable("#GetByIPFamily",
 	Entry("should return one entry with two IPv4 entries + IPv6 entry + ipv6 match", []string{"14.0.0.0/8", "15.0.0.0/8", "2001:db8:1::/64"}, IPv6Family, HaveLen(1)),
 	Entry("should return two entries with two IPv4 entries + two IPv6 entries + ipv6 match", []string{"16.0.0.0/8", "17.0.0.0/8", "2001:db8:1::/64", "2001:db8:2::/64"}, IPv6Family, HaveLen(2)),
 )
+
+var _ = DescribeTable("#Overlap",
+	func(cidr1, cidr2 string, expected bool) {
+		_, ipNet1, err := net.ParseCIDR(cidr1)
+		Expect(err).ToNot(HaveOccurred())
+		_, ipNet2, err := net.ParseCIDR(cidr2)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(Overlap(*ipNet1, *ipNet2)).To(Equal(expected))
+	},
+
+	Entry("should detect IPv4 overlap - same network", "10.0.0.0/8", "10.0.0.0/8", true),
+	Entry("should detect IPv4 overlap - subset network", "10.0.0.0/8", "10.0.0.0/16", true),
+	Entry("should detect IPv4 overlap - superset network", "10.0.0.0/16", "10.0.0.0/8", true),
+	Entry("should not detect IPv4 overlap - different networks", "10.0.0.0/8", "172.16.0.0/12", false),
+	Entry("should detect IPv6 overlap - same network", "2001:db8::/32", "2001:db8::/32", true),
+	Entry("should detect IPv6 overlap - subset network", "2001:db8::/32", "2001:db8:1::/48", true),
+	Entry("should detect IPv6 overlap - superset network", "2001:db8:1::/48", "2001:db8::/32", true),
+	Entry("should not detect IPv6 overlap - different networks", "2001:db8::/32", "2001:db9::/32", false),
+	Entry("should detect IPv4 overlap - subset", "10.245.152.0/22", "10.245.152.0/24", true),
+	Entry("should not detect IPv4 overlap - disjoint", "10.245.152.0/22", "10.246.150.0/24", false),
+	Entry("should detect IPv4 overlap - superset", "100.112.0.0/13", "100.112.0.0/16", true),
+	Entry("should not detect IPv4 overlap - different blocks", "100.64.0.0/12", "100.80.0.0/12", false),
+	Entry("should detect IPv4 overlap - partial overlap", "100.104.0.0/13", "100.112.0.0/13", false),
+	Entry("should detect IPv4 overlap - same network", "10.181.0.0/16", "10.181.0.0/16", true),
+	Entry("should not detect IPv4 overlap - disjoint", "10.180.0.0/16", "10.181.0.0/16", false),
+	Entry("should detect IPv6 overlap - subset", "2a10:afc0::/29", "2a10:afc0::/32", true),
+	Entry("should not detect IPv6 overlap - disjoint", "2a10:afc0::/29", "2a02:2ad0:910::/48", false),
+	Entry("should detect IPv6 overlap - superset", "2600:1f00::/24", "2600:1f00::/32", true),
+	Entry("should not detect IPv6 overlap - different blocks", "2620:107:4000::/44", "2604:1a00:50::/48", false),
+	Entry("should detect IPv6 overlap - same network", "2401:fa00:f2::/48", "2401:fa00:f2::/48", true),
+	Entry("should not detect IPv6 overlap - disjoint", "2603:1000::/24", "2600:1f00::/24", false),
+)
+
+var _ = DescribeTable("#OverlapAny",
+	func(cidr string, others []string, expected bool) {
+		_, ipNet, err := net.ParseCIDR(cidr)
+		Expect(err).ToNot(HaveOccurred())
+		var otherNets []net.IPNet
+		for _, other := range others {
+			_, otherNet, err := net.ParseCIDR(other)
+			Expect(err).ToNot(HaveOccurred())
+			otherNets = append(otherNets, *otherNet)
+		}
+		Expect(OverLapAny(*ipNet, otherNets...)).To(Equal(expected))
+	},
+
+	Entry("should work with empty list", "10.0.0.0/8", []string{}, false),
+	Entry("should detect single IPv4 overlap", "10.0.0.0/8", []string{"10.0.0.0/16"}, true),
+	Entry("should not detect single IPv4 overlap", "10.0.0.0/8", []string{"172.16.0.0/12"}, false),
+	Entry("should detect IPv4 overlap in multiple networks", "10.0.0.0/8", []string{"172.16.0.0/12", "192.168.0.0/16", "10.10.0.0/16"}, true),
+	Entry("should not detect IPv4 overlap in multiple networks", "10.0.0.0/8", []string{"172.16.0.0/12", "192.168.0.0/16"}, false),
+	Entry("should detect IPv6 overlap in multiple networks", "2001:db8::/32", []string{"2001:db9::/32", "2001:db8:1::/48"}, true),
+	Entry("should not detect IPv6 overlap in multiple networks", "2001:db8::/32", []string{"2001:db9::/32", "2001:dba::/32"}, false),
+	Entry("should detect overlap with dual-stack: IPv4 input, IPv4+IPv6 list (overlap on IPv4)",
+		"10.0.0.0/8", []string{"2001:db8::/32", "10.0.0.0/16"}, true),
+	Entry("should detect overlap with dual-stack: IPv6 input, IPv4+IPv6 list (overlap on IPv6)",
+		"2001:db8::/32", []string{"10.0.0.0/8", "2001:db8:1::/48"}, true),
+	Entry("should not detect overlap with dual-stack: IPv4 input, IPv4+IPv6 list (no overlap)",
+		"10.0.0.0/8", []string{"192.168.0.0/16", "2001:db8::/32"}, false),
+	Entry("should not detect overlap with dual-stack: IPv6 input, IPv4+IPv6 list (no overlap)",
+		"2001:db8::/32", []string{"10.0.0.0/8", "2001:db9::/32"}, false),
+	Entry("should detect overlap with dual-stack: IPv4+IPv6 input, IPv4+IPv6 list (overlap on both)",
+		"10.0.0.0/8", []string{"10.0.0.0/16", "2001:db8::/32"}, true),
+	Entry("should detect overlap with dual-stack: IPv6 input, dual-stack list (overlap on IPv6)",
+		"2001:db8::/32", []string{"10.0.0.0/8", "2001:db8::/32"}, true),
+)

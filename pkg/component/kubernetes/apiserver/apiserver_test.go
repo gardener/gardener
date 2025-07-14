@@ -46,11 +46,13 @@ import (
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/component/networking/vpn/envoy"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -62,7 +64,7 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString))
 	DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
 	DeferCleanup(test.WithVar(&secretsutils.Read, func(b []byte) (int, error) {
-		copy(b, []byte(strings.Repeat("_", len(b))))
+		copy(b, strings.Repeat("_", len(b)))
 		return len(b), nil
 	}))
 	DeferCleanup(test.WithVar(&secretsutils.GenerateVPNKey, secretsutils.FakeGenerateVPNKey))
@@ -95,6 +97,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameCAVPN                   = "ca-vpn"
 		secretNameEtcd                    = "etcd-client"
 		secretNameHTTPProxy               = "kube-apiserver-http-proxy"
+		secretNameHTTPProxyClient         = "kube-apiserver-http-proxy-client"
 		secretNameKubeAggregator          = "kube-aggregator"
 		secretNameKubeAPIServerToKubelet  = "kube-apiserver-kubelet"
 		secretNameServer                  = "kube-apiserver"
@@ -108,6 +111,8 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-b2b49c90"
 		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
 		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
+		configMapEnvoyConfig           = "kube-apiserver-envoy-config-a60282c1"
+		configMapEgressSelectorConfig  = "kube-apiserver-egress-selector-config-02bc784a"
 
 		deployment                     *appsv1.Deployment
 		horizontalPodAutoscaler        *autoscalingv2.HorizontalPodAutoscaler
@@ -2818,13 +2823,13 @@ kind: AuthorizationConfiguration
 					deployAndRead()
 
 					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
-						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+						"reference.resources.gardener.cloud/secret-7ae9678a":    secretNameHTTPProxyClient,
 						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
 						"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
 					})))
 				})
 
-				It("should have the expected annotations when VPN and HA is enabled", func() {
+				It("should have the expected annotations when VPN and HA is enabled (overlap)", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
@@ -2832,7 +2837,40 @@ kind: AuthorizationConfiguration
 						IsWorkerless:        true,
 						Version:             version,
 						ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
-						VPN:                 VPNConfig{Enabled: true, HighAvailabilityEnabled: true, PodNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}}},
+						VPN: VPNConfig{
+							Enabled:                 true,
+							HighAvailabilityEnabled: true,
+							PodNetworkCIDRs:         []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
+							SeedPodNetwork:          net.IPNet{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)},
+						},
+					})
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-7ae9678a":    secretNameHTTPProxyClient,
+						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
+						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
+						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
+						"reference.resources.gardener.cloud/configmap-9d9fd1bf": configMapEnvoyConfig,
+						"reference.resources.gardener.cloud/configmap-a90d2cd3": configMapEgressSelectorConfig,
+					})))
+				})
+				It("should have the expected annotations when VPN and HA is enabled (non-overlap)", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless:        true,
+						Version:             version,
+						ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
+						VPN: VPNConfig{
+							Enabled:                 true,
+							HighAvailabilityEnabled: true,
+							PodNetworkCIDRs:         []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
+							SeedPodNetwork:          net.IPNet{IP: net.ParseIP("10.2.0.0"), Mask: net.CIDRMask(16, 32)},
+						},
 					})
 					deployAndRead()
 
@@ -3007,13 +3045,13 @@ kind: AuthorizationConfiguration
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
-						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+						"reference.resources.gardener.cloud/secret-7ae9678a":    secretNameHTTPProxyClient,
 						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
 						"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
 					})))
 				})
 
-				It("should have the expected annotations when VPN and HA is enabled", func() {
+				It("should have the expected annotations when VPN and HA is enabled (overlap)", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
@@ -3021,7 +3059,40 @@ kind: AuthorizationConfiguration
 						IsWorkerless:        true,
 						Version:             version,
 						ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
-						VPN:                 VPNConfig{Enabled: true, HighAvailabilityEnabled: true, PodNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}}},
+						VPN: VPNConfig{
+							Enabled:                 true,
+							HighAvailabilityEnabled: true,
+							PodNetworkCIDRs:         []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
+							SeedPodNetwork:          net.IPNet{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)},
+						},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-7ae9678a":    secretNameHTTPProxyClient,
+						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
+						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
+						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
+						"reference.resources.gardener.cloud/configmap-9d9fd1bf": configMapEnvoyConfig,
+						"reference.resources.gardener.cloud/configmap-a90d2cd3": configMapEgressSelectorConfig,
+					})))
+				})
+				It("should have the expected annotations when VPN and HA is enabled (non-overlap)", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless:        true,
+						Version:             version,
+						ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
+						VPN: VPNConfig{
+							Enabled:                 true,
+							HighAvailabilityEnabled: true,
+							PodNetworkCIDRs:         []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
+							SeedPodNetwork:          net.IPNet{IP: net.ParseIP("10.2.0.0"), Mask: net.CIDRMask(16, 32)},
+						},
 					})
 					deployAndRead()
 
@@ -3064,20 +3135,6 @@ kind: AuthorizationConfiguration
 
 			haVPNClientContainerFor := func(index int) corev1.Container {
 
-				var serviceCIDRs, podCIDRs, nodeCIDRs []string
-
-				for _, v := range values.ServiceNetworkCIDRs {
-					serviceCIDRs = append(serviceCIDRs, v.String())
-				}
-
-				for _, v := range values.VPN.PodNetworkCIDRs {
-					podCIDRs = append(podCIDRs, v.String())
-				}
-
-				for _, v := range values.VPN.NodeNetworkCIDRs {
-					nodeCIDRs = append(nodeCIDRs, v.String())
-				}
-
 				container := corev1.Container{
 					Name:            fmt.Sprintf("vpn-client-%d", index),
 					Image:           "vpn-client-image:really-latest",
@@ -3088,28 +3145,20 @@ kind: AuthorizationConfiguration
 							Value: fmt.Sprintf("vpn-seed-server-%d", index),
 						},
 						{
-							Name:  "SERVICE_NETWORK",
-							Value: values.ServiceNetworkCIDRs[0].String(),
+							Name:  "SHOOT_POD_NETWORKS",
+							Value: netutils.JoinByComma(values.VPN.PodNetworkCIDRs),
 						},
 						{
-							Name:  "POD_NETWORK",
-							Value: values.VPN.PodNetworkCIDRs[0].String(),
+							Name:  "SHOOT_SERVICE_NETWORKS",
+							Value: netutils.JoinByComma(values.ServiceNetworkCIDRs),
 						},
 						{
-							Name:  "NODE_NETWORK",
-							Value: values.VPN.NodeNetworkCIDRs[0].String(),
+							Name:  "SHOOT_NODE_NETWORKS",
+							Value: netutils.JoinByComma(values.VPN.NodeNetworkCIDRs),
 						},
 						{
-							Name:  "SERVICE_NETWORKS",
-							Value: strings.Join(serviceCIDRs, ","),
-						},
-						{
-							Name:  "POD_NETWORKS",
-							Value: strings.Join(podCIDRs, ","),
-						},
-						{
-							Name:  "NODE_NETWORKS",
-							Value: strings.Join(nodeCIDRs, ","),
+							Name:  "SEED_POD_NETWORK",
+							Value: values.VPN.SeedPodNetwork.String(),
 						},
 						{
 							Name:  "VPN_SERVER_INDEX",
@@ -3202,12 +3251,12 @@ kind: AuthorizationConfiguration
 				return initContainer
 			}
 
-			testHAVPN := func() {
+			testHAVPN := func(overlap bool) {
 				values = Values{
 					Values: apiserver.Values{
 						RuntimeVersion: runtimeVersion,
 					},
-					Images:              Images{VPNClient: "vpn-client-image:really-latest"},
+					Images:              Images{VPNClient: "vpn-client-image:really-latest", EnvoyProxy: "envoy-distroless:v1.34.1"},
 					ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
 					VPN: VPNConfig{
 						Enabled:                              true,
@@ -3216,32 +3265,31 @@ kind: AuthorizationConfiguration
 						HighAvailabilityNumberOfShootClients: 3,
 						PodNetworkCIDRs:                      []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
 						NodeNetworkCIDRs:                     []net.IPNet{{IP: net.ParseIP("7.8.9.0"), Mask: net.CIDRMask(24, 32)}},
+						SeedPodNetwork:                       net.IPNet{IP: net.ParseIP("10.11.0.0"), Mask: net.CIDRMask(16, 32)},
 						IPFamilies:                           []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 					},
 					Version: version,
+				}
+				if overlap {
+					values.VPN.SeedPodNetwork = net.IPNet{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}
 				}
 				kapi = New(kubernetesInterface, namespace, sm, values)
 				deployAndRead()
 
 				initContainer := haVPNInitClientContainer()
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
-				Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
+				if overlap {
+					Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 3))
+				} else {
+					Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
+				}
+
 				for i := 0; i < values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 					labelKey := fmt.Sprintf("networking.resources.gardener.cloud/to-vpn-seed-server-%d-tcp-1194", i)
 					Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue(labelKey, "allowed"))
-					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i)))
+					Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(haVPNClientContainerFor(i)))
 				}
 
-				var serviceCIDRs, podCIDRs, nodeCIDRs []string
-				for _, v := range values.ServiceNetworkCIDRs {
-					serviceCIDRs = append(serviceCIDRs, v.String())
-				}
-				for _, v := range values.VPN.PodNetworkCIDRs {
-					podCIDRs = append(podCIDRs, v.String())
-				}
-				for _, v := range values.VPN.NodeNetworkCIDRs {
-					nodeCIDRs = append(nodeCIDRs, v.String())
-				}
 				pathControllerContainer := corev1.Container{
 					Name:            "vpn-path-controller",
 					Image:           "vpn-client-image:really-latest",
@@ -3249,28 +3297,20 @@ kind: AuthorizationConfiguration
 					Command:         []string{"/bin/vpn-client", "path-controller"},
 					Env: []corev1.EnvVar{
 						{
-							Name:  "SERVICE_NETWORK",
-							Value: values.ServiceNetworkCIDRs[0].String(),
+							Name:  "SHOOT_POD_NETWORKS",
+							Value: netutils.JoinByComma(values.VPN.PodNetworkCIDRs),
 						},
 						{
-							Name:  "POD_NETWORK",
-							Value: values.VPN.PodNetworkCIDRs[0].String(),
+							Name:  "SHOOT_SERVICE_NETWORKS",
+							Value: netutils.JoinByComma(values.ServiceNetworkCIDRs),
 						},
 						{
-							Name:  "NODE_NETWORK",
-							Value: values.VPN.NodeNetworkCIDRs[0].String(),
+							Name:  "SHOOT_NODE_NETWORKS",
+							Value: netutils.JoinByComma(values.VPN.NodeNetworkCIDRs),
 						},
 						{
-							Name:  "SERVICE_NETWORKS",
-							Value: strings.Join(serviceCIDRs, ","),
-						},
-						{
-							Name:  "POD_NETWORKS",
-							Value: strings.Join(podCIDRs, ","),
-						},
-						{
-							Name:  "NODE_NETWORKS",
-							Value: strings.Join(nodeCIDRs, ","),
+							Name:  "SEED_POD_NETWORK",
+							Value: values.VPN.SeedPodNetwork.String(),
 						},
 						{
 							Name:  "IS_HA",
@@ -3302,11 +3342,20 @@ kind: AuthorizationConfiguration
 					TerminationMessagePath:   "/dev/termination-log",
 					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 				}
-				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityNumberOfSeedServers+1]).To(DeepEqual(pathControllerContainer))
+				envoyProxyContainer := *envoy.GetEnvoyProxyContainer("envoy-distroless:v1.34.1")
 
-				Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--egress-selector-config-file=")))
-				Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
-				Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
+				Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(pathControllerContainer))
+				if overlap {
+					Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(envoyProxyContainer))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(ContainSubstring("--egress-selector-config-file=")))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
+				} else {
+					Expect(deployment.Spec.Template.Spec.Containers).ToNot(ContainElement(envoyProxyContainer))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElement(ContainSubstring("--egress-selector-config-file=")))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).ToNot(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
+					Expect(deployment.Spec.Template.Spec.Volumes).ToNot(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
+				}
 
 				hostPathCharDev := corev1.HostPathCharDev
 				Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
@@ -3369,8 +3418,12 @@ kind: AuthorizationConfiguration
 				))
 			}
 
-			It("should have one init container and three vpn-seed-client sidecar containers when VPN high availability are enabled", func() {
-				testHAVPN()
+			It("should have one init container, one kube-apiserver, one envoy proxy, two vpn-seed-clients and one path controller (total: 5) when VPN high availability and overlapping CIDRs are enabled", func() {
+				testHAVPN(true)
+			})
+
+			It("should have one init container, one kube-apiserver, two vpn-seed-clients and one path controller (total: 4) when VPN high availability and non-overlapping CIDRs are enabled", func() {
+				testHAVPN(false)
 			})
 
 			Context("kube-apiserver container", func() {
@@ -4391,7 +4444,7 @@ kind: AuthenticationConfiguration
 							Name: "http-proxy",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName:  secretNameHTTPProxy,
+									SecretName:  secretNameHTTPProxyClient,
 									DefaultMode: ptr.To[int32](0640),
 								},
 							},

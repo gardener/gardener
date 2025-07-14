@@ -95,6 +95,16 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 	return shoot
 }
 
+// DefaultOverlappingShoot returns a Shoot object with CIDR ranges overlapping with the
+// seed pod and service ranges of the default garden for the e2e tests.
+func DefaultOverlappingShoot(name string) *gardencorev1beta1.Shoot {
+	shoot := DefaultShoot(name + "-ovr")
+	shoot.Spec.Networking.Pods = ptr.To("10.1.0.0/16")
+	shoot.Spec.Networking.Services = ptr.To("10.2.0.0/16")
+
+	return shoot
+}
+
 // DefaultWorker returns a Worker object with default values for the e2e tests.
 func DefaultWorker(name string, updateStrategy *gardencorev1beta1.MachineUpdateStrategy) gardencorev1beta1.Worker {
 	return gardencorev1beta1.Worker{

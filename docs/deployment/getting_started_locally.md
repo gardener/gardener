@@ -282,6 +282,8 @@ cat <<EOF | sudo tee -a /etc/hosts
 172.18.255.1 api.e2e-upd-node.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-upd-node-wl.local.external.local.gardener.cloud
 172.18.255.1 api.e2e-upd-node-wl.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-upd-node-ovr.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-upd-node-ovr.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-upgrade.local.external.local.gardener.cloud
 172.18.255.1 api.e2e-upgrade.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-upgrade-wl.local.external.local.gardener.cloud
