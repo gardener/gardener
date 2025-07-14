@@ -165,6 +165,7 @@ func (v *vpa) reconcileUpdaterClusterRoleBindingInPlace(clusterRoleBinding *rbac
 		Namespace: v.namespaceForApplicationClassResource(),
 	}}
 }
+
 func (v *vpa) reconcileUpdaterRoleLeaderLocking(role *rbacv1.Role) {
 	role.Labels = getRoleLabel()
 	role.Rules = []rbacv1.PolicyRule{
