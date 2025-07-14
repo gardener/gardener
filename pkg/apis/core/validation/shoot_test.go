@@ -3258,6 +3258,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}, "1.32", ConsistOf(
 					field.Invalid(field.NewPath("featureGates"), "InPlaceOrRecreate", "for Kubernetes versions < 1.33, feature gate is not supported"),
 				)),
+				Entry("unknown feature gate", core.VerticalPodAutoscaler{
+					FeatureGates: map[string]bool{"Foo": true},
+				}, "1.33", ConsistOf(
+					field.Invalid(field.NewPath("featureGates.Foo"), "Foo", "unknown feature gate"),
+				)),
 			)
 
 			It("should not allow unknown feature gates", func() {
