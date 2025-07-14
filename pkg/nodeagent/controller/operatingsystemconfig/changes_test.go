@@ -5,9 +5,12 @@
 package operatingsystemconfig_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
 
@@ -128,6 +131,69 @@ var _ = Describe("Changes", func() {
 			changed, err := IsOsVersionUpToDate(currentOSVersion, newOSC)
 			Expect(err).To(MatchError(ContainSubstring("failed comparing current OS version")))
 			Expect(changed).To(BeFalse())
+		})
+	})
+
+	Describe("ComputeCredentialsRotationChanges", func() {
+		var (
+			oldOSC, newOSC *extensionsv1alpha1.OperatingSystemConfig
+			timeNow        = time.Now().UTC()
+		)
+
+		BeforeEach(func() {
+			oldOSC = &extensionsv1alpha1.OperatingSystemConfig{
+				Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+					InPlaceUpdates: &extensionsv1alpha1.InPlaceUpdates{
+						CredentialsRotation: &extensionsv1alpha1.CredentialsRotation{
+							CertificateAuthorities: &extensionsv1alpha1.CARotation{
+								LastInitiationTime: &metav1.Time{Time: timeNow.Add(-time.Hour)},
+							},
+							ServiceAccountKey: &extensionsv1alpha1.ServiceAccountKeyRotation{
+								LastInitiationTime: &metav1.Time{Time: timeNow.Add(-time.Hour)},
+							},
+						},
+					},
+				},
+			}
+
+			newOSC = oldOSC.DeepCopy()
+			newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime = &metav1.Time{Time: timeNow}
+			newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime = &metav1.Time{Time: timeNow}
+		})
+
+		It("should return false if CredentialsRotation is nil in the new OSC", func() {
+			oldOSC.Spec.InPlaceUpdates.CredentialsRotation = nil
+			newOSC.Spec.InPlaceUpdates.CredentialsRotation = nil
+
+			kubeletCARotation, nodeAgentCARotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
+			Expect(kubeletCARotation).To(BeFalse())
+			Expect(nodeAgentCARotation).To(BeFalse())
+			Expect(saKeyRotation).To(BeFalse())
+		})
+
+		It("should return true if the CredentialsRotation is nil in the old OSC", func() {
+			oldOSC.Spec.InPlaceUpdates.CredentialsRotation = nil
+
+			kubeletCARotation, nodeAgentCARotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
+			Expect(kubeletCARotation).To(BeTrue())
+			Expect(nodeAgentCARotation).To(BeTrue())
+			Expect(saKeyRotation).To(BeTrue())
+		})
+
+		It("should return true if the lastInitiationTimes of rotations are changed", func() {
+			kubeletCARotation, nodeAgentCARotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
+			Expect(kubeletCARotation).To(BeTrue())
+			Expect(nodeAgentCARotation).To(BeTrue())
+			Expect(saKeyRotation).To(BeTrue())
+		})
+
+		It("should return false if the lastInitiationTimes of rotations are not changed", func() {
+			oldOSC = newOSC.DeepCopy()
+
+			kubeletCARotation, nodeAgentCARotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
+			Expect(kubeletCARotation).To(BeFalse())
+			Expect(nodeAgentCARotation).To(BeFalse())
+			Expect(saKeyRotation).To(BeFalse())
 		})
 	})
 })
