@@ -161,9 +161,10 @@ Those credentials are stored in a `Secret` with the name `<shoot-name>.monitorin
 - `password`: the password
 - `auth`: the username with SHA-1 representation of the password
 
-**It is the responsibility of the end-user to regularly rotate those credentials.**
+**Unless automatic credentials rotation is enabled, it is the responsibility of the end-user to regularly rotate those credentials.**
 In order to rotate the `password`, annotate the `Shoot` with `gardener.cloud/operation=rotate-observability-credentials`.
 This operation is not allowed for `Shoot`s that are already marked for deletion.
+See [Automatic Credentials Rotation](../shoot/shoot_maintenance.md#automatic-credentials-rotation) for how to enable auto-rotation for observability passwords.
 
 ```bash
 kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-observability-credentials
@@ -184,6 +185,7 @@ The private key is stored in a `Secret` with the name `<shoot-name>.ssh-keypair`
 
 In order to rotate the keys, annotate the `Shoot` with `gardener.cloud/operation=rotate-ssh-keypair`.
 This will propagate a new key to all worker nodes while keeping the old key active and valid as well (it will only be invalidated/removed with the next rotation).
+See [Automatic Credentials Rotation](../shoot/shoot_maintenance.md#automatic-credentials-rotation) for how to enable auto-rotation for the ssh key pair.
 
 ```bash
 kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ssh-keypair
