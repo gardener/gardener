@@ -348,6 +348,15 @@ var _ = Describe("ResourceManager", func() {
 					{
 						KubeAPIServerNamePrefix: "virtual-garden-",
 						NamespaceSelector:       map[string]string{"barbaz": "bazbar"},
+						ObjectSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      "app",
+									Operator: "NotIn",
+									Values:   []string{"gardener-resource-manager"},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -1161,6 +1170,15 @@ var _ = Describe("ResourceManager", func() {
 						NamespaceSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"barbaz": "bazbar"},
 						},
+						ObjectSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      v1beta1constants.LabelApp,
+									Operator: metav1.LabelSelectorOpNotIn,
+									Values:   []string{"gardener-resource-manager"},
+								},
+							},
+						},
 						ClientConfig: admissionregistrationv1.WebhookClientConfig{
 							Service: &admissionregistrationv1.ServiceReference{
 								Name:      "gardener-resource-manager",
@@ -1462,8 +1480,11 @@ webhooks:
     matchLabels:
       barbaz: bazbar
   objectSelector:
-    matchLabels:
-      networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed
+    matchExpressions:
+	- key: app
+	  operator: NotIn
+	  values:
+	  - gardener-resource-manager
   rules:
   - apiGroups:
     - ""
