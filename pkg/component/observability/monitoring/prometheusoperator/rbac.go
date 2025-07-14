@@ -160,7 +160,7 @@ func (p *prometheusOperator) rolePrometheusShoot() *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "prometheus-shoot",
-			Namespace: p.namespace,
+			Namespace: p.namespace, // This is set to the garden namespace when instantiated by the shared component.
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
