@@ -17,20 +17,15 @@ import (
 var _ = Describe("vpaFeatureGates", func() {
 	Describe("#ValidateVpaFeatureGates", func() {
 		DescribeTable("validate vpa feature gates",
-			func(featureGates map[string]bool, version string, matcher gomegatypes.GomegaMatcher) {
-				errList := ValidateVpaFeatureGates(featureGates, version, nil)
+			func(featureGates map[string]bool, matcher gomegatypes.GomegaMatcher) {
+				errList := ValidateVpaFeatureGates(featureGates, nil)
 				Expect(errList).To(matcher)
 			},
-			Entry("empty list", nil, "1", BeEmpty()),
-			Entry("supported InPlaceOrRecreate", map[string]bool{"InPlaceOrRecreate": true}, "1.33", BeEmpty()),
-			Entry("unsupported InPlaceOrRecreate", map[string]bool{"InPlaceOrRecreate": true}, "1.32", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal(field.NewPath("InPlaceOrRecreate").String()),
-				"Detail": Equal("not supported in Kubernetes version 1.32"),
-			})))),
-			Entry("unknown feature gate", map[string]bool{"SomeFeatureGate": true}, "1.33", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("empty list", nil, BeEmpty()),
+			Entry("supported feature gate", map[string]bool{"InPlaceOrRecreate": true}, BeEmpty()),
+			Entry("unsupported feature gate", map[string]bool{"Foo": true}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal(field.NewPath("SomeFeatureGate").String()),
+				"Field":  Equal(field.NewPath("Foo").String()),
 				"Detail": Equal("unknown feature gate"),
 			})))),
 		)
