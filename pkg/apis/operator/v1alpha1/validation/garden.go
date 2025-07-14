@@ -41,6 +41,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -118,6 +119,10 @@ func validateRuntimeClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		}
 	}
 
+	if newRuntimeCluster.Settings != nil && newRuntimeCluster.Settings.VerticalPodAutoscaler != nil {
+		allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(newRuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates, fldPath.Child("settings", "verticalPodAutoscaler", "featureGates"))...)
+	}
+
 	return allErrs
 }
 
@@ -186,6 +191,10 @@ func validateRuntimeCluster(dns *operatorv1alpha1.DNSManagement, runtimeCluster 
 	allErrs = validateDomains(dns, runtimeCluster.Ingress.Domains, fldPath.Child("ingress", "domains"), allErrs)
 
 	allErrs = append(allErrs, validateRuntimeClusterNetworking(runtimeCluster.Networking, fldPath.Child("networking"))...)
+
+	if runtimeCluster.Settings != nil && runtimeCluster.Settings.VerticalPodAutoscaler != nil {
+		allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(runtimeCluster.Settings.VerticalPodAutoscaler.FeatureGates, fldPath.Child("settings", "verticalPodAutoscaler", "featureGates"))...)
+	}
 
 	return allErrs
 }
