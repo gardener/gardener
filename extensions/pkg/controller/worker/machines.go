@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 	"strconv"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -56,12 +57,9 @@ type MachineDeployments []MachineDeployment
 // HasDeployment checks whether the <name> is part of the <machineDeployments>
 // list, i.e. whether there is an entry whose 'Name' attribute matches <name>. It returns true or false.
 func (m MachineDeployments) HasDeployment(name string) bool {
-	for _, deployment := range m {
-		if name == deployment.Name {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(m, func(deployment MachineDeployment) bool {
+		return name == deployment.Name
+	})
 }
 
 // FindByName finds the deployment with the <name> from the <machineDeployments>
@@ -78,23 +76,17 @@ func (m MachineDeployments) FindByName(name string) *MachineDeployment {
 // HasClass checks whether the <className> is part of the <machineDeployments>
 // list, i.e. whether there is an entry whose 'ClassName' attribute matches <name>. It returns true or false.
 func (m MachineDeployments) HasClass(className string) bool {
-	for _, deployment := range m {
-		if className == deployment.ClassName {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(m, func(deployment MachineDeployment) bool {
+		return className == deployment.ClassName
+	})
 }
 
 // HasSecret checks whether the <secretName> is part of the <machineDeployments>
 // list, i.e. whether there is an entry whose 'SecretName' attribute matches <name>. It returns true or false.
 func (m MachineDeployments) HasSecret(secretName string) bool {
-	for _, deployment := range m {
-		if secretName == deployment.SecretName {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(m, func(deployment MachineDeployment) bool {
+		return secretName == deployment.SecretName
+	})
 }
 
 // WorkerPoolHash returns a hash value for a given worker pool and a given cluster resource.
