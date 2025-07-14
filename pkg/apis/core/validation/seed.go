@@ -20,6 +20,7 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
@@ -188,6 +189,9 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		if helper.SeedSettingTopologyAwareRoutingEnabled(seedSpec.Settings) && len(seedSpec.Provider.Zones) <= 1 {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled on multi-zone Seed clusters (with at least two zones in spec.provider.zones)"))
 		}
+		if seedSpec.Settings.VerticalPodAutoscaler != nil {
+			allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(seedSpec.Settings.VerticalPodAutoscaler.FeatureGates, fldPath.Child("settings", "verticalPodAutoscaler", "featureGates"))...)
+		}
 	}
 
 	if !inTemplate && seedSpec.Ingress == nil {
@@ -333,6 +337,10 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 		}
 	}
 	// If oldSeedSpec doesn't have backup configured, we allow to add it; but not the vice versa.
+
+	if newSeedSpec.Settings != nil && newSeedSpec.Settings.VerticalPodAutoscaler != nil {
+		allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(newSeedSpec.Settings.VerticalPodAutoscaler.FeatureGates, fldPath.Child("settings", "verticalPodAutoscaler", "featureGates"))...)
+	}
 
 	return allErrs
 }

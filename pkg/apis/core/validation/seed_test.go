@@ -82,6 +82,9 @@ var _ = Describe("Seed Validation Tests", func() {
 						Namespace:  "garden",
 					},
 				},
+				Settings: &core.SeedSettings{
+					VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{},
+				},
 			},
 		}
 		seedTemplate = &core.SeedTemplate{
@@ -1014,6 +1017,58 @@ var _ = Describe("Seed Validation Tests", func() {
 				}
 
 				Expect(ValidateSeed(seed)).To(BeEmpty())
+			})
+
+			Context("verticalPodAutoscaler", func() {
+				It("should not allow unknown feature gates", func() {
+					seed.Spec.Settings.VerticalPodAutoscaler.FeatureGates = map[string]bool{
+						"Foo": true,
+					}
+					Expect(ValidateSeed(seed)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.settings.verticalPodAutoscaler.featureGates.Foo"),
+							"Detail": Equal("unknown feature gate"),
+						})),
+					))
+				})
+
+				It("should allow supported feature gates", func() {
+					seed.Spec.Settings.VerticalPodAutoscaler.FeatureGates = map[string]bool{
+						"InPlaceOrRecreate": true,
+					}
+					Expect(ValidateSeed(seed)).To(BeEmpty())
+				})
+			})
+
+			Context("verticalPodAutoscaler update", func() {
+				var (
+					oldSeed *core.Seed
+					newSeed *core.Seed
+				)
+
+				BeforeEach(func() {
+					oldSeed = seed.DeepCopy()
+					newSeed = prepareSeedForUpdate(oldSeed)
+				})
+
+				It("should not allow updates with unknown feature gates", func() {
+					newSeed = prepareSeedForUpdate(oldSeed)
+
+					oldSeed.Spec.Settings.VerticalPodAutoscaler.FeatureGates = map[string]bool{
+						"InPlaceOrRecreate": true,
+					}
+					newSeed.Spec.Settings.VerticalPodAutoscaler.FeatureGates = map[string]bool{
+						"Foo": true,
+					}
+					Expect(ValidateSeedUpdate(newSeed, oldSeed)).To(ContainElement(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.settings.verticalPodAutoscaler.featureGates.Foo"),
+							"Detail": Equal("unknown feature gate"),
+						})),
+					))
+				})
 			})
 		})
 
