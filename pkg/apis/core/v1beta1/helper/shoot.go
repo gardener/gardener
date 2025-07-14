@@ -684,6 +684,24 @@ func ControlPlaneNamespaceForShoot(shoot *gardencorev1beta1.Shoot) string {
 	return shoot.Status.TechnicalID
 }
 
+// IsSSHKeypairRotationEnabled checks if ssh keypair for worker nodes automatic rotation is enabled in the maintenance window.
+func IsSSHKeypairRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Spec.Maintenance != nil &&
+		shoot.Spec.Maintenance.AutoRotation != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair != nil &&
+		ptr.Deref(shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.Enabled, false)
+}
+
+// IsObservabilityRotationEnabled checks if observability credentials automatic rotation is enabled in the maintenance window.
+func IsObservabilityRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Spec.Maintenance != nil &&
+		shoot.Spec.Maintenance.AutoRotation != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials != nil &&
+		shoot.Spec.Maintenance.AutoRotation.Credentials.Observability != nil &&
+		ptr.Deref(shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.Enabled, false)
+}
+
 // IsUpdateStrategyInPlace returns true if the given machine update strategy is either AutoInPlaceUpdate or ManualInPlaceUpdate.
 func IsUpdateStrategyInPlace(updateStrategy *gardencorev1beta1.MachineUpdateStrategy) bool {
 	if updateStrategy == nil {
