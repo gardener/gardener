@@ -1095,26 +1095,36 @@ func (c *validationContext) validateWorkerMachine(idxPath *field.Path, worker, o
 	if worker.Machine.Architecture != nil && !slices.Contains(v1beta1constants.ValidArchitectures, *worker.Machine.Architecture) {
 		return field.NotSupported(idxPath.Child("machine", "architecture"), *worker.Machine.Architecture, v1beta1constants.ValidArchitectures)
 	}
-
-	isMachinePresentInCloudprofile, architectureSupported, availableInAllZones, isUsableMachine, supportedMachineTypes := validateMachineTypes(c.cloudProfileSpec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.Regions, c.shoot.Spec.Region, worker.Zones)
-	if !isMachinePresentInCloudprofile {
-		return field.NotSupported(idxPath.Child("machine", "type"), worker.Machine.Type, supportedMachineTypes)
+	if err := c.validateMachineType(idxPath, worker, oldWorker); err != nil {
+		return err
 	}
 
-	if !architectureSupported || !availableInAllZones || !isUsableMachine {
-		detail := fmt.Sprintf("machine type %q ", worker.Machine.Type)
-		if !isUsableMachine {
-			detail += "is unusable, "
-		}
-		if !availableInAllZones {
-			detail += "is unavailable in at least one zone, "
-		}
-		if !architectureSupported {
-			detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
-		}
-		return field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedMachineTypes))
+	if err := c.validateMachineImage(idxPath, worker, oldWorker, isNewWorkerPool, a); err != nil {
+		return err
 	}
 
+	if err := c.validateMachineCapabilities(idxPath, worker); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *validationContext) validateMachineCapabilities(path *field.Path, worker core.Worker) *field.Error {
+	if len(c.cloudProfileSpec.Capabilities) == 0 {
+		return nil
+	}
+
+	machineImageVersion, _ := v1beta1helper.FindMachineImageVersion(c.cloudProfileSpec.MachineImages, worker.Machine.Image.Name, worker.Machine.Image.Version)
+	machineType := v1beta1helper.FindMachineTypeByName(c.cloudProfileSpec.MachineTypes, worker.Machine.Type)
+
+	if !v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineType.Capabilities, machineImageVersion.CapabilitySets, c.cloudProfileSpec.Capabilities) {
+		return field.Invalid(path.Child("machine", "image", "version"), worker.Machine.Image.Version, fmt.Sprintf("machine capabilities %v of machine type %q are not supported by machine image %v:%v", machineType.Capabilities, worker.Machine.Type, worker.Machine.Image.Name, worker.Machine.Image.Version))
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateMachineImage(idxPath *field.Path, worker core.Worker, oldWorker core.Worker, isNewWorkerPool bool, a admission.Attributes) *field.Error {
 	isUpdateStrategyInPlace := helper.IsUpdateStrategyInPlace(worker.UpdateStrategy)
 	isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine)
 	if !isMachineImagePresentInCloudprofile {
@@ -1139,6 +1149,28 @@ func (c *validationContext) validateWorkerMachine(idxPath *field.Path, worker, o
 		return field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("%ssupported machine image versions are: %+v", detail, validMachineImageVersions))
 	}
 
+	return nil
+}
+
+func (c *validationContext) validateMachineType(idxPath *field.Path, worker core.Worker, oldWorker core.Worker) *field.Error {
+	isMachinePresentInCloudprofile, architectureSupported, availableInAllZones, isUsableMachine, supportedMachineTypes := validateMachineTypes(c.cloudProfileSpec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.Regions, c.shoot.Spec.Region, worker.Zones)
+	if !isMachinePresentInCloudprofile {
+		return field.NotSupported(idxPath.Child("machine", "type"), worker.Machine.Type, supportedMachineTypes)
+	}
+
+	if !architectureSupported || !availableInAllZones || !isUsableMachine {
+		detail := fmt.Sprintf("machine type %q ", worker.Machine.Type)
+		if !isUsableMachine {
+			detail += "is unusable, "
+		}
+		if !availableInAllZones {
+			detail += "is unavailable in at least one zone, "
+		}
+		if !architectureSupported {
+			detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
+		}
+		return field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedMachineTypes))
+	}
 	return nil
 }
 
