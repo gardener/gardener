@@ -63,7 +63,7 @@ func IsSeedClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.K
 		return false, "DNSNames, EmailAddresses and IPAddresses fields must be empty"
 	}
 
-	if !hasExactUsages(usages, seedClientRequiredKeyUsages) {
+	if !sets.New(usages...).Equal(sets.New(seedClientRequiredKeyUsages...)) {
 		return false, fmt.Sprintf("key usages are not set to %v", seedClientRequiredKeyUsages)
 	}
 
@@ -72,22 +72,6 @@ func IsSeedClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.K
 	}
 
 	return true, ""
-}
-
-func hasExactUsages(usages, requiredUsages []certificatesv1.KeyUsage) bool {
-	if len(requiredUsages) != len(usages) {
-		return false
-	}
-
-	usageMap := sets.New(usages...)
-
-	for _, u := range requiredUsages {
-		if !usageMap.Has(u) {
-			return false
-		}
-	}
-
-	return true
 }
 
 // GetWildcardCertificate gets the wildcard TLS certificate for the seed ingress domain.
