@@ -1327,6 +1327,7 @@ build:
             - pkg/utils/gardener/gardenlet
             - pkg/utils/gardener/secretsrotation
             - pkg/utils/gardener/shootstate
+            - pkg/utils/gardener/shootstatus
             - pkg/utils/gardener/tokenrequest
             - pkg/utils/imagevector
             - pkg/utils/istio
