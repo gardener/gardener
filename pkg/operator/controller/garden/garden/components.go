@@ -415,6 +415,15 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 				}, {
 					KubeAPIServerNamePrefix: namePrefix,
 					NamespaceSelector:       map[string]string{"kubernetes.io/metadata.name": v1beta1constants.GardenNamespace},
+					ObjectSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      v1beta1constants.LabelApp,
+								Operator: metav1.LabelSelectorOpNotIn,
+								Values:   []string{resourcemanager.LabelValue},
+							},
+						},
+					},
 				},
 			},
 		},
