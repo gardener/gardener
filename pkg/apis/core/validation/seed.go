@@ -338,10 +338,6 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 	}
 	// If oldSeedSpec doesn't have backup configured, we allow to add it; but not the vice versa.
 
-	if newSeedSpec.Settings != nil && newSeedSpec.Settings.VerticalPodAutoscaler != nil {
-		allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(newSeedSpec.Settings.VerticalPodAutoscaler.FeatureGates, fldPath.Child("settings", "verticalPodAutoscaler", "featureGates"))...)
-	}
-
 	return allErrs
 }
 

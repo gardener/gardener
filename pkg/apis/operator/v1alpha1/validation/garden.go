@@ -119,10 +119,6 @@ func validateRuntimeClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		}
 	}
 
-	if newRuntimeCluster.Settings != nil && newRuntimeCluster.Settings.VerticalPodAutoscaler != nil {
-		allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(newRuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates, fldPath.Child("settings", "verticalPodAutoscaler", "featureGates"))...)
-	}
-
 	return allErrs
 }
 

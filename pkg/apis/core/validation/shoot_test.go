@@ -3264,23 +3264,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					field.Invalid(field.NewPath("featureGates.Foo"), "Foo", "unknown feature gate"),
 				)),
 			)
-
-			It("should not allow unknown feature gates", func() {
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.VerticalPodAutoscaler = &core.VerticalPodAutoscaler{
-					FeatureGates: map[string]bool{
-						"Foo": true,
-					},
-				}
-
-				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.kubernetes.verticalPodAutoscaler.featureGates.Foo"),
-						"Detail": Equal("unknown feature gate"),
-					})),
-				))
-			})
 		})
 
 		Context("AuditConfig validation", func() {
