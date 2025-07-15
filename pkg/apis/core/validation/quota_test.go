@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -91,7 +92,10 @@ var _ = Describe("Quota Validation Tests ", func() {
 
 		It("should forbid Quota specification with empty or invalid keys", func() {
 			quota.ObjectMeta = metav1.ObjectMeta{}
-			quota.Spec.Scope = corev1.ObjectReference{}
+			quota.Spec.Scope = corev1.ObjectReference{
+				Kind:       "Foo",
+				APIVersion: "invalid.gardener.cloud/v1beta1",
+			}
 			quota.Spec.Metrics["key"] = resource.MustParse("-100")
 
 			errorList := ValidateQuota(quota)
@@ -106,8 +110,10 @@ var _ = Describe("Quota Validation Tests ", func() {
 					"Field": Equal("metadata.namespace"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("spec.scope"),
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"BadValue": Equal("invalid.gardener.cloud/v1beta1, Kind=Foo"),
+					"Detail":   ContainSubstring("supported values: \"core.gardener.cloud/v1beta1, Kind=Project\", \"/v1, Kind=Secret\", \"security.gardener.cloud/v1alpha1, Kind=WorkloadIdentity\""),
+					"Field":    Equal("spec.scope"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -119,6 +125,22 @@ var _ = Describe("Quota Validation Tests ", func() {
 				})),
 			))
 		})
+
+		DescribeTable("cluster lifetime days", func(clusterLifeTimeDays *int32) {
+			quota.Spec.ClusterLifetimeDays = clusterLifeTimeDays
+
+			errorList := ValidateQuota(quota)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("spec.clusterLifetimeDays"),
+				"BadValue": Equal(clusterLifeTimeDays),
+				"Detail":   ContainSubstring("must be greater than 0"),
+			}))))
+		},
+			Entry("should forbid negative cluster lifetime days", ptr.To[int32](-1)),
+			Entry("should forbid zero cluster lifetime days", ptr.To[int32](0)),
+		)
 
 		It("should allow quota scope referencing WorkloadIdentity", func() {
 			quota.Spec.Scope = corev1.ObjectReference{
