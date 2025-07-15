@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
@@ -247,31 +248,38 @@ var _ = Describe("NodeLocalDNS", func() {
 				Namespace: namespace,
 			},
 		}
+		shoot := &gardencorev1beta1.Shoot{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "core.gardener.cloud/v1beta1",
+				Kind:       "Shoot",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "bar",
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{
+						{
+							Name: "worker-aaaa",
+						},
+					},
+				},
+			},
+		}
+		encoder := &jsonserializer.Serializer{}
+		rawShoot, err := runtime.Encode(encoder, shoot)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rawShoot).ToNot(BeEmpty())
+
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: namespace,
 			},
 			Spec: extensionsv1alpha1.ClusterSpec{
 				Shoot: runtime.RawExtension{
-					Object: &gardencorev1beta1.Shoot{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "core.gardener.cloud/v1beta1",
-							Kind:       "Shoot",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "foo",
-							Namespace: "bar",
-						},
-						Spec: gardencorev1beta1.ShootSpec{
-							Provider: gardencorev1beta1.Provider{
-								Workers: []gardencorev1beta1.Worker{
-									{
-										Name: "worker-aaaa",
-									},
-								},
-							},
-						},
-					},
+					Raw:    rawShoot,
+					Object: shoot,
 				},
 				Seed: runtime.RawExtension{
 					Object: &gardencorev1beta1.Seed{},
@@ -594,11 +602,24 @@ status: {}
 		)
 
 		JustBeforeEach(func() {
+			ctrl := gomock.NewController(GinkgoT())
+			shootClient := mockclient.NewMockClient(ctrl)
+			seedClient := mockclient.NewMockClient(ctrl)
+			seedClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					clusterObj, ok := obj.(*extensionsv1alpha1.Cluster)
+					if ok && cluster != nil {
+						*clusterObj = *cluster
+					}
+					return nil
+				}).AnyTimes()
+			values.ShootClient = shootClient
+			values.SeedClient = seedClient
 			component = New(c, namespace, values)
 			Expect(c.Create(ctx, cluster)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-			Expect(component.Deploy(ctx)).To(Succeed())
 
+			Expect(component.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1218,35 +1239,23 @@ ip6.arpa:53 {
 			shootClientSet.EXPECT().Client().Return(shootClient).AnyTimes()
 			shootClient.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			shootClient.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-			shootClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			seedClient := mockclient.NewMockClient(ctrl)
+			seedClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					clusterObj, ok := obj.(*extensionsv1alpha1.Cluster)
+					if ok && cluster != nil {
+						*clusterObj = *cluster
+					}
+					return nil
+				}).AnyTimes()
+			shootClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&appsv1.DaemonSet{})).Return(nil).AnyTimes()
+			shootClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).Return(nil).AnyTimes()
 			shootClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			shootClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			values.ShootClient = shootClient
+			values.SeedClient = seedClient
 			scrapeConfig.ResourceVersion = ""
 			scrapeConfigErrors.ResourceVersion = ""
-			cluster := &extensionsv1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{Name: namespace},
-				Spec: extensionsv1alpha1.ClusterSpec{
-					Shoot: runtime.RawExtension{
-						Object: &gardencorev1beta1.Shoot{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: "core.gardener.cloud/v1beta1",
-								Kind:       "Shoot",
-							},
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "foo",
-								Namespace: "bar",
-							},
-						},
-					},
-					Seed: runtime.RawExtension{
-						Object: &gardencorev1beta1.Seed{},
-					},
-					CloudProfile: runtime.RawExtension{
-						Object: &gardencorev1beta1.CloudProfile{},
-					},
-				},
-			}
-
 			component = New(c, namespace, values)
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())

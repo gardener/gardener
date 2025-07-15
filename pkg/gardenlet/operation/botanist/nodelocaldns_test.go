@@ -121,6 +121,7 @@ var _ = Describe("NodeLocalDNS", func() {
 			shootClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			shootClient.EXPECT().Scheme().Return(kubernetes.ShootScheme).AnyTimes()
 			nodelocaldns.EXPECT().SetShootClientSet(gomock.Any())
+			nodelocaldns.EXPECT().SetSeedClientSet(gomock.Any())
 			nodelocaldns.EXPECT().SetLogger(gomock.Any())
 			botanist.ShootClientSet = kubernetesClient
 			botanist.Shoot.Components = &shootpkg.Components{

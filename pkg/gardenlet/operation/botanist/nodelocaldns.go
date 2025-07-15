@@ -65,6 +65,7 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetDNSServers(dnsServers)
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetIPFamilies(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetShootClientSet(b.ShootClientSet)
+	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetSeedClientSet(b.SeedClientSet)
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetLogger(b.Logger)
 	if b.Shoot.NodeLocalDNSEnabled {
 		return b.Shoot.Components.SystemComponents.NodeLocalDNS.Deploy(ctx)
@@ -82,6 +83,7 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 
 		if versionutils.ConstraintK8sLess134.Check(kubernetesVersion) {
 			atLeastOnePoolLowerKubernetes134 = true
+			break
 		}
 	}
 
@@ -92,7 +94,6 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 		return nil
 	}
 
-	b.Logger.Info("NodeLocalDNS is disabled, removing NodeLocalDNS components")
 	return b.Shoot.Components.SystemComponents.NodeLocalDNS.Destroy(ctx)
 }
 
