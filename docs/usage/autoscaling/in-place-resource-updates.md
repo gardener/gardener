@@ -1,6 +1,9 @@
 ---
 title: In-Place Resource Updates
 description: In-place updates of Pod resources
+categories:
+  - Users
+  - Operators
 ---
 
 # In-Place Updates of Pod Resources
@@ -18,7 +21,7 @@ With Kubernetes 1.33, the `InPlacePodVerticalScaling` feature gate, which enable
 
 ### Vertical Pod Autoscaling
 
-With [1.4.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.4.0), the `InPlaceOrRecreate` feature gate, which enables `in-place` for `vpa-admission-controller` and `vpa-updater`, got introduced as an _alpha_ feature. To explicitly enable the feature for `Shoot`, `Seed` or `Garden` clusters, the `Vertical Pod Autoscaling` configurations, for the respective cluster types need to include an additional `InPlaceOrRecreate: true` entry in the `featureGates` map.
+With [1.4.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.4.0), the `InPlaceOrRecreate` feature gate, which enables `in-place` resource updates for `vpa-admission-controller` and `vpa-updater`, got introduced as an _alpha_ feature. To explicitly enable the feature for `Shoot`, `Seed` or `Garden` clusters, the `Vertical Pod Autoscaling` configurations, for the respective cluster types need to include an additional `InPlaceOrRecreate: true` entry in the `featureGates` map.
 
 ## Configuration
 
@@ -26,7 +29,7 @@ As described in the [Compatibility](#compatibility) section, _alpha_ versions of
 
 ### Shoot
 
-Since `Vertical Pod Autoscaler` has its `InPlaceOrRecreate` feature gate still in _alpha_, and Kubernetes promoted `InPlacePodVerticalScaling` to _beta_ just recently ( in _1.33_ ), we took the decision to allow configuring `in-place` resource updates only on `Shoot`(s) running _1.33 and onwards_.
+Since `Vertical Pod Autoscaler` has its `InPlaceOrRecreate` feature gate still in _alpha_, and Kubernetes promoted `InPlacePodVerticalScaling` to _beta_ in 1.33, it is allowed to configure `in-place` resource updates only for `Shoot`(s) with Kubernetes version 1.33+.
 
 - Enable the `InPlaceOrRecreate` feature gate for `Vertical Por Autoscaler` in the Shoot spec:
 
