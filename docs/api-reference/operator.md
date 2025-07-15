@@ -3241,7 +3241,7 @@ map[string]bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>FeatureGates is a map of feature gates for the vpa components.</p>
+<p>FeatureGates contains information about enabled feature gates.</p>
 </td>
 </tr>
 </tbody>

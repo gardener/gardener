@@ -4549,7 +4549,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 				Properties: map[string]spec.Schema{
 					"featureGates": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FeatureGates contains information about enabled feature gates. This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.",
+							Description: "FeatureGates contains information about enabled feature gates.\n\nThis is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -4718,7 +4718,7 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 				Properties: map[string]spec.Schema{
 					"featureGates": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FeatureGates contains information about enabled feature gates. This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.",
+							Description: "FeatureGates contains information about enabled feature gates.\n\nThis is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -4774,7 +4774,7 @@ func schema_pkg_apis_core_v1beta1_KubeProxyConfig(ref common.ReferenceCallback) 
 				Properties: map[string]spec.Schema{
 					"featureGates": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FeatureGates contains information about enabled feature gates. This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.",
+							Description: "FeatureGates contains information about enabled feature gates.\n\nThis is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -4817,7 +4817,7 @@ func schema_pkg_apis_core_v1beta1_KubeSchedulerConfig(ref common.ReferenceCallba
 				Properties: map[string]spec.Schema{
 					"featureGates": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FeatureGates contains information about enabled feature gates. This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.",
+							Description: "FeatureGates contains information about enabled feature gates.\n\nThis is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -4860,7 +4860,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 				Properties: map[string]spec.Schema{
 					"featureGates": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FeatureGates contains information about enabled feature gates. This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.",
+							Description: "FeatureGates contains information about enabled feature gates.\n\nThis is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -5315,7 +5315,7 @@ func schema_pkg_apis_core_v1beta1_KubernetesConfig(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"featureGates": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FeatureGates contains information about enabled feature gates. This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.",
+							Description: "FeatureGates contains information about enabled feature gates.\n\nThis is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -8453,7 +8453,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref common.Re
 					},
 					"featureGates": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FeatureGates is a map of feature gates for the vpa components.",
+							Description: "FeatureGates contains information about enabled feature gates.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,

@@ -7894,8 +7894,8 @@ map[string]bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>FeatureGates contains information about enabled feature gates.
-This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.</p>
+<p>FeatureGates contains information about enabled feature gates.</p>
+<p>This is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.</p>
 </td>
 </tr>
 </tbody>
@@ -11492,7 +11492,7 @@ map[string]bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>FeatureGates is a map of feature gates for the vpa components.</p>
+<p>FeatureGates contains information about enabled feature gates.</p>
 </td>
 </tr>
 </tbody>

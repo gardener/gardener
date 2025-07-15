@@ -1762,7 +1762,8 @@ message Kubernetes {
 // KubernetesConfig contains common configuration fields for the control plane components.
 message KubernetesConfig {
   // FeatureGates contains information about enabled feature gates.
-  // This is a legacy field that should no longer be used. Consider using inline map for feature gates definitions.
+  //
+  // This is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.
   // +optional
   map<string, bool> featureGates = 1;
 }
@@ -2844,7 +2845,7 @@ message SeedSettingVerticalPodAutoscaler {
   // your seed cluster already has another, manually/custom managed VPA deployment.
   optional bool enabled = 1;
 
-  // FeatureGates is a map of feature gates for the vpa components.
+  // FeatureGates contains information about enabled feature gates.
   // +optional
   map<string, bool> featureGates = 2;
 }
