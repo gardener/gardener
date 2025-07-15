@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
@@ -66,7 +67,7 @@ gardenadm bootstrap --config-dir /path/to/manifests`,
 var NewClientSetFromFile = botanist.NewClientSetFromFile
 
 func run(ctx context.Context, opts *Options) error {
-	clientSet, err := NewClientSetFromFile(opts.Kubeconfig)
+	clientSet, err := NewClientSetFromFile(opts.Kubeconfig, kubernetes.SeedScheme)
 	if err != nil {
 		return fmt.Errorf("failed creating client: %w", err)
 	}
