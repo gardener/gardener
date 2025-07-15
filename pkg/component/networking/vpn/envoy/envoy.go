@@ -101,9 +101,6 @@ func GetEnvoyProxyContainer(image string) *corev1.Container {
 				corev1.ResourceCPU:    resource.MustParse("20m"),
 				corev1.ResourceMemory: resource.MustParse("100Mi"),
 			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("850M"),
-			},
 		},
 		SecurityContext: &corev1.SecurityContext{
 			AllowPrivilegeEscalation: ptr.To(false),
