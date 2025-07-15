@@ -1220,6 +1220,7 @@ ip6.arpa:53 {
 			shootClient.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			shootClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			shootClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			shootClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			values.ShootClient = shootClient
 			scrapeConfig.ResourceVersion = ""
 			scrapeConfigErrors.ResourceVersion = ""

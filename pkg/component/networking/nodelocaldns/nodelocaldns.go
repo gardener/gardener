@@ -32,15 +32,14 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -49,10 +48,11 @@ import (
 const (
 	managedResourceName = "shoot-core-node-local-dns"
 
-	labelKey          = "k8s-app"
-	labelKeyCleanUp   = "app"
-	labelKeyPool      = "pool"
-	labelValueCleanUp = "node-local-dns-cleanup"
+	labelKey                = "k8s-app"
+	labelKeyCleanUp         = "app"
+	labelKeyPool            = "pool"
+	labelValueCleanUp       = "node-local-dns-cleanup"
+	labelKeyCleanUpRequired = "node-local-dns-cleanup-required"
 	// portServiceServer is the service port used for the DNS server.
 	portServiceServer = 53
 	// portServer is the target port used for the DNS server.
@@ -195,12 +195,12 @@ func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	cluster, err := gardenerextensions.GetCluster(ctx, n.client, n.namespace)
+	shoot, err := getShootFromCluster(ctx, n.client, n.namespace)
 	if err != nil {
 		return err
 	}
 
-	data, err := registry.AddAllAndSerialize(n.computePoolResourcesData(serviceAccount, configMap, service, cluster)...)
+	data, err := registry.AddAllAndSerialize(n.computePoolResourcesData(serviceAccount, configMap, service, shoot)...)
 	if err != nil {
 		return err
 	}
@@ -209,17 +209,35 @@ func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
 }
 
 func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
-	cluster, err := gardenerextensions.GetCluster(ctx, n.client, n.namespace)
+	exists := false
+	if _, err := managedresources.GetObjects(ctx, n.client, n.namespace, managedResourceName); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to check managed resource existence: %w", err)
+		}
+	} else {
+		exists = true
+	}
+
+	// Check if at least one Kubernetes node has the cleanup label
+	nodeList := &corev1.NodeList{}
+	if err := n.values.ShootClient.List(ctx, nodeList, client.MatchingLabels{
+		labelKeyCleanUpRequired: "true",
+	}); err != nil {
+		return fmt.Errorf("failed to list nodes with cleanup label: %w", err)
+	}
+
+	// If the managed resource does not exist and no nodes have the cleanup label, return early no cleanup needed
+	if !exists && len(nodeList.Items) == 0 {
+		return nil
+	}
+
+	shoot, err := getShootFromCluster(ctx, n.client, n.namespace)
 	if err != nil {
 		return err
 	}
 
-	if err = n.createCleanupConfigMap(ctx); err != nil {
-		return fmt.Errorf("failed to create cleanup ConfigMap: %w", err)
-	}
-
 	// Check for node-local-dns DaemonSet existence for each worker pool
-	for _, worker := range cluster.Shoot.Spec.Provider.Workers {
+	for _, worker := range shoot.Spec.Provider.Workers {
 		daemonSet := &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-local-dns-" + worker.Name,
@@ -233,21 +251,23 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 			continue
 		}
 
-		// If DaemonSet exists, add cleanup annotation to the cluster resource
-		if cluster.Shoot == nil {
-			return fmt.Errorf("shoot object is nil in cluster")
+		// If DaemonSet exists, add cleanup label to all nodes in the worker group
+		nodeList := &corev1.NodeList{}
+		if err := n.values.ShootClient.List(ctx, nodeList, client.MatchingLabels{
+			"worker.gardener.cloud/pool": worker.Name,
+		}); err != nil {
+			return fmt.Errorf("failed to list nodes for worker pool %s: %w", worker.Name, err)
 		}
-		if cluster.Shoot.Annotations == nil {
-			cluster.Shoot.Annotations = make(map[string]string)
+		for _, node := range nodeList.Items {
+			patch := client.MergeFrom(node.DeepCopy())
+			if node.Labels == nil {
+				node.Labels = make(map[string]string)
+			}
+			node.Labels["node-local-dns-cleanup-required"] = "true"
+			if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
+				return fmt.Errorf("failed to add cleanup label to node %s: %w", node.Name, err)
+			}
 		}
-		annotationKey := getAnnotationKey(worker.Name)
-		cluster.Shoot.Annotations[annotationKey] = "true"
-		n.values.Log.Info("Adding annotation to shoot", "annotation", annotationKey)
-	}
-
-	// Sync the updated cluster resource to the seed
-	if syncErr := gardenerextensions.SyncClusterResourceToSeed(ctx, n.client, cluster.ObjectMeta.Name, cluster.Shoot, cluster.CloudProfile, cluster.Seed); syncErr != nil {
-		return fmt.Errorf("cluster resource sync to seed failed: %w", syncErr)
 	}
 
 	// Delete resources
@@ -262,41 +282,71 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	g := flow.NewGraph("NodeLocalDNS Cleanup")
-	for _, worker := range cluster.Shoot.Spec.Provider.Workers {
-		annotationKey := getAnnotationKey(worker.Name)
-		if cluster.Shoot.Annotations[annotationKey] == "true" {
-			g.Add(flow.Task{
-				Name: fmt.Sprintf("NodeLocalDNS Cleanup for %s", worker.Name),
-				Fn: func(ctx context.Context) error {
-					cleanupDaemonSet := n.createCleanupDaemonSetForWorkerPool(worker.Name)
-					if _, err := controllerutil.CreateOrUpdate(ctx, n.values.ShootClient, cleanupDaemonSet, func() error {
-						return nil
-					}); err != nil {
-						return fmt.Errorf("failed to create or update cleanup DaemonSet for worker pool %s: %w", worker.Name, err)
-					}
+	// Wait until the managed resource is successfully deleted and check for recently joined nodes (within the last three minutes) that do not have the label, label them, and add to nodeList
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+	if err := managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, managedResourceName); err != nil {
+		return err
+	}
 
-					// Wait for the DaemonSet to complete
-					if err := waitForDaemonSetCompletion(ctx, n.values.ShootClient, cleanupDaemonSet.Namespace, cleanupDaemonSet.Name); err != nil {
-						return fmt.Errorf("cleanup DaemonSet for worker pool %s failed: %w", worker.Name, err)
-					}
-					n.values.Log.Info("Cleanup DaemonSet completed", "workerPool", worker.Name)
-
-					// Delete the DaemonSet after completion
-					if err := n.values.ShootClient.Delete(ctx, cleanupDaemonSet); err != nil {
-						return fmt.Errorf("failed to delete cleanup DaemonSet for worker pool %s: %w", worker.Name, err)
-					}
-
-					// Remove the annotation after successful cleanup
-					delete(cluster.Shoot.Annotations, annotationKey)
-
-					return nil
-				},
-			})
-			if err := g.Compile().Run(ctx, flow.Opts{}); err != nil {
-				return err
+	allNodes := &corev1.NodeList{}
+	if err := n.values.ShootClient.List(ctx, allNodes); err != nil {
+		return fmt.Errorf("failed to list all nodes: %w", err)
+	}
+	now := time.Now()
+	for _, node := range allNodes.Items {
+		// Skip nodes that already have the label
+		if val, ok := node.Labels[labelKeyCleanUpRequired]; ok && val == "true" {
+			continue
+		}
+		// Check if node joined within the last three minutes
+		if node.CreationTimestamp.After(now.Add(-3 * time.Minute)) {
+			patch := client.MergeFrom(node.DeepCopy())
+			if node.Labels == nil {
+				node.Labels = make(map[string]string)
+			}
+			node.Labels[labelKeyCleanUpRequired] = "true"
+			if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
+				return fmt.Errorf("failed to add cleanup label to recently joined node %s: %w", node.Name, err)
 			}
 		}
+	}
+
+	nodeList = &corev1.NodeList{}
+	if err := n.values.ShootClient.List(ctx, nodeList, client.MatchingLabels{
+		labelKeyCleanUpRequired: "true",
+	}); err != nil {
+		return fmt.Errorf("failed to list nodes for cleanup: %w", err)
+	}
+
+	if err := n.createCleanupConfigMap(ctx); err != nil {
+		return fmt.Errorf("failed to create cleanup ConfigMap: %w", err)
+	}
+
+	cleanupDaemonSet := n.createCleanupDaemonSet()
+	if _, err := controllerutil.CreateOrUpdate(ctx, n.values.ShootClient, cleanupDaemonSet, func() error {
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to create or update cleanup DaemonSet %s: %w", cleanupDaemonSet.Name, err)
+	}
+
+	if err := waitForDaemonSetCompletion(ctx, n.values.ShootClient, cleanupDaemonSet.Namespace, cleanupDaemonSet.Name); err != nil {
+		return fmt.Errorf("cleanup DaemonSet %s failed: %w", cleanupDaemonSet.Name, err)
+	}
+
+	n.values.Log.Info("Cleanup DaemonSet completed")
+	if err := n.values.ShootClient.Delete(ctx, cleanupDaemonSet); err != nil {
+		return fmt.Errorf("failed to delete cleanup DaemonSet %s: %w", cleanupDaemonSet.Name, err)
+	}
+
+	// Remove the cleanup-required label from all nodes in this pool
+	for _, node := range nodeList.Items {
+		patch := client.MergeFrom(node.DeepCopy())
+		delete(node.Labels, labelKeyCleanUpRequired)
+		if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
+			return fmt.Errorf("failed to remove cleanup label from node %s: %w", node.Name, err)
+		}
+		n.values.Log.Info("Removed cleanup label from node", "node", node.Name)
 	}
 
 	// Delete the cleanup script ConfigMap after all cleanups are done
@@ -306,13 +356,8 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 			Namespace: metav1.NamespaceSystem,
 		},
 	}
-	if err = n.values.ShootClient.Delete(ctx, cleanupScriptCM); err != nil && !apierrors.IsNotFound(err) {
+	if err := n.values.ShootClient.Delete(ctx, cleanupScriptCM); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete cleanup script ConfigMap: %w", err)
-	}
-
-	// Sync the updated cluster resource to the seed after cleanup
-	if syncErr := gardenerextensions.SyncClusterResourceToSeed(ctx, n.client, cluster.ObjectMeta.Name, cluster.Shoot, cluster.CloudProfile, cluster.Seed); syncErr != nil {
-		return fmt.Errorf("cluster resource sync to seed failed: %w", syncErr)
 	}
 
 	return nil
@@ -446,7 +491,7 @@ ip6.arpa:53 {
 	return serviceAccount, configMap, service, nil
 }
 
-func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAccount, configMap *corev1.ConfigMap, service *corev1.Service, cluster *gardenerextensions.Cluster) (clientObjects []client.Object) {
+func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAccount, configMap *corev1.ConfigMap, service *corev1.Service, shoot *gardencorev1beta1.Shoot) (clientObjects []client.Object) {
 	var (
 		maxUnavailable       = intstr.FromString("10%")
 		hostPathFileOrCreate = corev1.HostPathFileOrCreate
@@ -455,7 +500,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 	)
 
 	clientObjects = []client.Object{serviceAccount, configMap, service}
-	for _, worker := range cluster.Shoot.Spec.Provider.Workers {
+	for _, worker := range shoot.Spec.Provider.Workers {
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-local-dns-" + worker.Name,
@@ -791,40 +836,43 @@ func (n *nodeLocalDNS) createCleanupConfigMap(ctx context.Context) error {
 	return err
 }
 
-func (n *nodeLocalDNS) createCleanupDaemonSetForWorkerPool(poolName string) *appsv1.DaemonSet {
+func (n *nodeLocalDNS) createCleanupDaemonSet() *appsv1.DaemonSet {
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("node-local-dns-cleanup-%s", poolName),
+			Name:      "node-local-dns-cleanup",
 			Namespace: metav1.NamespaceSystem,
 			Labels: map[string]string{
 				labelKeyCleanUp: labelValueCleanUp,
-				labelKeyPool:    poolName,
 			},
 		},
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					labelKeyCleanUp: labelValueCleanUp,
-					labelKeyPool:    poolName,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						labelKeyCleanUp: labelValueCleanUp,
-						labelKeyPool:    poolName,
 					},
 				},
 				Spec: corev1.PodSpec{
-					HostNetwork:   true,
-					RestartPolicy: corev1.RestartPolicyAlways,
+					HostNetwork:       true,
+					RestartPolicy:     corev1.RestartPolicyAlways,
+					PriorityClassName: "system-node-critical",
 					Tolerations: []corev1.Toleration{
 						{
 							Operator: corev1.TolerationOpExists,
+							Effect:   corev1.TaintEffectNoExecute,
+						},
+						{
+							Operator: corev1.TolerationOpExists,
+							Effect:   corev1.TaintEffectNoSchedule,
 						},
 					},
 					NodeSelector: map[string]string{
-						"worker.gardener.cloud/pool": poolName,
+						labelKeyCleanUpRequired: "true",
 					},
 					Containers: []corev1.Container{
 						{
@@ -917,6 +965,20 @@ func waitForDaemonSetCompletion(ctx context.Context, client client.Client, names
 	})
 }
 
-func getAnnotationKey(poolName string) string {
-	return fmt.Sprintf("node-local-dns-cleanup-required-for-%s", poolName)
+func getShootFromCluster(ctx context.Context, client client.Client, namespace string) (*gardencorev1beta1.Shoot, error) {
+	cluster := &v1alpha1.Cluster{}
+	if err := client.Get(ctx, types.NamespacedName{Name: namespace}, cluster); err != nil {
+		return nil, err
+	}
+
+	if cluster.Spec.Shoot.Raw == nil {
+		return nil, fmt.Errorf("shoot spec is empty in cluster %s", namespace)
+	}
+
+	decoder := kubernetes.GardenCodec.UniversalDeserializer()
+	shoot := &gardencorev1beta1.Shoot{}
+	if _, _, err := decoder.Decode(cluster.Spec.Shoot.Raw, nil, shoot); err != nil {
+		return nil, fmt.Errorf("failed to decode Shoot spec: %w", err)
+	}
+	return shoot, nil
 }
