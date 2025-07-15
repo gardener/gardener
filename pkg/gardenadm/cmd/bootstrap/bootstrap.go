@@ -73,7 +73,7 @@ gardenadm bootstrap --config-dir /path/to/manifests`,
 var NewClientSetFromFile = botanist.NewClientSetFromFile
 
 func run(ctx context.Context, opts *Options) error {
-	clientSet, err := NewClientSetFromFile(opts.Kubeconfig)
+	clientSet, err := NewClientSetFromFile(opts.Kubeconfig, kubernetes.SeedScheme)
 	if err != nil {
 		return fmt.Errorf("failed creating client: %w", err)
 	}
