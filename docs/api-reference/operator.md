@@ -3232,6 +3232,18 @@ cluster already has another, manually/custom managed VPA deployment. If this is 
 disable it, then reconciliation will fail.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>featureGates</code></br>
+<em>
+map[string]bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FeatureGates contains information about enabled feature gates.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.Settings">Settings

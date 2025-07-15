@@ -62,6 +62,8 @@ spec:
     #     foo: bar
       verticalPodAutoscaler:
         enabled: true
+      # featureGates:
+      #   SomeKubernetesFeature: true
       topologyAwareRouting:
         enabled: false
   # volume:

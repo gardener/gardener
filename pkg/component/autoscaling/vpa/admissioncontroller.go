@@ -326,6 +326,10 @@ func (v *vpa) computeAdmissionControllerArgs() []string {
 		out = append(out, "--kubeconfig="+gardenerutils.PathGenericKubeconfig)
 	}
 
+	if v.values.FeatureGates != nil {
+		out = append(out, v.computeFeatureGates())
+	}
+
 	return out
 }
 

@@ -327,8 +327,10 @@ spec:
                         featureGates:
                           additionalProperties:
                             type: boolean
-                          description: FeatureGates contains information about enabled
-                            feature gates.
+                          description: |-
+                            FeatureGates contains information about enabled feature gates.
+
+                            This is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.
                           type: object
                         imageGCHighThresholdPercent:
                           description: |-

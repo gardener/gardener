@@ -810,6 +810,9 @@ type VerticalPodAutoscaler struct {
 	// (default: 8)
 	// +optional
 	MemoryAggregationIntervalCount *int64 `json:"memoryAggregationIntervalCount,omitempty" protobuf:"varint,18,opt,name=memoryAggregationIntervalCount"`
+	// FeatureGates contains information about enabled feature gates.
+	// +optional
+	FeatureGates map[string]bool `json:"featureGates,omitempty" protobuf:"bytes,19,rep,name=featureGates"`
 }
 
 const (
@@ -855,6 +858,8 @@ var (
 // KubernetesConfig contains common configuration fields for the control plane components.
 type KubernetesConfig struct {
 	// FeatureGates contains information about enabled feature gates.
+	//
+	// This is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty" protobuf:"bytes,1,rep,name=featureGates"`
 }

@@ -7895,6 +7895,7 @@ map[string]bool
 <td>
 <em>(Optional)</em>
 <p>FeatureGates contains information about enabled feature gates.</p>
+<p>This is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.</p>
 </td>
 </tr>
 </tbody>
@@ -11482,6 +11483,18 @@ is enabled by default because Gardener heavily relies on a VPA being deployed. Y
 your seed cluster already has another, manually/custom managed VPA deployment.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>featureGates</code></br>
+<em>
+map[string]bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FeatureGates contains information about enabled feature gates.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettings">SeedSettings
@@ -14328,6 +14341,18 @@ int64
 MemoryAggregationWindowLength which in turn is the period for memory usage aggregation by VPA. In other words,
 <code>MemoryAggregationWindowLength = memory-aggregation-interval * memory-aggregation-interval-count</code>.
 (default: 8)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>featureGates</code></br>
+<em>
+map[string]bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FeatureGates contains information about enabled feature gates.</p>
 </td>
 </tr>
 </tbody>

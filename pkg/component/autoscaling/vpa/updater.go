@@ -56,13 +56,15 @@ type ValuesUpdater struct {
 
 func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 	var (
-		clusterRole              = v.emptyClusterRole("evictioner")
-		clusterRoleBinding       = v.emptyClusterRoleBinding("evictioner")
-		roleLeaderLocking        = v.emptyRole("leader-locking-vpa-updater")
-		roleBindingLeaderLocking = v.emptyRoleBinding("leader-locking-vpa-updater")
-		deployment               = v.emptyDeployment(updater)
-		podDisruptionBudget      = v.emptyPodDisruptionBudget(updater)
-		vpa                      = v.emptyVerticalPodAutoscaler(updater)
+		clusterRole               = v.emptyClusterRole("evictioner")
+		clusterRoleBinding        = v.emptyClusterRoleBinding("evictioner")
+		clusterRoleInPlace        = v.emptyClusterRole("vpa-updater-in-place")
+		clusterRoleBindingInPlace = v.emptyClusterRoleBinding("vpa-updater-in-place-binding")
+		roleLeaderLocking         = v.emptyRole("leader-locking-vpa-updater")
+		roleBindingLeaderLocking  = v.emptyRoleBinding("leader-locking-vpa-updater")
+		deployment                = v.emptyDeployment(updater)
+		podDisruptionBudget       = v.emptyPodDisruptionBudget(updater)
+		vpa                       = v.emptyVerticalPodAutoscaler(updater)
 	)
 
 	configs := component.ResourceConfigs{
@@ -73,6 +75,16 @@ func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 			v.reconcileUpdaterRoleBindingLeaderLocking(roleBindingLeaderLocking, roleLeaderLocking, updater)
 		}},
 		{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileUpdaterVPA(vpa, deployment) }},
+	}
+
+	if isEnabled, ok := v.values.FeatureGates["InPlaceOrRecreate"]; ok && isEnabled {
+		inPlaceConfigs := component.ResourceConfigs{
+			{Obj: clusterRoleInPlace, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRoleInPlace(clusterRoleInPlace) }},
+			{Obj: clusterRoleBindingInPlace, Class: component.Application, MutateFn: func() {
+				v.reconcileUpdaterClusterRoleBindingInPlace(clusterRoleBindingInPlace, clusterRoleInPlace, updater)
+			}},
+		}
+		configs = append(configs, inPlaceConfigs...)
 	}
 
 	if v.values.ClusterType == component.ClusterTypeSeed {
@@ -114,6 +126,32 @@ func (v *vpa) reconcileUpdaterClusterRole(clusterRole *rbacv1.ClusterRole) {
 }
 
 func (v *vpa) reconcileUpdaterClusterRoleBinding(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccountName string) {
+	clusterRoleBinding.Labels = getRoleLabel()
+	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
+	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     clusterRole.Name,
+	}
+	clusterRoleBinding.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      serviceAccountName,
+		Namespace: v.namespaceForApplicationClassResource(),
+	}}
+}
+
+func (v *vpa) reconcileUpdaterClusterRoleInPlace(clusterRole *rbacv1.ClusterRole) {
+	clusterRole.Labels = getRoleLabel()
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods", "pods/resize"},
+			Verbs:     []string{"patch"},
+		},
+	}
+}
+
+func (v *vpa) reconcileUpdaterClusterRoleBindingInPlace(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccountName string) {
 	clusterRoleBinding.Labels = getRoleLabel()
 	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
 	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
@@ -257,6 +295,10 @@ func (v *vpa) computeUpdaterArgs() []string {
 
 	if v.values.ClusterType == component.ClusterTypeShoot {
 		out = append(out, "--kubeconfig="+gardenerutils.PathGenericKubeconfig)
+	}
+
+	if v.values.FeatureGates != nil {
+		out = append(out, v.computeFeatureGates())
 	}
 
 	return out

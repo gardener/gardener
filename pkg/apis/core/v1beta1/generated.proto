@@ -1762,6 +1762,8 @@ message Kubernetes {
 // KubernetesConfig contains common configuration fields for the control plane components.
 message KubernetesConfig {
   // FeatureGates contains information about enabled feature gates.
+  //
+  // This is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.
   // +optional
   map<string, bool> featureGates = 1;
 }
@@ -2842,6 +2844,10 @@ message SeedSettingVerticalPodAutoscaler {
   // is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
   // your seed cluster already has another, manually/custom managed VPA deployment.
   optional bool enabled = 1;
+
+  // FeatureGates contains information about enabled feature gates.
+  // +optional
+  map<string, bool> featureGates = 2;
 }
 
 // SeedSettings contains certain settings for this seed cluster.
@@ -3564,6 +3570,10 @@ message VerticalPodAutoscaler {
   // (default: 8)
   // +optional
   optional int64 memoryAggregationIntervalCount = 18;
+
+  // FeatureGates contains information about enabled feature gates.
+  // +optional
+  map<string, bool> featureGates = 19;
 }
 
 // Volume contains information about the volume type, size, and encryption.

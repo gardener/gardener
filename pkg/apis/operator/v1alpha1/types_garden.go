@@ -185,6 +185,9 @@ type SettingVerticalPodAutoscaler struct {
 	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
+	// FeatureGates contains information about enabled feature gates.
+	// +optional
+	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 }
 
 // SettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.

@@ -444,6 +444,14 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secr
 }
 
 func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	var (
+		featureGates map[string]bool
+	)
+
+	if garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler != nil {
+		featureGates = garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates
+	}
+
 	return sharedcomponent.NewVerticalPodAutoscaler(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -455,6 +463,7 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 		v1beta1constants.PriorityClassNameGardenSystem200,
 		v1beta1constants.PriorityClassNameGardenSystem200,
 		true,
+		featureGates,
 	)
 }
 

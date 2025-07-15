@@ -104,6 +104,8 @@ type Values struct {
 	Recommender ValuesRecommender
 	// Updater is a set of configuration values for the vpa-updater.
 	Updater ValuesUpdater
+	// FeatureGates is a map of feature gates for the vpa components.
+	FeatureGates map[string]bool
 }
 
 func (v *vpa) Deploy(ctx context.Context) error {
@@ -331,4 +333,8 @@ func (v *vpa) getPrometheusLabel() string {
 		return seed.Label
 	}
 	return shoot.Label
+}
+
+func (v *vpa) computeFeatureGates() string {
+	return kubernetesutils.FeatureGatesToCommandLineParameter(v.values.FeatureGates)
 }
