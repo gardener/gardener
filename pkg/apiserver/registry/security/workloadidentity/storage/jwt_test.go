@@ -7,7 +7,10 @@ package storage
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -30,6 +33,8 @@ import (
 
 var (
 	rsaPrivateKey *rsa.PrivateKey
+	seedUser      user.DefaultInfo
+	nonSeedUser   user.DefaultInfo
 )
 
 var _ = BeforeSuite(func() {
@@ -39,6 +44,20 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = Describe("#TokenRequest", func() {
+	BeforeEach(func() {
+		seedUser = user.DefaultInfo{
+			Name: v1beta1constants.SeedUserNamePrefix + "foo",
+			Groups: []string{
+				v1beta1constants.SeedsGroup,
+				"foo",
+			},
+		}
+		nonSeedUser = user.DefaultInfo{
+			Name:   "foo",
+			Groups: []string{"foo", "bar"},
+		}
+	})
+
 	Context("#getGardenerClaims", func() {
 		const (
 			workloadName      = "identity"
@@ -116,8 +135,7 @@ var _ = Describe("#TokenRequest", func() {
 
 				Expect(g).ToNot(BeNil())
 				Expect(g.Gardener.WorkloadIdentity.Name).To(Equal(workloadName))
-				Expect(g.Gardener.WorkloadIdentity.Namespace).ToNot(BeNil())
-				Expect(*g.Gardener.WorkloadIdentity.Namespace).To(Equal(workloadNamespace))
+				Expect(g.Gardener.WorkloadIdentity.Namespace).To(Equal(workloadNamespace))
 				Expect(g.Gardener.WorkloadIdentity.UID).To(Equal(workloadUID))
 
 				if objType == "none" {
@@ -131,8 +149,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(ctxObjects.shoot).ToNot(BeNil())
 					Expect(g.Gardener.Shoot).ToNot(BeNil())
 					Expect(g.Gardener.Shoot.Name).To(Equal(ctxObjects.shoot.GetName()))
-					Expect(g.Gardener.Shoot.Namespace).ToNot(BeNil())
-					Expect(*g.Gardener.Shoot.Namespace).To(Equal(ctxObjects.shoot.GetNamespace()))
+					Expect(g.Gardener.Shoot.Namespace).To(Equal(ctxObjects.shoot.GetNamespace()))
 					Expect(g.Gardener.Shoot.UID).To(BeEquivalentTo(ctxObjects.shoot.GetUID()))
 				} else {
 					Expect(ctxObjects.shoot).To(BeNil())
@@ -144,7 +161,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(g.Gardener.Seed).ToNot(BeNil())
 					Expect(g.Gardener.Seed.Name).To(Equal(ctxObjects.seed.GetName()))
 					Expect(g.Gardener.Seed.UID).To(BeEquivalentTo(ctxObjects.seed.GetUID()))
-					Expect(g.Gardener.Seed.Namespace).To(BeNil())
+					Expect(g.Gardener.Seed.Namespace).To(BeZero())
 				} else {
 					Expect(ctxObjects.seed).To(BeNil())
 					Expect(g.Gardener.Seed).To(BeNil())
@@ -155,7 +172,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(g.Gardener.Project).ToNot(BeNil())
 					Expect(g.Gardener.Project.Name).To(Equal(ctxObjects.project.GetName()))
 					Expect(g.Gardener.Project.UID).To(BeEquivalentTo(ctxObjects.project.GetUID()))
-					Expect(g.Gardener.Project.Namespace).To(BeNil())
+					Expect(g.Gardener.Project.Namespace).To(BeZero())
 				} else {
 					Expect(ctxObjects.project).To(BeNil())
 					Expect(g.Gardener.Project).To(BeNil())
@@ -166,7 +183,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(g.Gardener.BackupBucket).ToNot(BeNil())
 					Expect(g.Gardener.BackupBucket.Name).To(Equal(ctxObjects.backupBucket.GetName()))
 					Expect(g.Gardener.BackupBucket.UID).To(BeEquivalentTo(ctxObjects.backupBucket.GetUID()))
-					Expect(g.Gardener.BackupBucket.Namespace).To(BeNil())
+					Expect(g.Gardener.BackupBucket.Namespace).To(BeZero())
 				} else {
 					Expect(ctxObjects.backupBucket).To(BeNil())
 					Expect(g.Gardener.BackupBucket).To(BeNil())
@@ -177,8 +194,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(g.Gardener.BackupEntry).ToNot(BeNil())
 					Expect(g.Gardener.BackupEntry.Name).To(Equal(ctxObjects.backupEntry.GetName()))
 					Expect(g.Gardener.BackupEntry.UID).To(BeEquivalentTo(ctxObjects.backupEntry.GetUID()))
-					Expect(g.Gardener.BackupEntry.Namespace).ToNot(BeNil())
-					Expect(*g.Gardener.BackupEntry.Namespace).To(Equal(ctxObjects.backupEntry.GetNamespace()))
+					Expect(g.Gardener.BackupEntry.Namespace).To(Equal(ctxObjects.backupEntry.GetNamespace()))
 				} else {
 					Expect(ctxObjects.backupEntry).To(BeNil())
 					Expect(g.Gardener.BackupEntry).To(BeNil())
@@ -216,8 +232,6 @@ var _ = Describe("#TokenRequest", func() {
 			project      *gardencorev1beta1.Project
 			backupBucket *gardencorev1beta1.BackupBucket
 			backupEntry  *gardencorev1beta1.BackupEntry
-			seedUser     user.DefaultInfo
-			nonSeedUser  user.DefaultInfo
 
 			shootInformer        gardenv1betainformers.ShootInformer
 			seedInformer         gardenv1betainformers.SeedInformer
@@ -251,17 +265,6 @@ var _ = Describe("#TokenRequest", func() {
 				TypeMeta:   metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "BackupEntry"},
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespaceName, Name: backupEntryName, UID: backupEntryUID},
 				Spec:       gardencorev1beta1.BackupEntrySpec{BucketName: backupBucketName},
-			}
-			seedUser = user.DefaultInfo{
-				Name: v1beta1constants.SeedUserNamePrefix + "foo",
-				Groups: []string{
-					v1beta1constants.SeedsGroup,
-					"foo",
-				},
-			}
-			nonSeedUser = user.DefaultInfo{
-				Name:   "foo",
-				Groups: []string{"foo", "bar"},
 			}
 			informerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
 
@@ -879,31 +882,87 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(exp.After(now)).To(BeTrue())
 			Expect(token).ToNot(BeEmpty())
 		})
+
+		It("should omit setting empty namespace claim", func() {
+			var (
+				now          = time.Now()
+				tokenRequest = &securityapi.TokenRequest{
+					Spec: securityapi.TokenRequestSpec{
+						ContextObject: &securityapi.ContextObject{
+							APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+							Kind:       "Seed",
+							Name:       seedName,
+							UID:        seedUID,
+						},
+						ExpirationSeconds: int64(3600),
+					},
+				}
+			)
+			token, exp, err := r.issueToken(&seedUser, tokenRequest, workloadIdentity)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exp).ToNot(BeNil())
+			Expect(exp.After(now)).To(BeTrue())
+			Expect(token).ToNot(BeEmpty())
+			Expect(strings.Split(token, ".")).To(HaveLen(3))
+
+			encodedPayload := strings.Split(token, ".")[1]
+			Expect(encodedPayload).ToNot(BeEmpty())
+
+			payload, err := base64.RawURLEncoding.DecodeString(encodedPayload)
+			Expect(err).ToNot(HaveOccurred())
+
+			gardenerClaims := map[string]any{}
+			Expect(json.Unmarshal(payload, &gardenerClaims)).To(Succeed())
+			Expect(gardenerClaims).To(HaveKey("gardener.cloud"))
+
+			gardenerCloud, ok := (gardenerClaims["gardener.cloud"]).(map[string]any)
+			Expect(ok).To(BeTrue())
+
+			Expect(gardenerCloud).To(HaveKey("seed"))
+			seedClaims, ok := (gardenerCloud["seed"]).(map[string]any)
+			Expect(ok).To(BeTrue())
+
+			Expect(seedClaims).To(HaveLen(2))
+			Expect(seedClaims).To(Not(HaveKey("namespace")))
+			Expect(seedClaims).To(And(HaveKey("name"), HaveKey("uid")))
+
+			name, ok := (seedClaims["name"]).(string)
+			Expect(ok).To(BeTrue())
+			Expect(name).To(Equal(seedName))
+
+			uid, ok := (seedClaims["uid"]).(string)
+			Expect(ok).To(BeTrue())
+			Expect(uid).To(Equal(string(seedUID)))
+		})
 	})
 })
-
-type fakeShootLister struct {
-	err error
-}
-type fakeShootNamespaceLister struct {
-	err error
-}
 
 var (
 	_ gardencorev1beta1listers.ShootLister          = (*fakeShootLister)(nil)
 	_ gardencorev1beta1listers.ShootNamespaceLister = (*fakeShootNamespaceLister)(nil)
 )
 
+type fakeShootLister struct {
+	err error
+}
+
 func (*fakeShootLister) List(_ labels.Selector) (ret []*gardencorev1beta1.Shoot, err error) {
 	return []*gardencorev1beta1.Shoot{}, nil
 }
+
 func (f *fakeShootLister) Shoots(_ string) gardencorev1beta1listers.ShootNamespaceLister {
 	return &fakeShootNamespaceLister{err: f.err}
+}
+
+type fakeShootNamespaceLister struct {
+	err error
 }
 
 func (*fakeShootNamespaceLister) List(_ labels.Selector) (ret []*gardencorev1beta1.Shoot, err error) {
 	return []*gardencorev1beta1.Shoot{}, nil
 }
+
 func (f *fakeShootNamespaceLister) Get(_ string) (*gardencorev1beta1.Shoot, error) {
 	return nil, f.err
 }
