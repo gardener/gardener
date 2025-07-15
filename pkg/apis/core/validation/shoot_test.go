@@ -728,6 +728,37 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 
+			It("should allow valid config for nginx-ingress", func() {
+				shoot.Spec.Addons.NginxIngress.Config = map[string]string{"foo": "bar"}
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid invalid config for nginx-ingress", func() {
+				shoot.Spec.Addons.NginxIngress.Config = map[string]string{
+					"$/{}|][":                "1",
+					strings.Repeat("a", 260): "2",
+					"valid-key":              strings.Repeat("b", 1024*1024),
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.config[$/{}|][]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.config[" + strings.Repeat("a", 260) + "]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeTooLong),
+						"Field": Equal("spec.addons.nginxIngress.config"),
+					})),
+				))
+			})
+
 			It("should allow external traffic policies 'Cluster' for nginx-ingress", func() {
 				v := corev1.ServiceExternalTrafficPolicyCluster
 				shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v

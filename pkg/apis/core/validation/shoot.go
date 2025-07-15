@@ -524,6 +524,19 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 			allErrs = append(allErrs, validation.IsValidCIDR(fldPath.Child("nginxIngress", "loadBalancerSourceRanges").Index(i), sourceRange)...)
 		}
 
+		totalSize := 0
+
+		for key, value := range addons.NginxIngress.Config {
+			for _, msg := range validation.IsConfigMapKey(key) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("nginxIngress", "config").Key(key), key, msg))
+			}
+			totalSize += len(value)
+		}
+
+		if totalSize > corev1.MaxSecretSize {
+			allErrs = append(allErrs, field.TooLong(fldPath.Child("nginxIngress", "config"), "", corev1.MaxSecretSize))
+		}
+
 		if policy := addons.NginxIngress.ExternalTrafficPolicy; policy != nil {
 			if !availableNginxIngressExternalTrafficPolicies.Has(string(*policy)) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginxIngress", "externalTrafficPolicy"), *policy, sets.List(availableNginxIngressExternalTrafficPolicies)))
