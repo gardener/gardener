@@ -21,7 +21,7 @@ spec:
       priorityClassName: system-cluster-critical
       containers:
       - command: ["/gardener_apiserver_sshd/entrypoint.sh"]
-        image: alpine:3.22.0
+        image: alpine:3.22.1
         name: sshd
         volumeMounts:
         - name: gardener-apiserver-sshd
