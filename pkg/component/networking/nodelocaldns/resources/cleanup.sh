@@ -17,18 +17,20 @@ fi
 COMMENT="NodeLocal DNS Cache:"
 
 # Delete all iptables rules with the specified comment
-rules=$(iptables-legacy-save | grep -- "--comment \"$COMMENT\"")
-if [ -n "$rules" ]; then
-    echo "$rules" | while read -r line; do
-        rule=$(echo "$line" | sed -e 's/^-A/-D/')
-        if ! iptables $rule; then
-            echo "Failed to delete iptables rule: $rule" >&2
-            exit 1
-        fi
-    done
-    echo "All iptables rules with the comment \"$COMMENT\" have been deleted successfully."
-else
-    echo "No iptables rules with the comment \"$COMMENT\" found for nodelocaldns. Skipping deletion."
-fi
+for cmd in iptables-legacy-save ip6tables-legacy-save; do
+    rules=$($cmd | grep -- "--comment \"$COMMENT\"")
+    if [ -n "$rules" ]; then
+        echo "$rules" | while read -r line; do
+            rule=$(echo "$line" | sed -e 's/^-A/-D/')
+            if ! ${cmd%-save} $rule; then
+                echo "Failed to delete rule in $cmd: $rule" >&2
+                exit 1
+            fi
+        done
+        echo "All rules with the comment \"$COMMENT\" have been deleted successfully from $cmd."
+    else
+        echo "No rules with the comment \"$COMMENT\" found for nodelocaldns in $cmd. Skipping deletion."
+    fi
+done
 touch /tmp/healthy
 sleep infinity

@@ -5954,9 +5954,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}
 				shoot.Spec.Kubernetes.KubeAPIServer = nil
 				shoot.Spec.Kubernetes.Version = "1.34.0"
+				shoot.Spec.CloudProfileName = nil
+				cloudProfileRef := &core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "my-profile",
+				}
+				shoot.Spec.CloudProfile = cloudProfileRef
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.SystemComponents.NodeLocalDNS.Enabled = true
+				newShoot.Spec.CloudProfileName = nil
+				newShoot.Spec.CloudProfile = cloudProfileRef
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})

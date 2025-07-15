@@ -119,6 +119,18 @@ func (mr *MockInterfaceMockRecorder) SetLogger(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogger", reflect.TypeOf((*MockInterface)(nil).SetLogger), arg0)
 }
 
+// SetSeedClientSet mocks base method.
+func (m *MockInterface) SetSeedClientSet(arg0 kubernetes.Interface) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetSeedClientSet", arg0)
+}
+
+// SetSeedClientSet indicates an expected call of SetSeedClientSet.
+func (mr *MockInterfaceMockRecorder) SetSeedClientSet(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSeedClientSet", reflect.TypeOf((*MockInterface)(nil).SetSeedClientSet), arg0)
+}
+
 // SetShootClientSet mocks base method.
 func (m *MockInterface) SetShootClientSet(arg0 kubernetes.Interface) {
 	m.ctrl.T.Helper()

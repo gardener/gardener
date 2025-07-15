@@ -1788,13 +1788,27 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 			})
 
-			It("when node-local-dns enabled and changing kubernetesVersion >= 1.34 from below", func() {
-				values.NodeLocalDNSEnabled = true
+			It("when node-local-dns gets enabled and kubernetes version is equal or larger than 1.34", func() {
+				values.NodeLocalDNSEnabled = false
 				var err error
-				kubernetesVersion = semver.MustParse("1.33")
-				hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
-				Expect(err).ToNot(HaveOccurred())
 				kubernetesVersion = semver.MustParse("1.34")
+				hash1, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				Expect(err).ToNot(HaveOccurred())
+				values.NodeLocalDNSEnabled = true
+				hash2, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(hash1).To(Equal(hash2))
+			})
+			It("when node-local-dns gets enabled and kubernetes version is lower than 1.34", func() {
+				values.NodeLocalDNSEnabled = false
+				var err error
+				kubernetesVersion = semver.MustParse("1.31")
+				hash1, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				Expect(err).ToNot(HaveOccurred())
+				values.NodeLocalDNSEnabled = true
+				hash2, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(hash1).ToNot(Equal(hash2))
 			})
 		})
 	})

@@ -559,17 +559,34 @@ var _ = Describe("Machines", func() {
 
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
 			})
-			It("when kubernetes version is updated to 1.34 and node local dns is enabled", func() {
-				c.Shoot.Spec.Kubernetes.Version = "1.30.0"
-				p.KubernetesVersion = ptr.To("1.30.0")
+			It("when node-local-dns gets enabled and kubernetes version is equal or larger than 1.34", func() {
+				c.Shoot.Spec.Kubernetes.Version = "1.34.0"
+				p.KubernetesVersion = ptr.To("1.34.0")
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
-					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true},
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false},
 				}
 				hash1, err := WorkerPoolHashV1(p, c)
 				Expect(err).NotTo(HaveOccurred())
-				p.KubernetesVersion = ptr.To("1.34.0")
+				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true},
+				}
 				hash2, err := WorkerPoolHashV1(p, c)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(hash1).To(Equal(hash2))
+			})
+			It("when node-local-dns gets enabled and kubernetes version is lower than 1.34", func() {
+				c.Shoot.Spec.Kubernetes.Version = "1.31.0"
+				p.KubernetesVersion = ptr.To("1.31.0")
+				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false},
+				}
+				hash1, err := WorkerPoolHashV1(p, c)
+				Expect(err).NotTo(HaveOccurred())
+				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true},
+				}
+				hash2, err := WorkerPoolHashV1(p, c)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(hash1).NotTo(Equal(hash2))
 			})
 		})
