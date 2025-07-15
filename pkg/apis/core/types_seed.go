@@ -280,7 +280,7 @@ type SeedSettingVerticalPodAutoscaler struct {
 	// is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
 	// your seed cluster already has another, manually/custom managed VPA deployment.
 	Enabled bool
-	// FeatureGates is a map of feature gates for the vpa components.
+	// FeatureGates contains information about enabled feature gates.
 	FeatureGates map[string]bool
 }
 
