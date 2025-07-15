@@ -22,6 +22,7 @@ With Kubernetes 1.33, the `InPlacePodVerticalScaling` feature gate, which enable
 ### Vertical Pod Autoscaling
 
 With [1.4.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.4.0), the `InPlaceOrRecreate` feature gate, which enables `in-place` resource updates for `vpa-admission-controller` and `vpa-updater`, got introduced as an _alpha_ feature. To explicitly enable the feature for `Shoot`, `Seed` or `Garden` clusters, the `Vertical Pod Autoscaling` configurations, for the respective cluster types need to include an additional `InPlaceOrRecreate: true` entry in the `featureGates` map.
+Refer to the [usage guide](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md#usage) for details about instrumenting a `VerticalPodAutoscaler` resource with `in-place` updates.
 
 ## Configuration
 
