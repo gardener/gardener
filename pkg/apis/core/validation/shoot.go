@@ -1299,7 +1299,6 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, versio
 	if count := autoScaler.MemoryAggregationIntervalCount; count != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*count, fldPath.Child("memoryAggregationIntervalCount"))...)
 	}
-
 	allErrs = append(allErrs, featuresvalidation.ValidateVpaFeatureGates(autoScaler.FeatureGates, fldPath.Child("featureGates"))...)
 
 	if isEnabled, ok := autoScaler.FeatureGates["InPlaceOrRecreate"]; ok && isEnabled {

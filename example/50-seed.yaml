@@ -97,6 +97,8 @@ spec:
   #       allowed: true
     verticalPodAutoscaler:
       enabled: true # a Gardener-managed VPA deployment is enabled
+    # featureGates:
+    #   SomeKubernetesFeature: true
     topologyAwareRouting:
       enabled: true # certain Services deployed in the seed will be topology-aware
 # taints:

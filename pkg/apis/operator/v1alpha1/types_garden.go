@@ -185,7 +185,7 @@ type SettingVerticalPodAutoscaler struct {
 	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
-	// FeatureGates is a map of feature gates for the vpa components.
+	// FeatureGates contains information about enabled feature gates.
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 }

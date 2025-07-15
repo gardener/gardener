@@ -339,8 +339,6 @@ spec:
   #   ignoreDaemonsetsUtilization: false
   #   verbosity: 2
   # verticalPodAutoscaler:
-  #   featureGates:
-  #     SomeKubernetesFeature: true
   #   enabled: true
   #   evictAfterOOMThreshold: 10m0s
   #   evictionRateBurst: 1
@@ -359,6 +357,8 @@ spec:
   #   memoryHistogramDecayHalfLife: 24h
   #   memoryAggregationInterval: 24h
   #   memoryAggregationIntervalCount: 8
+  #   featureGates:
+  #     SomeKubernetesFeature: true
   dns:
     # When the shoot shall use a cluster domain no domain and no providers need to be provided - Gardener will
     # automatically compute a correct domain based on the default domains in the garden cluster.
