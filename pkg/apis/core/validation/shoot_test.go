@@ -3931,6 +3931,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootUpdate(newShoot, shoot)
 				Expect(errorList).To(BeEmpty())
 			})
+			It("should forbid changing ipfamilies from dual-stack to single-stack", func() {
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
+				errorList := ValidateShootUpdate(newShoot, shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.networking.ipFamilies"),
+					"Detail": Equal("unsupported IP family update: oldIPFamilies=[IPv4 IPv6], newIPFamilies=[IPv4]"),
+				}))))
+			})
 		})
 
 		Context("dual-stack", func() {
