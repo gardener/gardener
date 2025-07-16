@@ -284,6 +284,12 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, ValidateTolerations(spec.Tolerations, fldPath.Child("tolerations"))...)
 	allErrs = append(allErrs, ValidateSystemComponents(spec.SystemComponents, fldPath.Child("systemComponents"), workerless)...)
 
+	if spec.ExposureClassName != nil {
+		for _, err := range validation.IsDNS1123Subdomain(*spec.ExposureClassName) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("exposureClassName"), *spec.ExposureClassName, fmt.Sprintf("exposureClassName is not a valid DNS subdomain: %q", err)))
+		}
+	}
+
 	return allErrs
 }
 
