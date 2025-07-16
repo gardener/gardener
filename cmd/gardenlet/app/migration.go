@@ -352,6 +352,9 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 					Image:           *prometheus.Spec.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command:         []string{"sh", "-c", "rm -rf /prometheus/prometheus-; rm -rf /prometheus/prometheus-db/prometheus-"},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
+					},
 					VolumeMounts: []corev1.VolumeMount{{
 						Name:      "prometheus-db",
 						MountPath: "/prometheus",
