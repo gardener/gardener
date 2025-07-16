@@ -118,10 +118,10 @@ type Reconciler struct {
 
 // Reconcile decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
-func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := logf.FromContext(ctx)
+func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(reconcileCtx)
 
-	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
+	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
 	secret := &corev1.Secret{}
@@ -182,6 +182,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if isInPlaceUpdate(oscChanges) {
+		// In case of in-place update, we use retries for certain cases like OS update with higher timeouts,
+		// so we need to overwrite the context to use a longer timeout.
+		ctx, cancel = context.WithTimeout(reconcileCtx, 10*time.Minute)
+		defer cancel()
+
 		if !nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {
 			if node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] != machinev1alpha1.LabelValueNodeUpdateFailed {
 				log.Info("Node is not ready for in-place update, will be requeued when the node has the ready-for-update condition", "node", node.Name)
