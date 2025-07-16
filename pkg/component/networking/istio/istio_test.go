@@ -217,6 +217,11 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
+		istioIngressTelemetry = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_telemetry.yaml")
+			return string(data)
+		}
+
 		istioProxyProtocolEnvoyFilterSNI = func() string {
 			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_sni.yaml")
 			return string(data)
@@ -376,6 +381,7 @@ var _ = Describe("istiod", func() {
 				istioIngressServiceAccount(),
 				istioIngressDeployment(minReplicas),
 				istioIngressServiceMonitor(),
+				istioIngressTelemetry(),
 				istioIngressEnvoyFilter(),
 			}
 

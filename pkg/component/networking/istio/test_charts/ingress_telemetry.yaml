@@ -1,0 +1,19 @@
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  creationTimestamp: null
+  labels:
+    prometheus: aggregate
+  name: aggregate-enable-upstream-address
+  namespace: test-ingress
+spec:
+  metrics:
+  - overrides:
+    - match:
+        metric: ALL_METRICS
+      tagOverrides:
+        upstream_address:
+          value: upstream.address
+    providers:
+    - name: prometheus
+status: {}

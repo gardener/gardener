@@ -216,6 +216,7 @@ build:
             - pkg/component/observability/plutono
             - pkg/component/observability/plutono/dashboards/common
             - pkg/component/observability/plutono/dashboards/garden
+            - pkg/component/observability/plutono/dashboards/garden-seed
             - pkg/component/observability/plutono/dashboards/garden-shoot
             - pkg/component/observability/plutono/dashboards/seed
             - pkg/component/observability/plutono/dashboards/shoot
