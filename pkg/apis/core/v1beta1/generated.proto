@@ -1028,6 +1028,7 @@ message ExpirableVersion {
   // Version is the version identifier.
   optional string version = 1;
 
+  // ExpirationDate defines the time at which this version expires.
   // Deprecated: Is replaced by Lifecycle.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationDate = 2;
