@@ -1318,7 +1318,7 @@ func ValidateVerticalPodAutoscalerMaxAllowed(maxAllowed corev1.ResourceList, fld
 	for resource, quantity := range maxAllowed {
 		resourcePath := fldPath.Child("maxAllowed", resource.String())
 		if !allowedResources.Has(resource) {
-			allErrs = append(allErrs, field.NotSupported(resourcePath, resource, allowedResources.UnsortedList()))
+			allErrs = append(allErrs, field.NotSupported(resourcePath, resource, sets.List(allowedResources)))
 		}
 
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
