@@ -35,7 +35,7 @@ var _ = Describe("Discover", func() {
 		It("should return the expected output", func() {
 			Expect(command.Flags().Set("kubeconfig", "some-path-to-kubeconfig")).To(Succeed())
 
-			Expect(command.RunE(command, nil)).To(Succeed())
+			Expect(command.RunE(command, []string{"some-path-to-shoot-manifest-file"})).To(Succeed())
 
 			Eventually(stdErr).Should(Say("Not implemented"))
 		})

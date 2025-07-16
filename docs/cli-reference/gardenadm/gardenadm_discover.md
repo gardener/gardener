@@ -14,14 +14,16 @@ gardenadm discover [flags]
 
 ```
 # Download the configuration
-gardenadm discover --kubeconfig ~/.kube/config
+gardenadm discover <path-to-shoot-manifest>
 ```
 
 ### Options
 
 ```
-  -h, --help                help for discover
-  -k, --kubeconfig string   Path to the kubeconfig file pointing to the garden cluster
+  -d, --config-dir string                        Path to a directory containing the Gardener configuration files for the init command, i.e., files containing resources like CloudProfile, Shoot, etc. The files must be in YAML/JSON and have .{yaml,yml,json} file extensions to be considered.
+  -h, --help                                     help for discover
+  -k, --kubeconfig string                        Path to the kubeconfig file pointing to the garden cluster
+      --runs-control-plane gardenadm bootstrap   Indicates whether the control plane is run in the same cluster. This should be set to false if gardenadm bootstrap will be used for bootstrapping the shoot cluster. (default true)
 ```
 
 ### Options inherited from parent commands

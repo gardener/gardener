@@ -22,7 +22,7 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Long:  "Conveniently download Gardener configuration resources from an existing garden cluster (CloudProfile, ControllerRegistrations, ControllerDeployments, etc.)",
 
 		Example: `# Download the configuration
-gardenadm discover --kubeconfig ~/.kube/config`,
+gardenadm discover <path-to-shoot-manifest>`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {
