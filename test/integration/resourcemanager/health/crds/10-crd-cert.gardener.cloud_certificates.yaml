@@ -97,6 +97,12 @@ spec:
                   Must be at least twice the renewal window.
                   Value must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration.
                 type: string
+              emailAddresses:
+                description: EmailAddresses are the optional requested email subject
+                  alternative names.
+                items:
+                  type: string
+                type: array
               ensureRenewedAfter:
                 description: EnsureRenewedAfter specifies a time stamp in the past.
                   Renewing is only triggered if certificate notBefore date is before
@@ -108,6 +114,12 @@ spec:
                   is used if CNAME record for DNS01 challange domain `_acme-challenge.<domain>`
                   is set.
                 type: boolean
+              ipAddresses:
+                description: IPAddresses are the optional requested IP address subject
+                  alternative names.
+                items:
+                  type: string
+                type: array
               isCA:
                 description: |-
                   IsCA value is used to set the `isCA` field on the certificate request.
@@ -262,6 +274,12 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
+              uris:
+                description: URIs are the optional requested URI subject alternative
+                  names.
+                items:
+                  type: string
+                type: array
             type: object
           status:
             description: CertificateStatus is the status of the certificate request.
