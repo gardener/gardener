@@ -32,7 +32,6 @@ import (
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -71,21 +70,19 @@ func (b *AutonomousBotanist) deployKubeAPIServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(ptr.To[int32](0))
 
 	var enableNodeAgentAuthorizer bool
-	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-		// kube-apiserver must be able to resolve the gardener-resource-manager service IP to access the
-		// node-agent-authorizer webhook. Thus, we fetch the service IP. It is used to create a host alias in the
-		// kube-apiserver pod spec later. If the service does not exist yet, then kube-apiserver is bootstrapped for the
-		// first time - in this case, we don't activate the authorizer webhook.
-		service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: resourcemanagerconstants.ServiceName, Namespace: b.Shoot.ControlPlaneNamespace}}
-		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(service), service); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("failed getting service %s: %w", client.ObjectKeyFromObject(service), err)
-			}
+	// kube-apiserver must be able to resolve the gardener-resource-manager service IP to access the
+	// node-agent-authorizer webhook. Thus, we fetch the service IP. It is used to create a host alias in the
+	// kube-apiserver pod spec later. If the service does not exist yet, then kube-apiserver is bootstrapped for the
+	// first time - in this case, we don't activate the authorizer webhook.
+	service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: resourcemanagerconstants.ServiceName, Namespace: b.Shoot.ControlPlaneNamespace}}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(service), service); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed getting service %s: %w", client.ObjectKeyFromObject(service), err)
 		}
-
-		b.gardenerResourceManagerServiceIPs = service.Spec.ClusterIPs
-		enableNodeAgentAuthorizer = len(b.gardenerResourceManagerServiceIPs) > 0
 	}
+
+	b.gardenerResourceManagerServiceIPs = service.Spec.ClusterIPs
+	enableNodeAgentAuthorizer = len(b.gardenerResourceManagerServiceIPs) > 0
 
 	return b.DeployKubeAPIServer(ctx, enableNodeAgentAuthorizer)
 }

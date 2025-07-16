@@ -15,7 +15,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -110,7 +109,6 @@ func run(ctx context.Context, opts *Options) error {
 		approveGardenerNodeAgentCSR = g.Add(flow.Task{
 			Name:         "Approving gardener-node-agent client certificate signing request",
 			Fn:           flow.TaskFn(b.ApproveNodeAgentCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
-			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer),
 			Dependencies: flow.NewTaskIDs(activateGardenerNodeAgent),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
