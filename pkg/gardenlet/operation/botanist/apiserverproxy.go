@@ -53,16 +53,6 @@ func (b *Botanist) DeployAPIServerProxy(ctx context.Context) error {
 	if !b.ShootUsesDNS() {
 		return b.Shoot.Components.SystemComponents.APIServerProxy.Destroy(ctx)
 	}
-
 	b.Shoot.Components.SystemComponents.APIServerProxy.SetAdvertiseIPAddress(b.APIServerClusterIP)
-
-	if err := b.Shoot.Components.SystemComponents.APIServerProxy.Deploy(ctx); err != nil {
-		return err
-	}
-
-	// TODO(Wieneo): Remove this after Gardener v1.123
-	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
-		shoot.Status.Constraints = v1beta1helper.RemoveConditions(shoot.Status.Constraints, gardencorev1beta1.ShootAPIServerProxyUsesHTTPProxy)
-		return nil
-	})
+	return b.Shoot.Components.SystemComponents.APIServerProxy.Deploy(ctx)
 }
