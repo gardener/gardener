@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/certificate"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
@@ -32,13 +31,11 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 		return fmt.Errorf("failed computing label selector predicate for node: %w", err)
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-		if err := (&certificate.Reconciler{
-			Cancel:      cancel,
-			MachineName: machineName,
-		}).AddToManager(mgr); err != nil {
-			return fmt.Errorf("failed adding certificate controller: %w", err)
-		}
+	if err := (&certificate.Reconciler{
+		Cancel:      cancel,
+		MachineName: machineName,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding certificate controller: %w", err)
 	}
 
 	if err := (&node.Reconciler{}).AddToManager(mgr, nodePredicate); err != nil {
@@ -67,7 +64,7 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 
 	// Enable lease controller only if gardener-node-agent was able to determine the node name.
 	// Otherwise, gardener-node-agent would try to list leases of the entire kube-system namespace which is not allowed by node-agent-authorizer.
-	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || nodeName != "" {
+	if nodeName != "" {
 		if err := (&lease.Reconciler{}).AddToManager(mgr, nodePredicate); err != nil {
 			return fmt.Errorf("failed adding lease controller: %w", err)
 		}

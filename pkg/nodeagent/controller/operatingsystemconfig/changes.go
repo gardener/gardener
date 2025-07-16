@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	oscutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
-	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -249,7 +248,7 @@ func ComputeCredentialsRotationChanges(oldOSC, newOSC *extensionsv1alpha1.Operat
 		caRotation := newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil && newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime != nil
 
 		kubeletCARotation = caRotation
-		nodeAgentCARotation = caRotation && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)
+		nodeAgentCARotation = caRotation
 
 		serviceAccountKeyRotation = newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil && newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime != nil
 
@@ -261,7 +260,7 @@ func ComputeCredentialsRotationChanges(oldOSC, newOSC *extensionsv1alpha1.Operat
 		!oldOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime.Equal(newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime)
 
 	kubeletCARotation = caRotation
-	nodeAgentCARotation = caRotation && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)
+	nodeAgentCARotation = caRotation
 
 	serviceAccountKeyRotation = oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
 		newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
