@@ -721,6 +721,19 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 	}
 
 	if (nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) && !kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful)) || kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed) {
+		// It can so happen that the updateOSInPlace function returns nil error, because calling the update command succeeded,
+		// but the OS is not yet rebooted. We should not proceed the reconciliation until the node-agent is restarted after the OS update.
+		currentOSVersion, err := GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
+		if err != nil {
+			return fmt.Errorf("failed to get current OS version: %w", err)
+		}
+
+		if osVersionUpToDate, err := IsOsVersionUpToDate(currentOSVersion, osc); err != nil {
+			return err
+		} else if !osVersionUpToDate {
+			return reconcile.TerminalError(fmt.Errorf("stopping reconciliation until gardener-node-agent is restarted after the OS update"))
+		}
+
 		if err := r.deleteRemainingPods(ctx, log, node); err != nil {
 			return fmt.Errorf("failed to delete remaining pods: %w", err)
 		}
