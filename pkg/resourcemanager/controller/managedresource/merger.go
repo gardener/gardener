@@ -6,6 +6,7 @@ package managedresource
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -415,14 +416,10 @@ func mergeServiceAccount(scheme *runtime.Scheme, oldObj, newObj runtime.Object) 
 func mergeMapsBasedOnOldMap(desired, current, old map[string]string) map[string]string {
 	out := make(map[string]string, len(current))
 	// use current as base
-	for k, v := range current {
-		out[k] = v
-	}
+	maps.Copy(out, current)
 
 	// overwrite desired values
-	for k, v := range desired {
-		out[k] = v
-	}
+	maps.Copy(out, desired)
 
 	// check if we should remove values which were once desired but are not desired anymore
 	for k, oldValue := range old {

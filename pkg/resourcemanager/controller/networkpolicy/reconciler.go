@@ -259,17 +259,13 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 }
 
 func (r *Reconciler) deleteStalePolicies(networkPolicyList *metav1.PartialObjectMetadataList, desiredObjectMetaKeys []string) []flow.TaskFn {
-	objectMetaKeysForDesiredPolicies := make(map[string]struct{}, len(desiredObjectMetaKeys))
-	for _, objectMetaKey := range desiredObjectMetaKeys {
-		objectMetaKeysForDesiredPolicies[objectMetaKey] = struct{}{}
-	}
-
+	objectMetaKeysForDesiredPolicies := sets.New(desiredObjectMetaKeys...)
 	var taskFns []flow.TaskFn
 
 	for _, n := range networkPolicyList.Items {
 		networkPolicy := n
 
-		if _, ok := objectMetaKeysForDesiredPolicies[key(networkPolicy.ObjectMeta)]; !ok {
+		if !objectMetaKeysForDesiredPolicies.Has(key(networkPolicy.ObjectMeta)) {
 			taskFns = append(taskFns, func(ctx context.Context) error {
 				return kubernetesutils.DeleteObject(ctx, r.TargetClient, &networkPolicy)
 			})

@@ -6,6 +6,8 @@
 
 package v1alpha1
 
+import "maps"
+
 // KubeAPIServerOpenIDConnectApplyConfiguration represents an declarative configuration of the KubeAPIServerOpenIDConnect type for use
 // with apply.
 type KubeAPIServerOpenIDConnectApplyConfiguration struct {
@@ -74,9 +76,7 @@ func (b *KubeAPIServerOpenIDConnectApplyConfiguration) WithRequiredClaims(entrie
 	if b.RequiredClaims == nil && len(entries) > 0 {
 		b.RequiredClaims = make(map[string]string, len(entries))
 	}
-	for k, v := range entries {
-		b.RequiredClaims[k] = v
-	}
+	maps.Copy(b.RequiredClaims, entries)
 	return b
 }
 

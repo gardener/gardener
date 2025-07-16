@@ -128,7 +128,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
 		}
 
-		volumeProviderPurposes := make(map[string]struct{}, len(seedSpec.Volume.Providers))
+		volumeProviderPurposes := make(sets.Set[string], len(seedSpec.Volume.Providers))
 		for i, provider := range seedSpec.Volume.Providers {
 			idxPath := fldPath.Child("volume", "providers").Index(i)
 			if len(provider.Purpose) == 0 {
@@ -137,10 +137,10 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 			if len(provider.Name) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "cannot be empty"))
 			}
-			if _, ok := volumeProviderPurposes[provider.Purpose]; ok {
+			if volumeProviderPurposes.Has(provider.Purpose) {
 				allErrs = append(allErrs, field.Duplicate(idxPath.Child("purpose"), provider.Purpose))
 			}
-			volumeProviderPurposes[provider.Purpose] = struct{}{}
+			volumeProviderPurposes.Insert(provider.Purpose)
 		}
 	}
 

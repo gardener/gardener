@@ -66,7 +66,7 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 	}
 	ownerFound := false
 
-	members := make(map[string]struct{}, len(projectSpec.Members))
+	members := make(sets.Set[string], len(projectSpec.Members))
 
 	for i, member := range projectSpec.Members {
 		idxPath := fldPath.Child("members").Index(i)
@@ -78,10 +78,10 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 		}
 		id := ProjectMemberId(apiGroup, kind, namespace, name)
 
-		if _, ok := members[id]; ok {
+		if members.Has(id) {
 			allErrs = append(allErrs, field.Duplicate(idxPath, member))
 		} else {
-			members[id] = struct{}{}
+			members.Insert(id)
 		}
 
 		allErrs = append(allErrs, ValidateProjectMember(member, idxPath)...)
@@ -170,14 +170,14 @@ func ValidateProjectMember(member core.ProjectMember, fldPath *field.Path) field
 
 	allErrs = append(allErrs, ValidateSubject(member.Subject, fldPath)...)
 
-	foundRoles := make(map[string]struct{}, len(member.Roles))
+	foundRoles := make(sets.Set[string], len(member.Roles))
 	for i, role := range member.Roles {
 		rolesPath := fldPath.Child("roles").Index(i)
 
-		if _, ok := foundRoles[role]; ok {
+		if foundRoles.Has(role) {
 			allErrs = append(allErrs, field.Duplicate(rolesPath, role))
 		}
-		foundRoles[role] = struct{}{}
+		foundRoles.Insert(role)
 
 		if !supportedRoles.Has(role) && !strings.HasPrefix(role, core.ProjectMemberExtensionPrefix) {
 			allErrs = append(allErrs, field.NotSupported(rolesPath, role, append(sets.List(supportedRoles), core.ProjectMemberExtensionPrefix+"*")))

@@ -6,6 +6,7 @@ package builder
 
 import (
 	"context"
+	"maps"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -75,9 +76,7 @@ func (s *Secret) AddLabels(labels map[string]string) *Secret {
 	if s.secret.Labels == nil {
 		s.secret.Labels = make(map[string]string, len(labels))
 	}
-	for k, v := range labels {
-		s.secret.Labels[k] = v
-	}
+	maps.Copy(s.secret.Labels, labels)
 	return s
 }
 

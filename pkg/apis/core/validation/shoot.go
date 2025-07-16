@@ -1671,16 +1671,16 @@ func validateMonitoring(monitoring *core.Monitoring, fldPath *field.Path) field.
 
 func validateAlerting(alerting *core.Alerting, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	emails := make(map[string]struct{})
+	emails := sets.New[string]()
 	for i, email := range alerting.EmailReceivers {
 		if !utils.TestEmail(email) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("emailReceivers").Index(i), email, "must provide a valid email"))
 		}
 
-		if _, duplicate := emails[email]; duplicate {
+		if emails.Has(email) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("emailReceivers").Index(i), email))
 		} else {
-			emails[email] = struct{}{}
+			emails.Insert(email)
 		}
 	}
 	return allErrs
@@ -2140,7 +2140,7 @@ func validateClusterAutoscalerTaints(taints []string, option string, version str
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child(option), "not supported in Kubernetes version "+version))
 	}
 
-	taintKeySet := make(map[string]struct{})
+	taintKeySet := sets.New[string]()
 
 	for i, taint := range taints {
 		idxPath := fldPath.Index(i)
@@ -2154,11 +2154,11 @@ func validateClusterAutoscalerTaints(taints []string, option string, version str
 		}
 
 		// validate if taint key is duplicate
-		if _, ok := taintKeySet[taint]; ok {
+		if taintKeySet.Has(taint) {
 			allErrs = append(allErrs, field.Duplicate(idxPath, taint))
 			continue
 		}
-		taintKeySet[taint] = struct{}{}
+		taintKeySet.Insert(taint)
 	}
 	return allErrs
 }
@@ -2578,16 +2578,16 @@ func ValidateCoreDNSRewritingCommonSuffixes(commonSuffixes []string, fldPath *fi
 		return allErrs
 	}
 
-	suffixes := map[string]struct{}{}
+	suffixes := sets.New[string]()
 	for i, s := range commonSuffixes {
 		if strings.Count(s, ".") < 1 || (s[0] == '.' && strings.Count(s, ".") < 2) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("commonSuffixes").Index(i), s, "must contain at least one non-leading dot ('.')"))
 		}
 		s = strings.TrimPrefix(s, ".")
-		if _, found := suffixes[s]; found {
+		if suffixes.Has(s) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("commonSuffixes").Index(i), s))
 		} else {
-			suffixes[s] = struct{}{}
+			suffixes.Insert(s)
 		}
 	}
 

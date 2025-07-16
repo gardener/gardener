@@ -7,6 +7,8 @@
 package v1alpha1
 
 import (
+	"maps"
+
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -80,9 +82,7 @@ func (b *GardenletDeploymentApplyConfiguration) WithPodLabels(entries map[string
 	if b.PodLabels == nil && len(entries) > 0 {
 		b.PodLabels = make(map[string]string, len(entries))
 	}
-	for k, v := range entries {
-		b.PodLabels[k] = v
-	}
+	maps.Copy(b.PodLabels, entries)
 	return b
 }
 
@@ -94,9 +94,7 @@ func (b *GardenletDeploymentApplyConfiguration) WithPodAnnotations(entries map[s
 	if b.PodAnnotations == nil && len(entries) > 0 {
 		b.PodAnnotations = make(map[string]string, len(entries))
 	}
-	for k, v := range entries {
-		b.PodAnnotations[k] = v
-	}
+	maps.Copy(b.PodAnnotations, entries)
 	return b
 }
 

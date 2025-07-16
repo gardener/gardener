@@ -7,6 +7,8 @@
 package v1alpha1
 
 import (
+	"maps"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
@@ -138,9 +140,7 @@ func (b *ManagedSeedSetApplyConfiguration) WithLabels(entries map[string]string)
 	if b.Labels == nil && len(entries) > 0 {
 		b.Labels = make(map[string]string, len(entries))
 	}
-	for k, v := range entries {
-		b.Labels[k] = v
-	}
+	maps.Copy(b.Labels, entries)
 	return b
 }
 
@@ -153,9 +153,7 @@ func (b *ManagedSeedSetApplyConfiguration) WithAnnotations(entries map[string]st
 	if b.Annotations == nil && len(entries) > 0 {
 		b.Annotations = make(map[string]string, len(entries))
 	}
-	for k, v := range entries {
-		b.Annotations[k] = v
-	}
+	maps.Copy(b.Annotations, entries)
 	return b
 }
 
