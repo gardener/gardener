@@ -12,7 +12,7 @@ import (
 // RequeueAfterError or not.
 func ReconcileErr(err error) (reconcile.Result, error) {
 	if requeueAfter, ok := err.(*RequeueAfterError); ok {
-		return reconcile.Result{Requeue: true, RequeueAfter: requeueAfter.RequeueAfter}, nil
+		return reconcile.Result{RequeueAfter: requeueAfter.RequeueAfter}, nil
 	}
 	return reconcile.Result{}, err
 }
