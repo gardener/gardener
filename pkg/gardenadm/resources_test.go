@@ -35,6 +35,8 @@ var _ = Describe("Resources", func() {
 			createControllerDeployment(fsys, "ext2")
 			createExtension(fsys, "ext3")
 			createExtension(fsys, "ext4")
+			createConfigMap(fsys, "configmap1")
+			createConfigMap(fsys, "configmap2")
 			createSecret(fsys, "secret1")
 			createSecret(fsys, "secret2")
 			createSecretBinding(fsys, "secretBinding")
@@ -58,6 +60,9 @@ var _ = Describe("Resources", func() {
 			Expect(resources.ControllerDeployments[1].Name).To(Equal("ext2"))
 			Expect(resources.ControllerDeployments[2].Name).To(Equal("ext3"))
 			Expect(resources.ControllerDeployments[3].Name).To(Equal("ext4"))
+			Expect(resources.ConfigMaps).To(HaveLen(2))
+			Expect(resources.ConfigMaps[0].Name).To(Equal("configmap1"))
+			Expect(resources.ConfigMaps[1].Name).To(Equal("configmap2"))
 			Expect(resources.Secrets).To(HaveLen(2))
 			Expect(resources.Secrets[0].Name).To(Equal("secret1"))
 			Expect(resources.Secrets[1].Name).To(Equal("secret2"))
@@ -243,6 +248,14 @@ spec:
       type: ` + name + `
     - kind: Extension
       type: ` + name + `
+`)}
+}
+
+func createConfigMap(fsys fstest.MapFS, name string) {
+	fsys["configmap-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ` + name + `
 `)}
 }
 
