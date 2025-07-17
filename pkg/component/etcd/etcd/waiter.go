@@ -73,10 +73,10 @@ func CheckEtcdObject(obj client.Object) error {
 		return fmt.Errorf("gardener operation %q is not yet picked up by etcd-druid", op)
 	}
 
-	// If etcd replicas are set to 0, then we can skip readiness and updation checks,
-	// because druid does not perform condition checks on hibernated etcd clusters,
-	// and readiness no longer makes sense for hibernated etcd clusters.
-	if e.Spec.Replicas == 0 {
+	// If etcd replicas are set to 0, then we can skip readiness and updation checks, because druid does not perform
+	// condition checks on hibernated etcd clusters, and readiness no longer makes sense for hibernated etcd clusters.
+	// The same is done when the etcd runtime component creation is disabled.
+	if e.Spec.Replicas == 0 || !druidcorev1alpha1.IsEtcdRuntimeComponentCreationEnabled(e.ObjectMeta) {
 		return nil
 	}
 
