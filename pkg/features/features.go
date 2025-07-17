@@ -121,7 +121,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DefaultSeccompProfile:                    {Default: false, PreRelease: featuregate.Alpha},
 	UseNamespacedCloudProfile:                {Default: true, PreRelease: featuregate.Beta},
 	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
-	NewWorkerPoolHash:                        {Default: false, PreRelease: featuregate.Alpha},
+	NewWorkerPoolHash:                        {Default: true, PreRelease: featuregate.Beta},
 	NewVPN:                                   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	NodeAgentAuthorizer:                      {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CredentialsRotationWithoutWorkersRollout: {Default: true, PreRelease: featuregate.Beta},
