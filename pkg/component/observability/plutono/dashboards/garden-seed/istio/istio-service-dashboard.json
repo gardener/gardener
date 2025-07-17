@@ -20,7 +20,7 @@
   "panels": [
     {
       "collapsed": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -31,7 +31,7 @@
       "panels": [],
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "refId": "A"
         }
       ],
@@ -39,7 +39,7 @@
       "type": "row"
     },
     {
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -66,7 +66,7 @@
       "type": "text"
     },
     {
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -128,7 +128,7 @@
       "pluginVersion": "7.5.39",
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "exemplar": true,
           "expr": "round(sum(irate(istio_requests_total{reporter=~\"source\",destination_service=~\"$service\"}[5m])), 0.001)",
           "format": "time_series",
@@ -143,7 +143,7 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -200,7 +200,7 @@
       "pluginVersion": "7.5.39",
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "editorMode": "code",
           "exemplar": true,
           "expr": "sum(irate(istio_requests_total{reporter=~\"source\",destination_service=~\"$service\",response_code!~\"5.*\"}[5m])) / (sum(irate(istio_requests_total{reporter=~\"source\",destination_service=~\"$service\"}[5m])) or on () vector(1))",
@@ -216,7 +216,7 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -278,7 +278,7 @@
       "pluginVersion": "7.5.39",
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "exemplar": true,
           "expr": "sum(irate(istio_tcp_received_bytes_total{reporter=~\"source\", destination_service=~\"$service\"}[1m]))",
           "format": "time_series",
@@ -293,7 +293,7 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -355,7 +355,7 @@
       "pluginVersion": "7.5.39",
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "exemplar": true,
           "expr": "sum(irate(istio_tcp_sent_bytes_total{reporter=~\"source\", destination_service=~\"$service\"}[1m]))",
           "format": "time_series",
@@ -371,7 +371,7 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -382,7 +382,7 @@
       "panels": [],
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "refId": "A"
         }
       ],
@@ -390,7 +390,7 @@
       "type": "row"
     },
     {
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -421,7 +421,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "unit": "ops"
@@ -465,7 +465,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "exemplar": true,
           "expr": "round(sum(irate(istio_requests_total{destination_service=~\"$service\",reporter=~\"source\",source_workload=~\"$srcwl\",source_workload_namespace=~\"$srcns\"}[5m])) by (source_workload, source_workload_namespace, response_code), 0.001)",
           "format": "time_series",
@@ -522,7 +522,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit"
@@ -566,7 +566,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "exemplar": true,
           "expr": "sum(irate(istio_requests_total{reporter=~\"source\", destination_service=~\"$service\",response_code!~\"5.*\", source_workload=~\"$srcwl\", source_workload_namespace=~\"$srcns\"}[5m])) by (source_workload, source_workload_namespace) / sum(irate(istio_requests_total{reporter=~\"source\", destination_service=~\"$service\", source_workload=~\"$srcwl\", source_workload_namespace=~\"$srcns\"}[5m])) by (source_workload, source_workload_namespace)",
           "format": "time_series",
@@ -624,7 +624,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "unit": "ops"
@@ -668,7 +668,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "exemplar": true,
           "expr": "round(sum(label_replace(irate(istio_requests_total{destination_service=~\"$service\",reporter=~\"source\",source_workload=~\"$srcwl\",source_workload_namespace=~\"$srcns\"}[5m]), \"pod_ip\", \"$1\", \"upstream_address\", \"(.*):.*\")) by (source_workload, source_workload_namespace, pod_ip), 0.001) * on(pod_ip) group_left (pod) kube_pod_info{host_network=\"false\", pod_ip!=\"\"}",
           "format": "time_series",
@@ -725,7 +725,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit"
@@ -769,7 +769,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "exemplar": true,
           "expr": "sum(label_replace(irate(istio_requests_total{reporter=~\"source\", destination_service=~\"$service\",response_code!~\"5.*\", source_workload=~\"$srcwl\", source_workload_namespace=~\"$srcns\"}[5m]), \"pod_ip\", \"$1\", \"upstream_address\", \"(.*):.*\")) by (source_workload, source_workload_namespace, pod_ip) / sum(label_replace(irate(istio_requests_total{reporter=~\"source\", destination_service=~\"$service\", source_workload=~\"$srcwl\", source_workload_namespace=~\"$srcns\"}[5m]), \"pod_ip\", \"$1\", \"upstream_address\", \"(.*):.*\")) by (source_workload, source_workload_namespace, pod_ip) * on(pod_ip) group_left (pod) kube_pod_info{host_network=\"false\", pod_ip!=\"\"}",
           "format": "time_series",
@@ -827,7 +827,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "unit": "Bps"
@@ -871,7 +871,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "exemplar": true,
           "expr": "round(sum(irate(istio_tcp_received_bytes_total{reporter=~\"source\", destination_service=~\"$service\", source_workload=~\"$srcwl\", source_workload_namespace=~\"$srcns\"}[1m])) by (source_workload, source_workload_namespace), 0.001)",
           "format": "time_series",
@@ -929,7 +929,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "unit": "Bps"
@@ -973,7 +973,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "datasource": null,
+          "datasource": "${datasource}",
           "exemplar": true,
           "expr": "round(sum(irate(istio_tcp_sent_bytes_total{reporter=~\"source\", destination_service=~\"$service\", source_workload=~\"$srcwl\", source_workload_namespace=~\"$srcns\"}[1m])) by (source_workload, source_workload_namespace), 0.001)",
           "format": "time_series",
@@ -1035,13 +1035,21 @@
   "templating": {
     "list": [
       {
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "(prometheus-garden|prometheus-aggregate)",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
         "allValue": null,
-        "current": {
-          "selected": true,
-          "text": "virtual-garden-kube-apiserver.garden.svc.cluster.local",
-          "value": "virtual-garden-kube-apiserver.garden.svc.cluster.local"
-        },
-        "datasource": null,
+        "datasource": "${datasource}",
         "definition": "",
         "description": null,
         "error": null,
@@ -1072,7 +1080,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "datasource": null,
+        "datasource": "${datasource}",
         "definition": "query_result(sum(istio_requests_total{reporter=~\"source\", destination_service=\"$service\"}) by (source_workload_namespace) or sum(istio_tcp_sent_bytes_total{reporter=~\"source\", destination_service=~\"$service\"}) by (source_workload_namespace))",
         "description": null,
         "error": null,
@@ -1103,7 +1111,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "datasource": null,
+        "datasource": "${datasource}",
         "definition": "query_result(sum(istio_requests_total{reporter=~\"source\", destination_service=~\"$service\", source_workload_namespace=~\"$srcns\"}) by (source_workload) or sum(istio_tcp_sent_bytes_total{reporter=~\"source\", destination_service=~\"$service\", source_workload_namespace=~\"$srcns\"}) by (source_workload))",
         "description": null,
         "error": null,

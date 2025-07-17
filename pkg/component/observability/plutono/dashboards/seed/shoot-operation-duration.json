@@ -21,7 +21,7 @@
   "links": [],
   "panels": [
     {
-      "datasource": "seed-prometheus",
+      "datasource": "prometheus-seed",
       "description": "The average time it takes for shoot $operation_type operation.",
       "fieldConfig": {
         "defaults": {
@@ -90,7 +90,7 @@
         "mode": "opacity"
       },
       "dataFormat": "timeseries",
-      "datasource": "seed-prometheus",
+      "datasource": "prometheus-seed",
       "description": "The histogram provides a visual representation of the distribution of create and delete shoot operations. Currently displaying P($percentile).",
       "fieldConfig": {
         "defaults": {},
@@ -164,7 +164,7 @@
           "text": "Create",
           "value": "Create"
         },
-        "datasource": "seed-prometheus",
+        "datasource": "prometheus-seed",
         "definition": "label_values(gardenlet_shoot_operation_duration_seconds_sum{}, operation)",
         "description": null,
         "error": null,

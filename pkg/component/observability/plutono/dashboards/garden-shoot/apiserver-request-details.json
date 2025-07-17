@@ -41,7 +41,7 @@
             "mode": "spectrum"
           },
           "dataFormat": "tsbuckets",
-          "datasource": "prometheus",
+          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -136,7 +136,7 @@
             "mode": "spectrum"
           },
           "dataFormat": "tsbuckets",
-          "datasource": "prometheus",
+          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -228,7 +228,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(apiserver_request_total,job)",
         "error": null,
         "hide": 0,
@@ -345,7 +345,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(apiserver_response_sizes_bucket,resource)",
         "error": null,
         "hide": 0,
@@ -377,7 +377,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(apiserver_response_sizes_bucket,subresource)",
         "error": null,
         "hide": 0,

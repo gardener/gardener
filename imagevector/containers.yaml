@@ -371,7 +371,7 @@ images:
         value:
           - type: 'githubTeam'
             teamname: 'gardener/monitoring-maintainers'
-  - name: plutono-dashboard-refresher
+  - name: plutono-data-refresher
     sourceRepository: github.com/kiwigrid/k8s-sidecar
     repository: quay.io/kiwigrid/k8s-sidecar
     tag: "1.30.7"

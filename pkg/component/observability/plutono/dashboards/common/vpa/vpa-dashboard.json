@@ -715,7 +715,7 @@
           "text": "Deployment",
           "value": "Deployment"
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~\"$namespace\"}, target_kind)",
         "description": null,
         "error": null,
@@ -746,7 +746,7 @@
           "text": "blackbox-exporter",
           "value": "blackbox-exporter"
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\"}, target_name)",
         "description": null,
         "error": null,
@@ -777,7 +777,7 @@
           "text": "blackbox-exporter",
           "value": "blackbox-exporter"
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\",target_name=~\"$targetName\"}, container)",
         "description": null,
         "error": null,

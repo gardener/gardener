@@ -42,7 +42,7 @@
             "mode": "spectrum"
           },
           "dataFormat": "tsbuckets",
-          "datasource": "prometheus",
+          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -135,7 +135,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(apiserver_request_total,job)",
         "error": null,
         "hide": 0,
@@ -167,7 +167,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(etcd_request_duration_seconds_bucket,type)",
         "error": null,
         "hide": 0,
@@ -199,7 +199,7 @@
             "$__all"
           ]
         },
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(etcd_request_duration_seconds_bucket,operation)",
         "error": null,
         "hide": 0,

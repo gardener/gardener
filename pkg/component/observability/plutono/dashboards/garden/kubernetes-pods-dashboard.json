@@ -24,7 +24,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -130,7 +130,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -235,7 +235,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
+      "datasource": null,
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -383,7 +383,7 @@
     "list": [
       {
         "allValue": null,
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(container_cpu_usage_seconds_total, pod)",
         "error": null,
         "hide": 0,
@@ -405,7 +405,7 @@
       },
       {
         "allValue": ".*",
-        "datasource": "prometheus",
+        "datasource": null,
         "definition": "label_values(container_cpu_usage_seconds_total{pod=~\"$pod\", container!=\"POD\"}, container)",
         "error": null,
         "hide": 0,
