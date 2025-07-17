@@ -577,6 +577,8 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				return ptr.To("1.1.0"), nil
 			}))
 
+			oscChanges.InPlaceUpdates.OperatingSystem = true
+
 			metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed)
 			Expect(c.Update(ctx, node)).To(Succeed())
 
@@ -608,7 +610,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			})
 
 			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, ptr.To("1.1.0"))
-			Expect(err).To(MatchError(ContainSubstring("stopping reconciliation until gardener-node-agent is restarted after the OS update")))
+			Expect(err).To(MatchError(ContainSubstring("stopping reconciliation until gardener-node-agent is restarted after the OS update. Current version: \"1.1.0\", Desired version: \"1.2.3\"")))
 			Expect(err).To(MatchError(reconcile.TerminalError(nil)))
 		})
 	})
