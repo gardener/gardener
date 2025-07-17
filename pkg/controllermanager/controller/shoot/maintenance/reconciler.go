@@ -544,6 +544,11 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 		workerImage := worker.Machine.Image
 		workerLog := log.WithValues("worker", worker.Name, "image", workerImage.Name, "version", workerImage.Version)
 
+		machineType := v1beta1helper.FindMachineTypeByName(cloudProfile.Spec.MachineTypes, worker.Machine.Type)
+		if machineType == nil {
+			return nil, fmt.Errorf("machine type %q of worker %q does not exist in cloudprofile", worker.Machine.Type, worker.Name)
+		}
+
 		machineImageFromCloudProfile, err := helper.DetermineMachineImage(cloudProfile, workerImage)
 		if err != nil {
 			return nil, err
@@ -555,6 +560,10 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 		}
 
 		filteredMachineImageVersionsFromCloudProfile := helper.FilterMachineImageVersions(&machineImageFromCloudProfile, worker, kubeletVersion)
+		filteredMachineImageVersionsFromCloudProfile := filterForArchitecture(&machineImageFromCloudProfile, worker.Machine.Architecture)
+		filteredMachineImageVersionsFromCloudProfile = filterForCapabilities(filteredMachineImageVersionsFromCloudProfile, machineType.Capabilities, cloudProfile.Spec.Capabilities)
+		filteredMachineImageVersionsFromCloudProfile = filterForCRI(filteredMachineImageVersionsFromCloudProfile, worker.CRI)
+		filteredMachineImageVersionsFromCloudProfile = filterForKubeleteVersionConstraint(filteredMachineImageVersionsFromCloudProfile, kubeletVersion)
 
 		// first check if the machine image version should be updated
 		shouldBeUpdated, reason, isExpired := shouldMachineImageVersionBeUpdated(workerImage, filteredMachineImageVersionsFromCloudProfile, *shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion)
@@ -698,6 +707,130 @@ func getOperation(shoot *gardencorev1beta1.Shoot) string {
 	}
 
 	return operation
+}
+
+func filterForArchitecture(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, arch *string) *gardencorev1beta1.MachineImage {
+	filteredMachineImages := gardencorev1beta1.MachineImage{
+		Name:           machineImageFromCloudProfile.Name,
+		UpdateStrategy: machineImageFromCloudProfile.UpdateStrategy,
+		Versions:       []gardencorev1beta1.MachineImageVersion{},
+	}
+
+	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
+		if slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(cloudProfileVersion), *arch) {
+			filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+		}
+	}
+
+	return &filteredMachineImages
+}
+
+func filterForCapabilities(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, capabilities gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) *gardencorev1beta1.MachineImage {
+	if len(capabilitiesDefinitions) == 0 {
+		return machineImageFromCloudProfile
+	}
+
+	filteredMachineImages := gardencorev1beta1.MachineImage{
+		Name:           machineImageFromCloudProfile.Name,
+		UpdateStrategy: machineImageFromCloudProfile.UpdateStrategy,
+		Versions:       []gardencorev1beta1.MachineImageVersion{},
+	}
+
+	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
+		if v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(capabilities, cloudProfileVersion.CapabilitySets, capabilitiesDefinitions) {
+			filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+		}
+	}
+
+	return &filteredMachineImages
+}
+
+func filterForCRI(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, workerCRI *gardencorev1beta1.CRI) *gardencorev1beta1.MachineImage {
+	if workerCRI == nil {
+		return filterForCRI(machineImageFromCloudProfile, &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
+	}
+
+	filteredMachineImages := gardencorev1beta1.MachineImage{
+		Name:           machineImageFromCloudProfile.Name,
+		UpdateStrategy: machineImageFromCloudProfile.UpdateStrategy,
+		Versions:       []gardencorev1beta1.MachineImageVersion{},
+	}
+
+	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
+		criFromCloudProfileVersion, found := findCRIByName(workerCRI.Name, cloudProfileVersion.CRI)
+		if !found {
+			continue
+		}
+
+		if !areAllWorkerCRsPartOfCloudProfileVersion(workerCRI.ContainerRuntimes, criFromCloudProfileVersion.ContainerRuntimes) {
+			continue
+		}
+
+		filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+	}
+
+	return &filteredMachineImages
+}
+
+func filterForKubeleteVersionConstraint(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, kubeletVersion *semver.Version) *gardencorev1beta1.MachineImage {
+	filteredMachineImages := gardencorev1beta1.MachineImage{
+		Name:           machineImageFromCloudProfile.Name,
+		UpdateStrategy: machineImageFromCloudProfile.UpdateStrategy,
+		Versions:       []gardencorev1beta1.MachineImageVersion{},
+	}
+
+	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
+		if cloudProfileVersion.KubeletVersionConstraint != nil {
+			// CloudProfile cannot contain an invalid kubeletVersionConstraint
+			constraint, _ := semver.NewConstraint(*cloudProfileVersion.KubeletVersionConstraint)
+			if !constraint.Check(kubeletVersion) {
+				continue
+			}
+		}
+
+		filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+	}
+
+	return &filteredMachineImages
+}
+
+func findCRIByName(wanted gardencorev1beta1.CRIName, cris []gardencorev1beta1.CRI) (gardencorev1beta1.CRI, bool) {
+	for _, cri := range cris {
+		if cri.Name == wanted {
+			return cri, true
+		}
+	}
+	return gardencorev1beta1.CRI{}, false
+}
+
+func areAllWorkerCRsPartOfCloudProfileVersion(workerCRs []gardencorev1beta1.ContainerRuntime, crsFromCloudProfileVersion []gardencorev1beta1.ContainerRuntime) bool {
+	if workerCRs == nil {
+		return true
+	}
+	for _, workerCr := range workerCRs {
+		if !isWorkerCRPartOfCloudProfileVersionCRs(workerCr, crsFromCloudProfileVersion) {
+			return false
+		}
+	}
+	return true
+}
+
+func isWorkerCRPartOfCloudProfileVersionCRs(wanted gardencorev1beta1.ContainerRuntime, cloudProfileVersionCRs []gardencorev1beta1.ContainerRuntime) bool {
+	for _, cr := range cloudProfileVersionCRs {
+		if wanted.Type == cr.Type {
+			return true
+		}
+	}
+	return false
+}
+
+func determineMachineImage(cloudProfile *gardencorev1beta1.CloudProfile, shootMachineImage *gardencorev1beta1.ShootMachineImage) (gardencorev1beta1.MachineImage, error) {
+	machineImagesFound, machineImageFromCloudProfile := v1beta1helper.DetermineMachineImageForName(cloudProfile, shootMachineImage.Name)
+	if !machineImagesFound {
+		return gardencorev1beta1.MachineImage{}, fmt.Errorf("failure while determining the default machine image in the CloudProfile: no machineImage with name %q (specified in shoot) could be found in the cloudProfile %q", shootMachineImage.Name, cloudProfile.Name)
+	}
+
+	return machineImageFromCloudProfile, nil
 }
 
 func shouldMachineImageVersionBeUpdated(shootMachineImage *gardencorev1beta1.ShootMachineImage, machineImage *gardencorev1beta1.MachineImage, autoUpdate bool) (shouldBeUpdated bool, reason string, isExpired bool) {
