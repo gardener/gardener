@@ -713,11 +713,7 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 		return fmt.Errorf("failed to update OS in-place: %w", err)
 	}
 
-	if err := r.performCredentialsRotationInPlace(ctx, log, oscChanges, node); err != nil {
-		return fmt.Errorf("failed to perform certificate rotation in-place: %w", err)
-	}
-
-	if (nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) && !kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful)) || kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed) {
+	if oscChanges.InPlaceUpdates.OperatingSystem {
 		// It can so happen that the updateOSInPlace function returns nil error, because calling the update command succeeded,
 		// but the OS is not yet rebooted. We should not proceed the reconciliation until the node-agent is restarted after the OS update.
 		currentOSVersion, err := GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
@@ -728,9 +724,15 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 		if osVersionUpToDate, err := IsOsVersionUpToDate(currentOSVersion, osc); err != nil {
 			return err
 		} else if !osVersionUpToDate {
-			return reconcile.TerminalError(fmt.Errorf("stopping reconciliation until gardener-node-agent is restarted after the OS update"))
+			return reconcile.TerminalError(fmt.Errorf("stopping reconciliation until gardener-node-agent is restarted after the OS update. Current version: %q, Desired version: %q", *currentOSVersion, osc.Spec.InPlaceUpdates.OperatingSystemVersion))
 		}
+	}
 
+	if err := r.performCredentialsRotationInPlace(ctx, log, oscChanges, node); err != nil {
+		return fmt.Errorf("failed to perform certificate rotation in-place: %w", err)
+	}
+
+	if (nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) && !kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful)) || kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed) {
 		if err := r.deleteRemainingPods(ctx, log, node); err != nil {
 			return fmt.Errorf("failed to delete remaining pods: %w", err)
 		}
