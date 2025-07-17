@@ -149,6 +149,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.ControlPlane.OtelCollector, err = b.DefaultOtelCollector()
+	if err != nil {
+		return nil, err
+	}
 
 	// system components
 	o.Shoot.Components.SystemComponents.Resources = b.DefaultShootSystem()
