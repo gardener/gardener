@@ -18,7 +18,7 @@ require (
 	github.com/gardener/machine-controller-manager v0.59.0
 	github.com/gardener/terminal-controller-manager v0.34.0
 	github.com/go-jose/go-jose/v4 v4.1.0
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/go-test/deep v1.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/gnostic-models v0.7.0
@@ -35,7 +35,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/pelletier/go-toml v1.9.5
 	github.com/perses/perses-operator v0.2.0
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.83.0
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.84.0
 	github.com/prometheus/blackbox_exporter v0.27.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/common v0.65.0
