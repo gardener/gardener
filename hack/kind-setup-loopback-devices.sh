@@ -3,7 +3,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-
 set -o errexit
 set -o nounset
 
@@ -36,8 +35,6 @@ parse_flags() {
 
 parse_flags "$@"
 
-
-
 LOOPBACK_IP_ADDRESSES=(172.18.255.1)
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
   LOOPBACK_IP_ADDRESSES+=(::1)
@@ -69,7 +66,6 @@ elif [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-loc
   fi
 fi
 
-
 if ! command -v ip &>/dev/null; then
   if [[ "$OSTYPE" == "darwin"* ]]; then
     echo "'ip' command not found. Please install 'ip' command, refer https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#installing-iproute2" 1>&2
@@ -78,6 +74,7 @@ if ! command -v ip &>/dev/null; then
   echo "Skipping loopback device setup because 'ip' command is not available..."
   return
 fi
+
 LOOPBACK_DEVICE=$(ip address | grep LOOPBACK | sed "s/^[0-9]\+: //g" | awk '{print $1}' | sed "s/:$//g")
 echo "Checking loopback device ${LOOPBACK_DEVICE}..."
 for address in "${LOOPBACK_IP_ADDRESSES[@]}"; do
