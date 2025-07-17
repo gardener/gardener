@@ -155,7 +155,7 @@ func seedDNSProviderSecretRefEqual(oldDNS, newDNS *gardencorev1beta1.SeedDNSProv
 	return false
 }
 
-func addSeedResources(seedSpec gardencorev1beta1.SeedSpec, g *graph, seedVertex *vertex) {
+func addSeedResources(seedSpec gardencorev1beta1.SeedSpec, g *graph, seedVertex *Vertex) {
 	for _, resource := range seedSpec.Resources {
 		// only secrets and configMap are supported here
 		if resource.ResourceRef.APIVersion == "v1" {

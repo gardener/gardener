@@ -13,5 +13,5 @@ import (
 
 func TestGraph(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Webhook Auth SeedAuthorizer Graph Suite")
+	RunSpecs(t, "Utils Graph Suite")
 }

@@ -471,7 +471,6 @@ build:
             - pkg/admissioncontroller/webhook/admission/shootkubeconfigsecretref
             - pkg/admissioncontroller/webhook/admission/updaterestriction
             - pkg/admissioncontroller/webhook/auth/seed
-            - pkg/admissioncontroller/webhook/auth/seed/graph
             - pkg/api
             - pkg/apis/authentication
             - pkg/apis/authentication/install
@@ -519,6 +518,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/graph
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/bootstraptoken
             - pkg/utils/kubernetes/health
