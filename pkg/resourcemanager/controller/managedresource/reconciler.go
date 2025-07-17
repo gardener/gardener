@@ -54,6 +54,7 @@ import (
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	"github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
 
 var (
@@ -73,6 +74,7 @@ type Reconciler struct {
 	ClusterID                     string
 	GarbageCollectorActivated     bool
 	RequeueAfterOnDeletionPending *time.Duration
+	RateLimiter                   workqueue.TypedRateLimiter[reconcile.Request]
 }
 
 // Reconcile manages the resources reference by ManagedResources.
@@ -111,7 +113,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// must be delayed, until the deletion is finished.
 	if r.ClassFilter.IsWaitForCleanupRequired(mr) {
 		log.Info("Waiting for previous handler to clean resources created by ManagedResource")
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{RequeueAfter: r.RateLimiter.When(req)}, nil
 	}
 	return r.reconcile(ctx, log, mr)
 }

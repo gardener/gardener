@@ -39,11 +39,9 @@ import (
 
 // Reconciler reconciles Projects.
 type Reconciler struct {
-	Client   client.Client
-	Config   controllermanagerconfigv1alpha1.ProjectControllerConfiguration
-	Recorder record.EventRecorder
-
-	// RateLimiter allows limiting exponential backoff for testing purposes
+	Client      client.Client
+	Config      controllermanagerconfigv1alpha1.ProjectControllerConfiguration
+	Recorder    record.EventRecorder
 	RateLimiter workqueue.TypedRateLimiter[reconcile.Request]
 }
 
@@ -65,7 +63,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if project.DeletionTimestamp != nil {
 		log.Info("Deleting project")
-		return r.delete(ctx, log, project)
+		return r.delete(ctx, log, project, request)
 	}
 
 	log.Info("Reconciling project")
@@ -309,7 +307,7 @@ func namespaceAnnotationsFromProject(project *gardencorev1beta1.Project) map[str
 	}
 }
 
-func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project) (reconcile.Result, error) {
+func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project, request reconcile.Request) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(project, gardencorev1beta1.GardenerName) {
 		return reconcile.Result{}, nil
 	}
@@ -325,7 +323,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 		if inUse {
 			r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots", *namespace)
 			log.Info("Cannot release Project Namespace because it still contains Shoots")
-			return reconcile.Result{Requeue: true}, patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectTerminating)
+			return reconcile.Result{RequeueAfter: r.RateLimiter.When(request)}, patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectTerminating)
 		}
 
 		released, err := r.releaseNamespace(ctx, log, project, *namespace)

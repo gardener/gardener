@@ -14,9 +14,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
 
 // ControllerName is the name of this controller.
@@ -29,6 +31,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	}
 	if r.Recorder == nil {
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
+	}
+	if r.RateLimiter == nil {
+		r.RateLimiter = workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]()
 	}
 
 	return builder.
