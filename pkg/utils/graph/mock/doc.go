@@ -2,6 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-//go:generate mockgen -package mock -destination=mocks.go github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph Interface
+//go:generate mockgen -package mock -destination=mocks.go github.com/gardener/gardener/pkg/utils/graph Interface
 
 package mock
