@@ -50,7 +50,7 @@ require (
 	go.uber.org/mock v0.5.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.40.0
-	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc
+	golang.org/x/exp v0.0.0-20250717185816-542afb5b7346
 	golang.org/x/text v0.27.0
 	golang.org/x/time v0.12.0
 	golang.org/x/tools v0.35.0
