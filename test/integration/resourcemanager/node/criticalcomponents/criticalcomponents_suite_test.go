@@ -31,7 +31,6 @@ import (
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestCriticalComponents(t *testing.T) {
@@ -78,18 +77,12 @@ var _ = BeforeSuite(func() {
 	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			GenerateName: testID + "-",
+			Name: "kube-system",
 		},
 	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
-	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+	Expect(testClient.Get(ctx, client.ObjectKeyFromObject(testNamespace), testNamespace)).To(Succeed())
+	log.Info("Using Namespace for test", "namespaceName", testNamespace.Name)
 	testRunID = testNamespace.Name
-
-	DeferCleanup(func() {
-		By("Delete test Namespace")
-		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
