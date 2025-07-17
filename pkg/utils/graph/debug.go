@@ -36,7 +36,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 		name      = getQueryParameter(r.URL.Query(), "name")
 
 		nodesIterator = h.graph.Nodes()
-		nodes         []*vertex
+		nodes         []*Vertex
 	)
 
 	// On large landscapes, if there are many vertices then the entire graph cannot be rendered fast enough. Hence, we
@@ -47,11 +47,11 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	// Filter for all relevant nodes and sort them.
 	for nodesIterator.Next() {
-		v := nodesIterator.Node().(*vertex)
+		v := nodesIterator.Node().(*Vertex)
 
-		if (kind != "" && VertexTypes[v.vertexType].Kind != kind) ||
-			(namespace != "" && v.namespace != namespace) ||
-			(name != "" && v.name != name) {
+		if (kind != "" && VertexTypes[v.Type].Kind != kind) ||
+			(namespace != "" && v.Namespace != namespace) ||
+			(name != "" && v.Name != name) {
 			continue
 		}
 
@@ -65,7 +65,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
   <select name="kind">`
 	out += fmt.Sprintf(`<option value=""%s>&lt;all&gt;</option>`, selected("", kind))
 	for _, vt := range VertexTypes {
-		out += fmt.Sprintf(`<option value="%s"%s>%s</option>`, vt, selected(vt.Kind, kind), vt)
+		out += fmt.Sprintf(`<option value="%s"%s>%s</option>`, vt.Kind, selected(vt.Kind, kind), vt.Kind)
 	}
 	out += `
   </select>
@@ -85,9 +85,9 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 			{"<- (incoming)", h.graph.To(v.ID())},
 			{"-> (outgoing)", h.graph.From(v.ID())},
 		} {
-			var neighbors []*vertex
+			var neighbors []*Vertex
 			for n.iterator.Next() {
-				neighbors = append(neighbors, n.iterator.Node().(*vertex))
+				neighbors = append(neighbors, n.iterator.Node().(*Vertex))
 			}
 			sort.Sort(vertexSorter(neighbors))
 
@@ -115,26 +115,26 @@ func getQueryParameter(query url.Values, param string) string {
 	return out
 }
 
-type vertexSorter []*vertex
+type vertexSorter []*Vertex
 
 func (v vertexSorter) Len() int { return len(v) }
 
 func (v vertexSorter) Swap(i, j int) { v[i], v[j] = v[j], v[i] }
 
 func (v vertexSorter) Less(i, j int) bool {
-	if VertexTypes[v[i].vertexType].Kind < VertexTypes[v[j].vertexType].Kind {
+	if VertexTypes[v[i].Type].Kind < VertexTypes[v[j].Type].Kind {
 		return true
-	} else if VertexTypes[v[i].vertexType].Kind > VertexTypes[v[j].vertexType].Kind {
+	} else if VertexTypes[v[i].Type].Kind > VertexTypes[v[j].Type].Kind {
 		return false
 	}
 
-	if v[i].namespace < v[j].namespace {
+	if v[i].Namespace < v[j].Namespace {
 		return true
-	} else if v[i].namespace > v[j].namespace {
+	} else if v[i].Namespace > v[j].Namespace {
 		return false
 	}
 
-	return v[i].name < v[j].name
+	return v[i].Name < v[j].Name
 }
 
 func emptyNewline() string {
@@ -153,17 +153,17 @@ func indent(level int, format string, a ...any) string {
 	return fmt.Sprintf("| "+strings.Repeat("&nbsp;&nbsp;", level)+format+"<br />", a...)
 }
 
-func link(v *vertex) string {
-	path := fmt.Sprintf("%s?kind=%s", DebugHandlerPath, VertexTypes[v.vertexType].Kind)
-	out := fmt.Sprintf(`<a href="%s">%s</a>:`, path, VertexTypes[v.vertexType].Kind)
+func link(v *Vertex) string {
+	path := fmt.Sprintf("%s?kind=%s", DebugHandlerPath, VertexTypes[v.Type].Kind)
+	out := fmt.Sprintf(`<a href="%s">%s</a>:`, path, VertexTypes[v.Type].Kind)
 
-	if v.namespace != "" {
-		path += "&namespace=" + v.namespace
-		out += fmt.Sprintf(`<a href="%s">%s</a>/`, path, v.namespace)
+	if v.Namespace != "" {
+		path += "&namespace=" + v.Namespace
+		out += fmt.Sprintf(`<a href="%s">%s</a>/`, path, v.Namespace)
 	}
 
-	path += "&name=" + v.name
-	out += fmt.Sprintf(`<a href="%s">%s</a>`, path, v.name)
+	path += "&name=" + v.Name
+	out += fmt.Sprintf(`<a href="%s">%s</a>`, path, v.Name)
 
 	return out
 }
