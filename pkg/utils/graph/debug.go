@@ -49,7 +49,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	for nodesIterator.Next() {
 		v := nodesIterator.Node().(*vertex)
 
-		if (kind != "" && vertexTypes[v.vertexType] != kind) ||
+		if (kind != "" && VertexTypes[v.vertexType].Kind != kind) ||
 			(namespace != "" && v.namespace != namespace) ||
 			(name != "" && v.name != name) {
 			continue
@@ -64,8 +64,8 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 <form action="` + DebugHandlerPath + `" method="GET">
   <select name="kind">`
 	out += fmt.Sprintf(`<option value=""%s>&lt;all&gt;</option>`, selected("", kind))
-	for _, vt := range vertexTypes {
-		out += fmt.Sprintf(`<option value="%s"%s>%s</option>`, vt, selected(vt, kind), vt)
+	for _, vt := range VertexTypes {
+		out += fmt.Sprintf(`<option value="%s"%s>%s</option>`, vt, selected(vt.Kind, kind), vt)
 	}
 	out += `
   </select>
@@ -122,9 +122,9 @@ func (v vertexSorter) Len() int { return len(v) }
 func (v vertexSorter) Swap(i, j int) { v[i], v[j] = v[j], v[i] }
 
 func (v vertexSorter) Less(i, j int) bool {
-	if vertexTypes[v[i].vertexType] < vertexTypes[v[j].vertexType] {
+	if VertexTypes[v[i].vertexType].Kind < VertexTypes[v[j].vertexType].Kind {
 		return true
-	} else if vertexTypes[v[i].vertexType] > vertexTypes[v[j].vertexType] {
+	} else if VertexTypes[v[i].vertexType].Kind > VertexTypes[v[j].vertexType].Kind {
 		return false
 	}
 
@@ -154,8 +154,8 @@ func indent(level int, format string, a ...any) string {
 }
 
 func link(v *vertex) string {
-	path := fmt.Sprintf("%s?kind=%s", DebugHandlerPath, vertexTypes[v.vertexType])
-	out := fmt.Sprintf(`<a href="%s">%s</a>:`, path, vertexTypes[v.vertexType])
+	path := fmt.Sprintf("%s?kind=%s", DebugHandlerPath, VertexTypes[v.vertexType].Kind)
+	out := fmt.Sprintf(`<a href="%s">%s</a>:`, path, VertexTypes[v.vertexType].Kind)
 
 	if v.namespace != "" {
 		path += "&namespace=" + v.namespace

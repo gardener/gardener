@@ -96,7 +96,7 @@ func (g *graph) HasVertex(vertexType VertexType, vertexNamespace, vertexName str
 func (g *graph) HasPathFrom(fromType VertexType, fromNamespace, fromName string, toType VertexType, toNamespace, toName string) bool {
 	start := time.Now()
 	defer func() {
-		metricPathCheckDuration.WithLabelValues(vertexTypes[fromType], vertexTypes[toType]).Observe(time.Since(start).Seconds())
+		metricPathCheckDuration.WithLabelValues(VertexTypes[fromType].Kind, VertexTypes[toType].Kind).Observe(time.Since(start).Seconds())
 	}()
 	g.lock.RLock()
 	defer g.lock.RUnlock()
