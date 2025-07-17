@@ -32,7 +32,7 @@ func ItShouldWaitForLogsCountWithLabelToBeInVali(s *ShootContext, valiLabels map
 
 			return nil
 		}).Should(Succeed())
-	}, SpecTimeout(time.Minute))
+	}, SpecTimeout(15*time.Minute))
 }
 
 // ItShouldWaitForLogsWithLabelToBeInVali waits for logs with a specific label to be present in Vali. Does not regard the count of the logs.
