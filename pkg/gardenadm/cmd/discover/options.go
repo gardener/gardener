@@ -6,7 +6,6 @@ package discover
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -31,9 +30,10 @@ type Options struct {
 
 // ParseArgs parses the arguments to the options.
 func (o *Options) ParseArgs(args []string) error {
-	if o.Kubeconfig == "" {
-		o.Kubeconfig = os.Getenv("KUBECONFIG")
+	if err := cmd.DefaultKubeconfig(&o.Kubeconfig); err != nil {
+		return fmt.Errorf("cloud not default kubeconfig: %w", err)
 	}
+
 	if len(args) > 0 {
 		o.ShootManifest = strings.TrimSpace(args[0])
 
@@ -50,6 +50,7 @@ func (o *Options) Validate() error {
 	if len(o.Kubeconfig) == 0 {
 		return fmt.Errorf("must provide a path to a garden cluster kubeconfig")
 	}
+
 	if len(o.ShootManifest) == 0 {
 		return fmt.Errorf("must provide a path to the shoot manifest file")
 	}
