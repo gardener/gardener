@@ -439,9 +439,13 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 		}
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		requiredDashboards = map[string]embed.FS{
-			seedDashboardsPath:          seedDashboards,
-			gardenAndSeedDashboardsPath: gardenAndSeedDashboards,
-			commonDashboardsPath:        commonDashboards,
+			seedDashboardsPath:   seedDashboards,
+			commonDashboardsPath: commonDashboards,
+		}
+		// If seed is garden, these dashboards are already deployed by gardener-operator, so gardenlet does not need to
+		// deploy them again.
+		if !p.values.OnlyDeployDataSourcesAndDashboards {
+			requiredDashboards[gardenAndSeedDashboardsPath] = gardenAndSeedDashboards
 		}
 		if !p.values.IncludeIstioDashboards {
 			ignorePaths.Insert("istio")
