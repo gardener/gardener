@@ -35,7 +35,7 @@ var _ = Describe("ActuatorReconcile", func() {
 			testDeployment             *machinev1alpha1.MachineDeployment
 			returnedDeployment         machinev1alpha1.MachineDeployment
 			wantedMachineDeployments   extensionsworkercontroller.MachineDeployments
-			caUsed                     bool = true
+			caUsed                     bool
 		)
 
 		BeforeEach(func() {
