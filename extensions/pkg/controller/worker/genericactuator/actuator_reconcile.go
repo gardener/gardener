@@ -245,7 +245,11 @@ func deployMachineDeployments(
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, cl, machineDeployment, func() error {
 			metav1.SetMetaDataLabel(&machineDeployment.ObjectMeta, v1beta1constants.LabelWorkerPool, deployment.PoolName)
 			for k, v := range deployment.ClusterAutoscalerAnnotations {
-				metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
+				if v == "" {
+					delete(machineDeployment.ObjectMeta.GetAnnotations(), k)
+				} else {
+					metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
+				}
 			}
 			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
 				Replicas:             replicas,
