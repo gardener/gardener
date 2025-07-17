@@ -64,12 +64,12 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	// prep for checks: list all DaemonSets and all node-critical pods on the given node
 	daemonSetList := &appsv1.DaemonSetList{}
-	if err := r.TargetClient.List(ctx, daemonSetList, client.MatchingLabels{v1beta1constants.LabelNodeCriticalComponent: "true"}); err != nil {
+	if err := r.TargetClient.List(ctx, daemonSetList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{v1beta1constants.LabelNodeCriticalComponent: "true"}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed listing node-critical DaemonSets on node: %w", err)
 	}
 
 	podList := &corev1.PodList{}
-	if err := r.TargetClient.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: node.Name}, client.MatchingLabels{v1beta1constants.LabelNodeCriticalComponent: "true"}); err != nil {
+	if err := r.TargetClient.List(ctx, podList, client.InNamespace(metav1.NamespaceSystem), client.MatchingFields{indexer.PodNodeName: node.Name}, client.MatchingLabels{v1beta1constants.LabelNodeCriticalComponent: "true"}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed listing node-critical Pods on node: %w", err)
 	}
 
