@@ -246,7 +246,7 @@ func deployMachineDeployments(
 			metav1.SetMetaDataLabel(&machineDeployment.ObjectMeta, v1beta1constants.LabelWorkerPool, deployment.PoolName)
 			for k, v := range deployment.ClusterAutoscalerAnnotations {
 				if v == "" {
-					delete(machineDeployment.ObjectMeta.GetAnnotations(), k)
+					delete(machineDeployment.GetAnnotations(), k)
 				} else {
 					metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
 				}
