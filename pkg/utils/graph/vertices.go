@@ -111,32 +111,35 @@ var VertexTypes = map[VertexType]KindObject{
 	VertexTypeWorkloadIdentity:          {Kind: "WorkloadIdentity", NewObjectFunc: func() client.Object { return &securityv1alpha1.WorkloadIdentity{} }},
 }
 
-type vertex struct {
-	vertexType VertexType
-	namespace  string
-	name       string
-	id         int64
+// Vertex contains the type, namespace, and name of a vertex in the graph.
+type Vertex struct {
+	Type      VertexType
+	Namespace string
+	Name      string
+	id        int64
 }
 
-func newVertex(vertexType VertexType, namespace, name string, id int64) *vertex {
-	return &vertex{
-		vertexType: vertexType,
-		name:       name,
-		namespace:  namespace,
-		id:         id,
+func newVertex(vertexType VertexType, namespace, name string, id int64) *Vertex {
+	return &Vertex{
+		Type:      vertexType,
+		Name:      name,
+		Namespace: namespace,
+		id:        id,
 	}
 }
 
-func (v *vertex) ID() int64 {
+// ID returns the unique identifier of the vertex.
+func (v *Vertex) ID() int64 {
 	return v.id
 }
 
-func (v *vertex) String() string {
+// String returns the string representation of the vertex, which includes its type, namespace, and name.
+func (v *Vertex) String() string {
 	var namespace string
-	if len(v.namespace) > 0 {
-		namespace = v.namespace + "/"
+	if len(v.Namespace) > 0 {
+		namespace = v.Namespace + "/"
 	}
-	return VertexTypes[v.vertexType].Kind + ":" + namespace + v.name
+	return VertexTypes[v.Type].Kind + ":" + namespace + v.Name
 }
 
 // typeVertexMapping is a map from type -> namespace -> name -> vertex.
@@ -146,4 +149,4 @@ type typeVertexMapping map[VertexType]namespaceVertexMapping
 type namespaceVertexMapping map[string]nameVertexMapping
 
 // nameVertexMapping is a map of name -> vertex.
-type nameVertexMapping map[string]*vertex
+type nameVertexMapping map[string]*Vertex

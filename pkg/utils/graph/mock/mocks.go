@@ -15,6 +15,7 @@ import (
 
 	graph "github.com/gardener/gardener/pkg/utils/graph"
 	gomock "go.uber.org/mock/gomock"
+	graph0 "gonum.org/v1/gonum/graph"
 	cache "sigs.k8s.io/controller-runtime/pkg/cache"
 )
 
@@ -70,6 +71,20 @@ func (mr *MockInterfaceMockRecorder) HasVertex(vertexType, vertexNamespace, vert
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasVertex", reflect.TypeOf((*MockInterface)(nil).HasVertex), vertexType, vertexNamespace, vertexName)
 }
 
+// Nodes mocks base method.
+func (m *MockInterface) Nodes() graph0.Nodes {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Nodes")
+	ret0, _ := ret[0].(graph0.Nodes)
+	return ret0
+}
+
+// Nodes indicates an expected call of Nodes.
+func (mr *MockInterfaceMockRecorder) Nodes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Nodes", reflect.TypeOf((*MockInterface)(nil).Nodes))
+}
+
 // Setup mocks base method.
 func (m *MockInterface) Setup(ctx context.Context, c cache.Cache) error {
 	m.ctrl.T.Helper()
@@ -82,4 +97,16 @@ func (m *MockInterface) Setup(ctx context.Context, c cache.Cache) error {
 func (mr *MockInterfaceMockRecorder) Setup(ctx, c any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Setup", reflect.TypeOf((*MockInterface)(nil).Setup), ctx, c)
+}
+
+// Visit mocks base method.
+func (m *MockInterface) Visit(nodes graph0.Nodes, visitor func(graph0.Node)) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Visit", nodes, visitor)
+}
+
+// Visit indicates an expected call of Visit.
+func (mr *MockInterfaceMockRecorder) Visit(nodes, visitor any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Visit", reflect.TypeOf((*MockInterface)(nil).Visit), nodes, visitor)
 }
