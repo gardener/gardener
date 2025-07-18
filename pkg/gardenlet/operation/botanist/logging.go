@@ -32,7 +32,7 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("checking if Gardener Resource Manager is ready failed: %w", err)
 	}
-	b.Shoot.Components.ControlPlane.Vali.WithAuthenticationProxy(grmIsPresent)
+	b.Shoot.Components.ControlPlane.Vali.WithAuthenticationProxy(grmIsPresent && !features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector))
 
 	if b.isShootEventLoggerEnabled() && grmIsPresent {
 		if err := b.Shoot.Components.ControlPlane.EventLogger.Deploy(ctx); err != nil {
@@ -45,6 +45,7 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		b.Shoot.Components.ControlPlane.OtelCollector.WithAuthenticationProxy(grmIsPresent)
 		if err := b.Shoot.Components.ControlPlane.OtelCollector.Deploy(ctx); err != nil {
 			return fmt.Errorf("deploying OpenTelemetry Collector failed: %w", err)
 		}
@@ -129,8 +130,13 @@ func (b *Botanist) DefaultVali() (vali.Interface, error) {
 }
 
 // DefaultOtelCollector returns a deployer for the OpenTelemetry Collector.
-func (b *Botanist) DefaultOtelCollector() (component.DeployWaiter, error) {
-	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameOpentelemetryCollector)
+func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
+	collectorImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameOpentelemetryCollector)
+	if err != nil {
+		return nil, err
+	}
+
+	kubeRBACProxyImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameKubeRbacProxy)
 	if err != nil {
 		return nil, err
 	}
@@ -139,8 +145,10 @@ func (b *Botanist) DefaultOtelCollector() (component.DeployWaiter, error) {
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		collector.Values{
-			Image: image.String(),
+			Image:              collectorImage.String(),
+			KubeRBACProxyImage: kubeRBACProxyImage.String(),
 		},
 		"http://"+valiconstants.ServiceName+":"+strconv.Itoa(valiconstants.ValiPort)+valiconstants.PushEndpoint,
+		b.SecretsManager,
 	), nil
 }
