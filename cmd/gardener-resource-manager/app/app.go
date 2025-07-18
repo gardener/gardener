@@ -179,12 +179,20 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 			opts.MapperProvider = apiutil.NewDynamicRESTMapper
 
 			if cfg.Webhooks.NodeAgentAuthorizer.Enabled {
+				// If you add a new resource to opts.Cache.ByObject and explicitly set the Namespaces field, make sure
+				// to check the usages of LIST calls for these objects in the pkg/resourcemanager directories. You might
+				// need to add the client.InNamespace() filter option now that (potentially more) namespaces are
+				// considered by the cache.
+				// The same goes for WATCHes in controllers (you might need to add new predicates that filter by the
+				// namespaces).
 				opts.Cache.ByObject = map[client.Object]cache.ByObject{
-					// Needed for node-agent-authorizer webhook
-					&corev1.Pod{}: {Namespaces: map[string]cache.Config{cache.AllNamespaces: {}}},
+					&corev1.Pod{}: {Namespaces: map[string]cache.Config{cache.AllNamespaces: {}}}, // Needed for node-agent-authorizer webhook
 				}
 			}
 
+			// This restricts the cache to only watch the namespaces that are configured in the target client
+			// connection. Note that this does not apply for the resources in opts.Cache.ByObject for which the
+			// Namespaces are explicitly set (see above).
 			opts.Cache.DefaultNamespaces = getCacheConfig(cfg.TargetClientConnection.Namespaces)
 			opts.Cache.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration
 
