@@ -3165,6 +3165,41 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"BadValue": Equal(positiveInteger + 10),
 						"Detail":   ContainSubstring(fmt.Sprintf("must equal maxScaleDownParallelism %d", positiveInteger)),
 					})))),
+				Entry("invalid with negative scaleDownDelayAfterAdd", core.ClusterAutoscaler{
+					ScaleDownDelayAfterAdd: &metav1.Duration{Duration: -2 * time.Minute},
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("scaleDownDelayAfterAdd"),
+					"Detail": Equal("can not be negative"),
+				})))),
+				Entry("invalid with negative ScaleDownDelayAfterDelete", core.ClusterAutoscaler{
+					ScaleDownDelayAfterDelete: &metav1.Duration{Duration: -2 * time.Minute},
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("scaleDownDelayAfterDelete"),
+					"Detail": Equal("can not be negative"),
+				})))),
+				Entry("invalid with negative ScaleDownDelayAfterFailure", core.ClusterAutoscaler{
+					ScaleDownDelayAfterFailure: &metav1.Duration{Duration: -2 * time.Minute},
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("scaleDownDelayAfterFailure"),
+					"Detail": Equal("can not be negative"),
+				})))),
+				Entry("invalid with negative ScaleDownUnneededTime", core.ClusterAutoscaler{
+					ScaleDownUnneededTime: &metav1.Duration{Duration: -2 * time.Minute},
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("scaleDownUnneededTime"),
+					"Detail": Equal("can not be negative"),
+				})))),
+				Entry("invalid with negative ScanInterval", core.ClusterAutoscaler{
+					ScanInterval: &metav1.Duration{Duration: -2 * time.Minute},
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("scanInterval"),
+					"Detail": Equal("can not be negative"),
+				})))),
 			)
 
 			Describe("taint validation", func() {
@@ -6953,6 +6988,82 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
 				Expect(errList).To(BeEmpty())
 			})
+			It("should forbid setting MachineDrainTimeout to a negative value", func() {
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					MachineDrainTimeout: &metav1.Duration{Duration: time.Minute * -2},
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.machineDrainTimeout"),
+					"Detail": Equal("can not be negative"),
+				}))))
+			})
+			It("should forbid setting MachineHealthTimeout to a negative value", func() {
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					MachineHealthTimeout: &metav1.Duration{Duration: time.Minute * -2},
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.machineHealthTimeout"),
+					"Detail": Equal("can not be negative"),
+				}))))
+			})
+			It("should forbid setting MachineCreationTimeout to a negative value", func() {
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					MachineCreationTimeout: &metav1.Duration{Duration: time.Minute * -2},
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.machineCreationTimeout"),
+					"Detail": Equal("can not be negative"),
+				}))))
+			})
+			It("should forbid setting MachineInPlaceUpdateTimeout to a negative value", func() {
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					MachineInPlaceUpdateTimeout: &metav1.Duration{Duration: time.Minute * -2},
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.machineInPlaceUpdateTimeout"),
+					"Detail": Equal("can not be negative"),
+				}))))
+			})
+			It("should forbid setting MaxEvictRetries to a negative value", func() {
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					MaxEvictRetries: ptr.To(int32(-2)),
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.maxEvictRetries"),
+					"Detail": Equal("can not be negative"),
+				}))))
+			})
+		})
+		It("should fail when priority is set to value less than -1", func() {
+			worker := core.Worker{
+				Name: "worker",
+				Machine: core.Machine{
+					Type: "xlarge",
+				},
+				Priority: ptr.To(int32(-2)),
+			}
+
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
+			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("priority"),
+				"Detail": Equal("can not be less than -1"),
+			}))))
 		})
 	})
 
