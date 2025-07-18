@@ -56,6 +56,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -111,10 +112,10 @@ type Reconciler struct {
 
 // Reconcile decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
-func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := logf.FromContext(ctx)
+func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(reconcileCtx)
 
-	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
+	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
 	secret := &corev1.Secret{}
@@ -164,13 +165,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// If the node-agent has restarted after OS update, we need to persist the change in oscChanges.
-	if osc.Spec.InPlaceUpdates != nil && ptr.Deref(osVersion, "") == osc.Spec.InPlaceUpdates.OperatingSystemVersion {
-		if err := oscChanges.completeOSUpdate(); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed completing OS update: %w", err)
+	if osc.Spec.InPlaceUpdates != nil {
+		if osVersionUpToDate, err := IsOsVersionUpToDate(osVersion, osc); err != nil {
+			return reconcile.Result{}, err
+		} else if osVersionUpToDate {
+			if err := oscChanges.completeOSUpdate(); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed completing OS update: %w", err)
+			}
 		}
 	}
 
 	if isInPlaceUpdate(oscChanges) {
+		// In case of in-place update, we use retries for certain cases like OS update with higher timeouts,
+		// so we need to overwrite the context to use a longer timeout.
+		ctx, cancel = context.WithTimeout(reconcileCtx, 10*time.Minute)
+		defer cancel()
+
 		if !nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {
 			if node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] != machinev1alpha1.LabelValueNodeUpdateFailed {
 				log.Info("Node is not ready for in-place update, will be requeued when the node has the ready-for-update condition", "node", node.Name)
@@ -672,26 +682,50 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 		return nil
 	}
 
-	// This means that the OS was not updated in-place and it rolled back to the previous version but a newer version is not yet applied.
-	if lastAttemptedUpdateVersion, osUpdateAnnotationExists := node.Annotations[annotationUpdatingOperatingSystemVersion]; osUpdateAnnotationExists &&
-		osc.Spec.InPlaceUpdates != nil && osVersion != nil && osc.Spec.InPlaceUpdates.OperatingSystemVersion != *osVersion &&
-		lastAttemptedUpdateVersion == osc.Spec.InPlaceUpdates.OperatingSystemVersion {
-		reason, ok := node.Annotations[machinev1alpha1.AnnotationKeyMachineUpdateFailedReason]
-		// If there is already a annotatoin with the update failed reason, don't overwrite it.
-		if !ok {
-			if err := r.patchNodeUpdateFailed(ctx, log, node, fmt.Sprintf("OS update might have failed and rolled back to the previous version. Desired version: %q, Current version: %q", osc.Spec.InPlaceUpdates.OperatingSystemVersion, *osVersion)); err != nil {
-				return err
-			}
+	if osc.Spec.InPlaceUpdates == nil {
+		return nil
+	}
 
-			// No point in requeuing the node for the same version, wait for the newer version to be applied.
-			return reconcile.TerminalError(fmt.Errorf("OS update might have failed and rolled back to the previous version. Desired version: %q, Current version: %q", osc.Spec.InPlaceUpdates.OperatingSystemVersion, *osVersion))
+	// This means that the OS was not updated in-place and it rolled back to the previous version but a newer version is not yet applied.
+	if lastAttemptedUpdateVersion, osUpdateAnnotationExists := node.Annotations[annotationUpdatingOperatingSystemVersion]; osUpdateAnnotationExists && oscChanges.InPlaceUpdates.OperatingSystem {
+		lastAttemptedUpdateVersionIsSameAsDesired, err := versionutils.CompareVersions(lastAttemptedUpdateVersion, "=", osc.Spec.InPlaceUpdates.OperatingSystemVersion)
+		if err != nil {
+			return fmt.Errorf("failed comparing last attempted update version %q with desired OS version %q: %w", lastAttemptedUpdateVersion, osc.Spec.InPlaceUpdates.OperatingSystemVersion, err)
 		}
 
-		return reconcile.TerminalError(fmt.Errorf("OS update has failed with error: %s", reason))
+		if lastAttemptedUpdateVersionIsSameAsDesired {
+			reason, ok := node.Annotations[machinev1alpha1.AnnotationKeyMachineUpdateFailedReason]
+			// If there is already a annotation with the update failed reason, don't overwrite it.
+			if !ok {
+				if err := r.patchNodeUpdateFailed(ctx, log, node, fmt.Sprintf("OS update might have failed and rolled back to the previous version. Desired version: %q, Current version: %q", osc.Spec.InPlaceUpdates.OperatingSystemVersion, *osVersion)); err != nil {
+					return err
+				}
+
+				// No point in requeuing the node for the same version, wait for the newer version to be applied.
+				return reconcile.TerminalError(fmt.Errorf("OS update might have failed and rolled back to the previous version. Desired version: %q, Current version: %q", osc.Spec.InPlaceUpdates.OperatingSystemVersion, *osVersion))
+			}
+
+			return reconcile.TerminalError(fmt.Errorf("OS update has failed with error: %s", reason))
+		}
 	}
 
 	if err := r.updateOSInPlace(ctx, log, oscChanges, osc, node); err != nil {
 		return fmt.Errorf("failed to update OS in-place: %w", err)
+	}
+
+	if oscChanges.InPlaceUpdates.OperatingSystem {
+		// It can so happen that the updateOSInPlace function returns nil error, because calling the update command succeeded,
+		// but the OS is not yet rebooted. We should not proceed the reconciliation until the node-agent is restarted after the OS update.
+		currentOSVersion, err := GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
+		if err != nil {
+			return fmt.Errorf("failed to get current OS version: %w", err)
+		}
+
+		if osVersionUpToDate, err := IsOsVersionUpToDate(currentOSVersion, osc); err != nil {
+			return err
+		} else if !osVersionUpToDate {
+			return reconcile.TerminalError(fmt.Errorf("stopping reconciliation until gardener-node-agent is restarted after the OS update. Current version: %q, Desired version: %q", *currentOSVersion, osc.Spec.InPlaceUpdates.OperatingSystemVersion))
+		}
 	}
 
 	if err := r.performCredentialsRotationInPlace(ctx, log, oscChanges, node); err != nil {
@@ -981,15 +1015,14 @@ func (r *Reconciler) updateOSInPlace(ctx context.Context, log logr.Logger, oscCh
 	patch := client.MergeFrom(node.DeepCopy())
 	metav1.SetMetaDataAnnotation(&node.ObjectMeta, annotationUpdatingOperatingSystemVersion, osc.Spec.InPlaceUpdates.OperatingSystemVersion)
 	if err := r.Client.Patch(ctx, node, patch); err != nil {
-		log.Error(err, "Failed to patch node with annotation for OS update", "node", node.Name)
-		return err
+		return fmt.Errorf("failed to patch node with annotation for OS update: %w", err)
 	}
 
+	log.Info("Executing update script", "command", osc.Status.InPlaceUpdates.OSUpdate.Command, "args", strings.Join(osc.Status.InPlaceUpdates.OSUpdate.Args, " "))
 	if err := retryutils.UntilTimeout(ctx, OSUpdateRetryInterval, OSUpdateRetryTimeout, func(ctx context.Context) (bool, error) {
-		log.Info("Executing update script", "command", osc.Status.InPlaceUpdates.OSUpdate.Command, "args", strings.Join(osc.Status.InPlaceUpdates.OSUpdate.Args, " "))
-
 		if output, err2 := ExecCommandCombinedOutput(ctx, osc.Status.InPlaceUpdates.OSUpdate.Command, osc.Status.InPlaceUpdates.OSUpdate.Args...); err2 != nil {
 			if retriableErrorPatternRegex.MatchString(string(output)) {
+				log.Error(err2, "Retriable error detected while executing OS update command: retrying", "output", strings.ReplaceAll(string(output), "\n", " "))
 				return retryutils.MinorError(fmt.Errorf("retriable error detected: %w, output: %s", err2, string(output)))
 			} else if nonRetriableErrorPatternRegex.MatchString(string(output)) {
 				return retryutils.SevereError(fmt.Errorf("non-retriable error detected: %w, output: %s", err2, string(output)))
@@ -1025,7 +1058,7 @@ func (r *Reconciler) patchNodeUpdateSuccessful(ctx context.Context, log logr.Log
 }
 
 func (r *Reconciler) patchNodeUpdateFailed(ctx context.Context, log logr.Logger, node *corev1.Node, reason string) error {
-	log.Info("Marking the node with in-place update failed label", "node", node.Name, "reason", reason)
+	log.Info("Marking the node with in-place update failed label", "node", node.Name, "reason", strings.ReplaceAll(reason, "\n", " "))
 
 	patch := client.MergeFrom(node.DeepCopy())
 	metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed)
