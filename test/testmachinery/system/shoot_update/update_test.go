@@ -128,7 +128,7 @@ func RunTest(
 
 	var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
 	if hasInPlaceUpdateWorkers {
-		nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
+		nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, f.Logger, f.ShootClient.Client(), f.Shoot)
 	}
 
 	Expect(f.UpdateShootSpec(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
@@ -146,9 +146,9 @@ func RunTest(
 	})).To(Succeed())
 
 	if hasInPlaceUpdateWorkers {
-		inplace.ItShouldVerifyInPlaceUpdateStart(f.GardenClient.Client(), f.Shoot, hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers)
+		inplace.VerifyInPlaceUpdateStart(ctx, f.Logger, f.GardenClient.Client(), f.Shoot, hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers)
 		if hasManualInPlaceUpdateWorkers {
-			inplace.LabelManualInPlaceNodesWithSelectedForUpdate(ctx, f.ShootClient.Client(), f.Shoot)
+			inplace.LabelManualInPlaceNodesWithSelectedForUpdate(ctx, f.Logger, f.ShootClient.Client(), f.Shoot)
 		}
 	}
 
@@ -160,10 +160,10 @@ func RunTest(
 	Expect(err).NotTo(HaveOccurred())
 
 	if hasInPlaceUpdateWorkers {
-		nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
+		nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, f.Logger, f.ShootClient.Client(), f.Shoot)
 		Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
 
-		inplace.ItShouldVerifyInPlaceUpdateCompletion(f.GardenClient.Client(), f.Shoot)
+		inplace.VerifyInPlaceUpdateCompletion(ctx, f.Logger, f.GardenClient.Client(), f.Shoot)
 	}
 
 	By("Verify the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [after update]")

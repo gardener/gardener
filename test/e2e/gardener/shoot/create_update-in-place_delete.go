@@ -116,7 +116,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
-			inplace.ItShouldVerifyInPlaceUpdateStart(s.GardenClient, s.Shoot, true, true)
+			inplace.ItShouldVerifyInPlaceUpdateStart(s, true, true)
 
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
@@ -125,7 +125,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindNodesOfInPlaceWorkers(s)
 			Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
-			inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
+			inplace.ItShouldVerifyInPlaceUpdateCompletion(s)
 
 			ItShouldDeleteShoot(s)
 			ItShouldWaitForShootToBeDeleted(s)
