@@ -18,7 +18,7 @@ Dual-stack networking allows clusters to operate with both IPv4 and IPv6 protoco
 ### Key Considerations
 
 - Single stack IPv4 clusters can be migrated to  dual-stack by adding IPv6 as second element.
--The migration of single stack IPv6 clusters to dual-stack is not supported.
+- The migration of single stack IPv6 clusters to dual-stack is not supported.
 - A dual-stack cluster cannot be migrated to single-stack. Migration from single-stack to dual-stack is a one-way process and cannot be undone.
 - Migration involves multiple reconciliation runs to ensure a smooth transition without disruptions.
 

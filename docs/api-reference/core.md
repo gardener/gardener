@@ -9373,7 +9373,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+<p>IPFamilies specifies the IP protocol versions to use for shoot networking.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md</a>.
 Defaults to [&ldquo;IPv4&rdquo;].</p>
 </td>
