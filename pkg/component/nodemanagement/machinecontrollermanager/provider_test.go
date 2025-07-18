@@ -108,17 +108,17 @@ var _ = Describe("Provider", func() {
 			})
 		})
 
-		JustBeforeEach(func() {
-			for i, s := range container.Args {
-				if strings.HasPrefix(s, "--target-kubeconfig=") {
-					container.Args[i] = "--target-kubeconfig="
-				}
-			}
-		})
-
 		When("running the control plane (gardenadm init)", func() {
 			BeforeEach(func() {
 				namespace = "kube-system"
+			})
+
+			JustBeforeEach(func() {
+				for i, s := range container.Args {
+					if strings.HasPrefix(s, "--target-kubeconfig=") {
+						container.Args[i] = "--target-kubeconfig="
+					}
+				}
 			})
 
 			It("should return the provider sidecar container", func() {
@@ -127,6 +127,14 @@ var _ = Describe("Provider", func() {
 		})
 
 		When("not running the control plane (gardenadm bootstrap)", func() {
+			JustBeforeEach(func() {
+				for i, s := range container.Args {
+					if strings.HasPrefix(s, "--target-kubeconfig=") {
+						container.Args[i] = "--target-kubeconfig=none"
+					}
+				}
+			})
+
 			It("should return the provider sidecar container", func() {
 				Expect(ProviderSidecarContainer(shoot, namespace, provider, image)).To(DeepEqual(container))
 			})
