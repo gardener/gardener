@@ -17,10 +17,6 @@ DEPLOY_REGISTRY=true
 MULTI_ZONAL=false
 CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
 ADDITIONAL_ARGS=""
-SUDO=""
-if [[ "$(id -u)" != "0" ]]; then
-  SUDO="sudo "
-fi
 
 parse_flags() {
   while test $# -gt 0; do
@@ -105,29 +101,6 @@ setup_kind_network() {
     --subnet 172.18.0.0/16 --gateway 172.18.0.1 \
     --ipv6 --subnet fd00:10::/64 --gateway fd00:10::1 \
     --opt com.docker.network.bridge.enable_ip_masquerade=true
-}
-
-setup_loopback_device() {
-  LOOPBACK_IP_ADDRESSES=$1
-  if ! command -v ip &>/dev/null; then
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-      echo "'ip' command not found. Please install 'ip' command, refer https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#installing-iproute2" 1>&2
-      exit 1
-    fi
-    echo "Skipping loopback device setup because 'ip' command is not available..."
-    return
-  fi
-  LOOPBACK_DEVICE=$(ip address | grep LOOPBACK | sed "s/^[0-9]\+: //g" | awk '{print $1}' | sed "s/:$//g")
-  echo "Checking loopback device ${LOOPBACK_DEVICE}..."
-  for address in "${LOOPBACK_IP_ADDRESSES[@]}"; do
-    if ip address show dev ${LOOPBACK_DEVICE} | grep -q $address/; then
-      echo "IP address $address already assigned to ${LOOPBACK_DEVICE}."
-    else
-      echo "Adding IP address $address to ${LOOPBACK_DEVICE}..."
-      ${SUDO}ip address add "$address" dev "${LOOPBACK_DEVICE}"
-    fi
-  done
-  echo "Setting up loopback device ${LOOPBACK_DEVICE} completed."
 }
 
 # setup_containerd_registry_mirrors sets up all containerd registry mirrors.
@@ -283,37 +256,11 @@ mkdir -m 0755 -p \
   "$(dirname "$0")/../dev/local-backupbuckets" \
   "$(dirname "$0")/../dev/local-registry"
 
-LOOPBACK_IP_ADDRESSES=(172.18.255.1)
-if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(::1)
+additional_params=""
+if [[ ${MULTI_ZONAL} == "true" ]]; then
+  additional_params="--multi-zonal"
 fi
-
-if [[ "$MULTI_ZONAL" == "true" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(172.18.255.10 172.18.255.11 172.18.255.12)
-  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::10 ::11 ::12)
-  fi
-fi
-
-if [[ "$CLUSTER_NAME" != "*local2*" ]] ; then
-  LOOPBACK_IP_ADDRESSES+=(172.18.255.22)
-  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::22)
-  fi
-fi
-
-if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(172.18.255.3)
-  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::3)
-  fi
-elif [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local-multi-node2" ]]; then
-  LOOPBACK_IP_ADDRESSES+=(172.18.255.2)
-  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::2)
-  fi
-fi
-setup_loopback_device "${LOOPBACK_IP_ADDRESSES[@]}"
+./hack/kind-setup-loopback-devices.sh --cluster-name "${CLUSTER_NAME}" --ip-family "${IPFAMILY}" "${additional_params}"
 
 setup_kind_network
 
