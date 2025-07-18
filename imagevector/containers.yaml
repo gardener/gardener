@@ -207,7 +207,7 @@ images:
   - name: opentelemetry-operator
     sourceRepository: github.com/open-telemetry/opentelemetry-operator
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/opentelemetry-operator/opentelemetry-operator
-    tag: "v0.127.0"
+    tag: "v0.129.1"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:

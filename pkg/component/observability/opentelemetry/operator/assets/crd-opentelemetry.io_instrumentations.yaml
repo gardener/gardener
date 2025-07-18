@@ -378,7 +378,7 @@ spec:
                     type: string
                   volumeClaimTemplate:
                     description: |-
-                      VolumeClaimTemplate defines a ephemeral volume used for auto-instrumentation.
+                      VolumeClaimTemplate defines an ephemeral volume used for auto-instrumentation.
                       If omitted, an emptyDir is used with size limit VolumeSizeLimit
                     properties:
                       metadata:
@@ -607,9 +607,10 @@ spec:
                   useLabelsForResourceAttributes:
                     description: |-
                       UseLabelsForResourceAttributes defines whether to use common labels for resource attributes:
+                      Note: first entry wins:
+                        - `app.kubernetes.io/instance` becomes `service.name`
                         - `app.kubernetes.io/name` becomes `service.name`
                         - `app.kubernetes.io/version` becomes `service.version`
-                        - `app.kubernetes.io/part-of` becomes `service.namespace`
                     type: boolean
                 type: object
               dotnet:
@@ -802,7 +803,7 @@ spec:
                     type: object
                   volumeClaimTemplate:
                     description: |-
-                      VolumeClaimTemplate defines a ephemeral volume used for auto-instrumentation.
+                      VolumeClaimTemplate defines an ephemeral volume used for auto-instrumentation.
                       If omitted, an emptyDir is used with size limit VolumeSizeLimit
                     properties:
                       metadata:
@@ -1383,7 +1384,7 @@ spec:
                     type: object
                   volumeClaimTemplate:
                     description: |-
-                      VolumeClaimTemplate defines a ephemeral volume used for auto-instrumentation.
+                      VolumeClaimTemplate defines an ephemeral volume used for auto-instrumentation.
                       If omitted, an emptyDir is used with size limit VolumeSizeLimit
                     properties:
                       metadata:
@@ -1606,6 +1607,12 @@ spec:
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                 type: object
+              imagePullPolicy:
+                description: |-
+                  ImagePullPolicy
+                  One of Always, Never, IfNotPresent.
+                  Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
+                type: string
               java:
                 description: Java defines configuration for java auto-instrumentation.
                 properties:
@@ -1816,7 +1823,7 @@ spec:
                     type: object
                   volumeClaimTemplate:
                     description: |-
-                      VolumeClaimTemplate defines a ephemeral volume used for auto-instrumentation.
+                      VolumeClaimTemplate defines an ephemeral volume used for auto-instrumentation.
                       If omitted, an emptyDir is used with size limit VolumeSizeLimit
                     properties:
                       metadata:
@@ -2357,7 +2364,7 @@ spec:
                     type: object
                   volumeClaimTemplate:
                     description: |-
-                      VolumeClaimTemplate defines a ephemeral volume used for auto-instrumentation.
+                      VolumeClaimTemplate defines an ephemeral volume used for auto-instrumentation.
                       If omitted, an emptyDir is used with size limit VolumeSizeLimit
                     properties:
                       metadata:
@@ -2770,7 +2777,7 @@ spec:
                     type: object
                   volumeClaimTemplate:
                     description: |-
-                      VolumeClaimTemplate defines a ephemeral volume used for auto-instrumentation.
+                      VolumeClaimTemplate defines an ephemeral volume used for auto-instrumentation.
                       If omitted, an emptyDir is used with size limit VolumeSizeLimit
                     properties:
                       metadata:
@@ -3201,7 +3208,7 @@ spec:
                     type: object
                   volumeClaimTemplate:
                     description: |-
-                      VolumeClaimTemplate defines a ephemeral volume used for auto-instrumentation.
+                      VolumeClaimTemplate defines an ephemeral volume used for auto-instrumentation.
                       If omitted, an emptyDir is used with size limit VolumeSizeLimit
                     properties:
                       metadata:
