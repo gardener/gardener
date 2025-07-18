@@ -25,7 +25,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | UseNamespacedCloudProfile                | `true`  | `Beta`  | `1.112` |         |
 | ShootCredentialsBinding                  | `false` | `Alpha` | `1.98`  | `1.106` |
 | ShootCredentialsBinding                  | `true`  | `Beta`  | `1.107` |         |
-| NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  |         |
+| NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  | `1.123` |
 | NewWorkerPoolHash                        | `true`  | `Beta`  | `1.124` |         |
 | CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` | `1.120` |
 | CredentialsRotationWithoutWorkersRollout | `true`  | `Beta`  | `1.121` |         |
