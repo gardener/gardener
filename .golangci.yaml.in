@@ -3,6 +3,7 @@ run:
   concurrency: 4
 linters:
   enable:
+    - embeddedstructfieldcheck
     - ginkgolinter
     - importas
     - logcheck
@@ -12,7 +13,6 @@ linters:
     - unconvert
     - unparam
     - whitespace
-    - embeddedstructfieldcheck
   settings:
     embeddedstructfieldcheck:
       # Checks that sync.Mutex and sync.RWMutex are not used as embedded fields.

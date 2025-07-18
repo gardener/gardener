@@ -1033,6 +1033,10 @@ kind: NodeAgentConfiguration
 			}
 
 			DeferCleanup(test.WithVar(&operatingsystemconfig.ExecCommandCombinedOutput, func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+				// Simulate a successful OS update by returning the new OS version in GetOSVersion.
+				DeferCleanup(test.WithVars(
+					&operatingsystemconfig.GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) { return ptr.To("1.2.4"), nil },
+				))
 				return []byte("OS update successful"), nil
 			}))
 
