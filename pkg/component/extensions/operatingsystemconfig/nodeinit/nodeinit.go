@@ -16,7 +16,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
-	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -70,12 +69,7 @@ func Config(
 					},
 				},
 			},
-		}
-	)
-
-	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-		nodeInitFiles = append(nodeInitFiles,
-			extensionsv1alpha1.File{
+			{
 				Path:        nodeagentconfigv1alpha1.MachineNameFilePath,
 				Permissions: ptr.To[uint32](0640),
 				Content: extensionsv1alpha1.FileContent{
@@ -84,8 +78,9 @@ func Config(
 					},
 					TransmitUnencoded: ptr.To(true),
 				},
-			})
-	}
+			},
+		}
+	)
 
 	// The gardener-node-init script above will bootstrap the gardener-node-agent. This means that the unit file for
 	// the gardener-node-agent unit will be written and eventually started (whilst gardener-node-init disables and stops

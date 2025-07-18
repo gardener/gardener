@@ -16,7 +16,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
-	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -127,7 +126,6 @@ WantedBy=multi-user.target`))
 						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 					},
 				},
-				FeatureGates: map[string]bool{string(features.NodeAgentAuthorizer): true},
 			}))
 		})
 	})
@@ -158,8 +156,6 @@ controllers:
     - path: /var/lib/valitail/auth-token
       secretName: gardener-valitail
     syncPeriod: 12h0m0s
-featureGates:
-  NodeAgentAuthorizer: true
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""

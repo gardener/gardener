@@ -37,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
-	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -235,16 +234,6 @@ func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *gardenc
 }
 
 func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
-	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-		if err := gardenerutils.
-			NewShootAccessSecret(nodeagentconfigv1alpha1.AccessSecretName, o.values.Namespace).
-			WithTargetSecret(nodeagentconfigv1alpha1.AccessSecretName, metav1.NamespaceSystem).
-			WithTokenExpirationDuration("720h").
-			Reconcile(ctx, o.client); err != nil {
-			return err
-		}
-	}
-
 	if err := o.updateHashVersioningSecret(ctx); err != nil {
 		return err
 	}

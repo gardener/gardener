@@ -97,8 +97,6 @@ controllers:
     secretName: ` + oscSecretName + `
   token:
     syncPeriod: 12h0m0s
-featureGates:
-  NodeAgentAuthorizer: true
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""
@@ -195,8 +193,6 @@ controllers:
     secretName: ` + oscSecretName + `
   token:
     syncPeriod: 12h0m0s
-featureGates:
-  NodeAgentAuthorizer: true
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""

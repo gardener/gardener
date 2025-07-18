@@ -178,7 +178,6 @@ func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context
 		managedResourceSecretNamesWanted = sets.New[string]()
 		managedResourceSecretNameToData  = make(map[string]map[string][]byte, managedResourceSecretsCount)
 
-		secretNames                           []string
 		workerNameToOperatingSystemConfigMaps = b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerPoolNameToOperatingSystemConfigsMap()
 
 		fns = make([]flow.TaskFn, 0, managedResourceSecretsCount)
@@ -191,16 +190,15 @@ func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context
 			return fmt.Errorf("did not find osc data for worker pool %q", worker.Name)
 		}
 
-		secretName, data, err := b.generateOperatingSystemConfigSecretForWorker(ctx, worker, oscData.Original)
+		data, err := b.generateOperatingSystemConfigSecretForWorker(ctx, worker, oscData.Original)
 		if err != nil {
 			return err
 		}
 
-		secretNames = append(secretNames, secretName)
 		managedResourceSecretNameToData["shoot-gardener-node-agent-"+worker.Name] = data
 	}
 
-	rbacResourcesData, err := NodeAgentRBACResourcesDataFn(secretNames)
+	rbacResourcesData, err := NodeAgentRBACResourcesDataFn()
 	if err != nil {
 		return err
 	}
@@ -257,21 +255,20 @@ func (b *Botanist) generateOperatingSystemConfigSecretForWorker(
 	worker gardencorev1beta1.Worker,
 	oscDataOriginal operatingsystemconfig.Data,
 ) (
-	string,
 	map[string][]byte,
 	error,
 ) {
 	oscSecret, err := NodeAgentOSCSecretFn(ctx, b.SeedClientSet.Client(), oscDataOriginal.Object, oscDataOriginal.GardenerNodeAgentSecretName, worker.Name)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", worker.Name, err)
+		return nil, fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", worker.Name, err)
 	}
 
 	resources, err := managedresources.
 		NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
 		AddAllAndSerialize(oscSecret)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed adding gardener-node-agent secret for pool %q to the registry and serializing it: %w", worker.Name, err)
+		return nil, fmt.Errorf("failed adding gardener-node-agent secret for pool %q to the registry and serializing it: %w", worker.Name, err)
 	}
 
-	return oscSecret.Name, resources, nil
+	return resources, nil
 }

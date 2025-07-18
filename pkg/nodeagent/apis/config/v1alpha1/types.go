@@ -20,8 +20,6 @@ const (
 	// BinaryDir is the directory on the worker node that contains the binary for the gardener-node-agent.
 	BinaryDir = "/opt/bin"
 
-	// AccessSecretName is a constant for the secret name for the gardener-node-agent's shoot access secret.
-	AccessSecretName = "gardener-node-agent"
 	// BootstrapTokenFilePath is the file path on the worker node that contains the bootstrap token for the node.
 	BootstrapTokenFilePath = CredentialsDir + "/bootstrap-token"
 	// TokenFilePath is the file path on the worker node that contains the access token of the gardener-node-agent.
