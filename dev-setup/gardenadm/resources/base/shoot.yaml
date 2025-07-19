@@ -4,6 +4,9 @@ metadata:
   name: root
   namespace: garden
 spec:
+  cloudProfile:
+    kind: CloudProfile
+    name: local
   region: local
   provider:
     type: local

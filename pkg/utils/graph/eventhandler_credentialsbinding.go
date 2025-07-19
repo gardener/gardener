@@ -22,7 +22,7 @@ func (g *graph) setupCredentialsBindingWatch(_ context.Context, informer cache.I
 			if !ok {
 				return
 			}
-			g.handleCredentialsBindingCreateOrUpdate(credentialsBinding)
+			g.HandleCredentialsBindingCreateOrUpdate(credentialsBinding)
 		},
 
 		UpdateFunc: func(oldObj, newObj any) {
@@ -37,7 +37,7 @@ func (g *graph) setupCredentialsBindingWatch(_ context.Context, informer cache.I
 			}
 
 			if !apiequality.Semantic.DeepEqual(oldCredentialsBinding.CredentialsRef, newCredentialsBinding.CredentialsRef) {
-				g.handleCredentialsBindingCreateOrUpdate(newCredentialsBinding)
+				g.HandleCredentialsBindingCreateOrUpdate(newCredentialsBinding)
 			}
 		},
 
@@ -55,7 +55,7 @@ func (g *graph) setupCredentialsBindingWatch(_ context.Context, informer cache.I
 	return err
 }
 
-func (g *graph) handleCredentialsBindingCreateOrUpdate(credentialsBinding *securityv1alpha1.CredentialsBinding) {
+func (g *graph) HandleCredentialsBindingCreateOrUpdate(credentialsBinding *securityv1alpha1.CredentialsBinding) {
 	start := time.Now()
 	defer func() {
 		metricUpdateDuration.WithLabelValues("CredentialsBinding", "CreateOrUpdate").Observe(time.Since(start).Seconds())
@@ -68,7 +68,7 @@ func (g *graph) handleCredentialsBindingCreateOrUpdate(credentialsBinding *secur
 
 	var (
 		credentialsBindingVertex = g.getOrCreateVertex(VertexTypeCredentialsBinding, credentialsBinding.Namespace, credentialsBinding.Name)
-		credentialsVertex        *vertex
+		credentialsVertex        *Vertex
 	)
 	if credentialsBinding.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
 		credentialsBinding.CredentialsRef.Kind == "WorkloadIdentity" {

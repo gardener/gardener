@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -47,7 +48,7 @@ var _ = Describe("Bootstrap", func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
 		clientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 
-		DeferCleanup(test.WithVar(&NewClientSetFromFile, func(string) (kubernetes.Interface, error) { return clientSet, nil }))
+		DeferCleanup(test.WithVar(&NewClientSetFromFile, func(string, *runtime.Scheme) (kubernetes.Interface, error) { return clientSet, nil }))
 	})
 
 	Describe("#RunE", func() {

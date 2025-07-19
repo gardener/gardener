@@ -104,7 +104,7 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 		var (
 			namespace = seed.Spec.Backup.CredentialsRef.Namespace
 			name      = seed.Spec.Backup.CredentialsRef.Name
-			vertex    *vertex
+			vertex    *Vertex
 		)
 
 		if seed.Spec.Backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
