@@ -17,6 +17,8 @@ import (
 func ValidateExposureClass(exposureClass *core.ExposureClass) field.ErrorList {
 	var allErrs = field.ErrorList{}
 
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&exposureClass.ObjectMeta, false, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
+
 	handlerNameLength := len(exposureClass.Handler)
 
 	for _, errorMessage := range validation.IsDNS1123Label(exposureClass.Handler) {
