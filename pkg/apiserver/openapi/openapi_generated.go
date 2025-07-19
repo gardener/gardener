@@ -9321,7 +9321,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"cloudProfileName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CloudProfileName is a name of a CloudProfile object. Deprecated: This field will be removed in a future version of Gardener. Use `CloudProfile` instead. Until removed, this field is synced with the `CloudProfile` field.",
+							Description: "CloudProfileName is a name of a CloudProfile object. Deprecated: This field will be removed in a future version of Gardener. Use `CloudProfile` instead. Until Kubernetes v1.33, this field is synced with the `CloudProfile` field. Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
