@@ -346,6 +346,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/gardener/shootstatus
             - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health
@@ -1276,6 +1277,7 @@ build:
             - pkg/utils/gardener/gardenlet
             - pkg/utils/gardener/secretsrotation
             - pkg/utils/gardener/shootstate
+            - pkg/utils/gardener/shootstatus
             - pkg/utils/gardener/tokenrequest
             - pkg/utils/imagevector
             - pkg/utils/istio
