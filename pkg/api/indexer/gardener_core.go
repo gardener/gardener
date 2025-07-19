@@ -114,6 +114,20 @@ func AddShootStatusSeedName(ctx context.Context, indexer client.FieldIndexer) er
 	return nil
 }
 
+// AddShootStatusTechnicalID adds an index for core.ShootStatusTechnicalID to the given indexer.
+func AddShootStatusTechnicalID(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.Shoot{}, core.ShootStatusTechnicalID, func(obj client.Object) []string {
+		shoot, ok := obj.(*gardencorev1beta1.Shoot)
+		if !ok {
+			return []string{""}
+		}
+		return []string{shoot.Status.TechnicalID}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to Shoot Informer: %w", core.ShootStatusTechnicalID, err)
+	}
+	return nil
+}
+
 // AddBackupBucketSeedName adds an index for core.BackupBucketSeedName to the given indexer.
 func AddBackupBucketSeedName(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupBucket{}, core.BackupBucketSeedName, BackupBucketSeedNameIndexerFunc); err != nil {
