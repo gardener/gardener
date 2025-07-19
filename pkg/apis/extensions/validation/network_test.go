@@ -244,14 +244,19 @@ var _ = Describe("Network validation tests", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should allow updating ipFamilies from IPv6 to dual-stack [IPv6, IPv4]", func() {
+		It("should not allow updating ipFamilies from IPv6 to dual-stack [IPv6, IPv4]", func() {
 			network.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6}
 			newNetwork := prepareNetworkForUpdate(network)
 			newNetwork.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6, extensionsv1alpha1.IPFamilyIPv4}
 
 			errorList := ValidateNetworkUpdate(newNetwork, network)
 
-			Expect(errorList).To(BeEmpty())
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.ipFamilies"),
+				})),
+			))
 		})
 
 		It("should not allow updating ipFamilies from dual-stack [IPv4, IPv6] to [IPv6, IPv4]", func() {
