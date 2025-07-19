@@ -39,6 +39,8 @@ type reloader struct {
 	Namespace string
 	// Identity of the secrets manager used for managing the secret.
 	Identity string
+	// RateLimiter is used to limit how frequently requests may be queued.
+	RateLimiter workqueue.TypedRateLimiter[reconcile.Request]
 
 	lock                   sync.Mutex
 	reader                 client.Reader
@@ -50,6 +52,12 @@ type reloader struct {
 // manager in order to periodically reload the secret from the cluster.
 func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster) error {
 	r.reader = mgr.GetClient()
+
+	if r.RateLimiter == nil {
+		// if going into exponential backoff, wait at most the configured sync period
+		r.RateLimiter = workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.SyncPeriod)
+	}
+
 	if sourceCluster != nil {
 		r.reader = sourceCluster.GetClient()
 	}
@@ -85,8 +93,7 @@ func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager, source
 	opts := controller.Options{
 		Reconciler:   r,
 		RecoverPanic: ptr.To(true),
-		// if going into exponential backoff, wait at most the configured sync period
-		RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.SyncPeriod),
+		RateLimiter:  r.RateLimiter,
 	}
 	opts.DefaultFromConfig(mgr.GetControllerOptions())
 
@@ -107,7 +114,7 @@ func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager, source
 
 // Reconcile reloads the server certificates from the cluster and writes them to the cert directory if they have
 // changed. From here, the controller-runtime's certwatcher will pick them up and use them for the webhook server.
-func (r *reloader) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
+func (r *reloader) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx).WithValues(
 		"secretConfigName", r.ServerSecretName,
 		"secretNamespace", r.Namespace,
@@ -124,7 +131,7 @@ func (r *reloader) Reconcile(ctx context.Context, _ reconcile.Request) (reconcil
 
 	if !found {
 		log.Info("Couldn't find webhook server secret, retrying")
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{RequeueAfter: r.RateLimiter.When(req)}, nil
 	}
 
 	log = log.WithValues("secretName", secretName)

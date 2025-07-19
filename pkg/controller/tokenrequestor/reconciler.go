@@ -78,7 +78,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	}
 	if mustRequeue {
 		log.Info("No need to generate new token, renewal is scheduled", "after", requeueAfter)
-		return reconcile.Result{Requeue: true, RequeueAfter: requeueAfter}, nil
+		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
 	log.Info("Requesting new token")
@@ -105,7 +105,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	}
 
 	log.Info("Successfully requested token and scheduled renewal", "after", renewDuration)
-	return reconcile.Result{Requeue: true, RequeueAfter: renewDuration}, nil
+	return reconcile.Result{RequeueAfter: renewDuration}, nil
 }
 
 func (r *Reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1.Secret) (*corev1.ServiceAccount, error) {
