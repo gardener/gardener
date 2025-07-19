@@ -543,6 +543,11 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 		workerImage := worker.Machine.Image
 		workerLog := log.WithValues("worker", worker.Name, "image", workerImage.Name, "version", workerImage.Version)
 
+		machineType := v1beta1helper.FindMachineTypeByName(cloudProfile.Spec.MachineTypes, worker.Machine.Type)
+		if machineType == nil {
+			return nil, fmt.Errorf("machine type %q of worker %q does not exist in cloudprofile", worker.Machine.Type, worker.Name)
+		}
+
 		machineImageFromCloudProfile, err := determineMachineImage(cloudProfile, workerImage)
 		if err != nil {
 			return nil, err
@@ -554,6 +559,7 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 		}
 
 		filteredMachineImageVersionsFromCloudProfile := filterForArchitecture(&machineImageFromCloudProfile, worker.Machine.Architecture)
+		filteredMachineImageVersionsFromCloudProfile = filterForCapabilities(filteredMachineImageVersionsFromCloudProfile, machineType.Capabilities, cloudProfile.Spec.Capabilities)
 		filteredMachineImageVersionsFromCloudProfile = filterForCRI(filteredMachineImageVersionsFromCloudProfile, worker.CRI)
 		filteredMachineImageVersionsFromCloudProfile = filterForKubeleteVersionConstraint(filteredMachineImageVersionsFromCloudProfile, kubeletVersion)
 
@@ -710,6 +716,26 @@ func filterForArchitecture(machineImageFromCloudProfile *gardencorev1beta1.Machi
 
 	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
 		if slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(cloudProfileVersion), *arch) {
+			filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+		}
+	}
+
+	return &filteredMachineImages
+}
+
+func filterForCapabilities(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, capabilities gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) *gardencorev1beta1.MachineImage {
+	if len(capabilitiesDefinitions) == 0 {
+		return machineImageFromCloudProfile
+	}
+
+	filteredMachineImages := gardencorev1beta1.MachineImage{
+		Name:           machineImageFromCloudProfile.Name,
+		UpdateStrategy: machineImageFromCloudProfile.UpdateStrategy,
+		Versions:       []gardencorev1beta1.MachineImageVersion{},
+	}
+
+	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
+		if v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(capabilities, cloudProfileVersion.CapabilitySets, capabilitiesDefinitions) {
 			filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
 		}
 	}
