@@ -130,6 +130,9 @@ function cleanup {
 }
 trap cleanup EXIT ERR INT TERM
 
+# The umask could differ depending on the system/distro where the script is run. Therefore we explicitly set it to a sensible value
+umask 0022
+
 export HELM_HOME="$temp_helm_home"
 [ "$(helm version --client --template "{{.Version}}" | head -c2 | tail -c1)" = "3" ] || helm init --client-only > /dev/null 2>&1
 helm package "$CHART_DIR" --destination "$temp_dir" > /dev/null
