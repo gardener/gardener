@@ -109,8 +109,8 @@ The complete list of fields that trigger a rolling update:
 * `.spec.provider.workers[].volume.size`
 * `.spec.provider.workers[].providerConfig` (provider extension dependent with feature gate `NewWorkerPoolHash`)
 * `.spec.provider.workers[].cri.name`
+* `.spec.systemComponents.nodeLocalDNS.enabled` (for kubernetes version < 1.34)
 * `.spec.provider.workers[].kubernetes.version` (except for patch version changes)
-* `.spec.systemComponents.nodeLocalDNS.enabled`
 * `.status.credentials.rotation.certificateAuthorities.lastInitiationTime` (changed by Gardener when a shoot CA rotation is initiated) when worker pool is not part of `.status.credentials.rotation.certificateAuthorities.pendingWorkersRollouts[]`
 * `.status.credentials.rotation.serviceAccountKey.lastInitiationTime` (changed by Gardener when a shoot service account signing key rotation is initiated) when worker pool is not part of `.status.credentials.rotation.serviceAccountKey.pendingWorkersRollouts[]`
 
@@ -169,7 +169,7 @@ An in-place update of the shoot worker nodes is triggered for rolling update tri
 * `.spec.provider.workers[].volume.type`
 * `.spec.provider.workers[].volume.size`
 * `.spec.provider.workers[].cri.name`
-* `.spec.systemComponents.nodeLocalDNS.enabled`
+* `.spec.systemComponents.nodeLocalDNS.enabled` (for kubernetes version < 1.34)
 
 > There are validations which restricts changing the above mentioned exception fields when `in-place` updates strategy is configured.
 
