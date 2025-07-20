@@ -22,7 +22,6 @@ func GetFeatures() []featuregate.Feature {
 		features.DefaultSeccompProfile,
 		features.NewWorkerPoolHash,
 		features.NewVPN,
-		features.NodeAgentAuthorizer,
 		features.IstioTLSTermination,
 		features.DoNotCopyBackupCredentials,
 		features.OpenTelemetryCollector,
