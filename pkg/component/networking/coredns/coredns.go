@@ -857,7 +857,7 @@ func getSearchPathRewrites(clusterDomain string, commonSuffixes []string) string
 
 // GetIPFamilyPolicy returns the IPFamilyPolicy for the CoreDNS service based on the provided IP families and cluster IPs.
 func GetIPFamilyPolicy(ipFamilies []gardencorev1beta1.IPFamily, clusterIPs []net.IP) corev1.IPFamilyPolicy {
-	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](ipFamilies...)
+	ipFamiliesSet := sets.New(ipFamilies...)
 	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && hasIPv4andIPv6Address(clusterIPs) {
 		return corev1.IPFamilyPolicyPreferDualStack
 	}

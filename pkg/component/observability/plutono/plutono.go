@@ -494,7 +494,7 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 			normalizedPath = filepath.ToSlash(normalizedPath)
 
 			if dirEntry.IsDir() {
-				if len(sets.New[string](strings.Split(path, "/")...).Intersection(ignorePaths)) > 0 {
+				if len(sets.New(strings.Split(path, "/")...).Intersection(ignorePaths)) > 0 {
 					return filepath.SkipDir
 				}
 				return nil
