@@ -80,6 +80,28 @@ var _ = Describe("Shoot Maintenance", func() {
 									CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 									Architectures: []string{"amd64"},
 								},
+								{
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version: shootCurrentImageVersion + "-inplace",
+									},
+									CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+									Architectures: []string{"amd64"},
+									InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
+										Supported: true,
+									},
+								},
+								{
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version:        overallLatestVersion + "-inplace",
+										ExpirationDate: &expirationDateInTheFuture,
+									},
+									CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+									Architectures: []string{"amd64"},
+									InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
+										Supported:           true,
+										MinVersionForUpdate: ptr.To(shootCurrentImageVersion + "-inplace"),
+									},
+								},
 							},
 						},
 					},
@@ -106,6 +128,7 @@ var _ = Describe("Shoot Maintenance", func() {
 								Image:        shootCurrentImage,
 								Architecture: ptr.To("amd64"),
 							},
+							UpdateStrategy: ptr.To(gardencorev1beta1.AutoRollingUpdate),
 						},
 					},
 					},
@@ -124,6 +147,15 @@ var _ = Describe("Shoot Maintenance", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", overallLatestVersion)
+			})
+
+			It("should update machine image version to overall latest. Auto update: already on latest patch for minor, and there is an overall higher version available for in-place updates", func() {
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To(shootCurrentImageVersion + "-inplace")
+				shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(gardencorev1beta1.AutoInPlaceUpdate)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
+
+				Expect(err).NotTo(HaveOccurred())
+				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", overallLatestVersion+"-inplace")
 			})
 
 			It("should update machine image version to overall latest for correct architecture. Auto update: already on latest patch for minor, and there is an overall higher version available", func() {
@@ -846,6 +878,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		It("should treat workers with `cri: nil` like `cri.name: containerd` and not update if `containerd` is not explicitly supported by the machine image", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRIName("other")}}
+			cloudProfile.Spec.MachineImages[0].Versions[3].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRIName("other")}}
 
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
@@ -864,6 +897,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		It("should determine that the shoot worker machine images must NOT be maintained - found no machineImageVersion with matching CRI", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRIName("other")}}
+			cloudProfile.Spec.MachineImages[0].Versions[3].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRIName("other")}}
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}
 
 			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
@@ -921,6 +955,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		It("should determine that the shoot worker machine images must not be maintained - found no machineImageVersion with matching kubeletVersionConstraint (control plane K8s version)", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = ptr.To("< 1.26")
+			cloudProfile.Spec.MachineImages[0].Versions[3].KubeletVersionConstraint = ptr.To("< 1.26")
 			shoot.Spec.Kubernetes.Version = "1.26.0"
 
 			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
@@ -940,6 +975,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		It("should determine that the shoot worker machine images must not be maintained - found no machineImageVersion with matching kubeletVersionConstraint (worker K8s version)", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = ptr.To(">= 1.26")
+			cloudProfile.Spec.MachineImages[0].Versions[3].KubeletVersionConstraint = ptr.To(">= 1.26")
 			shoot.Spec.Kubernetes.Version = "1.26.0"
 			shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
 				Version: ptr.To("1.25.0"),

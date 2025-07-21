@@ -556,6 +556,7 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 		filteredMachineImageVersionsFromCloudProfile := filterForArchitecture(&machineImageFromCloudProfile, worker.Machine.Architecture)
 		filteredMachineImageVersionsFromCloudProfile = filterForCRI(filteredMachineImageVersionsFromCloudProfile, worker.CRI)
 		filteredMachineImageVersionsFromCloudProfile = filterForKubeleteVersionConstraint(filteredMachineImageVersionsFromCloudProfile, kubeletVersion)
+		filteredMachineImageVersionsFromCloudProfile = filterForInPlaceUpdateConstraint(filteredMachineImageVersionsFromCloudProfile, v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy))
 
 		// first check if the machine image version should be updated
 		shouldBeUpdated, reason, isExpired := shouldMachineImageVersionBeUpdated(workerImage, filteredMachineImageVersionsFromCloudProfile, *shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion)
@@ -761,6 +762,28 @@ func filterForKubeleteVersionConstraint(machineImageFromCloudProfile *gardencore
 		}
 
 		filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+	}
+
+	return &filteredMachineImages
+}
+
+func filterForInPlaceUpdateConstraint(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, isInPlaceUpdate bool) *gardencorev1beta1.MachineImage {
+	if !isInPlaceUpdate {
+		return machineImageFromCloudProfile
+	}
+
+	filteredMachineImages := gardencorev1beta1.MachineImage{
+		Name:           machineImageFromCloudProfile.Name,
+		UpdateStrategy: machineImageFromCloudProfile.UpdateStrategy,
+		Versions:       []gardencorev1beta1.MachineImageVersion{},
+	}
+
+	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
+		if cloudProfileVersion.InPlaceUpdates != nil && cloudProfileVersion.InPlaceUpdates.Supported && cloudProfileVersion.InPlaceUpdates.MinVersionForUpdate != nil {
+			if validVersion, _ := versionutils.CompareVersions(*cloudProfileVersion.InPlaceUpdates.MinVersionForUpdate, "<=", cloudProfileVersion.Version); validVersion {
+				filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+			}
+		}
 	}
 
 	return &filteredMachineImages
