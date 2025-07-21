@@ -767,8 +767,8 @@ func filterForKubeleteVersionConstraint(machineImageFromCloudProfile *gardencore
 	return &filteredMachineImages
 }
 
-func filterForInPlaceUpdateConstraint(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, isInPlaceUpdate bool) *gardencorev1beta1.MachineImage {
-	if !isInPlaceUpdate {
+func filterForInPlaceUpdateConstraint(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, isInPlaceUpdateWorker bool) *gardencorev1beta1.MachineImage {
+	if !isInPlaceUpdateWorker {
 		return machineImageFromCloudProfile
 	}
 
