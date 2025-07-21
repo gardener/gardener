@@ -140,7 +140,9 @@ gardener.cloud/operation=force-redeploy
 ```
 
 > [!TIP]
-> Do not forget to create the kubeconfig `Secret` and re-add the `.spec.kubeconfigSecretRef` to the `Gardenlet` specification if this is a remote cluster.
+> In case of a remote cluster, do not forget:
+> - to create the kubeconfig `Secret`
+> - to re-add the `gardener.cloud/operation=force-redeploy` annotation and the `.spec.kubeconfigSecretRef` to the `Gardenlet` simultaneously. Otherwise, latter will be deleted immediately by the `gardener-operator` due to an existing `Seed` resource
 
 `gardener-operator` will remove the operation annotation after it's done.
 Just like after the initial deployment, it'll also delete the kubeconfig `Secret` and set `.spec.kubeconfigSecretRef` to `nil`, see above.
