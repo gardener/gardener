@@ -48,6 +48,7 @@ var (
 	restConfig *rest.Config
 	testEnv    *envtest.Environment
 	testClient client.Client
+	mgrClient  client.Client
 
 	testNamespace *corev1.Namespace
 )
@@ -109,6 +110,7 @@ var _ = BeforeSuite(func() {
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("Register controller")
 	Expect((&garbagecollector.Reconciler{

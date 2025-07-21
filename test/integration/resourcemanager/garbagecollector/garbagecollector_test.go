@@ -6,6 +6,7 @@ package garbagecollector_test
 
 import (
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -51,13 +52,13 @@ var _ = Describe("Garbage collector tests", func() {
 			secretList := &corev1.SecretList{}
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return secretList.Items
-		}).Should(BeEmpty())
+		}).WithTimeout(15 * time.Second).Should(BeEmpty())
 
 		Eventually(func(g Gomega) []corev1.ConfigMap {
 			configMapList := &corev1.ConfigMapList{}
 			g.Expect(testClient.List(ctx, configMapList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return configMapList.Items
-		}).Should(BeEmpty())
+		}).WithTimeout(15 * time.Second).Should(BeEmpty())
 	})
 
 	It("should only garbage collect unreferenced resources", func() {
@@ -196,6 +197,16 @@ var _ = Describe("Garbage collector tests", func() {
 			Expect(testClient.Create(ctx, obj)).To(Succeed())
 		}
 
+		// Use the manager's cache to ensure it has observed the referencing resources.
+		// Similar to https://github.com/gardener/gardener/issues/6486 and
+		// https://github.com/gardener/gardener/issues/6607.
+		for _, obj := range referencingResources {
+			refObj := obj
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(refObj), refObj)
+			}).Should(Succeed())
+		}
+
 		for _, obj := range garbageCollectableObjects {
 			Expect(testClient.Create(ctx, obj)).To(Succeed())
 		}
@@ -204,7 +215,7 @@ var _ = Describe("Garbage collector tests", func() {
 			secretList := &corev1.SecretList{}
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return test.ObjectNames(secretList)
-		}).Should(And(
+		}).WithTimeout(15 * time.Second).Should(And(
 			ContainElements(
 				resourceName+"-secret0",
 				resourceName+"-secret1",
@@ -222,7 +233,7 @@ var _ = Describe("Garbage collector tests", func() {
 			configMapList := &corev1.ConfigMapList{}
 			g.Expect(testClient.List(ctx, configMapList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return test.ObjectNames(configMapList)
-		}).Should(And(
+		}).WithTimeout(15 * time.Second).Should(And(
 			Not(ContainElement(resourceName+"-configmap0")),
 			ContainElements(
 				resourceName+"-configmap1",
