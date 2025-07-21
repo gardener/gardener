@@ -33,7 +33,7 @@ require (
 	github.com/onsi/gomega v1.37.0
 	github.com/open-telemetry/opentelemetry-operator v0.129.1
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/pelletier/go-toml v1.9.5
+	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/perses/perses-operator v0.2.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.83.0
 	github.com/prometheus/blackbox_exporter v0.27.0
