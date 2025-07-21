@@ -556,7 +556,7 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 		filteredMachineImageVersionsFromCloudProfile := filterForArchitecture(&machineImageFromCloudProfile, worker.Machine.Architecture)
 		filteredMachineImageVersionsFromCloudProfile = filterForCRI(filteredMachineImageVersionsFromCloudProfile, worker.CRI)
 		filteredMachineImageVersionsFromCloudProfile = filterForKubeleteVersionConstraint(filteredMachineImageVersionsFromCloudProfile, kubeletVersion)
-		filteredMachineImageVersionsFromCloudProfile = filterForInPlaceUpdateConstraint(filteredMachineImageVersionsFromCloudProfile, v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy))
+		filteredMachineImageVersionsFromCloudProfile = filterForInPlaceUpdateConstraint(filteredMachineImageVersionsFromCloudProfile, workerImage.Version, v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy))
 
 		// first check if the machine image version should be updated
 		shouldBeUpdated, reason, isExpired := shouldMachineImageVersionBeUpdated(workerImage, filteredMachineImageVersionsFromCloudProfile, *shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion)
@@ -767,7 +767,7 @@ func filterForKubeleteVersionConstraint(machineImageFromCloudProfile *gardencore
 	return &filteredMachineImages
 }
 
-func filterForInPlaceUpdateConstraint(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, isInPlaceUpdateWorker bool) *gardencorev1beta1.MachineImage {
+func filterForInPlaceUpdateConstraint(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, workerImageVersion *string, isInPlaceUpdateWorker bool) *gardencorev1beta1.MachineImage {
 	if !isInPlaceUpdateWorker {
 		return machineImageFromCloudProfile
 	}
@@ -779,8 +779,8 @@ func filterForInPlaceUpdateConstraint(machineImageFromCloudProfile *gardencorev1
 	}
 
 	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
-		if cloudProfileVersion.InPlaceUpdates != nil && cloudProfileVersion.InPlaceUpdates.Supported && cloudProfileVersion.InPlaceUpdates.MinVersionForUpdate != nil {
-			if validVersion, _ := versionutils.CompareVersions(*cloudProfileVersion.InPlaceUpdates.MinVersionForUpdate, "<=", cloudProfileVersion.Version); validVersion {
+		if workerImageVersion != nil && cloudProfileVersion.InPlaceUpdates != nil && cloudProfileVersion.InPlaceUpdates.Supported && cloudProfileVersion.InPlaceUpdates.MinVersionForUpdate != nil {
+			if validVersion, _ := versionutils.CompareVersions(*cloudProfileVersion.InPlaceUpdates.MinVersionForUpdate, "<=", *workerImageVersion); validVersion {
 				filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
 			}
 		}
