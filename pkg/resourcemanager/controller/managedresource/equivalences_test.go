@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 var _ = Describe("Equivalences", func() {
@@ -17,12 +18,12 @@ var _ = Describe("Equivalences", func() {
 	Describe("#NewEquivalences, #GetEquivalencesFor", func() {
 		var (
 			additionalEquivalences  [][]metav1.GroupKind
-			expectedEquivalenceSets map[metav1.GroupKind]EquivalenceSet
+			expectedEquivalenceSets map[metav1.GroupKind]sets.Set[metav1.GroupKind]
 		)
 
 		BeforeEach(func() {
 			additionalEquivalences = [][]metav1.GroupKind{}
-			expectedEquivalenceSets = map[metav1.GroupKind]EquivalenceSet{}
+			expectedEquivalenceSets = map[metav1.GroupKind]sets.Set[metav1.GroupKind]{}
 		})
 
 		AfterEach(func() {
@@ -37,7 +38,7 @@ var _ = Describe("Equivalences", func() {
 		It("no additional equivalence sets (default equivalence sets)", func() {
 			for _, equiList := range defaultEquivalences {
 				for _, gk := range equiList {
-					expectedEquivalenceSets[gk] = EquivalenceSet{}.Insert(equiList...)
+					expectedEquivalenceSets[gk] = sets.New(equiList...)
 				}
 			}
 		})
@@ -50,7 +51,7 @@ var _ = Describe("Equivalences", func() {
 			}
 			additionalEquivalences = append(additionalEquivalences, equis)
 
-			expectedSet := EquivalenceSet{}.Insert(equis...)
+			expectedSet := sets.New(equis...)
 			for _, gk := range equis {
 				expectedEquivalenceSets[gk] = expectedSet
 			}
@@ -72,7 +73,7 @@ var _ = Describe("Equivalences", func() {
 			additionalEquivalences = append(additionalEquivalences, equis...)
 
 			for _, equiSet := range equis {
-				expectedSet := EquivalenceSet{}.Insert(equiSet...)
+				expectedSet := sets.New(equiSet...)
 				for _, gk := range equiSet {
 					expectedEquivalenceSets[gk] = expectedSet
 				}
@@ -92,7 +93,7 @@ var _ = Describe("Equivalences", func() {
 			}
 			additionalEquivalences = append(additionalEquivalences, equis...)
 
-			expectedSet := EquivalenceSet{}.Insert(equis[0]...).Insert(equis[1]...)
+			expectedSet := sets.New(equis[0]...).Insert(equis[1]...)
 
 			for _, equiSet := range equis {
 				for _, gk := range equiSet {
