@@ -7,8 +7,10 @@ package errors
 import (
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/hashicorp/go-multierror"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 type withSuppressed struct {
@@ -116,7 +118,7 @@ func GetID(err error) string {
 type ErrorContext struct {
 	name         string
 	lastErrorIDs []string
-	errorIDs     map[string]struct{}
+	errorIDs     sets.Set[string]
 }
 
 // NewErrorContext creates a new error context with the given name and lastErrors from the previous reconciliation
@@ -124,7 +126,7 @@ func NewErrorContext(name string, lastErrorIDs []string) *ErrorContext {
 	return &ErrorContext{
 		name:         name,
 		lastErrorIDs: lastErrorIDs,
-		errorIDs:     map[string]struct{}{},
+		errorIDs:     sets.New[string](),
 	}
 }
 
@@ -133,23 +135,17 @@ func (e *ErrorContext) AddErrorID(errorID string) {
 	if e.HasErrorWithID(errorID) {
 		panic(fmt.Sprintf("Error with id %q already exists in error context %q", errorID, e.name))
 	}
-	e.errorIDs[errorID] = struct{}{}
+	e.errorIDs.Insert(errorID)
 }
 
 // HasErrorWithID checks if the ErrorContext already contains an error with id errorID
 func (e *ErrorContext) HasErrorWithID(errorID string) bool {
-	_, ok := e.errorIDs[errorID]
-	return ok
+	return e.errorIDs.Has(errorID)
 }
 
 // HasLastErrorWithID checks if the previous reconciliation had encountered an error with id errorID
 func (e *ErrorContext) HasLastErrorWithID(errorID string) bool {
-	for _, lastErrorID := range e.lastErrorIDs {
-		if errorID == lastErrorID {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(e.lastErrorIDs, errorID)
 }
 
 // FailureHandler is a function which is called when an error occurs

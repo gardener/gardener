@@ -2252,7 +2252,7 @@ func ValidateSystemComponentWorkers(workers []core.Worker, fldPath *field.Path) 
 		allErrs                                   = field.ErrorList{}
 		atLeastOnePoolWithAllowedSystemComponents = false
 
-		workerPoolsWithSufficientWorkers   = make(map[string]struct{})
+		workerPoolsWithSufficientWorkers   = sets.New[string]()
 		workerPoolsWithInsufficientWorkers = make(map[string]int)
 	)
 
@@ -2283,11 +2283,11 @@ func ValidateSystemComponentWorkers(workers []core.Worker, fldPath *field.Path) 
 		}
 
 		if hasSufficientWorkers {
-			workerPoolsWithSufficientWorkers[workerPoolKey] = struct{}{}
+			workerPoolsWithSufficientWorkers.Insert(workerPoolKey)
 
 			delete(workerPoolsWithInsufficientWorkers, workerPoolKey)
 		} else {
-			if _, b := workerPoolsWithSufficientWorkers[workerPoolKey]; !b {
+			if !workerPoolsWithSufficientWorkers.Has(workerPoolKey) {
 				workerPoolsWithInsufficientWorkers[workerPoolKey] = i
 			}
 		}

@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,7 +52,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 
 	var (
 		labels                  = client.MatchingLabels{references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable}
-		objectsToGarbageCollect = map[objectId]struct{}{}
+		objectsToGarbageCollect = sets.New[objectId]()
 	)
 
 	for _, resource := range []struct {
@@ -73,7 +74,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 				continue
 			}
 
-			objectsToGarbageCollect[objectId{resource.kind, obj.Namespace, obj.Name}] = struct{}{}
+			objectsToGarbageCollect.Insert(objectId{resource.kind, obj.Namespace, obj.Name})
 		}
 	}
 
@@ -110,7 +111,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 			if objectKind == "" || objectName == "" {
 				continue
 			}
-			delete(objectsToGarbageCollect, objectId{objectKind, objectMeta.Namespace, objectName})
+			objectsToGarbageCollect.Delete(objectId{objectKind, objectMeta.Namespace, objectName})
 		}
 	}
 
