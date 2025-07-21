@@ -14,7 +14,7 @@
 		- Successful reconciliation of the Shoot after the Kubernetes Version update.
  **/
 
-package shootupdate_test
+package shootkubernetesupdate_test
 
 import (
 	"context"

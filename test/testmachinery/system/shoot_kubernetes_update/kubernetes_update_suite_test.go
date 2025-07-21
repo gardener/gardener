@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package shootupdate_test
+package shootkubernetesupdate_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestUpdateShoot(t *testing.T) {
+func TestKubernetesUpdateShoot(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Update Test Machinery Suite")
+	RunSpecs(t, "Shoot Kubernetes Update Test Machinery Suite")
 }
