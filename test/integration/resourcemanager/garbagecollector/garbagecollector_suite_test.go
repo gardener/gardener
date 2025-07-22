@@ -118,7 +118,7 @@ var _ = BeforeSuite(func() {
 			SyncPeriod: &metav1.Duration{Duration: 100 * time.Millisecond},
 		},
 		Clock:                 clock.RealClock{},
-		MinimumObjectLifetime: ptr.To(time.Duration(0)),
+		MinimumObjectLifetime: ptr.To(5 * time.Second),
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")
