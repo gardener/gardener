@@ -23,6 +23,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance/helper"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // GetKubeAPIServerAuthToken returns kube API server auth token for given shoot's control-plane namespace in seed cluster.
@@ -173,4 +176,104 @@ func WaitForJobToBeReady(ctx context.Context, cl client.Client, job *batchv1.Job
 		}
 		return fmt.Errorf("waiting for pod %v to be ready", podList.Items[0].Name)
 	}, time.Minute, time.Second).Should(Succeed())
+}
+
+// VerifyMachineImageVersions checks if the machine image versions of all worker nodes are up-to-date.
+func VerifyMachineImageVersions(ctx context.Context, shootClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
+	poolNameToMachineImageVersion := make(map[string]string, len(shoot.Spec.Provider.Workers))
+	for _, worker := range shoot.Spec.Provider.Workers {
+		if v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+			poolNameToMachineImageVersion[worker.Name] = *worker.Machine.Image.Version
+		}
+	}
+
+	nodeList := &corev1.NodeList{}
+	if err := shootClient.Client().List(ctx, nodeList); err != nil {
+		return err
+	}
+
+	for _, node := range nodeList.Items {
+		var (
+			poolName            = node.Labels[v1beta1constants.LabelWorkerPool]
+			machineImageVersion = poolNameToMachineImageVersion[poolName]
+		)
+
+		if _, ok := poolNameToMachineImageVersion[poolName]; !ok {
+			// not a in-place update worker pool, skip
+			continue
+		}
+
+		version := nodeagentconfigv1alpha1.OSVersionRegex.FindString(node.Status.NodeInfo.OSImage)
+		if version == "" {
+			return fmt.Errorf("unable to find os version in %q with regex: %s for node %q of pool %q", node.Status.NodeInfo.OSImage, nodeagentconfigv1alpha1.OSVersionRegex.String(), node.Name, poolName)
+		}
+
+		if machineImageVersionUpToDate, err := versionutils.CompareVersions(machineImageVersion, "=", version); err != nil {
+			return fmt.Errorf("failed comparing current machine image version %q with machine image version in the node status %q for node %q of pool %q: %w", machineImageVersion, version, node.Name, poolName, err)
+		} else if !machineImageVersionUpToDate {
+			return fmt.Errorf("machine image version of node %q of pool %q is %q but expected %q", node.Name, poolName, version, machineImageVersion)
+		}
+	}
+
+	return nil
+}
+
+// ComputeNewMachineImageVersions computes the new machine image versions for the worker pools of the given shoot.
+func ComputeNewMachineImageVersions(
+	cloudProfile *gardencorev1beta1.CloudProfile,
+	shoot *gardencorev1beta1.Shoot,
+	newWorkerPoolMachineImageVersion *string,
+) (
+	poolNameToMachineImageVersion map[string]string,
+	err error,
+) {
+	controlPlaneVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	poolNameToMachineImageVersion = make(map[string]string, len(shoot.Spec.Provider.Workers))
+	for _, worker := range shoot.Spec.Provider.Workers {
+		if !v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+			continue
+		}
+
+		if newWorkerPoolMachineImageVersion != nil && *newWorkerPoolMachineImageVersion != "" {
+			poolNameToMachineImageVersion[worker.Name] = *newWorkerPoolMachineImageVersion
+			continue
+		}
+
+		poolNameToMachineImageVersion[worker.Name], err = getNextConsecutiveMachineImageVersion(cloudProfile, worker, controlPlaneVersion)
+		if err != nil {
+			return nil, fmt.Errorf("error when getting next consecutive machine image version for worker pool %q: %w", worker.Name, err)
+		}
+	}
+
+	return
+}
+
+func getNextConsecutiveMachineImageVersion(cloudProfile *gardencorev1beta1.CloudProfile, worker gardencorev1beta1.Worker, controlPlaneVersion *semver.Version) (string, error) {
+	machineImageFromCloudProfile, err := helper.DetermineMachineImage(cloudProfile, worker.Machine.Image)
+	if err != nil {
+		return "", err
+	}
+
+	kubeletVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
+	if err != nil {
+		return "", err
+	}
+
+	filteredMachineImageVersionsFromCloudProfile := helper.FilterMachineImageVersions(&machineImageFromCloudProfile, worker, kubeletVersion)
+
+	// Always pass true for the value isExpired, because we want to get the next consecutive version regardless of whether the current version is expired or not.
+	newMachineImageVersion, err := helper.DetermineMachineImageVersion(worker.Machine.Image, filteredMachineImageVersionsFromCloudProfile, true)
+	if err != nil {
+		return "", err
+	}
+
+	if newMachineImageVersion == "" {
+		return "", fmt.Errorf("no consecutive OS version available for worker pool %q", worker.Name)
+	}
+
+	return newMachineImageVersion, nil
 }

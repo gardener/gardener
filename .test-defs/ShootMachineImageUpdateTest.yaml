@@ -1,0 +1,22 @@
+apiVersion: testmachinery.sapcloud.io
+kind: TestDefinition
+metadata:
+  name: shoot-machine-image-update-test
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Tests the machine image update of a shoot. It verifies that the machine image version is updated without rolling the nodes for in-place update workers. (only relevant for in-place update workers)
+
+  activeDeadlineSeconds: 4200
+
+  labels: ["shoot"]
+
+  command: [bash, -c]
+  args:
+  - >-
+    go test -timeout=0 ./test/testmachinery/system/shoot_machine_image_update
+    --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color -verbose=debug
+    -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
+    -shoot-name=$SHOOT_NAME
+    -project-namespace=$PROJECT_NAMESPACE
+    -version-worker-pools=$OS_VERSION_WORKER_POOLS
+  image: golang:1.24.5
