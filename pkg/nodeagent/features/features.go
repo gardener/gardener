@@ -4,13 +4,5 @@
 
 package features
 
-import (
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-
-	"github.com/gardener/gardener/pkg/features"
-)
-
 // RegisterFeatureGates registers the feature gates of gardener-node-agent.
-func RegisterFeatureGates() {
-	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(features.NodeAgentAuthorizer)))
-}
+func RegisterFeatureGates() {}

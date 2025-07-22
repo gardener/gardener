@@ -50,14 +50,6 @@ const (
 	// GA: v1.116.0
 	NewVPN featuregate.Feature = "NewVPN"
 
-	// NodeAgentAuthorizer enables authorization of requests from gardener-node-agents to shoot kube-apiservers using an authorization webhook.
-	// Enabling this feature gate restricts the permissions of each gardener-node-agent instance to the objects belonging to its own node only.
-	// owner: @oliver-goetz
-	// alpha: v1.109.0
-	// beta: v1.116.0
-	// GA: v1.123.0
-	NodeAgentAuthorizer featuregate.Feature = "NodeAgentAuthorizer"
-
 	// CredentialsRotationWithoutWorkersRollout enables starting the credentials rotation without immediately causing
 	// a rolling update of all worker nodes. Instead, the rolling update can be triggered manually by the user at a
 	// later point in time of their convenience.
@@ -129,7 +121,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:                        {Default: false, PreRelease: featuregate.Alpha},
 	NewVPN:                                   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	NodeAgentAuthorizer:                      {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CredentialsRotationWithoutWorkersRollout: {Default: true, PreRelease: featuregate.Beta},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
 	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},

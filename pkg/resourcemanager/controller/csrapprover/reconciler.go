@@ -267,11 +267,6 @@ func (r *Reconciler) mustApproveKubeAPIServerClient(ctx context.Context, csr *ce
 		if csr.Spec.Username != x509cr.Subject.CommonName {
 			return fmt.Sprintf("username %q and commonName %q do not match", csr.Spec.Username, x509cr.Subject.CommonName), csrDenied, nil
 		}
-	// TODO(oliver-goetz): remove this case when NodeAgentAuthorizer feature gate is removed. It is used for migrating existing gardener-node-agents
-	case csr.Spec.Username == "system:serviceaccount:kube-system:gardener-node-agent":
-		if nodeName == "" {
-			return "gardener-node-agent service account is allowed to create CSRs for machines with existing nodes only", csrDenied, nil
-		}
 	default:
 		return fmt.Sprintf("username %q is not allowed to create CSRs for a gardener-node-agent", csr.Spec.Username), csrDenied, nil
 	}

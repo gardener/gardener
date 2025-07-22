@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,12 +24,10 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -334,7 +331,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.DeployKubeAPIServer(ctx, canEnableNodeAgentAuthorizerWebhook && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer))
+				return botanist.DeployKubeAPIServer(ctx, canEnableNodeAgentAuthorizerWebhook)
 			}).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
 			Dependencies: flow.NewTaskIDs(
 				initializeSecretsManagement,
@@ -387,13 +384,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.DeployKubeAPIServer(ctx, true)
 			}).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
-			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || canEnableNodeAgentAuthorizerWebhook,
+			SkipIf:       canEnableNodeAgentAuthorizerWebhook,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
 		waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server with node-agent-authorizer rolled out",
 			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait,
-			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || o.Shoot.HibernationEnabled || canEnableNodeAgentAuthorizerWebhook || skipReadiness,
+			SkipIf:       o.Shoot.HibernationEnabled || canEnableNodeAgentAuthorizerWebhook || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerWithNodeAgentAuthorizer),
 		})
 		_ = g.Add(flow.Task{
@@ -882,20 +879,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(syncPointAllSystemComponentsDeployed, waitUntilNetworkIsReady, waitUntilWorkerReady),
 		})
-		waitUntilOperatingSystemConfigUpdated = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name:         "Waiting until all shoot worker nodes have updated the operating system config",
 			Fn:           botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools,
 			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
-		})
-		// TODO(oliver-goetz): Remove this when removing NodeAgentAuthorizer feature gate.
-		_ = g.Add(flow.Task{
-			Name: "Delete gardener-node-agent shoot access secret because NodeAgentAuthorizer feature gate is enabled",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return deleteGardenerNodeAgentShootAccess(ctx, o)
-			}),
-			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilOperatingSystemConfigUpdated),
 		})
 		deployAlertmanager = g.Add(flow.Task{
 			Name:         "Reconciling Shoot Alertmanager",
@@ -1081,34 +1069,6 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})
-}
-
-// TODO(oliver-goetz): Remove this when removing NodeAgentAuthorizer feature gate.
-func deleteGardenerNodeAgentShootAccess(ctx context.Context, o *operation.Operation) error {
-	if err := kubernetesutils.DeleteObject(
-		ctx,
-		o.SeedClientSet.Client(),
-		gardenerutils.NewShootAccessSecret(nodeagentconfigv1alpha1.AccessSecretName, o.Shoot.ControlPlaneNamespace).Secret,
-	); err != nil {
-		return fmt.Errorf("failed to delete gardener-node-agent shoot access secret in control plane namespace in seed: %w", err)
-	}
-
-	return kubernetesutils.DeleteObjects(
-		ctx,
-		o.ShootClientSet.Client(),
-		&corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      nodeagentconfigv1alpha1.AccessSecretName,
-				Namespace: metav1.NamespaceSystem,
-			},
-		},
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      nodeagentconfigv1alpha1.AccessSecretName,
-				Namespace: metav1.NamespaceSystem,
-			},
-		},
-	)
 }
 
 func shootHasPendingInPlaceUpdateWorkers(shoot *gardencorev1beta1.Shoot) bool {

@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
-	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -116,14 +115,6 @@ func ComponentConfig(
 	caBundle []byte,
 	additionalTokenSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig,
 ) *nodeagentconfigv1alpha1.NodeAgentConfiguration {
-	tokenSyncConfigs := additionalTokenSyncConfigs[:]
-	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-		tokenSyncConfigs = append(tokenSyncConfigs, nodeagentconfigv1alpha1.TokenSecretSyncConfig{
-			SecretName: nodeagentconfigv1alpha1.AccessSecretName,
-			Path:       nodeagentconfigv1alpha1.TokenFilePath,
-		})
-	}
-
 	return &nodeagentconfigv1alpha1.NodeAgentConfiguration{
 		APIServer: nodeagentconfigv1alpha1.APIServer{
 			Server:   apiServerURL,
@@ -135,14 +126,13 @@ func ComponentConfig(
 				KubernetesVersion: kubernetesVersion,
 			},
 			Token: nodeagentconfigv1alpha1.TokenControllerConfig{
-				SyncConfigs: tokenSyncConfigs,
+				SyncConfigs: additionalTokenSyncConfigs[:],
 				// It is enough to sync the access tokens every 12h to the disk because they are only rotated roughly
 				// each 12h. Furthermore, they are valid for 30d, so there should be enough head time to sync an updated
 				// token.
 				SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 			},
 		},
-		FeatureGates: map[string]bool{string(features.NodeAgentAuthorizer): features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)},
 	}
 }
 

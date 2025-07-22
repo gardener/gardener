@@ -318,7 +318,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				})
 
 				It("should fail because the RBAC resources data generation function fails", func() {
-					DeferCleanup(test.WithVar(&NodeAgentRBACResourcesDataFn, func([]string) (map[string][]byte, error) {
+					DeferCleanup(test.WithVar(&NodeAgentRBACResourcesDataFn, func() (map[string][]byte, error) {
 						return nil, fakeErr
 					}))
 
@@ -379,7 +379,7 @@ var _ = Describe("operatingsystemconfig", func() {
 					}
 					utilruntime.Must(kubernetesutils.MakeUnique(expectedMRSecretWorker2))
 
-					nodeAgentRBACResourcesData, err := NodeAgentRBACResourcesDataFn([]string{expectedOSCSecretWorker1.Name, expectedOSCSecretWorker2.Name})
+					nodeAgentRBACResourcesData, err := NodeAgentRBACResourcesDataFn()
 					Expect(err).NotTo(HaveOccurred())
 					expectedMRSecretRBAC := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
