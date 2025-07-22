@@ -185,7 +185,10 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 			return nil, fmt.Errorf("failed to check if kubelet config has changed: %w", err)
 		}
 
-		changes.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet, changes.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent, changes.InPlaceUpdates.ServiceAccountKeyRotation = ComputeCredentialsRotationChanges(oldOSC, newOSC)
+		caRotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
+		changes.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet = caRotation
+		changes.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent = caRotation
+		changes.InPlaceUpdates.ServiceAccountKeyRotation = saKeyRotation
 	}
 
 	var (
@@ -232,41 +235,29 @@ func IsOsVersionUpToDate(currentOSVersion *string, newOSC *extensionsv1alpha1.Op
 }
 
 // ComputeCredentialsRotationChanges computes if the credentials rotation has changed between the old and new OSC.
-func ComputeCredentialsRotationChanges(oldOSC, newOSC *extensionsv1alpha1.OperatingSystemConfig) (bool, bool, bool) {
-	var (
-		kubeletCARotation,
-		nodeAgentCARotation,
-		serviceAccountKeyRotation bool
-	)
-
+func ComputeCredentialsRotationChanges(oldOSC, newOSC *extensionsv1alpha1.OperatingSystemConfig) (bool, bool) {
 	if newOSC.Spec.InPlaceUpdates.CredentialsRotation == nil {
-		return false, false, false
+		return false, false
 	}
 
 	// Rotation is triggered for the first time
 	if oldOSC.Spec.InPlaceUpdates.CredentialsRotation == nil {
 		caRotation := newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil && newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime != nil
 
-		kubeletCARotation = caRotation
-		nodeAgentCARotation = caRotation
+		serviceAccountKeyRotation := newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil && newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime != nil
 
-		serviceAccountKeyRotation = newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil && newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime != nil
-
-		return kubeletCARotation, nodeAgentCARotation, serviceAccountKeyRotation
+		return caRotation, serviceAccountKeyRotation
 	}
 
 	caRotation := oldOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil &&
 		newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil &&
 		!oldOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime.Equal(newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime)
 
-	kubeletCARotation = caRotation
-	nodeAgentCARotation = caRotation
-
-	serviceAccountKeyRotation = oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
+	serviceAccountKeyRotation := oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
 		newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
 		!oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime.Equal(newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime)
 
-	return kubeletCARotation, nodeAgentCARotation, serviceAccountKeyRotation
+	return caRotation, serviceAccountKeyRotation
 }
 
 func getKubeletConfig(osc *extensionsv1alpha1.OperatingSystemConfig) (*kubeletconfigv1beta1.KubeletConfiguration, error) {

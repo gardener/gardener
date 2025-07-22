@@ -165,34 +165,30 @@ var _ = Describe("Changes", func() {
 			oldOSC.Spec.InPlaceUpdates.CredentialsRotation = nil
 			newOSC.Spec.InPlaceUpdates.CredentialsRotation = nil
 
-			kubeletCARotation, nodeAgentCARotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
-			Expect(kubeletCARotation).To(BeFalse())
-			Expect(nodeAgentCARotation).To(BeFalse())
+			caRotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
+			Expect(caRotation).To(BeFalse())
 			Expect(saKeyRotation).To(BeFalse())
 		})
 
 		It("should return true if the CredentialsRotation is nil in the old OSC", func() {
 			oldOSC.Spec.InPlaceUpdates.CredentialsRotation = nil
 
-			kubeletCARotation, nodeAgentCARotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
-			Expect(kubeletCARotation).To(BeTrue())
-			Expect(nodeAgentCARotation).To(BeTrue())
+			caRotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
+			Expect(caRotation).To(BeTrue())
 			Expect(saKeyRotation).To(BeTrue())
 		})
 
 		It("should return true if the lastInitiationTimes of rotations are changed", func() {
-			kubeletCARotation, nodeAgentCARotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
-			Expect(kubeletCARotation).To(BeTrue())
-			Expect(nodeAgentCARotation).To(BeTrue())
+			caRotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
+			Expect(caRotation).To(BeTrue())
 			Expect(saKeyRotation).To(BeTrue())
 		})
 
 		It("should return false if the lastInitiationTimes of rotations are not changed", func() {
 			oldOSC = newOSC.DeepCopy()
 
-			kubeletCARotation, nodeAgentCARotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
-			Expect(kubeletCARotation).To(BeFalse())
-			Expect(nodeAgentCARotation).To(BeFalse())
+			caRotation, saKeyRotation := ComputeCredentialsRotationChanges(oldOSC, newOSC)
+			Expect(caRotation).To(BeFalse())
 			Expect(saKeyRotation).To(BeFalse())
 		})
 	})

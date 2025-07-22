@@ -69,7 +69,6 @@ func (b *AutonomousBotanist) deployKubeAPIServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(ptr.To[int32](0))
 
-	var enableNodeAgentAuthorizer bool
 	// kube-apiserver must be able to resolve the gardener-resource-manager service IP to access the
 	// node-agent-authorizer webhook. Thus, we fetch the service IP. It is used to create a host alias in the
 	// kube-apiserver pod spec later. If the service does not exist yet, then kube-apiserver is bootstrapped for the
@@ -82,7 +81,7 @@ func (b *AutonomousBotanist) deployKubeAPIServer(ctx context.Context) error {
 	}
 
 	b.gardenerResourceManagerServiceIPs = service.Spec.ClusterIPs
-	enableNodeAgentAuthorizer = len(b.gardenerResourceManagerServiceIPs) > 0
+	enableNodeAgentAuthorizer := len(b.gardenerResourceManagerServiceIPs) > 0
 
 	return b.DeployKubeAPIServer(ctx, enableNodeAgentAuthorizer)
 }
