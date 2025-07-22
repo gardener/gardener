@@ -777,23 +777,20 @@ func needsRetry(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 func getOperation(shoot *gardencorev1beta1.Shoot, credentialsRotationUpdate map[string]updateResult) string {
-	var (
-		operation            = v1beta1constants.GardenerOperationReconcile
-		maintenanceOperation = shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]
-	)
+	maintenanceOperation := shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]
 
 	for credentials := range credentialsRotationUpdate {
 		if (credentials == sshKeypair && maintenanceOperation == v1beta1constants.ShootOperationRotateSSHKeypair) ||
 			(credentials == observabilityPasswords && maintenanceOperation == v1beta1constants.OperationRotateObservabilityCredentials) {
-			maintenanceOperation = ""
+			return v1beta1constants.GardenerOperationReconcile
 		}
 	}
 
-	if maintenanceOperation != "" {
-		operation = maintenanceOperation
+	if len(maintenanceOperation) > 0 {
+		return maintenanceOperation
 	}
 
-	return operation
+	return v1beta1constants.GardenerOperationReconcile
 }
 
 func shouldMachineImageVersionBeUpdated(shootMachineImage *gardencorev1beta1.ShootMachineImage, machineImage *gardencorev1beta1.MachineImage, autoUpdate bool) (shouldBeUpdated bool, reason string, isExpired bool) {
