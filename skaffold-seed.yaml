@@ -330,6 +330,7 @@ build:
             - pkg/healthz
             - pkg/logger
             - pkg/nodeagent/apis/config/v1alpha1
+            - pkg/nodeagent/apis/config/v1alpha1/helper
             - pkg/operator/client
             - pkg/resourcemanager/apis/config/v1alpha1
             - pkg/resourcemanager/controller/garbagecollector/references
@@ -597,6 +598,7 @@ build:
             - pkg/logger
             - pkg/nodeagent
             - pkg/nodeagent/apis/config/v1alpha1
+            - pkg/nodeagent/apis/config/v1alpha1/helper
             - pkg/nodeagent/apis/config/v1alpha1/validation
             - pkg/nodeagent/bootstrap
             - pkg/nodeagent/bootstrap/templates/scripts/format-kubelet-data-volume.tpl.sh
