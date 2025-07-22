@@ -29,5 +29,5 @@ chmod +x "{{ .binaryDirectory }}/{{ .binaryName }}"
 {{- if eq .binaryName "gardener-node-agent" }}
 
 echo "> Bootstrap {{ .binaryName }}"
-exec "{{ .binaryDirectory }}/{{ .binaryName }}" bootstrap --config="{{ .configFile }}"
+exec "{{ .binaryDirectory }}/{{ .binaryName }}" bootstrap --config-dir="{{ .configDir }}"
 {{- end }}

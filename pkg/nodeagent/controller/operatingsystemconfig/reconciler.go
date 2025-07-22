@@ -245,6 +245,17 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 		}
 	}
 
+	// We restart the gardener-node-agent before removing the old files, so that the previous
+	// config is deleted only after there is no gardener-node-agent that is still using it.
+	if oscChanges.MustRestartNodeAgent {
+		log.Info("Must restart myself (gardener-node-agent unit), canceling the context to initiate graceful shutdown")
+		if err := oscChanges.setMustRestartNodeAgent(false); err != nil {
+			return reconcile.Result{}, err
+		}
+		r.CancelContext()
+		return reconcile.Result{}, nil
+	}
+
 	// After the node is prepared, we can wait for the registries to be configured.
 	// The ones with readiness probes should also succeed here since their cache/mirror pods
 	// can now start as workload in the cluster.
@@ -279,15 +290,6 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 		if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
 			return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
 		}
-	}
-
-	if oscChanges.MustRestartNodeAgent {
-		log.Info("Must restart myself (gardener-node-agent unit), canceling the context to initiate graceful shutdown")
-		if err := oscChanges.setMustRestartNodeAgent(false); err != nil {
-			return reconcile.Result{}, err
-		}
-		r.CancelContext()
-		return reconcile.Result{}, nil
 	}
 
 	if node == nil {

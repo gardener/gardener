@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagenthelper "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -99,7 +100,7 @@ After=network-online.target
 
 [Service]
 LimitMEMLOCK=infinity
-ExecStart=` + nodeagentconfigv1alpha1.BinaryDir + `/gardener-node-agent --config=` + nodeagentconfigv1alpha1.ConfigFilePath + `
+ExecStart=` + nodeagentconfigv1alpha1.BinaryDir + `/gardener-node-agent --config-dir=` + nodeagentconfigv1alpha1.BaseDir + `
 Restart=always
 RestartSec=5
 
@@ -144,7 +145,7 @@ func Files(config *nodeagentconfigv1alpha1.NodeAgentConfiguration) ([]extensions
 	}
 
 	return []extensionsv1alpha1.File{{
-		Path:        nodeagentconfigv1alpha1.ConfigFilePath,
+		Path:        nodeagenthelper.GetDefaultConfigFilePath(),
 		Permissions: ptr.To[uint32](0600),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(configRaw)}},
 	}}, nil
