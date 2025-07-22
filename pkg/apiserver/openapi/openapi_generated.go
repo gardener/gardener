@@ -1598,13 +1598,6 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
-					"secretRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a secret that contains the credentials to access object store. Deprecated: This field will be removed after v1.123.0 has been released. Use `CredentialsRef` instead. Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
-						},
-					},
 					"seedName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedName holds the name of the seed allocated to BackupBucket for running controller. This field is immutable.",
@@ -1619,11 +1612,11 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 						},
 					},
 				},
-				Required: []string{"provider", "secretRef"},
+				Required: []string{"provider"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider", "k8s.io/api/core/v1.ObjectReference", "k8s.io/api/core/v1.SecretReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider", "k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 

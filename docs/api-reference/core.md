@@ -128,21 +128,6 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </tr>
 <tr>
 <td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<p>SecretRef is a reference to a secret that contains the credentials to access object store.
-Deprecated: This field will be removed after v1.123.0 has been released. Use <code>CredentialsRef</code> instead.
-Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>seedName</code></br>
 <em>
 string
@@ -3000,21 +2985,6 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <em>(Optional)</em>
 <p>ProviderConfig is the configuration passed to BackupBucket resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<p>SecretRef is a reference to a secret that contains the credentials to access object store.
-Deprecated: This field will be removed after v1.123.0 has been released. Use <code>CredentialsRef</code> instead.
-Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
 </td>
 </tr>
 <tr>
