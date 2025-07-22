@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/component-base/version"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -167,6 +168,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				SecretName:        oscSecretName,
 				KubernetesVersion: kubernetesVersion,
 			},
+			ConfigDir: "/var/lib/gardener-node-agent",
 			DBus:      fakeDBus,
 			FS:        fakeFS,
 			HostName:  hostName,
@@ -945,7 +947,7 @@ kubeReserved:
 			Expect(fakeFS.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte(nodeAgentKubeconfig), 0600)).To(Succeed())
 
 			nodeAgentConfigFile := extensionsv1alpha1.File{
-				Path: nodeagentconfigv1alpha1.ConfigFilePath,
+				Path: fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

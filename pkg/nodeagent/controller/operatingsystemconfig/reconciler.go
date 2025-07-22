@@ -97,6 +97,7 @@ func init() {
 type Reconciler struct {
 	Client        client.Client
 	Config        nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig
+	ConfigDir     string
 	Recorder      record.EventRecorder
 	DBus          dbus.DBus
 	FS            afero.Afero
@@ -824,7 +825,7 @@ func (r *Reconciler) performCredentialsRotationInPlace(ctx context.Context, log 
 	if oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet || oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent {
 		// Read the updated gardener-node-agent config for the API server CA bundle and server URL.
 		// This must always be called after applying the updated files.
-		apiServerConfig, err := nodeagent.GetAPIServerConfig(r.FS)
+		apiServerConfig, err := nodeagent.GetAPIServerConfig(r.FS, r.ConfigDir)
 		if err != nil {
 			return fmt.Errorf("failed reading the API server config: %w", err)
 		}
