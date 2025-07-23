@@ -151,7 +151,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	secrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.GetInfo().Name), true)
+	secrets, err := gardenerutils.ReadGardenSecrets(
+		ctx,
+		log,
+		r.GardenClient,
+		gardenerutils.ComputeGardenNamespace(seed.GetInfo().Name),
+	)
 	if err != nil {
 		return err
 	}

@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // HealthCheck is an interface used to perform health checks.
@@ -150,6 +151,7 @@ var defaultNewOperationFunc = func(
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
+	internalDomain *gardenerutils.Domain,
 	shoot *gardencorev1beta1.Shoot,
 ) (
 	*operation.Operation,
@@ -162,6 +164,7 @@ var defaultNewOperationFunc = func(
 		WithGardenerInfo(gardenerInfo).
 		WithGardenClusterIdentity(gardenClusterIdentity).
 		WithSecrets(secrets).
+		WithInternalDomain(internalDomain).
 		WithGardenFrom(gardenClient, shoot.Namespace).
 		WithSeedFrom(gardenClient, *shoot.Status.SeedName).
 		WithShootFromCluster(seedClientSet, shoot).

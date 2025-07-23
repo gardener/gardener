@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -92,6 +93,71 @@ func DomainIsDefaultDomain(domain string, defaultDomains []*Domain) *Domain {
 
 var gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
 
+// ReadGardenInternalDomain reads the internal domain information from the Garden cluster.
+func ReadGardenInternalDomain(
+	ctx context.Context,
+	log logr.Logger,
+	c client.Reader,
+	namespace string,
+	enforceSecret bool,
+	seedDNSProvider *gardencorev1beta1.SeedDNSProviderConf,
+) (
+	*Domain,
+	error,
+) {
+	if seedDNSProvider != nil {
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+			Name:      seedDNSProvider.CredentialsRef.Name,
+			Namespace: seedDNSProvider.CredentialsRef.Namespace,
+		}}
+
+		if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return nil, fmt.Errorf("cannot fetch internal domain secret: %w", err)
+		}
+
+		return &Domain{
+			Domain:     seedDNSProvider.Domain,
+			Provider:   seedDNSProvider.Type,
+			Zone:       ptr.Deref(seedDNSProvider.Zone, ""),
+			SecretData: secret.Data,
+		}, nil
+	}
+
+	secretList := &corev1.SecretList{}
+	if err := c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain,
+	}); err != nil {
+		return nil, err
+	}
+
+	if len(secretList.Items) == 0 {
+		// For each Shoot we create a LoadBalancer(LB) pointing to the API server of the Shoot. Because the technical address
+		// of the LB (ip or hostname) can change we cannot directly write it into the kubeconfig of the components
+		// which talk from outside (kube-proxy, kubelet etc.) (otherwise those kubeconfigs would be broken once ip/hostname
+		// of LB changed; and we don't have means to exchange kubeconfigs currently).
+		// Therefore, to have a stable endpoint, we create a DNS record pointing to the ip/hostname of the LB. This DNS record
+		// is used in all kubeconfigs. With that we have a robust endpoint stable against underlying ip/hostname changes.
+		// And there can only be one of this internal domain secret because otherwise the gardener would not know which
+		// domain it should use.
+		if enforceSecret {
+			return nil, fmt.Errorf("need an internal domain secret but found none")
+		}
+		return nil, nil
+	}
+
+	if len(secretList.Items) > 1 {
+		return nil, fmt.Errorf("found more than one internal domain secret")
+	}
+
+	secret := &secretList.Items[0]
+	domain, err := constructDomainFromSecret(secret)
+	if err != nil {
+		return nil, fmt.Errorf("error constructing internal domain from secret %s: %w", client.ObjectKeyFromObject(secret), err)
+	}
+
+	return domain, nil
+}
+
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
 func ReadGardenSecrets(
@@ -99,7 +165,6 @@ func ReadGardenSecrets(
 	log logr.Logger,
 	c client.Reader,
 	namespace string,
-	enforceInternalDomainSecret bool,
 ) (
 	map[string]*corev1.Secret,
 	error,
@@ -107,7 +172,6 @@ func ReadGardenSecrets(
 	var (
 		logInfo                                  []string
 		secretsMap                               = make(map[string]*corev1.Secret)
-		numberOfInternalDomainSecrets            = 0
 		numberOfAlertingSecrets                  = 0
 		numberOfGlobalMonitoringSecrets          = 0
 		numberOfShootServiceAccountIssuerSecrets = 0
@@ -131,21 +195,6 @@ func ReadGardenSecrets(
 			defaultDomainSecret := secret
 			secretsMap[fmt.Sprintf("%s-%s", v1beta1constants.GardenRoleDefaultDomain, domain)] = &defaultDomainSecret
 			logInfo = append(logInfo, fmt.Sprintf("default domain secret %q for domain %q", secret.Name, domain))
-		}
-
-		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
-		// a label indicating the Garden role internal-domain.
-		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
-			_, domain, _, err := GetDomainInfoFromAnnotations(secret.Annotations)
-			if err != nil {
-				log.Error(err, "Error getting information out of internal domain secret", "secret", client.ObjectKeyFromObject(&secret))
-				continue
-			}
-
-			internalDomainSecret := secret
-			secretsMap[v1beta1constants.GardenRoleInternalDomain] = &internalDomainSecret
-			logInfo = append(logInfo, fmt.Sprintf("internal domain secret %q for domain %q", secret.Name, domain))
-			numberOfInternalDomainSecrets++
 		}
 
 		// Retrieve the alerting secret to configure alerting. Either in cluster email alerting or
@@ -189,18 +238,6 @@ func ReadGardenSecrets(
 			logInfo = append(logInfo, fmt.Sprintf("Shoot Service Account Issuer secret %q", secret.Name))
 			numberOfShootServiceAccountIssuerSecrets++
 		}
-	}
-
-	// For each Shoot we create a LoadBalancer(LB) pointing to the API server of the Shoot. Because the technical address
-	// of the LB (ip or hostname) can change we cannot directly write it into the kubeconfig of the components
-	// which talk from outside (kube-proxy, kubelet etc.) (otherwise those kubeconfigs would be broken once ip/hostname
-	// of LB changed; and we don't have means to exchange kubeconfigs currently).
-	// Therefore, to have a stable endpoint, we create a DNS record pointing to the ip/hostname of the LB. This DNS record
-	// is used in all kubeconfigs. With that we have a robust endpoint stable against underlying ip/hostname changes.
-	// And there can only be one of this internal domain secret because otherwise the gardener would not know which
-	// domain it should use.
-	if enforceInternalDomainSecret && numberOfInternalDomainSecrets == 0 {
-		return nil, fmt.Errorf("need an internal domain secret but found none")
 	}
 
 	// Operators can configure gardener to send email alerts or send the alerts to an external alertmanager. If no configuration

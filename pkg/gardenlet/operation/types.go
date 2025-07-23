@@ -21,17 +21,19 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // Builder is an object that builds Operation objects.
 type Builder struct {
 	configFunc                func() (*gardenletconfigv1alpha1.GardenletConfiguration, error)
-	gardenFunc                func(context.Context, map[string]*corev1.Secret) (*garden.Garden, error)
+	gardenFunc                func(context.Context, map[string]*corev1.Secret, *gardenerutils.Domain) (*garden.Garden, error)
 	gardenerInfoFunc          func() (*gardencorev1beta1.Gardener, error)
 	gardenClusterIdentityFunc func() (string, error)
 	loggerFunc                func() (logr.Logger, error)
 	secretsFunc               func() (map[string]*corev1.Secret, error)
+	internalDomainFunc        func() (*gardenerutils.Domain, error)
 	seedFunc                  func(context.Context) (*seed.Seed, error)
 	shootFunc                 func(context.Context, client.Reader, *garden.Garden, *seed.Seed, *corev1.Secret) (*shoot.Shoot, error)
 	clockFunc                 func() clock.Clock
