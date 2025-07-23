@@ -208,7 +208,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				g.Expect(err).ToNot(HaveOccurred())
 			}).Should(Succeed())
 
-			Expect(selfSubjectReview.Status.UserInfo.Username).To(Equal("kubernetes-admin"))
+			Expect(selfSubjectReview.Status.UserInfo.Username).To(HaveSuffix(":kubernetes-admin"))
 			Expect(selfSubjectReview.Status.UserInfo.Groups).To(Equal([]string{"gardener.cloud:system:viewers", "system:authenticated"}))
 
 		})
