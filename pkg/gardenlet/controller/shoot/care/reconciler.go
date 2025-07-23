@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,7 +56,8 @@ type Reconciler struct {
 	GardenClusterIdentity string
 	SeedName              string
 
-	gardenSecrets map[string]*corev1.Secret
+	gardenSecrets        map[string]*corev1.Secret
+	gardenInternalDomain *gardenerutils.Domain
 }
 
 // Reconcile executes care operations, e.g. health checks or garbage collection.
@@ -99,11 +101,38 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if r.gardenSecrets == nil {
-		secrets, err := gardenerutils.ReadGardenSecrets(careCtx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(*shoot.Status.SeedName), true)
+		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{
+			Name: r.SeedName,
+		}}
+
+		if err := r.GardenClient.Get(careCtx, client.ObjectKeyFromObject(seed), seed); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error retrieving seed: %w", err)
+		}
+
+		secrets, err := gardenerutils.ReadGardenSecrets(
+			careCtx,
+			log,
+			r.GardenClient,
+			gardenerutils.ComputeGardenNamespace(*shoot.Status.SeedName),
+		)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reading Garden secrets: %w", err)
 		}
+
+		internalDomain, err := gardenerutils.ReadGardenInternalDomain(
+			careCtx,
+			log,
+			r.GardenClient,
+			gardenerutils.ComputeGardenNamespace(*shoot.Status.SeedName),
+			true,
+			seed.Spec.DNS.Internal,
+		)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("error reading Garden internal domain secret: %w", err)
+		}
+
 		r.gardenSecrets = secrets
+		r.gardenInternalDomain = internalDomain
 	}
 
 	o, err := NewOperation(
@@ -116,6 +145,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		r.Identity,
 		r.GardenClusterIdentity,
 		r.gardenSecrets,
+		r.gardenInternalDomain,
 		shoot,
 	)
 	if err != nil {
