@@ -2161,7 +2161,7 @@ message Networking {
   // +optional
   optional string services = 5;
 
-  // IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+  // IPFamilies specifies the IP protocol versions to use for shoot networking.
   // See https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md.
   // Defaults to ["IPv4"].
   // +optional

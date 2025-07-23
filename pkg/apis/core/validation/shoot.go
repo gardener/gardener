@@ -748,6 +748,26 @@ func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fld
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Services, oldNetworking.Services, fldPath.Child("services"))...)
 	}
 
+	allErrs = append(allErrs, validateIPFamiliesUpdate(newNetworking.IPFamilies, oldNetworking.IPFamilies, fldPath.Child("ipFamilies"))...)
+	return allErrs
+}
+
+func validateIPFamiliesUpdate(newIPFamilies, oldIPFamilies []core.IPFamily, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(oldIPFamilies) == 1 &&
+		oldIPFamilies[0] == core.IPFamilyIPv4 &&
+		len(newIPFamilies) == 2 &&
+		newIPFamilies[0] == core.IPFamilyIPv4 &&
+		newIPFamilies[1] == core.IPFamilyIPv6 {
+		return allErrs
+	}
+
+	if !apiequality.Semantic.DeepEqual(newIPFamilies, oldIPFamilies) {
+		allErrs = append(allErrs, field.Forbidden(fldPath,
+			fmt.Sprintf("unsupported IP family update: oldIPFamilies=%v, newIPFamilies=%v", oldIPFamilies, newIPFamilies)))
+	}
+
 	return allErrs
 }
 
