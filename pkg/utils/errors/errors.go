@@ -7,6 +7,7 @@ package errors
 import (
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/hashicorp/go-multierror"
 )
@@ -144,12 +145,7 @@ func (e *ErrorContext) HasErrorWithID(errorID string) bool {
 
 // HasLastErrorWithID checks if the previous reconciliation had encountered an error with id errorID
 func (e *ErrorContext) HasLastErrorWithID(errorID string) bool {
-	for _, lastErrorID := range e.lastErrorIDs {
-		if errorID == lastErrorID {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(e.lastErrorIDs, errorID)
 }
 
 // FailureHandler is a function which is called when an error occurs

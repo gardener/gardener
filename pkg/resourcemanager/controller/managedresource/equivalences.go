@@ -6,6 +6,7 @@ package managedresource
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 var defaultEquivalences = []equivalenceList{
@@ -19,19 +20,8 @@ var defaultEquivalences = []equivalenceList{
 
 type equivalenceList []metav1.GroupKind
 
-// EquivalenceSet is a set of GroupKinds which should be considered as equivalent representation of an Object Kind.
-type EquivalenceSet map[metav1.GroupKind]struct{}
-
-// Insert adds the given GroupKinds to the EquivalenceSet
-func (s EquivalenceSet) Insert(gks ...metav1.GroupKind) EquivalenceSet {
-	for _, gk := range gks {
-		s[gk] = struct{}{}
-	}
-	return s
-}
-
-// Equivalences is a set of EquivalenceSets, which can be used to look up equivalent GroupKinds for a given GroupKind.
-type Equivalences map[metav1.GroupKind]EquivalenceSet
+// Equivalences is a set of EquivalenceSets(sets.Set[metav1.GroupKind]'s), which can be used to look up equivalent GroupKinds for a given GroupKind.
+type Equivalences map[metav1.GroupKind]sets.Set[metav1.GroupKind]
 
 // NewEquivalences constructs a new Equivalences object, which can be used to look up equivalent GroupKinds for a given
 // GroupKind. It already has some default equivalences predefined (e.g. for Kind `Deployment` in Group `apps` and
@@ -52,7 +42,7 @@ func NewEquivalences(additionalEquivalences ...[]metav1.GroupKind) Equivalences 
 }
 
 func (e Equivalences) addEquivalentGroupKinds(equivalentGroupKinds []metav1.GroupKind) {
-	var m EquivalenceSet
+	var m sets.Set[metav1.GroupKind]
 
 	// check if we already have an equivalence set for one of the given GroupKinds
 	// if so, add the equivalents to the existing set, otherwise construct a new one
@@ -64,7 +54,7 @@ func (e Equivalences) addEquivalentGroupKinds(equivalentGroupKinds []metav1.Grou
 	}
 
 	if m == nil {
-		m = EquivalenceSet{}
+		m = sets.New[metav1.GroupKind]()
 	}
 
 	// add the equivalence set for each group kind
@@ -75,7 +65,7 @@ func (e Equivalences) addEquivalentGroupKinds(equivalentGroupKinds []metav1.Grou
 }
 
 // GetEquivalencesFor looks up which GroupKinds should be considered as equivalent to a given GroupKind.
-func (e Equivalences) GetEquivalencesFor(gk metav1.GroupKind) EquivalenceSet {
+func (e Equivalences) GetEquivalencesFor(gk metav1.GroupKind) sets.Set[metav1.GroupKind] {
 	return e[gk]
 }
 

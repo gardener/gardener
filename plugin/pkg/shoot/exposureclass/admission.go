@@ -169,8 +169,8 @@ func uniteSeedSelectors(shootSeedSelector *core.SeedSelector, exposureClassSeedS
 	shootSeedSelector.MatchExpressions = append(shootSeedSelector.MatchExpressions, exposureClassSeedSelector.MatchExpressions...)
 
 	// Unite provider types.
-	shootProviderTypes := sets.New[string]().Insert(shootSeedSelector.ProviderTypes...)
-	exposureclasssProviderTypes := sets.New[string]().Insert(exposureClassSeedSelector.ProviderTypes...)
+	shootProviderTypes := sets.New(shootSeedSelector.ProviderTypes...)
+	exposureclasssProviderTypes := sets.New(exposureClassSeedSelector.ProviderTypes...)
 	shootSeedSelector.ProviderTypes = sets.List(shootProviderTypes.Union(exposureclasssProviderTypes))
 
 	return shootSeedSelector, nil

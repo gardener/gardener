@@ -38,11 +38,11 @@ type Options struct {
 
 // Validate validates the options.
 func (o *Options) Validate() error {
-	if !sets.New[string](logger.AllLogLevels...).Has(o.LogLevel) {
+	if !sets.New(logger.AllLogLevels...).Has(o.LogLevel) {
 		return fmt.Errorf("log-level must be one of %v", logger.AllLogLevels)
 	}
 
-	if !sets.New[string](logger.AllLogFormats...).Has(o.LogFormat) {
+	if !sets.New(logger.AllLogFormats...).Has(o.LogFormat) {
 		return fmt.Errorf("log-format must be one of %v", logger.AllLogFormats)
 	}
 
