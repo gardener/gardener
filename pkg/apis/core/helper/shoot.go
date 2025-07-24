@@ -125,6 +125,18 @@ func GetShootETCDEncryptionKeyRotationPhase(credentials *core.ShootCredentials) 
 	return ""
 }
 
+// IsShootETCDEncryptionKeyRotationSingleOperation returns whether the current ETCD encryption key rotation is a single
+// operation rotation or not.
+func IsShootETCDEncryptionKeyRotationSingleOperation(credentials *core.ShootCredentials) bool {
+	if credentials != nil &&
+		credentials.Rotation != nil &&
+		credentials.Rotation.ETCDEncryptionKey != nil &&
+		credentials.Rotation.ETCDEncryptionKey.IsSingleOperationRotation != nil {
+		return *credentials.Rotation.ETCDEncryptionKey.IsSingleOperationRotation
+	}
+	return false
+}
+
 // GetAllZonesFromShoot returns the set of all availability zones defined in the worker pools of the Shoot specification.
 func GetAllZonesFromShoot(shoot *core.Shoot) sets.Set[string] {
 	out := sets.New[string]()

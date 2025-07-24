@@ -264,6 +264,18 @@ func GetShootETCDEncryptionKeyRotationPhase(credentials *gardencorev1beta1.Shoot
 	return ""
 }
 
+// IsShootETCDEncryptionKeyRotationSingleOperation returns whether the current ETCD encryption key rotation is a single
+// operation rotation or not.
+func IsShootETCDEncryptionKeyRotationSingleOperation(credentials *gardencorev1beta1.ShootCredentials) bool {
+	if credentials != nil &&
+		credentials.Rotation != nil &&
+		credentials.Rotation.ETCDEncryptionKey != nil &&
+		credentials.Rotation.ETCDEncryptionKey.IsSingleOperationRotation != nil {
+		return *credentials.Rotation.ETCDEncryptionKey.IsSingleOperationRotation
+	}
+	return false
+}
+
 // MutateShootETCDEncryptionKeyRotation mutates the .status.credentials.rotation.etcdEncryptionKey field based on the
 // provided mutation function. If the field is nil then it is initialized.
 func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ETCDEncryptionKeyRotation)) {
