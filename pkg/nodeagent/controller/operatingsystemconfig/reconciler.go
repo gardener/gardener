@@ -82,6 +82,8 @@ var (
 	OSUpdateRetryInterval = 30 * time.Second
 	// OSUpdateRetryTimeout is the timeout for OS update retries. Exported for testing.
 	OSUpdateRetryTimeout = 5 * time.Minute
+	// RequeueAfterRestart defines whether RequeueAfter is supposed to be triggered on restart of gardener-node-agent. Exposed for testing.
+	RequeueAfterRestart time.Duration
 )
 
 func init() {
@@ -249,12 +251,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 	// We restart the gardener-node-agent before removing the old files, so that the previous
 	// config is deleted only after there is no gardener-node-agent that is still using it.
 	if oscChanges.MustRestartNodeAgent {
-		log.Info("Must restart myself (gardener-node-agent unit), canceling the context to initiate graceful shutdown")
-		if err := oscChanges.setMustRestartNodeAgent(false); err != nil {
-			return reconcile.Result{}, err
-		}
-		r.CancelContext()
-		return reconcile.Result{}, nil
+		return r.restartNodeAgent(oscChanges, log)
 	}
 
 	// After the node is prepared, we can wait for the registries to be configured.
@@ -291,6 +288,10 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 		if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
 			return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
 		}
+	}
+
+	if oscChanges.MustRestartNodeAgent {
+		return r.restartNodeAgent(oscChanges, log)
 	}
 
 	if node == nil {
@@ -1080,4 +1081,13 @@ func (r *Reconciler) patchNodeUpdateFailed(ctx context.Context, log logr.Logger,
 	}
 
 	return nil
+}
+
+func (r *Reconciler) restartNodeAgent(oscChanges *operatingSystemConfigChanges, log logr.Logger) (reconcile.Result, error) {
+	log.Info("Must restart myself (gardener-node-agent unit), canceling the context to initiate graceful shutdown")
+	if err := oscChanges.setMustRestartNodeAgent(false); err != nil {
+		return reconcile.Result{}, err
+	}
+	r.CancelContext()
+	return reconcile.Result{RequeueAfter: RequeueAfterRestart}, nil
 }
