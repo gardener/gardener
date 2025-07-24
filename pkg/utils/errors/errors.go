@@ -10,7 +10,6 @@ import (
 	"slices"
 
 	"github.com/hashicorp/go-multierror"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 type withSuppressed struct {
@@ -118,7 +117,7 @@ func GetID(err error) string {
 type ErrorContext struct {
 	name         string
 	lastErrorIDs []string
-	errorIDs     sets.Set[string]
+	errorIDs     map[string]struct{}
 }
 
 // NewErrorContext creates a new error context with the given name and lastErrors from the previous reconciliation
@@ -126,7 +125,7 @@ func NewErrorContext(name string, lastErrorIDs []string) *ErrorContext {
 	return &ErrorContext{
 		name:         name,
 		lastErrorIDs: lastErrorIDs,
-		errorIDs:     sets.New[string](),
+		errorIDs:     map[string]struct{}{},
 	}
 }
 
@@ -135,12 +134,13 @@ func (e *ErrorContext) AddErrorID(errorID string) {
 	if e.HasErrorWithID(errorID) {
 		panic(fmt.Sprintf("Error with id %q already exists in error context %q", errorID, e.name))
 	}
-	e.errorIDs.Insert(errorID)
+	e.errorIDs[errorID] = struct{}{}
 }
 
 // HasErrorWithID checks if the ErrorContext already contains an error with id errorID
 func (e *ErrorContext) HasErrorWithID(errorID string) bool {
-	return e.errorIDs.Has(errorID)
+	_, ok := e.errorIDs[errorID]
+	return ok
 }
 
 // HasLastErrorWithID checks if the previous reconciliation had encountered an error with id errorID
