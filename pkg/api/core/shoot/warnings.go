@@ -43,7 +43,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	// We do not check for the Kubernetes version here because the shoot validation code is called before this
 	// and forbids setting the etcd encryption key rotation start and complete annotations for kubernetes >= v1.34.
 	if shoot.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.OperationRotateETCDEncryptionKeyStart || shoot.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.OperationRotateETCDEncryptionKeyComplete {
-		warnings = append(warnings, fmt.Sprintf("you are setting the opearation annotation to %s. This annotation has been deprecated and is forbiden to be set starting from Kubernetes 1.34. Instead, use the %s annotation, which performs a full rotation of the ETCD encryption key.", shoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.OperationRotateETCDEncryptionKey))
+		warnings = append(warnings, fmt.Sprintf("you are setting the operation annotation to %s. This annotation has been deprecated and is forbidden to be set starting from Kubernetes 1.34. Instead, use the %s annotation, which performs a full rotation of the ETCD encryption key.", shoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.OperationRotateETCDEncryptionKey))
 	}
 
 	if supportedVersion, _ := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.33"); supportedVersion && shoot.Spec.Kubernetes.ClusterAutoscaler != nil && shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete != nil {
