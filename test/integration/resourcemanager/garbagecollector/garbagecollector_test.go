@@ -6,7 +6,6 @@ package garbagecollector_test
 
 import (
 	"fmt"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -52,13 +51,13 @@ var _ = Describe("Garbage collector tests", func() {
 			secretList := &corev1.SecretList{}
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return secretList.Items
-		}).WithTimeout(15 * time.Second).Should(BeEmpty())
+		}).Should(BeEmpty())
 
 		Eventually(func(g Gomega) []corev1.ConfigMap {
 			configMapList := &corev1.ConfigMapList{}
 			g.Expect(testClient.List(ctx, configMapList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return configMapList.Items
-		}).WithTimeout(15 * time.Second).Should(BeEmpty())
+		}).Should(BeEmpty())
 	})
 
 	It("should only garbage collect unreferenced resources", func() {
@@ -215,7 +214,7 @@ var _ = Describe("Garbage collector tests", func() {
 			secretList := &corev1.SecretList{}
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return test.ObjectNames(secretList)
-		}).WithTimeout(15 * time.Second).Should(And(
+		}).Should(And(
 			ContainElements(
 				resourceName+"-secret0",
 				resourceName+"-secret1",
@@ -233,7 +232,7 @@ var _ = Describe("Garbage collector tests", func() {
 			configMapList := &corev1.ConfigMapList{}
 			g.Expect(testClient.List(ctx, configMapList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return test.ObjectNames(configMapList)
-		}).WithTimeout(15 * time.Second).Should(And(
+		}).Should(And(
 			Not(ContainElement(resourceName+"-configmap0")),
 			ContainElements(
 				resourceName+"-configmap1",

@@ -115,10 +115,10 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&garbagecollector.Reconciler{
 		Config: resourcemanagerconfigv1alpha1.GarbageCollectorControllerConfig{
-			SyncPeriod: &metav1.Duration{Duration: 100 * time.Millisecond},
+			SyncPeriod: &metav1.Duration{Duration: 1 * time.Second},
 		},
 		Clock:                 clock.RealClock{},
-		MinimumObjectLifetime: ptr.To(5 * time.Second),
+		MinimumObjectLifetime: ptr.To(time.Duration(0)),
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")
