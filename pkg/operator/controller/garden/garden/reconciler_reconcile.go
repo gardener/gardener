@@ -17,7 +17,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -502,7 +501,7 @@ func (r *Reconciler) reconcile(
 				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, secretsManager, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf: helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing &&
-				apiequality.Semantic.DeepEqual(resourcesToEncrypt, encryptedResources),
+				sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)),
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient, waitUntilGardenerAPIServerReady),
 		})
 		snapshotETCD = g.Add(flow.Task{
@@ -512,7 +511,7 @@ func (r *Reconciler) reconcile(
 			},
 			SkipIf: !backupConfigured ||
 				(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing &&
-					apiequality.Semantic.DeepEqual(resourcesToEncrypt, encryptedResources)),
+					sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...))),
 			Dependencies: flow.NewTaskIDs(rewriteResourcesAddLabel),
 		})
 		_ = g.Add(flow.Task{
@@ -522,7 +521,7 @@ func (r *Reconciler) reconcile(
 					return err
 				}
 
-				if !apiequality.Semantic.DeepEqual(resourcesToEncrypt, encryptedResources) {
+				if !sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)) {
 					encryptedResources := append(getKubernetesResourcesForEncryption(garden), getGardenerResourcesForEncryption(garden)...)
 
 					patch := client.MergeFrom(garden.DeepCopy())
@@ -535,7 +534,7 @@ func (r *Reconciler) reconcile(
 				return nil
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf: helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationCompleting &&
-				apiequality.Semantic.DeepEqual(resourcesToEncrypt, encryptedResources),
+				sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)),
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient, waitUntilGardenerAPIServerReady, snapshotETCD),
 		})
 
