@@ -52,6 +52,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const taskID = "initializeOperation"
@@ -610,6 +611,10 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	}
 
 	var mustRemoveOperationAnnotation bool
+	k8sLess134, err := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.34")
+	if err != nil {
+		return err
+	}
 
 	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
 	case v1beta1constants.OperationRotateCredentialsStart:
@@ -620,7 +625,11 @@ func (r *Reconciler) updateShootStatusOperationStart(
 			startRotationSSHKeypair(shoot, &now)
 		}
 		startRotationObservability(shoot, &now)
-		startRotationETCDEncryptionKey(shoot, &now)
+		if k8sLess134 {
+			startRotationETCDEncryptionKey(shoot, false, &now)
+		} else {
+			startRotationETCDEncryptionKey(shoot, true, &now)
+		}
 	case v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
 		mustRemoveOperationAnnotation = true
 		startRotationCAWithoutWorkersRollout(shoot, &now)
@@ -629,12 +638,18 @@ func (r *Reconciler) updateShootStatusOperationStart(
 			startRotationSSHKeypair(shoot, &now)
 		}
 		startRotationObservability(shoot, &now)
-		startRotationETCDEncryptionKey(shoot, &now)
+		if k8sLess134 {
+			startRotationETCDEncryptionKey(shoot, false, &now)
+		} else {
+			startRotationETCDEncryptionKey(shoot, true, &now)
+		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(shoot, &now)
 		completeRotationServiceAccountKey(shoot, &now)
-		completeRotationETCDEncryptionKey(shoot, &now)
+		if k8sLess134 {
+			completeRotationETCDEncryptionKey(shoot, &now)
+		}
 
 	case v1beta1constants.OperationRotateCAStart:
 		mustRemoveOperationAnnotation = true
@@ -666,9 +681,12 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		mustRemoveOperationAnnotation = true
 		completeRotationServiceAccountKey(shoot, &now)
 
+	case v1beta1constants.OperationRotateETCDEncryptionKey:
+		mustRemoveOperationAnnotation = true
+		startRotationETCDEncryptionKey(shoot, true, &now)
 	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
 		mustRemoveOperationAnnotation = true
-		startRotationETCDEncryptionKey(shoot, &now)
+		startRotationETCDEncryptionKey(shoot, false, &now)
 	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationETCDEncryptionKey(shoot, &now)
@@ -721,6 +739,11 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 		description                string
 		setConditionsToProgressing bool
 	)
+
+	k8sLess134, err := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.34")
+	if err != nil {
+		return err
+	}
 
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
@@ -854,10 +877,22 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 
 	switch v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) {
 	case gardencorev1beta1.RotationPreparing:
-		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
-			rotation.Phase = gardencorev1beta1.RotationPrepared
-			rotation.LastInitiationFinishedTime = &now
-		})
+		if v1beta1helper.IsShootETCDEncryptionKeyRotationSingleOperation(shoot.Status.Credentials) {
+			completeRotationETCDEncryptionKey(shoot, &now)
+		} else {
+			v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
+				rotation.Phase = gardencorev1beta1.RotationPrepared
+				rotation.LastInitiationFinishedTime = &now
+			})
+		}
+
+	// TODO(AleksandarSavchev): Remove rotation prepared case in a future release after support for Kubernetes v1.33 is dropped.
+	// It is added to forcefully complete the etcd encryption key rotation, since the annotation to complete the rotation
+	// is forbidden for clusters with k8s >= v1.34.
+	case gardencorev1beta1.RotationPrepared:
+		if k8sLess134 {
+			completeRotationETCDEncryptionKey(shoot, &now)
+		}
 
 	case gardencorev1beta1.RotationCompleting:
 		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
@@ -865,6 +900,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 			rotation.LastCompletionTime = &now
 			rotation.LastInitiationFinishedTime = nil
 			rotation.LastCompletionTriggeredTime = nil
+			rotation.IsSingleOperationRotation = nil
 		})
 	}
 
@@ -1165,12 +1201,13 @@ func completeRotationServiceAccountKey(shoot *gardencorev1beta1.Shoot, now *meta
 	})
 }
 
-func startRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
+func startRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, singleOperation bool, now *metav1.Time) {
 	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing
 		rotation.LastInitiationTime = now
 		rotation.LastInitiationFinishedTime = nil
 		rotation.LastCompletionTriggeredTime = nil
+		rotation.IsSingleOperationRotation = ptr.To(singleOperation)
 	})
 }
 
