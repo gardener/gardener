@@ -80,6 +80,18 @@ func GetETCDEncryptionKeyRotationPhase(credentials *operatorv1alpha1.Credentials
 	return ""
 }
 
+// IsETCDEncryptionKeyRotationSingleOperation returns whether the current ETCD encryption key rotation is a single
+// operation rotation or not.
+func IsETCDEncryptionKeyRotationSingleOperation(credentials *operatorv1alpha1.Credentials) bool {
+	if credentials != nil &&
+		credentials.Rotation != nil &&
+		credentials.Rotation.ETCDEncryptionKey != nil &&
+		credentials.Rotation.ETCDEncryptionKey.IsSingleOperationRotation != nil {
+		return *credentials.Rotation.ETCDEncryptionKey.IsSingleOperationRotation
+	}
+	return false
+}
+
 // MutateETCDEncryptionKeyRotation mutates the .status.credentials.rotation.etcdEncryptionKey field based on the
 // provided mutation function. If the field is nil then it is initialized.
 func MutateETCDEncryptionKeyRotation(garden *operatorv1alpha1.Garden, f func(*gardencorev1beta1.ETCDEncryptionKeyRotation)) {
