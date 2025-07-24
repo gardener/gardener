@@ -523,6 +523,19 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 		if c.seed.Spec.Backup == nil {
 			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because backup is not configured for seed %q", c.seed.Name))
 		}
+
+		// For now, just check if the internal domain field changes from empty to explicitly set.
+		var oldDomain, newDomain string
+		if oldSeed.Spec.DNS.Internal != nil {
+			oldDomain = oldSeed.Spec.DNS.Internal.Domain
+		}
+		if c.seed.Spec.DNS.Internal != nil {
+			newDomain = c.seed.Spec.DNS.Internal.Domain
+		}
+		if oldDomain != newDomain {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because internal domain would change from %q to %q", oldDomain, newDomain))
+		}
+
 	} else if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
 		if wasShootRescheduledToNewSeed(c.shoot) {
 			return admission.NewForbidden(a, fmt.Errorf("shoot spec cannot be changed because shoot has been rescheduled to a new seed"))
