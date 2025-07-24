@@ -92,7 +92,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		DeferCleanup(func() { Expect(fakeFS.RemoveAll(imageMountDirectory)).To(Succeed()) })
 
 		cancelFunc = cancelFuncEnsurer{}
-		DeferCleanup(test.WithVar(&operatingsystemconfig.RequeueAfterRestart, time.Duration(time.Second)))
+		DeferCleanup(test.WithVar(&operatingsystemconfig.RequeueAfterRestart, time.Second))
 
 		By("Setup manager")
 		mgr, err := manager.New(restConfig, manager.Options{
