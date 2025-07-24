@@ -260,14 +260,14 @@ var _ = Describe("Warnings", func() {
 			shoot.Annotations = map[string]string{
 				"gardener.cloud/operation": "rotate-etcd-encryption-key-start",
 			}
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the opearation annotation to rotate-etcd-encryption-key-start. This annotation has been deprecated and is forbiden to be set starting from Kubernetes 1.34. Instead, use the rotate-etcd-encryption-key annotation, which performs a full rotation of the ETCD encryption key.")))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the operation annotation to rotate-etcd-encryption-key-start. This annotation has been deprecated and is forbidden to be set starting from Kubernetes 1.34. Instead, use the rotate-etcd-encryption-key annotation, which performs a full rotation of the ETCD encryption key.")))
 		})
 
 		It("should warn when rotate-etcd-encryption-key-complete operation annotation is set", func() {
 			shoot.Annotations = map[string]string{
 				"gardener.cloud/operation": "rotate-etcd-encryption-key-complete",
 			}
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the opearation annotation to rotate-etcd-encryption-key-complete. This annotation has been deprecated and is forbiden to be set starting from Kubernetes 1.34. Instead, use the rotate-etcd-encryption-key annotation, which performs a full rotation of the ETCD encryption key.")))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the operation annotation to rotate-etcd-encryption-key-complete. This annotation has been deprecated and is forbidden to be set starting from Kubernetes 1.34. Instead, use the rotate-etcd-encryption-key annotation, which performs a full rotation of the ETCD encryption key.")))
 		})
 
 		It("should return a warning when enableAnonymousAuthentication is set", func() {
