@@ -280,6 +280,8 @@ cat <<EOF | sudo tee -a /etc/hosts
 172.18.255.1 api.e2e-rot-ip.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-rot-nr-ip.local.external.local.gardener.cloud
 172.18.255.1 api.e2e-rot-nr-ip.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-rot-etcd.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-rot-etcd.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-default.local.external.local.gardener.cloud
 172.18.255.1 api.e2e-default.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-default-wl.local.external.local.gardener.cloud
