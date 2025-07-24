@@ -464,6 +464,21 @@
       allowedVersions: '<v1.12.0',
     },
     {
+      // TODO(marc1404): Remove when supported for containerd v1 is dropped or the following issue is resolved: https://github.com/gardener/gardener/issues/12600
+      // Disable major updates of go-toml to stay on v1.x.x.
+      // Related issue: https://github.com/gardener/gardener/issues/12600
+      matchDatasources: [
+        'go',
+      ],
+      matchPackageNames: [
+        'github.com/pelletier/go-toml',
+      ],
+      matchUpdateTypes: [
+        'major',
+      ],
+      enabled: false,
+    },
+    {
       // Ignore paths which most likely create false positives.
       matchFileNames: [
         'cmd/**',
