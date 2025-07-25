@@ -674,8 +674,8 @@ func startCredentialsRotation(shoot *gardencorev1beta1.Shoot, now metav1.Time, c
 func computeCredentialsRotationResults(log logr.Logger, shoot *gardencorev1beta1.Shoot, now metav1.Time) map[string]updateResult {
 	var (
 		maintenanceResults                    = make(map[string]updateResult)
-		sshKeypairRotationEnabled             = v1beta1helper.IsSSHKeypairRotationEnabled(shoot)
-		observabilityPasswordsRotationEnabled = v1beta1helper.IsObservabilityRotationEnabled(shoot)
+		sshKeypairRotationEnabled             = v1beta1helper.IsSSHKeypairAutoRotationEnabled(shoot)
+		observabilityPasswordsRotationEnabled = v1beta1helper.IsObservabilityAutoRotationEnabled(shoot)
 	)
 
 	if sshKeypairRotationEnabled && v1beta1helper.ShootEnablesSSHAccess(shoot) && sshKeypairRotationPassedRotationPeriod(shoot.Status.Credentials, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod) {

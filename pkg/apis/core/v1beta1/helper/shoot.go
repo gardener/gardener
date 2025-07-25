@@ -654,8 +654,8 @@ func ControlPlaneNamespaceForShoot(shoot *gardencorev1beta1.Shoot) string {
 	return shoot.Status.TechnicalID
 }
 
-// IsSSHKeypairRotationEnabled checks if automatic rotation of SSH keypair for worker nodes is enabled in the maintenance window.
-func IsSSHKeypairRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
+// IsSSHKeypairAutoRotationEnabled checks if automatic rotation of SSH keypair for worker nodes is enabled in the maintenance window.
+func IsSSHKeypairAutoRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.Maintenance != nil &&
 		shoot.Spec.Maintenance.AutoRotation != nil &&
 		shoot.Spec.Maintenance.AutoRotation.Credentials != nil &&
@@ -663,8 +663,8 @@ func IsSSHKeypairRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
 		ptr.Deref(shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.Enabled, false)
 }
 
-// IsObservabilityRotationEnabled checks if automatic rotation of observability credentials is enabled in the maintenance window.
-func IsObservabilityRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
+// IsObservabilityAutoRotationEnabled checks if automatic rotation of observability credentials is enabled in the maintenance window.
+func IsObservabilityAutoRotationEnabled(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.Maintenance != nil &&
 		shoot.Spec.Maintenance.AutoRotation != nil &&
 		shoot.Spec.Maintenance.AutoRotation.Credentials != nil &&
