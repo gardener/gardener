@@ -23,7 +23,7 @@ func FilterMachineImageVersions(
 ) *gardencorev1beta1.MachineImage {
 	filteredMachineImageVersions := filterForArchitecture(machineImageFromCloudProfile, worker.Machine.Architecture)
 	filteredMachineImageVersions = filterForCRI(filteredMachineImageVersions, worker.CRI)
-	filteredMachineImageVersions = filterForKubeleteVersionConstraint(filteredMachineImageVersions, kubeletVersion)
+	filteredMachineImageVersions = filterForKubeletVersionConstraint(filteredMachineImageVersions, kubeletVersion)
 	filteredMachineImageVersions = filterForInPlaceUpdateConstraint(filteredMachineImageVersions, worker.Machine.Image.Version, v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy))
 
 	return filteredMachineImageVersions
@@ -158,7 +158,7 @@ func filterForCRI(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, 
 	return &filteredMachineImages
 }
 
-func filterForKubeleteVersionConstraint(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, kubeletVersion *semver.Version) *gardencorev1beta1.MachineImage {
+func filterForKubeletVersionConstraint(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, kubeletVersion *semver.Version) *gardencorev1beta1.MachineImage {
 	filteredMachineImages := gardencorev1beta1.MachineImage{
 		Name:           machineImageFromCloudProfile.Name,
 		UpdateStrategy: machineImageFromCloudProfile.UpdateStrategy,

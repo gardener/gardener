@@ -194,11 +194,11 @@ func VerifyMachineImageVersions(ctx context.Context, shootClient kubernetes.Inte
 
 	for _, node := range nodeList.Items {
 		var (
-			poolName            = node.Labels[v1beta1constants.LabelWorkerPool]
-			machineImageVersion = poolNameToMachineImageVersion[poolName]
+			poolName = node.Labels[v1beta1constants.LabelWorkerPool]
 		)
 
-		if _, ok := poolNameToMachineImageVersion[poolName]; !ok {
+		machineImageVersion, ok := poolNameToMachineImageVersion[poolName]
+		if !ok {
 			// not a in-place update worker pool, skip
 			continue
 		}
