@@ -1163,21 +1163,11 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEn
 // ValidateClusterAutoscaler validates the given ClusterAutoscaler fields.
 func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	if scaleDownDelayAfterAdd := autoScaler.ScaleDownDelayAfterAdd; scaleDownDelayAfterAdd != nil && scaleDownDelayAfterAdd.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownDelayAfterAdd"), *scaleDownDelayAfterAdd, "can not be negative"))
-	}
-	if scaleDownDelayAfterDelete := autoScaler.ScaleDownDelayAfterDelete; scaleDownDelayAfterDelete != nil && scaleDownDelayAfterDelete.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownDelayAfterDelete"), *scaleDownDelayAfterDelete, "can not be negative"))
-	}
-	if scaleDownDelayAfterFailure := autoScaler.ScaleDownDelayAfterFailure; scaleDownDelayAfterFailure != nil && scaleDownDelayAfterFailure.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownDelayAfterFailure"), *scaleDownDelayAfterFailure, "can not be negative"))
-	}
-	if scaleDownUnneededTime := autoScaler.ScaleDownUnneededTime; scaleDownUnneededTime != nil && scaleDownUnneededTime.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownUnneededTime"), *scaleDownUnneededTime, "can not be negative"))
-	}
-	if scanInterval := autoScaler.ScanInterval; scanInterval != nil && scanInterval.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("scanInterval"), *scanInterval, "can not be negative"))
-	}
+
+	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.ScaleDownDelayAfterAdd, fldPath.Child("scaleDownDelayAfterAdd"))...)
+	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.ScaleDownDelayAfterDelete, fldPath.Child("scaleDownDelayAfterDelete"))...)
+	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.ScaleDownDelayAfterFailure, fldPath.Child("scaleDownDelayAfterFailure"))...)
+	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.ScaleDownUnneededTime, fldPath.Child("scaleDownUnneededTime"))...)
 
 	if threshold := autoScaler.ScaleDownUtilizationThreshold; threshold != nil {
 		if *threshold < 0.0 {
@@ -1187,12 +1177,8 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownUtilizationThreshold"), *threshold, "can not be greater than 1.0"))
 		}
 	}
-	if maxNodeProvisionTime := autoScaler.MaxNodeProvisionTime; maxNodeProvisionTime != nil && maxNodeProvisionTime.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxNodeProvisionTime"), *maxNodeProvisionTime, "can not be negative"))
-	}
-	if maxGracefulTerminationSeconds := autoScaler.MaxGracefulTerminationSeconds; maxGracefulTerminationSeconds != nil && *maxGracefulTerminationSeconds < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxGracefulTerminationSeconds"), *maxGracefulTerminationSeconds, "can not be negative"))
-	}
+
+	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.ScanInterval, fldPath.Child("scanInterval"))...)
 
 	if expander := autoScaler.Expander; expander != nil {
 		expanderArray := strings.Split(string(*expander), ",")
@@ -1201,6 +1187,12 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("expander"), *expander, sets.List(availableClusterAutoscalerExpanderModes)))
 			}
 		}
+	}
+
+	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.MaxNodeProvisionTime, fldPath.Child("maxNodeProvisionTime"))...)
+
+	if autoScaler.MaxGracefulTerminationSeconds != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*autoScaler.MaxGracefulTerminationSeconds), fldPath.Child("maxGracefulTerminationSeconds"))...)
 	}
 
 	if startupTaints := autoScaler.StartupTaints; startupTaints != nil {
@@ -1215,9 +1207,7 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 		allErrs = append(allErrs, validateClusterAutoscalerTaints(ignoreTaints, "IgnoreTaints", version, fldPath.Child("ignoreTaints"))...)
 	}
 
-	if newPodScaleUpDelay := autoScaler.NewPodScaleUpDelay; newPodScaleUpDelay != nil && newPodScaleUpDelay.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("newPodScaleUpDelay"), *newPodScaleUpDelay, "can not be negative"))
-	}
+	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.NewPodScaleUpDelay, fldPath.Child("newPodScaleUpDelay"))...)
 
 	if maxEmptyBulkDelete := autoScaler.MaxEmptyBulkDelete; maxEmptyBulkDelete != nil {
 		if unsupportedVersion, _ := versionutils.CompareVersions(version, ">=", "1.33"); unsupportedVersion {
@@ -1228,8 +1218,8 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 		}
 	}
 
-	if maxScaleDownParallelism := autoScaler.MaxScaleDownParallelism; maxScaleDownParallelism != nil && *maxScaleDownParallelism < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxScaleDownParallelism"), *maxScaleDownParallelism, "can not be negative"))
+	if autoScaler.MaxScaleDownParallelism != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*autoScaler.MaxScaleDownParallelism), fldPath.Child("maxScaleDownParallelism"))...)
 	}
 
 	if autoScaler.MaxScaleDownParallelism != nil && autoScaler.MaxEmptyBulkDelete != nil && *autoScaler.MaxScaleDownParallelism != *autoScaler.MaxEmptyBulkDelete {
@@ -1240,8 +1230,12 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 		))
 	}
 
-	if maxDrainParallelism := autoScaler.MaxDrainParallelism; maxDrainParallelism != nil && *maxDrainParallelism < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxDrainParallelism"), *maxDrainParallelism, "can not be negative"))
+	if autoScaler.MaxDrainParallelism != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*autoScaler.MaxDrainParallelism), fldPath.Child("maxDrainParallelism"))...)
+	}
+
+	if autoScaler.Verbosity != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*autoScaler.Verbosity), fldPath.Child("verbosity"))...)
 	}
 
 	return allErrs
@@ -1937,26 +1931,23 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 }
 
 // ValidateMachineControllerManagerSettingsOptions validates the machine controller manager setting options of worker pools
-func ValidateMachineControllerManagerSettingsOptions(mcmOptions *core.MachineControllerManagerSettings, mcUpdateStrategy *core.MachineUpdateStrategy, fldPath *field.Path) field.ErrorList {
+func ValidateMachineControllerManagerSettingsOptions(mcmOptions *core.MachineControllerManagerSettings, machineUpdateStrategy *core.MachineUpdateStrategy, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
-	if mcDrainTimeout := mcmOptions.MachineDrainTimeout; mcDrainTimeout != nil && mcDrainTimeout.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("machineDrainTimeout"), *mcDrainTimeout, "can not be negative"))
-	}
-	if mcHealthTimeout := mcmOptions.MachineHealthTimeout; mcHealthTimeout != nil && mcHealthTimeout.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("machineHealthTimeout"), *mcHealthTimeout, "can not be negative"))
-	}
-	if mcCreationTimeout := mcmOptions.MachineCreationTimeout; mcCreationTimeout != nil && mcCreationTimeout.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("machineCreationTimeout"), *mcCreationTimeout, "can not be negative"))
-	}
-	if mcInPlaceUpdateTimeout := mcmOptions.MachineInPlaceUpdateTimeout; mcInPlaceUpdateTimeout != nil && mcInPlaceUpdateTimeout.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("machineInPlaceUpdateTimeout"), *mcInPlaceUpdateTimeout, "can not be negative"))
-	}
-	if maxEvictRetries := mcmOptions.MaxEvictRetries; ptr.Deref(maxEvictRetries, 0) < 0 {
+
+	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachineDrainTimeout, fldPath.Child("machineDrainTimeout"))...)
+	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachineHealthTimeout, fldPath.Child("machineHealthTimeout"))...)
+	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachineCreationTimeout, fldPath.Child("machineCreationTimeout"))...)
+
+	if maxEvictRetries := mcmOptions.MaxEvictRetries; ptr.Deref(mcmOptions.MaxEvictRetries, 0) < 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxEvictRetries"), *maxEvictRetries, "can not be negative"))
 	}
-	if ptr.Deref(mcmOptions.DisableHealthTimeout, false) && !helper.IsUpdateStrategyInPlace(mcUpdateStrategy) {
+
+	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachineInPlaceUpdateTimeout, fldPath.Child("machineInPlaceUpdateTimeout"))...)
+
+	if ptr.Deref(mcmOptions.DisableHealthTimeout, false) && !helper.IsUpdateStrategyInPlace(machineUpdateStrategy) {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("disableHealthTimeout"), "can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"))
 	}
+
 	return allErrs
 }
 

@@ -3027,13 +3027,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}, version_1_28, BeEmpty()),
 				Entry("invalid with negative maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &negativeDuration,
-				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
+				}, version_1_28, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("maxNodeProvisionTime"),
+					"Detail": Equal("must be non-negative"),
+				})))),
 				Entry("valid with maxGracefulTerminationSeconds", core.ClusterAutoscaler{
 					MaxGracefulTerminationSeconds: &positiveInteger,
 				}, version_1_28, BeEmpty()),
 				Entry("invalid with negative maxGracefulTerminationSeconds", core.ClusterAutoscaler{
 					MaxGracefulTerminationSeconds: &negativeInteger,
-				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("maxGracefulTerminationSeconds"), negativeInteger, "can not be negative"))),
+				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("maxGracefulTerminationSeconds"), int64(negativeInteger), "must be greater than or equal to 0").WithOrigin("minimum"))),
 				Entry("valid with expander least waste", core.ClusterAutoscaler{
 					Expander: &expanderLeastWaste,
 				}, version_1_28, BeEmpty()),
@@ -3124,7 +3128,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}, version_1_28, BeEmpty()),
 				Entry("invalid with negative newPodScaleUpDelay", core.ClusterAutoscaler{
 					NewPodScaleUpDelay: &negativeDuration,
-				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("newPodScaleUpDelay"), negativeDuration, "can not be negative"))),
+				}, version_1_28, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("newPodScaleUpDelay"),
+					"Detail": Equal("must be non-negative"),
+				})))),
 				Entry("valid with maxEmptyBulkDelete", core.ClusterAutoscaler{
 					MaxEmptyBulkDelete: &positiveInteger,
 				}, version_1_28, BeEmpty()),
@@ -3145,7 +3153,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}, version_1_32, BeEmpty()),
 				Entry("invalid with negative maxScaleDownParallelism", core.ClusterAutoscaler{
 					MaxScaleDownParallelism: &negativeInteger,
-				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("maxScaleDownParallelism"), negativeInteger, "can not be negative"))),
+				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("maxScaleDownParallelism"), int64(negativeInteger), "must be greater than or equal to 0").WithOrigin("minimum"))),
 				Entry("valid with maxDrainParallelism", core.ClusterAutoscaler{
 					MaxDrainParallelism: &positiveInteger,
 				}, version_1_32, BeEmpty()),
@@ -3155,7 +3163,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}, version_1_32, BeEmpty()),
 				Entry("invalid with negative maxDrainParallelism", core.ClusterAutoscaler{
 					MaxDrainParallelism: &negativeInteger,
-				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("maxDrainParallelism"), negativeInteger, "can not be negative"))),
+				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("maxDrainParallelism"), int64(negativeInteger), "must be greater than or equal to 0").WithOrigin("minimum"))),
 				Entry("invalid with both maxEmptyBulkDelete and maxScaleDownParallelism set to different values", core.ClusterAutoscaler{
 					MaxEmptyBulkDelete:      ptr.To(positiveInteger + 10),
 					MaxScaleDownParallelism: &positiveInteger,
@@ -3170,35 +3178,35 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("scaleDownDelayAfterAdd"),
-					"Detail": Equal("can not be negative"),
+					"Detail": Equal("must be non-negative"),
 				})))),
 				Entry("invalid with negative ScaleDownDelayAfterDelete", core.ClusterAutoscaler{
 					ScaleDownDelayAfterDelete: &metav1.Duration{Duration: -2 * time.Minute},
 				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("scaleDownDelayAfterDelete"),
-					"Detail": Equal("can not be negative"),
+					"Detail": Equal("must be non-negative"),
 				})))),
 				Entry("invalid with negative ScaleDownDelayAfterFailure", core.ClusterAutoscaler{
 					ScaleDownDelayAfterFailure: &metav1.Duration{Duration: -2 * time.Minute},
 				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("scaleDownDelayAfterFailure"),
-					"Detail": Equal("can not be negative"),
+					"Detail": Equal("must be non-negative"),
 				})))),
 				Entry("invalid with negative ScaleDownUnneededTime", core.ClusterAutoscaler{
 					ScaleDownUnneededTime: &metav1.Duration{Duration: -2 * time.Minute},
 				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("scaleDownUnneededTime"),
-					"Detail": Equal("can not be negative"),
+					"Detail": Equal("must be non-negative"),
 				})))),
 				Entry("invalid with negative ScanInterval", core.ClusterAutoscaler{
 					ScanInterval: &metav1.Duration{Duration: -2 * time.Minute},
 				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("scanInterval"),
-					"Detail": Equal("can not be negative"),
+					"Detail": Equal("must be non-negative"),
 				})))),
 			)
 
@@ -6997,7 +7005,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.machineDrainTimeout"),
-					"Detail": Equal("can not be negative"),
+					"Detail": Equal("must be non-negative"),
 				}))))
 			})
 			It("should forbid setting MachineHealthTimeout to a negative value", func() {
@@ -7009,7 +7017,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.machineHealthTimeout"),
-					"Detail": Equal("can not be negative"),
+					"Detail": Equal("must be non-negative"),
 				}))))
 			})
 			It("should forbid setting MachineCreationTimeout to a negative value", func() {
@@ -7021,7 +7029,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.machineCreationTimeout"),
-					"Detail": Equal("can not be negative"),
+					"Detail": Equal("must be non-negative"),
 				}))))
 			})
 			It("should forbid setting MachineInPlaceUpdateTimeout to a negative value", func() {
@@ -7033,7 +7041,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.machineInPlaceUpdateTimeout"),
-					"Detail": Equal("can not be negative"),
+					"Detail": Equal("must be non-negative"),
 				}))))
 			})
 			It("should forbid setting MaxEvictRetries to a negative value", func() {
