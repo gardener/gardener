@@ -299,7 +299,10 @@ func SetDefaults_Worker(obj *Worker) {
 			obj.MaxSurge = &DefaultInPlaceWorkerMaxSurge
 		}
 		if obj.MaxUnavailable == nil {
-			obj.MaxUnavailable = &DefaultInPlaceWorkerMaxUnavailable
+			obj.MaxUnavailable = &DefaultAutoInPlaceWorkerMaxUnavailable
+			if *obj.UpdateStrategy == ManualInPlaceUpdate {
+				obj.MaxUnavailable = &DefaultManualInPlaceWorkerMaxUnavailable
+			}
 		}
 		if obj.MachineControllerManagerSettings == nil {
 			obj.MachineControllerManagerSettings = &MachineControllerManagerSettings{}

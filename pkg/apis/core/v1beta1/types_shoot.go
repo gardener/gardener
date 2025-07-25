@@ -1911,8 +1911,10 @@ var (
 	DefaultInPlaceWorkerMaxSurge = intstr.FromInt32(0)
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
 	DefaultWorkerMaxUnavailable = intstr.FromInt32(0)
-	// DefaultInPlaceWorkerMaxUnavailable is the default value for In-Place Worker MaxUnavailable.
-	DefaultInPlaceWorkerMaxUnavailable = intstr.FromInt32(1)
+	// DefaultAutoInPlaceWorkerMaxUnavailable is the default value for AutoInPlaceUpdate Worker MaxUnavailable.
+	DefaultAutoInPlaceWorkerMaxUnavailable = intstr.FromInt32(1)
+	// DefaultManualInPlaceWorkerMaxUnavailable is the default value for ManualInPlaceUpdate Worker MaxUnavailable.
+	DefaultManualInPlaceWorkerMaxUnavailable = intstr.FromInt32(0)
 	// DefaultWorkerSystemComponentsAllow is the default value for Worker AllowSystemComponents
 	DefaultWorkerSystemComponentsAllow = true
 )
