@@ -258,14 +258,14 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
-	DescribeTable("#IsObservabilityPasswordsRotationEnabled",
+	DescribeTable("#IsObservabilityAutoRotationEnabled",
 		func(maintenance *gardencorev1beta1.Maintenance, expectedResult bool) {
 			shoot := &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Maintenance: maintenance,
 				},
 			}
-			Expect(IsObservabilityRotationEnabled(shoot)).To(Equal(expectedResult))
+			Expect(IsObservabilityAutoRotationEnabled(shoot)).To(Equal(expectedResult))
 		},
 
 		Entry("should return false when maintenance is nil", nil, false),
@@ -302,14 +302,14 @@ var _ = Describe("Helper", func() {
 			}, true),
 	)
 
-	DescribeTable("#IsSSHKeypairRotationEnabled",
+	DescribeTable("#IsSSHKeypairAutoRotationEnabled",
 		func(maintenance *gardencorev1beta1.Maintenance, expectedResult bool) {
 			shoot := &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Maintenance: maintenance,
 				},
 			}
-			Expect(IsSSHKeypairRotationEnabled(shoot)).To(Equal(expectedResult))
+			Expect(IsSSHKeypairAutoRotationEnabled(shoot)).To(Equal(expectedResult))
 		},
 
 		Entry("should return false when maintenance is nil", nil, false),
