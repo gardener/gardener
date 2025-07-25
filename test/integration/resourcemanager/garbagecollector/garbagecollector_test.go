@@ -200,9 +200,8 @@ var _ = Describe("Garbage collector tests", func() {
 		// Similar to https://github.com/gardener/gardener/issues/6486 and
 		// https://github.com/gardener/gardener/issues/6607.
 		for _, obj := range referencingResources {
-			refObj := obj
 			Eventually(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(refObj), refObj)
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 			}).Should(Succeed())
 		}
 
