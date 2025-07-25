@@ -10,7 +10,7 @@ After creation of a shoot cluster, end-users require a `kubeconfig` to access it
 
 The [`shoots/adminkubeconfig`](../../proposals/16-adminkubeconfig-subresource.md) subresource allows users to dynamically generate temporary `kubeconfig`s that can be used to access shoot cluster with `cluster-admin` privileges. The credentials associated with this `kubeconfig` are client certificates which have a very short validity and must be renewed before they expire (by calling the subresource endpoint again).
 
-The username associated with such `kubeconfig` will be the same which is used for authenticating to the Gardener API, with a random prefix added in front. Apart from this advantage, the created `kubeconfig` will not be persisted anywhere.
+The username associated with such `kubeconfig` will be the same which is used for authenticating to the Gardener API, with a random prefix added in front. The created `kubeconfig` will not be persisted anywhere.
 
 In order to request such a `kubeconfig`, you can run the following commands (targeting the garden cluster):
 
