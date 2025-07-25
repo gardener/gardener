@@ -196,6 +196,15 @@ var _ = Describe("Garbage collector tests", func() {
 			Expect(testClient.Create(ctx, obj)).To(Succeed())
 		}
 
+		// Use the manager's cache to ensure it has observed the referencing resources.
+		// Similar to https://github.com/gardener/gardener/issues/6486 and
+		// https://github.com/gardener/gardener/issues/6607.
+		for _, obj := range referencingResources {
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+			}).Should(Succeed())
+		}
+
 		for _, obj := range garbageCollectableObjects {
 			Expect(testClient.Create(ctx, obj)).To(Succeed())
 		}
