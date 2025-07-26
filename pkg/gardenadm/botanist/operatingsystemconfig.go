@@ -139,6 +139,7 @@ func (b *AutonomousBotanist) ApplyOperatingSystemConfig(ctx context.Context) err
 			SecretName:        b.operatingSystemConfigSecret.Name,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 		},
+		ConfigDir:             nodeagentconfigv1alpha1.BaseDir,
 		CancelContext:         cancelFunc,
 		Recorder:              &record.FakeRecorder{},
 		Extractor:             registry.NewExtractor(),

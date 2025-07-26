@@ -5,9 +5,12 @@
 package nodeagent_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
+	"k8s.io/component-base/version"
 
 	. "github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
@@ -40,7 +43,7 @@ kind: NodeAgentConfiguration
 		})
 
 		It("should return an error if the kubeconfig file does not exist", func() {
-			config, err := GetAPIServerConfig(fs)
+			config, err := GetAPIServerConfig(fs, "/var/lib/gardener-node-agent")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("error reading gardener-node-agent config"))
 			Expect(config).To(BeNil())
@@ -50,18 +53,18 @@ kind: NodeAgentConfiguration
 			invalidConfigFile := []byte(`apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 			kind: Invalid
 			`)
-			Expect(fs.WriteFile(nodeagentconfigv1alpha1.ConfigFilePath, invalidConfigFile, 0600)).To(Succeed())
+			Expect(fs.WriteFile(fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion), invalidConfigFile, 0600)).To(Succeed())
 
-			config, err := GetAPIServerConfig(fs)
+			config, err := GetAPIServerConfig(fs, "/var/lib/gardener-node-agent")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("error decoding gardener-node-agent config"))
 			Expect(config).To(BeNil())
 		})
 
 		It("should return the APIServer config", func() {
-			Expect(fs.WriteFile(nodeagentconfigv1alpha1.ConfigFilePath, nodeAgentConfigFile, 0600)).To(Succeed())
+			Expect(fs.WriteFile(fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion), nodeAgentConfigFile, 0600)).To(Succeed())
 
-			config, err := GetAPIServerConfig(fs)
+			config, err := GetAPIServerConfig(fs, "/var/lib/gardener-node-agent")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config).NotTo(BeNil())
 			Expect(config.CABundle).To(Equal(nodeAgentConfig.APIServer.CABundle))

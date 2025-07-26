@@ -117,7 +117,7 @@ func generateInitScript(nodeAgentImage string) ([]byte, error) {
 		"image":           nodeAgentImage,
 		"binaryName":      "gardener-node-agent",
 		"binaryDirectory": nodeagentconfigv1alpha1.BinaryDir,
-		"configFile":      nodeagentconfigv1alpha1.ConfigFilePath,
+		"configDir":       nodeagentconfigv1alpha1.BaseDir,
 	}); err != nil {
 		return nil, err
 	}

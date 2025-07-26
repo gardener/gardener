@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/component-base/version"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -68,10 +69,11 @@ var _ = Describe("Reconciler", func() {
 			Build()
 
 		reconciler = &Reconciler{
-			Client:   c,
-			FS:       fs,
-			DBus:     fakeDBus,
-			Recorder: nil,
+			Client:    c,
+			FS:        fs,
+			DBus:      fakeDBus,
+			ConfigDir: "/var/lib/gardener-node-agent",
+			Recorder:  nil,
 		}
 
 		node = &corev1.Node{
@@ -823,7 +825,7 @@ users:
 apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 kind: NodeAgentConfiguration
 `)
-			Expect(fs.WriteFile(nodeagentconfigv1alpha1.ConfigFilePath, nodeAgentConfigFile, 0600)).To(Succeed())
+			Expect(fs.WriteFile(fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion), nodeAgentConfigFile, 0600)).To(Succeed())
 
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				n, err := fmt.Fprintln(w, "OK")
