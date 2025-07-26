@@ -1084,7 +1084,7 @@ func KeyV2(
 		}
 	}
 
-	if nodeLocalDNSEnabled {
+	if version.ConstraintK8sLess134.Check(kubernetesVersion) && nodeLocalDNSEnabled {
 		data = append(data, "node-local-dns")
 	}
 
