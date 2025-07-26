@@ -71,13 +71,13 @@ func testCredentialRotation(s *ShootContext, shootVerifiers, utilsverifiers rota
 		}, SpecTimeout(time.Minute))
 
 		if inPlaceUpdate {
-			inplace.ItShouldVerifyInPlaceUpdateStart(s.GardenClient, s.Shoot, true, true)
+			inplace.ItShouldVerifyInPlaceUpdateStart(s, true, true)
 		}
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(s)
 
 		if inPlaceUpdate {
-			inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
+			inplace.ItShouldVerifyInPlaceUpdateCompletion(s)
 		}
 
 		shootVerifiers.AfterPrepared(context.TODO())
@@ -213,13 +213,13 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 
 	// In case of rotation without workers rollout, the in-place update status in only populated when the rollout for that worker pool is triggered
 	if inPlaceUpdate {
-		inplace.ItShouldVerifyInPlaceUpdateStart(s.GardenClient, s.Shoot, true, true)
+		inplace.ItShouldVerifyInPlaceUpdateStart(s, true, true)
 	}
 
 	ItShouldWaitForShootToBeReconciledAndHealthy(s)
 
 	if inPlaceUpdate {
-		inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
+		inplace.ItShouldVerifyInPlaceUpdateCompletion(s)
 	}
 
 	It("Credential rotation in status prepared", func() {
