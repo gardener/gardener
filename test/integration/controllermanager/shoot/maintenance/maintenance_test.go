@@ -27,7 +27,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	var (
 		cloudProfile *gardencorev1beta1.CloudProfile
 		shoot        *gardencorev1beta1.Shoot
-		shoot127     *gardencorev1beta1.Shoot
 		shoot129     *gardencorev1beta1.Shoot
 		shoot130     *gardencorev1beta1.Shoot
 		shoot131     *gardencorev1beta1.Shoot
@@ -83,12 +82,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			Spec: gardencorev1beta1.CloudProfileSpec{
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{
-						{
-							Version: "1.27.0",
-						},
-						{
-							Version: "1.28.0",
-						},
 						{
 							Version: "1.29.0",
 						},
@@ -370,7 +363,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			},
 		}
 
-		shoot127 = shoot.DeepCopy()
 		shoot129 = shoot.DeepCopy()
 		shoot130 = shoot.DeepCopy()
 		shoot131 = shoot.DeepCopy()
@@ -1113,17 +1105,16 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			})
 
 			It("Kubernetes version should be updated: force update minor version and maintain feature gates and admission plugins", func() {
-				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.27.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.27.5", Classification: &deprecatedClassification}
-				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.28.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.28.5", Classification: &deprecatedClassification}
-
+				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.5", Classification: &deprecatedClassification}
+				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.5", Classification: &deprecatedClassification}
 				var (
 					// Use two actual feature gates from pkg/utils/validation/features/featuregates.go
 					// which are supported in testKubernetesVersionHighestPatchLowMinor.Version
 					// but not in testKubernetesVersionHighestPatchConsecutiveMinor.Version
-					unsupportedfeatureGate1 = "AdvancedAuditing"
-					unsupportedfeatureGate2 = "CSIStorageCapacity"
+					unsupportedfeatureGate1 = "APISelfSubjectReview"
+					unsupportedfeatureGate2 = "ExpandedDNSConfig"
 					// Use two feature gates which are supported in both versions
 					supportedfeatureGate1 = "AppArmor"
 					supportedfeatureGate2 = "AllBeta"
@@ -1144,7 +1135,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Expect(testClient.Patch(ctx, cloudProfile, patch)).To(Succeed())
 
 				// set the shoots Kubernetes version to be the highest patch version of the minor version
-				shoot127.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+				shoot129.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
 					Version: testKubernetesVersionHighestPatchLowMinor.Version,
 					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
@@ -1196,64 +1187,64 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					},
 				}
 
-				By("Create k8s v1.27 Shoot")
-				Expect(testClient.Create(ctx, shoot127)).To(Succeed())
-				log.Info("Created shoot with k8s v1.27 for test", "shoot", client.ObjectKeyFromObject(shoot127))
+				By("Create k8s v1.29 Shoot")
+				Expect(testClient.Create(ctx, shoot129)).To(Succeed())
+				log.Info("Created shoot with k8s v1.29 for test", "shoot", client.ObjectKeyFromObject(shoot129))
 
 				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.27")
-					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot127))).To(Succeed())
+					By("Delete Shoot with k8s v1.29")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot129))).To(Succeed())
 				})
 
 				By("Expire Shoot's kubernetes version in the CloudProfile")
-				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot127.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
 
 				By("Wait until manager has observed the CloudProfile update")
-				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot127.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
+				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
 
-				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot127, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot129, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
 				// expect shoot to have updated to latest patch version of next minor version
 				Eventually(func(g Gomega) string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot127), shoot127)).To(Succeed())
-					g.Expect(shoot127.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.27.5\" to \"1.28.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot129), shoot129)).To(Succeed())
+					g.Expect(shoot129.Status.LastMaintenance).NotTo(BeNil())
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.29.5\" to \"1.30.5\". Reason: Kubernetes version expired - force update required"))
 
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeAPIServer.featureGates\" because they are not supported in Kubernetes version \"1.28.5\": AdvancedAuditing"))
-					g.Expect(shoot127.Spec.Kubernetes.KubeAPIServer.FeatureGates).To(Equal(map[string]bool{
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeAPIServer.featureGates\" because they are not supported in Kubernetes version \"1.30.5\": APISelfSubjectReview"))
+					g.Expect(shoot129.Spec.Kubernetes.KubeAPIServer.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 						supportedfeatureGate2: false,
 					}))
-					g.Expect(shoot127.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
+					g.Expect(shoot129.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
 						HaveField("Name", Equal(supportedAdmissionPlugin1)),
 						HaveField("Name", Equal(supportedAdmissionPlugin2)),
 					))
 
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeControllerManager.featureGates\" because they are not supported in Kubernetes version \"1.28.5\": AdvancedAuditing"))
-					g.Expect(shoot127.Spec.Kubernetes.KubeControllerManager.FeatureGates).To(Equal(map[string]bool{
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeControllerManager.featureGates\" because they are not supported in Kubernetes version \"1.30.5\": APISelfSubjectReview"))
+					g.Expect(shoot129.Spec.Kubernetes.KubeControllerManager.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 					}))
 
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeScheduler.featureGates\" because they are not supported in Kubernetes version \"1.28.5\": AdvancedAuditing, CSIStorageCapacity"))
-					g.Expect(shoot127.Spec.Kubernetes.KubeScheduler.FeatureGates).To(Equal(map[string]bool{
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeScheduler.featureGates\" because they are not supported in Kubernetes version \"1.30.5\": APISelfSubjectReview, ExpandedDNSConfig"))
+					g.Expect(shoot129.Spec.Kubernetes.KubeScheduler.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate2: true,
 					}))
 
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeProxy.featureGates\" because they are not supported in Kubernetes version \"1.28.5\": CSIStorageCapacity"))
-					g.Expect(shoot127.Spec.Kubernetes.KubeProxy.FeatureGates).To(Equal(map[string]bool{
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeProxy.featureGates\" because they are not supported in Kubernetes version \"1.30.5\": ExpandedDNSConfig"))
+					g.Expect(shoot129.Spec.Kubernetes.KubeProxy.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 						supportedfeatureGate2: false,
 					}))
 
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.28.5\": AdvancedAuditing, CSIStorageCapacity"))
-					g.Expect(shoot127.Spec.Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.30.5\": APISelfSubjectReview, ExpandedDNSConfig"))
+					g.Expect(shoot129.Spec.Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 					}))
 
-					g.Expect(shoot127.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
-					g.Expect(shoot127.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+					g.Expect(shoot129.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot129.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 
-					return shoot127.Spec.Kubernetes.Version
+					return shoot129.Spec.Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 			})
 		}
@@ -1633,17 +1624,17 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			})
 
 			It("Worker Pool Kubernetes version should be updated: force update minor version and maintain feature gates", func() {
-				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.27.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.27.5", Classification: &deprecatedClassification}
-				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.28.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.28.5", Classification: &deprecatedClassification}
+				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.5", Classification: &deprecatedClassification}
+				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.5", Classification: &deprecatedClassification}
 
 				var (
 					// Use two actual feature gates from pkg/utils/validation/features/featuregates.go
 					// which are supported in testKubernetesVersionHighestPatchLowMinor.Version
 					// but not in testKubernetesVersionHighestPatchConsecutiveMinor.Version
-					unsupportedfeatureGate1 = "AdvancedAuditing"
-					unsupportedfeatureGate2 = "CSIStorageCapacity"
+					unsupportedfeatureGate1 = "APISelfSubjectReview"
+					unsupportedfeatureGate2 = "ExpandedDNSConfig"
 					// Use two feature gates which are supported in both versions
 					supportedfeatureGate1 = "AppArmor"
 					supportedfeatureGate2 = "AllBeta"
@@ -1659,8 +1650,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 				Expect(testClient.Patch(ctx, cloudProfile, patch)).To(Succeed())
 
-				shoot127.Spec.Kubernetes.Version = testKubernetesVersionHighestPatchLowMinor.Version
-				shoot127.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+				shoot129.Spec.Kubernetes.Version = testKubernetesVersionHighestPatchLowMinor.Version
+				shoot129.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
 					Version: ptr.To(testKubernetesVersionHighestPatchLowMinor.Version),
 					Kubelet: &gardencorev1beta1.KubeletConfig{
 						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
@@ -1673,7 +1664,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 						},
 					},
 				}
-				shoot127.Spec.Provider.Workers[1].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+				shoot129.Spec.Provider.Workers[1].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
 					Kubelet: &gardencorev1beta1.KubeletConfig{
 						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 							FeatureGates: map[string]bool{
@@ -1684,46 +1675,46 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					},
 				}
 
-				By("Create k8s v1.27 Shoot")
-				Expect(testClient.Create(ctx, shoot127)).To(Succeed())
-				log.Info("Created shoot with k8s v1.27 for test", "shoot", client.ObjectKeyFromObject(shoot127))
+				By("Create k8s v1.29 Shoot")
+				Expect(testClient.Create(ctx, shoot129)).To(Succeed())
+				log.Info("Created shoot with k8s v1.29 for test", "shoot", client.ObjectKeyFromObject(shoot129))
 
 				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.27")
-					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot127))).To(Succeed())
+					By("Delete Shoot with k8s v1.29")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot129))).To(Succeed())
 				})
 
 				By("Expire Shoot's kubernetes version in the CloudProfile")
-				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot127.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
 
 				By("Wait until manager has observed the CloudProfile update")
-				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot127.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
+				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
 
-				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot127, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot129, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
 				// expect worker pool to have updated to latest patch version of next minor version
 				Eventually(func(g Gomega) string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot127), shoot127)).To(Succeed())
-					g.Expect(shoot127.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.27.5\" to \"1.28.5\". Reason: Kubernetes version expired - force update required"))
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring("Worker pool \"cpu-worker1\": Updated Kubernetes version from \"1.27.5\" to \"1.28.5\". Reason: Kubernetes version expired - force update required"))
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[0].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.28.5\": AdvancedAuditing, CSIStorageCapacity"))
-					g.Expect(shoot127.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot129), shoot129)).To(Succeed())
+					g.Expect(shoot129.Status.LastMaintenance).NotTo(BeNil())
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.29.5\" to \"1.30.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Worker pool \"cpu-worker1\": Updated Kubernetes version from \"1.29.5\" to \"1.30.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[0].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.30.5\": APISelfSubjectReview, ExpandedDNSConfig"))
+					g.Expect(shoot129.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 						supportedfeatureGate2: false,
 					}))
 
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[1].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.28.5\": AdvancedAuditing"))
-					g.Expect(shoot127.Spec.Provider.Workers[1].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[1].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.30.5\": APISelfSubjectReview"))
+					g.Expect(shoot129.Spec.Provider.Workers[1].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 					}))
 
-					g.Expect(shoot127.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
-					g.Expect(shoot127.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+					g.Expect(shoot129.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot129.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 
-					g.Expect(shoot127.Spec.Kubernetes.Version).To(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
+					g.Expect(shoot129.Spec.Kubernetes.Version).To(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 
-					return *shoot127.Spec.Provider.Workers[0].Kubernetes.Version
+					return *shoot129.Spec.Provider.Workers[0].Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 			})
 
@@ -1755,17 +1746,17 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			})
 
 			It("Worker Pool Kubernetes version should be updated, but control plane version stays: force update minor version and maintain feature gates", func() {
-				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.27.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.27.5", Classification: &deprecatedClassification}
-				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.28.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.28.5", Classification: &deprecatedClassification}
+				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.5", Classification: &deprecatedClassification}
+				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.5", Classification: &deprecatedClassification}
 
 				var (
 					// Use two actual feature gates from pkg/utils/validation/features/featuregates.go
 					// which are supported in testKubernetesVersionHighestPatchLowMinor.Version
 					// but not in testKubernetesVersionHighestPatchConsecutiveMinor.Version
-					unsupportedfeatureGate1 = "AdvancedAuditing"
-					unsupportedfeatureGate2 = "CSIStorageCapacity"
+					unsupportedfeatureGate1 = "APISelfSubjectReview"
+					unsupportedfeatureGate2 = "ExpandedDNSConfig"
 					// Use two feature gates which are supported in both versions
 					supportedfeatureGate1 = "AppArmor"
 					supportedfeatureGate2 = "AllBeta"
@@ -1781,8 +1772,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 				Expect(testClient.Patch(ctx, cloudProfile, patch)).To(Succeed())
 
-				shoot127.Spec.Kubernetes.Version = testKubernetesVersionLowPatchConsecutiveMinor.Version
-				shoot127.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+				shoot129.Spec.Kubernetes.Version = testKubernetesVersionLowPatchConsecutiveMinor.Version
+				shoot129.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
 					Version: ptr.To(testKubernetesVersionHighestPatchLowMinor.Version),
 					Kubelet: &gardencorev1beta1.KubeletConfig{
 						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
@@ -1795,7 +1786,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 						},
 					},
 				}
-				shoot127.Spec.Provider.Workers[1].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+				shoot129.Spec.Provider.Workers[1].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
 					Version: ptr.To(testKubernetesVersionHighestPatchLowMinor.Version),
 					Kubelet: &gardencorev1beta1.KubeletConfig{
 						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
@@ -1807,42 +1798,42 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					},
 				}
 
-				By("Create k8s v1.27 Shoot")
-				Expect(testClient.Create(ctx, shoot127)).To(Succeed())
-				log.Info("Created shoot with k8s v1.27 for test", "shoot", client.ObjectKeyFromObject(shoot127))
+				By("Create k8s v1.29 Shoot")
+				Expect(testClient.Create(ctx, shoot129)).To(Succeed())
+				log.Info("Created shoot with k8s v1.29 for test", "shoot", client.ObjectKeyFromObject(shoot129))
 
 				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.27")
-					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot127))).To(Succeed())
+					By("Delete Shoot with k8s v1.29")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot129))).To(Succeed())
 				})
 
 				By("Expire Shoot's kubernetes version in the CloudProfile")
-				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot127.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
 
 				By("Wait until manager has observed the CloudProfile update")
-				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot127.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
+				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
 
-				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot127, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot129, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
 				// expect worker pool to have updated to latest patch version of next minor version
 				Eventually(func(g Gomega) string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot127), shoot127)).To(Succeed())
-					g.Expect(shoot127.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring("Worker pool \"cpu-worker1\": Updated Kubernetes version from \"1.27.5\" to \"1.28.1\". Reason: Kubernetes version expired - force update required"))
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[0].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.28.1\": AdvancedAuditing, CSIStorageCapacity"))
-					g.Expect(shoot127.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot129), shoot129)).To(Succeed())
+					g.Expect(shoot129.Status.LastMaintenance).NotTo(BeNil())
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Worker pool \"cpu-worker1\": Updated Kubernetes version from \"1.29.5\" to \"1.30.1\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[0].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.30.1\": APISelfSubjectReview, ExpandedDNSConfig"))
+					g.Expect(shoot129.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 						supportedfeatureGate2: false,
 					}))
 
-					g.Expect(shoot127.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[1].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.28.1\": AdvancedAuditing"))
-					g.Expect(shoot127.Spec.Provider.Workers[1].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
+					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[1].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.30.1\": APISelfSubjectReview"))
+					g.Expect(shoot129.Spec.Provider.Workers[1].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 					}))
 
-					g.Expect(shoot127.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
-					g.Expect(shoot127.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
-					return *shoot127.Spec.Provider.Workers[0].Kubernetes.Version
+					g.Expect(shoot129.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot129.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+					return *shoot129.Spec.Provider.Workers[0].Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionLowPatchConsecutiveMinor.Version))
 			})
 
