@@ -606,6 +606,38 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Maintenance.AutoUpdate.KubernetesVersion).To(BeFalse())
 			Expect(obj.Spec.Maintenance.AutoUpdate.MachineImageVersion).To(PointTo(BeFalse()))
 		})
+
+		It("should default the maintenance rotation period field for configured credentials", func() {
+			obj.Spec.Maintenance = &Maintenance{
+				AutoRotation: &MaintenanceAutoRotation{
+					Credentials: &MaintenanceCredentialsAutoRotation{
+						SSHKeypair: &MaintenanceRotationConfig{Enabled: ptr.To(true)},
+					},
+				},
+			}
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod).NotTo(BeNil())
+			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod).To(Equal(&metav1.Duration{Duration: 7 * 24 * time.Hour}))
+			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.Observability).To(BeNil())
+		})
+
+		It("should not overwrite the already set values for maintenance rotation period", func() {
+			obj.Spec.Maintenance = &Maintenance{
+				AutoRotation: &MaintenanceAutoRotation{
+					Credentials: &MaintenanceCredentialsAutoRotation{
+						SSHKeypair:    &MaintenanceRotationConfig{Enabled: ptr.To(true), RotationPeriod: &metav1.Duration{Duration: 48 * time.Hour}},
+						Observability: &MaintenanceRotationConfig{Enabled: ptr.To(true), RotationPeriod: &metav1.Duration{Duration: 1 * time.Hour}},
+					},
+				},
+			}
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod).NotTo(BeNil())
+			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod).To(Equal(&metav1.Duration{Duration: 2 * 24 * time.Hour}))
+			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.Observability).NotTo(BeNil())
+			Expect(obj.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod).To(Equal(&metav1.Duration{Duration: 1 * time.Hour}))
+		})
 	})
 
 	Describe("KubeAPIServer defaulting", func() {
