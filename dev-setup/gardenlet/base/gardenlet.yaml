@@ -12,7 +12,6 @@ spec:
     kind: GardenletConfiguration
     featureGates:
       DefaultSeccompProfile: true
-      NewWorkerPoolHash: true
       IstioTLSTermination: true
     controllers:
       shoot:
