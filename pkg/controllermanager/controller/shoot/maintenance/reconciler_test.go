@@ -15,6 +15,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/test"
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
@@ -105,6 +106,10 @@ var _ = Describe("Shoot Maintenance", func() {
 							},
 						},
 					},
+					MachineTypes: []gardencorev1beta1.MachineType{
+						{Name: "someMachineType"},
+						{Name: ""},
+					},
 				},
 			}
 
@@ -127,6 +132,7 @@ var _ = Describe("Shoot Maintenance", func() {
 							Machine: gardencorev1beta1.Machine{
 								Image:        shootCurrentImage,
 								Architecture: ptr.To("amd64"),
+								Type:         "someMachineType",
 							},
 							UpdateStrategy: ptr.To(gardencorev1beta1.AutoRollingUpdate),
 						},
@@ -876,6 +882,112 @@ var _ = Describe("Shoot Maintenance", func() {
 			})
 		})
 
+		Context("Shoot uses CloudProfile with Capabilities", func() {
+			latestVersionWithSupportedCapabilities := "1.4.2"
+
+			BeforeEach(func() {
+				cloudProfile = cloudProfile.DeepCopy()
+				shoot = shoot.DeepCopy()
+				cloudProfile.Spec.Capabilities = []gardencorev1beta1.CapabilityDefinition{
+					{Name: v1beta1constants.ArchitectureName, Values: []string{v1beta1constants.ArchitectureARM64, v1beta1constants.ArchitectureAMD64}},
+					{Name: "someCapability", Values: []string{"value1", "value2", "value3"}},
+					{Name: "someOtherCapability", Values: []string{"value1", "value2"}},
+				}
+				cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+					{
+						Name: "someMachineType",
+						Capabilities: gardencorev1beta1.Capabilities{
+							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+							"someCapability":                  []string{"value1"},
+						},
+					},
+					{
+						Name: "someOtherMachineType",
+						Capabilities: gardencorev1beta1.Capabilities{
+							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+							"someCapability":                  []string{"value2"},
+						},
+					}, {
+						Name: "anotherMachineType",
+						Capabilities: gardencorev1beta1.Capabilities{
+							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+							"someCapability":                  []string{"value3"},
+						},
+					},
+				}
+				cloudProfile.Spec.MachineImages[0].Versions = []gardencorev1beta1.MachineImageVersion{
+					{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: shootCurrentImageVersion,
+						},
+						CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						CapabilitySets: []gardencorev1beta1.CapabilitySet{
+							{Capabilities: gardencorev1beta1.Capabilities{
+								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+							}},
+							{Capabilities: gardencorev1beta1.Capabilities{
+								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
+							}},
+						},
+					},
+					{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: latestVersionWithSupportedCapabilities,
+						},
+						CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						CapabilitySets: []gardencorev1beta1.CapabilitySet{
+							{Capabilities: gardencorev1beta1.Capabilities{
+								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+								"someCapability":                  []string{"value1", "value2"},
+							}},
+							{Capabilities: gardencorev1beta1.Capabilities{
+								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
+								"someCapability":                  []string{"value1", "value2"},
+							}},
+						},
+					},
+					{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version:        overallLatestVersion,
+							ExpirationDate: &expirationDateInTheFuture,
+						},
+						CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+						CapabilitySets: []gardencorev1beta1.CapabilitySet{
+							{Capabilities: gardencorev1beta1.Capabilities{
+								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+								"someCapability":                  []string{"value2"},
+							}},
+							{Capabilities: gardencorev1beta1.Capabilities{
+								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
+								"someCapability":                  []string{"value2"},
+							}},
+						},
+					},
+				}
+			})
+
+			It("should update to the latest version with supported capabilities", func() {
+				// the latest overall version does not support the workers' capabilities, hence it should not be updated to
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
+				Expect(err).NotTo(HaveOccurred())
+				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", latestVersionWithSupportedCapabilities)
+			})
+
+			It("should update to the latest version as all capabilities are supported", func() {
+				shoot.Spec.Provider.Workers[0].Machine.Type = "someOtherMachineType"
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
+				Expect(err).NotTo(HaveOccurred())
+				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", overallLatestVersion)
+			})
+
+			It("should not update if the current version is the latest/only that supports the machine type capabilities", func() {
+				shoot.Spec.Provider.Workers[0].Machine.Type = "anotherMachineType"
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
+				Expect(err).NotTo(HaveOccurred())
+				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", shootCurrentImageVersion)
+			})
+		})
+
 		It("should treat workers with `cri: nil` like `cri.name: containerd` and not update if `containerd` is not explicitly supported by the machine image", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRIName("other")}}
 			cloudProfile.Spec.MachineImages[0].Versions[3].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRIName("other")}}
@@ -1006,6 +1118,16 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 			Expect(err).To(HaveOccurred())
+
+		})
+
+		It("should return an error - cloud profile has no matching (machineImage.type) machine type defined", func() {
+			shoot.Spec.Provider.Workers[0].Machine.Type = "non-existing-machine-type"
+
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("machine type \"non-existing-machine-type\" of worker \"cpu-worker\" does not exist in cloudprofile"))
 		})
 	})
 
