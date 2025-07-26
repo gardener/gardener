@@ -359,6 +359,9 @@ spec:
   #   memoryAggregationIntervalCount: 8
   #   featureGates:
   #     SomeKubernetesFeature: true
+  #   maxAllowed:
+  #     cpu: 8
+  #     memory: 32Gi
   dns:
     # When the shoot shall use a cluster domain no domain and no providers need to be provided - Gardener will
     # automatically compute a correct domain based on the default domains in the garden cluster.

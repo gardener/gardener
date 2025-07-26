@@ -186,6 +186,9 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 				}
 			}
 		}
+		if seedSpec.Settings.VerticalPodAutoscaler != nil {
+			allErrs = append(allErrs, ValidateVerticalPodAutoscalerMaxAllowed(seedSpec.Settings.VerticalPodAutoscaler.MaxAllowed, fldPath.Child("settings", "verticalPodAutoscaler"))...)
+		}
 		if helper.SeedSettingTopologyAwareRoutingEnabled(seedSpec.Settings) && len(seedSpec.Provider.Zones) <= 1 {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled on multi-zone Seed clusters (with at least two zones in spec.provider.zones)"))
 		}
