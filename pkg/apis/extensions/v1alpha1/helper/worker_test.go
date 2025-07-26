@@ -34,12 +34,26 @@ var _ = Describe("Helper", func() {
 	)
 
 	Describe("#GetMachineDeploymentClusterAutoscalerAnnotations", func() {
-		It("should return nil when options passed is nil", func() {
-			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(nil)).To(BeNil())
+		It("should return annotations with value \"\" when options passed is nil", func() {
+			expectedValues := map[string]string{
+				extensionsv1alpha1.ScaleDownUtilizationThresholdAnnotation:    "",
+				extensionsv1alpha1.ScaleDownGpuUtilizationThresholdAnnotation: "",
+				extensionsv1alpha1.ScaleDownUnneededTimeAnnotation:            "",
+				extensionsv1alpha1.ScaleDownUnreadyTimeAnnotation:             "",
+				extensionsv1alpha1.MaxNodeProvisionTimeAnnotation:             "",
+			}
+			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(nil)).To(Equal(expectedValues))
 		})
 
-		It("should return empty map when an empty map is passed", func() {
-			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(ptr.To(extensionsv1alpha1.ClusterAutoscalerOptions{}))).To(Equal(map[string]string{}))
+		It("should return annotations with value \"\" when an empty map is passed", func() {
+			expectedValues := map[string]string{
+				extensionsv1alpha1.ScaleDownUtilizationThresholdAnnotation:    "",
+				extensionsv1alpha1.ScaleDownGpuUtilizationThresholdAnnotation: "",
+				extensionsv1alpha1.ScaleDownUnneededTimeAnnotation:            "",
+				extensionsv1alpha1.ScaleDownUnreadyTimeAnnotation:             "",
+				extensionsv1alpha1.MaxNodeProvisionTimeAnnotation:             "",
+			}
+			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(ptr.To(extensionsv1alpha1.ClusterAutoscalerOptions{}))).To(Equal(expectedValues))
 		})
 
 		It("should return correctly populated map when all options are passed", func() {
@@ -66,8 +80,11 @@ var _ = Describe("Helper", func() {
 				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: time.Minute}),
 			}
 			expectedValues := map[string]string{
+				extensionsv1alpha1.ScaleDownUtilizationThresholdAnnotation:    "",
 				extensionsv1alpha1.ScaleDownGpuUtilizationThresholdAnnotation: "0.6",
 				extensionsv1alpha1.ScaleDownUnneededTimeAnnotation:            "1m0s",
+				extensionsv1alpha1.ScaleDownUnreadyTimeAnnotation:             "",
+				extensionsv1alpha1.MaxNodeProvisionTimeAnnotation:             "",
 			}
 			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(caOptions)).To(Equal(expectedValues))
 		})
