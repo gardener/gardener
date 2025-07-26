@@ -25,6 +25,7 @@ import (
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	"github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
 
 // ControllerName is the name of the controller.
@@ -50,12 +51,16 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 	if r.RequeueAfterOnDeletionPending == nil {
 		r.RequeueAfterOnDeletionPending = ptr.To(5 * time.Second)
 	}
+	if r.RateLimiter == nil {
+		r.RateLimiter = workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]()
+	}
 
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			RateLimiter:             r.RateLimiter,
 		}).
 		For(&resourcesv1alpha1.ManagedResource{}, builder.WithPredicates(
 			r.ClassFilter,
