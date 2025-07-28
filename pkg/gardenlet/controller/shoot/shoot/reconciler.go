@@ -890,7 +890,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 	// It is added to forcefully complete the etcd encryption key rotation, since the annotation to complete the rotation
 	// is forbidden for clusters with k8s >= v1.34.
 	case gardencorev1beta1.RotationPrepared:
-		if k8sLess134 {
+		if !k8sLess134 {
 			completeRotationETCDEncryptionKey(shoot, &now)
 		}
 
