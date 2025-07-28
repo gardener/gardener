@@ -430,11 +430,16 @@ func (w *worker) findNodeTemplateAndMachineTypeByPoolName(obj *extensionsv1alpha
 
 // checkWorkerStatusMachineDeploymentsUpdated checks if the status of the worker is updated or not during its reconciliation.
 // It is updated if
+// * The Worker status does not have a recent LastError
 // * The status.MachineDeploymentsLastUpdateTime > the value of the time stamp stored in worker struct before the reconciliation begins.
 func (w *worker) checkWorkerStatusMachineDeploymentsUpdated(o client.Object) error {
 	obj, ok := o.(*extensionsv1alpha1.Worker)
 	if !ok {
 		return fmt.Errorf("expected *extensionsv1alpha1.Worker but got %T", o)
+	}
+
+	if obj.Status.LastError != nil && obj.Status.LastError.LastUpdateTime != nil && (w.machineDeploymentsLastUpdateTime == nil || obj.Status.LastError.LastUpdateTime.After(w.machineDeploymentsLastUpdateTime.Time)) {
+		return errors.New(obj.Status.LastError.Description)
 	}
 
 	if obj.Status.MachineDeploymentsLastUpdateTime != nil && (w.machineDeploymentsLastUpdateTime == nil || obj.Status.MachineDeploymentsLastUpdateTime.After(w.machineDeploymentsLastUpdateTime.Time)) {
