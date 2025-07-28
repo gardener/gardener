@@ -176,7 +176,7 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, be *extensions
 
 	log.Info("Starting the deletion of BackupEntry")
 
-	secretMetadata, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &be.Spec.SecretRef)
+	_, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
@@ -201,6 +201,12 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, be *extensions
 
 	if err := r.statusUpdater.Success(ctx, log, be, operationType, "Successfully deleted BackupEntry"); err != nil {
 		return reconcile.Result{}, err
+	}
+
+	// re-fetch secretMetadata since r.actuator.Delete might take long, during which the Secret's resourceVersion might change.
+	secretMetadata, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &be.Spec.SecretRef)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
 
 	if controllerutil.ContainsFinalizer(secretMetadata, FinalizerName) {
