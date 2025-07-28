@@ -292,7 +292,6 @@ linters:
       - pkg/client/seedmanagement
       - pkg/client/settings
       - third_party$
-      - builtin$
       - examples$
 formatters:
   settings:
@@ -304,7 +303,6 @@ formatters:
     generated: lax
     paths:
       - third_party$
-      - builtin$
       - examples$
 issues:
   max-issues-per-linter: 0
