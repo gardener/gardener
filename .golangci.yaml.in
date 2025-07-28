@@ -289,7 +289,6 @@ linters:
       - zz_generated\..*\.go$
       - openapi_generated\.go$
       - pkg/client/core
-      - pkg/client/extensions
       - pkg/client/seedmanagement
       - pkg/client/settings
       - third_party$
