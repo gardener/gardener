@@ -270,7 +270,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				},
 				Annotations: map[string]string{
 					"reference.resources.gardener.cloud/configmap-0e4e3fd5": "gardener-apiserver-audit-policy-config-f5b578b4",
-					"reference.resources.gardener.cloud/configmap-a6e4dc6f": "gardener-apiserver-admission-config-e38ff146",
+					"reference.resources.gardener.cloud/configmap-6e5f123b": "gardener-apiserver-admission-config-07c5248a",
 					"reference.resources.gardener.cloud/secret-9dca243c":    "shoot-access-gardener-apiserver",
 					"reference.resources.gardener.cloud/secret-47fc132b":    "gardener-apiserver-admission-kubeconfigs-e3b0c442",
 					"reference.resources.gardener.cloud/secret-389fbba5":    "etcd-client",
@@ -310,7 +310,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						},
 						Annotations: map[string]string{
 							"reference.resources.gardener.cloud/configmap-0e4e3fd5": "gardener-apiserver-audit-policy-config-f5b578b4",
-							"reference.resources.gardener.cloud/configmap-a6e4dc6f": "gardener-apiserver-admission-config-e38ff146",
+							"reference.resources.gardener.cloud/configmap-6e5f123b": "gardener-apiserver-admission-config-07c5248a",
 							"reference.resources.gardener.cloud/secret-9dca243c":    "shoot-access-gardener-apiserver",
 							"reference.resources.gardener.cloud/secret-47fc132b":    "gardener-apiserver-admission-kubeconfigs-e3b0c442",
 							"reference.resources.gardener.cloud/secret-389fbba5":    "etcd-client",
@@ -491,7 +491,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "gardener-apiserver-admission-config-e38ff146",
+											Name: "gardener-apiserver-admission-config-07c5248a",
 										},
 									},
 								},
@@ -1045,7 +1045,7 @@ rules:
 					It("should successfully deploy the configmap resource w/o admission plugins", func() {
 						configMapAdmission := &corev1.ConfigMap{
 							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-admission-config", Namespace: namespace},
-							Data: map[string]string{"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+							Data: map[string]string{"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins: null
 `},
@@ -1103,7 +1103,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 						configMapAdmission := &corev1.ConfigMap{
 							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-admission-config", Namespace: namespace},
 							Data: map[string]string{
-								"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+								"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins:
 - configuration: null
@@ -1176,7 +1176,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 						configMapAdmission := &corev1.ConfigMap{
 							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-admission-config", Namespace: namespace},
 							Data: map[string]string{
-								"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+								"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins:
 - configuration: null
@@ -1239,7 +1239,7 @@ kubeConfigFile: ""
 						configMapAdmission := &corev1.ConfigMap{
 							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-admission-config", Namespace: namespace},
 							Data: map[string]string{
-								"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+								"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins:
 - configuration: null
