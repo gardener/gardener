@@ -123,6 +123,26 @@ func ReadGardenInternalDomain(
 		}, nil
 	}
 
+	secret, err := ReadInternalDomainSecret(ctx, c, namespace, enforceSecret)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil && !enforceSecret {
+		return nil, nil
+	}
+
+	domain, err := constructDomainFromSecret(secret)
+	if err != nil {
+		return nil, fmt.Errorf("error constructing internal domain from secret %s: %w", client.ObjectKeyFromObject(secret), err)
+	}
+
+	return domain, nil
+}
+
+// ReadInternalDomainSecret reads the internal domain secret from the given namespace.
+// If enforceSecret is true, an error is returned if no secret is found.
+// If enforceSecret is false, the function can return (nil, nil) in case no internal domain secret is found.
+func ReadInternalDomainSecret(ctx context.Context, c client.Reader, namespace string, enforceSecret bool) (*corev1.Secret, error) {
 	secretList := &corev1.SecretList{}
 	if err := c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain,
@@ -149,13 +169,7 @@ func ReadGardenInternalDomain(
 		return nil, fmt.Errorf("found more than one internal domain secret")
 	}
 
-	secret := &secretList.Items[0]
-	domain, err := constructDomainFromSecret(secret)
-	if err != nil {
-		return nil, fmt.Errorf("error constructing internal domain from secret %s: %w", client.ObjectKeyFromObject(secret), err)
-	}
-
-	return domain, nil
+	return &secretList.Items[0], nil
 }
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
