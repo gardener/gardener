@@ -292,7 +292,6 @@ linters:
       - pkg/client/seedmanagement
       - pkg/client/settings
       - third_party$
-      - examples$
 formatters:
   settings:
     gofmt:
@@ -303,7 +302,6 @@ formatters:
     generated: lax
     paths:
       - third_party$
-      - examples$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
