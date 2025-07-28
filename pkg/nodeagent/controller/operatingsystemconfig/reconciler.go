@@ -69,7 +69,6 @@ const (
 
 var (
 	codec                         runtime.Codec
-	osVersionRegex                = regexp.MustCompile(`\b\d+(?:\.\d+)*\b`)
 	retriableErrorPatternRegex    = regexp.MustCompile(`(?i)network problems`)
 	nonRetriableErrorPatternRegex = regexp.MustCompile(`(?i)invalid arguments|system failure`)
 
@@ -993,9 +992,9 @@ var GetOSVersion = func(inPlaceUpdates *extensionsv1alpha1.InPlaceUpdates, fs af
 		return nil, fmt.Errorf("unable to get operating system name: %w", err)
 	}
 
-	version := osVersionRegex.FindString(os)
+	version := nodeagentconfigv1alpha1.OSVersionRegex.FindString(os)
 	if version == "" {
-		return nil, fmt.Errorf("unable to find version in %q with regex: %s", os, osVersionRegex.String())
+		return nil, fmt.Errorf("unable to find version in %q with regex: %s", os, nodeagentconfigv1alpha1.OSVersionRegex.String())
 	}
 	return ptr.To(version), nil
 }

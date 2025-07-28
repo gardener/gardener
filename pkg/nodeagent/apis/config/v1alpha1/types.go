@@ -5,6 +5,8 @@
 package v1alpha1
 
 import (
+	"regexp"
+
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
@@ -46,6 +48,9 @@ const (
 	// checksum of the last applied operating system configuration.
 	AnnotationKeyChecksumAppliedOperatingSystemConfig = "checksum/cloud-config-data"
 )
+
+// OSVersionRegex is a regular expression to match operating system versions.
+var OSVersionRegex = regexp.MustCompile(`\b\d+(?:\.\d+)*\b`)
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

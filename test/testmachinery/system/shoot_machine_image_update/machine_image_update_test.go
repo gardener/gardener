@@ -4,17 +4,17 @@
 
 /**
 	Overview
-		- Tests the update of a Shoot's Kubernetes version to the next minor version
+		- Tests the update of a Shoot's Worker Pool Machine Image version to the next supported version
 
 	Prerequisites
 		- A Shoot exists.
 
-	Test: Update the Shoot's Kubernetes version to the next minor version
+	Test: Update the Shoot's Worker Pool Machine Image version to the next supported version
 	Expected Output
-		- Successful reconciliation of the Shoot after the Kubernetes Version update.
+		- Successful reconciliation of the Shoot after the Worker Pool Machine Image Version update.
  **/
 
-package shootupdate_test
+package shootmachineimageupdate_test
 
 import (
 	"context"
@@ -38,36 +38,28 @@ import (
 	"github.com/gardener/gardener/test/utils/shoots/update/inplace"
 )
 
-var (
-	newControlPlaneKubernetesVersion = flag.String("version", "", "the version to use for .spec.kubernetes.version and .spec.provider.workers[].kubernetes.version (only when nil or equal to .spec.kubernetes.version)")
-	newWorkerPoolKubernetesVersion   = flag.String("version-worker-pools", "", "the version to use for .spec.provider.workers[].kubernetes.version (only when not equal to .spec.kubernetes.version)")
-)
+var newWorkerPoolMachineImageVersion = flag.String("version-worker-pools", "", "the version to use for .spec.provider.workers[].machine.image.version")
 
-const UpdateKubernetesVersionTimeout = 45 * time.Minute
+const UpdateMachineImageVersionTimeout = 45 * time.Minute
 
 func init() {
 	framework.RegisterShootFrameworkFlags()
 }
 
-var _ = Describe("Shoot update testing", func() {
+var _ = Describe("Shoot machine image update testing", func() {
 	f := framework.NewShootFramework(nil)
 
-	framework.CIt("should update the kubernetes version of the shoot and its worker pools to the respective next versions", func(ctx context.Context) {
-		RunTest(ctx, f, newControlPlaneKubernetesVersion, newWorkerPoolKubernetesVersion)
-	}, UpdateKubernetesVersionTimeout)
+	framework.CIt("should update machine image version for worker pools with in-place update strategy", func(ctx context.Context) {
+		RunTest(ctx, f, newWorkerPoolMachineImageVersion)
+	}, UpdateMachineImageVersionTimeout)
 })
 
-// RunTest runs the update test for an existing shoot cluster. If provided, it updates .spec.kubernetes.version with the
-// value of <newControlPlaneKubernetesVersion> and the .kubernetes.version fields of all worker pools which currently
-// have the same value as .spec.kubernetes.version. For all worker pools specifying a different version,
-// <newWorkerPoolKubernetesVersion> will be used.
-// If <newControlPlaneKubernetesVersion> or <newWorkerPoolKubernetesVersion> are nil or empty then the next consecutive
-// minor versions will be fetched from the CloudProfile referenced by the shoot.
+// RunTest runs the update test for an existing shoot cluster. If provided, it updates the worker pools with the specified machine image version.
+// It verifies that the machine image version is updated without rolling the nodes for in-place update workers.
 func RunTest(
 	ctx context.Context,
 	f *framework.ShootFramework,
-	newControlPlaneKubernetesVersion *string,
-	newWorkerPoolKubernetesVersion *string,
+	newWorkerPoolMachineImageVersion *string,
 ) {
 	By("Create shoot client")
 	var (
@@ -90,29 +82,6 @@ func RunTest(
 		shootupdatesuite.WaitForJobToBeReady(ctx, f.SeedClient.Client(), job)
 	}
 
-	By("Verify the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [before update]")
-	Expect(shootupdatesuite.VerifyKubernetesVersions(ctx, shootClient, f.Shoot)).To(Succeed())
-
-	By("Read CloudProfile")
-	cloudProfile, err := f.GetCloudProfile(ctx)
-	Expect(err).NotTo(HaveOccurred())
-
-	By("Compute new Kubernetes version for control plane and worker pools")
-	controlPlaneVersion, poolNameToKubernetesVersion, err := shootupdatesuite.ComputeNewKubernetesVersions(cloudProfile, f.Shoot, newControlPlaneKubernetesVersion, newWorkerPoolKubernetesVersion)
-	Expect(err).NotTo(HaveOccurred())
-
-	if len(controlPlaneVersion) == 0 && len(poolNameToKubernetesVersion) == 0 {
-		Skip("shoot already has the desired kubernetes versions")
-	}
-
-	By("Update shoot")
-	if controlPlaneVersion != "" {
-		By("Update .spec.kubernetes.version to " + controlPlaneVersion)
-	}
-	for poolName, kubernetesVersion := range poolNameToKubernetesVersion {
-		By("Update .kubernetes.version to " + kubernetesVersion + " for pool " + poolName)
-	}
-
 	var hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers, hasInPlaceUpdateWorkers bool
 
 	for _, worker := range f.Shoot.Spec.Provider.Workers {
@@ -126,19 +95,35 @@ func RunTest(
 
 	hasInPlaceUpdateWorkers = hasAutoInPlaceUpdateWorkers || hasManualInPlaceUpdateWorkers
 
+	// Verify that the test has at least one worker pool with in-place update strategy
+	// OS update test is only relevant for in-place update workers to ensure that the OS version is updated
+	// without rolling the nodes
+	Expect(hasInPlaceUpdateWorkers).To(BeTrue(), "the test requires at least one worker pool with in-place update strategy")
+
+	By("Verify the machine image version for all existing nodes matches with the versions defined in the Shoot spec [before update]")
+	Expect(shootupdatesuite.VerifyMachineImageVersions(ctx, shootClient, f.Shoot)).To(Succeed())
+
+	By("Read CloudProfile")
+	cloudProfile, err := f.GetCloudProfile(ctx)
+	Expect(err).NotTo(HaveOccurred())
+
+	poolNameToMachineImageVersion, err := shootupdatesuite.ComputeNewMachineImageVersions(cloudProfile, f.Shoot, newWorkerPoolMachineImageVersion)
+	Expect(err).NotTo(HaveOccurred())
+
+	By("Update shoot")
+	for poolName, machineImageVersion := range poolNameToMachineImageVersion {
+		By("Update .spec.provider.workers[].machine.image.version to " + machineImageVersion + " for pool " + poolName)
+	}
+
 	var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
 	if hasInPlaceUpdateWorkers {
-		nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
+		nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, f.Logger, f.ShootClient.Client(), f.Shoot)
 	}
 
 	Expect(f.UpdateShootSpec(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
-		if controlPlaneVersion != "" {
-			shoot.Spec.Kubernetes.Version = controlPlaneVersion
-		}
-
 		for i, worker := range shoot.Spec.Provider.Workers {
-			if workerPoolVersion, ok := poolNameToKubernetesVersion[worker.Name]; ok {
-				shoot.Spec.Provider.Workers[i].Kubernetes.Version = &workerPoolVersion
+			if workerMachineImageVersion, ok := poolNameToMachineImageVersion[worker.Name]; ok {
+				shoot.Spec.Provider.Workers[i].Machine.Image.Version = &workerMachineImageVersion
 			}
 		}
 
@@ -146,9 +131,9 @@ func RunTest(
 	})).To(Succeed())
 
 	if hasInPlaceUpdateWorkers {
-		inplace.ItShouldVerifyInPlaceUpdateStart(f.GardenClient.Client(), f.Shoot, hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers)
+		inplace.VerifyInPlaceUpdateStart(ctx, f.Logger, f.GardenClient.Client(), f.Shoot, hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers)
 		if hasManualInPlaceUpdateWorkers {
-			inplace.LabelManualInPlaceNodesWithSelectedForUpdate(ctx, f.ShootClient.Client(), f.Shoot)
+			inplace.LabelManualInPlaceNodesWithSelectedForUpdate(ctx, f.Logger, f.ShootClient.Client(), f.Shoot)
 		}
 	}
 
@@ -160,10 +145,10 @@ func RunTest(
 	Expect(err).NotTo(HaveOccurred())
 
 	if hasInPlaceUpdateWorkers {
-		nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
+		nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, f.Logger, f.ShootClient.Client(), f.Shoot)
 		Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
 
-		inplace.ItShouldVerifyInPlaceUpdateCompletion(f.GardenClient.Client(), f.Shoot)
+		inplace.VerifyInPlaceUpdateCompletion(ctx, f.Logger, f.GardenClient.Client(), f.Shoot)
 	}
 
 	By("Verify the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [after update]")
