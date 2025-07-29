@@ -107,7 +107,6 @@
 * [Readiness of Shoot Worker Nodes](usage/advanced/node-readiness.md)
 * [Cleanup of Shoot clusters in deletion](usage/advanced/shoot_cleanup.md)
 * [Tolerations](usage/advanced/tolerations.md)
-* [Immutable Backup Buckets](usage/advanced/immutable-backup-buckets.md)
 
 ## [API Reference](api-reference/README.md)
 
@@ -250,6 +249,7 @@
 
 * [Gardener configuration and usage](operations/configuration.md)
 * [Control Plane Migration](operations/control_plane_migration.md)
+* [Immutable Backup Buckets](operations/immutable-backup-buckets.md)
 * [Istio](operations/istio.md)
 * [Kube API server load balancing](operations/kube_apiserver_loadbalancing.md)
 * [`ManagedSeed`s: Register Shoot as Seed](operations/managed_seed.md)
