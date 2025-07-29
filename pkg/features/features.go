@@ -27,6 +27,7 @@ const (
 	// owner: @timuthy @benedictweis @LucaBernstein
 	// alpha: v1.92.0
 	// beta: v1.112.0
+	// GA: v1.125.0
 	UseNamespacedCloudProfile featuregate.Feature = "UseNamespacedCloudProfile"
 
 	// ShootCredentialsBinding enables the usage of the CredentialsBindingName API in shoot spec.
@@ -117,7 +118,7 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DefaultSeccompProfile:                    {Default: false, PreRelease: featuregate.Alpha},
-	UseNamespacedCloudProfile:                {Default: true, PreRelease: featuregate.Beta},
+	UseNamespacedCloudProfile:                {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:                        {Default: false, PreRelease: featuregate.Alpha},
 	NewVPN:                                   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
