@@ -6876,7 +6876,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			BeforeEach(func() {
 				worker = core.Worker{
-					Name: "worker1",
+					Name:           "worker1",
+					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 					Machine: core.Machine{
 						Type: "xlarge",
 					},
@@ -7048,7 +7049,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			BeforeEach(func() {
 				worker = core.Worker{
-					Name: "worker-1",
+					Name:           "worker-1",
+					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 					Machine: core.Machine{
 						Type: "xlarge",
 					},
@@ -7134,7 +7136,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			BeforeEach(func() {
 				worker = core.Worker{
-					Name: "worker-1",
+					Name:           "worker-1",
+					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 					Machine: core.Machine{
 						Type: "xlarge",
 					},
