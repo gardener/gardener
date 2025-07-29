@@ -95,8 +95,8 @@ This allows you to proceed with restoring the etcd cluster without being blocked
 
 ## References
 
-* [BackupBucket Resource Contract](../../extensions/resources/backupbucket.md)
-* [Gardenlet Controller Concepts – BackupBucket Controller](../../concepts/gardenlet.md#backupbucket-controller)
+* [BackupBucket Resource Contract](../extensions/resources/backupbucket.md)
+* [Gardenlet Controller Concepts – BackupBucket Controller](../concepts/gardenlet.md#backupbucket-controller)
 * [GCP BackupBucketConfig](https://github.com/gardener/gardener-extension-provider-gcp/blob/master/docs/usage/usage.md#backupbucketconfig)
 * [AWS BackupBucketConfig](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage/usage.md#backupbucketconfig)
 * [Azure BackupBucketConfig](https://github.com/gardener/gardener-extension-provider-azure/blob/master/docs/usage/usage.md#backupbucketconfig)
