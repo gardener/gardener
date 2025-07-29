@@ -224,7 +224,7 @@ honor_labels: true`
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
-					APIGroups: []string{corev1.GroupName},
+					APIGroups: []string{""},
 					Resources: []string{
 						"services",
 						"endpoints",
@@ -245,12 +245,12 @@ honor_labels: true`
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
+				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "Role",
 				Name:     "prometheus-" + name,
 			},
 			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
+				Kind:      "ServiceAccount",
 				Name:      "prometheus-" + name,
 				Namespace: namespace,
 			}},
@@ -258,7 +258,7 @@ honor_labels: true`
 		gardenRoleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "prometheus-" + namespace,
-				Namespace: v1beta1constants.GardenNamespace,
+				Namespace: "garden",
 				Labels: map[string]string{
 					"role": "monitoring",
 					"name": name,
@@ -266,12 +266,12 @@ honor_labels: true`
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
+				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "Role",
 				Name:     "prometheus-shoot",
 			},
 			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
+				Kind:      "ServiceAccount",
 				Name:      "prometheus-" + name,
 				Namespace: namespace,
 			}},

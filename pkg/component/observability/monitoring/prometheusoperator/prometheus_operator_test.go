@@ -353,7 +353,7 @@ var _ = Describe("PrometheusOperator", func() {
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
-					APIGroups: []string{corev1.GroupName},
+					APIGroups: []string{""},
 					Resources: []string{
 						"services",
 						"endpoints",
