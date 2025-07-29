@@ -40,7 +40,7 @@ You can find a template for the file at [`/example/provider-extensions/garden/co
 
 ### Infrastructure
 
-Infrastructure credentials, `Secrets` and `WorkloadIdentities`, and the corresponding credentials bindings should be maintained at:
+Infrastructure credentials, `Secrets` and `WorkloadIdentities`, and the corresponding `CredentialsBinding`s should be maintained at:
 
 - [`/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml`](/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml)
 - [`/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml`](/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml)
