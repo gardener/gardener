@@ -1,0 +1,72 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      next-version:
+        type: choice
+        options:
+          - bump-minor
+          - bump-patch
+
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yaml
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+    with:
+      mode: release
+
+  release-to-github-and-bump:
+    uses: gardener/cc-utils/.github/workflows/release.yaml@master
+    needs:
+      - build
+    secrets: inherit
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+    with:
+      release-commit-target: branch
+      next-version: ${{ inputs.next-version }}
+      next-version-callback-action-path:
+      slack-channel-id: C9CEBQPGE # #sap-tech-gardener
+      assets: |
+        - name: gardenadm-darwin-amd64
+          type: ocm-resource
+          id:
+            name: gardenadm
+            os: darwin
+            architecture: amd64
+        - name: gardenadm-darwin-arm64
+          type: ocm-resource
+          id:
+            name: gardenadm
+            os: darwin
+            architecture: arm64
+        - name: gardenadm-linux-amd64
+          type: ocm-resource
+          id:
+            name: gardenadm
+            os: linux
+            architecture: amd64
+        - name: gardenadm-linux-arm64
+          type: ocm-resource
+          id:
+            name: gardenadm
+            os: linux
+            architecture: arm64
+        - name: gardenadm-windows-amd64
+          type: ocm-resource
+          id:
+            name: gardenadm
+            os: windows
+            architecture: amd64
+        - name: gardenadm-windows-arm64
+          type: ocm-resource
+          id:
+            name: gardenadm
+            os: windows
+            architecture: arm64
