@@ -282,6 +282,10 @@ type SeedSettingVerticalPodAutoscaler struct {
 	Enabled bool
 	// FeatureGates contains information about enabled feature gates.
 	FeatureGates map[string]bool
+	// MaxAllowed specifies the global maximum allowed (maximum amount of resources) that vpa-recommender can recommend for a container.
+	// The VerticalPodAutoscaler-level maximum allowed takes precedence over the global maximum allowed.
+	// For more information, see https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/examples.md#specifying-global-maximum-allowed-resources-to-prevent-pods-from-being-unschedulable.
+	MaxAllowed corev1.ResourceList
 }
 
 // SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.

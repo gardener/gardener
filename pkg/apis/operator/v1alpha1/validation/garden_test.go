@@ -1125,6 +1125,86 @@ var _ = Describe("Validation Tests", func() {
 				})
 			})
 
+			Context("vertical pod autoscaler", func() {
+				It("should not allow unknown feature gates", func() {
+					garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates = map[string]bool{
+						"Foo": true,
+					}
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.runtimeCluster.settings.verticalPodAutoscaler.featureGates.Foo"),
+							"Detail": Equal("unknown feature gate"),
+						})),
+					))
+				})
+
+				It("should allow known feature gates", func() {
+					garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates = map[string]bool{
+						"InPlaceOrRecreate": true,
+					}
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+				})
+
+				It("should not allow maxAllowed with unsupported resource", func() {
+					garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
+						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
+							MaxAllowed: corev1.ResourceList{
+								"storage": {},
+							},
+						},
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeNotSupported),
+							"Field":    Equal("spec.runtimeCluster.settings.verticalPodAutoscaler.maxAllowed.storage"),
+							"BadValue": Equal(corev1.ResourceName("storage")),
+							"Detail":   Equal(`supported values: "cpu", "memory"`),
+						})),
+					))
+				})
+
+				It("should not allow maxAllowed with invalid resources", func() {
+					garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
+						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
+							MaxAllowed: corev1.ResourceList{
+								"cpu":    resource.MustParse("-100m"),
+								"memory": resource.MustParse("-100Mi"),
+							},
+						},
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.runtimeCluster.settings.verticalPodAutoscaler.maxAllowed.cpu"),
+							"BadValue": Equal("-100m"),
+							"Detail":   Equal("must be greater than or equal to 0"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.runtimeCluster.settings.verticalPodAutoscaler.maxAllowed.memory"),
+							"BadValue": Equal("-100Mi"),
+							"Detail":   Equal("must be greater than or equal to 0"),
+						})),
+					))
+				})
+
+				It("should allow maxAllowed with valid resources", func() {
+					garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
+						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
+							MaxAllowed: corev1.ResourceList{
+								"cpu":    resource.MustParse("8"),
+								"memory": resource.MustParse("32Gi"),
+							},
+						},
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+				})
+			})
+
 			Context("topology-aware routing field", func() {
 				It("should prevent enabling topology-aware routing on single-zone cluster", func() {
 					garden.Spec.RuntimeCluster.Provider.Zones = []string{"a"}
@@ -1235,30 +1315,6 @@ var _ = Describe("Validation Tests", func() {
 							"Field": Equal("spec.runtimeCluster.ingress.domains[0].provider"),
 						})),
 					))
-				})
-			})
-
-			Context("settings", func() {
-				Context("verticalPodAutoscaler", func() {
-					It("should not allow unknown feature gates", func() {
-						garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates = map[string]bool{
-							"Foo": true,
-						}
-						Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
-							PointTo(MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(field.ErrorTypeInvalid),
-								"Field":  Equal("spec.runtimeCluster.settings.verticalPodAutoscaler.featureGates.Foo"),
-								"Detail": Equal("unknown feature gate"),
-							})),
-						))
-					})
-
-					It("should allow known feature gates", func() {
-						garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates = map[string]bool{
-							"InPlaceOrRecreate": true,
-						}
-						Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
-					})
 				})
 			})
 		})

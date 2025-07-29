@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
@@ -170,6 +172,15 @@ func HighAvailabilityEnabled(garden *operatorv1alpha1.Garden) bool {
 // TopologyAwareRoutingEnabled returns true if the topology-aware routing is enabled.
 func TopologyAwareRoutingEnabled(settings *operatorv1alpha1.Settings) bool {
 	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
+}
+
+// VerticalPodAutoscalerMaxAllowed returns the configured vertical pod autoscaler's maximum allowed recommendation.
+func VerticalPodAutoscalerMaxAllowed(settings *operatorv1alpha1.Settings) corev1.ResourceList {
+	if settings == nil || settings.VerticalPodAutoscaler == nil {
+		return nil
+	}
+
+	return settings.VerticalPodAutoscaler.MaxAllowed
 }
 
 // GetETCDMainBackup returns the backup configuration for etcd main of the given garden object or nil if not configured.
