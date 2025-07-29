@@ -83,7 +83,7 @@ linters:
           alias: machinev1alpha1
         - pkg: github.com/gardener/etcd-druid/api/core/v1alpha1
           alias: druidcorev1alpha1
-        - pkg: github.com/gardener/etcd-druid/api/core/crds
+        - pkg: github.com/gardener/etcd-druid/api/core/v1alpha1/crds
           alias: druidcorecrds
         - pkg: github.com/gardener/cert-management/pkg/apis/cert/v1alpha1
           alias: certv1alpha1
