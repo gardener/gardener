@@ -127,8 +127,6 @@ linters:
           alias: $1$2
         - pkg: github.com/gardener/gardener/pkg/apis/([^c]\w+)/([\w\d]+)/([\w\d]+)
           alias: $1$2$3
-        - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config
-          alias: ${1}config
         - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/([a-z]+)
           alias: $1$2
         - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/(v\d[\w\d]*)
