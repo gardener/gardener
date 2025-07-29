@@ -251,6 +251,11 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return err
 	}
 
+	if shoot.Spec.Kubernetes.KubeProxy != nil && shoot.Spec.Kubernetes.KubeProxy.Enabled != nil && *shoot.Spec.Kubernetes.KubeProxy.Enabled &&
+		shoot.Spec.Kubernetes.KubeProxy.Mode != nil && *shoot.Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS {
+		return nil
+	}
+
 	// Wait until the managed resource is successfully deleted and check for recently joined nodes within the last three minutes (TimeoutWaitForManagedResource + 1 min buffer) that do not have the label, label them, and add to nodeList
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
