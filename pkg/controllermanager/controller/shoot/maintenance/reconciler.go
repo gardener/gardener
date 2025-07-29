@@ -140,7 +140,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		log.Error(err, "Failed to maintain Shoot kubernetes version")
 	}
 
-	credentialsRotationUpdate := computeCredentialsRotationResults(log, maintainedShoot, metav1.Time{Time: r.Clock.Now()})
+	credentialsToRotationUpdate := computeCredentialsToRotationResults(log, maintainedShoot, metav1.Time{Time: r.Clock.Now()})
 
 	oldShootKubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
 	if err != nil {
@@ -303,12 +303,12 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
-	operation := maintainOperation(maintainedShoot, credentialsRotationUpdate)
+	operation := maintainOperation(maintainedShoot, credentialsToRotationUpdate)
 	if operation != "" {
 		operations = append(operations, fmt.Sprintf("Added %q operation annotation", operation))
 	}
 
-	requirePatch := len(operations) > 0 || kubernetesControlPlaneUpdate != nil || len(workerToKubernetesUpdate) > 0 || len(workerToMachineImageUpdate) > 0 || len(credentialsRotationUpdate) > 0
+	requirePatch := len(operations) > 0 || kubernetesControlPlaneUpdate != nil || len(workerToKubernetesUpdate) > 0 || len(workerToMachineImageUpdate) > 0 || len(credentialsToRotationUpdate) > 0
 	if requirePatch {
 		patch := client.MergeFrom(shoot.DeepCopy())
 
@@ -317,13 +317,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			kubernetesControlPlaneUpdate,
 			workerToKubernetesUpdate,
 			workerToMachineImageUpdate,
-			credentialsRotationUpdate,
+			credentialsToRotationUpdate,
 		)
-
-		// start credentials rotation
-		if len(credentialsRotationUpdate) > 0 {
-			startCredentialsRotation(shoot, metav1.Time{Time: r.Clock.Now()}, credentialsRotationUpdate)
-		}
 
 		// append also other maintenance operation
 		if len(operations) > 0 {
@@ -367,6 +362,11 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			return nil
 		}
 
+		// start credentials rotation
+		if len(credentialsToRotationUpdate) > 0 {
+			startCredentialsRotation(shoot, metav1.Time{Time: r.Clock.Now()}, credentialsToRotationUpdate)
+		}
+
 		if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
 			return err
 		}
@@ -374,7 +374,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 
 	// update shoot spec changes in maintenance call
 	shoot.Spec = *maintainedShoot.Spec.DeepCopy()
-	_ = maintainOperation(shoot, credentialsRotationUpdate)
+	_ = maintainOperation(shoot, credentialsToRotationUpdate)
 	maintainTasks(shoot, r.Config)
 
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
@@ -425,7 +425,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 
 // buildMaintenanceMessages builds a combined message containing the performed maintenance operations over all worker pools. If the maintenance operation failed, the description
 // contains an indication for the failure and the reason the update was triggered. Details for failed maintenance operations are returned in the second return string.
-func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, workerToKubernetesUpdate, workerToMachineImageUpdate, credentialsRotationUpdate map[string]updateResult) (string, string) {
+func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, workerToKubernetesUpdate, workerToMachineImageUpdate, credentialsToRotationUpdate map[string]updateResult) (string, string) {
 	countSuccessfulOperations := 0
 	countFailedOperations := 0
 	description := ""
@@ -466,7 +466,7 @@ func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, worker
 		failureReason = fmt.Sprintf("%s, Worker pool %q: %s", failureReason, worker, result.description)
 	}
 
-	for credentials, result := range credentialsRotationUpdate {
+	for credentials, result := range credentialsToRotationUpdate {
 		if result.isSuccessful {
 			countSuccessfulOperations++
 			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Credentials %q: %s. Reason: %s", credentials, result.description, result.reason))
@@ -474,8 +474,8 @@ func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, worker
 		}
 
 		countFailedOperations++
-		description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Credential %q: Automatic rotation failed. Reason for update: %s", credentials, result.reason))
-		failureReason = fmt.Sprintf("%s, Credential %q: Automatic rotation failure due to: %s", failureReason, credentials, result.description)
+		description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Credentials %q: Automatic rotation failed. Reason for update: %s", credentials, result.reason))
+		failureReason = fmt.Sprintf("%s, Credentials %q: Automatic rotation failure due to: %s", failureReason, credentials, result.description)
 	}
 
 	description = strings.TrimPrefix(description, ", ")
@@ -502,7 +502,7 @@ func (r *Reconciler) recordMaintenanceEventsForPool(workerToUpdateResult map[str
 	}
 }
 
-func maintainOperation(shoot *gardencorev1beta1.Shoot, credentialsRotationUpdate map[string]updateResult) string {
+func maintainOperation(shoot *gardencorev1beta1.Shoot, credentialsToRotationUpdate map[string]updateResult) string {
 	var operation string
 	if hasMaintainNowAnnotation(shoot) {
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
@@ -519,7 +519,7 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot, credentialsRotationUpdate
 			delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
 		}
 	default:
-		operation = getOperation(shoot, credentialsRotationUpdate)
+		operation = getOperation(shoot, credentialsToRotationUpdate)
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		delete(shoot.Annotations, v1beta1constants.GardenerMaintenanceOperation)
 	}
@@ -655,8 +655,8 @@ func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUp
 }
 
 // startCredentialsRotation starts the credentials rotations if necessary
-func startCredentialsRotation(shoot *gardencorev1beta1.Shoot, now metav1.Time, credentialsRotationUpdate map[string]updateResult) {
-	for credential, result := range credentialsRotationUpdate {
+func startCredentialsRotation(shoot *gardencorev1beta1.Shoot, now metav1.Time, credentialsToRotationUpdate map[string]updateResult) {
+	for credential, result := range credentialsToRotationUpdate {
 		switch {
 		case credential == sshKeypair && result.isSuccessful:
 			shootstatus.StartRotationSSHKeypair(shoot, &now)
@@ -666,8 +666,8 @@ func startCredentialsRotation(shoot *gardencorev1beta1.Shoot, now metav1.Time, c
 	}
 }
 
-// computeCredentialsRotationResults starts the credentials rotation if necessary and returns the reason why an update was done
-func computeCredentialsRotationResults(log logr.Logger, shoot *gardencorev1beta1.Shoot, now metav1.Time) map[string]updateResult {
+// computeCredentialsToRotationResults starts the credentials rotation if necessary and returns the reason why an update was done
+func computeCredentialsToRotationResults(log logr.Logger, shoot *gardencorev1beta1.Shoot, now metav1.Time) map[string]updateResult {
 	var (
 		maintenanceResults                    = make(map[string]updateResult)
 		sshKeypairRotationEnabled             = v1beta1helper.IsSSHKeypairAutoRotationEnabled(shoot)
@@ -776,10 +776,11 @@ func needsRetry(shoot *gardencorev1beta1.Shoot) bool {
 	return needsRetryOperation
 }
 
-func getOperation(shoot *gardencorev1beta1.Shoot, credentialsRotationUpdate map[string]updateResult) string {
+func getOperation(shoot *gardencorev1beta1.Shoot, credentialsToRotationUpdate map[string]updateResult) string {
 	maintenanceOperation := shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]
 
-	for credentials := range credentialsRotationUpdate {
+	// Skip in the cases where the maintenance operation is covered by automatic credentials rotations in the current maintenance cycle.
+	for credentials := range credentialsToRotationUpdate {
 		if (credentials == sshKeypair && maintenanceOperation == v1beta1constants.ShootOperationRotateSSHKeypair) ||
 			(credentials == observabilityPasswords && maintenanceOperation == v1beta1constants.OperationRotateObservabilityCredentials) {
 			return v1beta1constants.GardenerOperationReconcile
