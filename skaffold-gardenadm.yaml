@@ -527,7 +527,6 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/controllerutils/routes
-            - pkg/features
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
@@ -746,7 +745,6 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/extensions
-            - pkg/features
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
