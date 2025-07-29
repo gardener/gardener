@@ -94,6 +94,9 @@ honor_labels: true`
 		serviceAccount                      *corev1.ServiceAccount
 		service                             *corev1.Service
 		clusterRoleBinding                  *rbacv1.ClusterRoleBinding
+		role                                *rbacv1.Role
+		roleBinding                         *rbacv1.RoleBinding
+		gardenRoleBinding                   *rbacv1.RoleBinding
 		prometheusFor                       func([]alertmanager, bool) *monitoringv1.Prometheus
 		vpa                                 *vpaautoscalingv1.VerticalPodAutoscaler
 		ingress                             *networkingv1.Ingress
@@ -202,6 +205,70 @@ honor_labels: true`
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "ClusterRole",
 				Name:     "prometheus",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+			}},
+		}
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"services",
+						"endpoints",
+						"pods",
+					},
+					Verbs: []string{"get", "list", "watch"},
+				},
+			},
+		}
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "prometheus-" + name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+			}},
+		}
+		gardenRoleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + namespace,
+				Namespace: "garden",
+				Labels: map[string]string{
+					"role": "monitoring",
+					"name": name,
+					"app":  "prometheus",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "prometheus-shoot",
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      "ServiceAccount",
@@ -663,7 +730,9 @@ honor_labels: true`
 					Expect(managedResource).To(consistOf(
 						serviceAccount,
 						service,
-						clusterRoleBinding,
+						role,
+						roleBinding,
+						gardenRoleBinding,
 						prometheusFor(nil, true),
 						vpa,
 						prometheusRule,
