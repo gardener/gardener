@@ -6,7 +6,6 @@ package nodeinit
 
 import (
 	"bytes"
-	_ "embed"
 	"fmt"
 	"path/filepath"
 

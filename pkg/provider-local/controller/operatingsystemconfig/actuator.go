@@ -6,7 +6,6 @@ package operatingsystemconfig
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 
 	"github.com/go-logr/logr"

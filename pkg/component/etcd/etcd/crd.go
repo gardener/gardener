@@ -5,7 +5,6 @@
 package etcd
 
 import (
-	_ "embed"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"

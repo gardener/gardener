@@ -6,7 +6,6 @@ package seedserver_test
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"net"
 
