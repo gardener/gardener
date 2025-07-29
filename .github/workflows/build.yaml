@@ -173,7 +173,7 @@ jobs:
     permissions:
       contents: read
     needs:
-      - test
+      - tests
       - sast-lint
     strategy:
       matrix:
