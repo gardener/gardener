@@ -331,13 +331,16 @@ kind-single-node-down kind-multi-node-down kind-multi-zone-down: $(KIND)
 	# We need root privileges to clean the backup bucket directory, see https://github.com/gardener/gardener/issues/6752
 	docker run --rm --user root:root -v $(REPO_ROOT)/dev/local-backupbuckets:/dev/local-backupbuckets alpine rm -rf /dev/local-backupbuckets/garden-*
 
-export SKAFFOLD_BUILD_CONCURRENCY = 0 # speed-up skaffold deployments by building all images concurrently
-export SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS = true # build the images for the platform matching the nodes of the active kubernetes cluster, even in `skaffold build`, which doesn't enable this by default
+# speed-up skaffold deployments by building all images concurrently
+export SKAFFOLD_BUILD_CONCURRENCY = 0
+# build the images for the platform matching the nodes of the active kubernetes cluster, even in `skaffold build`, which doesn't enable this by default
+export SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS = true
 export SKAFFOLD_DEFAULT_REPO = garden.local.gardener.cloud:5001
 export SKAFFOLD_PUSH = true
 export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)
 export GARDENER_VERSION = $(VERSION)
-export SKAFFOLD_LABEL = "skaffold.dev/run-id=gardener-local" # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
+# use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
+export SKAFFOLD_LABEL = "skaffold.dev/run-id=gardener-local"
 
 %up %dev %debug: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh k8s.io/component-base $(REPO_ROOT)/VERSION Gardener $(BUILD_DATE))
 # skaffold dev and debug clean up deployed modules by default, disable this
