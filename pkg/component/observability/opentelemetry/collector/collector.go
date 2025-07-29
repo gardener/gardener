@@ -11,6 +11,8 @@ import (
 	"time"
 
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +24,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -31,6 +36,8 @@ import (
 
 const (
 	managedResourceName              = "opentelemetry-collector"
+	scrapeJobName                    = "opentelemetry-collector"
+	scrapeConfigName                 = "opentelemetry-collector"
 	otelCollectorConfigName          = "opentelemetry-collector-config"
 	kubeRBACProxyName                = "kube-rbac-proxy"
 	volumeMountPathGenericKubeconfig = "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig"
@@ -88,6 +95,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 	var (
 		genericTokenKubeconfigSecretName string
 		kubeRBACProxyShootAccessSecret   = o.newKubeRBACProxyShootAccessSecret()
+		objects                          = []client.Object{}
 	)
 
 	if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
@@ -102,7 +110,15 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	serializedResources, err := registry.AddAllAndSerialize(o.openTelemetryCollector(o.namespace, o.lokiEndpoint, genericTokenKubeconfigSecretName))
+	objects = append(objects, o.openTelemetryCollector(o.namespace, o.lokiEndpoint, genericTokenKubeconfigSecretName))
+
+	scrapeConfig, err := o.scrapeConfig()
+	if err != nil {
+		return err
+	}
+	objects = append(objects, scrapeConfig)
+
+	serializedResources, err := registry.AddAllAndSerialize(objects...)
 	if err != nil {
 		return err
 	}
@@ -126,6 +142,70 @@ func (o *otelCollector) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, o.client, o.namespace, managedResourceName)
+}
+
+func (o *otelCollector) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta(scrapeConfigName, o.namespace, shoot.Label)}
+}
+
+func (o *otelCollector) scrapeConfig() (*monitoringv1alpha1.ScrapeConfig, error) {
+	allowedMetrics := []string{
+		"otelcol_exporter_enqueue_failed_log_records",
+		"otelcol_exporter_enqueue_failed_metric_points",
+		"otelcol_exporter_enqueue_failed_spans",
+		"otelcol_exporter_queue_capacity",
+		"otelcol_exporter_queue_size",
+		"otelcol_exporter_send_failed_log_records",
+		"otelcol_exporter_send_failed_metric_points",
+		"otelcol_exporter_send_failed_spans",
+		"otelcol_exporter_sent_log_records",
+		"otelcol_exporter_sent_metric_points",
+		"otelcol_exporter_sent_spans",
+		"otelcol_process_cpu_seconds",
+		"otelcol_process_memory_rss",
+		"otelcol_process_runtime_heap_alloc_bytes",
+		"otelcol_process_runtime_total_alloc_bytes",
+		"otelcol_process_runtime_total_sys_memory_bytes",
+		"otelcol_process_uptime",
+		"otelcol_processor_incoming_items",
+		"otelcol_processor_outgoing_items",
+		"otelcol_receiver_accepted_log_records",
+		"otelcol_receiver_accepted_metric_points",
+		"otelcol_receiver_accepted_spans",
+		"otelcol_receiver_refused_log_records",
+		"otelcol_receiver_refused_metric_points",
+		"otelcol_receiver_refused_spans",
+		"otelcol_scraper_errored_metric_points",
+		"otelcol_scraper_scraped_metric_points",
+	}
+
+	scrapeConfig := o.emptyScrapeConfig()
+	_, err := controllerutils.GetAndCreateOrMergePatch(context.TODO(), o.client, scrapeConfig, func() error {
+		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
+		scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
+			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+				Role:       monitoringv1alpha1.KubernetesRoleService,
+				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{o.namespace}},
+			}},
+			RelabelConfigs: []monitoringv1.RelabelConfig{
+				{
+					Action:      "replace",
+					Replacement: ptr.To(scrapeJobName),
+					TargetLabel: "job",
+				},
+				{
+					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_service_port_name"},
+					Action:       "keep",
+					Regex:        collectorconstants.ServiceName + `;` + "metrics",
+				},
+			},
+			MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(allowedMetrics...),
+		}
+
+		return nil
+	})
+
+	return scrapeConfig, err
 }
 
 func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericTokenKubeconfigSecretName string) *otelv1beta1.OpenTelemetryCollector {
@@ -177,6 +257,9 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			Name:      collectorconstants.OpenTelemetryCollectorResourceName,
 			Namespace: namespace,
 			Labels:    getLabels(),
+			Annotations: map[string]string{
+				"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": "[{\"protocol\":\"TCP\",\"port\":8888}]",
+			},
 		},
 		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
 			Mode:            "deployment",
@@ -192,6 +275,12 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 						ServicePort: corev1.ServicePort{
 							Name: kubeRBACProxyName,
 							Port: collectorconstants.KubeRBACProxyPort,
+						},
+					},
+					{
+						ServicePort: corev1.ServicePort{
+							Name: "metrics",
+							Port: 8888,
 						},
 					},
 				},
@@ -217,7 +306,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 							"actions": []any{
 								map[string]any{
 									"key":    "loki.attribute.labels",
-									"value":  "job, unit, nodename, origin, pod_name, container_name, origin, namespace_name, nodename, gardener_cloud_role",
+									"value":  "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
 									"action": "insert",
 								},
 								map[string]any{
@@ -237,6 +326,30 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					},
 				},
 				Service: otelv1beta1.Service{
+					Telemetry: &otelv1beta1.AnyConfig{
+						Object: map[string]any{
+							"metrics": map[string]any{
+								"level": "basic",
+								"readers": []any{
+									map[string]any{
+										"pull": map[string]any{
+											"exporter": map[string]any{
+												"prometheus": map[string]any{
+													"host": "0.0.0.0",
+													// Field needs to be cast to `float64` due to an issue with serialization during tests.
+													"port": float64(8888),
+												},
+											},
+										},
+									},
+								},
+							},
+							"logs": map[string]any{
+								"level":    "info",
+								"encoding": "json",
+							},
+						},
+					},
 					Pipelines: map[string]*otelv1beta1.Pipeline{
 						"logs": {
 							Exporters: []string{

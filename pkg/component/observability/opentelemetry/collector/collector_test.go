@@ -12,6 +12,8 @@ import (
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +27,9 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	. "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
+	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -64,6 +68,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		volume                 corev1.Volume
 		volumeMount            corev1.VolumeMount
 		openTelemetryCollector *otelv1beta1.OpenTelemetryCollector
+		scrapeConfig           *monitoringv1alpha1.ScrapeConfig
 	)
 
 	BeforeEach(func() {
@@ -167,11 +172,72 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			},
 		}
 
+		allowedMetrics := []string{
+			"otelcol_exporter_enqueue_failed_log_records",
+			"otelcol_exporter_enqueue_failed_metric_points",
+			"otelcol_exporter_enqueue_failed_spans",
+			"otelcol_exporter_queue_capacity",
+			"otelcol_exporter_queue_size",
+			"otelcol_exporter_send_failed_log_records",
+			"otelcol_exporter_send_failed_metric_points",
+			"otelcol_exporter_send_failed_spans",
+			"otelcol_exporter_sent_log_records",
+			"otelcol_exporter_sent_metric_points",
+			"otelcol_exporter_sent_spans",
+			"otelcol_process_cpu_seconds",
+			"otelcol_process_memory_rss",
+			"otelcol_process_runtime_heap_alloc_bytes",
+			"otelcol_process_runtime_total_alloc_bytes",
+			"otelcol_process_runtime_total_sys_memory_bytes",
+			"otelcol_process_uptime",
+			"otelcol_processor_incoming_items",
+			"otelcol_processor_outgoing_items",
+			"otelcol_receiver_accepted_log_records",
+			"otelcol_receiver_accepted_metric_points",
+			"otelcol_receiver_accepted_spans",
+			"otelcol_receiver_refused_log_records",
+			"otelcol_receiver_refused_metric_points",
+			"otelcol_receiver_refused_spans",
+			"otelcol_scraper_errored_metric_points",
+			"otelcol_scraper_scraped_metric_points",
+		}
+
+		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-opentelemetry-collector",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					Role:       monitoringv1alpha1.KubernetesRoleService,
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						Action:      "replace",
+						Replacement: ptr.To("opentelemetry-collector"),
+						TargetLabel: "job",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_service_port_name"},
+						Action:       "keep",
+						Regex:        collectorconstants.ServiceName + `;` + "metrics",
+					},
+				},
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(allowedMetrics...),
+			},
+		}
+
 		openTelemetryCollector = &otelv1beta1.OpenTelemetryCollector{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "opentelemetry-collector",
 				Namespace: namespace,
 				Labels:    getLabels(),
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": "[{\"protocol\":\"TCP\",\"port\":8888}]",
+				},
 			},
 			Spec: otelv1beta1.OpenTelemetryCollectorSpec{
 				Mode:            "deployment",
@@ -187,6 +253,12 @@ var _ = Describe("OpenTelemetry Collector", func() {
 							ServicePort: corev1.ServicePort{
 								Name: "kube-rbac-proxy",
 								Port: 8080,
+							},
+						},
+						{
+							ServicePort: corev1.ServicePort{
+								Name: "metrics",
+								Port: 8888,
 							},
 						},
 					},
@@ -212,7 +284,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 								"actions": []any{
 									map[string]any{
 										"key":    "loki.attribute.labels",
-										"value":  "job, unit, nodename, origin, pod_name, container_name, origin, namespace_name, nodename, gardener_cloud_role",
+										"value":  "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
 										"action": "insert",
 									},
 									map[string]any{
@@ -232,6 +304,30 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						},
 					},
 					Service: otelv1beta1.Service{
+						Telemetry: &otelv1beta1.AnyConfig{
+							Object: map[string]any{
+								"metrics": map[string]any{
+									"level": "basic",
+									"readers": []any{
+										map[string]any{
+											"pull": map[string]any{
+												"exporter": map[string]any{
+													"prometheus": map[string]any{
+														"host": "0.0.0.0",
+														// Field needs to be cast to `float64` due to an issue with serialization during tests.
+														"port": float64(8888),
+													},
+												},
+											},
+										},
+									},
+								},
+								"logs": map[string]any{
+									"level":    "info",
+									"encoding": "json",
+								},
+							},
+						},
 						Pipelines: map[string]*otelv1beta1.Pipeline{
 							"logs": {
 								Exporters:  []string{"loki"},
@@ -279,6 +375,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
+				scrapeConfig,
 			))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
@@ -320,6 +417,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			openTelemetryCollector.Spec.AdditionalContainers = append(openTelemetryCollector.Spec.AdditionalContainers, kubeRBACProxyContainer)
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
+				scrapeConfig,
 			))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
