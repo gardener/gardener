@@ -6,7 +6,6 @@ package vpa_test
 
 import (
 	"context"
-	_ "embed"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

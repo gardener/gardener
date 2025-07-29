@@ -6,7 +6,6 @@ package seedserver
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"net"
 	"path/filepath"

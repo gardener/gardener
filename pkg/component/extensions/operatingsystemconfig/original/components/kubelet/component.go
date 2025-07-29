@@ -5,7 +5,6 @@
 package kubelet
 
 import (
-	_ "embed"
 	"strconv"
 	"strings"
 

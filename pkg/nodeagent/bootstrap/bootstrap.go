@@ -6,7 +6,6 @@ package bootstrap
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"os"
 	"path"

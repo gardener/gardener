@@ -6,7 +6,6 @@ package apiserver
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"slices"
 	"strconv"
