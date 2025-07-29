@@ -21,9 +21,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("CloudProfile", func() {
@@ -235,10 +233,6 @@ var _ = Describe("CloudProfile", func() {
 		})
 
 		Describe("#ValidateCloudProfileChanges", func() {
-			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
-			})
-
 			It("should pass if the CloudProfile did not change from cloudProfileName to cloudProfile, without kind", func() {
 				newShoot := shoot.DeepCopy()
 				shoot.Spec.CloudProfileName = &cloudProfileName
@@ -274,8 +268,6 @@ var _ = Describe("CloudProfile", func() {
 			})
 
 			It("should pass if the NamespacedCloudProfile did not change", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-
 				shoot.Spec.CloudProfile = &core.CloudProfileReference{
 					Kind: "NamespacedCloudProfile",
 					Name: namespacedCloudProfileName,
@@ -287,8 +279,6 @@ var _ = Describe("CloudProfile", func() {
 			})
 
 			It("should pass if the CloudProfile referenced by cloudProfileName is updated to a direct descendant NamespacedCloudProfile", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
 
@@ -303,8 +293,6 @@ var _ = Describe("CloudProfile", func() {
 			})
 
 			It("should pass if the CloudProfile referenced by cloudProfile is updated to a direct descendant NamespacedCloudProfile", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
 
@@ -321,9 +309,7 @@ var _ = Describe("CloudProfile", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should pass if the NamespacedCloudProfile referenced by cloudProfile is updated to a its parent CloudProfile", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-
+			It("should pass if the NamespacedCloudProfile referenced by cloudProfile is updated to its parent CloudProfile", func() {
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
 
@@ -341,8 +327,6 @@ var _ = Describe("CloudProfile", func() {
 			})
 
 			It("should pass if the NamespacedCloudProfile referenced by cloudProfile is updated to another related NamespacedCloudProfile", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-
 				anotherNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 				anotherNamespacedCloudProfile.Name = namespacedCloudProfileName + "-2"
 
@@ -364,8 +348,6 @@ var _ = Describe("CloudProfile", func() {
 			})
 
 			It("should fail if the CloudProfile referenced by cloudProfileName is updated to an unrelated NamespacedCloudProfile", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-
 				unrelatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 				unrelatedNamespacedCloudProfile.Spec.Parent = gardencorev1beta1.CloudProfileReference{
 					Kind: "CloudProfile",
@@ -386,8 +368,6 @@ var _ = Describe("CloudProfile", func() {
 			})
 
 			It("should fail if the CloudProfile is updated to another CloudProfile", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-
 				unrelatedCloudProfile := cloudProfile.DeepCopy()
 				unrelatedCloudProfile.Name = "someOtherCloudProfile"
 
@@ -447,7 +427,6 @@ var _ = Describe("CloudProfile", func() {
 
 		Describe("#SyncCloudProfileFields", func() {
 			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
 				shoot.Spec.Kubernetes.Version = "v1"
 			})
 
@@ -460,8 +439,7 @@ var _ = Describe("CloudProfile", func() {
 				Expect(shoot.Spec.CloudProfile.Kind).To(Equal("Secret"))
 			})
 
-			It("should remove the cloudProfileName if a NamespacedCloudProfile is given and the feature is enabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
+			It("should remove the cloudProfileName if a NamespacedCloudProfile is provided", func() {
 				shoot.Spec.CloudProfileName = ptr.To("profile")
 				shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}
 				gardenerutils.SyncCloudProfileFields(nil, shoot)
@@ -470,17 +448,7 @@ var _ = Describe("CloudProfile", func() {
 				Expect(shoot.Spec.CloudProfile.Kind).To(Equal("NamespacedCloudProfile"))
 			})
 
-			It("should remove the cloudProfileName and leave the cloudProfile untouched for an invalid kind with enabled nscpfl feature toggle (failure is evaluated at another point in the validation chain, fields are only synced here)", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-				shoot.Spec.CloudProfileName = ptr.To("profile")
-				shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile-secret", Kind: "Secret"}
-				gardenerutils.SyncCloudProfileFields(nil, shoot)
-				Expect(shoot.Spec.CloudProfileName).To(BeNil())
-				Expect(shoot.Spec.CloudProfile.Name).To(Equal("namespacedprofile-secret"))
-				Expect(shoot.Spec.CloudProfile.Kind).To(Equal("Secret"))
-			})
-
-			It("should keep a NamespacedCloudProfile reference if it has been enabled before", func() {
+			It("should keep a unchanged NamespacedCloudProfile reference", func() {
 				shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}
 				oldShoot := shoot.DeepCopy()
 				gardenerutils.SyncCloudProfileFields(oldShoot, shoot)
@@ -505,15 +473,6 @@ var _ = Describe("CloudProfile", func() {
 				It("should override the cloudProfileName from the cloudProfile", func() {
 					shoot.Spec.CloudProfileName = ptr.To("profile-name")
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}
-					gardenerutils.SyncCloudProfileFields(nil, shoot)
-					Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
-					Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
-					Expect(shoot.Spec.CloudProfile.Kind).To(Equal("CloudProfile"))
-				})
-
-				It("should override cloudProfile from cloudProfileName as with disabledFeatureToggle reference to NamespacedCloudProfile is ignored", func() {
-					shoot.Spec.CloudProfileName = ptr.To("profile")
-					shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}
 					gardenerutils.SyncCloudProfileFields(nil, shoot)
 					Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 					Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
@@ -594,7 +553,7 @@ var _ = Describe("CloudProfile", func() {
 						Expect(shoot.Spec.CloudProfile.Kind).To(Equal("CloudProfile"))
 					})
 
-					It("should not modify cloudProfile and cloudProfileName as with disabledFeatureToggle reference to NamespacedCloudProfile is ignored", func() {
+					It("should not sync back cloudProfileName (will fail in a later stage in the validation chain)", func() {
 						shoot.Spec.CloudProfileName = ptr.To("profile")
 						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}
 						gardenerutils.SyncCloudProfileFields(nil, shoot)
