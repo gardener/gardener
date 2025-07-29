@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -193,8 +194,9 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 								Type:         "some-machine-type",
 								Architecture: ptr.To("amd64"),
 							},
-							Maximum: 2,
-							Minimum: 1,
+							Maximum:        2,
+							Minimum:        1,
+							MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 						},
 					},
 				},
