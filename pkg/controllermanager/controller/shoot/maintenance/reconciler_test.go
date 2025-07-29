@@ -1361,7 +1361,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
-	Describe("#computeCredentialsRotationResults", func() {
+	Describe("#computeCredentialsToRotationResults", func() {
 		var shoot *gardencorev1beta1.Shoot
 
 		BeforeEach(func() {
@@ -1399,13 +1399,13 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.Enabled = ptr.To(false)
 			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.Enabled = ptr.To(false)
 
-			results := computeCredentialsRotationResults(log, shoot, metav1.Time{Time: now})
+			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
 
 			Expect(results).To(BeEmpty())
 		})
 
 		It("should return successful results for all credentials rotation", func() {
-			results := computeCredentialsRotationResults(log, shoot, metav1.Time{Time: now})
+			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
 
 			Expect(results).To(HaveLen(2))
 			Expect(results["ssh-keypair"]).To(Equal(updateResult{
@@ -1431,7 +1431,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 				},
 			}
-			results := computeCredentialsRotationResults(log, shoot, metav1.Time{Time: now})
+			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
 
 			Expect(results).To(HaveLen(2))
 			Expect(results["ssh-keypair"]).To(Equal(updateResult{
@@ -1457,7 +1457,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 				},
 			}
-			results := computeCredentialsRotationResults(log, shoot, metav1.Time{Time: now})
+			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
 
 			Expect(results).To(BeEmpty())
 		})
@@ -1475,14 +1475,14 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		DescribeTable("#getOperation",
-			func(maintenanceAnnotation *string, credentialsRotationUpdate map[string]updateResult, expectedResult string) {
+			func(maintenanceAnnotation *string, credentialsToRotationUpdate map[string]updateResult, expectedResult string) {
 				if maintenanceAnnotation != nil {
 					shoot.Annotations = map[string]string{
 						"maintenance.gardener.cloud/operation": *maintenanceAnnotation,
 					}
 				}
 
-				result := getOperation(shoot, credentialsRotationUpdate)
+				result := getOperation(shoot, credentialsToRotationUpdate)
 				Expect(result).To(Equal(expectedResult))
 			},
 			Entry("should return reconcile operation when there is no maintenance operation", nil, nil, "reconcile"),
