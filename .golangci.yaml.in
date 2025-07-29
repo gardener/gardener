@@ -70,13 +70,13 @@ linters:
           alias: logf
         - pkg: go.uber.org/mock/gomock
           alias: gmock
-        - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2
+        - pkg: github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2
           alias: fluentbitv1alpha2
-        - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/filter
+        - pkg: github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/filter
           alias: fluentbitv1alpha2filter
-        - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/parser
+        - pkg: github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/parser
           alias: fluentbitv1alpha2parser
-        - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/input
+        - pkg: github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/input
           alias: fluentbitv1alpha2input
         # Gardener external imported packages
         - pkg: github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
