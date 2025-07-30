@@ -69,13 +69,14 @@ func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
 			return fmt.Errorf("failed walking directory: %w", err)
 		}
 
+		// stop walking hidden directories entirely
 		if d.IsDir() && d.Name() != "." && strings.HasPrefix(d.Name(), ".") {
 			return fs.SkipDir
 		}
 
-		if d.IsDir() ||
-			strings.HasPrefix(d.Name(), ".") ||
-			(!strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".json")) {
+		if d.IsDir() || // don't read directories
+			strings.HasPrefix(d.Name(), ".") || // don't read hidden files
+			(!strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".json")) { // don't read files with unexpected extension
 			return nil
 		}
 
