@@ -670,7 +670,7 @@
         {
           "datasource": "${datasource}",
           "exemplar": true,
-          "expr": "round(sum(label_replace(irate(istio_requests_total{destination_service=~\"$service\",reporter=~\"source\",source_workload=~\"$srcwl\",source_workload_namespace=~\"$srcns\"}[5m]), \"pod_ip\", \"$1\", \"upstream_address\", \"(.*):.*\")) by (source_workload, source_workload_namespace, pod_ip), 0.001) * on(pod_ip) group_left (pod) kube_pod_info{host_network=\"false\", pod_ip!=\"\"}",
+          "expr": "round(sum(label_replace(irate(istio_requests_total{destination_service=~\"$service\",reporter=~\"source\",source_workload=~\"$srcwl\",source_workload_namespace=~\"$srcns\"}[5m]), \"pod_ip\", \"$1\", \"upstream_address\", \"(.*):.*\")) by (source_workload, source_workload_namespace, pod_ip), 0.001) * on(pod_ip) group_left (pod) topk(1, kube_pod_info{host_network=\"false\", pod_ip!=\"\"}) by (pod_ip)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -771,7 +771,7 @@
         {
           "datasource": "${datasource}",
           "exemplar": true,
-          "expr": "sum(label_replace(irate(istio_requests_total{reporter=~\"source\", destination_service=~\"$service\",response_code!~\"5.*\", source_workload=~\"$srcwl\", source_workload_namespace=~\"$srcns\"}[5m]), \"pod_ip\", \"$1\", \"upstream_address\", \"(.*):.*\")) by (source_workload, source_workload_namespace, pod_ip) / sum(label_replace(irate(istio_requests_total{reporter=~\"source\", destination_service=~\"$service\", source_workload=~\"$srcwl\", source_workload_namespace=~\"$srcns\"}[5m]), \"pod_ip\", \"$1\", \"upstream_address\", \"(.*):.*\")) by (source_workload, source_workload_namespace, pod_ip) * on(pod_ip) group_left (pod) kube_pod_info{host_network=\"false\", pod_ip!=\"\"}",
+          "expr": "sum(label_replace(irate(istio_requests_total{reporter=~\"source\", destination_service=~\"$service\",response_code!~\"5.*\", source_workload=~\"$srcwl\", source_workload_namespace=~\"$srcns\"}[5m]), \"pod_ip\", \"$1\", \"upstream_address\", \"(.*):.*\")) by (source_workload, source_workload_namespace, pod_ip) / sum(label_replace(irate(istio_requests_total{reporter=~\"source\", destination_service=~\"$service\", source_workload=~\"$srcwl\", source_workload_namespace=~\"$srcns\"}[5m]), \"pod_ip\", \"$1\", \"upstream_address\", \"(.*):.*\")) by (source_workload, source_workload_namespace, pod_ip) * on(pod_ip) group_left (pod) topk(1, kube_pod_info{host_network=\"false\", pod_ip!=\"\"}) by (pod_ip)",
           "format": "time_series",
           "hide": false,
           "interval": "",
