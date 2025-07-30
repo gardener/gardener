@@ -60,7 +60,7 @@ type Resources struct {
 
 // ReadManifests reads Kubernetes and Gardener manifests in YAML or JSON format.
 // It returns among others a CloudProfile, Project, and Shoot resource if found, or an error if any issues occur during
-// reading or decoding.
+// reading or decoding. It ignores hidden files and directories (starting with a dot).
 func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
 	resources := Resources{Seed: &gardencorev1beta1.Seed{}}
 
@@ -69,7 +69,14 @@ func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
 			return fmt.Errorf("failed walking directory: %w", err)
 		}
 
-		if d.IsDir() || !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".json") {
+		// stop walking hidden directories entirely
+		if d.IsDir() && d.Name() != "." && strings.HasPrefix(d.Name(), ".") {
+			return fs.SkipDir
+		}
+
+		if d.IsDir() || // don't read directories
+			strings.HasPrefix(d.Name(), ".") || // don't read hidden files
+			(!strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".json")) { // don't read files with unexpected extension
 			return nil
 		}
 

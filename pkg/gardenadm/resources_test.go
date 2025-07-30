@@ -64,6 +64,22 @@ var _ = Describe("Resources", func() {
 			Expect(resources.SecretBinding.Name).To(Equal("secretBinding"))
 			Expect(resources.CredentialsBinding.Name).To(Equal("credentialsBinding"))
 		})
+
+		It("should ignore hidden files", func() {
+			// invalid content should not be read
+			fsys[".cloudprofile-foo.yaml"] = &fstest.MapFile{Data: []byte(`{`)}
+
+			_, err := gardenadm.ReadManifests(log, fsys)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should ignore hidden folders", func() {
+			// invalid content should not be read
+			fsys[".hidden/cloudprofile-foo.yaml"] = &fstest.MapFile{Data: []byte(`{`)}
+
+			_, err := gardenadm.ReadManifests(log, fsys)
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	When("it cannot parse a file", func() {
