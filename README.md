@@ -3,7 +3,7 @@
 ![Gardener Logo](logo/gardener-large.png)
 
 [![REUSE status](https://api.reuse.software/badge/github.com/gardener/gardener)](https://api.reuse.software/info/github.com/gardener/gardener)
-[![CI Build status](https://concourse.ci.gardener.cloud/api/v1/teams/gardener/pipelines/gardener-master/jobs/master-head-update-job/badge)](https://concourse.ci.gardener.cloud/teams/gardener/pipelines/gardener-master/jobs/master-head-update-job)
+[![Build](https://github.com/gardener/gardener/actions/workflows/non-release.yaml/badge.svg)](https://github.com/gardener/gardener/actions/workflows/non-release.yaml)
 [![Slack workspace](https://img.shields.io/badge/Slack-Gardener%20Project-brightgreen.svg?logo=slack)](https://gardener-cloud.slack.com/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gardener/gardener)](https://goreportcard.com/report/github.com/gardener/gardener)
 [![GoDoc](https://godoc.org/github.com/gardener/gardener?status.svg)](https://godoc.org/github.com/gardener/gardener)
