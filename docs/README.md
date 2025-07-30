@@ -259,6 +259,7 @@
 * [Topology-Aware Traffic Routing](operations/topology_aware_routing.md)
 * [Trusted TLS certificate for shoot control planes](operations/trusted-tls-for-control-planes.md)
 * [Trusted TLS certificate for garden runtime cluster](operations/trusted-tls-for-garden-runtime.md)
+* [Overlapping Network Ranges between Seeds and Shoots](operations/overlapping-network-ranges.md)
 
 ## Monitoring
 
