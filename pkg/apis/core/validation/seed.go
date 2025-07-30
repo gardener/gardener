@@ -233,6 +233,30 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		}
 	}
 
+	if internalDNS := seedSpec.DNS.Internal; internalDNS != nil {
+		dnsInternalFieldPath := fldPath.Child("dns", "internal")
+		if len(internalDNS.Domain) == 0 {
+			allErrs = append(allErrs, field.Required(dnsInternalFieldPath.Child("domain"), "cannot be empty"))
+		} else {
+			allErrs = append(allErrs, ValidateDNS1123Subdomain(internalDNS.Domain, dnsInternalFieldPath.Child("domain"))...)
+		}
+
+		if len(internalDNS.Type) == 0 {
+			allErrs = append(allErrs, field.Required(dnsInternalFieldPath.Child("type"), "cannot be empty"))
+		}
+
+		// TODO(dimityrmirchev): Add support for workload identity
+		if internalDNS.CredentialsRef.Kind != "Secret" || internalDNS.CredentialsRef.APIVersion != corev1.SchemeGroupVersion.String() {
+			allErrs = append(allErrs, field.Invalid(dnsInternalFieldPath.Child("credentialsRef"), internalDNS.CredentialsRef, "credentialsRef must reference a Secret"))
+		}
+		if len(internalDNS.CredentialsRef.Name) == 0 {
+			allErrs = append(allErrs, field.Required(dnsInternalFieldPath.Child("credentialsRef", "name"), "cannot be empty"))
+		}
+		if len(internalDNS.CredentialsRef.Namespace) == 0 {
+			allErrs = append(allErrs, field.Required(dnsInternalFieldPath.Child("credentialsRef", "namespace"), "cannot be empty"))
+		}
+	}
+
 	allErrs = append(allErrs, validateExtensions(seedSpec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(seedSpec.Resources, fldPath.Child("resources"))...)
 
