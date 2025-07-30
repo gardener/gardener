@@ -327,6 +327,65 @@ var _ = Describe("Seed Validation Tests", func() {
 			))
 		})
 
+		Context("internal DNS", func() {
+			It("should require valid fields if internal DNS is set", func() {
+				seed.Spec.DNS.Internal = &core.SeedDNSProviderConf{}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.internal.type"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.internal.domain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.internal.credentialsRef"),
+						"Detail": Equal("credentialsRef must reference a Secret"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.internal.credentialsRef.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.internal.credentialsRef.namespace"),
+					})),
+				))
+			})
+
+			It("should return error if the internal DNS configures a malformed domain", func() {
+				seed.Spec.DNS.Internal = &core.SeedDNSProviderConf{
+					Type:   "foo",
+					Domain: "invalid_dns1123-subdomain",
+				}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.internal.domain"),
+					"Detail": ContainSubstring("a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters"),
+				}))))
+			})
+
+			It("should not return an error if the dns is configured correctly", func() {
+				seed.Spec.DNS.Internal = &core.SeedDNSProviderConf{
+					Type:   "foo",
+					Domain: "foo.example.com",
+					Zone:   ptr.To("zone-1"),
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "internal-domain",
+						Namespace:  "garden",
+					},
+				}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(BeEmpty())
+			})
+		})
+
 		Context("backup credentialsRef and secretRef", func() {
 			It("should require credentialsRef to be set", func() {
 				seed.Spec.Backup.CredentialsRef = nil
