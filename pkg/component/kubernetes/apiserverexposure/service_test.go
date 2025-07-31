@@ -164,7 +164,6 @@ var _ = Describe("#Service", func() {
 	Context("when service is not in shoot namespace", func() {
 		BeforeEach(func() {
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
-				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
 			}, netpolAnnotations())
 		})
@@ -177,7 +176,6 @@ var _ = Describe("#Service", func() {
 			namespace = "shoot-" + expected.Namespace
 
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
-				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
 			}, shootNetpolAnnotations())
 			expected.Namespace = namespace
