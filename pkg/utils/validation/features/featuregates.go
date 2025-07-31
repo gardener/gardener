@@ -299,7 +299,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"UserNamespacesPodSecurityStandards":               {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 	"UserNamespacesStatelessPodsSupport":               {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.28"}},
 	"UserNamespacesSupport":                            {VersionRange: versionutils.VersionRange{AddedInVersion: "1.28"}},
-	"ValidatingAdmissionPolicy":                        {LockedValue: true, LockedToDefaultInVersion: "1.30"},
+	"ValidatingAdmissionPolicy":                        {LockedValue: true, LockedToDefaultInVersion: "1.30", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.32"}},
 	"VolumeAttributesClass":                            {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 	"VolumeCapacityPriority":                           {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.33"}},
 	"WatchBookmark":                                    {LockedValue: true, LockedToDefaultInVersion: "1.17", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.33"}},
