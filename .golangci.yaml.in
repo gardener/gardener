@@ -281,13 +281,6 @@ linters:
       - path: (.+)\.go$
         text: 'structured logging message should be capitalized: "garden(er-apiserver|er-controller-manager|er-admission-controller|er-operator|er-resource-manager|let)'
     paths:
-      - .*\.pb\.go$
-      - zz_generated\..*\.go$
-      - openapi_generated\.go$
-      - pkg/client/core
-      - pkg/client/security
-      - pkg/client/seedmanagement
-      - pkg/client/settings
       - third_party$
 formatters:
   settings:
