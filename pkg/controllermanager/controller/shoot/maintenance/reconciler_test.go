@@ -886,8 +886,6 @@ var _ = Describe("Shoot Maintenance", func() {
 			latestVersionWithSupportedCapabilities := "1.4.2"
 
 			BeforeEach(func() {
-				cloudProfile = cloudProfile.DeepCopy()
-				shoot = shoot.DeepCopy()
 				cloudProfile.Spec.Capabilities = []gardencorev1beta1.CapabilityDefinition{
 					{Name: v1beta1constants.ArchitectureName, Values: []string{v1beta1constants.ArchitectureARM64, v1beta1constants.ArchitectureAMD64}},
 					{Name: "someCapability", Values: []string{"value1", "value2", "value3"}},

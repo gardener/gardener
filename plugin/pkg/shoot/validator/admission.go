@@ -756,7 +756,7 @@ func (c *validationContext) ensureMachineImages() field.ErrorList {
 		for idx, worker := range c.shoot.Spec.Provider.Workers {
 			fldPath := field.NewPath("spec", "provider", "workers").Index(idx)
 
-			image, err := c.ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfileSpec.MachineImages, fldPath)
+			image, err := c.ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, fldPath)
 			if err != nil {
 				allErrs = append(allErrs, err)
 				continue
@@ -1780,11 +1780,9 @@ func getDefaultMachineImage(
 					break
 				}
 				// skip capabilities check if machineType was not found in the cloud profile
-				if machineType != nil {
-					if v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineType.Capabilities, version.CapabilitySets, capabilitiesDefinition) {
-						defaultImage = &machineImage
-						break
-					}
+				if machineType != nil && v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineType.Capabilities, version.CapabilitySets, capabilitiesDefinition) {
+					defaultImage = &machineImage
+					break
 				}
 			}
 			if defaultImage != nil {
@@ -1827,10 +1825,8 @@ func getDefaultMachineImage(
 		}
 
 		// skip capabilities check if machineType was not found in the cloud profile
-		if machineType != nil {
-			if !v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineType.Capabilities, version.CapabilitySets, capabilitiesDefinition) {
-				continue
-			}
+		if machineType != nil && !v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineType.Capabilities, version.CapabilitySets, capabilitiesDefinition) {
+			continue
 		}
 
 		// if InPlace update is true, only consider versions that support in-place updates
@@ -2040,7 +2036,7 @@ func validateKubeletVersion(constraints []gardencorev1beta1.MachineImage, worker
 	return nil
 }
 
-func (c *validationContext) ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []gardencorev1beta1.MachineImage, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+func (c *validationContext) ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	// General approach with machine image defaulting in this code: Try to keep the machine image
 	// from the old shoot object to not accidentally update it to the default machine image.
 	// This should only happen in the maintenance time window of shoots and is performed by the
@@ -2058,16 +2054,16 @@ func (c *validationContext) ensureMachineImage(oldWorkers []core.Worker, worker 
 		if oldWorker.Machine.Image.Name == worker.Machine.Image.Name {
 			// image name was not changed -> keep version from the new worker if specified, otherwise use the old worker image version
 			if len(worker.Machine.Image.Version) != 0 {
-				return getDefaultMachineImage(images, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.Capabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
+				return getDefaultMachineImage(c.cloudProfileSpec.MachineImages, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.Capabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
 			}
 			return oldWorker.Machine.Image, nil
 		} else if len(worker.Machine.Image.Version) != 0 {
 			// image name was changed -> keep version from new worker if specified, otherwise default the image version
-			return getDefaultMachineImage(images, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.Capabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
+			return getDefaultMachineImage(c.cloudProfileSpec.MachineImages, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.Capabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
 		}
 	}
 
-	return getDefaultMachineImage(images, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.Capabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
+	return getDefaultMachineImage(c.cloudProfileSpec.MachineImages, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.Capabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
 }
 
 func addInfrastructureDeploymentTask(shoot *core.Shoot) {
