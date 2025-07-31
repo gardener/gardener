@@ -280,18 +280,12 @@ linters:
       # allow non-capitalized messages if they start with technical terms
       - path: (.+)\.go$
         text: 'structured logging message should be capitalized: "garden(er-apiserver|er-controller-manager|er-admission-controller|er-operator|er-resource-manager|let)'
-    paths:
-      - third_party$
 formatters:
   settings:
     gofmt:
       rewrite-rules:
         - pattern: interface{}
           replacement: any
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
