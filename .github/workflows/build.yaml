@@ -35,7 +35,7 @@ jobs:
           mkdir -p /tmp/blobs.d
           if [ '${{ inputs.mode }}' == 'release' ]; then
             make verify-extended |& tee /tmp/blobs.d/tests-log.txt
-            tar czf /tmp/blobs.d/tests-log.tar.gz -C/tmp/blobs.d tests-log.txt
+            tar czf /tmp/blobs.d/tests-log.tar.gz -C /tmp/blobs.d tests-log.txt
           else
             # tests are run using prow for non-release-runs, so early-exit
             echo "dummy" > /tmp/blobs.d/tests-log.tar.gz
