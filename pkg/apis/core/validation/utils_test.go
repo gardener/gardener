@@ -242,4 +242,29 @@ var _ = Describe("Utils tests", func() {
 			),
 		),
 	)
+
+	Describe("#ValidateMachineImages", func() {
+		DescribeTable("should not allow invalid machine image names",
+			func(name string, shouldFail bool) {
+				validationResult := ValidateMachineImages([]core.MachineImage{{Name: name}}, nil, field.NewPath("spec", "machineImages"), true)
+
+				if shouldFail {
+					Expect(validationResult).
+						To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.machineImages[0].name"),
+								"Detail": ContainSubstring("machine image name must be a qualified name"),
+							})),
+						))
+				} else {
+					Expect(validationResult).To(BeEmpty())
+				}
+			},
+			Entry("forbid emoji characters", "🪴", true),
+			Entry("forbid whitespaces", "special image", true),
+			Entry("forbid slashes", "nested/image", true),
+			Entry("pass with dashes", "qualified-name", false),
+		)
+	})
 })

@@ -206,6 +206,8 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilities core.
 
 		if len(image.Name) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "machine image name must not be empty"))
+		} else if errs := validation.IsQualifiedName(image.Name); len(errs) > 0 || strings.Contains(image.Name, "/") {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), image.Name, fmt.Sprintf("machine image name must be a qualified name: %v", errs)))
 		}
 
 		if len(image.Versions) == 0 && !allowEmptyVersions {
