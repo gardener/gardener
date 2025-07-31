@@ -206,7 +206,7 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilities core.
 
 		if len(image.Name) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "machine image name must not be empty"))
-		} else if errs := validation.IsQualifiedName(image.Name); len(errs) > 0 || strings.Contains(image.Name, "/") {
+		} else if errs := validateUnprefixedQualifiedName(image.Name); len(errs) != 0 {
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), image.Name, fmt.Sprintf("machine image name must be a qualified name: %v", errs)))
 		}
 
@@ -257,6 +257,16 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilities core.
 	}
 
 	return allErrs
+}
+
+func validateUnprefixedQualifiedName(name string) []string {
+	if errs := validation.IsQualifiedName(name); len(errs) > 0 {
+		return errs
+	}
+	if strings.Contains(name, "/") {
+		return []string{fmt.Sprintf("name '%s' must not contain a prefix", name)}
+	}
+	return nil
 }
 
 // validateMachineTypes validates the given list of machine types for valid values and combinations.
