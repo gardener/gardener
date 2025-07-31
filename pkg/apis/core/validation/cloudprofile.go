@@ -233,6 +233,9 @@ func validateContainerRuntimes(containerRuntimes []core.ContainerRuntime, fldPat
 	duplicateCR := sets.Set[string]{}
 
 	for i, cr := range containerRuntimes {
+		if errs := validateUnprefixedQualifiedName(cr.Type); len(errs) != 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("type"), cr.Type, fmt.Sprintf("container runtime type must be a qualified name: %v", errs)))
+		}
 		if duplicateCR.Has(cr.Type) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), cr.Type))
 		}

@@ -905,6 +905,36 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				}))))
 			})
 
+			It("should forbid invalid container runtime types", func() {
+				cloudProfile.Spec.MachineImages[0].Versions[0].CRI = []core.CRI{
+					{
+						Name: core.CRINameContainerD,
+						ContainerRuntimes: []core.ContainerRuntime{
+							{
+								Type: "no-emoji-🪴",
+							},
+							{
+								Type: "no spaces",
+							},
+						},
+					},
+				}
+
+				errorList := ValidateCloudProfile(cloudProfile)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.machineImages[0].versions[0].cri[0].containerRuntimes[0].type"),
+						"Detail": ContainSubstring("container runtime type must be a qualified name"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.machineImages[0].versions[0].cri[0].containerRuntimes[1].type"),
+						"Detail": ContainSubstring("container runtime type must be a qualified name"),
+					})),
+				))
+			})
+
 			Context("machine types validation", func() {
 				It("should enforce that at least one machine type has been defined", func() {
 					cloudProfile.Spec.MachineTypes = []core.MachineType{}
