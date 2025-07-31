@@ -528,7 +528,7 @@
       "colorBackground": false,
       "colorValue": true,
       "colors": [
-        "#299c46",
+        "#c7d0d9",
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
@@ -584,7 +584,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "absent(up{job=\"cluster-autoscaler\"} == 1)",
+          "expr": "  (absent(up{job=\"cluster-autoscaler\"} == 1) or on () vector(0))\nand on ()\n  kube_deployment_spec_replicas{deployment=\"cluster-autoscaler\"} > 0",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 10,
@@ -592,14 +592,14 @@
           "refId": "A"
         }
       ],
-      "thresholds": "0,1",
+      "thresholds": ".5,1",
       "title": "cluster-autoscaler",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
         {
           "op": "=",
-          "text": "UP",
+          "text": "not deployed",
           "value": "null"
         },
         {
