@@ -25,11 +25,12 @@ import (
 // When the certificate is renewed it saves the resulting kubeconfig on the disk, cancels its context to initiate a
 // restart of gardener-node-agent.
 type Reconciler struct {
-	Cancel      context.CancelFunc
-	Clock       clock.Clock
-	FS          afero.Afero
-	Config      *rest.Config
-	MachineName string
+	Cancel             context.CancelFunc
+	Clock              clock.Clock
+	FS                 afero.Afero
+	Config             *rest.Config
+	NodeAgentConfigDir string
+	MachineName        string
 
 	renewalDeadline *time.Time
 }
@@ -58,7 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		// Otherwise, if the renewal deadline is reached right after the osc reconciler requests a new certificate, but node-agent has
 		// not restarted yet, this reconciler could use the old CA bundle to request a new certificate. This could lead to osc reconciler
 		// marking the certificate rotation as complete, while the persisted certificate is still using the old CA bundle.
-		apiServerConfig, err := nodeagent.GetAPIServerConfig(r.FS)
+		apiServerConfig, err := nodeagent.GetAPIServerConfig(r.FS, r.NodeAgentConfigDir)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed reading the API server config: %w", err)
 		}

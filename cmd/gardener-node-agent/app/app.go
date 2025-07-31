@@ -66,7 +66,7 @@ func NewCommand() *cobra.Command {
 				return err
 			}
 			ctx, cancel := context.WithCancel(cmd.Context())
-			return run(ctx, cancel, log, opts.config)
+			return run(ctx, cancel, log, opts.config, opts.configDir)
 		},
 	}
 
@@ -99,7 +99,7 @@ func getBootstrapCommand(opts *options) *cobra.Command {
 	return bootstrapCmd
 }
 
-func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration) error {
+func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration, cfgDir string) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 	fs := afero.Afero{Fs: afero.NewOsFs()}
 
@@ -186,7 +186,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 		},
 		ActualRunnables: []manager.Runnable{
 			manager.RunnableFunc(func(ctx context.Context) error {
-				return controller.AddToManager(ctx, cancel, mgr, cfg, hostName, machineName, nodeName)
+				return controller.AddToManager(ctx, cancel, mgr, cfg, hostName, machineName, nodeName, cfgDir)
 			}),
 		},
 	}); err != nil {

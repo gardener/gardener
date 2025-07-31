@@ -26,8 +26,6 @@ const (
 	BootstrapTokenFilePath = CredentialsDir + "/bootstrap-token"
 	// TokenFilePath is the file path on the worker node that contains the access token of the gardener-node-agent.
 	TokenFilePath = CredentialsDir + "/token"
-	// ConfigFilePath is the file path on the worker node that contains the configuration of the gardener-node-agent.
-	ConfigFilePath = BaseDir + "/config.yaml"
 	// KubeconfigFilePath is the file path on the worker node that contains the kubeconfig of the gardener-node-agent.
 	KubeconfigFilePath = CredentialsDir + "/kubeconfig"
 	// MachineNameFilePath is the file path on the worker node that contains the machine name.

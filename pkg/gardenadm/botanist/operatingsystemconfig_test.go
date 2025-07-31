@@ -6,6 +6,7 @@ package botanist_test
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/coreos/go-systemd/v22/dbus"
@@ -16,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -101,7 +103,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						})),
 					}),
 				}),
-				MatchFields(IgnoreExtras, Fields{"Path": Equal("/var/lib/gardener-node-agent/config.yaml")}),
+				MatchFields(IgnoreExtras, Fields{"Path": Equal(fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion))}),
 			))
 		})
 	})

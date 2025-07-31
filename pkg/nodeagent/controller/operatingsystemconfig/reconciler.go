@@ -81,6 +81,8 @@ var (
 	OSUpdateRetryInterval = 30 * time.Second
 	// OSUpdateRetryTimeout is the timeout for OS update retries. Exported for testing.
 	OSUpdateRetryTimeout = 5 * time.Minute
+	// RequeueAfterRestart defines whether RequeueAfter is supposed to be triggered on restart of gardener-node-agent. Exposed for testing.
+	RequeueAfterRestart time.Duration
 )
 
 func init() {
@@ -96,6 +98,7 @@ func init() {
 type Reconciler struct {
 	Client        client.Client
 	Config        nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig
+	ConfigDir     string
 	Recorder      record.EventRecorder
 	DBus          dbus.DBus
 	FS            afero.Afero
@@ -244,6 +247,12 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 		}
 	}
 
+	// We restart the gardener-node-agent before removing the old files, so that the previous
+	// config is deleted only after there is no gardener-node-agent that is still using it.
+	if oscChanges.MustRestartNodeAgent {
+		return r.restartNodeAgent(oscChanges, log)
+	}
+
 	// After the node is prepared, we can wait for the registries to be configured.
 	// The ones with readiness probes should also succeed here since their cache/mirror pods
 	// can now start as workload in the cluster.
@@ -281,12 +290,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 	}
 
 	if oscChanges.MustRestartNodeAgent {
-		log.Info("Must restart myself (gardener-node-agent unit), canceling the context to initiate graceful shutdown")
-		if err := oscChanges.setMustRestartNodeAgent(false); err != nil {
-			return reconcile.Result{}, err
-		}
-		r.CancelContext()
-		return reconcile.Result{}, nil
+		return r.restartNodeAgent(oscChanges, log)
 	}
 
 	if node == nil {
@@ -821,7 +825,7 @@ func (r *Reconciler) performCredentialsRotationInPlace(ctx context.Context, log 
 	if oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet || oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent {
 		// Read the updated gardener-node-agent config for the API server CA bundle and server URL.
 		// This must always be called after applying the updated files.
-		apiServerConfig, err := nodeagent.GetAPIServerConfig(r.FS)
+		apiServerConfig, err := nodeagent.GetAPIServerConfig(r.FS, r.ConfigDir)
 		if err != nil {
 			return fmt.Errorf("failed reading the API server config: %w", err)
 		}
@@ -1076,4 +1080,13 @@ func (r *Reconciler) patchNodeUpdateFailed(ctx context.Context, log logr.Logger,
 	}
 
 	return nil
+}
+
+func (r *Reconciler) restartNodeAgent(oscChanges *operatingSystemConfigChanges, log logr.Logger) (reconcile.Result, error) {
+	log.Info("Must restart myself (gardener-node-agent unit), canceling the context to initiate graceful shutdown")
+	if err := oscChanges.setMustRestartNodeAgent(false); err != nil {
+		return reconcile.Result{}, err
+	}
+	r.CancelContext()
+	return reconcile.Result{RequeueAfter: RequeueAfterRestart}, nil
 }

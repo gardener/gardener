@@ -5,12 +5,14 @@
 package nodeagent_test
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/component-base/version"
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -65,13 +67,13 @@ After=network-online.target
 
 [Service]
 LimitMEMLOCK=infinity
-ExecStart=/opt/bin/gardener-node-agent --config=/var/lib/gardener-node-agent/config.yaml
+ExecStart=/opt/bin/gardener-node-agent --config-dir=/var/lib/gardener-node-agent
 Restart=always
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target`),
-					FilePaths: []string{"/var/lib/gardener-node-agent/config.yaml", "/opt/bin/gardener-node-agent"},
+					FilePaths: []string{fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion), "/opt/bin/gardener-node-agent"},
 				},
 			))
 			Expect(files).To(ConsistOf(append(expectedFiles, extensionsv1alpha1.File{
@@ -95,7 +97,7 @@ After=network-online.target
 
 [Service]
 LimitMEMLOCK=infinity
-ExecStart=/opt/bin/gardener-node-agent --config=/var/lib/gardener-node-agent/config.yaml
+ExecStart=/opt/bin/gardener-node-agent --config-dir=/var/lib/gardener-node-agent
 Restart=always
 RestartSec=5
 
@@ -135,7 +137,7 @@ WantedBy=multi-user.target`))
 			config := ComponentConfig(oscSecretName, nil, apiServerURL, caBundle, additionalTokenSyncConfigs)
 
 			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{
-				Path:        "/var/lib/gardener-node-agent/config.yaml",
+				Path:        fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),
 				Permissions: ptr.To[uint32](0600),
 				Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
   caBundle: ` + utils.EncodeBase64(caBundle) + `
