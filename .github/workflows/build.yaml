@@ -32,12 +32,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p /tmp/blobs.d
           if [ '${{ inputs.mode }}' == 'release' ]; then
-            make verify-extended
+            make verify-extended |& tee /tmp/blobs.d/tests-log.txt
+            tar czf /tmp/blobs.d/tests-log.tar.gz -C/tmp/blobs.d tests-log.txt
           else
-             # tests are run using prow for non-release-runs, so early-exit
+            # tests are run using prow for non-release-runs, so early-exit
+            echo "dummy" > /tmp/blobs.d/tests-log.tar.gz
             exit 0
           fi
+      - name: add-tests-report-to-component-descriptor
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        with:
+          blobs-directory: /tmp/blobs.d
+          ocm-resources: |
+            name: test-results
+            relation: local
+            access:
+              type: localBlob
+              localReference: tests-log.tar.gz
+            labels:
+              - name: gardener.cloud/purposes
+                value:
+                  - test
 
   sast-lint:
     uses: gardener/cc-utils/.github/workflows/sastlint-ocm.yaml@master
