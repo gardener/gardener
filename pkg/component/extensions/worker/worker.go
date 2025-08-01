@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -238,8 +239,8 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			Name:           workerPool.Name,
 			Minimum:        workerPool.Minimum,
 			Maximum:        workerPool.Maximum,
-			MaxSurge:       *workerPool.MaxSurge,
-			MaxUnavailable: *workerPool.MaxUnavailable,
+			MaxSurge:       ptr.Deref(workerPool.MaxSurge, intstr.FromInt32(0)),
+			MaxUnavailable: ptr.Deref(workerPool.MaxUnavailable, intstr.FromInt32(0)),
 			Annotations:    workerPool.Annotations,
 			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled, gardenerNodeAgentSecretName),
 			Taints:         workerPool.Taints,
