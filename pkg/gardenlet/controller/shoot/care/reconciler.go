@@ -121,7 +121,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 		internalDomain, err := gardenerutils.ReadGardenInternalDomain(
 			careCtx,
-			log,
 			r.GardenClient,
 			gardenerutils.ComputeGardenNamespace(*shoot.Status.SeedName),
 			true,

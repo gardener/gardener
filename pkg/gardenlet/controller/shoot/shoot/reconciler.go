@@ -375,7 +375,6 @@ func (r *Reconciler) initializeOperation(
 
 	internalDomain, err := gardenerutils.ReadGardenInternalDomain(
 		ctx,
-		log,
 		r.GardenClient,
 		gardenerutils.ComputeGardenNamespace(seed.Name),
 		true,
