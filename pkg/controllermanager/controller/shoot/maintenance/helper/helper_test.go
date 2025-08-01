@@ -15,12 +15,15 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance/helper"
 )
 
 var _ = Describe("Helper Functions", func() {
 	var (
 		machineImage              *gardencorev1beta1.MachineImage
+		machineType               *gardencorev1beta1.MachineType
+		capabilityDefinitions     []gardencorev1beta1.CapabilityDefinition
 		shootMachineImage         *gardencorev1beta1.ShootMachineImage
 		worker                    gardencorev1beta1.Worker
 		kubeletVersion            *semver.Version
@@ -33,6 +36,16 @@ var _ = Describe("Helper Functions", func() {
 		expirationDateInThePast = metav1.Time{Time: time.Now().Add(-time.Hour * 24)}
 		kubeletVersion = semver.MustParse("1.30.0")
 
+		machineType = &gardencorev1beta1.MachineType{
+			Name: "Standard",
+			Capabilities: gardencorev1beta1.Capabilities{
+				"someCapability": []string{"supported"},
+			},
+		}
+		capabilityDefinitions = []gardencorev1beta1.CapabilityDefinition{
+			{Name: v1beta1constants.ArchitectureName, Values: []string{v1beta1constants.ArchitectureAMD64}},
+			{Name: "someCapability", Values: []string{"supported", "unsupported"}},
+		}
 		machineImage = &gardencorev1beta1.MachineImage{
 			Name: "CoreOS",
 			Versions: []gardencorev1beta1.MachineImageVersion{
@@ -40,8 +53,11 @@ var _ = Describe("Helper Functions", func() {
 					ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 						Version: "1.0.0",
 					},
-					CRI:                      []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
-					Architectures:            []string{"amd64"},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+					Architectures: []string{"amd64"},
+					CapabilitySets: []gardencorev1beta1.CapabilitySet{{
+						Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
+					}},
 					KubeletVersionConstraint: ptr.To("< 1.27"),
 				},
 				{
@@ -49,8 +65,11 @@ var _ = Describe("Helper Functions", func() {
 						Version:        "1.1.0",
 						ExpirationDate: &expirationDateInTheFuture,
 					},
-					CRI:                      []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
-					Architectures:            []string{"amd64"},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+					Architectures: []string{"amd64"},
+					CapabilitySets: []gardencorev1beta1.CapabilitySet{{
+						Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
+					}},
 					KubeletVersionConstraint: ptr.To(">= 1.30.0"),
 					InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 						Supported:           true,
@@ -80,14 +99,14 @@ var _ = Describe("Helper Functions", func() {
 
 	Describe("#FilterMachineImageVersions", func() {
 		It("should filter machine images which supports worker configuration", func() {
-			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion)
+			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
 
 			Expect(filteredMachineImages.Versions).ShouldNot(BeEmpty())
 		})
 
 		It("should return an empty machine image if no versions found with matching architecture", func() {
 			worker.Machine.Architecture = ptr.To("arm64")
-			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion)
+			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
 
 			Expect(filteredMachineImages.Versions).Should(BeEmpty())
 		})
@@ -95,14 +114,14 @@ var _ = Describe("Helper Functions", func() {
 		It("should return an empty machine image if no versions found with matching kubelet version", func() {
 			worker.Machine.Image.Version = ptr.To("1.1.0")
 			kubeletVersion = semver.MustParse("1.29.0")
-			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion)
+			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
 
 			Expect(filteredMachineImages.Versions).Should(BeEmpty())
 		})
 
 		It("should return an empty machine image if no versions found with matching CRI", func() {
 			worker.CRI = &gardencorev1beta1.CRI{Name: "test-cri"}
-			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion)
+			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
 
 			Expect(filteredMachineImages.Versions).Should(BeEmpty())
 		})
@@ -110,7 +129,14 @@ var _ = Describe("Helper Functions", func() {
 		It("should return an empty machine image if no versions found with in-place update constraint", func() {
 			worker.Machine.Image.Version = ptr.To("0.1.0")
 			worker.UpdateStrategy = ptr.To(gardencorev1beta1.AutoInPlaceUpdate)
-			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion)
+			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
+
+			Expect(filteredMachineImages.Versions).Should(BeEmpty())
+		})
+
+		It("should return an empty machine image if no versions found with supported capabilities", func() {
+			machineType.Capabilities = gardencorev1beta1.Capabilities{"someCapability": []string{"unsupported"}}
+			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
 
 			Expect(filteredMachineImages.Versions).Should(BeEmpty())
 		})

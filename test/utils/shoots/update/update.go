@@ -253,6 +253,11 @@ func ComputeNewMachineImageVersions(
 }
 
 func getNextConsecutiveMachineImageVersion(cloudProfile *gardencorev1beta1.CloudProfile, worker gardencorev1beta1.Worker, controlPlaneVersion *semver.Version) (string, error) {
+	machineTypeFromCloudProfile := v1beta1helper.FindMachineTypeByName(cloudProfile.Spec.MachineTypes, worker.Machine.Type)
+	if machineTypeFromCloudProfile == nil {
+		return "", fmt.Errorf("machine type %q of worker %q does not exist in cloudprofile", worker.Machine.Type, worker.Name)
+	}
+
 	machineImageFromCloudProfile, err := helper.DetermineMachineImage(cloudProfile, worker.Machine.Image)
 	if err != nil {
 		return "", err
@@ -263,7 +268,7 @@ func getNextConsecutiveMachineImageVersion(cloudProfile *gardencorev1beta1.Cloud
 		return "", err
 	}
 
-	filteredMachineImageVersionsFromCloudProfile := helper.FilterMachineImageVersions(&machineImageFromCloudProfile, worker, kubeletVersion)
+	filteredMachineImageVersionsFromCloudProfile := helper.FilterMachineImageVersions(&machineImageFromCloudProfile, worker, kubeletVersion, machineTypeFromCloudProfile, cloudProfile.Spec.Capabilities)
 
 	// Always pass true for the value isExpired, because we want to get the next consecutive version regardless of whether the current version is expired or not.
 	newMachineImageVersion, err := helper.DetermineMachineImageVersion(worker.Machine.Image, filteredMachineImageVersionsFromCloudProfile, true)
