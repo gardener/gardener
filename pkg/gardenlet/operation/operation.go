@@ -124,7 +124,7 @@ func (b *Builder) WithSecrets(secrets map[string]*corev1.Secret) *Builder {
 	return b
 }
 
-// WithSecrets sets the secretsFunc attribute at the Builder.
+// WithInternalDomain sets the internalDomainFunc attribute at the Builder.
 func (b *Builder) WithInternalDomain(domain *gardenerutils.Domain) *Builder {
 	b.internalDomainFunc = func() (*gardenerutils.Domain, error) { return domain, nil }
 	return b

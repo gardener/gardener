@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -448,7 +447,6 @@ var _ = Describe("Garden", func() {
 	Describe("#ReadGardenInternalDomain", func() {
 		var (
 			ctx             = context.Background()
-			log             = logr.Discard()
 			client          client.Client
 			seedDNSProvider *gardencorev1beta1.SeedDNSProviderConf
 			secret          *corev1.Secret
@@ -483,7 +481,7 @@ var _ = Describe("Garden", func() {
 		It("should return domain information from SeedDNSProviderConf", func() {
 			Expect(client.Create(ctx, secret)).To(Succeed())
 
-			result, err := ReadGardenInternalDomain(ctx, log, client, namespace, true, seedDNSProvider)
+			result, err := ReadGardenInternalDomain(ctx, client, namespace, true, seedDNSProvider)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(&Domain{
 				Domain:     domain,
@@ -494,10 +492,10 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should return domain information from a labeled secret", func() {
-			secret.ObjectMeta.Labels = map[string]string{
+			secret.Labels = map[string]string{
 				constants.GardenRole: constants.GardenRoleInternalDomain,
 			}
-			secret.ObjectMeta.Annotations = map[string]string{
+			secret.Annotations = map[string]string{
 				"dns.gardener.cloud/provider": providerType,
 				"dns.gardener.cloud/domain":   domain,
 				"dns.gardener.cloud/zone":     zone,
@@ -505,7 +503,7 @@ var _ = Describe("Garden", func() {
 
 			Expect(client.Create(ctx, secret)).To(Succeed())
 
-			result, err := ReadGardenInternalDomain(ctx, log, client, namespace, true, nil)
+			result, err := ReadGardenInternalDomain(ctx, client, namespace, true, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(&Domain{
 				Domain:     domain,
@@ -516,22 +514,22 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should return nil if no secret and enforceSecret is false", func() {
-			result, err := ReadGardenInternalDomain(ctx, log, client, namespace, false, nil)
+			result, err := ReadGardenInternalDomain(ctx, client, namespace, false, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeNil())
 		})
 
 		It("should error if no secret and enforceSecret is true", func() {
-			result, err := ReadGardenInternalDomain(ctx, log, client, namespace, true, nil)
+			result, err := ReadGardenInternalDomain(ctx, client, namespace, true, nil)
 			Expect(result).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("need an internal domain secret")))
 		})
 
 		It("should error if more than one secret is found", func() {
-			secret.ObjectMeta.Labels = map[string]string{
+			secret.Labels = map[string]string{
 				constants.GardenRole: constants.GardenRoleInternalDomain,
 			}
-			secret.ObjectMeta.Annotations = map[string]string{
+			secret.Annotations = map[string]string{
 				"dns.gardener.cloud/provider": providerType,
 				"dns.gardener.cloud/domain":   domain,
 				"dns.gardener.cloud/zone":     zone,
@@ -543,23 +541,23 @@ var _ = Describe("Garden", func() {
 			Expect(client.Create(ctx, secret)).To(Succeed())
 			Expect(client.Create(ctx, secret2)).To(Succeed())
 
-			result, err := ReadGardenInternalDomain(ctx, log, client, namespace, true, nil)
+			result, err := ReadGardenInternalDomain(ctx, client, namespace, true, nil)
 			Expect(result).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("more than one internal domain secret")))
 		})
 
 		It("should error if secret is malformed", func() {
-			secret.ObjectMeta.Labels = map[string]string{
+			secret.Labels = map[string]string{
 				constants.GardenRole: constants.GardenRoleInternalDomain,
 			}
-			secret.ObjectMeta.Annotations = map[string]string{
+			secret.Annotations = map[string]string{
 				"dns.gardener.cloud/provider": providerType,
 				// Missing domain annotation
 			}
 
 			Expect(client.Create(ctx, secret)).To(Succeed())
 
-			result, err := ReadGardenInternalDomain(ctx, log, client, namespace, true, nil)
+			result, err := ReadGardenInternalDomain(ctx, client, namespace, true, nil)
 			Expect(result).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("error constructing internal domain from secret")))
 		})
