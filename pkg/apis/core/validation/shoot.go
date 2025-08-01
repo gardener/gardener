@@ -1938,8 +1938,8 @@ func ValidateMachineControllerManagerSettingsOptions(mcmOptions *core.MachineCon
 	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachineHealthTimeout, fldPath.Child("machineHealthTimeout"))...)
 	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachineCreationTimeout, fldPath.Child("machineCreationTimeout"))...)
 
-	if maxEvictRetries := mcmOptions.MaxEvictRetries; ptr.Deref(mcmOptions.MaxEvictRetries, 0) < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxEvictRetries"), *maxEvictRetries, "can not be negative"))
+	if mcmOptions.MaxEvictRetries != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*mcmOptions.MaxEvictRetries), fldPath.Child("maxEvictRetries"))...)
 	}
 
 	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachineInPlaceUpdateTimeout, fldPath.Child("machineInPlaceUpdateTimeout"))...)

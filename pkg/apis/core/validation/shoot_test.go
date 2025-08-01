@@ -7056,11 +7056,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}
 
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
-				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.maxEvictRetries"),
-					"Detail": Equal("can not be negative"),
-				}))))
+				Expect(errList).To(ConsistOf(field.Invalid(field.NewPath("workers[0].machineControllerManagerSettings.maxEvictRetries"), int64(-2), "must be greater than or equal to 0").WithOrigin("minimum")))
 			})
 		})
 		It("should fail when priority is set to value less than -1", func() {
