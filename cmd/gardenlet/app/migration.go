@@ -27,7 +27,6 @@ import (
 	shootsystem "github.com/gardener/gardener/pkg/component/shoot/system"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -37,11 +36,6 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 	log.Info("Migrating deprecated failure-domain.beta.kubernetes.io labels to topology.kubernetes.io")
 	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient()); err != nil {
 		return err
-	}
-
-	log.Info("Cleaning up ingress controller resource lock configmaps")
-	if err := cleanupNginxConfigMaps(ctx, g.mgr.GetClient()); err != nil {
-		return fmt.Errorf("failed deleting nginx ingress controller resource lock configmaps: %w", err)
 	}
 
 	log.Info("Cleaning up prometheus obsolete folders")
@@ -114,26 +108,6 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
-}
-
-// TODO(shafeeqes): Remove this function in gardener v1.125
-func cleanupNginxConfigMaps(ctx context.Context, client client.Client) error {
-	return kubernetesutils.DeleteObjects(
-		ctx,
-		client,
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ingress-controller-seed-leader",
-				Namespace: v1beta1constants.GardenNamespace,
-			},
-		},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ingress-controller-seed-leader-nginx-gardener",
-				Namespace: v1beta1constants.GardenNamespace,
-			},
-		},
-	)
 }
 
 // TODO(vicwicker): Remove this after v1.125 has been released.
