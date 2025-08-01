@@ -3208,6 +3208,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("scanInterval"),
 					"Detail": Equal("must be non-negative"),
 				})))),
+				Entry("valid with verbosity", core.ClusterAutoscaler{
+					Verbosity: &positiveInteger,
+				}, version_1_32, BeEmpty()),
+				Entry("invalid with negative verbosity", core.ClusterAutoscaler{
+					Verbosity: &negativeInteger,
+				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("verbosity"), int64(negativeInteger), "must be greater than or equal to 0").WithOrigin("minimum"))),
 			)
 
 			Describe("taint validation", func() {
