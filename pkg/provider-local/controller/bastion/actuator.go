@@ -155,6 +155,7 @@ func userDataSecretForBastion(bastion *extensionsv1alpha1.Bastion) *corev1.Secre
 func podForBastion(bastion *extensionsv1alpha1.Bastion, image, userDataSecretName string) *corev1.Pod {
 	objectMeta := objectMetaForBastion(bastion)
 	metav1.SetMetaDataLabel(&objectMeta, gardenerutils.NetworkPolicyLabel("machines", SSHPort), v1beta1constants.LabelNetworkPolicyAllowed)
+	metav1.SetMetaDataLabel(&objectMeta, v1beta1constants.LabelNetworkPolicyToDNS, v1beta1constants.LabelNetworkPolicyAllowed)
 
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
