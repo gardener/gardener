@@ -66,6 +66,7 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 	defer g.lock.Unlock()
 
 	g.deleteAllIncomingEdges(VertexTypeSeed, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
+	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllIncomingEdges(VertexTypeWorkloadIdentity, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllIncomingEdges(VertexTypeServiceAccount, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
@@ -103,6 +104,9 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 			}
 			g.addEdge(vertex, managedSeedVertex)
 		}
+
+		// Add seed resources here so that the seed can register itself.
+		addSeedResources(seedTemplate.Spec, g, seedVertex)
 	}
 
 	if gardenletConfig == nil || managedSeed.Spec.Gardenlet.Bootstrap == nil {
