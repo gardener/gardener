@@ -1,6 +1,16 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Plutono --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
   "editable": true,
   "gnetId": null,
@@ -9,6 +19,7 @@
   "panels": [
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -31,6 +42,10 @@
       ],
       "datasource": "prometheus",
       "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -49,10 +64,8 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Kubernetes Control Plane Status",
           "targetBlank": true,
           "title": "Kubernetes Control Plane Status",
-          "type": "dashboard",
           "url": "/d/kubernetes-control-plane-status/kubernetes-control-plane-status"
         }
       ],
@@ -131,6 +144,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -149,10 +166,8 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Kubernetes Control Plane Status",
           "targetBlank": true,
           "title": "Kubernetes Control Plane Status",
-          "type": "dashboard",
           "url": "/d/kubernetes-control-plane-status/kubernetes-control-plane-status"
         }
       ],
@@ -231,6 +246,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -249,10 +268,8 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Kubernetes Control Plane Status",
           "targetBlank": true,
           "title": "Kubernetes Control Plane Status",
-          "type": "dashboard",
           "url": "/d/kubernetes-control-plane-status/kubernetes-control-plane-status"
         }
       ],
@@ -331,6 +348,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -349,12 +370,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "etcd",
-          "params": "?orgId=1&var-cluster=main",
           "targetBlank": true,
           "title": "etcd",
-          "type": "dashboard",
-          "url": "/d/etcd/etcd"
+          "url": "/d/etcd/etcd??orgId=1&var-cluster=main"
         }
       ],
       "mappingType": 1,
@@ -432,6 +450,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -450,21 +472,20 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "etcd",
-          "params": "?orgId=1&var-cluster=events",
           "targetBlank": true,
           "title": "etcd",
-          "type": "dashboard",
-          "url": "/d/etcd/etcd"
+          "url": "/d/etcd/etcd??orgId=1&var-cluster=events"
         }
       ],
       "mappingType": 1,
       "mappingTypes": [
         {
+          "$$hashKey": "object:335",
           "name": "value to text",
           "value": 1
         },
         {
+          "$$hashKey": "object:336",
           "name": "range to text",
           "value": 2
         }
@@ -506,16 +527,19 @@
       "valueFontSize": "80%",
       "valueMaps": [
         {
+          "$$hashKey": "object:338",
           "op": "=",
           "text": "UP",
           "value": "null"
         },
         {
+          "$$hashKey": "object:339",
           "op": "=",
           "text": "UP",
           "value": "0"
         },
         {
+          "$$hashKey": "object:340",
           "op": "=",
           "text": "DOWN",
           "value": "1"
@@ -533,6 +557,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -553,10 +581,12 @@
       "mappingType": 1,
       "mappingTypes": [
         {
+          "$$hashKey": "object:218",
           "name": "value to text",
           "value": 1
         },
         {
+          "$$hashKey": "object:219",
           "name": "range to text",
           "value": 2
         }
@@ -584,9 +614,12 @@
       "tableColumn": "",
       "targets": [
         {
+          "exemplar": true,
           "expr": "  (absent(up{job=\"cluster-autoscaler\"} == 1) or on () vector(0))\nand on ()\n  kube_deployment_spec_replicas{deployment=\"cluster-autoscaler\"} > 0",
           "format": "time_series",
+          "hide": false,
           "instant": true,
+          "interval": "",
           "intervalFactor": 10,
           "legendFormat": "",
           "refId": "A"
@@ -598,16 +631,19 @@
       "valueFontSize": "80%",
       "valueMaps": [
         {
+          "$$hashKey": "object:221",
           "op": "=",
           "text": "not deployed",
           "value": "null"
         },
         {
+          "$$hashKey": "object:222",
           "op": "=",
           "text": "UP",
           "value": "0"
         },
         {
+          "$$hashKey": "object:223",
           "op": "=",
           "text": "DOWN",
           "value": "1"
@@ -617,6 +653,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -639,6 +676,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -731,6 +772,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -749,10 +794,8 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "CoreDNS",
           "targetBlank": true,
           "title": "CoreDNS",
-          "type": "dashboard",
           "url": "/d/core-dns/coredns"
         }
       ],
@@ -823,6 +866,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -845,6 +889,10 @@
       ],
       "datasource": "prometheus",
       "editable": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -927,7 +975,12 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "percentunit",
       "gauge": {
         "maxValue": 0.06,
@@ -959,7 +1012,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "pluginVersion": "6.2.0",
       "postfix": "",
       "postfixFontSize": "50%",
@@ -1007,6 +1059,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1029,6 +1082,10 @@
       ],
       "datasource": "prometheus",
       "editable": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1114,6 +1171,10 @@
       ],
       "datasource": "prometheus",
       "editable": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1198,6 +1259,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -1290,6 +1355,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -1382,6 +1451,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -1474,6 +1547,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -1566,6 +1643,10 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 1,
@@ -1651,6 +1732,10 @@
     {
       "columns": [],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fontSize": "100%",
       "gridPos": {
         "h": 10,
@@ -1670,6 +1755,7 @@
       "styles": [
         {
           "alias": "Name",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1686,6 +1772,7 @@
         },
         {
           "alias": "State",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1702,6 +1789,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1718,6 +1806,7 @@
         },
         {
           "alias": "Count",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1734,6 +1823,7 @@
         },
         {
           "alias": "Severity",
+          "align": "auto",
           "colorMode": "value",
           "colors": [
             "rgba(50, 172, 45, 0.97)",
@@ -1767,7 +1857,7 @@
       ],
       "title": "Alert overview",
       "transform": "table",
-      "type": "table"
+      "type": "table-old"
     },
     {
       "aliasColors": {},
@@ -1775,13 +1865,19 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 10,
         "w": 12,
         "x": 12,
         "y": 19
       },
+      "hiddenSeries": false,
       "id": 39,
       "legend": {
         "alignAsTable": true,
@@ -1800,7 +1896,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.40",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1859,7 +1959,7 @@
       }
     }
   ],
-  "schemaVersion": 18,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [
     "controlplane",
