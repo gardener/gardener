@@ -11,6 +11,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
@@ -56,8 +57,9 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 								Type:         "some-machine-type",
 								Architecture: ptr.To("amd64"),
 							},
-							Maximum: 2,
-							Minimum: 1,
+							Maximum:        2,
+							Minimum:        1,
+							MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 						},
 					},
 				},

@@ -38,7 +38,7 @@ import (
 	"github.com/gardener/gardener/test/utils/shoots/update/inplace"
 )
 
-var newWorkerPoolMachineImageVersion = flag.String("version-worker-pools", "", "the version to use for .spec.provider.workers[].machine.image.version")
+var newWorkerPoolMachineImageVersion = flag.String("machine-image-version", "", "the version to use for .spec.provider.workers[].machine.image.version")
 
 const UpdateMachineImageVersionTimeout = 45 * time.Minute
 
