@@ -96,7 +96,6 @@ var gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, select
 // ReadGardenInternalDomain reads the internal domain information from the Garden cluster.
 func ReadGardenInternalDomain(
 	ctx context.Context,
-	log logr.Logger,
 	c client.Reader,
 	namespace string,
 	enforceSecret bool,

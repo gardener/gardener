@@ -535,7 +535,6 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 		if oldDomain != newDomain {
 			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because internal domain would change from %q to %q", oldDomain, newDomain))
 		}
-
 	} else if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
 		if wasShootRescheduledToNewSeed(c.shoot) {
 			return admission.NewForbidden(a, fmt.Errorf("shoot spec cannot be changed because shoot has been rescheduled to a new seed"))
