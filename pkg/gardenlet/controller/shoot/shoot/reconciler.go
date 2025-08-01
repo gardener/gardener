@@ -49,6 +49,7 @@ import (
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstatus"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -586,18 +587,18 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		startRotationCA(shoot, &now)
 		startRotationServiceAccountKey(shoot, &now)
 		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
-			startRotationSSHKeypair(shoot, &now)
+			shootstatus.StartRotationSSHKeypair(shoot, &now)
 		}
-		startRotationObservability(shoot, &now)
+		shootstatus.StartRotationObservability(shoot, &now)
 		startRotationETCDEncryptionKey(shoot, &now)
 	case v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
 		mustRemoveOperationAnnotation = true
 		startRotationCAWithoutWorkersRollout(shoot, &now)
 		startRotationServiceAccountKeyWithoutWorkersRollout(shoot, &now)
 		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
-			startRotationSSHKeypair(shoot, &now)
+			shootstatus.StartRotationSSHKeypair(shoot, &now)
 		}
-		startRotationObservability(shoot, &now)
+		shootstatus.StartRotationObservability(shoot, &now)
 		startRotationETCDEncryptionKey(shoot, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
@@ -618,12 +619,12 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	case v1beta1constants.ShootOperationRotateSSHKeypair:
 		mustRemoveOperationAnnotation = true
 		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
-			startRotationSSHKeypair(shoot, &now)
+			shootstatus.StartRotationSSHKeypair(shoot, &now)
 		}
 
 	case v1beta1constants.OperationRotateObservabilityCredentials:
 		mustRemoveOperationAnnotation = true
-		startRotationObservability(shoot, &now)
+		shootstatus.StartRotationObservability(shoot, &now)
 
 	case v1beta1constants.OperationRotateServiceAccountKeyStart:
 		mustRemoveOperationAnnotation = true
@@ -1147,18 +1148,6 @@ func completeRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *meta
 	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationCompleting
 		rotation.LastCompletionTriggeredTime = now
-	})
-}
-
-func startRotationSSHKeypair(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
-	v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
-		rotation.LastInitiationTime = now
-	})
-}
-
-func startRotationObservability(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
-	v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ObservabilityRotation) {
-		rotation.LastInitiationTime = now
 	})
 }
 
