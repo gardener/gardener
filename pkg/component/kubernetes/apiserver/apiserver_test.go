@@ -106,7 +106,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameVPNSeedClient           = "vpn-seed-client"
 		secretNameVPNSeedServerTLSAuth    = "vpn-seed-server-tlsauth-a1d0aa00"
 
-		configMapNameAdmissionConfigs  = "kube-apiserver-admission-config-e38ff146"
+		configMapNameAdmissionConfigs  = "kube-apiserver-admission-config-07c5248a"
 		secretNameAdmissionKubeconfigs = "kube-apiserver-admission-kubeconfigs-e3b0c442"
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-b2b49c90"
 		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
@@ -1396,7 +1396,7 @@ resources:
 				It("should successfully deploy the configmap resource w/o admission plugins", func() {
 					configMapAdmission = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
-						Data: map[string]string{"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+						Data: map[string]string{"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins: null
 `},
@@ -1465,7 +1465,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 					configMapAdmission = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
 						Data: map[string]string{
-							"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+							"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins:
 - configuration: null
@@ -1555,7 +1555,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 					configMapAdmission = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
 						Data: map[string]string{
-							"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+							"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins:
 - configuration: null
@@ -1632,7 +1632,7 @@ kubeConfigFile: ""
 					configMapAdmission = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
 						Data: map[string]string{
-							"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+							"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins:
 - configuration: null
@@ -2762,7 +2762,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-af50ac19":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
-						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
+						"reference.resources.gardener.cloud/configmap-0ddefe9e": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
 						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
 					}
@@ -2984,7 +2984,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-af50ac19":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
-						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
+						"reference.resources.gardener.cloud/configmap-0ddefe9e": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
 						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
 					}
