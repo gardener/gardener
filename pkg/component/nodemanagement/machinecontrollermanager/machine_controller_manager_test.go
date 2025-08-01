@@ -21,7 +21,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
@@ -45,9 +44,8 @@ var _ = Describe("MachineControllerManager", func() {
 		ctx       = context.Background()
 		namespace string
 
-		image        = "mcm-image:tag"
-		namespaceUID = types.UID("uid")
-		replicas     = int32(1)
+		image    = "mcm-image:tag"
+		replicas = int32(1)
 
 		fakeClient client.Client
 		sm         secretsmanager.Interface
@@ -60,7 +58,6 @@ var _ = Describe("MachineControllerManager", func() {
 		roleBindingYAML        string
 
 		serviceAccount        *corev1.ServiceAccount
-		clusterRoleBinding    *rbacv1.ClusterRoleBinding
 		roleBinding           *rbacv1.RoleBinding
 		role                  *rbacv1.Role
 		service               *corev1.Service
@@ -96,30 +93,6 @@ var _ = Describe("MachineControllerManager", func() {
 				Namespace: namespace,
 			},
 			AutomountServiceAccountToken: ptr.To(false),
-		}
-
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "machine-controller-manager-" + namespace,
-				OwnerReferences: []metav1.OwnerReference{{
-					APIVersion:         "v1",
-					Kind:               "Namespace",
-					Name:               namespace,
-					UID:                namespaceUID,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(true),
-				}},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "ClusterRole",
-				Name:     "system:machine-controller-manager-runtime",
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      "ServiceAccount",
-				Name:      "machine-controller-manager",
-				Namespace: namespace,
-			}},
 		}
 
 		roleBinding = &rbacv1.RoleBinding{
@@ -587,10 +560,6 @@ subjects:
 			serviceAccount.ResourceVersion = "1"
 			Expect(actualServiceAccount).To(DeepEqual(serviceAccount))
 
-			//TODO(@aaronfern): Remove this after v1.123 is released
-			actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(BeNotFoundError())
-
 			actualRoleBinding := &rbacv1.RoleBinding{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), actualRoleBinding)).To(Succeed())
 			roleBinding.ResourceVersion = "1"
@@ -717,24 +686,9 @@ subjects:
 		})
 	})
 
-	Describe("#MigrateRBAC", func() {
-		It("should successfully delete existing clusterRoleBinding and create a role/roleBinding when MigrateRBAC is called", func() {
-			Expect(fakeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), &rbacv1.Role{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), &rbacv1.RoleBinding{})).To(BeNotFoundError())
-
-			Expect(mcm.MigrateRBAC(ctx)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), &rbacv1.Role{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), &rbacv1.RoleBinding{})).To(Succeed())
-		})
-	})
-
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
 			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
-			Expect(fakeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
 			Expect(fakeClient.Create(ctx, role)).To(Succeed())
 			Expect(fakeClient.Create(ctx, roleBinding)).To(Succeed())
 			Expect(fakeClient.Create(ctx, service)).To(Succeed())
@@ -756,7 +710,6 @@ subjects:
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), &appsv1.Deployment{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), &corev1.ServiceAccount{})).To(BeNotFoundError())
