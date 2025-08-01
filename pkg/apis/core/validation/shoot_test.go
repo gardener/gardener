@@ -7038,7 +7038,32 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
-			It("should forbid setting MachineInPlaceUpdateTimeout to a negative value", func() {
+
+			It("should forbid setting MachineInPlaceUpdateTimeout if update strategy is AutoRollingUpdate", func() {
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					MachineInPlaceUpdateTimeout: &metav1.Duration{Duration: time.Minute * 2},
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.inPlaceUpdateTimeout"),
+					"Detail": Equal("can only be set when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"),
+				}))))
+			})
+			It("should allow setting MachineInPlaceUpdateTimeout to positive value for update strategy AutoInPlaceUpdate", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					MachineInPlaceUpdateTimeout: &metav1.Duration{Duration: time.Minute * 2},
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(BeEmpty())
+			})
+			It("should forbid setting MachineInPlaceUpdateTimeout to negative value for update strategy AutoInPlaceUpdate", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					MachineInPlaceUpdateTimeout: &metav1.Duration{Duration: time.Minute * -2},
 				}
@@ -7046,10 +7071,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.machineInPlaceUpdateTimeout"),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.inPlaceUpdateTimeout"),
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
+
 			It("should forbid setting MaxEvictRetries to a negative value", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					MaxEvictRetries: ptr.To(int32(-2)),
