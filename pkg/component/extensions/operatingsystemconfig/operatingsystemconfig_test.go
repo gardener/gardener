@@ -185,7 +185,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					caBundle = fmt.Sprintf("%s\n%s", caBundle, *worker.CABundle)
 				}
 
-				key := KeyV1(worker.Name, k8sVersion, worker.CRI)
+				key := KeyV2(k8sVersion, values.CredentialsRotationStatus, &worker, values.NodeLocalDNSEnabled, kubeletConfig)
 				if inPlaceUpdate {
 					key = fmt.Sprintf("gardener-node-agent-%s", worker.Name)
 				}
@@ -233,10 +233,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				originalUnits, originalFiles, _ := originalConfigFn(componentsContext)
 
-				name := key + "-" + worker.Machine.Image.Name + "-init"
-				if inPlaceUpdate {
-					name = key + "-init"
-				}
+				name := key + "-init"
 
 				oscInit := &extensionsv1alpha1.OperatingSystemConfig{
 					ObjectMeta: metav1.ObjectMeta{
@@ -274,10 +271,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					oscInit.Spec.Files = append(oscInit.Spec.Files, sFiles...)
 				}
 
-				name = key + "-" + worker.Machine.Image.Name + "-original"
-				if inPlaceUpdate {
-					name = key + "-original"
-				}
+				name = key + "-original"
 
 				oscOriginal := &extensionsv1alpha1.OperatingSystemConfig{
 					ObjectMeta: metav1.ObjectMeta{
@@ -480,13 +474,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Data: map[string][]byte{
 					"pools": []byte(`pools:
     - name: worker1
-      currentVersion: 1
+      currentVersion: 2
       hashVersionToOSCKey:
-        1: gardener-node-agent-worker1-77ac3
+        2: gardener-node-agent-worker1-4692a28d44cc6a0c
     - name: worker2
-      currentVersion: 1
+      currentVersion: 2
       hashVersionToOSCKey:
-        1: gardener-node-agent-worker2-d9e53
+        2: gardener-node-agent-worker2-2ad2eaf0b80f61a3
 `)},
 			}
 
@@ -513,13 +507,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 				pools := secret.Data["pools"]
 				Expect(string(pools)).To(Equal(`pools:
     - name: worker1
-      currentVersion: 1
+      currentVersion: 2
       hashVersionToOSCKey:
-        1: gardener-node-agent-worker1-77ac3
+        2: gardener-node-agent-worker1-4692a28d44cc6a0c
     - name: worker2
-      currentVersion: 1
+      currentVersion: 2
       hashVersionToOSCKey:
-        1: gardener-node-agent-worker2-d9e53
+        2: gardener-node-agent-worker2-2ad2eaf0b80f61a3
 `))
 			})
 
@@ -640,14 +634,12 @@ var _ = Describe("OperatingSystemConfig", func() {
 				pools := secret.Data["pools"]
 				Expect(string(pools)).To(Equal(`pools:
     - name: worker1
-      currentVersion: 1
+      currentVersion: 2
       hashVersionToOSCKey:
-        1: gardener-node-agent-worker1-77ac3
         2: worker1-version2
     - name: worker2
-      currentVersion: 1
+      currentVersion: 2
       hashVersionToOSCKey:
-        1: gardener-node-agent-worker2-d9e53
         2: worker2-version2
 `))
 			})
@@ -881,17 +873,17 @@ var _ = Describe("OperatingSystemConfig", func() {
 					if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
 						k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
 					}
-					key := KeyV1(worker.Name, k8sVersion, worker.CRI)
+					key := KeyV2(k8sVersion, values.CredentialsRotationStatus, &worker, values.NodeLocalDNSEnabled, kubeletConfig)
 
 					extensions = append(extensions,
 						gardencorev1beta1.ExtensionResourceState{
-							Name:    ptr.To(key + "-" + worker.Machine.Image.Name + "-init"),
+							Name:    ptr.To(key + "-init"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
 							Purpose: ptr.To(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
 							State:   &runtime.RawExtension{Raw: stateInit},
 						},
 						gardencorev1beta1.ExtensionResourceState{
-							Name:    ptr.To(key + "-" + worker.Machine.Image.Name + "-original"),
+							Name:    ptr.To(key + "-original"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
 							Purpose: ptr.To(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
 							State:   &runtime.RawExtension{Raw: stateOriginal},
@@ -1153,22 +1145,26 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
-							Object:                      worker1OSCDownloader,
+							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							Object:                        worker1OSCDownloader,
+							IncludeSecretNameInWorkerPool: true,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
-							Object:                      worker1OSCOriginal,
+							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							Object:                        worker1OSCOriginal,
+							IncludeSecretNameInWorkerPool: true,
 						},
 					},
 					worker2Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
-							Object:                      worker2OSCDownloader,
+							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							Object:                        worker2OSCDownloader,
+							IncludeSecretNameInWorkerPool: true,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
-							Object:                      worker2OSCOriginal,
+							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							Object:                        worker2OSCOriginal,
+							IncludeSecretNameInWorkerPool: true,
 						},
 					},
 				}))
@@ -1213,24 +1209,28 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
-							SecretName:                  ptr.To("cc-" + expected[0].Name),
-							Object:                      worker1OSCDownloader,
+							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							SecretName:                    ptr.To("cc-" + expected[0].Name),
+							Object:                        worker1OSCDownloader,
+							IncludeSecretNameInWorkerPool: true,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
-							Object:                      worker1OSCOriginal,
+							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							Object:                        worker1OSCOriginal,
+							IncludeSecretNameInWorkerPool: true,
 						},
 					},
 					worker2Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
-							SecretName:                  ptr.To("cc-" + expected[2].Name),
-							Object:                      worker2OSCDownloader,
+							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							SecretName:                    ptr.To("cc-" + expected[2].Name),
+							Object:                        worker2OSCDownloader,
+							IncludeSecretNameInWorkerPool: true,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
-							Object:                      worker2OSCOriginal,
+							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							Object:                        worker2OSCOriginal,
+							IncludeSecretNameInWorkerPool: true,
 						},
 					},
 				}))
@@ -1284,7 +1284,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should return error if resources still exist", func() {
 				Expect(c.Create(ctx, expected[0])).To(Succeed())
-				Expect(defaultDepWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("OperatingSystemConfig test-namespace/gardener-node-agent-worker1-77ac3-type1-init is still present")))
+				Expect(defaultDepWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("OperatingSystemConfig test-namespace/gardener-node-agent-worker1-4692a28d44cc6a0c-init is still present")))
 			})
 		})
 
