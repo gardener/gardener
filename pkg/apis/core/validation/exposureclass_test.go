@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
@@ -29,6 +30,47 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 	})
 
 	Describe("#ValidateExposureClass", func() {
+		DescribeTable("ExposureClass metadata",
+			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
+				exposureClass.ObjectMeta = objectMeta
+
+				errorList := ValidateExposureClass(exposureClass)
+
+				Expect(errorList).To(matcher)
+			},
+
+			Entry("should forbid ExposureClass with empty metadata",
+				metav1.ObjectMeta{},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("metadata.name"),
+					})),
+				),
+			),
+			Entry("should forbid ExposureClass with empty name",
+				metav1.ObjectMeta{Name: ""},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid ExposureClass with '.' in the name (not a DNS-1123 label compliant name)",
+				metav1.ObjectMeta{Name: "foo.test"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid ExposureClass with '_' in the name (not a DNS-1123 subdomain)",
+				metav1.ObjectMeta{Name: "foo_test"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+		)
+
 		It("should pass as exposure class is valid", func() {
 			errorList := ValidateExposureClass(exposureClass)
 			Expect(errorList).To(BeEmpty())

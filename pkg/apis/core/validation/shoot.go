@@ -285,6 +285,12 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, ValidateTolerations(spec.Tolerations, fldPath.Child("tolerations"))...)
 	allErrs = append(allErrs, ValidateSystemComponents(spec.SystemComponents, fldPath.Child("systemComponents"), workerless)...)
 
+	if spec.ExposureClassName != nil {
+		for _, err := range validation.IsDNS1123Subdomain(*spec.ExposureClassName) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("exposureClassName"), *spec.ExposureClassName, fmt.Sprintf("exposureClassName is not a valid DNS subdomain: %q", err)))
+		}
+	}
+
 	return allErrs
 }
 
@@ -524,6 +530,23 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 	}
 
 	if helper.NginxIngressEnabled(addons) {
+		for i, sourceRange := range addons.NginxIngress.LoadBalancerSourceRanges {
+			allErrs = append(allErrs, validation.IsValidCIDR(fldPath.Child("nginxIngress", "loadBalancerSourceRanges").Index(i), sourceRange)...)
+		}
+
+		totalSize := 0
+
+		for key, value := range addons.NginxIngress.Config {
+			for _, msg := range validation.IsConfigMapKey(key) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("nginxIngress", "config").Key(key), key, msg))
+			}
+			totalSize += len(value)
+		}
+
+		if totalSize > corev1.MaxSecretSize {
+			allErrs = append(allErrs, field.TooLong(fldPath.Child("nginxIngress", "config"), "", corev1.MaxSecretSize))
+		}
+
 		if policy := addons.NginxIngress.ExternalTrafficPolicy; policy != nil {
 			if !availableNginxIngressExternalTrafficPolicies.Has(string(*policy)) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginxIngress", "externalTrafficPolicy"), *policy, sets.List(availableNginxIngressExternalTrafficPolicies)))
@@ -979,8 +1002,12 @@ func validateNetworking(networking *core.Networking, workerless bool, fldPath *f
 			return allErrs
 		}
 
+		path := fldPath.Child("type")
 		if len(ptr.Deref(networking.Type, "")) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
+			allErrs = append(allErrs, field.Required(path, "networking type must be provided"))
+		} else if len(metav1validation.ValidateLabelName(v1beta1constants.LabelExtensionNetworkingTypePrefix+ptr.Deref(networking.Type, ""), path)) > 0 {
+			// The original errors returned by ValidateLabelName may be irritating due to the label prefix.
+			allErrs = append(allErrs, field.Invalid(path, networking.Type, "type must be a valid label name"))
 		}
 	}
 
@@ -2635,6 +2662,10 @@ func ValidateCoreDNSRewritingCommonSuffixes(commonSuffixes []string, fldPath *fi
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("commonSuffixes").Index(i), s))
 		} else {
 			suffixes.Insert(s)
+		}
+
+		if len(validation.IsDNS1123Subdomain(strings.TrimSuffix(s, "."))) != 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("commonSuffixes").Index(i), s, "must be a valid DNS subdomain"))
 		}
 	}
 
