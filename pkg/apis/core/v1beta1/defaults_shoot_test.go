@@ -856,8 +856,8 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Provider.Workers[0].MachineControllerManagerSettings).NotTo(BeNil())
 			Expect(obj.Spec.Provider.Workers[0].MachineControllerManagerSettings.DisableHealthTimeout).To(PointTo(BeTrue()))
 
-			Expect(obj.Spec.Provider.Workers[1].MaxSurge).To(PointTo(Equal(intstr.FromInt32(0))))
-			Expect(obj.Spec.Provider.Workers[1].MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
+			Expect(obj.Spec.Provider.Workers[1].MaxSurge).To(BeNil())
+			Expect(obj.Spec.Provider.Workers[1].MaxUnavailable).To(BeNil())
 			Expect(obj.Spec.Provider.Workers[1].SystemComponents).NotTo(BeNil())
 			Expect(obj.Spec.Provider.Workers[1].SystemComponents.Allow).To(BeTrue())
 			Expect(obj.Spec.Provider.Workers[1].UpdateStrategy).To(PointTo(Equal(ManualInPlaceUpdate)))
