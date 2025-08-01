@@ -34,11 +34,13 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/test"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	testutils "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -89,6 +91,8 @@ var _ = Describe("Vali", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, false))
+
 			By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
 			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 		})
@@ -121,101 +125,206 @@ var _ = Describe("Vali", func() {
 			}
 		})
 
-		It("should successfully deploy all resources for shoot", func() {
-			valiDeployer := New(
-				c,
-				namespace,
-				fakeSecretManager,
-				Values{
-					Replicas:                1,
-					Storage:                 &storage,
-					ShootNodeLoggingEnabled: true,
-					ValiImage:               valiImage,
-					CuratorImage:            curatorImage,
-					InitLargeDirImage:       initLargeDirImage,
-					TelegrafImage:           telegrafImage,
-					KubeRBACProxyImage:      kubeRBACProxyImage,
-					WithRBACProxy:           true,
-					PriorityClassName:       priorityClassName,
-					ClusterType:             "shoot",
-					IngressHost:             valiHost,
-				},
-			)
+		Context("OpenTelemetryCollector featuregate disabled", func() {
+			It("should successfully deploy all resources for shoot", func() {
+				valiDeployer := New(
+					c,
+					namespace,
+					fakeSecretManager,
+					Values{
+						Replicas:                1,
+						Storage:                 &storage,
+						ShootNodeLoggingEnabled: true,
+						ValiImage:               valiImage,
+						CuratorImage:            curatorImage,
+						InitLargeDirImage:       initLargeDirImage,
+						TelegrafImage:           telegrafImage,
+						KubeRBACProxyImage:      kubeRBACProxyImage,
+						WithRBACProxy:           true,
+						PriorityClassName:       priorityClassName,
+						ClusterType:             "shoot",
+						IngressHost:             valiHost,
+					},
+				)
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
-			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+				Expect(valiDeployer.Deploy(ctx)).To(Succeed())
 
-			Expect(c.Get(ctx, client.ObjectKey{Name: valitailShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBacProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: valitailShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBacProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			expectedMr := &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            managedResourceName,
-					Namespace:       namespace,
-					Labels:          map[string]string{"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy"},
-					ResourceVersion: "1",
-				},
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
-					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResource.Spec.SecretRefs[0].Name,
-					}},
-					KeepObjects: ptr.To(false),
-				},
-			}
-			utilruntime.Must(references.InjectAnnotations(expectedMr))
-			Expect(managedResource).To(DeepEqual(expectedMr))
-			Expect(managedResource).To(consistOf(
-				getTelegrafConfigMap(),
-				getValiConfigMap(),
-				getVPA(true),
-				getIngress(),
-				getService(true, "shoot"),
-				getStatefulSet(true),
-				getServiceMonitor("shoot", true),
-				getPrometheusRule("shoot"),
-			))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				expectedMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceName,
+						Namespace:       namespace,
+						Labels:          map[string]string{"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy"},
+						ResourceVersion: "1",
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						Class: ptr.To("seed"),
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResource.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: ptr.To(false),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
+				Expect(managedResource).To(consistOf(
+					getTelegrafConfigMap(),
+					getValiConfigMap(),
+					getVPA(true),
+					getIngress("/vali/api/v1/push", "logging", 8080),
+					getService(true, "shoot"),
+					getStatefulSet(true),
+					getServiceMonitor("shoot", true),
+					getPrometheusRule("shoot"),
+				))
 
-			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
-			expectedTargetMr := &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            managedResourceNameTarget,
-					Namespace:       namespace,
-					ResourceVersion: "1",
-					Labels:          map[string]string{"origin": "gardener"},
-				},
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResourceTarget.Spec.SecretRefs[0].Name,
-					}},
-					KeepObjects: ptr.To(false),
-				},
-			}
-			utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
-			Expect(managedResourceTarget).To(DeepEqual(expectedTargetMr))
-			Expect(managedResourceTarget).To(consistOf(
-				getKubeRBACProxyClusterRoleBinding(),
-				getValitailClusterRole(),
-				getValitailClusterRoleBinding(),
-			))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
+				expectedTargetMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceNameTarget,
+						Namespace:       namespace,
+						ResourceVersion: "1",
+						Labels:          map[string]string{"origin": "gardener"},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResourceTarget.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: ptr.To(false),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
+				Expect(managedResourceTarget).To(DeepEqual(expectedTargetMr))
+				Expect(managedResourceTarget).To(consistOf(
+					getKubeRBACProxyClusterRoleBinding(),
+					getValitailClusterRole("/vali/api/v1/push"),
+					getValitailClusterRoleBinding(),
+				))
 
-			managedResourceSecretTarget.Name = managedResourceTarget.Spec.SecretRefs[0].Name
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
-			Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
-			Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+				managedResourceSecretTarget.Name = managedResourceTarget.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
+				Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			test.PrometheusRule(getPrometheusRule("shoot"), "testdata/shoot-vali.prometheusrule.test.yaml")
+				test.PrometheusRule(getPrometheusRule("shoot"), "testdata/shoot-vali.prometheusrule.test.yaml")
+			})
+		})
+
+		Context("OpenTelemetryCollector featuregate enabled", func() {
+			BeforeEach(func() {
+				DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, true))
+			})
+
+			It("should successfully deploy all resources for shoot", func() {
+				valiDeployer := New(
+					c,
+					namespace,
+					fakeSecretManager,
+					Values{
+						Replicas:                1,
+						Storage:                 &storage,
+						ShootNodeLoggingEnabled: true,
+						ValiImage:               valiImage,
+						CuratorImage:            curatorImage,
+						InitLargeDirImage:       initLargeDirImage,
+						TelegrafImage:           telegrafImage,
+						KubeRBACProxyImage:      kubeRBACProxyImage,
+						WithRBACProxy:           true,
+						PriorityClassName:       priorityClassName,
+						ClusterType:             "shoot",
+						IngressHost:             valiHost,
+					},
+				)
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
+
+				Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKey{Name: valitailShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBacProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				expectedMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceName,
+						Namespace:       namespace,
+						Labels:          map[string]string{"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy"},
+						ResourceVersion: "1",
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						Class: ptr.To("seed"),
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResource.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: ptr.To(false),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
+				Expect(managedResource).To(consistOf(
+					getTelegrafConfigMap(),
+					getValiConfigMap(),
+					getVPA(true),
+					getIngress("/loki/api/v1/push", "opentelemetry-collector-collector", 8080),
+					getService(true, "shoot"),
+					getStatefulSet(true),
+					getServiceMonitor("shoot", true),
+					getPrometheusRule("shoot"),
+				))
+
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
+				expectedTargetMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceNameTarget,
+						Namespace:       namespace,
+						ResourceVersion: "1",
+						Labels:          map[string]string{"origin": "gardener"},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResourceTarget.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: ptr.To(false),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
+				Expect(managedResourceTarget).To(DeepEqual(expectedTargetMr))
+				Expect(managedResourceTarget).To(consistOf(
+					getKubeRBACProxyClusterRoleBinding(),
+					getValitailClusterRole("/loki/api/v1/push"),
+					getValitailClusterRoleBinding(),
+				))
+
+				managedResourceSecretTarget.Name = managedResourceTarget.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
+				Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+				test.PrometheusRule(getPrometheusRule("shoot"), "testdata/shoot-vali.prometheusrule.test.yaml")
+			})
 		})
 
 		It("should successfully deploy all resources for seed", func() {
@@ -1057,7 +1166,7 @@ func getVPA(isRBACProxyEnabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
 	return vpa
 }
 
-func getIngress() *networkingv1.Ingress {
+func getIngress(path, serviceName string, port int32) *networkingv1.Ingress {
 	pathType := networkingv1.PathTypePrefix
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1082,13 +1191,13 @@ func getIngress() *networkingv1.Ingress {
 								{
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
-											Name: "logging",
+											Name: serviceName,
 											Port: networkingv1.ServiceBackendPort{
-												Number: 8080,
+												Number: port,
 											},
 										},
 									},
-									Path:     "/vali/api/v1/push",
+									Path:     path,
 									PathType: &pathType,
 								},
 							},
@@ -1455,7 +1564,7 @@ func getKubeRBACProxyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-func getValitailClusterRole() *rbacv1.ClusterRole {
+func getValitailClusterRole(path string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "gardener.cloud:logging:valitail",
@@ -1478,7 +1587,7 @@ func getValitailClusterRole() *rbacv1.ClusterRole {
 				},
 			},
 			{
-				NonResourceURLs: []string{"/vali/api/v1/push"},
+				NonResourceURLs: []string{path},
 				Verbs:           []string{"create"},
 			},
 		},
