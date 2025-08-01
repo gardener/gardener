@@ -201,7 +201,6 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 
 		directoryOrCreate  = corev1.HostPathDirectoryOrCreate
 		fileOrCreate       = corev1.HostPathFileOrCreate
-		k8sGreaterEqual128 = versionutils.ConstraintK8sGreaterEqual128.Check(pool.KubernetesVersion)
 		k8sGreaterEqual129 = versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion)
 
 		daemonSet = &appsv1.DaemonSet{
@@ -254,7 +253,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 						HostNetwork:        true,
 						ServiceAccountName: k.serviceAccount.Name,
 						Containers: []corev1.Container{
-							k.getKubeProxyContainer(k8sGreaterEqual129, k8sGreaterEqual128, pool.Image, false),
+							k.getKubeProxyContainer(k8sGreaterEqual129, pool.Image, false),
 							{
 								// sidecar container with fix for conntrack
 								Name:            containerNameConntrackFix,
@@ -535,14 +534,13 @@ func (k *kubeProxy) getInitContainers(kubernetesVersion *semver.Version, image s
 
 	k8sGreaterEqual129 := versionutils.ConstraintK8sGreaterEqual129.Check(kubernetesVersion)
 	if k8sGreaterEqual129 {
-		k8sGreaterEqual128 := versionutils.ConstraintK8sGreaterEqual128.Check(kubernetesVersion)
-		initContainers = append(initContainers, k.getKubeProxyContainer(k8sGreaterEqual129, k8sGreaterEqual128, image, true))
+		initContainers = append(initContainers, k.getKubeProxyContainer(k8sGreaterEqual129, image, true))
 	}
 
 	return initContainers
 }
 
-func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129, k8sGreaterEqual128 bool, image string, init bool) corev1.Container {
+func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129 bool, image string, init bool) corev1.Container {
 	container := corev1.Container{
 		Name:            containerName,
 		Image:           image,
@@ -605,14 +603,10 @@ func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129, k8sGreaterEqual128
 			Protocol:      corev1.ProtocolTCP,
 		}}
 
-		urlPath := "/healthz"
-		if k8sGreaterEqual128 {
-			urlPath = "/livez"
-		}
 		container.ReadinessProbe = &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path:   urlPath,
+					Path:   "/livez",
 					Port:   intstr.FromInt32(portHealthz),
 					Scheme: corev1.URISchemeHTTP,
 				},
