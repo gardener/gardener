@@ -1942,10 +1942,15 @@ func ValidateMachineControllerManagerSettingsOptions(mcmOptions *core.MachineCon
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*mcmOptions.MaxEvictRetries), fldPath.Child("maxEvictRetries"))...)
 	}
 
-	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachineInPlaceUpdateTimeout, fldPath.Child("machineInPlaceUpdateTimeout"))...)
-
-	if ptr.Deref(mcmOptions.DisableHealthTimeout, false) && !helper.IsUpdateStrategyInPlace(machineUpdateStrategy) {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("disableHealthTimeout"), "can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"))
+	if helper.IsUpdateStrategyInPlace(machineUpdateStrategy) {
+		allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachineInPlaceUpdateTimeout, fldPath.Child("inPlaceUpdateTimeout"))...)
+	} else {
+		if mcmOptions.MachineInPlaceUpdateTimeout != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("inPlaceUpdateTimeout"), "can only be set when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"))
+		}
+		if ptr.Deref(mcmOptions.DisableHealthTimeout, false) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("disableHealthTimeout"), "can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"))
+		}
 	}
 
 	return allErrs
