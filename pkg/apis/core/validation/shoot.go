@@ -1886,15 +1886,14 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 	allErrs = append(allErrs, IsNotMoreThan100Percent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 
-	if getIntOrPercentValue(ptr.Deref(worker.MaxSurge, intstr.IntOrString{})) != 0 && ptr.Deref(worker.UpdateStrategy, "") == core.ManualInPlaceUpdate {
-		// MaxSurge must be 0 when update strategy is ManualInPlaceUpdate.
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxSurge"), worker.MaxSurge, "must be set to 0 or should not be set when `updateStrategy` is `ManualInPlaceUpdate`"))
-	}
-
 	// TODO(acumino): Uncomment this after the Gardener v1.127 is released.
-	// if getIntOrPercentValue(ptr.Deref(worker.MaxUnavailable, intstr.IntOrString{})) != 0 && ptr.Deref(worker.UpdateStrategy, "") == core.ManualInPlaceUpdate {
-	// 	// MaxUnavailable must be 0 when update strategy is ManualInPlaceUpdate.
-	// 	allErrs = append(allErrs, field.Invalid(fldPath.Child("maxUnavailable"), worker.MaxUnavailable, "must be set to 0 or should not be set when `updateStrategy` is `ManualInPlaceUpdate`"))
+	// if ptr.Deref(worker.UpdateStrategy, "") == core.ManualInPlaceUpdate {
+	// 	if worker.MaxSurge != nil {
+	// 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxSurge"), worker.MaxSurge, "should not be set when `updateStrategy` is `ManualInPlaceUpdate`"))
+	// 	}
+	// 	if worker.MaxUnavailable != nil {
+	// 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxUnavailable"), worker.MaxUnavailable, "should not be set when `updateStrategy` is `ManualInPlaceUpdate`"))
+	// 	}
 	// }
 
 	if (worker.MaxUnavailable == nil || getIntOrPercentValue(*worker.MaxUnavailable) == 0) && (worker.MaxSurge == nil || getIntOrPercentValue(*worker.MaxSurge) == 0) && ptr.Deref(worker.UpdateStrategy, "") != core.ManualInPlaceUpdate {
