@@ -244,6 +244,7 @@ func (b *AutonomousBotanist) ControlPlaneBootstrapOperatingSystemConfig() (opera
 	return operatingsystemconfig.NewControlPlaneBootstrap(
 		b.Logger,
 		b.SeedClientSet.Client(),
+		b.SecretsManager,
 		&operatingsystemconfig.ControlPlaneBootstrapValues{
 			Namespace:      b.Shoot.ControlPlaneNamespace,
 			Worker:         worker,

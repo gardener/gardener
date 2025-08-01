@@ -139,7 +139,7 @@ machine-1   Ready    <none>   37s   v1.32.0
 Use the following command to prepare the `gardenadm` medium-touch scenario:
 
 ```shell
-make gardenadm-medium-touch-up
+make gardenadm-up SCENARIO=medium-touch
 ```
 
 This will first build the needed images and then render the needed manifests for `gardenadm bootstrap` to the [`./dev-setup/gardenadm/resources/generated/medium-touch`](../../dev-setup/gardenadm/resources/generated/medium-touch) directory.
