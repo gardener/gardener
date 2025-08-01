@@ -122,19 +122,7 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 		g.addEdge(secretVertex, seedVertex)
 	}
 
-	for _, resource := range seed.Spec.Resources {
-		// only secrets and configMap are supported here
-		if resource.ResourceRef.APIVersion == "v1" {
-			if resource.ResourceRef.Kind == "Secret" {
-				secretVertex := g.getOrCreateVertex(VertexTypeSecret, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
-				g.addEdge(secretVertex, seedVertex)
-			}
-			if resource.ResourceRef.Kind == "ConfigMap" {
-				configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
-				g.addEdge(configMapVertex, seedVertex)
-			}
-		}
-	}
+	addSeedResources(seed.Spec, g, seedVertex)
 }
 
 func (g *graph) handleSeedDelete(seed *gardencorev1beta1.Seed) {
@@ -165,4 +153,20 @@ func seedDNSProviderSecretRefEqual(oldDNS, newDNS *gardencorev1beta1.SeedDNSProv
 	}
 
 	return false
+}
+
+func addSeedResources(seedSpec gardencorev1beta1.SeedSpec, g *graph, seedVertex *vertex) {
+	for _, resource := range seedSpec.Resources {
+		// only secrets and configMap are supported here
+		if resource.ResourceRef.APIVersion == "v1" {
+			if resource.ResourceRef.Kind == "Secret" {
+				secretVertex := g.getOrCreateVertex(VertexTypeSecret, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
+				g.addEdge(secretVertex, seedVertex)
+			}
+			if resource.ResourceRef.Kind == "ConfigMap" {
+				configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
+				g.addEdge(configMapVertex, seedVertex)
+			}
+		}
+	}
 }
