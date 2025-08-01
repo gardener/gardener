@@ -42,6 +42,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 
 			providerType1   = "provider-type-1"
 			providerType2   = "provider-type-2"
+			providerRegion1 = "provider-region-1"
 			dnsProviderType = "dns-provider"
 		)
 
@@ -52,7 +53,8 @@ var _ = Describe("ExtensionLabels tests", func() {
 				},
 				Spec: core.SeedSpec{
 					Provider: core.SeedProvider{
-						Type: providerType1,
+						Type:   providerType1,
+						Region: providerRegion1,
 					},
 					Ingress: &core.Ingress{},
 					DNS: core.SeedDNS{
@@ -76,6 +78,8 @@ var _ = Describe("ExtensionLabels tests", func() {
 			expectedLabels := map[string]string{
 				"provider.extensions.gardener.cloud/" + providerType1:    "true",
 				"dnsrecord.extensions.gardener.cloud/" + dnsProviderType: "true",
+				"seed.gardener.cloud/provider":                           "provider-type-1",
+				"seed.gardener.cloud/region":                             "provider-region-1",
 			}
 
 			Expect(seed.ObjectMeta.Labels).To(Equal(expectedLabels))
@@ -97,6 +101,8 @@ var _ = Describe("ExtensionLabels tests", func() {
 			for _, providerType := range []string{providerType1, providerType2} {
 				expectedLabels["provider.extensions.gardener.cloud/"+providerType] = "true"
 			}
+			expectedLabels["seed.gardener.cloud/provider"] = "provider-type-1"
+			expectedLabels["seed.gardener.cloud/region"] = "provider-region-1"
 
 			Expect(newSeed.ObjectMeta.Labels).To(Equal(expectedLabels))
 		})
