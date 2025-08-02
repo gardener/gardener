@@ -165,12 +165,6 @@ This webhook reacts on events for the `dependency-watchdog-probe` `Deployment`, 
 All these pods need to be able to resolve the DNS names for shoot clusters.
 It sets the `.spec.dnsPolicy=None` and `.spec.dnsConfig.nameServers` to the cluster IP of the `coredns` `Service` created in the `gardener-extension-provider-local-coredns` namespaces so that these pods can resolve the DNS records for shoot clusters (see the [Bootstrapping section](#bootstrapping) for more details).
 
-#### Machine Controller Manager
-
-This webhook mutates the global `ClusterRole` related to `machine-controller-manager` and injects permissions for `Service` resources.
-The `machine-controller-manager-provider-local` deploys `Pod`s for each `Machine` (while real infrastructure provider obviously deploy VMs, so no Kubernetes resources directly).
-It also deploys a `Service` for these machine pods, and in order to do so, the `ClusterRole` must allow the needed permissions for `Service` resources.
-
 #### Node
 
 This webhook reacts on updates to `nodes/status` in both seed and shoot clusters and sets the `.status.{allocatable,capacity}.cpu="100"` and `.status.{allocatable,capacity}.memory="100Gi"` fields.
@@ -197,14 +191,6 @@ The corresponding test sets the DNS configuration accordingly so that the name r
 
 Out of tree (controller-based) implementation for `local` as a new provider.
 The local out-of-tree provider implements the interface defined at [MCM OOT driver](https://github.com/gardener/machine-controller-manager/blob/master/pkg/util/provider/driver/driver.go).
-
-#### Fundamental Design Principles
-
-Following are the basic principles kept in mind while developing the external plugin.
-
-- Communication between this Machine Controller (MC) and Machine Controller Manager (MCM) is achieved using the Kubernetes native declarative approach.
-- Machine Controller (MC) behaves as the controller used to interact with the `local` provider and manage the VMs corresponding to the machine objects.
-- Machine Controller Manager (MCM) deals with higher level objects such as machine-set and machine-deployment objects.
 
 ## Future Work
 
