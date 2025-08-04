@@ -73,6 +73,49 @@ One example for this is the [GCP control plane controller](https://github.com/ga
 As Gardener cannot know which information is required by providers, it simply mirrors the `Shoot`, `Seed`, and `CloudProfile` resources into the seed.
 They are part of the [`Cluster` extension resource](../cluster.md) and can be used to extract information that is not part of the `Infrastructure` resource itself.
 
+## Supporting Autonomous Shoot Clusters (`gardenadm bootstrap`)
+
+When bootstrapping an [autonomous shoot cluster](../../concepts/gardenadm.md) (medium-touch scenario), `gardenadm bootstrap` deploys control plane components in the temporary bootstrap cluster (kind cluster), e.g., gardener-resource-manager and machine-controller-manager.
+These components are used for creating the machines, where the autonomous shoot cluster's actual control plane will run after executing `gardenadm init` on them.
+In this stage however, there is no full shoot control plane yet, i.e., there is no running `kube-apiserver` in the temporary bootstrap cluster.
+
+`gardenadm bootstrap` still deploys the `ControlPlane` resource and activates the [`ControlPlane` webhooks](../controlplane-webhooks.md) to allow provider extensions to customize the components deployed in this scenario.
+For example, the provider extension's `ControlPlane` webhook needs to inject the machine-controller-manager provider sidecar container.
+If the machine-controller-manager provider needs additional configuration, the `ControlPlane` controller can deploy it as usual.
+
+However, the `ControlPlane` controller needs to take care of not deploying other control plane components like `cloud-controller-manager` or CSI drivers in this scenario.
+The provider implementation can identify this scenario by the presence of a worker pool with the `controlPlane` section in [`Cluster.shoot.spec.provider.workers`](../cluster.md) and the `ControlPlane` object not running in the `kube-system` namespace, e.g.:
+
+```go
+func (vp *valuesProvider) GetControlPlaneChartValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster, secretsReader secretsmanager.Reader, checksums map[string]string, scaledDown bool) (map[string]any, error) {
+  values := map[string]any{}
+  
+  if v1beta1helper.IsShootAutonomous(cluster.Shoot) && cp.Namespace != metav1.NamespaceSystem {
+    // When bootstrapping the autonomous shoot cluster (`gardenadm bootstrap`), we don't need to run ccm or csi components.
+    values["cloud-controller-manager"] = map[string]any{
+      "enabled": false,
+    }
+    values["csi-driver-controller"] = map[string]any{
+      "enabled": false,
+    }
+  }
+
+  // ...
+  return values, nil
+}	
+```
+
+The [generic `ControlPlane` actuator](../../../extensions/pkg/controller/controlplane/genericactuator) from the extensions library already takes care of most aspects for supporting the `gardenadm bootstrap` scenario:
+
+- it doesn't deploy any shoot access secrets
+- it doesn't deploy the `controlPlaneShootChart`, `controlPlaneShootCRDsChart`, `storageClassesChart`
+- it doesn't deploy the shoot webhook configs
+
+If using the generic actuator, the provider implementation only needs to take over the following aspects:
+
+- the `GetConfigChartValues` and `GetControlPlaneChartValues` should disable config and components not needed in the scenario (e.g., cloud-controller-manager and CSI driver controller) 
+- the `secretConfigs` function should not return secret configs for these disabled components (e.g., cloud-controller-manager server certificates)
+
 ## References and Additional Resources
 
 * [`ControlPlane` API (Golang Specification)](../../../pkg/apis/extensions/v1alpha1/types_controlplane.go)
