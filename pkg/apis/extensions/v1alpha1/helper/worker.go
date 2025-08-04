@@ -21,18 +21,14 @@ func ClusterAutoscalerRequired(pools []extensionsv1alpha1.WorkerPool) bool {
 
 // GetMachineDeploymentClusterAutoscalerAnnotations returns a map of annotations with values intended to be used as cluster-autoscaler options for the worker group
 func GetMachineDeploymentClusterAutoscalerAnnotations(caOptions *extensionsv1alpha1.ClusterAutoscalerOptions) map[string]string {
-	annotations := make(map[string]string)
-	caAnnotationsKeys := []string{
-		extensionsv1alpha1.ScaleDownUtilizationThresholdAnnotation,
-		extensionsv1alpha1.ScaleDownGpuUtilizationThresholdAnnotation,
-		extensionsv1alpha1.ScaleDownUnneededTimeAnnotation,
-		extensionsv1alpha1.ScaleDownUnreadyTimeAnnotation,
-		extensionsv1alpha1.MaxNodeProvisionTimeAnnotation,
-	}
 	// Setting all the annotations to empty value which is used
 	// to check which options are explicitly set
-	for _, key := range caAnnotationsKeys {
-		annotations[key] = ""
+	annotations := map[string]string{
+		extensionsv1alpha1.ScaleDownUtilizationThresholdAnnotation:    "",
+		extensionsv1alpha1.ScaleDownGpuUtilizationThresholdAnnotation: "",
+		extensionsv1alpha1.ScaleDownUnneededTimeAnnotation:            "",
+		extensionsv1alpha1.ScaleDownUnreadyTimeAnnotation:             "",
+		extensionsv1alpha1.MaxNodeProvisionTimeAnnotation:             "",
 	}
 	if caOptions != nil {
 		if caOptions.ScaleDownUtilizationThreshold != nil {
