@@ -12,15 +12,22 @@ import (
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/api/extensions"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/publicip"
 )
 
@@ -78,6 +85,11 @@ func run(ctx context.Context, opts *Options) error {
 	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, false)
 	if err != nil {
 		return err
+	}
+
+	hasMigratedExtensionKind, err := getMigratedExtensionKinds(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace)
+	if err != nil {
+		return fmt.Errorf("failed determining migrated extension kinds: %w", err)
 	}
 
 	var (
@@ -162,11 +174,13 @@ func run(ctx context.Context, opts *Options) error {
 		deployInfrastructure = g.Add(flow.Task{
 			Name:         "Deploying Shoot infrastructure",
 			Fn:           b.DeployInfrastructure,
+			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.InfrastructureResource],
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
 		waitUntilInfrastructureReady = g.Add(flow.Task{
 			Name:         "Waiting until Shoot infrastructure has been reconciled",
 			Fn:           b.WaitForInfrastructure,
+			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.InfrastructureResource],
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
 
@@ -190,11 +204,13 @@ func run(ctx context.Context, opts *Options) error {
 		deployWorker = g.Add(flow.Task{
 			Name:         "Deploying control plane machines",
 			Fn:           b.DeployWorker,
+			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.WorkerResource],
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady, waitUntilOperatingSystemConfigReady, deployMachineControllerManager),
 		})
 		waitUntilWorkerReady = g.Add(flow.Task{
 			Name:         "Waiting until control plane machines have been deployed",
 			Fn:           b.Shoot.Components.Extensions.Worker.Wait,
+			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.WorkerResource],
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
 
@@ -208,8 +224,66 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
 
-		_ = waitUntilWorkerReady
+		// Delete machine-controller-manager to prevent it from interfering with Machine objects that will be migrated to
+		// the autonomous shoot.
+		deleteMachineControllerManager = g.Add(flow.Task{
+			Name:         "Deleting machine-controller-manager",
+			Fn:           component.OpDestroyAndWait(b.Shoot.Components.ControlPlane.MachineControllerManager).Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
+		})
+
+		// In contrast to the usual Shoot migrate flow, we don't delete the extension objects are executing the migrate
+		// operation. The extension controllers are supposed to skip any reconcile operation if the last operation is of
+		// type "Migrate". Also, this makes it easier to allow re-running `gardenadm bootstrap` in case of failures
+		// down the line. If we deleted the extension objects, we would need to restore them when re-running the flow.
+		migrateExtensionResources = g.Add(flow.Task{
+			Name: "Preparing extension resources for migration to autonomous shoot",
+			Fn: flow.Parallel(
+				component.MigrateAndWait(b.Shoot.Components.Extensions.Infrastructure),
+				component.MigrateAndWait(b.Shoot.Components.Extensions.Worker),
+			),
+			Dependencies: flow.NewTaskIDs(deleteMachineControllerManager),
+		})
+
+		// In contrast to a usual Shoot control plane migration, there is no garden cluster where the ShootState is stored.
+		// In this flow, the ShootState is only stored in memory (in the fake garden client). This is sufficient for this
+		// use case as we can copy it to the control plane machines. If we lose the ShootState (e.g., re-run of the flow)
+		// we can re-construct the ShootState from the objects in the bootstrap cluster.
+		compileShootState = g.Add(flow.Task{
+			Name: "Compiling ShootState",
+			Fn: func(ctx context.Context) error {
+				return shootstate.Deploy(ctx, b.Clock, b.GardenClient, b.SeedClientSet.Client(), b.Shoot.GetInfo(), false)
+			},
+			Dependencies: flow.NewTaskIDs(migrateExtensionResources),
+		})
+		// TODO(timebertt): drop this task again once this flow implements copying of the ShootState to the machines
+		_ = g.Add(flow.Task{
+			Name: "Dump ShootState for testing purposes",
+			Fn: func(ctx context.Context) error {
+				shootState := &gardencorev1beta1.ShootState{}
+				if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shootState); err != nil {
+					return err
+				}
+
+				shootStateBytes, err := runtime.Encode(kubernetes.GardenCodec.EncoderForVersion(kubernetes.GardenSerializer, gardencorev1beta1.SchemeGroupVersion), shootState)
+				if err != nil {
+					return err
+				}
+
+				_, err = opts.Out.Write(shootStateBytes)
+				return err
+			},
+			Dependencies: flow.NewTaskIDs(compileShootState),
+		})
+
 		_ = deployBastion
+		_ = compileShootState
+
+		// In contrast to the usual Shoot migrate flow, we don't delete the shoot control plane namespace at the end.
+		// The bootstrap cluster is designed to be temporary and thrown away after successfully executing
+		// `gardenadm bootstrap`. Correctly deleting the control plane namespace would need the correct order and would
+		// still orphan some global resources. We spare the effort of implementing this cleanup and instruct users to
+		// throw away the bootstrap cluster afterward.
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
@@ -244,4 +318,46 @@ func ensureNoGardenletOrOperator(ctx context.Context, c client.Reader) error {
 	}
 
 	return nil
+}
+
+// getMigratedExtensionKinds returns a map of all extension kinds that will eventually be migrated in the `gardenadm
+// bootstrap` flow. If at least one of the extension objects in the given namespace has the last operation type Migrate,
+// the map value will be true for this kind.
+// This is used to skip the extension reconciliation when re-running the flow after starting the extension migration.
+func getMigratedExtensionKinds(ctx context.Context, c client.Reader, namespace string) (map[string]bool, error) {
+	relevantExtensionKinds := map[string]client.ObjectList{
+		extensionsv1alpha1.InfrastructureResource: &extensionsv1alpha1.InfrastructureList{},
+		extensionsv1alpha1.WorkerResource:         &extensionsv1alpha1.WorkerList{},
+	}
+
+	out := make(map[string]bool, len(relevantExtensionKinds))
+	for kind, list := range relevantExtensionKinds {
+		if err := c.List(ctx, list, client.InNamespace(namespace)); err != nil {
+			if meta.IsNoMatchError(err) {
+				out[kind] = false
+				continue
+			}
+			return nil, fmt.Errorf("error listing %s objects: %w", kind, err)
+		}
+
+		hasMigrated := false
+		if err := meta.EachListItem(list, func(obj runtime.Object) error {
+			extensionObject, err := extensions.Accessor(obj)
+			if err != nil {
+				return err
+			}
+
+			lastOperation := extensionObject.GetExtensionStatus().GetLastOperation()
+			if lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate {
+				hasMigrated = true
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+
+		out[kind] = hasMigrated
+	}
+
+	return out, nil
 }
