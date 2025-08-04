@@ -605,4 +605,12 @@ var _ = Describe("Helper", func() {
 		Entry("EnableAnonymousAuthentication is false", &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(false)}, true),
 		Entry("EnableAnonymousAuthentication is true", &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}, true),
 	)
+
+	DescribeTable("#IsKubeProxyIPVSMode",
+		func(kubeProxyConfig *core.KubeProxyConfig, expected bool) {
+			Expect(IsKubeProxyIPVSMode(kubeProxyConfig)).To(Equal(expected))
+		},
+		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(core.ProxyModeIPVS)}, true),
+		Entry("with KubeProxy in IPTables mode", &core.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(core.ProxyModeIPTables)}, false),
+	)
 })

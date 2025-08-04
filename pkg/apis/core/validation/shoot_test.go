@@ -5891,7 +5891,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("node-local-dns update", func() {
-			It("the node-local-dns setting cannot be changed if the shoot has at least one worker pool with an update strategy of either AutoInPlaceUpdate or ManualInPlaceUpdate, and is running a Kubernetes version below 1.34.0.", func() {
+			It("the node-local-dns setting cannot be changed if the shoot has at least one worker pool with an update strategy of either AutoInPlaceUpdate or ManualInPlaceUpdate, and is running a Kubernetes version below 1.34.0 or if kube-proxy runs in IPVS mode.", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
 				shoot.Spec.Provider.Workers[1].Name = "worker-2"
@@ -5908,7 +5908,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.systemComponents.nodeLocalDNS"),
-					"Detail": Equal("the node-local-dns setting cannot be changed if the shoot has at least one worker pool with an update strategy of either AutoInPlaceUpdate or ManualInPlaceUpdate, and is running a Kubernetes version below 1.34.0."),
+					"Detail": Equal("the node-local-dns setting cannot be changed if the shoot has at least one worker pool with an update strategy of either AutoInPlaceUpdate or ManualInPlaceUpdate, and is running a Kubernetes version below 1.34.0 or if kube-proxy runs in IPVS mode."),
 				}))))
 
 				shoot.Spec.SystemComponents = &core.SystemComponents{
@@ -5923,7 +5923,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.systemComponents.nodeLocalDNS"),
-					"Detail": Equal("the node-local-dns setting cannot be changed if the shoot has at least one worker pool with an update strategy of either AutoInPlaceUpdate or ManualInPlaceUpdate, and is running a Kubernetes version below 1.34.0."),
+					"Detail": Equal("the node-local-dns setting cannot be changed if the shoot has at least one worker pool with an update strategy of either AutoInPlaceUpdate or ManualInPlaceUpdate, and is running a Kubernetes version below 1.34.0 or if kube-proxy runs in IPVS mode."),
 				}))))
 			})
 

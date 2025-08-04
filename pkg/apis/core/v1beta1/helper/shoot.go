@@ -696,3 +696,12 @@ func GetBackupConfigForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1b
 func GetAPIServerDomain(domain string) string {
 	return fmt.Sprintf("%s.%s", v1beta1constants.APIServerFQDNPrefix, domain)
 }
+
+// IsKubeProxyIPVSMode checks if the shoot is running with kube-proxy in IPVS mode.
+func IsKubeProxyIPVSMode(kubeProxyConfig *gardencorev1beta1.KubeProxyConfig) bool {
+	if kubeProxyConfig != nil && kubeProxyConfig.Enabled != nil && *kubeProxyConfig.Enabled &&
+		kubeProxyConfig.Mode != nil && *kubeProxyConfig.Mode == gardencorev1beta1.ProxyModeIPVS {
+		return true
+	}
+	return false
+}

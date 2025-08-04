@@ -289,3 +289,12 @@ func IsUpdateStrategyInPlace(updateStrategy *core.MachineUpdateStrategy) bool {
 func IsLegacyAnonymousAuthenticationSet(kubeAPIServerConfig *core.KubeAPIServerConfig) bool {
 	return kubeAPIServerConfig != nil && kubeAPIServerConfig.EnableAnonymousAuthentication != nil
 }
+
+// IsKubeProxyIPVSMode checks if the shoot is running with kube-proxy in IPVS mode.
+func IsKubeProxyIPVSMode(kubeProxyConfig *core.KubeProxyConfig) bool {
+	if kubeProxyConfig != nil && kubeProxyConfig.Enabled != nil && *kubeProxyConfig.Enabled &&
+		kubeProxyConfig.Mode != nil && *kubeProxyConfig.Mode == core.ProxyModeIPVS {
+		return true
+	}
+	return false
+}
