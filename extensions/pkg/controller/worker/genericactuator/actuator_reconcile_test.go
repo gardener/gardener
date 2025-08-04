@@ -82,13 +82,13 @@ var _ = Describe("ActuatorReconcile", func() {
 			}
 
 			Expect(seedClient.Create(ctx, testDeployment)).To(Succeed())
-			dep := extensionsworkercontroller.MachineDeployment{
+			wantedMachineDeployment := extensionsworkercontroller.MachineDeployment{
 				Name:                         testDeployment.Name,
 				PoolName:                     testDeployment.Labels["worker.gardener.cloud/pool"],
 				Labels:                       testDeployment.Labels,
 				ClusterAutoscalerAnnotations: testDeployment.Annotations,
 			}
-			wantedMachineDeployments = []extensionsworkercontroller.MachineDeployment{dep}
+			wantedMachineDeployments = []extensionsworkercontroller.MachineDeployment{wantedMachineDeployment}
 
 			DeferCleanup(func() {
 				Expect(seedClient.Delete(ctx, worker)).To(Succeed())
