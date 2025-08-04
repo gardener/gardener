@@ -37,6 +37,7 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
@@ -96,15 +97,7 @@ var _ = Describe("Actuator", func() {
 
 		cp *extensionsv1alpha1.ControlPlane
 
-		cluster = &extensionscontroller.Cluster{
-			Shoot: &gardencorev1beta1.Shoot{
-				Spec: gardencorev1beta1.ShootSpec{
-					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: shootVersion,
-					},
-				},
-			},
-		}
+		cluster *extensionscontroller.Cluster
 
 		cpSecretKey    client.ObjectKey
 		cpConfigMapKey client.ObjectKey
@@ -147,6 +140,10 @@ var _ = Describe("Actuator", func() {
 			caNameControlPlane:                       "3e6425b85bb75f33df7c16387b6999eb0f2d3c3e0a81afb4739626c69a79887b",
 			"cloud-controller-manager":               "47448ddc1d8c7b02d20125b4f0914acf8402ee9d763d5bdd48634fcbf8d75b1d",
 		}
+		checksumsGardenadmBootstrap = map[string]string{
+			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
+			cloudProviderConfigName:                  "08a7bc7fe8f59b055f173145e211760a83f02cf89635cef26ebb351378635606",
+		}
 
 		configChartValues = map[string]any{
 			"cloudProviderConfig": `[Global]`,
@@ -168,7 +165,7 @@ var _ = Describe("Actuator", func() {
 			"foo": "bar",
 		}
 
-		shootAccessSecretsFunc func(string) []*gardenerutils.AccessSecret
+		shootAccessSecretsFunc func(cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) []*gardenerutils.AccessSecret
 
 		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
 		logger      = log.Log.WithName("test")
@@ -195,7 +192,22 @@ var _ = Describe("Actuator", func() {
 			Spec:       extensionsv1alpha1.ControlPlaneSpec{},
 		}
 
-		shootAccessSecretsFunc = func(namespace string) []*gardenerutils.AccessSecret {
+		cluster = &extensionscontroller.Cluster{
+			Shoot: &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: shootVersion,
+					},
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{{
+							Name: "worker",
+						}},
+					},
+				},
+			},
+		}
+
+		shootAccessSecretsFunc = func(_ *extensionsv1alpha1.ControlPlane, _ *extensionscontroller.Cluster) []*gardenerutils.AccessSecret {
 			return []*gardenerutils.AccessSecret{gardenerutils.NewShootAccessSecret("new-cp", namespace)}
 		}
 
@@ -304,7 +316,11 @@ var _ = Describe("Actuator", func() {
 	})
 
 	DescribeTable("#Reconcile",
-		func(configName string, checksums map[string]string, webhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, withShootCRDsChart bool) {
+		func(configName string, checksums map[string]string, webhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, withShootCRDsChart, isGardenadmBootstrap bool) {
+			if isGardenadmBootstrap {
+				cluster.Shoot.Spec.Provider.Workers[0].ControlPlane = &gardencorev1beta1.WorkerControlPlane{}
+			}
+
 			var atomicWebhookConfig *atomic.Value
 			if webhookConfig != nil {
 				atomicWebhookConfig = &atomic.Value{}
@@ -314,7 +330,7 @@ var _ = Describe("Actuator", func() {
 			// Create mock client
 			c := mockclient.NewMockClient(ctrl)
 
-			if webhookConfig != nil {
+			if webhookConfig != nil && !isGardenadmBootstrap {
 				compressedData, err := test.BrotliCompressionForManifests(`apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -347,31 +363,33 @@ webhooks:
 				c.EXPECT().Get(ctx, cpConfigMapKey, &corev1.ConfigMap{}).DoAndReturn(clientGet(cpConfigMap))
 			}
 
-			utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForCPShootChart))
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForCPShootChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-			c.EXPECT().Create(ctx, createdMRSecretForCPShootChart).Return(nil)
-			c.EXPECT().Get(ctx, resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
-			createdMRForCPShootChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootChart.Name}}
-			utilruntime.Must(references.InjectAnnotations(createdMRForCPShootChart))
-			c.EXPECT().Create(ctx, createdMRForCPShootChart).Return(nil)
+			if !isGardenadmBootstrap {
+				utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForCPShootChart))
+				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForCPShootChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+				c.EXPECT().Create(ctx, createdMRSecretForCPShootChart).Return(nil)
+				c.EXPECT().Get(ctx, resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+				createdMRForCPShootChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootChart.Name}}
+				utilruntime.Must(references.InjectAnnotations(createdMRForCPShootChart))
+				c.EXPECT().Create(ctx, createdMRForCPShootChart).Return(nil)
 
-			if withShootCRDsChart {
-				utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForCPShootCRDsChart))
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForCPShootCRDsChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-				c.EXPECT().Create(ctx, createdMRSecretForCPShootCRDsChart).Return(nil)
-				c.EXPECT().Get(ctx, resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
-				createdMRForCPShootCRDsChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootCRDsChart.Name}}
-				utilruntime.Must(references.InjectAnnotations(createdMRForCPShootCRDsChart))
-				c.EXPECT().Create(ctx, createdMRForCPShootCRDsChart).Return(nil)
+				if withShootCRDsChart {
+					utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForCPShootCRDsChart))
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForCPShootCRDsChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+					c.EXPECT().Create(ctx, createdMRSecretForCPShootCRDsChart).Return(nil)
+					c.EXPECT().Get(ctx, resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+					createdMRForCPShootCRDsChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootCRDsChart.Name}}
+					utilruntime.Must(references.InjectAnnotations(createdMRForCPShootCRDsChart))
+					c.EXPECT().Create(ctx, createdMRForCPShootCRDsChart).Return(nil)
+				}
+
+				utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForStorageClassesChart))
+				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForStorageClassesChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+				c.EXPECT().Create(ctx, createdMRSecretForStorageClassesChart).Return(nil)
+				c.EXPECT().Get(ctx, resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+				createdMRForStorageClassesChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForStorageClassesChart.Name}}
+				utilruntime.Must(references.InjectAnnotations(createdMRForStorageClassesChart))
+				c.EXPECT().Create(ctx, createdMRForStorageClassesChart).Return(nil)
 			}
-
-			utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForStorageClassesChart))
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForStorageClassesChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-			c.EXPECT().Create(ctx, createdMRSecretForStorageClassesChart).Return(nil)
-			c.EXPECT().Get(ctx, resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
-			createdMRForStorageClassesChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForStorageClassesChart.Name}}
-			utilruntime.Must(references.InjectAnnotations(createdMRForStorageClassesChart))
-			c.EXPECT().Create(ctx, createdMRForStorageClassesChart).Return(nil)
 
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
@@ -382,7 +400,9 @@ webhooks:
 			// Create mock chart renderer and factory
 			chartRenderer := mockchartrenderer.NewMockInterface(ctrl)
 			crf := extensionsmockcontroller.NewMockChartRendererFactory(ctrl)
-			crf.EXPECT().NewChartRendererForShoot(shootVersion).Return(chartRenderer, nil)
+			if !isGardenadmBootstrap {
+				crf.EXPECT().NewChartRendererForShoot(shootVersion).Return(chartRenderer, nil)
+			}
 
 			// Create mock charts
 			var configChart chart.Interface
@@ -393,16 +413,21 @@ webhooks:
 			}
 			ccmChart := mockchartutil.NewMockInterface(ctrl)
 			ccmChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion, controlPlaneChartValues).Return(nil)
+
 			ccmShootChart := mockchartutil.NewMockInterface(ctrl)
-			ccmShootChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, controlPlaneShootChartValues).Return(chartName, []byte(renderedContent), nil)
+			storageClassesChart := mockchartutil.NewMockInterface(ctrl)
+			if !isGardenadmBootstrap {
+				ccmShootChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, controlPlaneShootChartValues).Return(chartName, []byte(renderedContent), nil)
+				storageClassesChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, storageClassesChartValues).Return(chartName, []byte(renderedContent), nil)
+			}
 			var cpShootCRDsChart chart.Interface
 			if withShootCRDsChart {
 				cpShootCRDsChartMock := mockchartutil.NewMockInterface(ctrl)
-				cpShootCRDsChartMock.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, controlPlaneShootCRDsChartValues).Return(chartName, []byte(renderedContent), nil)
+				if !isGardenadmBootstrap {
+					cpShootCRDsChartMock.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, controlPlaneShootCRDsChartValues).Return(chartName, []byte(renderedContent), nil)
+				}
 				cpShootCRDsChart = cpShootCRDsChartMock
 			}
-			storageClassesChart := mockchartutil.NewMockInterface(ctrl)
-			storageClassesChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, storageClassesChartValues).Return(chartName, []byte(renderedContent), nil)
 
 			// Create mock values provider
 			vp := extensionsmockgenericactuator.NewMockValuesProvider(ctrl)
@@ -410,37 +435,40 @@ webhooks:
 				vp.EXPECT().GetConfigChartValues(ctx, cp, cluster).Return(configChartValues, nil)
 			}
 			vp.EXPECT().GetControlPlaneChartValues(ctx, cp, cluster, gomock.Any(), checksums, false).Return(controlPlaneChartValues, nil)
-			vp.EXPECT().GetControlPlaneShootChartValues(ctx, cp, cluster, gomock.Any(), checksums).Return(controlPlaneShootChartValues, nil)
-			if withShootCRDsChart {
-				vp.EXPECT().GetControlPlaneShootCRDsChartValues(ctx, cp, cluster).Return(controlPlaneShootCRDsChartValues, nil)
+
+			if !isGardenadmBootstrap {
+				vp.EXPECT().GetControlPlaneShootChartValues(ctx, cp, cluster, gomock.Any(), checksums).Return(controlPlaneShootChartValues, nil)
+				if withShootCRDsChart {
+					vp.EXPECT().GetControlPlaneShootCRDsChartValues(ctx, cp, cluster).Return(controlPlaneShootCRDsChartValues, nil)
+				}
+				vp.EXPECT().GetStorageClassesChartValues(ctx, cp, cluster).Return(storageClassesChartValues, nil)
+
+				// Handle shoot access secrets and legacy secret cleanup
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootAccessSecretsFunc(cp, cluster)[0].Secret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+						obj.SetResourceVersion("0")
+					})
+
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(Equal(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      shootAccessSecretsFunc(cp, cluster)[0].Secret.Name,
+								Namespace: namespace,
+								Annotations: map[string]string{
+									"serviceaccount.resources.gardener.cloud/name":      shootAccessSecretsFunc(cp, cluster)[0].ServiceAccountName,
+									"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+								},
+								Labels: map[string]string{
+									"resources.gardener.cloud/purpose": "token-requestor",
+									"resources.gardener.cloud/class":   "shoot",
+								},
+								ResourceVersion: "0",
+							},
+							Type: corev1.SecretTypeOpaque,
+						}))
+					})
 			}
-			vp.EXPECT().GetStorageClassesChartValues(ctx, cp, cluster).Return(storageClassesChartValues, nil)
-
-			// Handle shoot access secrets and legacy secret cleanup
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootAccessSecretsFunc(namespace)[0].Secret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
-					obj.SetResourceVersion("0")
-				})
-
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-				Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(Equal(&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      shootAccessSecretsFunc(namespace)[0].Secret.Name,
-							Namespace: namespace,
-							Annotations: map[string]string{
-								"serviceaccount.resources.gardener.cloud/name":      shootAccessSecretsFunc(namespace)[0].ServiceAccountName,
-								"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
-							},
-							Labels: map[string]string{
-								"resources.gardener.cloud/purpose": "token-requestor",
-								"resources.gardener.cloud/class":   "shoot",
-							},
-							ResourceVersion: "0",
-						},
-						Type: corev1.SecretTypeOpaque,
-					}))
-				})
 
 			// Create actuator
 			a := &actuator{
@@ -468,15 +496,20 @@ webhooks:
 			Expect(requeue).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 
-			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
-				"ca-provider-test-controlplane-05334c48", "ca-provider-test-controlplane-bundle-bdc12448",
-				"cloud-controller-manager-bc446deb",
-			)
+			if !isGardenadmBootstrap {
+				expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
+					"ca-provider-test-controlplane-05334c48", "ca-provider-test-controlplane-bundle-bdc12448",
+					"cloud-controller-manager-bc446deb",
+				)
+			} else {
+				expectSecretsManagedBySecretsManager(fakeClient, "should not create secrets for gardenadm bootstrap")
+			}
 		},
-		Entry("should deploy secrets and apply charts with correct parameters", cloudProviderConfigName, checksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
-		Entry("should deploy secrets and apply charts with correct parameters (no config)", "", checksumsNoConfig, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
-		Entry("should deploy secrets and apply charts with correct parameters (no webhook)", cloudProviderConfigName, checksums, nil, true),
-		Entry("should deploy secrets and apply charts with correct parameters (no shoot CRDs chart)", cloudProviderConfigName, checksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, false),
+		Entry("should deploy secrets and apply charts with correct parameters", cloudProviderConfigName, checksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true, false),
+		Entry("should deploy secrets and apply charts with correct parameters (no config)", "", checksumsNoConfig, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true, false),
+		Entry("should deploy secrets and apply charts with correct parameters (no webhook)", cloudProviderConfigName, checksums, nil, true, false),
+		Entry("should deploy secrets and apply charts with correct parameters (no shoot CRDs chart)", cloudProviderConfigName, checksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, false, false),
+		Entry("should skip shoot-related resources in gardenadm bootstrap", cloudProviderConfigName, checksumsGardenadmBootstrap, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true, true),
 	)
 
 	DescribeTable("#Delete",
@@ -538,7 +571,7 @@ webhooks:
 			}
 
 			// Handle shoot access secrets and legacy secret cleanup
-			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
+			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(cp, cluster)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
 			a := &actuator{
@@ -586,7 +619,11 @@ func clientGet(result client.Object) any {
 	}
 }
 
-func getSecretsConfigs(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
+func getSecretsConfigs(cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) []extensionssecretsmanager.SecretConfigWithOptions {
+	if v1beta1helper.IsShootAutonomous(cluster.Shoot) && cp.Namespace != metav1.NamespaceSystem {
+		return nil
+	}
+
 	return []extensionssecretsmanager.SecretConfigWithOptions{
 		{
 			Config: &secretsutils.CertificateSecretConfig{

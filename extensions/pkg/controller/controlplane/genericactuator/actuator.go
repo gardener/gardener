@@ -56,7 +56,8 @@ type ValuesProvider interface {
 func NewActuator(
 	mgr manager.Manager,
 	providerName string,
-	secretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, shootAccessSecrets func(namespace string) []*gardenerutils.AccessSecret,
+	secretConfigs func(cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) []extensionssecretsmanager.SecretConfigWithOptions,
+	shootAccessSecrets func(cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) []*gardenerutils.AccessSecret,
 	configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassesChart chart.Interface,
 	vp ValuesProvider,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
@@ -104,8 +105,8 @@ type newSecretsManagerFunc func(context.Context, logr.Logger, clock.Clock, clien
 type actuator struct {
 	providerName string
 
-	secretConfigsFunc      func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions
-	shootAccessSecretsFunc func(namespace string) []*gardenerutils.AccessSecret
+	secretConfigsFunc      func(cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) []extensionssecretsmanager.SecretConfigWithOptions
+	shootAccessSecretsFunc func(cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) []*gardenerutils.AccessSecret
 
 	configChart                chart.Interface
 	controlPlaneChart          chart.Interface
@@ -149,6 +150,8 @@ func (a *actuator) Reconcile(
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) (bool, error) {
+	isGardenadmBootstrap := v1beta1helper.IsShootAutonomous(cluster.Shoot) && cp.Namespace != metav1.NamespaceSystem
+
 	if a.hasShootWebhooks(cluster.Shoot) {
 		value := a.atomicShootWebhookConfig.Load()
 		webhookConfig, ok := value.(*webhook.Configs)
@@ -163,7 +166,7 @@ func (a *actuator) Reconcile(
 
 	var secretConfigs []extensionssecretsmanager.SecretConfigWithOptions
 	if a.secretConfigsFunc != nil {
-		secretConfigs = a.secretConfigsFunc(cp.Namespace)
+		secretConfigs = a.secretConfigsFunc(cp, cluster)
 	}
 
 	sm, err := a.newSecretsManagerForControlPlane(ctx, log, cluster, secretConfigs)
@@ -179,8 +182,8 @@ func (a *actuator) Reconcile(
 	}
 
 	// Deploy shoot access secrets
-	if a.shootAccessSecretsFunc != nil {
-		for _, shootAccessSecret := range a.shootAccessSecretsFunc(cp.Namespace) {
+	if a.shootAccessSecretsFunc != nil && !isGardenadmBootstrap {
+		for _, shootAccessSecret := range a.shootAccessSecretsFunc(cp, cluster) {
 			if err := shootAccessSecret.Reconcile(ctx, a.client); err != nil {
 				return false, fmt.Errorf("could not reconcile shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, client.ObjectKeyFromObject(cp), err)
 			}
@@ -247,45 +250,47 @@ func (a *actuator) Reconcile(
 		}
 	}
 
-	// Create shoot chart renderer
-	chartRenderer, err := a.chartRendererFactory.NewChartRendererForShoot(version)
-	if err != nil {
-		return false, fmt.Errorf("could not create chart renderer for shoot '%s': %w", cp.Namespace, err)
-	}
-
-	if a.controlPlaneShootChart != nil {
-		// Get control plane shoot chart values
-		values, err := a.vp.GetControlPlaneShootChartValues(ctx, cp, cluster, sm, checksums)
+	if !isGardenadmBootstrap {
+		// Create shoot chart renderer
+		chartRenderer, err := a.chartRendererFactory.NewChartRendererForShoot(version)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("could not create chart renderer for shoot '%s': %w", cp.Namespace, err)
 		}
 
-		if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootChartResourceName, false, a.client, chartRenderer, a.controlPlaneShootChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
-			return false, fmt.Errorf("could not apply control plane shoot chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
-		}
-	}
+		if a.controlPlaneShootChart != nil {
+			// Get control plane shoot chart values
+			values, err := a.vp.GetControlPlaneShootChartValues(ctx, cp, cluster, sm, checksums)
+			if err != nil {
+				return false, err
+			}
 
-	if a.controlPlaneShootCRDsChart != nil {
-		// Get control plane shoot CRDs chart values
-		values, err := a.vp.GetControlPlaneShootCRDsChartValues(ctx, cp, cluster)
-		if err != nil {
-			return false, err
-		}
-
-		if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootCRDsChartResourceName, false, a.client, chartRenderer, a.controlPlaneShootCRDsChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
-			return false, fmt.Errorf("could not apply control plane shoot CRDs chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
-		}
-	}
-
-	if a.storageClassesChart != nil {
-		// Get storage class chart values
-		values, err := a.vp.GetStorageClassesChartValues(ctx, cp, cluster)
-		if err != nil {
-			return false, err
+			if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootChartResourceName, false, a.client, chartRenderer, a.controlPlaneShootChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
+				return false, fmt.Errorf("could not apply control plane shoot chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
+			}
 		}
 
-		if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, StorageClassesChartResourceName, false, a.client, chartRenderer, a.storageClassesChart, values, a.imageVector, metav1.NamespaceSystem, version, true, true); err != nil {
-			return false, fmt.Errorf("could not apply storage classes chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
+		if a.controlPlaneShootCRDsChart != nil {
+			// Get control plane shoot CRDs chart values
+			values, err := a.vp.GetControlPlaneShootCRDsChartValues(ctx, cp, cluster)
+			if err != nil {
+				return false, err
+			}
+
+			if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootCRDsChartResourceName, false, a.client, chartRenderer, a.controlPlaneShootCRDsChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
+				return false, fmt.Errorf("could not apply control plane shoot CRDs chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
+			}
+		}
+
+		if a.storageClassesChart != nil {
+			// Get storage class chart values
+			values, err := a.vp.GetStorageClassesChartValues(ctx, cp, cluster)
+			if err != nil {
+				return false, err
+			}
+
+			if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, StorageClassesChartResourceName, false, a.client, chartRenderer, a.storageClassesChart, values, a.imageVector, metav1.NamespaceSystem, version, true, true); err != nil {
+				return false, fmt.Errorf("could not apply storage classes chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
+			}
 		}
 	}
 
@@ -394,7 +399,7 @@ func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1
 	}
 
 	if a.shootAccessSecretsFunc != nil {
-		for _, shootAccessSecret := range a.shootAccessSecretsFunc(cp.Namespace) {
+		for _, shootAccessSecret := range a.shootAccessSecretsFunc(cp, cluster) {
 			if err := kubernetesutils.DeleteObject(ctx, a.client, shootAccessSecret.Secret); err != nil {
 				return fmt.Errorf("could not delete shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, client.ObjectKeyFromObject(cp), err)
 			}
@@ -419,6 +424,9 @@ func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1
 }
 
 func (a *actuator) hasShootWebhooks(shoot *gardencorev1beta1.Shoot) bool {
+	// In `gardenadm init`, the provider extension's shoot webhook configs are merged into the seed webhook configs.
+	// In `gardenadm bootstrap`, there is no control plane of the shoot yet.
+	// So if the shoot is autonomous, we don't need to deploy any shoot webhook configs.
 	return a.atomicShootWebhookConfig != nil && !v1beta1helper.IsShootAutonomous(shoot)
 }
 

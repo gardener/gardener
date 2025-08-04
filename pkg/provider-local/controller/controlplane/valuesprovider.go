@@ -8,9 +8,12 @@ import (
 	"context"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/charts"
 	localimagevector "github.com/gardener/gardener/pkg/provider-local/imagevector"
@@ -32,7 +35,12 @@ type valuesProvider struct {
 	genericactuator.NoopValuesProvider
 }
 
-func getSecretConfigs(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
+func getSecretConfigs(cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) []extensionssecretsmanager.SecretConfigWithOptions {
+	if v1beta1helper.IsShootAutonomous(cluster.Shoot) && cp.Namespace != metav1.NamespaceSystem {
+		// When bootstrapping the autonomous shoot cluster (`gardenadm bootstrap`), we don't need additional secrets.
+		return nil
+	}
+
 	return []extensionssecretsmanager.SecretConfigWithOptions{
 		{
 			Config: &secretsutils.CertificateSecretConfig{
@@ -46,7 +54,7 @@ func getSecretConfigs(namespace string) []extensionssecretsmanager.SecretConfigW
 			Config: &secretsutils.CertificateSecretConfig{
 				Name:       local.Name + "-dummy-server",
 				CommonName: local.Name + "-dummy-server",
-				DNSNames:   kubernetesutils.DNSNamesForService(local.Name+"-dummy-server", namespace),
+				DNSNames:   kubernetesutils.DNSNamesForService(local.Name+"-dummy-server", cp.Namespace),
 				CertType:   secretsutils.ServerCert,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
