@@ -284,6 +284,8 @@ func validateMachineTypes(machineTypes []core.MachineType, capabilities core.Cap
 
 		if len(machineType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+		} else if errs := validateUnprefixedQualifiedName(machineType.Name); len(errs) != 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("name"), machineType.Name, fmt.Sprintf("machine type name must be a qualified name: %v", errs)))
 		}
 
 		if names.Has(machineType.Name) {

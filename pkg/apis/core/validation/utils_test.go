@@ -11,6 +11,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -265,6 +266,58 @@ var _ = Describe("Utils tests", func() {
 			Entry("forbid whitespaces", "special image", true),
 			Entry("forbid slashes", "nested/image", true),
 			Entry("pass with dashes", "qualified-name", false),
+		)
+	})
+
+	Describe("#ValidateMachineTypes", func() {
+		var specTemplate = &core.CloudProfileSpec{
+			Type:    "local",
+			Regions: []core.Region{{Name: "local"}},
+			Kubernetes: core.KubernetesSettings{
+				Versions: []core.ExpirableVersion{
+					{Version: "1.0.0"},
+				},
+			},
+			MachineImages: []core.MachineImage{
+				{
+					Name: "test-image",
+					Versions: []core.MachineImageVersion{{
+						ExpirableVersion: core.ExpirableVersion{Version: "1.0.0"},
+						CRI:              []core.CRI{{Name: "containerd"}},
+						Architectures:    []string{"amd64"},
+					}},
+					UpdateStrategy: ptr.To(core.UpdateStrategyMajor),
+				},
+			},
+			MachineTypes: []core.MachineType{
+				{Architecture: ptr.To("amd64")},
+			},
+		}
+
+		DescribeTable("should not allow invalid machine type names",
+			func(name string, shouldFail bool) {
+				spec := specTemplate.DeepCopy()
+				spec.MachineTypes[0].Name = name
+
+				validationResult := ValidateCloudProfileSpec(spec, field.NewPath("spec"))
+
+				if shouldFail {
+					Expect(validationResult).
+						To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.machineTypes[0].name"),
+								"Detail": ContainSubstring("machine type name must be a qualified name"),
+							})),
+						))
+				} else {
+					Expect(validationResult).To(BeEmpty())
+				}
+			},
+			Entry("forbid emoji characters", "🪴", true),
+			Entry("forbid whitespaces", "special image", true),
+			Entry("forbid slashes", "nested/image", true),
+			Entry("pass with dashes and dots", "quali.fied-name", false),
 		)
 	})
 })
