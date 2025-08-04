@@ -458,6 +458,8 @@ func validateCapabilities(capabilities []core.CapabilityDefinition, fldPath *fie
 	for key, value := range capabilityMap {
 		if key == "" {
 			allErrs = append(allErrs, field.Required(fldPath, "capability keys must not be empty"))
+		} else if errs := validateUnprefixedQualifiedName(key); len(errs) > 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath, key, "capability key must be qualified name: "+strings.Join(errs, ", ")))
 		}
 		if len(value) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child(key), "capability values must not be empty"))
@@ -465,6 +467,8 @@ func validateCapabilities(capabilities []core.CapabilityDefinition, fldPath *fie
 		for i, v := range value {
 			if v == "" {
 				allErrs = append(allErrs, field.Required(fldPath.Child(key).Index(i), "capability values must not be empty"))
+			} else if errs := validateUnprefixedQualifiedName(v); len(errs) > 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child(key).Index(i), v, "capability value must be qualified name: "+strings.Join(errs, ", ")))
 			}
 		}
 	}

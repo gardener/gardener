@@ -1529,6 +1529,35 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					))
 				})
 
+				It("should fail to validate capabilities with keys or values not passing qualified name check", func() {
+					cloudProfile.Spec.Capabilities = []core.CapabilityDefinition{
+						{Name: "architecture", Values: []string{"amd64"}},
+						{Name: "🪴", Values: []string{"ℹ️", "no spaces", "correct_value"}},
+					}
+					cloudProfile.Spec.MachineTypes[0].Capabilities = core.Capabilities{
+						"architecture": []string{"amd64"},
+					}
+
+					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.capabilities"),
+							"BadValue": Equal("🪴"),
+							"Detail":   ContainSubstring("capability key must be qualified name"),
+						})), PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.capabilities.🪴[0]"),
+							"BadValue": Equal("ℹ️"),
+							"Detail":   ContainSubstring("capability value must be qualified name"),
+						})), PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.capabilities.🪴[1]"),
+							"BadValue": Equal("no spaces"),
+							"Detail":   ContainSubstring("capability value must be qualified name"),
+						})),
+					))
+				})
+
 				Describe("should validate that the architectures do not conflict", func() {
 					It("should succeed if both architectures and capabilities set the same values", func() {
 						cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
