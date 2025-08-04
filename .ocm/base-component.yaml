@@ -1,3 +1,4 @@
+name: github.com/gardener/gardener
 main-source:
   labels:
     - name: cloud.gardener.cnudie/dso/scanning-hints/source_analysis/v1
