@@ -30,6 +30,14 @@ spec:
       secretRef:
         name: ingress-secret
         namespace: garden
+    internal:
+      credentialsRef:
+        apiVersion: v1
+        kind: Secret
+        name: internal-dns-secret
+        namespace: garden
+      type: aws-route53
+      domain: internal.dev.example.com
   extensions:
   - type: foobar
   # providerConfig:
