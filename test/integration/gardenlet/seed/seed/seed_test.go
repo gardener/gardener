@@ -394,7 +394,7 @@ var _ = Describe("Seed controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 					g.Expect(seed.Status.LastOperation).NotTo(BeNil())
 					g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
-					g.Expect(seed.Status.LastOperation.Description).To(ContainSubstring("need an internal domain secret but found none"))
+					g.Expect(seed.Status.LastOperation.Description).To(ContainSubstring("global monitoring secret not found in seed namespace Operation will be retried"))
 				}).Should(Succeed())
 			})
 		})
