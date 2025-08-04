@@ -470,6 +470,14 @@ spec:
               name: internal-domain-internal-local-gardener-cloud
               namespace: garden
             type: local
+          internal:
+            credentialsRef:
+              apiVersion: v1
+              kind: Secret
+              name: internal-domain-internal-local-gardener-cloud
+              namespace: garden
+            type: local
+            domain: internal.local.gardener.cloud
         ingress:
           controller:
             kind: nginx
