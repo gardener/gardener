@@ -316,7 +316,7 @@ var _ = Describe("Utils tests", func() {
 			Entry("forbid emoji characters", "🪴", true),
 			Entry("forbid whitespaces", "special image", true),
 			Entry("forbid slashes", "nested/image", true),
-			Entry("pass with dashes and dots", "quali.fied-name", false),
+			Entry("pass with dashes and dots", "a.qualified-name", false),
 		)
 
 		DescribeTable("should not allow invalid volume type names",
@@ -342,7 +342,7 @@ var _ = Describe("Utils tests", func() {
 			Entry("forbid emoji characters", "🪴", true),
 			Entry("forbid whitespaces", "special image", true),
 			Entry("forbid slashes", "nested/image", true),
-			Entry("pass with dashes and dots", "quali.fied-name", false),
+			Entry("pass with dashes and dots", "a.qualified-name", false),
 		)
 
 		DescribeTable("should not allow invalid volume type class",
@@ -368,7 +368,7 @@ var _ = Describe("Utils tests", func() {
 			Entry("forbid emoji characters", "🪴", true),
 			Entry("forbid whitespaces", "special image", true),
 			Entry("forbid slashes", "nested/image", true),
-			Entry("pass with dashes and dots", "quali.fied-name", false),
+			Entry("pass with dashes and dots", "a.qualified-name", false),
 		)
 	})
 })
