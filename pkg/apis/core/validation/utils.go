@@ -331,6 +331,8 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 
 		if len(volumeType.Class) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("class"), "must provide a class"))
+		} else if errs := validateUnprefixedQualifiedName(volumeType.Class); len(errs) != 0 {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("class"), volumeType.Class, fmt.Sprintf("volume class must be a qualified name: %v", errs)))
 		}
 
 		if volumeType.MinSize != nil {

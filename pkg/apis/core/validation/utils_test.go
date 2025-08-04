@@ -344,5 +344,31 @@ var _ = Describe("Utils tests", func() {
 			Entry("forbid slashes", "nested/image", true),
 			Entry("pass with dashes and dots", "quali.fied-name", false),
 		)
+
+		DescribeTable("should not allow invalid volume type class",
+			func(name string, shouldFail bool) {
+				spec := specTemplate.DeepCopy()
+				spec.VolumeTypes[0].Class = name
+
+				validationResult := ValidateCloudProfileSpec(spec, field.NewPath("spec"))
+
+				if shouldFail {
+					Expect(validationResult).
+						To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.volumeTypes[0].class"),
+								"Detail": ContainSubstring("volume class must be a qualified name"),
+							})),
+						))
+				} else {
+					Expect(validationResult).To(BeEmpty())
+				}
+			},
+			Entry("forbid emoji characters", "🪴", true),
+			Entry("forbid whitespaces", "special image", true),
+			Entry("forbid slashes", "nested/image", true),
+			Entry("pass with dashes and dots", "quali.fied-name", false),
+		)
 	})
 })
