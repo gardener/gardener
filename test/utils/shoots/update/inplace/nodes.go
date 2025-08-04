@@ -88,19 +88,6 @@ func FindNodesOfInPlaceWorkers(ctx context.Context, log logr.Logger, shootClient
 	return nodesOfInPlaceWorkers
 }
 
-// ItShouldFindNodesOfInPlaceWorkers finds all nodes of in-place workers and returns their names.
-func ItShouldFindNodesOfInPlaceWorkers(s *ShootContext) sets.Set[string] {
-	GinkgoHelper()
-
-	nodesOfInPlaceWorkers := sets.New[string]()
-
-	It("should get the nodes of worker with in-place update strategy", func(ctx SpecContext) {
-		nodesOfInPlaceWorkers = FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
-	}, SpecTimeout(2*time.Minute))
-
-	return nodesOfInPlaceWorkers
-}
-
 // ItShouldLabelManualInPlaceNodesWithSelectedForUpdate labels all manual in-place nodes with the selected-for-update label.
 // In the actual scenario, this should be done by the user, but for testing purposes, we do it here.
 func ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s *ShootContext) {
