@@ -1545,4 +1545,21 @@ var _ = Describe("Helper", func() {
 			Expect(GetBackupConfigForShoot(shoot, seed)).To(Equal(shootBackup))
 		})
 	})
+
+	Describe("#IsKubeProxyIPVSMode", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeProxy: &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(gardencorev1beta1.ProxyModeIPVS)}}}}
+		})
+
+		It("should return true if KubeProxy is in IPVS mode", func() {
+			Expect(IsKubeProxyIPVSMode(shoot.Spec.Kubernetes.KubeProxy)).To(BeTrue())
+		})
+
+		It("should return false if KubeProxy is not in IPVS mode", func() {
+			shoot.Spec.Kubernetes.KubeProxy.Mode = ptr.To(gardencorev1beta1.ProxyModeIPTables)
+			Expect(IsKubeProxyIPVSMode(shoot.Spec.Kubernetes.KubeProxy)).To(BeFalse())
+		})
+	})
 })

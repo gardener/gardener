@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
@@ -90,8 +89,7 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 	kubeProxyConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy
 	if stillDesired, err := b.isNodeLocalDNSStillDesired(ctx); err != nil {
 		return err
-	} else if stillDesired && (atLeastOnePoolLowerKubernetes134 ||
-		kubeProxyConfig != nil && kubeProxyConfig.Enabled != nil && *kubeProxyConfig.Enabled && kubeProxyConfig.Mode != nil && *kubeProxyConfig.Mode == gardencorev1beta1.ProxyModeIPVS) {
+	} else if stillDesired && (atLeastOnePoolLowerKubernetes134 || v1beta1helper.IsKubeProxyIPVSMode(kubeProxyConfig)) {
 		// Leave NodeLocalDNS components in the cluster until all nodes have been rolled
 		return nil
 	}

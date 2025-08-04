@@ -1093,7 +1093,7 @@ func KeyV2(
 	}
 
 	if version.ConstraintK8sLess134.Check(kubernetesVersion) && nodeLocalDNSEnabled ||
-		kubeProxyConfig != nil && kubeProxyConfig.Enabled != nil && *kubeProxyConfig.Enabled && kubeProxyConfig.Mode != nil && *kubeProxyConfig.Mode == gardencorev1beta1.ProxyModeIPVS && nodeLocalDNSEnabled {
+		v1beta1helper.IsKubeProxyIPVSMode(kubeProxyConfig) && nodeLocalDNSEnabled {
 		data = append(data, "node-local-dns")
 	}
 
