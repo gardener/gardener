@@ -170,6 +170,17 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
 
+		deployControlPlane = g.Add(flow.Task{
+			Name:         "Deploying ControlPlane resource",
+			Fn:           b.DeployControlPlane,
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+		})
+		waitUntilControlPlaneReady = g.Add(flow.Task{
+			Name:         "Waiting until ControlPlane resource has been reconciled",
+			Fn:           b.Shoot.Components.Extensions.ControlPlane.Wait,
+			Dependencies: flow.NewTaskIDs(deployControlPlane),
+		})
+
 		deployOperatingSystemConfig = g.Add(flow.Task{
 			Name:         "Deploying OperatingSystemConfig for control plane machines",
 			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.Deploy,
@@ -184,7 +195,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployMachineControllerManager = g.Add(flow.Task{
 			Name:         "Deploying machine-controller-manager",
 			Fn:           b.DeployMachineControllerManager,
-			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady),
 		})
 
 		deployWorker = g.Add(flow.Task{

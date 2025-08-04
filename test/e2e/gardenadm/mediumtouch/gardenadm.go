@@ -47,7 +47,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			Eventually(ctx, session.Err).Should(gbytes.Say("Using auto-detected public IP addresses as bastion ingress CIDRs"))
 		}, SpecTimeout(time.Minute))
 
-		It("should find the cloud provider secret", func(ctx SpecContext) {
+		It("should deploy the cloud provider secret", func(ctx SpecContext) {
 			cloudProviderSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloudprovider", Namespace: technicalID}}
 			Eventually(ctx, Object(cloudProviderSecret)).Should(HaveField("ObjectMeta.Labels", HaveKeyWithValue("gardener.cloud/purpose", "cloudprovider")))
 		}, SpecTimeout(time.Minute))
@@ -62,9 +62,14 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			Eventually(ctx, Object(deployment)).Should(BeHealthy(health.CheckDeployment))
 		}, SpecTimeout(time.Minute))
 
-		It("should deploy the infrastructure", func(ctx SpecContext) {
+		It("should deploy the Infrastructure", func(ctx SpecContext) {
 			infra := &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: technicalID}}
 			Eventually(ctx, Object(infra)).Should(BeHealthy(health.CheckExtensionObject))
+		}, SpecTimeout(time.Minute))
+
+		It("should deploy the ControlPlane", func(ctx SpecContext) {
+			controlPlane := &extensionsv1alpha1.ControlPlane{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: technicalID}}
+			Eventually(ctx, Object(controlPlane)).Should(BeHealthy(health.CheckExtensionObject))
 		}, SpecTimeout(time.Minute))
 
 		It("should deploy machine-controller-manager", func(ctx SpecContext) {
@@ -83,7 +88,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			), "should be healthy and not have default (open) ingress CIDRs")
 		}, SpecTimeout(time.Minute))
 
-		It("should deploy the worker", func(ctx SpecContext) {
+		It("should deploy the Worker", func(ctx SpecContext) {
 			worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: technicalID}}
 			Eventually(ctx, Object(worker)).Should(BeHealthy(health.CheckExtensionObject))
 		}, SpecTimeout(5*time.Minute))

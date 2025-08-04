@@ -227,7 +227,7 @@ var _ = Describe("Extensions", func() {
 		})
 
 		When("not running the control plane", func() {
-			It("should return the Infrastructure, Worker, and OSC extensions", func() {
+			It("should return the Infrastructure, ControlPlane, OSC, and Worker extensions", func() {
 				extensions, err := ComputeExtensions(gardenadm.Resources{
 					Shoot:                   shoot,
 					ControllerRegistrations: controllerRegistrations,
@@ -235,6 +235,18 @@ var _ = Describe("Extensions", func() {
 				}, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(extensions).To(Equal([]Extension{
+					{
+						ControllerRegistration: controllerRegistration1,
+						ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment1),
+						ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
+							ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration1.Name},
+							Spec: gardencorev1beta1.ControllerInstallationSpec{
+								RegistrationRef: corev1.ObjectReference{Name: controllerRegistration1.Name},
+								DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment1.Name},
+								SeedRef:         corev1.ObjectReference{Name: shoot.Name},
+							},
+						},
+					},
 					{
 						ControllerRegistration: controllerRegistration2,
 						ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment2),
