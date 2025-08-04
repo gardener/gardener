@@ -269,7 +269,7 @@ var _ = Describe("Utils tests", func() {
 		)
 	})
 
-	Describe("#ValidateMachineTypes", func() {
+	Describe("#ValidateCloudProfileSpec", func() {
 		var specTemplate = &core.CloudProfileSpec{
 			Type:    "local",
 			Regions: []core.Region{{Name: "local"}},
@@ -289,9 +289,8 @@ var _ = Describe("Utils tests", func() {
 					UpdateStrategy: ptr.To(core.UpdateStrategyMajor),
 				},
 			},
-			MachineTypes: []core.MachineType{
-				{Architecture: ptr.To("amd64")},
-			},
+			MachineTypes: []core.MachineType{{Name: "valid", Architecture: ptr.To("amd64")}},
+			VolumeTypes:  []core.VolumeType{{Class: "standard", Name: "valid"}},
 		}
 
 		DescribeTable("should not allow invalid machine type names",
@@ -308,6 +307,32 @@ var _ = Describe("Utils tests", func() {
 								"Type":   Equal(field.ErrorTypeInvalid),
 								"Field":  Equal("spec.machineTypes[0].name"),
 								"Detail": ContainSubstring("machine type name must be a qualified name"),
+							})),
+						))
+				} else {
+					Expect(validationResult).To(BeEmpty())
+				}
+			},
+			Entry("forbid emoji characters", "🪴", true),
+			Entry("forbid whitespaces", "special image", true),
+			Entry("forbid slashes", "nested/image", true),
+			Entry("pass with dashes and dots", "quali.fied-name", false),
+		)
+
+		DescribeTable("should not allow invalid volume type names",
+			func(name string, shouldFail bool) {
+				spec := specTemplate.DeepCopy()
+				spec.VolumeTypes[0].Name = name
+
+				validationResult := ValidateCloudProfileSpec(spec, field.NewPath("spec"))
+
+				if shouldFail {
+					Expect(validationResult).
+						To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.volumeTypes[0].name"),
+								"Detail": ContainSubstring("volume type name must be a qualified name"),
 							})),
 						))
 				} else {

@@ -319,6 +319,8 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 		namePath := idxPath.Child("name")
 		if len(volumeType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+		} else if errs := validateUnprefixedQualifiedName(volumeType.Name); len(errs) != 0 {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), volumeType.Name, fmt.Sprintf("volume type name must be a qualified name: %v", errs)))
 		}
 
 		if names.Has(volumeType.Name) {
