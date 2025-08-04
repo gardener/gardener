@@ -186,6 +186,14 @@ var _ = Describe("DNSRecord validation tests", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
+		It("should allow valid resources (type AAAA) with non-canonical value", func() {
+			dns.Spec.RecordType = extensionsv1alpha1.DNSRecordTypeAAAA
+			dns.Spec.Values = []string{"2001:db8:f00:0:0:0:0:1"}
+
+			errorList := ValidateDNSRecord(dns)
+			Expect(errorList).To(BeEmpty())
+		})
+
 		It("should allow valid resources (type TXT)", func() {
 			dns.Spec.RecordType = extensionsv1alpha1.DNSRecordTypeTXT
 			dns.Spec.Values = []string{"can be anything"}

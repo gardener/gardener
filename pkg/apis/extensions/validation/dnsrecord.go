@@ -6,6 +6,7 @@ package validation
 
 import (
 	"fmt"
+	"net"
 	"slices"
 	"strings"
 
@@ -112,9 +113,20 @@ func validateValue(recordType extensionsv1alpha1.DNSRecordType, value string, fl
 
 	switch recordType {
 	case extensionsv1alpha1.DNSRecordTypeA, extensionsv1alpha1.DNSRecordTypeAAAA:
-		allErrs = append(allErrs, validation.IsValidIP(fldPath, value)...)
+		allErrs = append(allErrs, isValidIP(fldPath, value)...)
 	case extensionsv1alpha1.DNSRecordTypeCNAME:
 		allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(fldPath, value)...)
 	}
+	return allErrs
+}
+
+func isValidIP(fldPath *field.Path, value string) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	ip := net.ParseIP(value)
+	if ip == nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, value, "must be a valid IP address, (e.g. 10.9.8.7 or 2001:db8::ffff)"))
+	}
+
 	return allErrs
 }
