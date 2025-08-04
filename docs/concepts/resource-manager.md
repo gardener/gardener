@@ -5,17 +5,9 @@ description: Set of controllers with different responsibilities running once per
 
 ## Overview
 
-Initially, the `gardener-resource-manager` was a project similar to the [kube-addon-manager](https://github.com/kubernetes/kubernetes/tree/master/cluster/addons/addon-manager).
-It manages Kubernetes resources in a target cluster which means that it creates, updates, and deletes them.
-Also, it makes sure that manual modifications to these resources are reconciled back to the desired state.
+Gardener heavily utilizes Kubernetes resources for its operations. Therefore any unintentional changes to those resources by an user or operator could lead to problems ranging from failure of a shoot, seed or even the whole landscape. Gardener Resource Manager solves this problem by providing a way to define the desired state of a Kubernetes resource in a target cluster and reverts back any unexpected changes applied to it.
 
-In the Gardener project we were using the kube-addon-manager since more than two years.
-While we have progressed with our [extensibility story](../proposals/01-extensibility.md) (moving cloud providers out-of-tree), we had decided that the kube-addon-manager is no longer suitable for this use-case.
-The problem with it is that it needs to have its managed resources on its file system.
-This requires storing the resources in `ConfigMap`s or `Secret`s and mounting them to the kube-addon-manager pod during deployment time.
-The `gardener-resource-manager` uses `CustomResourceDefinition`s which allows to dynamically add, change, and remove resources with immediate action and without the need to reconfigure the volume mounts/restarting the pod.
-
-Meanwhile, the `gardener-resource-manager` has evolved to a more generic component comprising several controllers and webhook handlers.
+Apart from this functionality `gardener-resource-manager` has evolved to a more generic component comprising several controllers and webhook handlers.
 It is deployed by gardenlet once per seed (in the `garden` namespace) and once per shoot (in the respective shoot namespaces in the seed).
 
 ## Component Configuration
