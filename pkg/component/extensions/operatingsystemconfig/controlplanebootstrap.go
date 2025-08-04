@@ -21,15 +21,18 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 type controlPlaneBootstrap struct {
 	// This type only implements a subset of Interface. Embed this to spare the panic stubs.
 	Interface
 
-	log    logr.Logger
-	client client.Client
-	values *ControlPlaneBootstrapValues
+	log            logr.Logger
+	client         client.Client
+	secretsManager secretsmanager.Interface
+	values         *ControlPlaneBootstrapValues
 
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
@@ -52,13 +55,15 @@ type ControlPlaneBootstrapValues struct {
 func NewControlPlaneBootstrap(
 	log logr.Logger,
 	client client.Client,
+	secretsManager secretsmanager.Interface,
 	values *ControlPlaneBootstrapValues,
 	waitInterval, waitSevereThreshold, waitTimeout time.Duration,
 ) Interface {
 	return &controlPlaneBootstrap{
-		log:    log,
-		client: client,
-		values: values,
+		log:            log,
+		client:         client,
+		secretsManager: secretsManager,
+		values:         values,
 
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
@@ -72,7 +77,12 @@ func NewControlPlaneBootstrap(
 }
 
 func (c *controlPlaneBootstrap) Deploy(ctx context.Context) error {
-	units, files, err := nodeinit.GardenadmConfig(c.values.GardenadmImage)
+	sshKeypairSecret, found := c.secretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
+	}
+
+	units, files, err := nodeinit.GardenadmConfig(c.values.GardenadmImage, string(sshKeypairSecret.Data[secretsutils.DataKeySSHAuthorizedKeys]))
 	if err != nil {
 		return err
 	}
