@@ -809,6 +809,23 @@ const (
 	// for administrators.
 	ClusterRoleNameGardenerAdministrators = "gardener.cloud:system:administrators"
 
+	// GardenerReadOnlyClusterRoleName is the name of a cluster role allowing read-only access to a shoot cluster.
+	GardenerReadOnlyClusterRoleName = "gardener.cloud:system:read-only"
+	// GardenerSystemAdminsGroupName is a group assigned to gardener system administrators
+	// when they are using the AdminKubeconfig to access a shoot cluster.
+	GardenerSystemAdminsGroupName = "gardener.cloud:system:admins"
+	// GardenerSystemViewersGroupName is a group assigned to gardener system viewers
+	// when they are using the ViewerKubeconfig to access a shoot cluster.
+	GardenerSystemViewersGroupName = "gardener.cloud:system:viewers"
+	// GardenerProjectAdminsGroupName is a group assigned to gardener project administrators,
+	// or other users allowed to create shoot/adminkubeconfig on the shoot but not system administrator,
+	// when they are using the AdminKubeconfig to access a shoot cluster.
+	GardenerProjectAdminsGroupName = "gardener.cloud:project:admins"
+	// GardenerProjectViewersGroupName is a group assigned to gardener project viewers,
+	// or other users allowed to create shoot/viewerkubeconfig on the shoot but not system viewers,
+	// when they are using the ViewerKubeconfig to access a shoot cluster.
+	GardenerProjectViewersGroupName = "gardener.cloud:project:viewers"
+
 	// ProjectName is the key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"
 	// ProjectSkipStaleCheck is the key of an annotation on a project namespace that marks the associated Project to be

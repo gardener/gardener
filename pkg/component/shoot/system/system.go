@@ -19,6 +19,7 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -320,6 +321,10 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
+	if err := registry.Add(s.adminRBACResources()...); err != nil {
+		return nil, err
+	}
+
 	return registry.SerializedObjects()
 }
 
@@ -431,7 +436,7 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener.cloud:system:read-only",
+			Name: v1beta1constants.GardenerReadOnlyClusterRoleName,
 		},
 		Rules: make([]rbacv1.PolicyRule, 0, len(allAPIGroups)),
 	}
@@ -444,23 +449,39 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 		})
 	}
 
-	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "gardener.cloud:system:read-only",
-			Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+	return []client.Object{
+		clusterRole,
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        v1beta1constants.GardenerSystemViewersGroupName,
+				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     v1beta1constants.GardenerReadOnlyClusterRoleName,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind: rbacv1.GroupKind,
+				Name: v1beta1constants.GardenerSystemViewersGroupName,
+			}},
 		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     clusterRole.Name,
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        v1beta1constants.GardenerProjectViewersGroupName,
+				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     v1beta1constants.GardenerReadOnlyClusterRoleName,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind: rbacv1.GroupKind,
+				Name: v1beta1constants.GardenerProjectViewersGroupName,
+			}},
 		},
-		Subjects: []rbacv1.Subject{{
-			Kind: rbacv1.GroupKind,
-			Name: v1beta1constants.ShootGroupViewers,
-		}},
 	}
-
-	return []client.Object{clusterRole, clusterRoleBinding}
 }
 
 func (s *shootSystem) isEncryptedResource(resource, group string) bool {
@@ -477,5 +498,52 @@ func addNetworkToMap(name string, cidrs []net.IPNet, data map[string]string) {
 	networks := netutils.JoinByComma(cidrs)
 	if networks != "" {
 		data[name] = networks
+	}
+}
+
+func (s *shootSystem) adminRBACResources() []client.Object {
+	return []client.Object{
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        v1beta1constants.GardenerSystemAdminsGroupName,
+				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "cluster-admin",
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind: rbacv1.GroupKind,
+					Name: v1beta1constants.GardenerSystemAdminsGroupName,
+				},
+				{
+					Kind: rbacv1.GroupKind,
+					Name: user.SystemPrivilegedGroup, // TODO(vpnachev): Remove "system:masters" subject after v1.125 is released
+				},
+			},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        v1beta1constants.GardenerProjectAdminsGroupName,
+				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "cluster-admin",
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind: rbacv1.GroupKind,
+					Name: v1beta1constants.GardenerProjectAdminsGroupName,
+				},
+				{
+					Kind: rbacv1.GroupKind,
+					Name: user.SystemPrivilegedGroup, // TODO(vpnachev): Remove "system:masters" subject after v1.125 is released
+				},
+			},
+		},
 	}
 }
