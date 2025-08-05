@@ -812,18 +812,20 @@ const (
 	// GardenerReadOnlyClusterRoleName is the name of a cluster role allowing read-only access to a shoot cluster.
 	GardenerReadOnlyClusterRoleName = "gardener.cloud:system:read-only"
 	// GardenerSystemAdminsGroupName is a group assigned to gardener system administrators
-	// when they are using the AdminKubeconfig to access a shoot cluster.
+	// when they request an AdminKubeconfig to access a shoot cluster.
 	GardenerSystemAdminsGroupName = "gardener.cloud:system:admins"
 	// GardenerSystemViewersGroupName is a group assigned to gardener system viewers
-	// when they are using the ViewerKubeconfig to access a shoot cluster.
+	// when they request a ViewerKubeconfig to access a shoot cluster.
 	GardenerSystemViewersGroupName = "gardener.cloud:system:viewers"
-	// GardenerProjectAdminsGroupName is a group assigned to gardener project administrators,
-	// or other users allowed to create shoot/adminkubeconfig on the shoot but not system administrator,
-	// when they are using the AdminKubeconfig to access a shoot cluster.
+	// GardenerProjectAdminsGroupName is a group assigned during AdminKubeconfig generation to
+	// gardener project administrators or other users allowed to request an AdminKubeconfig.
+	// System administrators do not get assigned to this group when requesting an AdminKubeconfig.
+	// Instead, they are assigned to the group "gardener.cloud:system:admins".
 	GardenerProjectAdminsGroupName = "gardener.cloud:project:admins"
-	// GardenerProjectViewersGroupName is a group assigned to gardener project viewers,
-	// or other users allowed to create shoot/viewerkubeconfig on the shoot but not system viewers,
-	// when they are using the ViewerKubeconfig to access a shoot cluster.
+	// GardenerProjectViewersGroupName is a group assigned during ViewerKubeconfig generation to
+	// gardener project viewers or other users allowed to request a ViewerKubeconfig.
+	// System viewers do not get assigned to this group when requesting a ViewerKubeconfig.
+	// Instead, they are assigned to the group "gardener.cloud:system:viewers".
 	GardenerProjectViewersGroupName = "gardener.cloud:project:viewers"
 
 	// ProjectName is the key of a label on namespaces whose value holds the project name.
