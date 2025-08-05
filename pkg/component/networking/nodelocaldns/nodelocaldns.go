@@ -314,23 +314,13 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 	for _, node := range nodeList.Items {
 		node := node // capture range variable
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			return retry.UntilTimeout(ctx, 500*time.Millisecond, 3*time.Second, func(ctx context.Context) (bool, error) {
-				patch := client.MergeFrom(node.DeepCopy())
-				delete(node.Labels, labelKeyCleanupRequired)
-				err := n.values.ShootClient.Patch(ctx, &node, patch)
-				if err == nil {
-					n.values.Log.Info("Removed node-local-dns cleanup label from node", "node", node.Name)
-					return retry.Ok()
-				}
-				if apierrors.IsConflict(err) {
-					// Refetch latest node and retry
-					if err := n.values.ShootClient.Get(ctx, client.ObjectKey{Name: node.Name}, &node); err != nil {
-						return retry.SevereError(fmt.Errorf("failed to refetch node %s: %w", node.Name, err))
-					}
-					return false, nil
-				}
-				return retry.SevereError(fmt.Errorf("failed to remove cleanup label from node %s: %w", node.Name, err))
-			})
+			patch := client.MergeFrom(node.DeepCopy())
+			delete(node.Labels, labelKeyCleanupRequired)
+			err := n.values.ShootClient.Patch(ctx, &node, patch)
+			if err == nil {
+				n.values.Log.Info("Removed node-local-dns cleanup label from node", "node", node.Name)
+			}
+			return err
 		})
 	}
 
