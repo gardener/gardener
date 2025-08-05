@@ -7002,6 +7002,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
 				Expect(errList).To(BeEmpty())
 			})
+
 			It("should forbid setting MachineDrainTimeout to a negative value", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					MachineDrainTimeout: &metav1.Duration{Duration: time.Minute * -2},
@@ -7014,6 +7015,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
+
 			It("should forbid setting MachineHealthTimeout to a negative value", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					MachineHealthTimeout: &metav1.Duration{Duration: time.Minute * -2},
@@ -7026,6 +7028,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
+
 			It("should forbid setting MachineCreationTimeout to a negative value", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					MachineCreationTimeout: &metav1.Duration{Duration: time.Minute * -2},
@@ -7051,6 +7054,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": Equal("can only be set when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"),
 				}))))
 			})
+
 			It("should allow setting MachineInPlaceUpdateTimeout to positive value for update strategy AutoInPlaceUpdate", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
@@ -7061,6 +7065,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
 				Expect(errList).To(BeEmpty())
 			})
+			
 			It("should forbid setting MachineInPlaceUpdateTimeout to negative value for update strategy AutoInPlaceUpdate", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
