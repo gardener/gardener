@@ -135,13 +135,14 @@ type NewOperationFunc func(
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
+	internalDomain *gardenerutils.Domain,
 	shoot *gardencorev1beta1.Shoot,
 ) (
 	*operation.Operation,
 	error,
 )
 
-var defaultNewOperationFunc = func(
+var defaultNewOperationFunc NewOperationFunc = func(
 	ctx context.Context,
 	log logr.Logger,
 	gardenClient client.Client,
