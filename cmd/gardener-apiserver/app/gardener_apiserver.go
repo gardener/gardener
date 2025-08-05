@@ -302,7 +302,7 @@ func (o *Options) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	server, err := config.Complete().New()
+	server, err := config.Complete().New(kubeClient.AuthorizationV1().SubjectAccessReviews())
 	if err != nil {
 		return err
 	}
