@@ -34,41 +34,43 @@ As this setup is running on a real infrastructure, you have to provide credentia
 
 Gardener control plane requires DNS for default and internal domains. Thus, you have to configure a valid DNS provider for your setup.
 
-Please maintain your DNS provider configuration and credentials at `./example/provider-extensions/garden/controlplane/domain-secrets.yaml`.
+Please maintain your DNS provider configuration and credentials at [`/example/provider-extensions/garden/controlplane/domain-secrets.yaml`](/example/provider-extensions/garden/controlplane/domain-secrets.yaml).
 
-You can find a template for the file at `./example/provider-extensions/garden/controlplane/domain-secrets.yaml.tmpl`.
+You can find a template for the file at [`/example/provider-extensions/garden/controlplane/domain-secrets.yaml.tmpl`](/example/provider-extensions/garden/controlplane/domain-secrets.yaml.tmpl).
 
 ### Infrastructure
 
-Infrastructure secrets and the corresponding secret bindings should be maintained at:
+Infrastructure credentials, `Secrets` and `WorkloadIdentities`, and the corresponding `CredentialsBinding`s should be maintained at:
 
-- `./example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml`
-- `./example/provider-extensions/garden/project/credentials/secretbindings.yaml`
+- [`/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml`](/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml)
+- [`/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml`](/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml)
+- [`/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml`](/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml)
+- [`/example/provider-extensions/garden/project/credentials/secretbindings.yaml`](/example/provider-extensions/garden/project/credentials/secretbindings.yaml)
 
 There are templates with `.tmpl` suffixes for the files in the same folder.
 
 ### Projects
 
-The projects and the namespaces associated with them should be maintained at `./example/provider-extensions/garden/project/project.yaml`.
+The projects and the namespaces associated with them should be maintained at [`/example/provider-extensions/garden/project/project.yaml`](/example/provider-extensions/garden/project/project.yaml).
 
-You can find a template for the file at `./example/provider-extensions/garden/project/project.yaml.tmpl`.
+You can find a template for the file at [`/example/provider-extensions/garden/project/project.yaml.tmpl`](/example/provider-extensions/garden/project/project.yaml.tmpl).
 
 ### Seed Cluster Preparation
 
-The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at `./example/provider-extensions/seed/kubeconfig`.
-Additionally, please maintain the configuration of your seed in `./example/provider-extensions/gardenlet/values.yaml`. It is automatically copied from `values.yaml.tmpl` in the same directory when you run `make gardener-extensions-up` for the first time. It also includes explanations of the properties you should set.
+The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at [`/example/provider-extensions/seed/kubeconfig`](/example/provider-extensions/seed/kubeconfig).
+Additionally, please maintain the configuration of your seed in [`/example/provider-extensions/gardenlet/values.yaml`](/example/provider-extensions/gardenlet/values.yaml). It is automatically copied from `values.yaml.tmpl` in the same directory when you run `make gardener-extensions-up` for the first time. It also includes explanations of the properties you should set.
 
 Using a Gardener Shoot cluster as seed simplifies the process, because some configuration options can be taken from `shoot-info` and creating DNS entries and TLS certificates is automated.
 
-However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of `./example/provider-extensions/gardenlet/values.yaml` upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up`, which is explained later, will pause and tell you what to do.
+However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of [`/example/provider-extensions/gardenlet/values.yaml`](/example/provider-extensions/gardenlet/values.yaml) upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up`, which is explained later, will pause and tell you what to do.
 
 ### External Controllers
 
-You might plan to deploy and register external controllers for networking, operating system, providers, etc. Please put `ControllerDeployment`s and `ControllerRegistration`s into the `./example/provider-extensions/garden/controllerregistrations` directory. The whole content of this folder will be applied to your KinD cluster.
+You might plan to deploy and register external controllers for networking, operating system, providers, etc. Please put `ControllerDeployment`s and `ControllerRegistration`s into the [`/example/provider-extensions/garden/controllerregistrations`](/example/provider-extensions/garden/controllerregistrations) directory. The whole content of this folder will be applied to your Garden cluster.
 
 ### `CloudProfile`s
 
-There are no demo `CloudProfiles` yet. Thus, please copy `CloudProfiles` from another landscape to the `./example/provider-extensions/garden/cloudprofiles` directory or create your own `CloudProfiles` based on the [gardener examples](../../example/30-cloudprofile.yaml). Please check the GitHub repository of your desired provider-extension. Most of them include example `CloudProfile`s. All files you place in this folder will be applied to your KinD cluster.
+There are no demo `CloudProfiles` yet. Thus, please copy `CloudProfiles` from another landscape to the [`/example/provider-extensions/garden/cloudprofiles`](/example/provider-extensions/garden/cloudprofiles) directory or create your own `CloudProfiles` based on the [gardener examples](../../example/30-cloudprofile.yaml). Please check the GitHub repository of your desired provider-extension. Most of them include example `CloudProfile`s. All files you place in this folder will be applied to your Garden cluster.
 
 ## Setting Up the KinD Cluster
 
@@ -76,10 +78,10 @@ There are no demo `CloudProfiles` yet. Thus, please copy `CloudProfiles` from an
 make kind-extensions-up
 ```
 
-This command sets up a new KinD cluster named `gardener-extensions` and stores the kubeconfig in the `./example/gardener-local/kind/extensions/kubeconfig` file.
+This command sets up a new KinD cluster named `gardener-extensions` and stores the kubeconfig in the [`/example/gardener-local/kind/extensions/kubeconfig`](/example/gardener-local/kind/extensions/kubeconfig) file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
-Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/extensions/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/extensions/kubeconfig`.
+Alternatively, make sure to set your `KUBECONFIG` environment variable to [`/example/gardener-local/kind/extensions/kubeconfig`](/example/gardener-local/kind/extensions/kubeconfig) for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/extensions/kubeconfig`.
 
 All of the following steps assume that you are using this kubeconfig.
 
@@ -115,8 +117,8 @@ DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up
 
 > [!IMPORTANT]
 > The Gardener Discovery Server is started with a token which is valid for 48 hours.
-> Rerun `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up` in order to renew the token. 
-> 
+> Rerun `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up` in order to renew the token.
+>
 > When working with multiple seed clusters you need to only pass `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true` for the one seed cluster that will be used to expose the workload identity documents.
 > A single Garden cluster needs only one Gardener Discovery Server.
 
@@ -159,7 +161,7 @@ To remove all seeds and to cleanup the local Gardener cluster, you have to run t
 
 There is a container image registry in each Seed cluster where Gardener images required for the Seed and the Shoot nodes are pushed to. This registry is password protected.
 The password is generated when the Seed is deployed via `make gardener-extensions-up`. Afterward, it is not rotated automatically.
-Otherwise, this could break the update of `gardener-node-agent`, because it might not be able to pull its own new image anymore
+Otherwise, this could break the update of `gardener-node-agent`, because it might not be able to pull its own new image anymore.
 This is no general issue of `gardener-node-agent`, but a limitation `provider-extensions` setup. Gardener does not support protected container images out of the box. The function was added for this scenario only.
 
 However, if you want to rotate the credentials for any reason, there are two options for it.
@@ -174,7 +176,6 @@ or
 - run `kubectl delete secrets -n registry registry-password` on your seed cluster
 - run `./example/provider-extensions/registry-seed/deploy-registry.sh <path to seed kubeconfig> <seed registry hostname>`
 - `reconcile` the shoots again
-
 
 ## Pause and Unpause the KinD Cluster
 
