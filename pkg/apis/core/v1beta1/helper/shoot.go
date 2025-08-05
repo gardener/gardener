@@ -700,8 +700,8 @@ func GetAPIServerDomain(domain string) string {
 // IsKubeProxyIPVSMode checks if the shoot is running with kube-proxy in IPVS mode.
 func IsKubeProxyIPVSMode(kubeProxyConfig *gardencorev1beta1.KubeProxyConfig) bool {
 	if kubeProxyConfig != nil && kubeProxyConfig.Enabled != nil && *kubeProxyConfig.Enabled &&
-		kubeProxyConfig.Mode != nil && *kubeProxyConfig.Mode == gardencorev1beta1.ProxyModeIPVS {
-		return true
+		kubeProxyConfig.Mode != nil {
+		return *kubeProxyConfig.Mode == gardencorev1beta1.ProxyModeIPVS
 	}
 	return false
 }

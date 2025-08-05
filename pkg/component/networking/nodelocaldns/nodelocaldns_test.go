@@ -1239,6 +1239,7 @@ ip6.arpa:53 {
 			shootClientSet.EXPECT().Client().Return(shootClient).AnyTimes()
 			shootClient.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			shootClient.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			shootClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			seedClient := mockclient.NewMockClient(ctrl)
 			seedClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
