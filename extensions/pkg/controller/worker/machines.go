@@ -160,8 +160,8 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 		return "", fmt.Errorf("failed to parse Kubernetes version %q: %w", kubernetesVersion, err)
 	}
 
-	if versionutils.ConstraintK8sLess134.Check(parsedVersion) && v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) ||
-		v1beta1helper.IsKubeProxyIPVSMode(cluster.Shoot.Spec.Kubernetes.KubeProxy) && v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
+	if (versionutils.ConstraintK8sLess134.Check(parsedVersion) && v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents)) ||
+		(v1beta1helper.IsKubeProxyIPVSMode(cluster.Shoot.Spec.Kubernetes.KubeProxy) && v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents)) {
 		data = append(data, "node-local-dns")
 	}
 

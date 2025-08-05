@@ -25,6 +25,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -251,8 +252,7 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	if shoot.Spec.Kubernetes.KubeProxy != nil && shoot.Spec.Kubernetes.KubeProxy.Enabled != nil && *shoot.Spec.Kubernetes.KubeProxy.Enabled &&
-		shoot.Spec.Kubernetes.KubeProxy.Mode != nil && *shoot.Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS {
+	if v1beta1helper.IsKubeProxyIPVSMode(shoot.Spec.Kubernetes.KubeProxy) {
 		return nil
 	}
 
@@ -263,13 +263,13 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	allNodes := &corev1.NodeList{}
-	if err := n.values.ShootClient.List(ctx, allNodes); err != nil {
+	nodeList = &corev1.NodeList{}
+	if err := n.values.ShootClient.List(ctx, nodeList); err != nil {
 		return fmt.Errorf("failed to list all nodes: %w", err)
 	}
 	now := time.Now()
 	if managedResourceExists {
-		for _, node := range allNodes.Items {
+		for _, node := range nodeList.Items {
 			// Skip nodes that already have the label
 			if val, ok := node.Labels[labelKeyCleanupRequired]; ok && val == "true" {
 				continue
@@ -277,10 +277,7 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 			// Check if node joined within the last three minutes (TimeoutWaitForManagedResource + 1 min buffer)
 			if node.CreationTimestamp.After(now.Add(-3 * time.Minute)) {
 				patch := client.MergeFrom(node.DeepCopy())
-				if node.Labels == nil {
-					node.Labels = make(map[string]string)
-				}
-				node.Labels[labelKeyCleanupRequired] = "true"
+				metav1.SetMetaDataLabel(&node.ObjectMeta, labelKeyCleanupRequired, "true")
 				if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
 					return fmt.Errorf("failed to add cleanup label to recently joined node %s: %w", node.Name, err)
 				}
@@ -314,7 +311,7 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 			Namespace: metav1.NamespaceSystem,
 		},
 	}
-	if err := n.values.ShootClient.Delete(ctx, cleanupDaemonSet); err != nil && !apierrors.IsNotFound(err) {
+	if err := n.values.ShootClient.Delete(ctx, cleanupDaemonSet); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("failed to delete cleanup DaemonSet %s: %w", labelValueAndCleanupName, err)
 	}
 
@@ -349,7 +346,7 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 			Namespace: metav1.NamespaceSystem,
 		},
 	}
-	if err := n.values.ShootClient.Delete(ctx, cleanupScriptCM); err != nil && !apierrors.IsNotFound(err) {
+	if err := n.values.ShootClient.Delete(ctx, cleanupScriptCM); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("failed to delete cleanup script ConfigMap: %w", err)
 	}
 
@@ -485,16 +482,13 @@ func (n *nodeLocalDNS) createCleanupConfigMap(ctx context.Context) error {
 			Name:      cleanupConfigMapName,
 			Namespace: metav1.NamespaceSystem,
 		},
-		Data: map[string]string{
-			dataKeyCleanupScript: cleanupScript,
-		},
-		Immutable: ptr.To(true),
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.values.ShootClient, cm, func() error {
 		cm.Data = map[string]string{
 			dataKeyCleanupScript: cleanupScript,
 		}
+		cm.Immutable = ptr.To(true)
 		return nil
 	})
 	return err
@@ -509,7 +503,9 @@ func (n *nodeLocalDNS) createCleanupDaemonSet(ctx context.Context) error {
 				v1beta1constants.LabelApp: labelValueAndCleanupName,
 			},
 		},
-		Spec: appsv1.DaemonSetSpec{
+	}
+	_, err := controllerutil.CreateOrUpdate(ctx, n.values.ShootClient, cleanupDaemonSet, func() error {
+		cleanupDaemonSet.Spec = appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					v1beta1constants.LabelApp: labelValueAndCleanupName,
@@ -605,14 +601,10 @@ func (n *nodeLocalDNS) createCleanupDaemonSet(ctx context.Context) error {
 					},
 				},
 			},
-		},
-	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, n.values.ShootClient, cleanupDaemonSet, func() error {
+		}
 		return nil
-	}); err != nil {
-		return err
-	}
-	return nil
+	})
+	return err
 }
 
 func (n *nodeLocalDNS) markNodeForCleanup(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
@@ -638,15 +630,14 @@ func (n *nodeLocalDNS) markNodeForCleanup(ctx context.Context, shoot *gardencore
 		}); err != nil {
 			return fmt.Errorf("failed to list nodes for worker pool %s: %w", worker.Name, err)
 		}
+
 		for _, node := range nodeList.Items {
 			if node.Labels[labelKeyCleanupRequired] == "true" {
 				continue
 			}
+
 			patch := client.MergeFrom(node.DeepCopy())
-			if node.Labels == nil {
-				node.Labels = make(map[string]string)
-			}
-			node.Labels[labelKeyCleanupRequired] = "true"
+			metav1.SetMetaDataLabel(&node.ObjectMeta, labelKeyCleanupRequired, "true")
 			if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
 				return fmt.Errorf("failed to add cleanup label to node %s: %w", node.Name, err)
 			}

@@ -1810,6 +1810,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(hash1).To(Equal(hash2))
 			})
+
 			It("when node-local-dns gets disabled and kube-proxy runs in ipvs mode", func() {
 				values.NodeLocalDNSEnabled = true
 				var err error
@@ -1825,6 +1826,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(hash1).ToNot(Equal(hash2))
 			})
+
 			It("when node-local-dns gets enabled and kubernetes version is lower than 1.34", func() {
 				values.NodeLocalDNSEnabled = false
 				var err error

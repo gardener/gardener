@@ -1092,8 +1092,8 @@ func KeyV2(
 		}
 	}
 
-	if version.ConstraintK8sLess134.Check(kubernetesVersion) && nodeLocalDNSEnabled ||
-		v1beta1helper.IsKubeProxyIPVSMode(kubeProxyConfig) && nodeLocalDNSEnabled {
+	if (version.ConstraintK8sLess134.Check(kubernetesVersion) && nodeLocalDNSEnabled) ||
+		(v1beta1helper.IsKubeProxyIPVSMode(kubeProxyConfig) && nodeLocalDNSEnabled) {
 		data = append(data, "node-local-dns")
 	}
 
