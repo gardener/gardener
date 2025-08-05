@@ -234,6 +234,11 @@ var _ = Describe("NodeLocalDNS", func() {
 			Image:       image,
 			AlpineImage: alpineImage,
 			IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+			Workers: []gardencorev1beta1.Worker{
+				{
+					Name: "worker-aaaa",
+				},
+			},
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
