@@ -600,6 +600,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("exposure class", func() {
+			It("should forbid invalid exposure class names", func() {
+				shoot.Spec.ExposureClassName = ptr.To("$invalid.class.[]name{}/")
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.exposureClassName"),
+					})),
+				))
+			})
+
+			It("should allow valid exposure class name", func() {
+				shoot.Spec.ExposureClassName = ptr.To("exposure-class-1")
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+
 			It("should pass as exposure class is not changed", func() {
 				shoot.Spec.ExposureClassName = ptr.To("exposure-class-1")
 				newShoot := prepareShootForUpdate(shoot)
@@ -696,6 +713,68 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.addons.kubernetesDashboard.authenticationMode"),
 				}))))
+			})
+
+			It("should allow valid load balancer source ranges for nginx-ingress", func() {
+				shoot.Spec.Addons.NginxIngress.LoadBalancerSourceRanges = []string{"192.168.123.56/32", "2001:db8::/64"}
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid invalid load balancer source ranges for nginx-ingress", func() {
+				shoot.Spec.Addons.NginxIngress.LoadBalancerSourceRanges = []string{"", "invalid-source-range", "192.168.123.56/33", "2001:db.8::/64"}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[0]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[1]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[2]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[3]"),
+					})),
+				))
+			})
+
+			It("should allow valid config for nginx-ingress", func() {
+				shoot.Spec.Addons.NginxIngress.Config = map[string]string{"foo": "bar"}
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid invalid config for nginx-ingress", func() {
+				shoot.Spec.Addons.NginxIngress.Config = map[string]string{
+					"$/{}|][":                "1",
+					strings.Repeat("a", 260): "2",
+					"valid-key":              strings.Repeat("b", 1024*1024),
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.config[$/{}|][]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.addons.nginxIngress.config[" + strings.Repeat("a", 260) + "]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeTooLong),
+						"Field": Equal("spec.addons.nginxIngress.config"),
+					})),
+				))
 			})
 
 			It("should allow external traffic policies 'Cluster' for nginx-ingress", func() {
@@ -3802,6 +3881,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			It("should forbid specifying a networking type with invalid characters", func() {
+				shoot.Spec.Networking.Type = ptr.To("$/()[]{}")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.networking.type"),
+				}))))
+			})
+
+			It("should forbid specifying a very long networking type", func() {
+				shoot.Spec.Networking.Type = ptr.To("my-extremely-long-networking-type-that-exceeds-the-maximum-length")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.networking.type"),
+				}))))
+			})
+
 			It("should forbid changing the networking type", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Networking.Type = ptr.To("some-other-type")
@@ -4181,6 +4282,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":     Equal(field.ErrorTypeDuplicate),
 						"BadValue": Equal("foo.bar."),
+					})),
+				)),
+				Entry("should not allow extremely long domains", []string{"extremely-long-domain-name-with-repeating-subdomains.extremely-long-domain-name-with-repeating-subdomains.extremely-long-domain-name-with-repeating-subdomains.extremely-long-domain-name-with-repeating-subdomains.extremely-long-domain-name-with-repeating-subdomains.bar"}, ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Detail": ContainSubstring("must be a valid DNS subdomain"),
+					})),
+				)),
+				Entry("should not allow invalid characters", []string{"foo/$()[]{}.bar"}, ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Detail": ContainSubstring("must be a valid DNS subdomain"),
 					})),
 				)),
 			)
