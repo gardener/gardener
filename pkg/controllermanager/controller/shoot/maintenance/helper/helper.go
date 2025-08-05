@@ -15,7 +15,7 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-// FilterMachineImageVersions filters the machine image versions based on the worker's architecture, CRI, and kubelet version.
+// FilterMachineImageVersions filters the machine image versions based on the worker's architecture, machineType capabilities, CRI, and kubelet version.
 func FilterMachineImageVersions(
 	machineImageFromCloudProfile *gardencorev1beta1.MachineImage,
 	worker gardencorev1beta1.Worker,
@@ -32,7 +32,7 @@ func FilterMachineImageVersions(
 	return filteredMachineImageVersions
 }
 
-func filterForCapabilities(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, capabilities gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) *gardencorev1beta1.MachineImage {
+func filterForCapabilities(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, machineCapabilities gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) *gardencorev1beta1.MachineImage {
 	if len(capabilitiesDefinitions) == 0 {
 		return machineImageFromCloudProfile
 	}
@@ -44,7 +44,7 @@ func filterForCapabilities(machineImageFromCloudProfile *gardencorev1beta1.Machi
 	}
 
 	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
-		if v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(capabilities, cloudProfileVersion.CapabilitySets, capabilitiesDefinitions) {
+		if v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineCapabilities, cloudProfileVersion.CapabilitySets, capabilitiesDefinitions) {
 			filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
 		}
 	}

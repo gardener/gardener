@@ -1747,7 +1747,8 @@ func getDefaultMachineImage(
 	machineType *gardencorev1beta1.MachineType,
 	capabilitiesDefinition []gardencorev1beta1.CapabilityDefinition,
 	isUpdateStrategyInPlace bool,
-	fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+	fldPath *field.Path,
+) (*core.ShootMachineImage, *field.Error) {
 	var imageReference string
 	if image != nil {
 		imageReference = fmt.Sprintf("%s@%s", image.Name, image.Version)
