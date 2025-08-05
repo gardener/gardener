@@ -123,11 +123,8 @@ func ReadGardenInternalDomain(
 	}
 
 	secret, err := ReadInternalDomainSecret(ctx, c, namespace, enforceSecret)
-	if err != nil {
+	if err != nil || secret == nil && !enforceSecret {
 		return nil, err
-	}
-	if secret == nil && !enforceSecret {
-		return nil, nil
 	}
 
 	domain, err := constructDomainFromSecret(secret)
