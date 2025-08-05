@@ -250,7 +250,7 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return nil
 	}
 
-	// Wait until the managed resource is successfully deleted and check for recently joined nodes within the last three minutes (TimeoutWaitForManagedResource + 1 min buffer) that do not have the label, label them, and add to nodeList
+	// Wait until the managed resource is successfully deleted and go through node list again to add cleanup label
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 	if err := managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, managedResourceName); err != nil {
@@ -261,22 +261,29 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 	if err := n.values.ShootClient.List(ctx, nodeList); err != nil {
 		return fmt.Errorf("failed to list all nodes: %w", err)
 	}
-	now := time.Now()
+
+	var taskFns []flow.TaskFn
 	if managedResourceExists {
 		for _, node := range nodeList.Items {
 			// Skip nodes that already have the label
 			if val, ok := node.Labels[labelKeyCleanupRequired]; ok && val == "true" {
 				continue
 			}
-			// Check if node joined within the last three minutes (TimeoutWaitForManagedResource + 1 min buffer)
-			if node.CreationTimestamp.After(now.Add(-3 * time.Minute)) {
+
+			node := node // capture range variable
+			taskFns = append(taskFns, func(ctx context.Context) error {
 				patch := client.MergeFrom(node.DeepCopy())
 				metav1.SetMetaDataLabel(&node.ObjectMeta, labelKeyCleanupRequired, "true")
 				if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
 					return fmt.Errorf("failed to add cleanup label to recently joined node %s: %w", node.Name, err)
 				}
-			}
+				return nil
+			})
 		}
+	}
+
+	if err := flow.Parallel(taskFns...)(ctx); err != nil {
+		return fmt.Errorf("failed to remove cleanup label from nodes: %w", err)
 	}
 
 	nodeList = &corev1.NodeList{}
@@ -309,7 +316,7 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return fmt.Errorf("failed to delete cleanup DaemonSet %s: %w", labelValueAndCleanupName, err)
 	}
 
-	var taskFns []flow.TaskFn
+	taskFns = []flow.TaskFn{}
 	// Remove the cleanup-required label from all nodes in this pool in parallel using flow
 	for _, node := range nodeList.Items {
 		node := node // capture range variable
@@ -324,7 +331,9 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		})
 	}
 
-	flow.Parallel(taskFns...)(ctx)
+	if err := flow.Parallel(taskFns...)(ctx); err != nil {
+		return fmt.Errorf("failed to remove cleanup label from nodes: %w", err)
+	}
 
 	// Delete the cleanup script ConfigMap after all cleanups are done
 	cleanupScriptCM := &corev1.ConfigMap{
