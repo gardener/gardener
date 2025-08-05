@@ -27,7 +27,8 @@ var _ = Describe("Component", func() {
 
 		kubeletCABundle       = []byte("certificate")
 		kubeletCABundleBase64 = utils.EncodeBase64(kubeletCABundle)
-		kubeletConfig         = `apiVersion: kubelet.config.k8s.io/v1beta1
+		kubeletConfigFor      = func(cGroupDriver string) string {
+			return `apiVersion: kubelet.config.k8s.io/v1beta1
 authentication:
   anonymous:
     enabled: false
@@ -41,7 +42,7 @@ authorization:
   webhook:
     cacheAuthorizedTTL: 5m0s
     cacheUnauthorizedTTL: 30s
-cgroupDriver: cgroupfs
+cgroupDriver: ` + cGroupDriver + `
 cgroupRoot: /
 cgroupsPerQOS: true
 clusterDNS:
@@ -139,6 +140,7 @@ tlsCipherSuites:
 volumePluginDir: /var/lib/kubelet/volumeplugins
 volumeStatsAggPeriod: 1m0s
 `
+		}
 	)
 
 	BeforeEach(func() {
@@ -184,15 +186,21 @@ volumeStatsAggPeriod: 1m0s
 		},
 
 		Entry(
-			"kubernetes 1.27",
-			"1.27.1",
-			kubeletConfig,
+			"kubernetes 1.30",
+			"1.30.1",
+			kubeletConfigFor("cgroupfs"),
 			false,
 		),
 		Entry(
-			"kubernetes 1.27 and preferIPv6",
-			"1.27.1",
-			kubeletConfig,
+			"kubernetes 1.31",
+			"1.31.1",
+			kubeletConfigFor("systemd"),
+			false,
+		),
+		Entry(
+			"kubernetes 1.31 and preferIPv6",
+			"1.31.1",
+			kubeletConfigFor("systemd"),
 			true,
 		),
 	)
