@@ -103,9 +103,10 @@ The shoot worker nodes are `Pod`s with a container based on the `kindest/node` i
 
 #### `Worker`
 
-This controller leverages the standard [generic `Worker` actuator](../../extensions/pkg/controller/worker/genericactuator) in order to deploy the [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager) as well as the [`machine-controller-manager-provider-local`](https://github.com/gardener/machine-controller-manager-provider-local).
+This controller leverages the standard [generic `Worker` actuator](../../extensions/pkg/controller/worker/genericactuator) in order to generate the [`MachineClass`es](https://github.com/gardener/machine-controller-manager-provider-local/blob/master/kubernetes/machine-class.yaml) and the `MachineDeployment`s based on the specification of the `Worker` resource.
 
-Additionally, it generates the [`MachineClass`es](https://github.com/gardener/machine-controller-manager-provider-local/blob/master/kubernetes/machine-class.yaml) and the `MachineDeployment`s based on the specification of the `Worker` resources.
+Additionally, the controller deploys RBAC objects for granting machine-controller-manager additional permissions in the control plane namespace.
+This is needed because the [local machine provider](#machine-controller-manager-provider-local) creates Kubernetes objects in the control plane namespace for starting `Machines`, which is different to all other machine provider implementations.
 
 #### `Bastion`
 
