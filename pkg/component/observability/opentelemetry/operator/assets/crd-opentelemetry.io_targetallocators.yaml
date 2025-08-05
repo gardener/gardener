@@ -4325,6 +4325,12 @@ spec:
                           PodMonitor(for sidecar mode) should be created for the service
                           managed by the OpenTelemetry Operator.
                         type: boolean
+                      extraLabels:
+                        additionalProperties:
+                          type: string
+                        description: ExtraLabels are additional labels to be added
+                          to the ServiceMonitor
+                        type: object
                     type: object
                 type: object
               podAnnotations:
