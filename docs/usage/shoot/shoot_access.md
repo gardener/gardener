@@ -10,7 +10,9 @@ After creation of a shoot cluster, end-users require a `kubeconfig` to access it
 
 The [`shoots/adminkubeconfig`](../../proposals/16-adminkubeconfig-subresource.md) subresource allows users to dynamically generate temporary `kubeconfig`s that can be used to access shoot cluster with `cluster-admin` privileges. The credentials associated with this `kubeconfig` are client certificates which have a very short validity and must be renewed before they expire (by calling the subresource endpoint again).
 
-The username associated with such `kubeconfig` will be the same which is used for authenticating to the Gardener API, with a random prefix added in front. The created `kubeconfig` will not be persisted anywhere.
+The username associated with such `kubeconfig` will be the same which is used for authenticating to the Gardener API, with a random prefix added in front.
+If the user is considered Gardener System administrator, i.e. has the permissions to read all secrets in the Garden cluster, then the group `gardener.cloud:system:admins` is associated with the `kubeconfig`, otherwise the group `gardener.cloud:project:admins`.
+The created `kubeconfig` will not be persisted anywhere.
 
 In order to request such a `kubeconfig`, you can run the following commands (targeting the garden cluster):
 
@@ -45,7 +47,7 @@ config = adminKubeconfigRequest.Status.Kubeconfig
 In Python, you can use the native [`kubernetes` client](https://github.com/kubernetes-client/python) to create such a kubeconfig like this:
 
 ```python
-# This script first loads an existing kubeconfig from your system, and then sends a request to the Gardener API to create a new kubeconfig for a shoot cluster. 
+# This script first loads an existing kubeconfig from your system, and then sends a request to the Gardener API to create a new kubeconfig for a shoot cluster.
 # The received kubeconfig is then decoded and a new API client is created for interacting with the shoot cluster.
 
 import base64
@@ -86,14 +88,16 @@ shoot_api_client = config.new_client_from_config_dict(yaml.safe_load(decoded_kub
 v1 = client.CoreV1Api(shoot_api_client)
 ```
 
-> **Note:** The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2) tool simplifies targeting shoot clusters. It automatically downloads a kubeconfig that uses the [gardenlogin](https://github.com/gardener/gardenlogin) kubectl auth plugin. This transparently manages authentication and certificate renewal without containing any credentials.
+> [!NOTE]
+> The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2) tool simplifies targeting shoot clusters. It automatically downloads a kubeconfig that uses the [gardenlogin](https://github.com/gardener/gardenlogin) kubectl auth plugin. This transparently manages authentication and certificate renewal without containing any credentials.
 
 ## `shoots/viewerkubeconfig` Subresource
 
-The `shoots/viewerkubeconfig` subresource works similar to the [`shoots/adminkubeconfig`](#shootsadminkubeconfig-subresource).
-The difference is that it returns a kubeconfig with read-only access for all APIs except the `core/v1.Secret` API and the resources which are specified in the `spec.kubernetes.kubeAPIServer.encryptionConfig` field in the Shoot (see [this document](../security/etcd_encryption_config.md)).
+The `shoots/viewerkubeconfig` subresource works similar to the [`shoots/adminkubeconfig`](#shootsadminkubeconfig-subresource) with two differences.
+One is that it returns a kubeconfig with read-only access for all APIs except the `core/v1.Secret` API and the resources which are specified in the `spec.kubernetes.kubeAPIServer.encryptionConfig` field in the Shoot (see [this document](../security/etcd_encryption_config.md)).
+The other difference is the group associated with the `kubeconfig` - if the user is considered Gardener System viewer, i.e. has the permissions to read all projects in the Garden cluster, then the group `gardener.cloud:system:viewers` is associated with the `kubeconfig`, otherwise the group `gardener.cloud:project:viewers`.
 
-In order to request such a `kubeconfig`, you can run follow almost the same code as above - the only difference is that you need to use the `viewerkubeconfig` subresource.
+In order to request such a `kubeconfig`, you can run almost the same code as above - the only difference is that you need to use the `viewerkubeconfig` subresource.
 For example, in bash this looks like this:
 
 ```bash
