@@ -55,7 +55,7 @@ var (
 		},
 		3: {
 			registryConfigPath: {"plugins", "io.containerd.cri.v1.images", "registry", "config_path"},
-			sandboxImagePath:   {"plugins", "io.containerd.cri.v1.runtime", "sandbox_image"},
+			sandboxImagePath:   {"plugins", "io.containerd.cri.v1.images", "pinned_images", "sandbox"},
 			cgroupDriverPath:   {"plugins", "io.containerd.cri.v1.runtime", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
 			cniPluginPath:      {"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"},
 		},
