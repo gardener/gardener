@@ -26,7 +26,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -34,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -113,6 +113,10 @@ type Values struct {
 	SeedClient client.Client
 	// Log is the logger used for logging.
 	Log logr.Logger
+	// Workers is the group of workers for which node-local-dns is deployed.
+	Workers []gardencorev1beta1.Worker
+	// KubeProxyConfig is the kube-proxy configuration for the shoot.
+	KubeProxyConfig *gardencorev1beta1.KubeProxyConfig
 }
 
 // New creates a new instance of DeployWaiter for node-local-dns.
@@ -191,12 +195,7 @@ func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	shoot, err := n.getShootFromCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	data, err := registry.AddAllAndSerialize(n.computePoolResourcesData(serviceAccount, configMap, service, shoot)...)
+	data, err := registry.AddAllAndSerialize(n.computePoolResourcesData(serviceAccount, configMap, service)...)
 	if err != nil {
 		return err
 	}
@@ -228,14 +227,9 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return nil
 	}
 
-	shoot, err := n.getShootFromCluster(ctx)
-	if err != nil {
-		return err
-	}
-
 	// Mark nodes for cleanup if the managed resource exists
 	if managedResourceExists {
-		if err := n.markNodeForCleanup(ctx, shoot); err != nil {
+		if err := n.markNodeForCleanup(ctx); err != nil {
 			return fmt.Errorf("failed to mark nodes for cleanup: %w", err)
 		}
 	}
@@ -252,7 +246,7 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	if v1beta1helper.IsKubeProxyIPVSMode(shoot.Spec.Kubernetes.KubeProxy) {
+	if v1beta1helper.IsKubeProxyIPVSMode(n.values.KubeProxyConfig) {
 		return nil
 	}
 
@@ -296,7 +290,7 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return fmt.Errorf("failed to create cleanup ConfigMap: %w", err)
 	}
 
-	if err = n.createCleanupDaemonSet(ctx); err != nil {
+	if err := n.createCleanupDaemonSet(ctx); err != nil {
 		return fmt.Errorf("failed to create cleanup DaemonSet: %w", err)
 	}
 
@@ -315,29 +309,32 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return fmt.Errorf("failed to delete cleanup DaemonSet %s: %w", labelValueAndCleanupName, err)
 	}
 
-	// Remove the cleanup-required label from all nodes in this pool
+	var taskFns []flow.TaskFn
+	// Remove the cleanup-required label from all nodes in this pool in parallel using flow
 	for _, node := range nodeList.Items {
-		err := retry.UntilTimeout(ctx, 500*time.Millisecond, 3*time.Second, func(ctx context.Context) (bool, error) {
-			patch := client.MergeFrom(node.DeepCopy())
-			delete(node.Labels, labelKeyCleanupRequired)
-			err := n.values.ShootClient.Patch(ctx, &node, patch)
-			if err == nil {
-				n.values.Log.Info("Removed node-local-dns cleanup label from node", "node", node.Name)
-				return retry.Ok()
-			}
-			if apierrors.IsConflict(err) {
-				// Refetch latest node and retry
-				if err := n.values.ShootClient.Get(ctx, client.ObjectKey{Name: node.Name}, &node); err != nil {
-					return retry.SevereError(fmt.Errorf("failed to refetch node %s: %w", node.Name, err))
+		node := node // capture range variable
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return retry.UntilTimeout(ctx, 500*time.Millisecond, 3*time.Second, func(ctx context.Context) (bool, error) {
+				patch := client.MergeFrom(node.DeepCopy())
+				delete(node.Labels, labelKeyCleanupRequired)
+				err := n.values.ShootClient.Patch(ctx, &node, patch)
+				if err == nil {
+					n.values.Log.Info("Removed node-local-dns cleanup label from node", "node", node.Name)
+					return retry.Ok()
 				}
-				return false, nil
-			}
-			return retry.SevereError(fmt.Errorf("failed to remove cleanup label from node %s: %w", node.Name, err))
+				if apierrors.IsConflict(err) {
+					// Refetch latest node and retry
+					if err := n.values.ShootClient.Get(ctx, client.ObjectKey{Name: node.Name}, &node); err != nil {
+						return retry.SevereError(fmt.Errorf("failed to refetch node %s: %w", node.Name, err))
+					}
+					return false, nil
+				}
+				return retry.SevereError(fmt.Errorf("failed to remove cleanup label from node %s: %w", node.Name, err))
+			})
 		})
-		if err != nil {
-			return err
-		}
 	}
+
+	flow.Parallel(taskFns...)(ctx)
 
 	// Delete the cleanup script ConfigMap after all cleanups are done
 	cleanupScriptCM := &corev1.ConfigMap{
@@ -607,9 +604,23 @@ func (n *nodeLocalDNS) createCleanupDaemonSet(ctx context.Context) error {
 	return err
 }
 
-func (n *nodeLocalDNS) markNodeForCleanup(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+func (n *nodeLocalDNS) markNodeForCleanup(ctx context.Context) error {
+	nodeList := &corev1.NodeList{}
+	if err := n.values.ShootClient.List(ctx, nodeList); err != nil {
+		return fmt.Errorf("failed to list nodes: %w", err)
+	}
+
+	poolToNodes := make(map[string][]corev1.Node)
+	for _, node := range nodeList.Items {
+		poolName := node.Labels[v1beta1constants.LabelWorkerPool]
+		if poolName != "" {
+			poolToNodes[poolName] = append(poolToNodes[poolName], node)
+		}
+	}
+
+	var taskFns []flow.TaskFn
 	// Check for node-local-dns DaemonSet existence for each worker pool
-	for _, worker := range shoot.Spec.Provider.Workers {
+	for _, worker := range n.values.Workers {
 		daemonSet := &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-local-dns-" + worker.Name,
@@ -624,26 +635,28 @@ func (n *nodeLocalDNS) markNodeForCleanup(ctx context.Context, shoot *gardencore
 		}
 
 		// If DaemonSet exists, add cleanup label to all nodes in the worker group
-		nodeList := &corev1.NodeList{}
-		if err := n.values.ShootClient.List(ctx, nodeList, client.MatchingLabels{
-			v1beta1constants.LabelWorkerPool: worker.Name,
-		}); err != nil {
-			return fmt.Errorf("failed to list nodes for worker pool %s: %w", worker.Name, err)
-		}
-
-		for _, node := range nodeList.Items {
+		for _, node := range poolToNodes[worker.Name] {
+			node := node // capture range variable
 			if node.Labels[labelKeyCleanupRequired] == "true" {
 				continue
 			}
 
-			patch := client.MergeFrom(node.DeepCopy())
-			metav1.SetMetaDataLabel(&node.ObjectMeta, labelKeyCleanupRequired, "true")
-			if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
-				return fmt.Errorf("failed to add cleanup label to node %s: %w", node.Name, err)
-			}
+			taskFns = append(taskFns, func(ctx context.Context) error {
+				patch := client.MergeFrom(node.DeepCopy())
+				if node.Labels == nil {
+					node.Labels = make(map[string]string)
+				}
+
+				node.Labels[labelKeyCleanupRequired] = "true"
+				if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
+					return fmt.Errorf("failed to add cleanup label to node %s: %w", node.Name, err)
+				}
+
+				return nil
+			})
 		}
 	}
-	return nil
+	return flow.Parallel(taskFns...)(ctx)
 }
 
 // waitForDaemonSetCompletion waits until the cleanup job is completed and the all pods from the daemonset are marked as ready.
@@ -663,22 +676,4 @@ func (n *nodeLocalDNS) waitForDaemonSetCompletion(ctx context.Context, namespace
 		}
 		return false, nil
 	})
-}
-
-func (n *nodeLocalDNS) getShootFromCluster(ctx context.Context) (*gardencorev1beta1.Shoot, error) {
-	cluster := &v1alpha1.Cluster{}
-	if err := n.values.SeedClient.Get(ctx, types.NamespacedName{Name: n.namespace}, cluster); err != nil {
-		return nil, err
-	}
-
-	if cluster.Spec.Shoot.Raw == nil {
-		return nil, fmt.Errorf("shoot spec is empty in cluster %s", n.namespace)
-	}
-
-	decoder := kubernetes.GardenCodec.UniversalDeserializer()
-	shoot := &gardencorev1beta1.Shoot{}
-	if _, _, err := decoder.Decode(cluster.Spec.Shoot.Raw, nil, shoot); err != nil {
-		return nil, fmt.Errorf("failed to decode Shoot spec: %w", err)
-	}
-	return shoot, nil
 }
