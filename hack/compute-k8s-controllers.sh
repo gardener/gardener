@@ -82,11 +82,6 @@ declare -A path_map=(
 )
 
 for version in "${versions[@]}"; do
-  if [ "$version" \< "1.28" ]; then
-    echo "Versions less than 1.28 are not supported."
-    exit 1
-  fi
-
   rm -rf "${out_dir}/kubernetes-${version}"
   rm -f "${out_dir}/k8s-controllers-${version}.txt"
 
