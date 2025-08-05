@@ -32,7 +32,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Named(ControllerName).
 		For(&gardencorev1beta1.Seed{}, builder.WithPredicates(r.SeedPredicate())).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: 0,
+			MaxConcurrentReconciles: 5,
 		}).
 		Complete(r)
 }
