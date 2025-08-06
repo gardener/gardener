@@ -106,9 +106,9 @@ var _ = Describe("DualStackMigration", func() {
 
 			condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
 			Expect(condition).NotTo(BeNil())
-			Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionFalse))
+			Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionProgressing))
 			Expect(condition.Reason).To(Equal("NodesNotMigrated"))
-			Expect(condition.Message).To(Equal("Not all nodes were migrated to dual-stack networking."))
+			Expect(condition.Message).To(Equal("The shoot is migrating to dual-stack networking."))
 		})
 	})
 })

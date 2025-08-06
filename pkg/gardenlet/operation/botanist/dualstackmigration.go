@@ -27,9 +27,9 @@ func (b *Botanist) DetermineUpdateFunction(
 	}
 
 	allNodesDualStack := true
-	conditionStatus := gardencorev1beta1.ConditionFalse
+	conditionStatus := gardencorev1beta1.ConditionProgressing
 	conditionReason := "NodesNotMigrated"
-	conditionMessage := "Not all nodes were migrated to dual-stack networking."
+	conditionMessage := "The shoot is migrating to dual-stack networking."
 	for _, node := range nodeList.Items {
 		allNodesDualStack = allNodesDualStack && len(node.Spec.PodCIDRs) == 2
 	}
