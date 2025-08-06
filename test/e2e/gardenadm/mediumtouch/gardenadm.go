@@ -11,12 +11,15 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/local"
@@ -102,6 +105,34 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
+		It("should stop machine-controller-manager", func(ctx SpecContext) {
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: technicalID}}
+			Eventually(ctx, Get(deployment)).Should(BeNotFoundError())
+		}, SpecTimeout(time.Minute))
+
+		It("should prepare extension resources for migration", func(ctx SpecContext) {
+			extensionKinds := map[string]client.ObjectList{
+				extensionsv1alpha1.InfrastructureResource: &extensionsv1alpha1.InfrastructureList{},
+				extensionsv1alpha1.WorkerResource:         &extensionsv1alpha1.WorkerList{},
+			}
+
+			for kind, list := range extensionKinds {
+				Eventually(ctx, ObjectList(list, client.InNamespace(technicalID))).Should(
+					HaveField("Items", matchAllElements(
+						HaveField("Status.DefaultStatus.LastOperation", And(
+							HaveField("Type", gardencorev1beta1.LastOperationTypeMigrate),
+							HaveField("State", gardencorev1beta1.LastOperationStateSucceeded),
+						)),
+					)),
+					"should prepare %s resources for migration", kind,
+				)
+			}
+		}, SpecTimeout(time.Minute))
+
+		It("should compile the ShootState", func(ctx SpecContext) {
+			Eventually(ctx, session.Out).Should(gbytes.Say("apiVersion: core.gardener.cloud/v1beta1\nkind: ShootState\n"))
+		}, SpecTimeout(time.Minute))
+
 		It("should finish successfully", func(ctx SpecContext) {
 			Wait(ctx, session)
 			Eventually(ctx, session.Err).Should(gbytes.Say("work in progress"))
@@ -112,3 +143,11 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		}, SpecTimeout(2*time.Minute))
 	})
 })
+
+// matchAllElements returns a matcher that must succeed for all elements in a slice.
+func matchAllElements(matcher gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
+	// map all elements to the same given matcher
+	return gstruct.MatchAllElements(func(any) string { return "" }, gstruct.Elements{
+		"": matcher,
+	})
+}
