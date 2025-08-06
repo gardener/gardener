@@ -68,7 +68,7 @@ gardenadm bootstrap --config-dir /path/to/manifests`,
 	return cmd
 }
 
-// NewClientSetFromFile in alias for botanist.NewClientSetFromFile.
+// NewClientSetFromFile is an alias for botanist.NewClientSetFromFile.
 // Exposed for unit testing.
 var NewClientSetFromFile = botanist.NewClientSetFromFile
 

@@ -68,10 +68,10 @@ gardenadm discover <path-to-shoot-manifest>`,
 }
 
 var (
-	// NewClientSetFromFile in alias for botanist.NewClientSetFromFile.
+	// NewClientSetFromFile is an alias for botanist.NewClientSetFromFile.
 	// Exposed for unit testing.
 	NewClientSetFromFile = botanist.NewClientSetFromFile
-	// NewAferoFs in alias for returning an afero.NewOsFs.
+	// NewAferoFs is an alias for returning an afero.NewOsFs.
 	// Exposed for unit testing.
 	NewAferoFs = func() afero.Afero { return afero.Afero{Fs: afero.NewOsFs()} }
 )
@@ -235,11 +235,11 @@ func getAndExportObject(ctx context.Context, c client.Client, fs afero.Afero, op
 	}
 
 	path := filepath.Join(opts.ConfigDir, fmt.Sprintf("%s-%s.yaml", strings.ToLower(kind), obj.GetName()))
-	if err := fs.WriteFile(path, []byte(objYAML), 0644); err != nil {
+	if err := fs.WriteFile(path, []byte(objYAML), 0600); err != nil {
 		return fmt.Errorf("failed writing file to %s: %w", path, err)
 	}
 
-	fmt.Fprintf(opts.Out, "Exported %s to %s\n", kind, path)
+	fmt.Fprintf(opts.Out, "Exported %s/%s to %s\n", kind, obj.GetName(), path)
 	return nil
 }
 

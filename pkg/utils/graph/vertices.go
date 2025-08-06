@@ -11,6 +11,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
@@ -92,7 +93,7 @@ var VertexTypes = map[VertexType]KindObject{
 	VertexTypeNamespacedCloudProfile:    {Kind: "NamespacedCloudProfile", NewObjectFunc: func() client.Object { return &gardencorev1beta1.NamespacedCloudProfile{} }},
 	VertexTypeClusterRoleBinding:        {Kind: "ClusterRoleBinding", NewObjectFunc: func() client.Object { return &rbacv1.ClusterRoleBinding{} }},
 	VertexTypeConfigMap:                 {Kind: "ConfigMap", NewObjectFunc: func() client.Object { return &corev1.ConfigMap{} }},
-	VertexTypeControllerDeployment:      {Kind: "ControllerDeployment", NewObjectFunc: func() client.Object { return &gardencorev1beta1.ControllerDeployment{} }},
+	VertexTypeControllerDeployment:      {Kind: "ControllerDeployment", NewObjectFunc: func() client.Object { return &gardencorev1.ControllerDeployment{} }},
 	VertexTypeControllerInstallation:    {Kind: "ControllerInstallation", NewObjectFunc: func() client.Object { return &gardencorev1beta1.ControllerInstallation{} }},
 	VertexTypeControllerRegistration:    {Kind: "ControllerRegistration", NewObjectFunc: func() client.Object { return &gardencorev1beta1.ControllerRegistration{} }},
 	VertexTypeExposureClass:             {Kind: "ExposureClass", NewObjectFunc: func() client.Object { return &gardencorev1beta1.ExposureClass{} }},
