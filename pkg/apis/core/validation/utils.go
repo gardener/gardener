@@ -206,6 +206,8 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilities core.
 
 		if len(image.Name) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "machine image name must not be empty"))
+		} else if errs := validateUnprefixedQualifiedName(image.Name); len(errs) != 0 {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), image.Name, fmt.Sprintf("machine image name must be a qualified name: %v", errs)))
 		}
 
 		if len(image.Versions) == 0 && !allowEmptyVersions {
@@ -236,7 +238,7 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilities core.
 
 			if machineVersion.InPlaceUpdates != nil && machineVersion.InPlaceUpdates.MinVersionForUpdate != nil {
 				if _, err = semver.NewVersion(*machineVersion.InPlaceUpdates.MinVersionForUpdate); err != nil {
-					allErrs = append(allErrs, field.Invalid(versionsPath.Child("minVersionForInPlaceUpdate"), machineVersion.Version, "could not parse version. Use a semantic version."))
+					allErrs = append(allErrs, field.Invalid(versionsPath.Child("minVersionForInPlaceUpdate"), *machineVersion.InPlaceUpdates.MinVersionForUpdate, "could not parse version. Use a semantic version."))
 				}
 			}
 
@@ -257,6 +259,16 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilities core.
 	return allErrs
 }
 
+func validateUnprefixedQualifiedName(name string) []string {
+	if errs := validation.IsQualifiedName(name); len(errs) > 0 {
+		return errs
+	}
+	if strings.Contains(name, "/") {
+		return []string{fmt.Sprintf("name '%s' must not contain a prefix", name)}
+	}
+	return nil
+}
+
 // validateMachineTypes validates the given list of machine types for valid values and combinations.
 func validateMachineTypes(machineTypes []core.MachineType, capabilities core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -272,6 +284,8 @@ func validateMachineTypes(machineTypes []core.MachineType, capabilities core.Cap
 
 		if len(machineType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+		} else if errs := validateUnprefixedQualifiedName(machineType.Name); len(errs) != 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("name"), machineType.Name, fmt.Sprintf("machine type name must be a qualified name: %v", errs)))
 		}
 
 		if names.Has(machineType.Name) {
@@ -305,6 +319,8 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 		namePath := idxPath.Child("name")
 		if len(volumeType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+		} else if errs := validateUnprefixedQualifiedName(volumeType.Name); len(errs) != 0 {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), volumeType.Name, fmt.Sprintf("volume type name must be a qualified name: %v", errs)))
 		}
 
 		if names.Has(volumeType.Name) {
@@ -315,6 +331,8 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 
 		if len(volumeType.Class) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("class"), "must provide a class"))
+		} else if errs := validateUnprefixedQualifiedName(volumeType.Class); len(errs) != 0 {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("class"), volumeType.Class, fmt.Sprintf("volume class must be a qualified name: %v", errs)))
 		}
 
 		if volumeType.MinSize != nil {

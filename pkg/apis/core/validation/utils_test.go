@@ -11,6 +11,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -242,4 +243,132 @@ var _ = Describe("Utils tests", func() {
 			),
 		),
 	)
+
+	Describe("#ValidateMachineImages", func() {
+		DescribeTable("should not allow invalid machine image names",
+			func(name string, shouldFail bool) {
+				validationResult := ValidateMachineImages([]core.MachineImage{{Name: name}}, nil, field.NewPath("spec", "machineImages"), true)
+
+				if shouldFail {
+					Expect(validationResult).
+						To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.machineImages[0].name"),
+								"Detail": ContainSubstring("machine image name must be a qualified name"),
+							})),
+						))
+				} else {
+					Expect(validationResult).To(BeEmpty())
+				}
+			},
+			Entry("forbid emoji characters", "🪴", true),
+			Entry("forbid whitespaces", "special image", true),
+			Entry("forbid slashes", "nested/image", true),
+			Entry("pass with dashes", "qualified-name", false),
+		)
+	})
+
+	Describe("#ValidateCloudProfileSpec", func() {
+		var specTemplate = &core.CloudProfileSpec{
+			Type:    "local",
+			Regions: []core.Region{{Name: "local"}},
+			Kubernetes: core.KubernetesSettings{
+				Versions: []core.ExpirableVersion{
+					{Version: "1.0.0"},
+				},
+			},
+			MachineImages: []core.MachineImage{
+				{
+					Name: "test-image",
+					Versions: []core.MachineImageVersion{{
+						ExpirableVersion: core.ExpirableVersion{Version: "1.0.0"},
+						CRI:              []core.CRI{{Name: "containerd"}},
+						Architectures:    []string{"amd64"},
+					}},
+					UpdateStrategy: ptr.To(core.UpdateStrategyMajor),
+				},
+			},
+			MachineTypes: []core.MachineType{{Name: "valid", Architecture: ptr.To("amd64")}},
+			VolumeTypes:  []core.VolumeType{{Class: "standard", Name: "valid"}},
+		}
+
+		DescribeTable("should not allow invalid machine type names",
+			func(name string, shouldFail bool) {
+				spec := specTemplate.DeepCopy()
+				spec.MachineTypes[0].Name = name
+
+				validationResult := ValidateCloudProfileSpec(spec, field.NewPath("spec"))
+
+				if shouldFail {
+					Expect(validationResult).
+						To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.machineTypes[0].name"),
+								"Detail": ContainSubstring("machine type name must be a qualified name"),
+							})),
+						))
+				} else {
+					Expect(validationResult).To(BeEmpty())
+				}
+			},
+			Entry("forbid emoji characters", "🪴", true),
+			Entry("forbid whitespaces", "special image", true),
+			Entry("forbid slashes", "nested/image", true),
+			Entry("pass with dashes and dots", "a.qualified-name", false),
+		)
+
+		DescribeTable("should not allow invalid volume type names",
+			func(name string, shouldFail bool) {
+				spec := specTemplate.DeepCopy()
+				spec.VolumeTypes[0].Name = name
+
+				validationResult := ValidateCloudProfileSpec(spec, field.NewPath("spec"))
+
+				if shouldFail {
+					Expect(validationResult).
+						To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.volumeTypes[0].name"),
+								"Detail": ContainSubstring("volume type name must be a qualified name"),
+							})),
+						))
+				} else {
+					Expect(validationResult).To(BeEmpty())
+				}
+			},
+			Entry("forbid emoji characters", "🪴", true),
+			Entry("forbid whitespaces", "special image", true),
+			Entry("forbid slashes", "nested/image", true),
+			Entry("pass with dashes and dots", "a.qualified-name", false),
+		)
+
+		DescribeTable("should not allow invalid volume type class",
+			func(name string, shouldFail bool) {
+				spec := specTemplate.DeepCopy()
+				spec.VolumeTypes[0].Class = name
+
+				validationResult := ValidateCloudProfileSpec(spec, field.NewPath("spec"))
+
+				if shouldFail {
+					Expect(validationResult).
+						To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.volumeTypes[0].class"),
+								"Detail": ContainSubstring("volume class must be a qualified name"),
+							})),
+						))
+				} else {
+					Expect(validationResult).To(BeEmpty())
+				}
+			},
+			Entry("forbid emoji characters", "🪴", true),
+			Entry("forbid whitespaces", "special image", true),
+			Entry("forbid slashes", "nested/image", true),
+			Entry("pass with dashes and dots", "a.qualified-name", false),
+		)
+	})
 })
