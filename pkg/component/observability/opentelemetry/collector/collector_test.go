@@ -53,6 +53,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		values                           = Values{
 			Image:              image,
 			KubeRBACProxyImage: kubeRBACProxyImage,
+			LokiEndpoint:       lokiEndpoint,
 		}
 
 		c         client.Client
@@ -75,7 +76,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		format.MaxLength = 0
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
-		component = New(c, namespace, values, lokiEndpoint, fakeSecretManager)
+		component = New(c, namespace, values, fakeSecretManager)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
@@ -236,15 +237,14 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				Namespace: namespace,
 				Labels:    getLabels(),
 				Annotations: map[string]string{
-					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": "[{\"protocol\":\"TCP\",\"port\":8888}]",
+					`networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports`: `[{"protocol":"TCP","port":8888}]`,
 				},
 			},
 			Spec: otelv1beta1.OpenTelemetryCollectorSpec{
 				Mode:            "deployment",
 				UpgradeStrategy: "none",
 				OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
-					Image:   image,
-					Volumes: []corev1.Volume{volume},
+					Image: image,
 					SecurityContext: &corev1.SecurityContext{
 						AllowPrivilegeEscalation: ptr.To(false),
 					},
@@ -414,7 +414,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(customResourcesManagedResource).To(DeepEqual(expectedMr))
 
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
-			openTelemetryCollector.Spec.AdditionalContainers = append(openTelemetryCollector.Spec.AdditionalContainers, kubeRBACProxyContainer)
+			openTelemetryCollector.Spec.AdditionalContainers = []corev1.Container{kubeRBACProxyContainer}
+			openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume}
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
 				scrapeConfig,

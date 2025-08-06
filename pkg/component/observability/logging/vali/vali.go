@@ -77,8 +77,8 @@ const (
 	telegrafVolumeMountPath    = "/etc/telegraf"
 	telegrafVolumeName         = "telegraf-config-volume"
 
-	kubeRBACProxyName = "kube-rbac-proxy"
-	kubeRBACProxyPort = 8080
+	kubeRBACProxyName       = "kube-rbac-proxy"
+	kubeRBACProxyPort int32 = 8080
 
 	initLargeDirName = "init-large-dir"
 )
@@ -347,11 +347,14 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 }
 
 func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
-	pathType := networkingv1.PathTypePrefix
+	var (
+		pathType = networkingv1.PathTypePrefix
 
-	serviceName := valiServiceName
-	endpoint := valiconstants.PushEndpoint
-	var port int32 = kubeRBACProxyPort
+		serviceName = valiServiceName
+		endpoint    = valiconstants.PushEndpoint
+		port        = kubeRBACProxyPort
+	)
+
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
 		serviceName = collectorconstants.ServiceName
 		endpoint = collectorconstants.PushEndpoint

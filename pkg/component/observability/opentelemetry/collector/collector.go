@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
@@ -30,55 +29,54 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
-	managedResourceName              = "opentelemetry-collector"
-	scrapeJobName                    = "opentelemetry-collector"
-	scrapeConfigName                 = "opentelemetry-collector"
-	otelCollectorConfigName          = "opentelemetry-collector-config"
-	kubeRBACProxyName                = "kube-rbac-proxy"
-	volumeMountPathGenericKubeconfig = "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig"
-	timeoutWaitForManagedResources   = 2 * time.Minute
+	managedResourceName     = "opentelemetry-collector"
+	scrapeJobName           = "opentelemetry-collector"
+	scrapeConfigName        = "opentelemetry-collector"
+	otelCollectorConfigName = "opentelemetry-collector-config"
+	kubeRBACProxyName       = "kube-rbac-proxy"
+
+	metricsEndpointName            = "metrics"
+	metricsPort                    = 8888
+	timeoutWaitForManagedResources = 2 * time.Minute
 )
 
-// Values is the values for otel-collector configurations
+// Values is the values for OpenTelemetry Collector configurations
 type Values struct {
 	// Image is the collector image.
 	Image              string
 	KubeRBACProxyImage string
 	WithRBACProxy      bool
+	LokiEndpoint       string
 }
 
 type otelCollector struct {
 	client         client.Client
 	namespace      string
 	values         Values
-	lokiEndpoint   string
 	secretsManager secretsmanager.Interface
 }
 
-// Interface is the interface for the OtelCollector deployer.
+// Interface is the interface for the OpenTelemetry Collector deployer.
 type Interface interface {
 	component.DeployWaiter
 	WithAuthenticationProxy(bool)
 }
 
-// New creates a new instance of otel-collector deployer.
+// New creates a new instance of OpenTelemetry Collector deployer.
 func New(
 	client client.Client,
 	namespace string,
 	values Values,
-	lokiEndpoint string,
 	secretsManager secretsmanager.Interface,
 ) Interface {
 	return &otelCollector{
 		client:         client,
 		namespace:      namespace,
 		values:         values,
-		lokiEndpoint:   lokiEndpoint,
 		secretsManager: secretsManager,
 	}
 }
@@ -110,9 +108,9 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	objects = append(objects, o.openTelemetryCollector(o.namespace, o.lokiEndpoint, genericTokenKubeconfigSecretName))
+	objects = append(objects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName))
 
-	scrapeConfig, err := o.scrapeConfig()
+	scrapeConfig, err := o.scrapeConfig(ctx)
 	if err != nil {
 		return err
 	}
@@ -148,7 +146,7 @@ func (o *otelCollector) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
 	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta(scrapeConfigName, o.namespace, shoot.Label)}
 }
 
-func (o *otelCollector) scrapeConfig() (*monitoringv1alpha1.ScrapeConfig, error) {
+func (o *otelCollector) scrapeConfig(ctx context.Context) (*monitoringv1alpha1.ScrapeConfig, error) {
 	allowedMetrics := []string{
 		"otelcol_exporter_enqueue_failed_log_records",
 		"otelcol_exporter_enqueue_failed_metric_points",
@@ -180,7 +178,7 @@ func (o *otelCollector) scrapeConfig() (*monitoringv1alpha1.ScrapeConfig, error)
 	}
 
 	scrapeConfig := o.emptyScrapeConfig()
-	_, err := controllerutils.GetAndCreateOrMergePatch(context.TODO(), o.client, scrapeConfig, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, scrapeConfig, func() error {
 		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
 		scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
 			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
@@ -196,7 +194,7 @@ func (o *otelCollector) scrapeConfig() (*monitoringv1alpha1.ScrapeConfig, error)
 				{
 					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_service_port_name"},
 					Action:       "keep",
-					Regex:        collectorconstants.ServiceName + `;` + "metrics",
+					Regex:        collectorconstants.ServiceName + `;` + metricsEndpointName,
 				},
 			},
 			MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(allowedMetrics...),
@@ -209,56 +207,16 @@ func (o *otelCollector) scrapeConfig() (*monitoringv1alpha1.ScrapeConfig, error)
 }
 
 func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericTokenKubeconfigSecretName string) *otelv1beta1.OpenTelemetryCollector {
-	var (
-		volume = corev1.Volume{
-			Name: "kubeconfig",
-			VolumeSource: corev1.VolumeSource{
-				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To[int32](420),
-					Sources: []corev1.VolumeProjection{
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: genericTokenKubeconfigSecretName,
-								},
-								Items: []corev1.KeyToPath{{
-									Key:  secrets.DataKeyKubeconfig,
-									Path: secrets.DataKeyKubeconfig,
-								}},
-								Optional: ptr.To(false),
-							},
-						},
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: "shoot-access-" + kubeRBACProxyName,
-								},
-								Items: []corev1.KeyToPath{{
-									Key:  resourcesv1alpha1.DataKeyToken,
-									Path: resourcesv1alpha1.DataKeyToken,
-								}},
-								Optional: ptr.To(false),
-							},
-						},
-					},
-				},
-			},
-		}
-
-		volumeMount = corev1.VolumeMount{
-			Name:      volume.Name,
-			MountPath: volumeMountPathGenericKubeconfig,
-			ReadOnly:  true,
-		}
-	)
-
 	obj := &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      collectorconstants.OpenTelemetryCollectorResourceName,
 			Namespace: namespace,
 			Labels:    getLabels(),
+			// We want this annotation to be passed down to the service that will be created by the OpenTelemetry Operator.
+			// Currently, there is no other way to define the annotations on the service other than adding them to the OpenTelemetryCollector resource.
+			// All annotations that exist here will be passed down to every resource that gets created by the OpenTelemetry Operator.
 			Annotations: map[string]string{
-				"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": "[{\"protocol\":\"TCP\",\"port\":8888}]",
+				"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort),
 			},
 		},
 		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
@@ -269,7 +227,6 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				SecurityContext: &corev1.SecurityContext{
 					AllowPrivilegeEscalation: ptr.To(false),
 				},
-				Volumes: []corev1.Volume{volume},
 				Ports: []otelv1beta1.PortsSpec{
 					{
 						ServicePort: corev1.ServicePort{
@@ -279,8 +236,8 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					},
 					{
 						ServicePort: corev1.ServicePort{
-							Name: "metrics",
-							Port: 8888,
+							Name: metricsEndpointName,
+							Port: metricsPort,
 						},
 					},
 				},
@@ -337,7 +294,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 												"prometheus": map[string]any{
 													"host": "0.0.0.0",
 													// Field needs to be cast to `float64` due to an issue with serialization during tests.
-													"port": float64(8888),
+													"port": float64(metricsPort),
 												},
 											},
 										},
@@ -370,14 +327,14 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 	}
 
 	if o.values.WithRBACProxy {
-		obj.Spec.AdditionalContainers = append(obj.Spec.AdditionalContainers,
-			corev1.Container{
+		obj.Spec.AdditionalContainers = []corev1.Container{
+			{
 				Name:  kubeRBACProxyName,
 				Image: o.values.KubeRBACProxyImage,
 				Args: []string{
 					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", collectorconstants.KubeRBACProxyPort),
 					fmt.Sprintf("--upstream=http://127.0.0.1:%d/", collectorconstants.PushPort),
-					"--kubeconfig=" + volumeMountPathGenericKubeconfig + "/kubeconfig",
+					"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
 					"--logtostderr=true",
 					"--v=6",
 				},
@@ -401,11 +358,11 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 						Protocol:      corev1.ProtocolTCP,
 					},
 				},
-				VolumeMounts: []corev1.VolumeMount{
-					volumeMount,
-				},
 			},
-		)
+		}
+
+		obj.Spec.Volumes = []corev1.Volume{gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig")}
+		obj.Spec.AdditionalContainers[0].VolumeMounts = []corev1.VolumeMount{gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)}
 	}
 
 	return obj
