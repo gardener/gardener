@@ -507,18 +507,16 @@ var _ = Describe("VPA", func() {
 				},
 			}
 
-			switch clusterType {
-			case "seed":
-				if isGardenCluster {
-					obj.Annotations = map[string]string{
-						"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8943}]`,
-					}
-				} else {
-					obj.Annotations = map[string]string{
-						"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8943}]`,
-					}
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8943}]`,
 				}
-			case "shoot":
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8943}]`,
+				}
+			case clusterType == component.ClusterTypeShoot:
 				obj.Annotations = map[string]string{
 					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8943}]`,
 				}
@@ -555,17 +553,14 @@ var _ = Describe("VPA", func() {
 				},
 			}
 
-			if clusterType == component.ClusterTypeSeed {
-				if isGardenCluster {
-					obj.Labels = map[string]string{"prometheus": "garden"}
-					obj.Name = "garden-vpa-updater"
-				} else {
-					obj.Labels = map[string]string{"prometheus": "seed"}
-					obj.Name = "seed-vpa-updater"
-				}
-			}
-
-			if clusterType == component.ClusterTypeShoot {
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "garden"}
+				obj.Name = "garden-vpa-updater"
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "seed"}
+				obj.Name = "seed-vpa-updater"
+			case clusterType == component.ClusterTypeShoot:
 				obj.Labels = map[string]string{"prometheus": "shoot"}
 				obj.Name = "shoot-vpa-updater"
 			}
@@ -778,18 +773,16 @@ var _ = Describe("VPA", func() {
 				},
 			}
 
-			switch clusterType {
-			case "seed":
-				if isGardenCluster {
-					obj.Annotations = map[string]string{
-						"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
-					}
-				} else {
-					obj.Annotations = map[string]string{
-						"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
-					}
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
 				}
-			case "shoot":
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
+				}
+			case clusterType == component.ClusterTypeShoot:
 				obj.Annotations = map[string]string{
 					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
 				}
@@ -1009,17 +1002,14 @@ var _ = Describe("VPA", func() {
 				},
 			}
 
-			if clusterType == component.ClusterTypeSeed {
-				if isGardenCluster {
-					obj.Labels = map[string]string{"prometheus": "garden"}
-					obj.Name = "garden-vpa-recommender"
-				} else {
-					obj.Labels = map[string]string{"prometheus": "seed"}
-					obj.Name = "seed-vpa-recommender"
-				}
-			}
-
-			if clusterType == component.ClusterTypeShoot {
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "garden"}
+				obj.Name = "garden-vpa-recommender"
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "seed"}
+				obj.Name = "seed-vpa-recommender"
+			case clusterType == component.ClusterTypeShoot:
 				obj.Labels = map[string]string{"prometheus": "shoot"}
 				obj.Name = "shoot-vpa-recommender"
 			}
@@ -1136,15 +1126,14 @@ var _ = Describe("VPA", func() {
 				},
 			}
 
-			if clusterType == "seed" {
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-world-to-ports", `[{"protocol":"TCP","port":10250}]`)
-				if isGardenCluster {
-					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
-				} else {
-					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
-				}
-			}
-			if clusterType == "shoot" {
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-world-to-ports", `[{"protocol":"TCP","port":10250}]`)
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
+			case clusterType == component.ClusterTypeShoot:
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports", `[{"protocol":"TCP","port":10250}]`)
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
 			}
@@ -1359,17 +1348,14 @@ var _ = Describe("VPA", func() {
 				},
 			}
 
-			if clusterType == component.ClusterTypeSeed {
-				if isGardenCluster {
-					obj.Labels = map[string]string{"prometheus": "garden"}
-					obj.Name = "garden-vpa-admission-controller"
-				} else {
-					obj.Labels = map[string]string{"prometheus": "seed"}
-					obj.Name = "seed-vpa-admission-controller"
-				}
-			}
-
-			if clusterType == component.ClusterTypeShoot {
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "garden"}
+				obj.Name = "garden-vpa-admission-controller"
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "seed"}
+				obj.Name = "seed-vpa-admission-controller"
+			case clusterType == component.ClusterTypeShoot:
 				obj.Labels = map[string]string{"prometheus": "shoot"}
 				obj.Name = "shoot-vpa-admission-controller"
 			}
