@@ -40,6 +40,9 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
+// GardenadmBaseDir is the directory that gardenadm works with for storing information, transferring manifests, etc.
+const GardenadmBaseDir = "/var/lib/gardenadm"
+
 // AutonomousBotanist is a struct which has methods that perform operations for an autonomous shoot cluster.
 type AutonomousBotanist struct {
 	*botanistpkg.Botanist
@@ -388,7 +391,7 @@ func initializeSeedResource(seed *gardencorev1beta1.Seed, shootName string, runs
 
 func shootUID(fs afero.Afero) (types.UID, error) {
 	var (
-		path                    = filepath.Join(string(filepath.Separator), "var", "lib", "gardenadm", "shoot-uid")
+		path                    = filepath.Join(string(filepath.Separator), GardenadmBaseDir, "shoot-uid")
 		permissions os.FileMode = 0600
 	)
 
