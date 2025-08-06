@@ -228,11 +228,11 @@ func run(ctx context.Context, opts *Options) error {
 		// the autonomous shoot.
 		deleteMachineControllerManager = g.Add(flow.Task{
 			Name:         "Deleting machine-controller-manager",
-			Fn:           component.OpDestroyAndWait(b.Shoot.Components.ControlPlane.MachineControllerManager).Deploy,
+			Fn:           component.OpDestroyAndWait(b.Shoot.Components.ControlPlane.MachineControllerManager).Destroy,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
 
-		// In contrast to the usual Shoot migrate flow, we don't delete the extension objects are executing the migrate
+		// In contrast to the usual Shoot migrate flow, we don't delete the extension objects after executing the migrate
 		// operation. The extension controllers are supposed to skip any reconcile operation if the last operation is of
 		// type "Migrate". Also, this makes it easier to allow re-running `gardenadm bootstrap` in case of failures
 		// down the line. If we deleted the extension objects, we would need to restore them when re-running the flow.
