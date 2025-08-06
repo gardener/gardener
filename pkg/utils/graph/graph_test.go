@@ -184,7 +184,7 @@ var _ = Describe("graph", func() {
 					Provider: &gardencorev1beta1.SeedDNSProvider{
 						SecretRef: seed1DNSProviderSecretRef,
 					},
-					Internal: &gardencorev1beta1.SeedDNSProviderConf{
+					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
 						CredentialsRef: seed1InternalDNSCredentialsRef,
 					},
 				},
@@ -500,7 +500,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		seed1Copy = seed1.DeepCopy()
 		seed1.Spec.Backup = &gardencorev1beta1.Backup{CredentialsRef: &seed1BackupSecretCredentialsRef}
 		seed1.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{SecretRef: seed1DNSProviderSecretRef}
-		seed1.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConf{CredentialsRef: seed1InternalDNSCredentialsRef}
+		seed1.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{CredentialsRef: seed1InternalDNSCredentialsRef}
 		fakeInformerSeed.Update(seed1Copy, seed1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(8))
 		Expect(graph.graph.Edges().Len()).To(Equal(7))

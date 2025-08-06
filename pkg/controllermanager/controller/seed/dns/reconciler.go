@@ -58,7 +58,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 		// Patch the Seed with the internal domain info
 		patch := client.MergeFrom(seed.DeepCopy())
-		seed.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConf{
+		seed.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
 			Type:   providerType,
 			Domain: domain,
 		}

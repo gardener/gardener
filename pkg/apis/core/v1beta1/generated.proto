@@ -2646,7 +2646,7 @@ message SeedDNS {
 
   // Internal configures DNS settings related to seed internal domain.
   // +optional
-  optional SeedDNSProviderConf internal = 3;
+  optional SeedDNSProviderConfig internal = 3;
 }
 
 // SeedDNSProvider configures a DNSProvider for Seeds
@@ -2658,8 +2658,8 @@ message SeedDNSProvider {
   optional .k8s.io.api.core.v1.SecretReference secretRef = 2;
 }
 
-// SeedDNSProviderConf configures a DNS provider.
-message SeedDNSProviderConf {
+// SeedDNSProviderConfig configures a DNS provider.
+message SeedDNSProviderConfig {
   // Type is the type of the DNS provider.
   optional string type = 1;
 

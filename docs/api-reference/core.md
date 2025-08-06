@@ -10741,8 +10741,8 @@ SeedDNSProvider
 <td>
 <code>internal</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.SeedDNSProviderConf">
-SeedDNSProviderConf
+<a href="#core.gardener.cloud/v1beta1.SeedDNSProviderConfig">
+SeedDNSProviderConfig
 </a>
 </em>
 </td>
@@ -10796,14 +10796,14 @@ Kubernetes core/v1.SecretReference
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.SeedDNSProviderConf">SeedDNSProviderConf
+<h3 id="core.gardener.cloud/v1beta1.SeedDNSProviderConfig">SeedDNSProviderConfig
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.SeedDNS">SeedDNS</a>)
 </p>
 <p>
-<p>SeedDNSProviderConf configures a DNS provider.</p>
+<p>SeedDNSProviderConfig configures a DNS provider.</p>
 </p>
 <table>
 <thead>

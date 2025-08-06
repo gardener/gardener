@@ -448,7 +448,7 @@ var _ = Describe("Garden", func() {
 		var (
 			ctx             = context.Background()
 			client          client.Client
-			seedDNSProvider *gardencorev1beta1.SeedDNSProviderConf
+			seedDNSProvider *gardencorev1beta1.SeedDNSProviderConfig
 			secret          *corev1.Secret
 			namespace       = "garden"
 			providerType    = "route-53"
@@ -458,7 +458,7 @@ var _ = Describe("Garden", func() {
 
 		BeforeEach(func() {
 			client = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-			seedDNSProvider = &gardencorev1beta1.SeedDNSProviderConf{
+			seedDNSProvider = &gardencorev1beta1.SeedDNSProviderConfig{
 				Type:   providerType,
 				Domain: domain,
 				Zone:   ptr.To(zone),
