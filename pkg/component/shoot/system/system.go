@@ -320,7 +320,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
-	if err := registry.Add(s.adminRBACResources()...); err != nil {
+	if err := registry.Add(adminClusterRoleBindings()...); err != nil {
 		return nil, err
 	}
 
@@ -448,8 +448,65 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 		})
 	}
 
+	return append(viewerClusterRoleBindings(), clusterRole)
+}
+
+func (s *shootSystem) isEncryptedResource(resource, group string) bool {
+	resourceName := fmt.Sprintf("%s.%s", resource, group)
+
+	if group == corev1.SchemeGroupVersion.Group {
+		resourceName = resource
+	}
+
+	return slices.Contains(s.values.EncryptedResources, resourceName)
+}
+
+func addNetworkToMap(name string, cidrs []net.IPNet, data map[string]string) {
+	networks := netutils.JoinByComma(cidrs)
+	if networks != "" {
+		data[name] = networks
+	}
+}
+
+func adminClusterRoleBindings() []client.Object {
 	return []client.Object{
-		clusterRole,
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        v1beta1constants.ShootSystemAdminsGroupName,
+				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "cluster-admin",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.GroupName,
+				Kind:     rbacv1.GroupKind,
+				Name:     v1beta1constants.ShootSystemAdminsGroupName,
+			}},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        v1beta1constants.ShootProjectAdminsGroupName,
+				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "cluster-admin",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.GroupName,
+				Kind:     rbacv1.GroupKind,
+				Name:     v1beta1constants.ShootProjectAdminsGroupName,
+			}},
+		},
+	}
+}
+
+func viewerClusterRoleBindings() []client.Object {
+	return []client.Object{
 		&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        v1beta1constants.ShootSystemViewersGroupName,
@@ -485,56 +542,9 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 	}
 }
 
-func (s *shootSystem) isEncryptedResource(resource, group string) bool {
-	resourceName := fmt.Sprintf("%s.%s", resource, group)
-
-	if group == corev1.SchemeGroupVersion.Group {
-		resourceName = resource
-	}
-
-	return slices.Contains(s.values.EncryptedResources, resourceName)
-}
-
-func addNetworkToMap(name string, cidrs []net.IPNet, data map[string]string) {
-	networks := netutils.JoinByComma(cidrs)
-	if networks != "" {
-		data[name] = networks
-	}
-}
-
-func (s *shootSystem) adminRBACResources() []client.Object {
-	return []client.Object{
-		&rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.ShootSystemAdminsGroupName,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "cluster-admin",
-			},
-			Subjects: []rbacv1.Subject{{
-				APIGroup: rbacv1.GroupName,
-				Kind:     rbacv1.GroupKind,
-				Name:     v1beta1constants.ShootSystemAdminsGroupName,
-			}},
-		},
-		&rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.ShootProjectAdminsGroupName,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "cluster-admin",
-			},
-			Subjects: []rbacv1.Subject{{
-				APIGroup: rbacv1.GroupName,
-				Kind:     rbacv1.GroupKind,
-				Name:     v1beta1constants.ShootProjectAdminsGroupName,
-			}},
-		},
-	}
+// ClusterRoleBindings is function generating the shoot ClusterRoleBindings related
+// to the AdminKubeconfig and ViewerKubeconfig deployed in the shoot cluster.
+// Deprecated: Do not use, this function is deprecated and will be removed after v1.127.0 has been released
+func ClusterRoleBindings() []client.Object {
+	return append(adminClusterRoleBindings(), viewerClusterRoleBindings()...)
 }
