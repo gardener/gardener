@@ -365,6 +365,10 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 	}
 	// If oldSeedSpec doesn't have backup configured, we allow to add it; but not the vice versa.
 
+	if oldSeedSpec.DNS.Internal != nil && newSeedSpec.DNS.Internal == nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("dns", "internal"), "removing internal DNS configuration is not allowed"))
+	}
+
 	return allErrs
 }
 
