@@ -7,6 +7,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -20,7 +21,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
@@ -247,25 +247,6 @@ func run(ctx context.Context, opts *Options) error {
 			},
 			Dependencies: flow.NewTaskIDs(migrateExtensionResources),
 		})
-		// TODO(timebertt): drop this task again once this flow implements copying of the ShootState to the machines
-		_ = g.Add(flow.Task{
-			Name: "Dump ShootState for testing purposes",
-			Fn: func(ctx context.Context) error {
-				shootState := &gardencorev1beta1.ShootState{}
-				if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shootState); err != nil {
-					return err
-				}
-
-				shootStateBytes, err := runtime.Encode(kubernetes.GardenCodec.EncoderForVersion(kubernetes.GardenSerializer, gardencorev1beta1.SchemeGroupVersion), shootState)
-				if err != nil {
-					return err
-				}
-
-				_, err = opts.Out.Write(shootStateBytes)
-				return err
-			},
-			Dependencies: flow.NewTaskIDs(compileShootState),
-		})
 
 		deployBastion = g.Add(flow.Task{
 			Name: "Deploying and connecting to bastion host",
@@ -286,9 +267,15 @@ func run(ctx context.Context, opts *Options) error {
 			}).RetryUntilTimeout(5*time.Second, 5*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, deployBastion),
 		})
+		copyManifests = g.Add(flow.Task{
+			Name: "Copying manifests to the first control plane machine",
+			Fn: func(ctx context.Context) error {
+				return b.CopyManifests(ctx, connMachine0, os.DirFS(opts.ConfigDir))
+			},
+			Dependencies: flow.NewTaskIDs(connectToMachine0, compileShootState),
+		})
 
-		_ = connectToMachine0
-		_ = compileShootState
+		_ = copyManifests
 
 		// In contrast to the usual Shoot migrate flow, we don't delete the shoot control plane namespace at the end.
 		// The bootstrap cluster is designed to be temporary and thrown away after successfully executing
