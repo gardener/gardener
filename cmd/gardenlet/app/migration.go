@@ -428,14 +428,17 @@ func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log lo
 		}
 
 		tasks = append(tasks, func(ctx context.Context) error {
-			managedResource := &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace.Name,
-					Name:      shootsystem.ManagedResourceName,
-				},
-			}
-			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
-				return fmt.Errorf("failed to get ManagedResource %q: %w", client.ObjectKeyFromObject(managedResource), err)
+			var (
+				key             = client.ObjectKey{Namespace: namespace.Name, Name: shootsystem.ManagedResourceName}
+				managedResource = &resourcesv1alpha1.ManagedResource{}
+			)
+
+			if err := seedClient.Get(ctx, key, managedResource); err != nil {
+				if apierrors.IsNotFound(err) {
+					log.Info("Managed resource not found, skipping migration", "managedResource", key)
+					return nil
+				}
+				return fmt.Errorf("failed to get ManagedResource %q: %w", key, err)
 			}
 
 			if managedResource.DeletionTimestamp != nil {
@@ -444,7 +447,7 @@ func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log lo
 
 			objects, err := managedresources.GetObjects(ctx, seedClient, managedResource.Namespace, managedResource.Name)
 			if err != nil {
-				return fmt.Errorf("failed to get objects for ManagedResource %q: %w", client.ObjectKeyFromObject(managedResource), err)
+				return fmt.Errorf("failed to get objects for ManagedResource %q: %w", key, err)
 			}
 
 			crbs := []string{v1beta1constants.ShootProjectAdminsGroupName, v1beta1constants.ShootProjectViewersGroupName, v1beta1constants.ShootSystemAdminsGroupName, v1beta1constants.ShootSystemViewersGroupName}
@@ -454,11 +457,11 @@ func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log lo
 
 			objects = append(objects, shootsystem.ClusterRoleBindings()...)
 
-			log.Info("Migrating ClusterRoleBindings for shoot/adminkubeconfig and shoot/viewerkubeconfig access in managed resource", "managedResource", client.ObjectKeyFromObject(managedResource))
+			log.Info("Migrating ClusterRoleBindings for shoot/adminkubeconfig and shoot/viewerkubeconfig access in managed resource", "managedResource", key)
 			registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 			resources, err := registry.AddAllAndSerialize(objects...)
 			if err != nil {
-				return fmt.Errorf("failed serializing objects for ManagedResource %q: %w", client.ObjectKeyFromObject(managedResource), err)
+				return fmt.Errorf("failed serializing objects for ManagedResource %q: %w", key, err)
 			}
 
 			return managedresources.CreateForShoot(ctx, seedClient, managedResource.Namespace, managedResource.Name, managedresources.LabelValueGardener, false, resources)
