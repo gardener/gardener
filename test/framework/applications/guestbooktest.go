@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -20,10 +21,14 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
@@ -139,6 +144,33 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		// AliCloud requires a minimum of 20 GB for its PVCs
 		masterValues["persistence"] = map[string]any{
 			"size": "20Gi",
+		}
+	}
+
+	hasARMWorkerPools := slices.ContainsFunc(shoot.Spec.Provider.Workers, func(worker gardencorev1beta1.Worker) bool {
+		return worker.Machine.Architecture != nil && *worker.Machine.Architecture == v1beta1constants.ArchitectureARM64
+	})
+
+	// GCP requires a specific storage class for ARM worker pools
+	if shoot.Spec.Provider.Type == "gcp" && hasARMWorkerPools {
+		err := t.framework.ShootClient.Client().Create(ctx, &storagev1.StorageClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gce-hd-balanced",
+				Annotations: map[string]string{
+					"resources.gardener.cloud/delete-on-invalid-update": "true",
+				},
+			},
+			AllowVolumeExpansion: ptr.To(true),
+			Provisioner:          "pd.csi.storage.gke.io",
+			Parameters: map[string]string{
+				"type": "hyperdisk-balanced",
+			},
+			VolumeBindingMode: ptr.To(storagev1.VolumeBindingWaitForFirstConsumer),
+		})
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+		masterValues["persistence"] = map[string]any{
+			"storageClass": "gce-hd-balanced",
 		}
 	}
 
