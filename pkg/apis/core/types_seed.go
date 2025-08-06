@@ -121,9 +121,8 @@ type Backup struct {
 type SeedDNS struct {
 	// Provider configures a DNSProvider
 	Provider *SeedDNSProvider
-
 	// Internal configures DNS settings related to seed internal domain.
-	Internal *SeedDNSProviderConf
+	Internal *SeedDNSProviderConfig
 }
 
 // SeedDNSProvider configures a DNS provider
@@ -134,8 +133,8 @@ type SeedDNSProvider struct {
 	SecretRef corev1.SecretReference
 }
 
-// SeedDNSProviderConf configures a DNS provider.
-type SeedDNSProviderConf struct {
+// SeedDNSProviderConfig configures a DNS provider.
+type SeedDNSProviderConfig struct {
 	// Type is the type of the DNS provider.
 	Type string
 	// Domain is the domain name to be used by the DNS provider.

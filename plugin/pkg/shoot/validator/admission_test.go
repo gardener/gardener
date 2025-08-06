@@ -6283,8 +6283,8 @@ var _ = Describe("validator", func() {
 				oldSeed     *gardencorev1beta1.Seed
 				oldShoot    *core.Shoot
 
-				internalDNS1 gardencorev1beta1.SeedDNSProviderConf
-				internalDNS2 gardencorev1beta1.SeedDNSProviderConf
+				internalDNS1 gardencorev1beta1.SeedDNSProviderConfig
+				internalDNS2 gardencorev1beta1.SeedDNSProviderConfig
 			)
 			BeforeEach(func() {
 				oldSeedName = fmt.Sprintf("old-%s", seedName)
@@ -6294,11 +6294,11 @@ var _ = Describe("validator", func() {
 				oldShoot = shoot.DeepCopy()
 				oldShoot.Spec.SeedName = &oldSeedName
 
-				internalDNS1 = gardencorev1beta1.SeedDNSProviderConf{
+				internalDNS1 = gardencorev1beta1.SeedDNSProviderConfig{
 					Type:   "internal",
 					Domain: "test1.internal",
 				}
-				internalDNS2 = gardencorev1beta1.SeedDNSProviderConf{
+				internalDNS2 = gardencorev1beta1.SeedDNSProviderConfig{
 					Type:   "internal",
 					Domain: "test2.internal",
 				}
@@ -6371,7 +6371,7 @@ var _ = Describe("validator", func() {
 			)
 
 			DescribeTable("Validating internal dns secret reference change by migration",
-				func(oldDNSInternalRef, newDNSInternalRef *gardencorev1beta1.SeedDNSProviderConf, matcher types.GomegaMatcher) {
+				func(oldDNSInternalRef, newDNSInternalRef *gardencorev1beta1.SeedDNSProviderConfig, matcher types.GomegaMatcher) {
 					oldSeed.Spec.DNS.Internal = oldDNSInternalRef
 					seed.Spec.DNS.Internal = newDNSInternalRef
 

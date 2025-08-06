@@ -107,7 +107,7 @@ func SeedBackupCredentialsRefEqual(oldBackup, newBackup *gardencorev1beta1.Backu
 }
 
 // InternalDNSProviderEqual returns true when the credentials reference of the internal DNS provider configuration is the same.
-func InternalDNSProviderEqual(oldDNSProvider, newDNSProvider *gardencorev1beta1.SeedDNSProviderConf) bool {
+func InternalDNSProviderEqual(oldDNSProvider, newDNSProvider *gardencorev1beta1.SeedDNSProviderConfig) bool {
 	var (
 		oldCredentialsRef *corev1.ObjectReference
 		newCredentialsRef *corev1.ObjectReference
