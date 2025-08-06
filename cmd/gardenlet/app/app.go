@@ -451,7 +451,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	return wait.PollUntilContextCancel(timeoutCtx, 500*time.Millisecond, false, func(context.Context) (done bool, err error) {
+	if err := wait.PollUntilContextCancel(timeoutCtx, 500*time.Millisecond, false, func(context.Context) (done bool, err error) {
 		if err := gardenClient.Get(ctx, client.ObjectKey{Name: gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name)}, &corev1.Namespace{}); err != nil {
 			if apierrors.IsNotFound(err) || apierrors.IsForbidden(err) {
 				return false, nil
@@ -459,7 +459,46 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 			return false, err
 		}
 		return true, nil
-	})
+	}); err != nil {
+		return err
+	}
+
+	// If the Seed does not have spec.dns.internal set, set it automatically from the internal domain.
+	if seed.Spec.DNS.Internal == nil {
+		// TODO(dimityrmirchev): Require internal DNS settings and remove this logic after 1.127 release
+		secret, err := gardenerutils.ReadInternalDomainSecret(ctx, gardenClient, gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name), true)
+		if err != nil {
+			return err
+		}
+
+		providerType, domain, zone, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
+		if err != nil {
+			return err
+		}
+
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, seed, func() error {
+			seed.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
+				Type:   providerType,
+				Domain: domain,
+			}
+			if len(zone) > 0 {
+				seed.Spec.DNS.Internal.Zone = &zone
+			}
+
+			seed.Spec.DNS.Internal.CredentialsRef = corev1.ObjectReference{
+				APIVersion: "v1",
+				Kind:       "Secret",
+				Namespace:  secret.Namespace,
+				Name:       secret.Name,
+			}
+
+			return nil
+		}); err != nil {
+			return fmt.Errorf("could not patch internal dns settings for seed %q: %w", seed.Name, err)
+		}
+	}
+
+	return nil
 }
 
 var seedManagementDecoder runtime.Decoder
