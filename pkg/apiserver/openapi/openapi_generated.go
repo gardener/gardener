@@ -179,7 +179,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Seed":                                       schema_pkg_apis_core_v1beta1_Seed(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS":                                    schema_pkg_apis_core_v1beta1_SeedDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider":                            schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConf":                        schema_pkg_apis_core_v1beta1_SeedDNSProviderConf(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig":                      schema_pkg_apis_core_v1beta1_SeedDNSProviderConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedList":                                   schema_pkg_apis_core_v1beta1_SeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks":                               schema_pkg_apis_core_v1beta1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider":                               schema_pkg_apis_core_v1beta1_SeedProvider(ref),
@@ -7826,14 +7826,14 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 					"internal": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Internal configures DNS settings related to seed internal domain.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConf"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConf"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig"},
 	}
 }
 
@@ -7868,11 +7868,11 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) 
 	}
 }
 
-func schema_pkg_apis_core_v1beta1_SeedDNSProviderConf(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_core_v1beta1_SeedDNSProviderConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SeedDNSProviderConf configures a DNS provider.",
+				Description: "SeedDNSProviderConfig configures a DNS provider.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {

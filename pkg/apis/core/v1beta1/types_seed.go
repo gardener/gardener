@@ -157,14 +157,13 @@ type SeedDNS struct {
 	// Provider configures a DNSProvider
 	// +optional
 	Provider *SeedDNSProvider `json:"provider,omitempty" protobuf:"bytes,2,opt,name=provider"`
-
 	// Internal configures DNS settings related to seed internal domain.
 	// +optional
-	Internal *SeedDNSProviderConf `json:"internal,omitempty" protobuf:"bytes,3,opt,name=internal"`
+	Internal *SeedDNSProviderConfig `json:"internal,omitempty" protobuf:"bytes,3,opt,name=internal"`
 }
 
-// SeedDNSProviderConf configures a DNS provider.
-type SeedDNSProviderConf struct {
+// SeedDNSProviderConfig configures a DNS provider.
+type SeedDNSProviderConfig struct {
 	// Type is the type of the DNS provider.
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// Domain is the domain name to be used by the DNS provider.

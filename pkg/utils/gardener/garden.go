@@ -99,7 +99,7 @@ func ReadGardenInternalDomain(
 	c client.Reader,
 	namespace string,
 	enforceSecret bool,
-	seedDNSProvider *gardencorev1beta1.SeedDNSProviderConf,
+	seedDNSProvider *gardencorev1beta1.SeedDNSProviderConfig,
 ) (
 	*Domain,
 	error,

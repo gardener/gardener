@@ -329,7 +329,7 @@ var _ = Describe("Seed Validation Tests", func() {
 
 		Context("internal DNS", func() {
 			It("should require valid fields if internal DNS is set", func() {
-				seed.Spec.DNS.Internal = &core.SeedDNSProviderConf{}
+				seed.Spec.DNS.Internal = &core.SeedDNSProviderConfig{}
 				errorList := ValidateSeed(seed)
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -357,7 +357,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			})
 
 			It("should return error if the internal DNS configures a malformed domain", func() {
-				seed.Spec.DNS.Internal = &core.SeedDNSProviderConf{
+				seed.Spec.DNS.Internal = &core.SeedDNSProviderConfig{
 					Type:   "foo",
 					Domain: "invalid_dns1123-subdomain",
 				}
@@ -370,7 +370,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			})
 
 			It("should not return an error if the dns is configured correctly", func() {
-				seed.Spec.DNS.Internal = &core.SeedDNSProviderConf{
+				seed.Spec.DNS.Internal = &core.SeedDNSProviderConfig{
 					Type:   "foo",
 					Domain: "foo.example.com",
 					Zone:   ptr.To("zone-1"),

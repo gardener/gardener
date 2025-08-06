@@ -88,7 +88,7 @@ var _ = Describe("Reconciler", func() {
 			},
 			Spec: gardencorev1beta1.SeedSpec{
 				DNS: gardencorev1beta1.SeedDNS{
-					Internal: &gardencorev1beta1.SeedDNSProviderConf{
+					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
 						Type:   "providerType",
 						Domain: "internal.example.com",
 						Zone:   ptr.To("zone-1"),
@@ -106,7 +106,7 @@ var _ = Describe("Reconciler", func() {
 
 	It("should not default internal DNS if already set in the seed", func() {
 		seed.Spec.DNS = gardencorev1beta1.SeedDNS{
-			Internal: &gardencorev1beta1.SeedDNSProviderConf{
+			Internal: &gardencorev1beta1.SeedDNSProviderConfig{
 				Type:   "custom-provider",
 				Domain: "custom.example.com",
 				Zone:   ptr.To("custom-zone"),
@@ -134,7 +134,7 @@ var _ = Describe("Reconciler", func() {
 			},
 			Spec: gardencorev1beta1.SeedSpec{
 				DNS: gardencorev1beta1.SeedDNS{
-					Internal: &gardencorev1beta1.SeedDNSProviderConf{
+					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
 						Type:   "custom-provider",
 						Domain: "custom.example.com",
 						Zone:   ptr.To("custom-zone"),
