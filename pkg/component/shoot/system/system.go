@@ -462,8 +462,9 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 				Name:     v1beta1constants.ShootReadOnlyClusterRoleName,
 			},
 			Subjects: []rbacv1.Subject{{
-				Kind: rbacv1.GroupKind,
-				Name: v1beta1constants.ShootSystemViewersGroupName,
+				APIGroup: rbacv1.GroupName,
+				Kind:     rbacv1.GroupKind,
+				Name:     v1beta1constants.ShootSystemViewersGroupName,
 			}},
 		},
 		&rbacv1.ClusterRoleBinding{
@@ -477,8 +478,9 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 				Name:     v1beta1constants.ShootReadOnlyClusterRoleName,
 			},
 			Subjects: []rbacv1.Subject{{
-				Kind: rbacv1.GroupKind,
-				Name: v1beta1constants.ShootProjectViewersGroupName,
+				APIGroup: rbacv1.GroupName,
+				Kind:     rbacv1.GroupKind,
+				Name:     v1beta1constants.ShootProjectViewersGroupName,
 			}},
 		},
 	}
@@ -515,8 +517,9 @@ func (s *shootSystem) adminRBACResources() []client.Object {
 			},
 			Subjects: []rbacv1.Subject{
 				{
-					Kind: rbacv1.GroupKind,
-					Name: v1beta1constants.ShootSystemAdminsGroupName,
+					APIGroup: rbacv1.GroupName,
+					Kind:     rbacv1.GroupKind,
+					Name:     v1beta1constants.ShootSystemAdminsGroupName,
 				},
 				{
 					Kind: rbacv1.GroupKind,
@@ -536,8 +539,9 @@ func (s *shootSystem) adminRBACResources() []client.Object {
 			},
 			Subjects: []rbacv1.Subject{
 				{
-					Kind: rbacv1.GroupKind,
-					Name: v1beta1constants.ShootProjectAdminsGroupName,
+					APIGroup: rbacv1.GroupName,
+					Kind:     rbacv1.GroupKind,
+					Name:     v1beta1constants.ShootProjectAdminsGroupName,
 				},
 				{
 					Kind: rbacv1.GroupKind,

@@ -454,7 +454,7 @@ var _ = Describe("ShootSystem", func() {
 		})
 
 		Context("RBAC resources", func() {
-			It("should do not add read-only RBACs when the API resource list is unset", func() {
+			It("should not add read-only RBACs when the API resource list is unset", func() {
 				manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -573,12 +573,11 @@ var _ = Describe("ShootSystem", func() {
 							Kind:     "ClusterRole",
 							Name:     "gardener.cloud:system:read-only",
 						},
-						Subjects: []rbacv1.Subject{
-							{
-								Kind: "Group",
-								Name: "gardener.cloud:system:viewers",
-							},
-						},
+						Subjects: []rbacv1.Subject{{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "Group",
+							Name:     "gardener.cloud:system:viewers",
+						}},
 					}
 
 					projectViewersClusterRoleBinding := &rbacv1.ClusterRoleBinding{
@@ -593,12 +592,11 @@ var _ = Describe("ShootSystem", func() {
 							Kind:     "ClusterRole",
 							Name:     "gardener.cloud:system:read-only",
 						},
-						Subjects: []rbacv1.Subject{
-							{
-								Kind: "Group",
-								Name: "gardener.cloud:project:viewers",
-							},
-						},
+						Subjects: []rbacv1.Subject{{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "Group",
+							Name:     "gardener.cloud:project:viewers",
+						}},
 					}
 
 					systemAdminClusterRoleBinding := &rbacv1.ClusterRoleBinding{
@@ -615,8 +613,9 @@ var _ = Describe("ShootSystem", func() {
 						},
 						Subjects: []rbacv1.Subject{
 							{
-								Kind: "Group",
-								Name: "gardener.cloud:system:admins",
+								APIGroup: "rbac.authorization.k8s.io",
+								Kind:     "Group",
+								Name:     "gardener.cloud:system:admins",
 							},
 							{
 								Kind: "Group",
@@ -639,8 +638,9 @@ var _ = Describe("ShootSystem", func() {
 						},
 						Subjects: []rbacv1.Subject{
 							{
-								Kind: "Group",
-								Name: "gardener.cloud:project:admins",
+								APIGroup: "rbac.authorization.k8s.io",
+								Kind:     "Group",
+								Name:     "gardener.cloud:project:admins",
 							},
 							{
 								Kind: "Group",
