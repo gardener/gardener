@@ -328,7 +328,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
 
 			if inPlaceUpdate {
-				nodesOfInPlaceWorkersBeforeTest = inplace.ItShouldFindNodesOfInPlaceWorkers(s)
+				It("should get the nodes of worker with in-place update strategy", func(ctx SpecContext) {
+					nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
+				}, SpecTimeout(2*time.Minute))
 				inplace.ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
 			}
 
@@ -345,8 +347,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
 
 				if inPlaceUpdate {
-					nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindNodesOfInPlaceWorkers(s)
-					Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
+					It("should compare the node names after the test", func(ctx SpecContext) {
+						totalInPlaceWorkersMaxSurge := inplace.GetTotalInPlaceWorkersMaxSurge(s.Shoot)
+						s.Log.Info("Total in-place workers max surge", "maxSurge", totalInPlaceWorkersMaxSurge)
+
+						nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
+						s.Log.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
+
+						Expect(nodesOfInPlaceWorkersAfterTest.Intersection(nodesOfInPlaceWorkersBeforeTest)).To(HaveLen(nodesOfInPlaceWorkersBeforeTest.Len() - totalInPlaceWorkersMaxSurge))
+					}, SpecTimeout(2*time.Minute))
 				}
 			}
 

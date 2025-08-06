@@ -82,3 +82,17 @@ func VerifyInPlaceUpdateCompletion(ctx context.Context, log logr.Logger, gardenC
 		))
 	}).Should(Succeed())
 }
+
+// GetTotalInPlaceWorkersMaxSurge calculates the total max surge for all workers with update strategy AutoInPlaceUpdate.
+func GetTotalInPlaceWorkersMaxSurge(shoot *gardencorev1beta1.Shoot) int {
+	GinkgoHelper()
+
+	totalInPlaceWorkersMaxSurge := 0
+	for _, pool := range shoot.Spec.Provider.Workers {
+		if pool.UpdateStrategy != nil && *pool.UpdateStrategy == gardencorev1beta1.AutoInPlaceUpdate {
+			totalInPlaceWorkersMaxSurge += pool.MaxSurge.IntValue()
+		}
+	}
+
+	return totalInPlaceWorkersMaxSurge
+}

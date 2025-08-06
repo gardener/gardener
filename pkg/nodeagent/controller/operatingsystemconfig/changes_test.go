@@ -19,21 +19,6 @@ import (
 )
 
 var _ = Describe("Changes", func() {
-	DescribeTable("#CheckIfMinorVersionUpdate", func(oldVersion, newVersion string, expected bool, errMatcher gomegatypes.GomegaMatcher) {
-		isMinorVersionUpdate, err := CheckIfMinorVersionUpdate(oldVersion, newVersion)
-		Expect(err).To(errMatcher)
-		Expect(isMinorVersionUpdate).To(Equal(expected))
-	},
-		Entry("invalid version", "a.b.c", "1.0.0", false, MatchError(ContainSubstring("failed to parse"))),
-		Entry("1.0.0 to 1.1.0", "1.0.0", "1.1.0", true, BeNil()),
-		Entry("1.1.0 to 1.1.2", "1.1.0", "1.1.2", false, BeNil()),
-		Entry("v1.1.0 to v1.1.2", "v1.1.0", "v1.1.2", false, BeNil()),
-		Entry("v1.2.3 to v1.3.4", "v1.2.3", "v1.3.4", true, BeNil()),
-		Entry("v1.3.4 to v1.5.6", "v1.3.4", "v1.5.6", true, BeNil()),
-		Entry("1.2.3-foo.12 to 1.2.4-foo.23", "1.2.3-foo.12", "1.2.4-foo.12", false, BeNil()),
-		Entry("1.1.1-foo.12 to 1.2.3-foo.23", "1.1.1-foo.12", "1.2.3-foo.23", true, BeNil()),
-	)
-
 	DescribeTable("#ComputeKubeletConfigChange", func(oldKubeletConfig, newKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration, expectedCPUManagerPolicyChange, expectedConfigChange bool, errMatcher gomegatypes.GomegaMatcher) {
 		configChange, cpuManagerPolicyChange, err := ComputeKubeletConfigChange(oldKubeletConfig, newKubeletConfig)
 		Expect(err).To(errMatcher)

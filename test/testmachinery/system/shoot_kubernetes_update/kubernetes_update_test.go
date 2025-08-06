@@ -31,6 +31,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
@@ -105,22 +106,41 @@ func RunTest(
 		Skip("shoot already has the desired kubernetes versions")
 	}
 
+	var controlPlaneMinorVersionUpdated bool
+
 	By("Update shoot")
 	if controlPlaneVersion != "" {
 		By("Update .spec.kubernetes.version to " + controlPlaneVersion)
+		controlPlaneMinorVersionUpdated, err = versionutils.CheckIfMinorVersionUpdate(f.Shoot.Spec.Kubernetes.Version, controlPlaneVersion)
+		Expect(err).NotTo(HaveOccurred())
 	}
+
 	for poolName, kubernetesVersion := range poolNameToKubernetesVersion {
 		By("Update .kubernetes.version to " + kubernetesVersion + " for pool " + poolName)
 	}
 
 	var hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers, hasInPlaceUpdateWorkers bool
 
+	isMinorVersionUpdate := func(workerKubernetes *gardencorev1beta1.WorkerKubernetes, poolVersion string, controlPlaneMinorVersionUpdated bool) bool {
+		if workerKubernetes == nil || workerKubernetes.Version == nil || poolVersion == "" {
+			return controlPlaneMinorVersionUpdated
+		}
+
+		minorVersionUpdate, err := versionutils.CheckIfMinorVersionUpdate(*workerKubernetes.Version, poolVersion)
+		Expect(err).NotTo(HaveOccurred())
+		return minorVersionUpdate
+	}
+
 	for _, worker := range f.Shoot.Spec.Provider.Workers {
 		switch ptr.Deref(worker.UpdateStrategy, "") {
 		case gardencorev1beta1.AutoInPlaceUpdate:
-			hasAutoInPlaceUpdateWorkers = true
+			if isMinorVersionUpdate(worker.Kubernetes, poolNameToKubernetesVersion[worker.Name], controlPlaneMinorVersionUpdated) {
+				hasAutoInPlaceUpdateWorkers = true
+			}
 		case gardencorev1beta1.ManualInPlaceUpdate:
-			hasManualInPlaceUpdateWorkers = true
+			if isMinorVersionUpdate(worker.Kubernetes, poolNameToKubernetesVersion[worker.Name], controlPlaneMinorVersionUpdated) {
+				hasManualInPlaceUpdateWorkers = true
+			}
 		}
 	}
 
@@ -161,6 +181,7 @@ func RunTest(
 
 	if hasInPlaceUpdateWorkers {
 		nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, f.Logger, f.ShootClient.Client(), f.Shoot)
+		f.Logger.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
 		Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
 
 		inplace.VerifyInPlaceUpdateCompletion(ctx, f.Logger, f.GardenClient.Client(), f.Shoot)

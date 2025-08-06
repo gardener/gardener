@@ -18,5 +18,5 @@ spec:
     -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
     -shoot-name=$SHOOT_NAME
     -project-namespace=$PROJECT_NAMESPACE
-    -version-worker-pools=$OS_VERSION_WORKER_POOLS
+    -machine-image-version=$MACHINE_IMAGE_VERSION
   image: golang:1.24.5

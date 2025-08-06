@@ -38,7 +38,7 @@ import (
 	"github.com/gardener/gardener/test/utils/shoots/update/inplace"
 )
 
-var newWorkerPoolMachineImageVersion = flag.String("version-worker-pools", "", "the version to use for .spec.provider.workers[].machine.image.version")
+var newWorkerPoolMachineImageVersion = flag.String("machine-image-version", "", "the version to use for .spec.provider.workers[].machine.image.version")
 
 const UpdateMachineImageVersionTimeout = 45 * time.Minute
 
@@ -146,13 +146,14 @@ func RunTest(
 
 	if hasInPlaceUpdateWorkers {
 		nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, f.Logger, f.ShootClient.Client(), f.Shoot)
+		f.Logger.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
 		Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
 
 		inplace.VerifyInPlaceUpdateCompletion(ctx, f.Logger, f.GardenClient.Client(), f.Shoot)
 	}
 
-	By("Verify the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [after update]")
-	Expect(shootupdatesuite.VerifyKubernetesVersions(ctx, shootClient, f.Shoot)).To(Succeed())
+	By("Verify the machine image version for all existing nodes matches with the versions defined in the Shoot spec [after update]")
+	Expect(shootupdatesuite.VerifyMachineImageVersions(ctx, shootClient, f.Shoot)).To(Succeed())
 
 	if v1beta1helper.IsHAControlPlaneConfigured(f.Shoot) {
 		By("Ensure there was no downtime while upgrading shoot")

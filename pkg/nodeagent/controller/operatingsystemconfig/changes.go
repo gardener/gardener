@@ -10,7 +10,6 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
@@ -165,7 +164,7 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 		changes.InPlaceUpdates.OperatingSystem = !isOsVersionUpToDate
 
 		if oldOSC.Spec.InPlaceUpdates.KubeletVersion != newOSC.Spec.InPlaceUpdates.KubeletVersion {
-			changes.InPlaceUpdates.Kubelet.MinorVersion, err = CheckIfMinorVersionUpdate(oldOSC.Spec.InPlaceUpdates.KubeletVersion, newOSC.Spec.InPlaceUpdates.KubeletVersion)
+			changes.InPlaceUpdates.Kubelet.MinorVersion, err = versionutils.CheckIfMinorVersionUpdate(oldOSC.Spec.InPlaceUpdates.KubeletVersion, newOSC.Spec.InPlaceUpdates.KubeletVersion)
 			if err != nil {
 				return nil, fmt.Errorf("failed to check if kubelet minor version was updated: %w", err)
 			}
@@ -554,18 +553,4 @@ func getCommandToExecute(newUnit extensionsv1alpha1.Unit) extensionsv1alpha1.Uni
 		commandToExecute = extensionsv1alpha1.CommandStop
 	}
 	return commandToExecute
-}
-
-// CheckIfMinorVersionUpdate checks if the new kubelet version is a minor version update to the old kubelet version.
-func CheckIfMinorVersionUpdate(old, new string) (bool, error) {
-	oldVersion, err := semver.NewVersion(versionutils.Normalize(old))
-	if err != nil {
-		return false, fmt.Errorf("failed to parse old kubelet version %s: %w", old, err)
-	}
-	newVersion, err := semver.NewVersion(versionutils.Normalize(new))
-	if err != nil {
-		return false, fmt.Errorf("failed to parse new kubelet version %s: %w", new, err)
-	}
-
-	return oldVersion.Minor() != newVersion.Minor(), nil
 }
