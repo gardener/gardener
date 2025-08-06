@@ -7065,7 +7065,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
 				Expect(errList).To(BeEmpty())
 			})
-			
+
 			It("should forbid setting MachineInPlaceUpdateTimeout to negative value for update strategy AutoInPlaceUpdate", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
