@@ -611,17 +611,11 @@ var _ = Describe("ShootSystem", func() {
 							Kind:     "ClusterRole",
 							Name:     "cluster-admin",
 						},
-						Subjects: []rbacv1.Subject{
-							{
-								APIGroup: "rbac.authorization.k8s.io",
-								Kind:     "Group",
-								Name:     "gardener.cloud:system:admins",
-							},
-							{
-								Kind: "Group",
-								Name: "system:masters", // TODO(vpnachev): Remove "system:masters" subject after v1.125 is released
-							},
-						},
+						Subjects: []rbacv1.Subject{{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "Group",
+							Name:     "gardener.cloud:system:admins",
+						}},
 					}
 
 					projectAdminClusterRoleBinding := &rbacv1.ClusterRoleBinding{
@@ -636,17 +630,11 @@ var _ = Describe("ShootSystem", func() {
 							Kind:     "ClusterRole",
 							Name:     "cluster-admin",
 						},
-						Subjects: []rbacv1.Subject{
-							{
-								APIGroup: "rbac.authorization.k8s.io",
-								Kind:     "Group",
-								Name:     "gardener.cloud:project:admins",
-							},
-							{
-								Kind: "Group",
-								Name: "system:masters", // TODO(vpnachev): Remove "system:masters" subject after v1.125 is released
-							},
-						},
+						Subjects: []rbacv1.Subject{{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "Group",
+							Name:     "gardener.cloud:project:admins",
+						}},
 					}
 
 					Expect(managedResource).To(contain(clusterRole, systemViewersClusterRoleBinding, projectViewersClusterRoleBinding, systemAdminClusterRoleBinding, projectAdminClusterRoleBinding))

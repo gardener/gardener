@@ -19,7 +19,6 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apiserver/pkg/authentication/user"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -515,17 +514,11 @@ func (s *shootSystem) adminRBACResources() []client.Object {
 				Kind:     "ClusterRole",
 				Name:     "cluster-admin",
 			},
-			Subjects: []rbacv1.Subject{
-				{
-					APIGroup: rbacv1.GroupName,
-					Kind:     rbacv1.GroupKind,
-					Name:     v1beta1constants.ShootSystemAdminsGroupName,
-				},
-				{
-					Kind: rbacv1.GroupKind,
-					Name: user.SystemPrivilegedGroup, // TODO(vpnachev): Remove "system:masters" subject after v1.125 is released
-				},
-			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.GroupName,
+				Kind:     rbacv1.GroupKind,
+				Name:     v1beta1constants.ShootSystemAdminsGroupName,
+			}},
 		},
 		&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -537,17 +530,11 @@ func (s *shootSystem) adminRBACResources() []client.Object {
 				Kind:     "ClusterRole",
 				Name:     "cluster-admin",
 			},
-			Subjects: []rbacv1.Subject{
-				{
-					APIGroup: rbacv1.GroupName,
-					Kind:     rbacv1.GroupKind,
-					Name:     v1beta1constants.ShootProjectAdminsGroupName,
-				},
-				{
-					Kind: rbacv1.GroupKind,
-					Name: user.SystemPrivilegedGroup, // TODO(vpnachev): Remove "system:masters" subject after v1.125 is released
-				},
-			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.GroupName,
+				Kind:     rbacv1.GroupKind,
+				Name:     v1beta1constants.ShootProjectAdminsGroupName,
+			}},
 		},
 	}
 }
