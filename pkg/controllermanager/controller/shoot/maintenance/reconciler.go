@@ -544,6 +544,11 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 		workerImage := worker.Machine.Image
 		workerLog := log.WithValues("worker", worker.Name, "image", workerImage.Name, "version", workerImage.Version)
 
+		machineTypeFromCloudProfile := v1beta1helper.FindMachineTypeByName(cloudProfile.Spec.MachineTypes, worker.Machine.Type)
+		if machineTypeFromCloudProfile == nil {
+			return nil, fmt.Errorf("machine type %q of worker %q does not exist in cloudprofile", worker.Machine.Type, worker.Name)
+		}
+
 		machineImageFromCloudProfile, err := helper.DetermineMachineImage(cloudProfile, workerImage)
 		if err != nil {
 			return nil, err
@@ -554,7 +559,7 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 			return nil, err
 		}
 
-		filteredMachineImageVersionsFromCloudProfile := helper.FilterMachineImageVersions(&machineImageFromCloudProfile, worker, kubeletVersion)
+		filteredMachineImageVersionsFromCloudProfile := helper.FilterMachineImageVersions(&machineImageFromCloudProfile, worker, kubeletVersion, machineTypeFromCloudProfile, cloudProfile.Spec.Capabilities)
 
 		// first check if the machine image version should be updated
 		shouldBeUpdated, reason, isExpired := shouldMachineImageVersionBeUpdated(workerImage, filteredMachineImageVersionsFromCloudProfile, *shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion)
