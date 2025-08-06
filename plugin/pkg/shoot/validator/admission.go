@@ -524,7 +524,6 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because backup is not configured for seed %q", c.seed.Name))
 		}
 
-		// For now, just check if the internal domain field changes from empty to explicitly set.
 		var oldDomain, newDomain string
 		if oldSeed.Spec.DNS.Internal != nil {
 			oldDomain = oldSeed.Spec.DNS.Internal.Domain
