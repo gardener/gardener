@@ -12,7 +12,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/dns"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/extensionscheck"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/lifecycle"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/reference"
@@ -25,10 +24,6 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 		Config: *cfg.Controllers.SeedBackupBucketsCheck,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding backupbuckets check reconciler: %w", err)
-	}
-
-	if err := (&dns.Reconciler{}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding dns defaulting reconciler: %w", err)
 	}
 
 	if err := (&extensionscheck.Reconciler{

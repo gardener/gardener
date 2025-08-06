@@ -315,7 +315,6 @@ build:
             - pkg/controllermanager/controller/secretbinding
             - pkg/controllermanager/controller/seed
             - pkg/controllermanager/controller/seed/backupbucketscheck
-            - pkg/controllermanager/controller/seed/dns
             - pkg/controllermanager/controller/seed/extensionscheck
             - pkg/controllermanager/controller/seed/lifecycle
             - pkg/controllermanager/controller/seed/reference
@@ -364,7 +363,6 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - third_party/gopkg.in/yaml.v2
-            - third_party/mock/controller-runtime/predicate
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
