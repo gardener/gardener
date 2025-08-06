@@ -75,7 +75,7 @@ go test -timeout=0 ./test/testmachinery/suites/shoot \
       -shoot-name=<shoot-name> \                           # Name of the shoot to test
       -project-namespace=<gardener project namespace> \    # Name of the gardener project the test shoot resides
       -ginkgo.focus="\[RELEASE\]" \                        # Run all tests that are tagged as release
-      -ginkgo.skip="\[SERIAL\]|\[DISRUPTIVE\]"             # Exclude all tests that are tagged SERIAL or DISRUPTIVE
+      -ginkgo.skip="\[SERIAL\]"                            # Exclude all tests that are tagged SERIAL
 ```
 
 ## Add a New Test

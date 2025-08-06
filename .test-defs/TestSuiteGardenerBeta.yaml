@@ -18,6 +18,6 @@ spec:
       -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
       -project-namespace=$PROJECT_NAMESPACE
       -ginkgo.focus="\[BETA\]"
-      -ginkgo.skip="\[SERIAL\]|\[DISRUPTIVE\]"
+      -ginkgo.skip="\[SERIAL\]"
 
   image: golang:1.24.6
