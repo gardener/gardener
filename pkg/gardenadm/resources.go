@@ -6,6 +6,7 @@ package gardenadm
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -65,28 +66,7 @@ type Resources struct {
 func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
 	resources := Resources{Seed: &gardencorev1beta1.Seed{}}
 
-	if err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return fmt.Errorf("failed walking directory: %w", err)
-		}
-
-		// stop walking hidden directories entirely
-		if d.IsDir() && d.Name() != "." && strings.HasPrefix(d.Name(), ".") {
-			return fs.SkipDir
-		}
-
-		if d.IsDir() || // don't read directories
-			strings.HasPrefix(d.Name(), ".") || // don't read hidden files
-			(!strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".json")) { // don't read files with unexpected extension
-			return nil
-		}
-
-		file, err := fsys.Open(path)
-		if err != nil {
-			return fmt.Errorf("failed opening file %s: %w", path, err)
-		}
-		defer file.Close()
-
+	if err := VisitManifestFiles(fsys, func(path string, file fs.File) error {
 		reader := yaml.NewYAMLReader(bufio.NewReader(file))
 
 		for indexInFile := 0; true; indexInFile++ {
@@ -176,4 +156,37 @@ func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
 	}
 
 	return resources, nil
+}
+
+// VisitManifestFiles calls the visit func for all manifest files in the given file system.
+// It ignores hidden files and directories (starting with a dot).
+func VisitManifestFiles(fsys fs.FS, visit func(path string, file fs.File) error) error {
+	return fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) (rErr error) {
+		if err != nil {
+			return fmt.Errorf("failed walking directory: %w", err)
+		}
+
+		// stop walking hidden directories entirely
+		if d.IsDir() && d.Name() != "." && strings.HasPrefix(d.Name(), ".") {
+			return fs.SkipDir
+		}
+
+		if d.IsDir() || // don't read directories
+			strings.HasPrefix(d.Name(), ".") || // don't read hidden files
+			(!strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".json")) { // don't read files with unexpected extension
+			return nil
+		}
+
+		file, err := fsys.Open(path)
+		if err != nil {
+			return fmt.Errorf("failed opening file %s: %w", path, err)
+		}
+		defer func() {
+			if closeErr := file.Close(); closeErr != nil {
+				rErr = errors.Join(rErr, closeErr)
+			}
+		}()
+
+		return visit(path, file)
+	})
 }
