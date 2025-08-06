@@ -149,3 +149,17 @@ func (r *VersionRange) SupportedVersionRange() string {
 		return "all kubernetes versions"
 	}
 }
+
+// CheckIfMinorVersionUpdate checks if the new version is a minor version update to the old version.
+func CheckIfMinorVersionUpdate(old, new string) (bool, error) {
+	oldVersion, err := semver.NewVersion(Normalize(old))
+	if err != nil {
+		return false, fmt.Errorf("failed to parse old version %s: %w", old, err)
+	}
+	newVersion, err := semver.NewVersion(Normalize(new))
+	if err != nil {
+		return false, fmt.Errorf("failed to parse new version %s: %w", new, err)
+	}
+
+	return oldVersion.Minor() != newVersion.Minor(), nil
+}

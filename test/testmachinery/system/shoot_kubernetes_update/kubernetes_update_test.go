@@ -21,7 +21,6 @@ import (
 	"flag"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	batchv1 "k8s.io/api/batch/v1"
@@ -32,6 +31,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
@@ -106,46 +106,39 @@ func RunTest(
 		Skip("shoot already has the desired kubernetes versions")
 	}
 
-	sameMajorMinorVersion := func(oldVersion, newVersion string) bool {
-		oldSemver, err := semver.NewVersion(oldVersion)
-		Expect(err).NotTo(HaveOccurred())
-		newSemver, err := semver.NewVersion(newVersion)
-		Expect(err).NotTo(HaveOccurred())
+	var controlPlaneMinorVersionUpdated bool
 
-		return oldSemver.Major() == newSemver.Major() && oldSemver.Minor() == newSemver.Minor()
-	}
-
-	var controlPlaneSameMajorMinorVersion bool
 	By("Update shoot")
 	if controlPlaneVersion != "" {
 		By("Update .spec.kubernetes.version to " + controlPlaneVersion)
-		if sameMajorMinorVersion(f.Shoot.Spec.Kubernetes.Version, controlPlaneVersion) {
-			controlPlaneSameMajorMinorVersion = true
-		}
+		controlPlaneMinorVersionUpdated, err = versionutils.CheckIfMinorVersionUpdate(f.Shoot.Spec.Kubernetes.Version, controlPlaneVersion)
+		Expect(err).NotTo(HaveOccurred())
 	}
+
 	for poolName, kubernetesVersion := range poolNameToKubernetesVersion {
 		By("Update .kubernetes.version to " + kubernetesVersion + " for pool " + poolName)
 	}
 
 	var hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers, hasInPlaceUpdateWorkers bool
 
-	isPatchVersionUpdate := func(workerKubernetes *gardencorev1beta1.WorkerKubernetes, poolVersion string, controlPlaneSameMajorMinorVersion bool) bool {
+	isMinorVersionUpdate := func(workerKubernetes *gardencorev1beta1.WorkerKubernetes, poolVersion string, controlPlaneMinorVersionUpdated bool) bool {
 		if workerKubernetes == nil || workerKubernetes.Version == nil || poolVersion == "" {
-			return controlPlaneSameMajorMinorVersion
+			return controlPlaneMinorVersionUpdated
 		}
-		return sameMajorMinorVersion(*workerKubernetes.Version, poolVersion)
+
+		minorVersionUpdate, err := versionutils.CheckIfMinorVersionUpdate(*workerKubernetes.Version, poolVersion)
+		Expect(err).NotTo(HaveOccurred())
+		return minorVersionUpdate
 	}
 
 	for _, worker := range f.Shoot.Spec.Provider.Workers {
 		switch ptr.Deref(worker.UpdateStrategy, "") {
 		case gardencorev1beta1.AutoInPlaceUpdate:
-			// if patch version is updated, node doesn't need to go through in-place update
-			if !isPatchVersionUpdate(worker.Kubernetes, poolNameToKubernetesVersion[worker.Name], controlPlaneSameMajorMinorVersion) {
+			if isMinorVersionUpdate(worker.Kubernetes, poolNameToKubernetesVersion[worker.Name], controlPlaneMinorVersionUpdated) {
 				hasAutoInPlaceUpdateWorkers = true
 			}
 		case gardencorev1beta1.ManualInPlaceUpdate:
-			// if patch version is updated, node doesn't need to go through in-place update
-			if !isPatchVersionUpdate(worker.Kubernetes, poolNameToKubernetesVersion[worker.Name], controlPlaneSameMajorMinorVersion) {
+			if isMinorVersionUpdate(worker.Kubernetes, poolNameToKubernetesVersion[worker.Name], controlPlaneMinorVersionUpdated) {
 				hasManualInPlaceUpdateWorkers = true
 			}
 		}
