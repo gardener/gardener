@@ -22,6 +22,5 @@ spec:
       -project-namespace=$PROJECT_NAMESPACE
       -fenced=$FENCED
       -ginkgo.focus="\[BETA\].*\[SERIAL\]"
-      -ginkgo.skip="\[DISRUPTIVE\]"
 
   image: golang:1.24.6
