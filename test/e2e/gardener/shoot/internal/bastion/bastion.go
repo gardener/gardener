@@ -5,6 +5,7 @@
 package bastion
 
 import (
+	"context"
 	"crypto/rsa"
 	"io"
 	"net"
@@ -86,12 +87,13 @@ func VerifyBastion(s *ShootContext) {
 			nodeSSHKey = secret.Data[secretsutils.DataKeyRSAPrivateKey]
 		}, SpecTimeout(time.Minute))
 
-		var nodeName, nodeAddr string
-		It("should pick a shoot Node with InternalIP", func(ctx SpecContext) {
+		var nodeName, nodeAddrHostname, nodeAddrInternalIP string
+		It("should pick a shoot Node with Hostname and InternalIP", func(ctx SpecContext) {
 			var nodes []corev1.Node
 			Eventually(ctx, s.ShootKomega.ObjectList(&corev1.NodeList{})).Should(
 				HaveField("Items", ContainElement(
-					HaveField("Status.Addresses", ContainElement(
+					HaveField("Status.Addresses", ContainElements(
+						HaveField("Type", corev1.NodeHostName),
 						HaveField("Type", corev1.NodeInternalIP),
 					)),
 					&nodes,
@@ -100,14 +102,19 @@ func VerifyBastion(s *ShootContext) {
 
 			nodeName = nodes[0].Name
 			AddReportEntry("node-name", nodeName)
-
 			nodeAddresses := nodes[0].Status.Addresses
+
+			nodeHostname := nodeAddresses[slices.IndexFunc(nodeAddresses, func(address corev1.NodeAddress) bool {
+				return address.Type == corev1.NodeHostName
+			})].Address
+			AddReportEntry("node-hostname", nodeHostname)
 			nodeInternalIP := nodeAddresses[slices.IndexFunc(nodeAddresses, func(address corev1.NodeAddress) bool {
 				return address.Type == corev1.NodeInternalIP
 			})].Address
 			AddReportEntry("node-internal-ip", nodeInternalIP)
 
-			nodeAddr = net.JoinHostPort(nodeInternalIP, "22")
+			nodeAddrHostname = net.JoinHostPort(nodeHostname, "22")
+			nodeAddrInternalIP = net.JoinHostPort(nodeInternalIP, "22")
 		}, SpecTimeout(time.Minute))
 
 		It("should ensure there are no other Bastions", func(ctx SpecContext) {
@@ -172,11 +179,11 @@ func VerifyBastion(s *ShootContext) {
 			closers = append(closers, bastionConnection)
 		}, SpecTimeout(time.Minute))
 
-		It("should connect to the Node via Bastion", func(ctx SpecContext) {
+		connect := func(ctx context.Context, addr string) {
 			var nodeConnection *sshutils.Connection
 			Eventually(ctx, func() error {
 				var err error
-				nodeConnection, err = sshutils.Dial(ctx, nodeAddr,
+				nodeConnection, err = sshutils.Dial(ctx, addr,
 					sshutils.WithProxyConnection(bastionConnection),
 					sshutils.WithUser("gardener"), sshutils.WithPrivateKeyBytes(nodeSSHKey),
 				)
@@ -185,6 +192,14 @@ func VerifyBastion(s *ShootContext) {
 			closers = append(closers, nodeConnection)
 
 			Eventually(ctx, execute(nodeConnection, "hostname")).Should(gbytes.Say(nodeName))
+		}
+
+		It("should connect to the Node via Bastion on Hostname", func(ctx SpecContext) {
+			connect(ctx, nodeAddrHostname)
+		}, SpecTimeout(time.Minute))
+
+		It("should connect to the Node via Bastion on InternalIP", func(ctx SpecContext) {
+			connect(ctx, nodeAddrInternalIP)
 		}, SpecTimeout(time.Minute))
 
 		It("should delete the Bastion", func(ctx SpecContext) {

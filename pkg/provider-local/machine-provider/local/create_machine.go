@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -19,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -53,6 +55,10 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error applying user data secret: %s", err.Error()))
 	}
 
+	if err := d.applyService(ctx, req); err != nil {
+		return nil, err
+	}
+
 	pod, err := d.applyPod(ctx, req, providerSpec, userDataSecret)
 	if err != nil {
 		return nil, err
@@ -66,6 +72,39 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 		ProviderID: pod.Name,
 		NodeName:   pod.Name,
 	}, nil
+}
+
+func (d *localDriver) applyService(ctx context.Context, req *driver.CreateMachineRequest) error {
+	service := serviceForMachine(req.Machine, req.MachineClass)
+
+	service.Labels = map[string]string{
+		labelKeyProvider: apiv1alpha1.Provider,
+		labelKeyApp:      labelValueMachine,
+		labelKeyMachine:  req.Machine.Name,
+	}
+	service.Spec = corev1.ServiceSpec{
+		Type:      corev1.ServiceTypeClusterIP,
+		ClusterIP: corev1.ClusterIPNone,
+		Selector:  maps.Clone(service.Labels),
+		Ports: []corev1.ServicePort{
+			{
+				Name:        "ssh",
+				Port:        22,
+				Protocol:    corev1.ProtocolTCP,
+				AppProtocol: ptr.To("ssh"),
+			},
+		},
+	}
+
+	if err := controllerutil.SetControllerReference(req.Machine, service, d.client.Scheme()); err != nil {
+		return status.Error(codes.Internal, fmt.Sprintf("could not set service ownership: %s", err.Error()))
+	}
+
+	if err := d.client.Patch(ctx, service, client.Apply, fieldOwner, client.ForceOwnership); err != nil {
+		return status.Error(codes.Internal, fmt.Sprintf("error applying service: %s", err.Error()))
+	}
+
+	return nil
 }
 
 func (d *localDriver) applyPod(
@@ -90,6 +129,7 @@ func (d *localDriver) applyPod(
 	pod.Labels = map[string]string{
 		labelKeyProvider:                   apiv1alpha1.Provider,
 		labelKeyApp:                        labelValueMachine,
+		labelKeyMachine:                    req.Machine.Name,
 		"networking.gardener.cloud/to-dns": "allowed",
 		"networking.gardener.cloud/to-private-networks":                 "allowed",
 		"networking.gardener.cloud/to-public-networks":                  "allowed",

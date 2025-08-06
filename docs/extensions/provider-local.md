@@ -103,9 +103,10 @@ The shoot worker nodes are `Pod`s with a container based on the `kindest/node` i
 
 #### `Worker`
 
-This controller leverages the standard [generic `Worker` actuator](../../extensions/pkg/controller/worker/genericactuator) in order to deploy the [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager) as well as the [`machine-controller-manager-provider-local`](https://github.com/gardener/machine-controller-manager-provider-local).
+This controller leverages the standard [generic `Worker` actuator](../../extensions/pkg/controller/worker/genericactuator) in order to generate the [`MachineClass`es](https://github.com/gardener/machine-controller-manager-provider-local/blob/master/kubernetes/machine-class.yaml) and the `MachineDeployment`s based on the specification of the `Worker` resource.
 
-Additionally, it generates the [`MachineClass`es](https://github.com/gardener/machine-controller-manager-provider-local/blob/master/kubernetes/machine-class.yaml) and the `MachineDeployment`s based on the specification of the `Worker` resources.
+Additionally, the controller deploys RBAC objects for granting machine-controller-manager additional permissions in the control plane namespace.
+This is needed because the [local machine provider](#machine-controller-manager-provider-local) creates Kubernetes objects in the control plane namespace for starting `Machines`, which is different to all other machine provider implementations.
 
 #### `Bastion`
 
@@ -165,12 +166,6 @@ This webhook reacts on events for the `dependency-watchdog-probe` `Deployment`, 
 All these pods need to be able to resolve the DNS names for shoot clusters.
 It sets the `.spec.dnsPolicy=None` and `.spec.dnsConfig.nameServers` to the cluster IP of the `coredns` `Service` created in the `gardener-extension-provider-local-coredns` namespaces so that these pods can resolve the DNS records for shoot clusters (see the [Bootstrapping section](#bootstrapping) for more details).
 
-#### Machine Controller Manager
-
-This webhook mutates the global `ClusterRole` related to `machine-controller-manager` and injects permissions for `Service` resources.
-The `machine-controller-manager-provider-local` deploys `Pod`s for each `Machine` (while real infrastructure provider obviously deploy VMs, so no Kubernetes resources directly).
-It also deploys a `Service` for these machine pods, and in order to do so, the `ClusterRole` must allow the needed permissions for `Service` resources.
-
 #### Node
 
 This webhook reacts on updates to `nodes/status` in both seed and shoot clusters and sets the `.status.{allocatable,capacity}.cpu="100"` and `.status.{allocatable,capacity}.memory="100Gi"` fields.
@@ -198,13 +193,14 @@ The corresponding test sets the DNS configuration accordingly so that the name r
 Out of tree (controller-based) implementation for `local` as a new provider.
 The local out-of-tree provider implements the interface defined at [MCM OOT driver](https://github.com/gardener/machine-controller-manager/blob/master/pkg/util/provider/driver/driver.go).
 
-#### Fundamental Design Principles
+For every `Machine` object, the [local machine provider](../../pkg/provider-local/machine-provider) creates a `Pod` in the shoot control plane namespace.
+A machine pod uses an [image](../../pkg/provider-local/node) based on [kind's](https://github.com/kubernetes-sigs/kind) node image (`kindest/node`).
+The machine's user data is deployed as a `Secret` in the shoot control plane namespace and mounted into the machine pod.
+In contrast to kind, the local machine image doesn't directly run kubelet as a systemd unit. Instead, it has a unit for running the user data script at `/etc/machine/userdata`.
 
-Following are the basic principles kept in mind while developing the external plugin.
-
-- Communication between this Machine Controller (MC) and Machine Controller Manager (MCM) is achieved using the Kubernetes native declarative approach.
-- Machine Controller (MC) behaves as the controller used to interact with the `local` provider and manage the VMs corresponding to the machine objects.
-- Machine Controller Manager (MCM) deals with higher level objects such as machine-set and machine-deployment objects.
+Typically, machines running in a cloud infrastructure environment can resolve the hostnames of other machines in the same cluster/network.
+To mimic this behavior in the local setup, the machine provider creates a `Service` for every `Machine` with the same name as the `Pod`. 
+With this, local `Nodes` and `Bastions` can connect to other `Nodes` via their hostname.
 
 ## Future Work
 
