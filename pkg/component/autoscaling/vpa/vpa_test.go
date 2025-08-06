@@ -1619,6 +1619,11 @@ var _ = Describe("VPA", func() {
 						serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeSeed, true)
 						Expect(managedResource).To(contain(serviceMonitorRecommender))
 					})
+
+					It("should label vpa-updater ServiceMonitor with `prometheus=garden`", func() {
+						serviceMonitorUpdater := serviceMonitorUpdaterFor(component.ClusterTypeSeed, true)
+						Expect(managedResource).To(contain(serviceMonitorUpdater))
+					})
 				})
 
 				Context("when not deployed in a garden cluster", func() {
@@ -1634,6 +1639,11 @@ var _ = Describe("VPA", func() {
 					It("should label vpa-recommender ServiceMonitor with `prometheus=seed`", func() {
 						serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeSeed, false)
 						Expect(managedResource).To(contain(serviceMonitorRecommender))
+					})
+
+					It("should label vpa-updater ServiceMonitor with `prometheus=seed`", func() {
+						serviceMonitorUpdater := serviceMonitorUpdaterFor(component.ClusterTypeSeed, false)
+						Expect(managedResource).To(contain(serviceMonitorUpdater))
 					})
 				})
 			})
@@ -2041,6 +2051,16 @@ var _ = Describe("VPA", func() {
 
 						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
 					})
+
+					It("should label vpa-updater ServiceMonitor with `prometheus=shoot`", func() {
+						serviceMonitorExpected := serviceMonitorUpdaterFor(component.ClusterTypeShoot, true)
+						serviceMonitorExpected.ResourceVersion = "1"
+
+						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-updater"}, serviceMonitorActual)).To(Succeed())
+
+						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
+					})
 				})
 
 				Context("when not deployed in a garden cluster", func() {
@@ -2065,6 +2085,16 @@ var _ = Describe("VPA", func() {
 
 						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitorActual)).To(Succeed())
+
+						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
+					})
+
+					It("should label vpa-updater ServiceMonitor with `prometheus=shoot`", func() {
+						serviceMonitorExpected := serviceMonitorUpdaterFor(component.ClusterTypeShoot, false)
+						serviceMonitorExpected.ResourceVersion = "1"
+
+						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-updater"}, serviceMonitorActual)).To(Succeed())
 
 						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
 					})
