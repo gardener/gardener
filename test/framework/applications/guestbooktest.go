@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -145,13 +147,9 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		}
 	}
 
-	hasARMWorkerPools := false
-	for _, worker := range shoot.Spec.Provider.Workers {
-		if worker.Machine.Architecture != nil && *worker.Machine.Architecture == v1beta1constants.ArchitectureARM64 {
-			hasARMWorkerPools = true
-			break
-		}
-	}
+	hasARMWorkerPools := slices.ContainsFunc(shoot.Spec.Provider.Workers, func(worker gardencorev1beta1.Worker) bool {
+		return worker.Machine.Architecture != nil && *worker.Machine.Architecture == v1beta1constants.ArchitectureARM64
+	})
 
 	// GCP requires a specific storage class for ARM worker pools
 	if shoot.Spec.Provider.Type == "gcp" && hasARMWorkerPools {
