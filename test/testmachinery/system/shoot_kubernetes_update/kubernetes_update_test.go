@@ -21,6 +21,7 @@ import (
 	"flag"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	batchv1 "k8s.io/api/batch/v1"
@@ -105,9 +106,22 @@ func RunTest(
 		Skip("shoot already has the desired kubernetes versions")
 	}
 
+	sameMajorMinorVersion := func(oldVersion, newVersion string) bool {
+		oldSemver, err := semver.NewVersion(oldVersion)
+		Expect(err).NotTo(HaveOccurred())
+		newSemver, err := semver.NewVersion(newVersion)
+		Expect(err).NotTo(HaveOccurred())
+
+		return oldSemver.Major() == newSemver.Major() && oldSemver.Minor() == newSemver.Minor()
+	}
+
+	var controlPlaneSameMajorMinorVersion bool
 	By("Update shoot")
 	if controlPlaneVersion != "" {
 		By("Update .spec.kubernetes.version to " + controlPlaneVersion)
+		if sameMajorMinorVersion(f.Shoot.Spec.Kubernetes.Version, controlPlaneVersion) {
+			controlPlaneSameMajorMinorVersion = true
+		}
 	}
 	for poolName, kubernetesVersion := range poolNameToKubernetesVersion {
 		By("Update .kubernetes.version to " + kubernetesVersion + " for pool " + poolName)
@@ -115,12 +129,25 @@ func RunTest(
 
 	var hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers, hasInPlaceUpdateWorkers bool
 
+	isPatchVersionUpdate := func(workerKubernetes *gardencorev1beta1.WorkerKubernetes, poolVersion string, controlPlaneSameMajorMinorVersion bool) bool {
+		if workerKubernetes == nil || workerKubernetes.Version == nil || poolVersion == "" {
+			return controlPlaneSameMajorMinorVersion
+		}
+		return sameMajorMinorVersion(*workerKubernetes.Version, poolVersion)
+	}
+
 	for _, worker := range f.Shoot.Spec.Provider.Workers {
 		switch ptr.Deref(worker.UpdateStrategy, "") {
 		case gardencorev1beta1.AutoInPlaceUpdate:
-			hasAutoInPlaceUpdateWorkers = true
+			// if patch version is updated, node doesn't need to go through in-place update
+			if !isPatchVersionUpdate(worker.Kubernetes, poolNameToKubernetesVersion[worker.Name], controlPlaneSameMajorMinorVersion) {
+				hasAutoInPlaceUpdateWorkers = true
+			}
 		case gardencorev1beta1.ManualInPlaceUpdate:
-			hasManualInPlaceUpdateWorkers = true
+			// if patch version is updated, node doesn't need to go through in-place update
+			if !isPatchVersionUpdate(worker.Kubernetes, poolNameToKubernetesVersion[worker.Name], controlPlaneSameMajorMinorVersion) {
+				hasManualInPlaceUpdateWorkers = true
+			}
 		}
 	}
 
