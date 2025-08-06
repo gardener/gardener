@@ -5,7 +5,8 @@ description: Set of controllers with different responsibilities running once per
 
 ## Overview
 
-Gardener heavily utilizes Kubernetes resources for its operations. Therefore, any unintentional changes to those resources by an user or operator could lead to problems ranging from failure of a shoot, seed or even the whole landscape. `gardener-resource-manager` solves this problem by providing a way to define the desired state of a Kubernetes resource in a target cluster, and reverts back any unexpected changes applied to it.
+Gardener heavily utilizes Kubernetes resources for its operations.
+Therefore, any unintentional changes to those resources by a user or operator could lead to problems ranging from failure of a shoot, seed, or even the whole landscape. The `gardener-resource-manager` solves this problem by providing a way to define the desired state of a Kubernetes resource in a target cluster. It reverts any unexpected changes applied to it.
 
 Apart from this functionality, `gardener-resource-manager` has evolved to a more generic component comprising several controllers and webhook handlers.
 It is deployed by gardenlet once per seed (in the `garden` namespace) and once per shoot (in the respective shoot namespaces in the seed).
