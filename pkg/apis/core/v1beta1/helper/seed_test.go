@@ -278,4 +278,30 @@ var _ = Describe("Helper", func() {
 			}, map[string]int{"seed": 1, "seed2": 3, "seed3": 2, "seed4": 1})
 		})
 	})
+
+	DescribeTable("#InternalDNSProviderEqual",
+		func(oldDNSProvider, newDNSProvider *gardencorev1beta1.SeedDNSProviderConfig, equal bool) {
+			Expect(InternalDNSProviderEqual(oldDNSProvider, newDNSProvider)).To(Equal(equal))
+		},
+
+		Entry("both nil", nil, nil, true),
+		Entry("old nil, new empty", nil, &gardencorev1beta1.SeedDNSProviderConfig{}, false),
+		Entry("old empty, new nil", &gardencorev1beta1.SeedDNSProviderConfig{}, nil, false),
+		Entry("both empty", &gardencorev1beta1.SeedDNSProviderConfig{}, &gardencorev1beta1.SeedDNSProviderConfig{}, true),
+		Entry("different credentials refs",
+			&gardencorev1beta1.SeedDNSProviderConfig{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+			&gardencorev1beta1.SeedDNSProviderConfig{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "foo"}},
+			false,
+		),
+		Entry("different API group in credentials ref",
+			&gardencorev1beta1.SeedDNSProviderConfig{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+			&gardencorev1beta1.SeedDNSProviderConfig{CredentialsRef: corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar"}},
+			false,
+		),
+		Entry("equal credentials refs",
+			&gardencorev1beta1.SeedDNSProviderConfig{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+			&gardencorev1beta1.SeedDNSProviderConfig{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+			true,
+		),
+	)
 })
