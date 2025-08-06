@@ -864,10 +864,11 @@ var (
 )
 
 // KubernetesConfig contains common configuration fields for the control plane components.
+//
+// This is a legacy type that should not be used in new API fields or resources.
+// Instead of embedding this type, consider using inline map for feature gates definitions.
 type KubernetesConfig struct {
 	// FeatureGates contains information about enabled feature gates.
-	//
-	// This is a legacy field that should no longer be used. Instead, consider using inline map for feature gates definitions.
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty" protobuf:"bytes,1,rep,name=featureGates"`
 }
