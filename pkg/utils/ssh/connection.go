@@ -18,6 +18,10 @@ var _ = io.Closer(&Connection{})
 // Use Dial to open a new Connection, and ensure to call Connection.Close() for cleanup.
 type Connection struct {
 	*ssh.Client
+
+	// OutputPrefix is an optional line prefix added to stdout and stderr in Run and RunWithStreams.
+	// This is useful when dealing with multiple connections for marking output with different connection information.
+	OutputPrefix string
 }
 
 // Dial opens a new SSH Connection. Ensure to call Connection.Close() for cleanup.
@@ -58,8 +62,15 @@ func (c *Connection) RunWithStreams(stdin io.Reader, stdout, stderr io.Writer, c
 	defer session.Close()
 
 	session.Stdin = stdin
+
 	session.Stdout = stdout
+	if c.OutputPrefix != "" {
+		session.Stdout = NewPrefixedWriter(c.OutputPrefix, session.Stdout)
+	}
 	session.Stderr = stderr
+	if c.OutputPrefix != "" {
+		session.Stderr = NewPrefixedWriter(c.OutputPrefix, session.Stderr)
+	}
 
 	return session.Run(command)
 }
