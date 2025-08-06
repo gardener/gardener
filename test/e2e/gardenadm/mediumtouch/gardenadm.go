@@ -75,17 +75,6 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			Eventually(ctx, Object(deployment)).Should(BeHealthy(health.CheckDeployment))
 		}, SpecTimeout(time.Minute))
 
-		It("should deploy a bastion with the detected public IPs", func(ctx SpecContext) {
-			bastion := &extensionsv1alpha1.Bastion{ObjectMeta: metav1.ObjectMeta{Name: "gardenadm-bootstrap", Namespace: technicalID}}
-			Eventually(ctx, Object(bastion)).Should(And(
-				HaveField("Spec.Ingress", Not(Or(
-					ContainElement(HaveField("IPBlock.CIDR", "0.0.0.0/0")),
-					ContainElement(HaveField("IPBlock.CIDR", "::/0")),
-				))),
-				BeHealthy(health.CheckExtensionObject),
-			), "should be healthy and not have default (open) ingress CIDRs")
-		}, SpecTimeout(time.Minute))
-
 		It("should deploy the worker", func(ctx SpecContext) {
 			worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: technicalID}}
 			Eventually(ctx, Object(worker)).Should(BeHealthy(health.CheckExtensionObject))
@@ -131,6 +120,17 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 
 		It("should compile the ShootState", func(ctx SpecContext) {
 			Eventually(ctx, session.Out).Should(gbytes.Say("apiVersion: core.gardener.cloud/v1beta1\nkind: ShootState\n"))
+		}, SpecTimeout(time.Minute))
+
+		It("should deploy a bastion with the detected public IPs", func(ctx SpecContext) {
+			bastion := &extensionsv1alpha1.Bastion{ObjectMeta: metav1.ObjectMeta{Name: "gardenadm-bootstrap", Namespace: technicalID}}
+			Eventually(ctx, Object(bastion)).Should(And(
+				HaveField("Spec.Ingress", Not(Or(
+					ContainElement(HaveField("IPBlock.CIDR", "0.0.0.0/0")),
+					ContainElement(HaveField("IPBlock.CIDR", "::/0")),
+				))),
+				BeHealthy(health.CheckExtensionObject),
+			), "should be healthy and not have default (open) ingress CIDRs")
 		}, SpecTimeout(time.Minute))
 
 		It("should finish successfully", func(ctx SpecContext) {

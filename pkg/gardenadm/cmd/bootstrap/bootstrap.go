@@ -214,16 +214,6 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
 
-		deployBastion = g.Add(flow.Task{
-			Name: "Deploying and connecting to bastion host",
-			Fn: func(ctx context.Context) error {
-				b.Bastion.Values.IngressCIDRs = opts.BastionIngressCIDRs
-				return component.OpWait(b.Bastion).Deploy(ctx)
-			},
-			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
-		})
-		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
-
 		// Delete machine-controller-manager to prevent it from interfering with Machine objects that will be migrated to
 		// the autonomous shoot.
 		deleteMachineControllerManager = g.Add(flow.Task{
@@ -275,6 +265,16 @@ func run(ctx context.Context, opts *Options) error {
 			},
 			Dependencies: flow.NewTaskIDs(compileShootState),
 		})
+
+		deployBastion = g.Add(flow.Task{
+			Name: "Deploying and connecting to bastion host",
+			Fn: func(ctx context.Context) error {
+				b.Bastion.Values.IngressCIDRs = opts.BastionIngressCIDRs
+				return component.OpWait(b.Bastion).Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
+		})
+		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
 
 		_ = deployBastion
 		_ = compileShootState
