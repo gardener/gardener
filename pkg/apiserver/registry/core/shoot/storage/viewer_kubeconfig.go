@@ -39,6 +39,6 @@ func NewViewerKubeconfigREST(
 		newObjectFunc: func() runtime.Object {
 			return &authenticationv1alpha1.ViewerKubeconfigRequest{}
 		},
-		clientCertificateOrganization: v1beta1constants.ShootGroupViewers,
+		clientCertificateOrganization: v1beta1constants.ShootSystemViewersGroupName,
 	}
 }

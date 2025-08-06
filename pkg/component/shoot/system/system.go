@@ -436,7 +436,7 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: v1beta1constants.GardenerReadOnlyClusterRoleName,
+			Name: v1beta1constants.ShootReadOnlyClusterRoleName,
 		},
 		Rules: make([]rbacv1.PolicyRule, 0, len(allAPIGroups)),
 	}
@@ -453,32 +453,32 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 		clusterRole,
 		&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.GardenerSystemViewersGroupName,
+				Name:        v1beta1constants.ShootSystemViewersGroupName,
 				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
 				Kind:     "ClusterRole",
-				Name:     v1beta1constants.GardenerReadOnlyClusterRoleName,
+				Name:     v1beta1constants.ShootReadOnlyClusterRoleName,
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind: rbacv1.GroupKind,
-				Name: v1beta1constants.GardenerSystemViewersGroupName,
+				Name: v1beta1constants.ShootSystemViewersGroupName,
 			}},
 		},
 		&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.GardenerProjectViewersGroupName,
+				Name:        v1beta1constants.ShootProjectViewersGroupName,
 				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
 				Kind:     "ClusterRole",
-				Name:     v1beta1constants.GardenerReadOnlyClusterRoleName,
+				Name:     v1beta1constants.ShootReadOnlyClusterRoleName,
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind: rbacv1.GroupKind,
-				Name: v1beta1constants.GardenerProjectViewersGroupName,
+				Name: v1beta1constants.ShootProjectViewersGroupName,
 			}},
 		},
 	}
@@ -505,7 +505,7 @@ func (s *shootSystem) adminRBACResources() []client.Object {
 	return []client.Object{
 		&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.GardenerSystemAdminsGroupName,
+				Name:        v1beta1constants.ShootSystemAdminsGroupName,
 				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -516,7 +516,7 @@ func (s *shootSystem) adminRBACResources() []client.Object {
 			Subjects: []rbacv1.Subject{
 				{
 					Kind: rbacv1.GroupKind,
-					Name: v1beta1constants.GardenerSystemAdminsGroupName,
+					Name: v1beta1constants.ShootSystemAdminsGroupName,
 				},
 				{
 					Kind: rbacv1.GroupKind,
@@ -526,7 +526,7 @@ func (s *shootSystem) adminRBACResources() []client.Object {
 		},
 		&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.GardenerProjectAdminsGroupName,
+				Name:        v1beta1constants.ShootProjectAdminsGroupName,
 				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -537,7 +537,7 @@ func (s *shootSystem) adminRBACResources() []client.Object {
 			Subjects: []rbacv1.Subject{
 				{
 					Kind: rbacv1.GroupKind,
-					Name: v1beta1constants.GardenerProjectAdminsGroupName,
+					Name: v1beta1constants.ShootProjectAdminsGroupName,
 				},
 				{
 					Kind: rbacv1.GroupKind,
