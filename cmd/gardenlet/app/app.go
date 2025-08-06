@@ -439,7 +439,17 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		}, g.config.SeedConfig.Labels)
 
+		internalDNS := seed.Spec.DNS.Internal
+
 		seed.Spec = g.config.SeedConfig.Spec
+
+		// Preserve current internal dns settings
+		// as these could have been already explicitly set by gardenlet itself
+		// and setting internal dns to nil is forbidden
+		if internalDNS != nil && g.config.SeedConfig.Spec.DNS.Internal == nil {
+			seed.Spec.DNS.Internal = internalDNS
+		}
+
 		return nil
 	}); err != nil {
 		return fmt.Errorf("could not register seed %q: %w", seed.Name, err)
@@ -463,8 +473,9 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 		return err
 	}
 
-	// If the Seed does not have spec.dns.internal set, set it automatically from the internal domain.
-	if seed.Spec.DNS.Internal == nil {
+	// If the Seed config does not have spec.dns.internal set,
+	// set it automatically based on the global internal domain secret.
+	if g.config.SeedConfig.Spec.DNS.Internal == nil {
 		// TODO(dimityrmirchev): Require internal DNS settings and remove this logic after 1.127 release
 		secret, err := gardenerutils.ReadInternalDomainSecret(ctx, gardenClient, gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name), true)
 		if err != nil {
