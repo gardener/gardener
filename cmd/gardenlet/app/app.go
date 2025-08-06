@@ -488,7 +488,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 			seed.Spec.DNS.Internal.CredentialsRef = corev1.ObjectReference{
 				APIVersion: "v1",
 				Kind:       "Secret",
-				Namespace:  secret.Namespace,
+				Namespace:  v1beta1constants.GardenNamespace, // explicitly set the garden namespace as the secret was originally copied from there to the seed namespace
 				Name:       secret.Name,
 			}
 
