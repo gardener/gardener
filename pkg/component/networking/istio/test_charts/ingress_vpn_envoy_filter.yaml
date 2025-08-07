@@ -23,7 +23,7 @@ spec:
             virtual_hosts:
             - domains:
               - "*"
-              name: reversed-vpn
+              name: reversed-vpn-tls-tunnel
               routes:
               - match:
                   connect_matcher: {}

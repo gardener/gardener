@@ -319,6 +319,8 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 
 	servicePorts := []corev1.ServicePort{
 		{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
+		{Name: "http-proxy", Port: vpnseedserver.HTTPProxyGatewayPort, TargetPort: intstr.FromInt(vpnseedserver.HTTPProxyGatewayPort)},
+		// TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
 		{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt32(vpnseedserver.GatewayPort)},
 	}
 
@@ -731,9 +733,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 }
 
 func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSettings, secretsManager secretsmanager.Interface, isGardenCluster bool) (component.DeployWaiter, error) {
-	var (
-		featureGates map[string]bool
-	)
+	var featureGates map[string]bool
 
 	if settings.VerticalPodAutoscaler != nil {
 		featureGates = settings.VerticalPodAutoscaler.FeatureGates

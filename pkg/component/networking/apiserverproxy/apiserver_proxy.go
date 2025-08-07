@@ -15,6 +15,9 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+
+	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
+	"github.com/gardener/gardener/pkg/features"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -43,8 +46,9 @@ const (
 	configMapName       = "apiserver-proxy-config"
 	name                = "apiserver-proxy"
 
-	adminPort           = 16910
+	// TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
 	proxySeedServerPort = 8132
+	adminPort           = 16910
 	portNameMetrics     = "metrics"
 
 	volumeNameConfig   = "proxy-config"
@@ -203,18 +207,25 @@ func (a *apiserverProxy) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
 
 func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 	var envoyYAML bytes.Buffer
-	reversedVPNHeaderValue := fmt.Sprintf("outbound|443||kube-apiserver.%s.svc.cluster.local", a.namespace)
+	gardenerDestinationHeaderValue := fmt.Sprintf("outbound|443||kube-apiserver.%s.svc.cluster.local", a.namespace)
 	if a.values.IstioTLSTermination {
-		reversedVPNHeaderValue = apiserverexposure.GetAPIServerProxyTargetClusterName(a.namespace)
+		gardenerDestinationHeaderValue = apiserverexposure.GetAPIServerProxyTargetClusterName(a.namespace)
+	}
+
+	seedServerPort := proxySeedServerPort
+	if features.DefaultFeatureGate.Enabled(features.UseUnifiedHTTPProxyPort) {
+		seedServerPort = vpnseedserver.HTTPProxyGatewayPort
 	}
 
 	if err := tplEnvoy.Execute(&envoyYAML, map[string]any{
-		"advertiseIPAddress":     a.values.advertiseIPAddress,
-		"dnsLookupFamily":        a.values.DNSLookupFamily,
-		"adminPort":              adminPort,
-		"proxySeedServerHost":    a.values.ProxySeedServerHost,
-		"proxySeedServerPort":    proxySeedServerPort,
-		"reversedVPNHeaderValue": reversedVPNHeaderValue,
+		"advertiseIPAddress":             a.values.advertiseIPAddress,
+		"dnsLookupFamily":                a.values.DNSLookupFamily,
+		"adminPort":                      adminPort,
+		"proxySeedServerHost":            a.values.ProxySeedServerHost,
+		"proxySeedServerPort":            seedServerPort,
+		"gardenerDestinationHeaderValue": gardenerDestinationHeaderValue,
+		// TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
+		"reversedVPNHeaderValue": gardenerDestinationHeaderValue,
 	}); err != nil {
 		return nil, err
 	}
