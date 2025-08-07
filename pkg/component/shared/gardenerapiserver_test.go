@@ -66,7 +66,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		BeforeEach(func() {
 			name = "bar"
 			objectMeta = metav1.ObjectMeta{Namespace: namespace, Name: name}
-			runtimeVersion = semver.MustParse("1.27.0")
+			runtimeVersion = semver.MustParse("1.33.0")
 			autoscalingConfig = gardenerapiserver.AutoscalingConfig{}
 			auditWebhookConfig = nil
 

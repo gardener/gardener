@@ -28,7 +28,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				OperatingSystemConfig: OperatingSystemConfigControllerConfig{
 					SecretName:        "osc-secret",
 					SyncPeriod:        &metav1.Duration{Duration: time.Minute},
-					KubernetesVersion: semver.MustParse("v1.27.0"),
+					KubernetesVersion: semver.MustParse("v1.33.0"),
 				},
 				Token: TokenControllerConfig{
 					SyncConfigs: []TokenSecretSyncConfig{{

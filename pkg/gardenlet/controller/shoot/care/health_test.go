@@ -48,7 +48,7 @@ var _ = Describe("health check", func() {
 		condition gardencorev1beta1.Condition
 
 		controlPlaneNamespace = "shoot--foo--bar"
-		kubernetesVersion     = semver.MustParse("1.27.3")
+		kubernetesVersion     = semver.MustParse("1.33.3")
 
 		shoot = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{

@@ -62,8 +62,8 @@ const (
 
 	caNameControlPlane = "ca-" + providerName + "-controlplane"
 
-	seedVersion  = "1.28.0"
-	shootVersion = "1.28.0"
+	seedVersion  = "1.33.0"
+	shootVersion = "1.33.0"
 )
 
 var (
