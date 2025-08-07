@@ -443,6 +443,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 
 		seed.Spec = g.config.SeedConfig.Spec
 
+		// TODO(dimityrmirchev): Remove this after 1.127 release
 		// Preserve current internal dns settings
 		// as these could have been already explicitly set by gardenlet itself
 		// and setting internal dns to nil is forbidden
@@ -487,24 +488,23 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 			return err
 		}
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, seed, func() error {
-			seed.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
-				Type:   providerType,
-				Domain: domain,
-			}
-			if len(zone) > 0 {
-				seed.Spec.DNS.Internal.Zone = &zone
-			}
+		patch := client.MergeFrom(seed.DeepCopy())
+		seed.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
+			Type:   providerType,
+			Domain: domain,
+		}
+		if len(zone) > 0 {
+			seed.Spec.DNS.Internal.Zone = &zone
+		}
 
-			seed.Spec.DNS.Internal.CredentialsRef = corev1.ObjectReference{
-				APIVersion: "v1",
-				Kind:       "Secret",
-				Namespace:  v1beta1constants.GardenNamespace, // explicitly set the garden namespace as the secret was originally copied from there to the seed namespace
-				Name:       secret.Name,
-			}
+		seed.Spec.DNS.Internal.CredentialsRef = corev1.ObjectReference{
+			APIVersion: "v1",
+			Kind:       "Secret",
+			Namespace:  v1beta1constants.GardenNamespace, // explicitly set the garden namespace as the secret was originally copied from there to the seed namespace
+			Name:       secret.Name,
+		}
 
-			return nil
-		}); err != nil {
+		if err := gardenClient.Patch(ctx, seed, patch); err != nil {
 			return fmt.Errorf("could not patch internal dns settings for seed %q: %w", seed.Name, err)
 		}
 	}
