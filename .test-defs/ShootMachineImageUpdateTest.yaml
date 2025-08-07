@@ -19,4 +19,4 @@ spec:
     -shoot-name=$SHOOT_NAME
     -project-namespace=$PROJECT_NAMESPACE
     -machine-image-version=$MACHINE_IMAGE_VERSION
-  image: golang:1.24.5
+  image: golang:1.24.6
