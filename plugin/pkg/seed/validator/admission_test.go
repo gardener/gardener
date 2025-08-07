@@ -106,6 +106,33 @@ var _ = Describe("validator", func() {
 				})
 			})
 
+			Context("Internal Domain", func() {
+				BeforeEach(func() {
+					oldSeed = seedBase.DeepCopy()
+					newSeed = seedBase.DeepCopy()
+
+					oldSeed.Spec.DNS.Internal = &core.SeedDNSProviderConfig{
+						Domain: "foo.bar",
+					}
+					newSeed.Spec.DNS.Internal = &core.SeedDNSProviderConfig{
+						Domain: "bar.foo",
+					}
+				})
+
+				It("should allow internal domain change when there are no shoots", func() {
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should forbid internal domain change when there are shoots", func() {
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+				})
+			})
+
 			Context("Backup provider with WorkloadIdentity credentials", func() {
 				BeforeEach(func() {
 					oldSeed = seedBase.DeepCopy()
