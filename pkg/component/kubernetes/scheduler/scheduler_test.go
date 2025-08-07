@@ -49,7 +49,7 @@ var _ = Describe("KubeScheduler", func() {
 		kubeScheduler     component.DeployWaiter
 		ctx                     = context.Background()
 		namespace               = "shoot--foo--bar"
-		image                   = "registry.k8s.io/kube-scheduler:v1.27.2"
+		image                   = "registry.k8s.io/kube-scheduler:v1.33.2"
 		replicas          int32 = 1
 		profileBinPacking       = gardencorev1beta1.SchedulingProfileBinPacking
 		configEmpty       *gardencorev1beta1.KubeSchedulerConfig

@@ -2064,10 +2064,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			Context("EncryptionConfig validation", func() {
-				BeforeEach(func() {
-					shoot.Spec.Kubernetes.Version = "1.28"
-				})
-
 				It("should allow specifying valid resources", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"configmaps", "nonexistingresource", "postgres.fancyoperator.io"},
@@ -3030,7 +3026,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Mode:             &mode,
 				}
 				shoot.Spec.Kubernetes.KubeProxy = &config
-				shoot.Spec.Kubernetes.Version = "1.28.1"
+				shoot.Spec.Kubernetes.Version = "1.33.1"
 				oldMode := core.ProxyMode("IPTables")
 				oldConfig := core.KubeProxyConfig{
 					KubernetesConfig: kubernetesConfig,
@@ -6814,7 +6810,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				},
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: "1.27.3"}, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: "1.33.3"}, nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -7540,9 +7536,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("should allow empty memory swap", false, nil, "1.26", BeEmpty()),
-			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.26", BeEmpty()),
-			Entry("should allow LimitedSwap behavior", true, ptr.To("LimitedSwap"), "1.26", BeEmpty()),
+			Entry("should allow empty memory swap", false, nil, "1.29", BeEmpty()),
+			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.29", BeEmpty()),
+			Entry("should allow LimitedSwap behavior", true, ptr.To("LimitedSwap"), "1.29", BeEmpty()),
 			Entry("should allow UnlimitedSwap behavior for Kubernetes versions < 1.30", true, ptr.To("UnlimitedSwap"), "1.29", BeEmpty()),
 			Entry("should forbid UnlimitedSwap behavior for Kubernetes versions >= 1.30", true, ptr.To("UnlimitedSwap"), "1.30", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -7559,7 +7555,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})),
 			)),
 			Entry("should allow NoSwap behavior for Kubernetes versions >= 1.30", true, ptr.To("NoSwap"), "1.30", BeEmpty()),
-			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, ptr.To("LimitedSwap"), "1.26", ConsistOf(
+			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, ptr.To("LimitedSwap"), "1.29", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("memorySwap"),

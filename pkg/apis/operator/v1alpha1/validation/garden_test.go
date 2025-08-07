@@ -89,7 +89,7 @@ var _ = Describe("Validation Tests", func() {
 							Domains: []operatorv1alpha1.DNSDomain{{Name: "foo.bar.com", Provider: ptr.To("primary")}},
 						},
 						Kubernetes: operatorv1alpha1.Kubernetes{
-							Version: "1.28.3",
+							Version: "1.31.3",
 							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
 								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{},
 							},
@@ -2427,7 +2427,7 @@ var _ = Describe("Validation Tests", func() {
 					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						Kubernetes: operatorv1alpha1.Kubernetes{
-							Version: "1.27.0",
+							Version: "1.31.0",
 							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
 								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
 									EncryptionConfig: &gardencorev1beta1.EncryptionConfig{},

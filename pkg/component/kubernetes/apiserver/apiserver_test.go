@@ -137,8 +137,8 @@ var _ = Describe("KubeAPIServer", func() {
 		sm = fakesecretsmanager.New(c, namespace)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
-		version = semver.MustParse("1.28.1")
-		runtimeVersion = semver.MustParse("1.28.1")
+		version = semver.MustParse("1.29.1")
+		runtimeVersion = semver.MustParse("1.29.1")
 		namePrefix = ""
 	})
 

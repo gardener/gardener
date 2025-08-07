@@ -66,10 +66,10 @@ var _ = Describe("KubeControllerManager", func() {
 		_, serviceCIDR2, _       = net.ParseCIDR("2001:db8::/64")
 		serviceCIDRs             = []net.IPNet{*serviceCIDR1, *serviceCIDR2}
 		namespace                = "shoot--foo--bar"
-		version                  = "1.27.3"
+		version                  = "1.30.3"
 		semverVersion, _         = semver.NewVersion(version)
 		runtimeKubernetesVersion = semver.MustParse("1.31.1")
-		image                    = "registry.k8s.io/kube-controller-manager:v1.31.1"
+		image                    = "registry.k8s.io/kube-controller-manager:v1.33.3"
 		isWorkerless             = false
 		priorityClassName        = v1beta1constants.PriorityClassNameShootControlPlane300
 

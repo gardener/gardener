@@ -213,7 +213,7 @@ var _ = Describe("Helper", func() {
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.27.0",
+						Version: "1.33.0",
 					},
 				},
 			},
@@ -223,7 +223,7 @@ var _ = Describe("Helper", func() {
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.27.0",
+						Version: "1.33.0",
 						KubeScheduler: &gardencorev1beta1.KubeSchedulerConfig{
 							Profile: &profile,
 						},
