@@ -72,8 +72,8 @@ func getAdminUserGroups(ctx context.Context, u user.Info, subjectAccessReviewer 
 	}
 
 	if result.Status.Allowed {
-		return []string{v1beta1constants.GardenerSystemAdminsGroupName}, nil
+		return []string{v1beta1constants.ShootSystemAdminsGroupName}, nil
 	}
 
-	return []string{v1beta1constants.GardenerProjectAdminsGroupName}, nil
+	return []string{v1beta1constants.ShootProjectAdminsGroupName}, nil
 }

@@ -72,8 +72,8 @@ func getViewerUserGroups(ctx context.Context, u user.Info, subjectAccessReviewer
 	}
 
 	if result.Status.Allowed {
-		return []string{v1beta1constants.GardenerSystemViewersGroupName}, nil
+		return []string{v1beta1constants.ShootSystemViewersGroupName}, nil
 	}
 
-	return []string{v1beta1constants.GardenerProjectViewersGroupName}, nil
+	return []string{v1beta1constants.ShootProjectViewersGroupName}, nil
 }
