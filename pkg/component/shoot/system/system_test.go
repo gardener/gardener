@@ -43,7 +43,7 @@ var _ = Describe("ShootSystem", func() {
 		namespace           = "some-namespace"
 
 		projectName       = "foo"
-		shootNamespace    = "garden-" + projectName
+		projectNamespace  = "garden-" + projectName
 		shootName         = "bar"
 		region            = "test-region"
 		providerType      = "test-provider"
@@ -59,7 +59,7 @@ var _ = Describe("ShootSystem", func() {
 		shootObj          = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName,
-				Namespace: shootNamespace,
+				Namespace: projectNamespace,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
@@ -453,14 +453,25 @@ var _ = Describe("ShootSystem", func() {
 			})
 		})
 
-		Context("Read-Only resources", func() {
-			It("should do nothing when the API resource list is unset", func() {
+		Context("RBAC resources", func() {
+			It("should not add read-only RBACs when the API resource list is unset", func() {
 				manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
 				Expect(err).NotTo(HaveOccurred())
 
-				for _, manifest := range manifests {
-					Expect(manifest).NotTo(And(ContainSubstring("name: gardener.cloud:system:read-only"), ContainSubstring("kind: ClusterRole")))
-				}
+				Expect(manifests).NotTo(ContainElement(And(
+					ContainSubstring("name: gardener.cloud:system:read-only"),
+					ContainSubstring("kind: ClusterRole"),
+				)))
+				Expect(manifests).To(ContainElements(
+					And(
+						ContainSubstring("name: gardener.cloud:system:admins"),
+						ContainSubstring("kind: ClusterRoleBinding"),
+					),
+					And(
+						ContainSubstring("name: gardener.cloud:project:admins"),
+						ContainSubstring("kind: ClusterRoleBinding"),
+					),
+				))
 			})
 
 			When("API resource list is set", func() {
@@ -550,9 +561,9 @@ var _ = Describe("ShootSystem", func() {
 						},
 					}
 
-					clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+					systemViewersClusterRoleBinding := &rbacv1.ClusterRoleBinding{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: "gardener.cloud:system:read-only",
+							Name: "gardener.cloud:system:viewers",
 							Annotations: map[string]string{
 								"resources.gardener.cloud/delete-on-invalid-update": "true",
 							},
@@ -562,15 +573,71 @@ var _ = Describe("ShootSystem", func() {
 							Kind:     "ClusterRole",
 							Name:     "gardener.cloud:system:read-only",
 						},
-						Subjects: []rbacv1.Subject{
-							{
-								Kind: "Group",
-								Name: "gardener.cloud:system:viewers",
-							},
-						},
+						Subjects: []rbacv1.Subject{{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "Group",
+							Name:     "gardener.cloud:system:viewers",
+						}},
 					}
 
-					Expect(managedResource).To(contain(clusterRole, clusterRoleBinding))
+					projectViewersClusterRoleBinding := &rbacv1.ClusterRoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gardener.cloud:project:viewers",
+							Annotations: map[string]string{
+								"resources.gardener.cloud/delete-on-invalid-update": "true",
+							},
+						},
+						RoleRef: rbacv1.RoleRef{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "ClusterRole",
+							Name:     "gardener.cloud:system:read-only",
+						},
+						Subjects: []rbacv1.Subject{{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "Group",
+							Name:     "gardener.cloud:project:viewers",
+						}},
+					}
+
+					systemAdminClusterRoleBinding := &rbacv1.ClusterRoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gardener.cloud:system:admins",
+							Annotations: map[string]string{
+								"resources.gardener.cloud/delete-on-invalid-update": "true",
+							},
+						},
+						RoleRef: rbacv1.RoleRef{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "ClusterRole",
+							Name:     "cluster-admin",
+						},
+						Subjects: []rbacv1.Subject{{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "Group",
+							Name:     "gardener.cloud:system:admins",
+						}},
+					}
+
+					projectAdminClusterRoleBinding := &rbacv1.ClusterRoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gardener.cloud:project:admins",
+							Annotations: map[string]string{
+								"resources.gardener.cloud/delete-on-invalid-update": "true",
+							},
+						},
+						RoleRef: rbacv1.RoleRef{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "ClusterRole",
+							Name:     "cluster-admin",
+						},
+						Subjects: []rbacv1.Subject{{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "Group",
+							Name:     "gardener.cloud:project:admins",
+						}},
+					}
+
+					Expect(managedResource).To(contain(clusterRole, systemViewersClusterRoleBinding, projectViewersClusterRoleBinding, systemAdminClusterRoleBinding, projectAdminClusterRoleBinding))
 				})
 			})
 		})

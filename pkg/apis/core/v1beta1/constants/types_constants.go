@@ -802,12 +802,29 @@ const (
 	// SeedUserNamePrefix is the identity user name prefix for gardenlets when authenticating to the API server.
 	SeedUserNamePrefix = "gardener.cloud:system:seed:"
 
-	// ShootGroupViewers is a constant for a group name in shoot clusters whose users get read-only privileges (except
-	// for core/v1.Secrets).
-	ShootGroupViewers = "gardener.cloud:system:viewers"
 	// ClusterRoleNameGardenerAdministrators is the name of a cluster role in the garden cluster defining privileges
 	// for administrators.
 	ClusterRoleNameGardenerAdministrators = "gardener.cloud:system:administrators"
+
+	// ShootReadOnlyClusterRoleName is the name of a cluster role allowing read-only access to resources
+	// in a shoot cluster, except core/v1.Secrets and those that are encrypted in the ETCD.
+	ShootReadOnlyClusterRoleName = "gardener.cloud:system:read-only"
+	// ShootSystemAdminsGroupName is a group assigned to gardener system administrators
+	// when they request an AdminKubeconfig to access a shoot cluster.
+	ShootSystemAdminsGroupName = "gardener.cloud:system:admins"
+	// ShootSystemViewersGroupName is a group assigned to gardener system viewers
+	// when they request a ViewerKubeconfig to access a shoot cluster.
+	ShootSystemViewersGroupName = "gardener.cloud:system:viewers"
+	// ShootProjectAdminsGroupName is a group assigned during AdminKubeconfig generation to
+	// gardener project administrators or other users allowed to request an AdminKubeconfig.
+	// System administrators do not get assigned to this group when requesting an AdminKubeconfig.
+	// Instead, they are assigned to the group "gardener.cloud:system:admins".
+	ShootProjectAdminsGroupName = "gardener.cloud:project:admins"
+	// ShootProjectViewersGroupName is a group assigned during ViewerKubeconfig generation to
+	// gardener project viewers or other users allowed to request a ViewerKubeconfig.
+	// System viewers do not get assigned to this group when requesting a ViewerKubeconfig.
+	// Instead, they are assigned to the group "gardener.cloud:system:viewers".
+	ShootProjectViewersGroupName = "gardener.cloud:project:viewers"
 
 	// ProjectName is the key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"
