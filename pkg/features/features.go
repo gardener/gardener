@@ -42,6 +42,7 @@ const (
 	// to support this feature first.
 	// owner: @MichaelEischer
 	// alpha: v1.98.0
+	// beta: v1.126.0
 	NewWorkerPoolHash featuregate.Feature = "NewWorkerPoolHash"
 
 	// NewVPN enables the new implementation of the VPN (go rewrite) using an IPv6 transfer network.
@@ -120,7 +121,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DefaultSeccompProfile:                    {Default: false, PreRelease: featuregate.Alpha},
 	UseNamespacedCloudProfile:                {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
-	NewWorkerPoolHash:                        {Default: false, PreRelease: featuregate.Alpha},
+	NewWorkerPoolHash:                        {Default: true, PreRelease: featuregate.Beta},
 	NewVPN:                                   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CredentialsRotationWithoutWorkersRollout: {Default: true, PreRelease: featuregate.Beta},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},

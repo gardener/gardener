@@ -23,7 +23,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | DefaultSeccompProfile                    | `false` | `Alpha` | `1.54`  |         |
 | ShootCredentialsBinding                  | `false` | `Alpha` | `1.98`  | `1.106` |
 | ShootCredentialsBinding                  | `true`  | `Beta`  | `1.107` |         |
-| NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  |         |
+| NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  | `1.125` |
+| NewWorkerPoolHash                        | `true`  | `Beta`  | `1.126` |         |
 | CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` | `1.120` |
 | CredentialsRotationWithoutWorkersRollout | `true`  | `Beta`  | `1.121` |         |
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
