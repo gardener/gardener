@@ -610,6 +610,9 @@ var _ = Describe("Helper", func() {
 		func(kubeProxyConfig *core.KubeProxyConfig, expected bool) {
 			Expect(IsKubeProxyIPVSMode(kubeProxyConfig)).To(Equal(expected))
 		},
+		Entry("with KubeProxy in IPVS mode", nil, false),
+		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{}, false),
+		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{Enabled: ptr.To(false), Mode: ptr.To(core.ProxyModeIPVS)}, false),
 		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(core.ProxyModeIPVS)}, true),
 		Entry("with KubeProxy in IPTables mode", &core.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(core.ProxyModeIPTables)}, false),
 	)

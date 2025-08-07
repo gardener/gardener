@@ -1562,4 +1562,15 @@ var _ = Describe("Helper", func() {
 			Expect(IsKubeProxyIPVSMode(shoot.Spec.Kubernetes.KubeProxy)).To(BeFalse())
 		})
 	})
+
+	DescribeTable("#IsKubeProxyIPVSMode",
+		func(kubeProxyConfig *gardencorev1beta1.KubeProxyConfig, expected bool) {
+			Expect(IsKubeProxyIPVSMode(kubeProxyConfig)).To(Equal(expected))
+		},
+		Entry("with KubeProxy in IPVS mode", nil, false),
+		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{}, false),
+		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(false), Mode: ptr.To(gardencorev1beta1.ProxyModeIPVS)}, false),
+		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(gardencorev1beta1.ProxyModeIPVS)}, true),
+		Entry("with KubeProxy in IPTables mode", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(gardencorev1beta1.ProxyModeIPTables)}, false),
+	)
 })
