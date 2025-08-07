@@ -141,6 +141,8 @@ spec:
     #   machineHealthTimeout: 10m
     #   machineCreationTimeout: 20m
     #   maxEvictRetries: 10
+    #   inPlaceUpdateTimeout: 20m (only relevant for in-place update strategy)
+    #   disableHealthTimeout: true (only relevant for in-place update strategy)
     #   nodeConditions:
     #   - ReadonlyFilesystem
     #   - KernelDeadlock
