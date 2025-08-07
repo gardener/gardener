@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
@@ -74,25 +76,38 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 	}
 
 	atLeastOnePoolLowerKubernetes134 := false
-	// Check if at least one worker pool has a Kubernetes version lower than 1.34.
-	// If so, we cannot remove NodeLocalDNS components yet, as they are still required
-	// for nodes running that version.
-	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
-		kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(b.Shoot.KubernetesVersion, worker.Kubernetes)
-		if err != nil {
-			return fmt.Errorf("failed to calculate effective Kubernetes version for worker %q: %w", worker.Name, err)
-		}
+	var err error
 
-		if versionutils.ConstraintK8sLess134.Check(kubernetesVersion) {
-			atLeastOnePoolLowerKubernetes134 = true
-			break
-		}
+	if atLeastOnePoolLowerKubernetes134, err = v1beta1helper.IsOneWorkerPoolLowerKubernetes134(b.Shoot.KubernetesVersion, b.Shoot.GetInfo().Spec.Provider.Workers); err != nil {
+		return err
 	}
+
 	kubeProxyConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy
 	if stillDesired, err := b.isNodeLocalDNSStillDesired(ctx); err != nil {
 		return err
 	} else if stillDesired && (atLeastOnePoolLowerKubernetes134 || v1beta1helper.IsKubeProxyIPVSMode(kubeProxyConfig)) {
 		// Leave NodeLocalDNS components in the cluster until all nodes have been rolled
+		if !v1beta1helper.IsKubeProxyIPVSMode(kubeProxyConfig) {
+			if err := nodelocaldns.MarkNodesForCleanup(ctx, b.ShootClientSet.Client(), b.Shoot.GetInfo().Spec.Provider.Workers); err != nil {
+				return fmt.Errorf("failed to mark nodes for cleanup: %w", err)
+			}
+
+			imageAlpine, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameAlpineIptables, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+			if err != nil {
+				return err
+			}
+
+			cleanupRequired, err := hasKubernetesVersionsBelowAndAbove134(b.Shoot.KubernetesVersion, b.Shoot.GetInfo().Spec.Provider.Workers)
+			if err != nil {
+				return err
+			}
+
+			if cleanupRequired {
+				if err = nodelocaldns.RunCleanup(ctx, b.ShootClientSet.Client(), imageAlpine.String(), b.Logger); err != nil {
+					return fmt.Errorf("failed to run node-local-dns cleanup: %w", err)
+				}
+			}
+		}
 		return nil
 	}
 
@@ -104,4 +119,31 @@ func (b *Botanist) isNodeLocalDNSStillDesired(ctx context.Context) (bool, error)
 	return kubernetesutils.ResourcesExist(ctx, b.ShootClientSet.Client(), &corev1.NodeList{}, b.ShootClientSet.Client().Scheme(), client.MatchingLabels{
 		v1beta1constants.LabelNodeLocalDNS: strconv.FormatBool(true),
 	})
+}
+
+// hasKubernetesVersionsBelowAndAbove134 checks if there are worker pools with Kubernetes versions below 1.34 and others with versions 1.34 or above.
+func hasKubernetesVersionsBelowAndAbove134(controlPlaneVersion *semver.Version, workers []gardencorev1beta1.Worker) (bool, error) {
+	hasLower134 := false
+	hasGreaterOrEqual134 := false
+	for _, worker := range workers {
+		if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
+			kubernetesVersion, err := semver.NewVersion(*worker.Kubernetes.Version)
+			if err != nil {
+				return hasLower134 && hasGreaterOrEqual134, err
+			}
+
+			if versionutils.ConstraintK8sLess134.Check(kubernetesVersion) {
+				hasLower134 = true
+			} else {
+				hasGreaterOrEqual134 = true
+			}
+		} else {
+			if versionutils.ConstraintK8sLess134.Check(controlPlaneVersion) {
+				hasLower134 = true
+			} else {
+				hasGreaterOrEqual134 = true
+			}
+		}
+	}
+	return hasLower134 && hasGreaterOrEqual134, nil
 }

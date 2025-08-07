@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -40,6 +41,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -228,12 +230,12 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 
 	// If the managed resource does not exist and no nodes have the cleanup label, return early no cleanup needed
 	if !managedResourceExists && len(nodeList.Items) == 0 {
-		return n.deleteCleanupScriptConfigMap(ctx)
+		return deleteCleanupScriptConfigMap(ctx, n.values.ShootClient)
 	}
 
 	// Mark nodes for cleanup if the managed resource exists
 	if managedResourceExists {
-		if err := n.markNodesForCleanup(ctx); err != nil {
+		if err := MarkNodesForCleanup(ctx, n.values.ShootClient, n.values.Workers); err != nil {
 			return fmt.Errorf("failed to mark nodes for cleanup: %w", err)
 		}
 	}
@@ -269,58 +271,14 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 			return fmt.Errorf("failed to list all nodes without %s label: %w", labelKeyCleanupRequired, err)
 		}
 
-		taskFns = append(taskFns, n.addCleanupLabelToNodes(nodeList.Items)...)
+		taskFns = append(taskFns, addCleanupLabelToNodes(n.values.ShootClient, nodeList.Items)...)
 	}
 
 	if err := flow.Parallel(taskFns...)(ctx); err != nil {
 		return fmt.Errorf("failed to add cleanup label to nodes: %w", err)
 	}
 
-	if err := n.createCleanupConfigMap(ctx); err != nil {
-		return fmt.Errorf("failed to create cleanup ConfigMap: %w", err)
-	}
-
-	if err := n.createCleanupDaemonSet(ctx); err != nil {
-		return fmt.Errorf("failed to create cleanup DaemonSet: %w", err)
-	}
-
-	if err := n.waitForDaemonSetCompletion(ctx, metav1.NamespaceSystem, labelValueAndCleanupName); err != nil {
-		return fmt.Errorf("cleanup DaemonSet %s failed: %w", labelValueAndCleanupName, err)
-	}
-
-	n.values.Log.Info("Cleanup DaemonSet for node-local-dns completed")
-	cleanupDaemonSet := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      labelValueAndCleanupName,
-			Namespace: metav1.NamespaceSystem,
-		},
-	}
-	if err := n.values.ShootClient.Delete(ctx, cleanupDaemonSet); client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("failed to delete cleanup DaemonSet %s: %w", labelValueAndCleanupName, err)
-	}
-
-	taskFns = []flow.TaskFn{}
-	nodeList = &metav1.PartialObjectMetadataList{}
-	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-	if err := n.values.ShootClient.List(ctx, nodeList, client.MatchingLabels{
-		labelKeyCleanupRequired: "true",
-	}); err != nil {
-		return fmt.Errorf("failed to list nodes for cleanup: %w", err)
-	}
-
-	for _, node := range nodeList.Items {
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			patch := client.MergeFrom(node.DeepCopy())
-			delete(node.Labels, labelKeyCleanupRequired)
-			return n.values.ShootClient.Patch(ctx, &node, patch)
-		})
-	}
-
-	if err := flow.Parallel(taskFns...)(ctx); err != nil {
-		return fmt.Errorf("failed to remove cleanup label from nodes: %w", err)
-	}
-
-	return n.deleteCleanupScriptConfigMap(ctx)
+	return RunCleanup(ctx, n.values.ShootClient, n.values.AlpineImage, n.values.Log)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -446,7 +404,7 @@ func (n *nodeLocalDNS) getAddress(useIPv6Brackets bool) string {
 }
 
 // createCleanupConfigMap creates a ConfigMap containing the cleanup shell script for node-local-dns cleanup DaemonSet.
-func (n *nodeLocalDNS) createCleanupConfigMap(ctx context.Context) error {
+func createCleanupConfigMap(ctx context.Context, shootClient client.Client) error {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cleanupConfigMapName,
@@ -454,7 +412,7 @@ func (n *nodeLocalDNS) createCleanupConfigMap(ctx context.Context) error {
 		},
 	}
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.values.ShootClient, cm, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, shootClient, cm, func() error {
 		cm.Data = map[string]string{
 			dataKeyCleanupScript: cleanupScript,
 		}
@@ -464,14 +422,14 @@ func (n *nodeLocalDNS) createCleanupConfigMap(ctx context.Context) error {
 	return err
 }
 
-func (n *nodeLocalDNS) createCleanupDaemonSet(ctx context.Context) error {
+func createCleanupDaemonSet(ctx context.Context, shootClient client.Client, alpineImage string) error {
 	cleanupDaemonSet := &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      labelValueAndCleanupName,
 			Namespace: metav1.NamespaceSystem,
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, n.values.ShootClient, cleanupDaemonSet, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, shootClient, cleanupDaemonSet, func() error {
 		metav1.SetMetaDataLabel(&cleanupDaemonSet.ObjectMeta, v1beta1constants.LabelApp, labelValueAndCleanupName)
 		cleanupDaemonSet.Spec = appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
@@ -505,7 +463,7 @@ func (n *nodeLocalDNS) createCleanupDaemonSet(ctx context.Context) error {
 					Containers: []corev1.Container{
 						{
 							Name:  "cleanup",
-							Image: n.values.AlpineImage,
+							Image: alpineImage,
 							Command: []string{
 								"/bin/sh",
 								"-c",
@@ -575,15 +533,30 @@ func (n *nodeLocalDNS) createCleanupDaemonSet(ctx context.Context) error {
 	return err
 }
 
-func (n *nodeLocalDNS) markNodesForCleanup(ctx context.Context) error {
+// MarkNodesForCleanup marks nodes for cleanup by adding a label to them if the node-local-dns DaemonSet exists.
+func MarkNodesForCleanup(ctx context.Context, shootClient client.Client, workers []gardencorev1beta1.Worker) error {
 	nodeList := &metav1.PartialObjectMetadataList{}
 	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-	if err := n.values.ShootClient.List(ctx, nodeList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(labelKeyCleanupRequired, selection.DoesNotExist))}); err != nil {
+	if err := shootClient.List(ctx, nodeList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(labelKeyCleanupRequired, selection.DoesNotExist))}); err != nil {
 		return fmt.Errorf("failed to list nodes: %w", err)
 	}
 
 	poolToNodes := make(map[string][]metav1.PartialObjectMetadata)
 	for _, node := range nodeList.Items {
+		kubernetesVersionString, ok := node.Labels[v1beta1constants.LabelWorkerKubernetesVersion]
+		if !ok {
+			continue
+		}
+
+		kubernetesVersion, err := semver.NewVersion(kubernetesVersionString)
+		if err != nil {
+			return err
+		}
+
+		if versionutils.ConstraintK8sLess134.Check(kubernetesVersion) {
+			continue
+		}
+
 		if poolName := node.Labels[v1beta1constants.LabelWorkerPool]; poolName != "" {
 			poolToNodes[poolName] = append(poolToNodes[poolName], node)
 		}
@@ -591,10 +564,10 @@ func (n *nodeLocalDNS) markNodesForCleanup(ctx context.Context) error {
 
 	var taskFns []flow.TaskFn
 	// Check for node-local-dns DaemonSet existence for each worker pool
-	for _, worker := range n.values.Workers {
+	for _, worker := range workers {
 		daemonSet := &metav1.PartialObjectMetadata{}
 		daemonSet.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("DaemonSet"))
-		if err := n.values.ShootClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: "node-local-dns-" + worker.Name}, daemonSet); err != nil {
+		if err := shootClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: "node-local-dns-" + worker.Name}, daemonSet); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf("failed to check DaemonSet %s: %w", daemonSet.Name, err)
 			}
@@ -602,16 +575,16 @@ func (n *nodeLocalDNS) markNodesForCleanup(ctx context.Context) error {
 		}
 
 		// If DaemonSet exists, add cleanup label to all nodes in the worker group
-		taskFns = append(taskFns, n.addCleanupLabelToNodes(poolToNodes[worker.Name])...)
+		taskFns = append(taskFns, addCleanupLabelToNodes(shootClient, poolToNodes[worker.Name])...)
 	}
 	return flow.Parallel(taskFns...)(ctx)
 }
 
 // waitForDaemonSetCompletion waits until the cleanup job is completed and the all pods from the daemonset are marked as ready.
-func (n *nodeLocalDNS) waitForDaemonSetCompletion(ctx context.Context, namespace, name string) error {
+func waitForDaemonSetCompletion(ctx context.Context, shootClient client.Client, namespace, name string) error {
 	return retry.UntilTimeout(ctx, daemonSetPollInterval, 1*time.Minute, func(ctx context.Context) (done bool, err error) {
 		daemonSet := &appsv1.DaemonSet{}
-		if err := n.values.ShootClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, daemonSet); err != nil {
+		if err := shootClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, daemonSet); err != nil {
 			return retry.SevereError(err)
 		}
 
@@ -627,27 +600,27 @@ func (n *nodeLocalDNS) waitForDaemonSetCompletion(ctx context.Context, namespace
 }
 
 // deleteCleanupScriptConfigMap deletes the ConfigMap containing the cleanup script.
-func (n *nodeLocalDNS) deleteCleanupScriptConfigMap(ctx context.Context) error {
+func deleteCleanupScriptConfigMap(ctx context.Context, shootClient client.Client) error {
 	cleanupScriptCM := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cleanupConfigMapName,
 			Namespace: metav1.NamespaceSystem,
 		},
 	}
-	if err := n.values.ShootClient.Delete(ctx, cleanupScriptCM); client.IgnoreNotFound(err) != nil {
+	if err := shootClient.Delete(ctx, cleanupScriptCM); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("failed to delete cleanup script ConfigMap: %w", err)
 	}
 	return nil
 }
 
 // addCleanupLabelToNodes adds a cleanup label to the nodes that are part of the node-local-dns deployment.
-func (n *nodeLocalDNS) addCleanupLabelToNodes(nodeList []metav1.PartialObjectMetadata) []flow.TaskFn {
+func addCleanupLabelToNodes(shootClient client.Client, nodeList []metav1.PartialObjectMetadata) []flow.TaskFn {
 	var taskFns []flow.TaskFn
 	for _, node := range nodeList {
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			patch := client.MergeFrom(node.DeepCopy())
 			metav1.SetMetaDataLabel(&node.ObjectMeta, labelKeyCleanupRequired, "true")
-			if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
+			if err := shootClient.Patch(ctx, &node, patch); err != nil {
 				return fmt.Errorf("failed to add cleanup label to node %s: %w", node.Name, err)
 			}
 
@@ -655,4 +628,53 @@ func (n *nodeLocalDNS) addCleanupLabelToNodes(nodeList []metav1.PartialObjectMet
 		})
 	}
 	return taskFns
+}
+
+// RunCleanup runs the cleanup DaemonSet for node-local-dns, waits for its completion, and removes the cleanup label from nodes.
+func RunCleanup(ctx context.Context, shootClient client.Client, alpineImage string, logger logr.Logger) error {
+	if err := createCleanupConfigMap(ctx, shootClient); err != nil {
+		return fmt.Errorf("failed to create cleanup ConfigMap: %w", err)
+	}
+
+	if err := createCleanupDaemonSet(ctx, shootClient, alpineImage); err != nil {
+		return fmt.Errorf("failed to create cleanup DaemonSet: %w", err)
+	}
+
+	if err := waitForDaemonSetCompletion(ctx, shootClient, metav1.NamespaceSystem, labelValueAndCleanupName); err != nil {
+		return fmt.Errorf("cleanup DaemonSet %s failed: %w", labelValueAndCleanupName, err)
+	}
+
+	logger.Info("Cleanup DaemonSet for node-local-dns completed")
+	cleanupDaemonSet := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      labelValueAndCleanupName,
+			Namespace: metav1.NamespaceSystem,
+		},
+	}
+	if err := shootClient.Delete(ctx, cleanupDaemonSet); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("failed to delete cleanup DaemonSet %s: %w", labelValueAndCleanupName, err)
+	}
+
+	taskFns := []flow.TaskFn{}
+	nodeList := &metav1.PartialObjectMetadataList{}
+	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	if err := shootClient.List(ctx, nodeList, client.MatchingLabels{
+		labelKeyCleanupRequired: "true",
+	}); err != nil {
+		return fmt.Errorf("failed to list nodes for cleanup: %w", err)
+	}
+
+	for _, node := range nodeList.Items {
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			patch := client.MergeFrom(node.DeepCopy())
+			delete(node.Labels, labelKeyCleanupRequired)
+			return shootClient.Patch(ctx, &node, patch)
+		})
+	}
+
+	if err := flow.Parallel(taskFns...)(ctx); err != nil {
+		return fmt.Errorf("failed to remove cleanup label from nodes: %w", err)
+	}
+
+	return deleteCleanupScriptConfigMap(ctx, shootClient)
 }
