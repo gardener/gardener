@@ -2229,15 +2229,16 @@ func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath
 	return allErrs
 }
 
-var reservedTaintKeys = sets.New(v1beta1constants.TaintNodeCriticalComponentsNotReady)
-
-func validateClusterAutoscalerTaints(taints []string, option string, version string, fldPath *field.Path) field.ErrorList {
-	var optionVersionRanges = map[string]*featuresvalidation.FeatureGateVersionRange{
+var (
+	reservedTaintKeys   = sets.New(v1beta1constants.TaintNodeCriticalComponentsNotReady)
+	optionVersionRanges = map[string]*featuresvalidation.FeatureGateVersionRange{
 		"IgnoreTaints":  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.14", RemovedInVersion: "1.32"}},
 		"StartupTaints": {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 		"StatusTaints":  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 	}
+)
 
+func validateClusterAutoscalerTaints(taints []string, option string, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	supported, err := optionVersionRanges[option].Contains(version)
