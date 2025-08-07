@@ -261,28 +261,19 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	nodeList = &metav1.PartialObjectMetadataList{}
-	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-	if err := n.values.ShootClient.List(ctx, nodeList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(labelKeyCleanupRequired, selection.DoesNotExist))}); err != nil {
-		return fmt.Errorf("failed to list all nodes without %s label: %w", labelKeyCleanupRequired, err)
-	}
-
 	var taskFns []flow.TaskFn
 	if managedResourceExists {
-		for _, node := range nodeList.Items {
-			taskFns = append(taskFns, func(ctx context.Context) error {
-				patch := client.MergeFrom(node.DeepCopy())
-				metav1.SetMetaDataLabel(&node.ObjectMeta, labelKeyCleanupRequired, "true")
-				if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
-					return fmt.Errorf("failed to add cleanup label to recently joined node %s: %w", node.Name, err)
-				}
-				return nil
-			})
+		nodeList = &metav1.PartialObjectMetadataList{}
+		nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+		if err := n.values.ShootClient.List(ctx, nodeList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(labelKeyCleanupRequired, selection.DoesNotExist))}); err != nil {
+			return fmt.Errorf("failed to list all nodes without %s label: %w", labelKeyCleanupRequired, err)
 		}
+
+		taskFns = append(taskFns, n.addCleanupLabelToNodes(nodeList.Items)...)
 	}
 
 	if err := flow.Parallel(taskFns...)(ctx); err != nil {
-		return fmt.Errorf("failed to remove cleanup label from nodes: %w", err)
+		return fmt.Errorf("failed to add cleanup label to nodes: %w", err)
 	}
 
 	if err := n.createCleanupConfigMap(ctx); err != nil {
@@ -316,7 +307,7 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 	}); err != nil {
 		return fmt.Errorf("failed to list nodes for cleanup: %w", err)
 	}
-	// Remove the cleanup-required label from all nodes in this pool in parallel using flow
+
 	for _, node := range nodeList.Items {
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			patch := client.MergeFrom(node.DeepCopy())
@@ -585,12 +576,13 @@ func (n *nodeLocalDNS) createCleanupDaemonSet(ctx context.Context) error {
 }
 
 func (n *nodeLocalDNS) markNodesForCleanup(ctx context.Context) error {
-	nodeList := &corev1.NodeList{}
-	if err := n.values.ShootClient.List(ctx, nodeList); err != nil {
+	nodeList := &metav1.PartialObjectMetadataList{}
+	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	if err := n.values.ShootClient.List(ctx, nodeList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(labelKeyCleanupRequired, selection.DoesNotExist))}); err != nil {
 		return fmt.Errorf("failed to list nodes: %w", err)
 	}
 
-	poolToNodes := make(map[string][]corev1.Node)
+	poolToNodes := make(map[string][]metav1.PartialObjectMetadata)
 	for _, node := range nodeList.Items {
 		if poolName := node.Labels[v1beta1constants.LabelWorkerPool]; poolName != "" {
 			poolToNodes[poolName] = append(poolToNodes[poolName], node)
@@ -600,13 +592,9 @@ func (n *nodeLocalDNS) markNodesForCleanup(ctx context.Context) error {
 	var taskFns []flow.TaskFn
 	// Check for node-local-dns DaemonSet existence for each worker pool
 	for _, worker := range n.values.Workers {
-		daemonSet := &appsv1.DaemonSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "node-local-dns-" + worker.Name,
-				Namespace: metav1.NamespaceSystem,
-			},
-		}
-		if err := n.values.ShootClient.Get(ctx, client.ObjectKeyFromObject(daemonSet), daemonSet); err != nil {
+		daemonSet := &metav1.PartialObjectMetadata{}
+		daemonSet.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("DaemonSet"))
+		if err := n.values.ShootClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: "node-local-dns-" + worker.Name}, daemonSet); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf("failed to check DaemonSet %s: %w", daemonSet.Name, err)
 			}
@@ -614,21 +602,7 @@ func (n *nodeLocalDNS) markNodesForCleanup(ctx context.Context) error {
 		}
 
 		// If DaemonSet exists, add cleanup label to all nodes in the worker group
-		for _, node := range poolToNodes[worker.Name] {
-			if node.Labels[labelKeyCleanupRequired] == "true" {
-				continue
-			}
-
-			taskFns = append(taskFns, func(ctx context.Context) error {
-				patch := client.MergeFrom(node.DeepCopy())
-				metav1.SetMetaDataLabel(&node.ObjectMeta, labelKeyCleanupRequired, "true")
-				if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
-					return fmt.Errorf("failed to add cleanup label to node %s: %w", node.Name, err)
-				}
-
-				return nil
-			})
-		}
+		taskFns = append(taskFns, n.addCleanupLabelToNodes(poolToNodes[worker.Name])...)
 	}
 	return flow.Parallel(taskFns...)(ctx)
 }
@@ -664,4 +638,21 @@ func (n *nodeLocalDNS) deleteCleanupScriptConfigMap(ctx context.Context) error {
 		return fmt.Errorf("failed to delete cleanup script ConfigMap: %w", err)
 	}
 	return nil
+}
+
+// addCleanupLabelToNodes adds a cleanup label to the nodes that are part of the node-local-dns deployment.
+func (n *nodeLocalDNS) addCleanupLabelToNodes(nodeList []metav1.PartialObjectMetadata) []flow.TaskFn {
+	var taskFns []flow.TaskFn
+	for _, node := range nodeList {
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			patch := client.MergeFrom(node.DeepCopy())
+			metav1.SetMetaDataLabel(&node.ObjectMeta, labelKeyCleanupRequired, "true")
+			if err := n.values.ShootClient.Patch(ctx, &node, patch); err != nil {
+				return fmt.Errorf("failed to add cleanup label to node %s: %w", node.Name, err)
+			}
+
+			return nil
+		})
+	}
+	return taskFns
 }

@@ -292,9 +292,6 @@ func IsLegacyAnonymousAuthenticationSet(kubeAPIServerConfig *core.KubeAPIServerC
 
 // IsKubeProxyIPVSMode checks if the shoot is running with kube-proxy in IPVS mode.
 func IsKubeProxyIPVSMode(kubeProxyConfig *core.KubeProxyConfig) bool {
-	if kubeProxyConfig != nil && kubeProxyConfig.Enabled != nil && *kubeProxyConfig.Enabled &&
-		kubeProxyConfig.Mode != nil {
-		return *kubeProxyConfig.Mode == core.ProxyModeIPVS
-	}
-	return false
+	return kubeProxyConfig != nil && kubeProxyConfig.Enabled != nil && *kubeProxyConfig.Enabled &&
+		kubeProxyConfig.Mode != nil && *kubeProxyConfig.Mode == core.ProxyModeIPVS
 }

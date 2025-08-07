@@ -742,13 +742,14 @@ func validateNodeLocalDNSUpdate(newSpec, oldSpec *core.ShootSpec, fldPath *field
 	if oldNodeLocalDNSEnabled != newNodeLocalDNSEnabled {
 		defaultVersion, err := semver.NewVersion(oldSpec.Kubernetes.Version)
 		if err != nil {
-			return field.ErrorList{field.Invalid(fldPath, oldSpec.Kubernetes.Version, fmt.Sprintf("failed to parse old Kubernetes version %q: %v", oldSpec.Kubernetes.Version, err))}
+			return field.ErrorList{field.Invalid(fldPath.Child("kubernetes", "version"), oldSpec.Kubernetes.Version, fmt.Sprintf("failed to parse old Kubernetes version %q: %v", oldSpec.Kubernetes.Version, err))}
 		}
 
-		for _, worker := range oldSpec.Provider.Workers {
+		for i, worker := range oldSpec.Provider.Workers {
+			var idxPath = field.NewPath("spec", "provider", "workers").Index(i)
 			workerK8sVersion, err := helper.CalculateEffectiveKubernetesVersion(defaultVersion, worker.Kubernetes)
 			if err != nil {
-				return field.ErrorList{field.Invalid(fldPath, "", fmt.Sprintf("failed to calculate effective Kubernetes version for worker %q: %v", worker.Name, err))}
+				return field.ErrorList{field.Invalid(idxPath, "", fmt.Sprintf("failed to calculate effective Kubernetes version for worker %q: %v", worker.Name, err))}
 			}
 
 			if (helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) && (versionutils.ConstraintK8sLess134.Check(workerK8sVersion))) ||
