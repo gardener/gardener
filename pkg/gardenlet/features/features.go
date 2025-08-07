@@ -24,5 +24,6 @@ func GetFeatures() []featuregate.Feature {
 		features.IstioTLSTermination,
 		features.DoNotCopyBackupCredentials,
 		features.OpenTelemetryCollector,
+		features.UseUnifiedHTTPProxyPort,
 	}
 }

@@ -272,7 +272,7 @@ var _ = Describe("APIServerProxy", func() {
 
 		Context("IPv4", func() {
 			It("should deploy the managed resource successfully", func() {
-				testFunc("6049033b")
+				testFunc("cb9301ef")
 			})
 		})
 
@@ -283,7 +283,7 @@ var _ = Describe("APIServerProxy", func() {
 			})
 
 			It("should deploy the managed resource successfully", func() {
-				testFunc("5460b295")
+				testFunc("5a33f6dd")
 			})
 		})
 
@@ -294,7 +294,7 @@ var _ = Describe("APIServerProxy", func() {
 			})
 
 			It("should deploy the managed resource successfully", func() {
-				testFunc("7b4e78d0")
+				testFunc("9e555b69")
 			})
 		})
 	})
@@ -481,8 +481,12 @@ static_resources:
             # hostname is irrelevant as it will be dropped by envoy, we still need it for the configuration though
             hostname: "api.internal.local.:443"
             headers_to_add:
+            # TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
             - header:
                 key: Reversed-VPN
+                value: "` + xGardenerDestination + `"
+            - header:
+                key: X-Gardener-Destination
                 value: "` + xGardenerDestination + `"
           access_log:
           - name: envoy.access_loggers.stdout

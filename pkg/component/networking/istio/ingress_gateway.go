@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
+	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/features"
 )
 
@@ -81,6 +82,23 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			cpuRequests = "450m"
 		}
 
+		vpnValues := map[string]any{
+			"enabled": istioIngressGateway.VPNEnabled,
+			"ports": map[string]any{
+				"tls-tunnel": map[string]any{
+					"port":   vpnseedserver.GatewayPort,
+					"header": "Reversed-VPN",
+				},
+			},
+		}
+		if features.DefaultFeatureGate.Enabled(features.UseUnifiedHTTPProxyPort) {
+			ports := vpnValues["ports"].(map[string]any)
+			ports["http-proxy"] = map[string]any{
+				"port":   vpnseedserver.HTTPProxyGatewayPort,
+				"header": "X-Gardener-Destination",
+			}
+		}
+
 		values := map[string]any{
 			"trustDomain":                        istioIngressGateway.TrustDomain,
 			"labels":                             istioIngressGateway.Labels,
@@ -98,15 +116,13 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"internalServiceName":                v1beta1constants.InternalSNIIngressServiceName,
 			"terminateLoadBalancerProxyProtocol": istioIngressGateway.TerminateLoadBalancerProxyProtocol,
 			"terminateAPIServerTLS":              enableAPIServerTLSTermination,
-			"vpn": map[string]any{
-				"enabled": istioIngressGateway.VPNEnabled,
-			},
-			"enforceSpreadAcrossHosts":                  istioIngressGateway.EnforceSpreadAcrossHosts,
-			"apiServerRequestHeaderUserName":            kubeapiserverconstants.RequestHeaderUserName,
-			"apiServerRequestHeaderGroup":               kubeapiserverconstants.RequestHeaderGroup,
+			"vpn":                                vpnValues,
+			"enforceSpreadAcrossHosts":           istioIngressGateway.EnforceSpreadAcrossHosts,
+			"apiServerRequestHeaderUserName":     kubeapiserverconstants.RequestHeaderUserName,
+			"apiServerRequestHeaderGroup":        kubeapiserverconstants.RequestHeaderGroup,
 			"apiServerAuthenticationDynamicMetadataKey": apiserverexposure.AuthenticationDynamicMetadataKey,
-			"cpuRequests":                               cpuRequests,
-			"kubernetesVersion":                         istioIngressGateway.KubernetesVersion,
+			"cpuRequests":       cpuRequests,
+			"kubernetesVersion": istioIngressGateway.KubernetesVersion,
 		}
 
 		if istioIngressGateway.MinReplicas != nil {

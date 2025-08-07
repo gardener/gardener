@@ -10,6 +10,7 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
+	"github.com/gardener/gardener/pkg/features"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -21,14 +22,24 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		return nil, err
 	}
 
+	var (
+		openvpnPort int32 = vpnseedserver.GatewayPort
+		headerKey   string
+	)
+
+	if features.DefaultFeatureGate.Enabled(features.UseUnifiedHTTPProxyPort) {
+		openvpnPort = vpnseedserver.HTTPProxyGatewayPort
+		headerKey = "X-Gardener-Destination"
+	}
 	values := vpnshoot.Values{
 		Image:             image.String(),
 		VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
 		VPAUpdateDisabled: b.Shoot.VPNVPAUpdateDisabled,
 		ReversedVPN: vpnshoot.ReversedVPNValues{
 			Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.ControlPlaneNamespace + ".svc.cluster.local",
+			HeaderKey:   headerKey,
 			Endpoint:    b.outOfClusterAPIServerFQDN(),
-			OpenVPNPort: 8132,
+			OpenVPNPort: openvpnPort,
 			IPFamilies:  b.Shoot.GetInfo().Spec.Networking.IPFamilies,
 		},
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
@@ -51,5 +62,9 @@ func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
 	b.Shoot.Components.SystemComponents.VPNShoot.SetServiceNetworkCIDRs(b.Shoot.Networks.Services)
 	b.Shoot.Components.SystemComponents.VPNShoot.SetNodeNetworkCIDRs(b.Shoot.Networks.Nodes)
 
-	return b.Shoot.Components.SystemComponents.VPNShoot.Deploy(ctx)
+	if err := b.Shoot.Components.SystemComponents.VPNShoot.Deploy(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }

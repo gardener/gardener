@@ -38,3 +38,7 @@ terminateAPIServerTLS: false
 terminateLoadBalancerProxyProtocol: false
 vpn:
   enabled: false
+  ports: {}
+  # tls-tunnel:
+  #   header: Reversed-VPN
+  #   port: 8132

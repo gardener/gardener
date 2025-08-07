@@ -6,6 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   configPatches:
+  {{- range $name, $p := .Values.vpn.ports }}
   - applyTo: NETWORK_FILTER
     match:
       context: GATEWAY
@@ -13,7 +14,7 @@ spec:
         filterChain:
           filter:
             name: envoy.filters.network.http_connection_manager
-        portNumber: 8132
+        portNumber: {{ $p.port }}
     patch:
       operation: MERGE
       value:
@@ -24,17 +25,17 @@ spec:
             virtual_hosts:
             - domains:
               - "*"
-              name: reversed-vpn
+              name: reversed-vpn-{{ $name }}
               routes:
               - match:
                   connect_matcher: {}
                   headers:
-                    - name: Reversed-VPN
+                    - name: {{ $p.header }}
                       string_match:
                         safe_regex:
                           regex: '^(outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local|shoot--.*--.*--kube-apiserver-socket)$'
                 route:
-                  cluster_header: Reversed-VPN
+                  cluster_header: {{ $p.header }}
                   upgrade_configs:
                   - connect_config: {}
                     upgrade_type: CONNECT
@@ -53,6 +54,7 @@ spec:
                 redirect:
                   https_redirect: true
                   port_redirect: 443
+  {{- end }}
   workloadSelector:
     labels:
 {{ .Values.labels | toYaml | indent 6 }}
@@ -64,11 +66,12 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   configPatches:
+  {{- range .Values.vpn.ports }}
   - applyTo: NETWORK_FILTER
     match:
       context: GATEWAY
       listener:
-        portNumber: 8132
+        portNumber: {{ .port }}
         filterChain:
           filter:
             name: envoy.filters.network.http_connection_manager
@@ -82,8 +85,8 @@ spec:
             accept_http_10: true
           upgrade_configs:
           - upgrade_type: CONNECT
+  {{- end }}
   workloadSelector:
     labels:
 {{ .Values.labels | toYaml | indent 6 }}
-{{- end -}}
-
+{{- end }}

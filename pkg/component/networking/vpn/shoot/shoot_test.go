@@ -476,6 +476,13 @@ var _ = Describe("VPNShoot", func() {
 					},
 				)
 
+				if headerKey := values.ReversedVPN.HeaderKey; headerKey != "" {
+					env = append(env, corev1.EnvVar{
+						Name:  "REVERSED_VPN_HEADER_KEY",
+						Value: headerKey,
+					})
+				}
+
 				volumeMounts = append(volumeMounts,
 					corev1.VolumeMount{
 						Name:      "dev-net-tun",
@@ -868,6 +875,22 @@ var _ = Describe("VPNShoot", func() {
 					secretNameCA      = expectCASecret(manifests)
 					secretNameTLSAuth = expectTLSAuthSecret(manifests)
 				)
+				Expect(managedResource).To(contain(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth)))
+			})
+		})
+
+		Context("VPNShoot with header key", func() {
+			BeforeEach(func() {
+				values.ReversedVPN.HeaderKey = "X-Gardener-Destination"
+			})
+
+			It("should successfully deploy all resources", func() {
+				var (
+					secretNameClient  = expectVPNShootSecret(manifests)
+					secretNameCA      = expectCASecret(manifests)
+					secretNameTLSAuth = expectTLSAuthSecret(manifests)
+				)
+
 				Expect(managedResource).To(contain(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth)))
 			})
 		})
