@@ -128,7 +128,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{
 					ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"},
 				},
-				RuntimeVersion: semver.MustParse("1.27.1"),
+				RuntimeVersion: semver.MustParse("1.33.1"),
 			},
 			Autoscaling: AutoscalingConfig{
 				Replicas:           &replicas,
@@ -203,7 +203,6 @@ var _ = Describe("GardenerAPIServer", func() {
 				Annotations: map[string]string{
 					"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports":       `[{"protocol":"TCP","port":8443}]`,
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8443}]`,
-					"service.kubernetes.io/topology-mode":                                              "auto",
 				},
 				Labels: map[string]string{
 					"app":  "gardener",
@@ -222,6 +221,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt32(8443),
 				}},
+				TrafficDistribution: ptr.To(corev1.ServiceTrafficDistributionPreferClose),
 			},
 		}
 
@@ -770,7 +770,7 @@ resources:
 							deployer = New(fakeClient, namespace, fakeSecretManager, Values{
 								Values: apiserver.Values{
 									ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"}},
-									RuntimeVersion: semver.MustParse("1.27.1"),
+									RuntimeVersion: semver.MustParse("1.33.1"),
 								},
 							})
 
@@ -887,7 +887,7 @@ resources:
 					deployer = New(fakeClient, namespace, fakeSecretManager, Values{
 						Values: apiserver.Values{
 							Audit:          auditConfig,
-							RuntimeVersion: semver.MustParse("1.27.1"),
+							RuntimeVersion: semver.MustParse("1.33.1"),
 						},
 					})
 
@@ -947,7 +947,7 @@ resources:
 						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
 							Values: apiserver.Values{
 								EnabledAdmissionPlugins: admissionPlugins,
-								RuntimeVersion:          semver.MustParse("1.27.1"),
+								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
 						})
 
@@ -1015,7 +1015,7 @@ rules:
 						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
 							Values: apiserver.Values{
 								Audit:          auditConfig,
-								RuntimeVersion: semver.MustParse("1.27.1"),
+								RuntimeVersion: semver.MustParse("1.33.1"),
 							},
 						})
 
@@ -1096,7 +1096,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
 							Values: apiserver.Values{
 								EnabledAdmissionPlugins: admissionPlugins,
-								RuntimeVersion:          semver.MustParse("1.27.1"),
+								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
 						})
 
@@ -1169,7 +1169,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
 							Values: apiserver.Values{
 								EnabledAdmissionPlugins: admissionPlugins,
-								RuntimeVersion:          semver.MustParse("1.27.1"),
+								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
 						})
 
@@ -1232,7 +1232,7 @@ kubeConfigFile: ""
 						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
 							Values: apiserver.Values{
 								EnabledAdmissionPlugins: admissionPlugins,
-								RuntimeVersion:          semver.MustParse("1.27.1"),
+								RuntimeVersion:          semver.MustParse("1.33.1"),
 							},
 						})
 
@@ -1367,9 +1367,9 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				})
 
-				Context("when kubernetes version is >= 1.27", func() {
+				Context("Kubernetes version >= 1.31", func() {
 					BeforeEach(func() {
-						values.RuntimeVersion = semver.MustParse("1.27.0")
+						values.RuntimeVersion = semver.MustParse("1.31.0")
 						deployer = New(fakeClient, namespace, fakeSecretManager, values)
 					})
 
@@ -1384,33 +1384,18 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 				})
 
-				Context("when kubernetes version is < 1.26", func() {
+				Context("Kubernetes version < 1.31", func() {
 					BeforeEach(func() {
-						values.RuntimeVersion = semver.MustParse("1.25.0")
+						values.RuntimeVersion = semver.MustParse("1.30.0")
 						deployer = New(fakeClient, namespace, fakeSecretManager, values)
 					})
 
 					It("should successfully deploy all resources", func() {
+						metav1.SetMetaDataAnnotation(&serviceRuntime.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
+						serviceRuntime.Spec.TrafficDistribution = nil
+
 						expectedRuntimeObjects = append(
 							expectedRuntimeObjects,
-							podDisruptionBudget,
-							serviceRuntime,
-						)
-
-						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					})
-				})
-
-				Context("when kubernetes version is < 1.27", func() {
-					BeforeEach(func() {
-						values.RuntimeVersion = semver.MustParse("1.26.0")
-						deployer = New(fakeClient, namespace, fakeSecretManager, values)
-					})
-
-					It("should successfully deploy all resources", func() {
-						expectedRuntimeObjects = append(
-							expectedRuntimeObjects,
-							serviceMonitor,
 							podDisruptionBudget,
 							serviceRuntime,
 						)
