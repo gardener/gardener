@@ -420,7 +420,11 @@ func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log lo
 		return fmt.Errorf("failed listing namespaces: %w", err)
 	}
 
-	var tasks []flow.TaskFn
+	var (
+		tasks     []flow.TaskFn
+		crbs      = []string{v1beta1constants.ShootProjectAdminsGroupName, v1beta1constants.ShootProjectViewersGroupName, v1beta1constants.ShootSystemAdminsGroupName, v1beta1constants.ShootSystemViewersGroupName}
+		crbsCount = len(crbs)
+	)
 
 	for _, namespace := range namespaceList.Items {
 		if namespace.DeletionTimestamp != nil || namespace.Status.Phase == corev1.NamespaceTerminating {
@@ -450,10 +454,15 @@ func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log lo
 				return fmt.Errorf("failed to get objects for ManagedResource %q: %w", key, err)
 			}
 
-			crbs := []string{v1beta1constants.ShootProjectAdminsGroupName, v1beta1constants.ShootProjectViewersGroupName, v1beta1constants.ShootSystemAdminsGroupName, v1beta1constants.ShootSystemViewersGroupName}
+			oldObjectsCount := len(objects)
 			objects = slices.DeleteFunc(objects, func(obj client.Object) bool {
 				return slices.Contains(crbs, obj.GetName())
 			})
+
+			if oldObjectsCount-len(objects) == crbsCount {
+				log.Info("ClusterRoleBindings for shoot/adminkubeconfig and shoot/viewerkubeconfig have already been migrated, skipping", "managedResource", key)
+				return nil
+			}
 
 			objects = append(objects, shootsystem.ClusterRoleBindings()...)
 
@@ -468,8 +477,5 @@ func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log lo
 		})
 	}
 
-	if err := flow.Parallel(tasks...)(ctx); err != nil {
-		return err
-	}
-	return nil
+	return flow.Parallel(tasks...)(ctx)
 }
