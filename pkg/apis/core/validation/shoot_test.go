@@ -7096,7 +7096,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Machine: core.Machine{
 					Type: "xlarge",
 				},
-				Priority: ptr.To(int32(-2)),
+				MaxUnavailable: ptr.To(intstr.FromInt(1)),
+				Priority:       ptr.To(int32(-2)),
 			}
 
 			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
