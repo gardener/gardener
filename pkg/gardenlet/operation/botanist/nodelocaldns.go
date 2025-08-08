@@ -125,6 +125,7 @@ func (b *Botanist) isNodeLocalDNSStillDesired(ctx context.Context) (bool, error)
 func hasKubernetesVersionsBelowAndAbove134(controlPlaneVersion *semver.Version, workers []gardencorev1beta1.Worker) (bool, error) {
 	hasLower134 := false
 	hasGreaterOrEqual134 := false
+	controlPlaneIsLower134 := versionutils.ConstraintK8sLess134.Check(controlPlaneVersion)
 	for _, worker := range workers {
 		if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
 			kubernetesVersion, err := semver.NewVersion(*worker.Kubernetes.Version)
@@ -138,7 +139,7 @@ func hasKubernetesVersionsBelowAndAbove134(controlPlaneVersion *semver.Version, 
 				hasGreaterOrEqual134 = true
 			}
 		} else {
-			if versionutils.ConstraintK8sLess134.Check(controlPlaneVersion) {
+			if controlPlaneIsLower134 {
 				hasLower134 = true
 			} else {
 				hasGreaterOrEqual134 = true
