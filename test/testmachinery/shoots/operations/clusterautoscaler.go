@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
@@ -58,6 +59,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		origWorkers                 []gardencorev1beta1.Worker
 		origMinWorkers              int32
 		origMaxWorkers              int32
+		isInPlaceUpdateTest         bool
 	)
 
 	f.Default().Serial().CIt("should autoscale a single worker group", func(ctx context.Context) {
@@ -66,6 +68,11 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 
 			workerPoolName = shoot.Spec.Provider.Workers[0].Name
 		)
+
+		if v1beta1helper.IsUpdateStrategyInPlace(shoot.Spec.Provider.Workers[0].UpdateStrategy) {
+			isInPlaceUpdateTest = true
+			ginkgo.Skip("worker pool is using in-place update strategy")
+		}
 
 		origClusterAutoscalerConfig = shoot.Spec.Kubernetes.ClusterAutoscaler.DeepCopy()
 		origMinWorkers = shoot.Spec.Provider.Workers[0].Minimum
@@ -122,6 +129,9 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		err = framework.WaitForNNodesToBeHealthyInWorkerPool(ctx, f.ShootClient, int(origMinWorkers), &workerPoolName, scaleDownTimeout)
 		framework.ExpectNoError(err)
 	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+		if isInPlaceUpdateTest {
+			ginkgo.Skip("Test was skipped so skipping cleanup")
+		}
 
 		ginkgo.By("Revert shoot spec changes by test")
 		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
@@ -145,8 +155,14 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 	f.Default().Serial().CIt("should autoscale a single worker group to/from zero", func(ctx context.Context) {
 		var shoot = f.Shoot
 
+		isInPlaceUpdateTest = false
 		origClusterAutoscalerConfig = shoot.Spec.Kubernetes.ClusterAutoscaler.DeepCopy()
 		origWorkers = shoot.Spec.Provider.Workers
+
+		if v1beta1helper.IsUpdateStrategyInPlace(shoot.Spec.Provider.Workers[0].UpdateStrategy) {
+			isInPlaceUpdateTest = true
+			ginkgo.Skip("worker pool is using in-place update strategy")
+		}
 
 		// Create a dedicated worker-pool for cluster autoscaler.
 		testWorkerPool := origWorkers[0]
@@ -215,6 +231,10 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		err = framework.WaitForNNodesToBeHealthyInWorkerPool(ctx, f.ShootClient, 0, &testWorkerPoolName, scaleDownTimeout)
 		framework.ExpectNoError(err)
 	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+		if isInPlaceUpdateTest {
+			ginkgo.Skip("Test was skipped so skipping cleanup")
+		}
+
 		ginkgo.By("Revert shoot spec changes by test")
 		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 			s.Spec.Kubernetes.ClusterAutoscaler = origClusterAutoscalerConfig
