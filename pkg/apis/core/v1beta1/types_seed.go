@@ -157,6 +157,24 @@ type SeedDNS struct {
 	// Provider configures a DNSProvider
 	// +optional
 	Provider *SeedDNSProvider `json:"provider,omitempty" protobuf:"bytes,2,opt,name=provider"`
+	// Internal configures DNS settings related to seed internal domain.
+	// +optional
+	Internal *SeedDNSProviderConfig `json:"internal,omitempty" protobuf:"bytes,3,opt,name=internal"`
+}
+
+// SeedDNSProviderConfig configures a DNS provider.
+type SeedDNSProviderConfig struct {
+	// Type is the type of the DNS provider.
+	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
+	// Domain is the domain name to be used by the DNS provider.
+	Domain string `json:"domain" protobuf:"bytes,2,opt,name=domain"`
+	// Zone is the zone where the DNS records are managed.
+	// +optional
+	Zone *string `json:"zone,omitempty" protobuf:"bytes,3,opt,name=zone"`
+	// CredentialsRef is a reference to a resource holding the credentials used for
+	// authentication with the DNS provider.
+	// As of now, only v1.Secrets are supported.
+	CredentialsRef corev1.ObjectReference `json:"credentialsRef" protobuf:"bytes,4,opt,name=credentialsRef"`
 }
 
 // SeedDNSProvider configures a DNSProvider for Seeds

@@ -285,8 +285,12 @@ func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.Mana
 }
 
 func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
-	allErrs := field.ErrorList{}
-	zonesFieldPath := field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones")
+	var (
+		allErrs                 = field.ErrorList{}
+		seedConfigSpecBasePath  = field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec")
+		zonesFieldPath          = seedConfigSpecBasePath.Child("provider", "zones")
+		internalDomainFieldPath = seedConfigSpecBasePath.Child("dns", "internal", "domain")
+	)
 
 	oldSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(oldManagedSeed)
 	if err != nil {
@@ -299,6 +303,10 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 
 	if err := admissionutils.ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
 		allErrs = append(allErrs, field.Forbidden(zonesFieldPath, "zones must not be removed while shoots are still scheduled onto seed"))
+	}
+
+	if err := admissionutils.ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
+		allErrs = append(allErrs, field.Forbidden(internalDomainFieldPath, "internal domain must not be changed while shoots are still scheduled onto seed"))
 	}
 
 	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)
