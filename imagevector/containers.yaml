@@ -851,7 +851,7 @@ images:
           - name: 'luajit'
             version: '19878ec'
           - name: 'nghttp2'
-            version: '1.72.0'
+            version: '1.66.0'
           - name: 'protobuf'
             version: '29.3'
           - name: 'fmt'
