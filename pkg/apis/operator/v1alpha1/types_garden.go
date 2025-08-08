@@ -824,6 +824,7 @@ var AvailableOperationAnnotations = sets.New(
 	v1beta1constants.OperationRotateCAComplete,
 	v1beta1constants.OperationRotateServiceAccountKeyStart,
 	v1beta1constants.OperationRotateServiceAccountKeyComplete,
+	v1beta1constants.OperationRotateETCDEncryptionKey,
 	v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 	v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
 	v1beta1constants.OperationRotateObservabilityCredentials,
