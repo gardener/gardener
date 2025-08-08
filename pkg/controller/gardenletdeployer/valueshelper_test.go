@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
@@ -37,7 +38,7 @@ var _ = Describe("ValuesHelper", func() {
 		gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration
 
 		mergedDeployment      *seedmanagementv1alpha1.GardenletDeployment
-		mergedGardenletConfig func(bool) *gardenletconfigv1alpha1.GardenletConfiguration
+		mergedGardenletConfig func(bool, bool) *gardenletconfigv1alpha1.GardenletConfiguration
 
 		gardenletChartValues func(bool, string, int32, map[string]any) map[string]any
 	)
@@ -137,7 +138,7 @@ var _ = Describe("ValuesHelper", func() {
 				"foo": "bar",
 			},
 		}
-		mergedGardenletConfig = func(withBootstrap bool) *gardenletconfigv1alpha1.GardenletConfiguration {
+		mergedGardenletConfig = func(withBootstrap bool, withMonitoring bool) *gardenletconfigv1alpha1.GardenletConfiguration {
 			var kubeconfigPath string
 			var bootstrapKubeconfig, kubeconfigSecret *corev1.SecretReference
 			if withBootstrap {
@@ -151,6 +152,34 @@ var _ = Describe("ValuesHelper", func() {
 				}
 			} else {
 				kubeconfigPath = gardenKubeconfigPath
+			}
+			var monitoring *gardenletconfigv1alpha1.MonitoringConfig
+			if withMonitoring {
+				monitoring = &gardenletconfigv1alpha1.MonitoringConfig{
+					Seed: &gardenletconfigv1alpha1.SeedMonitoringConfig{
+						PrometheusCache: gardenletconfigv1alpha1.PrometheusConfig{
+							Retention: resource.MustParse("1Gi"),
+							Storage: &gardenletconfigv1alpha1.Storage{
+								Capacity:  ptr.To(resource.MustParse("2Gi")),
+								ClassName: ptr.To("foo"),
+							},
+						},
+						PrometheusAggregate: gardenletconfigv1alpha1.PrometheusConfig{
+							Retention: resource.MustParse("1Gi"),
+							Storage: &gardenletconfigv1alpha1.Storage{
+								Capacity:  ptr.To(resource.MustParse("2Gi")),
+								ClassName: ptr.To("foo"),
+							},
+						},
+						PrometheusSeed: gardenletconfigv1alpha1.PrometheusConfig{
+							Retention: resource.MustParse("1Gi"),
+							Storage: &gardenletconfigv1alpha1.Storage{
+								Capacity:  ptr.To(resource.MustParse("2Gi")),
+								ClassName: ptr.To("foo"),
+							},
+						},
+					},
+				}
 			}
 			return &gardenletconfigv1alpha1.GardenletConfiguration{
 				TypeMeta: metav1.TypeMeta{
@@ -193,6 +222,7 @@ var _ = Describe("ValuesHelper", func() {
 				Logging: &gardenletconfigv1alpha1.Logging{
 					Enabled: ptr.To(true),
 				},
+				Monitoring: monitoring,
 			}
 		}
 
@@ -201,7 +231,6 @@ var _ = Describe("ValuesHelper", func() {
 			if !withBootstrap {
 				kubeconfig = "garden kubeconfig"
 			}
-
 			result := map[string]any{
 				"replicaCount":         float64(replicaCount),
 				"revisionHistoryLimit": float64(1),
@@ -297,21 +326,55 @@ var _ = Describe("ValuesHelper", func() {
 		It("should merge the gardenlet config with the parent gardenlet config", func() {
 			result, err := vh.MergeGardenletConfiguration(gardenletConfig)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(mergedGardenletConfig(false)))
+			Expect(result).To(Equal(mergedGardenletConfig(false, false)))
 		})
 	})
 
 	Describe("#GetGardenletChartValues", func() {
 		It("should compute the correct gardenlet chart values with bootstrap", func() {
-			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(true), "bootstrap kubeconfig")
+			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(true, false), "bootstrap kubeconfig")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(gardenletChartValues(true, "bootstrap kubeconfig", 1, nil)))
 		})
 
 		It("should compute the correct gardenlet chart values without bootstrap", func() {
-			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(false), "")
+			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(false, false), "")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(gardenletChartValues(false, "", 1, nil)))
+		})
+
+		It("should compute the correct gardenlet chart values with monitoring configuration", func() {
+			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(false, true), "")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(gardenletChartValues(false, "", 1, map[string]any{
+				"config": map[string]any{
+					"monitoring": map[string]any{
+						"seed": map[string]any{
+							"prometheusCache": map[string]any{
+								"retention": "1Gi",
+								"storage": map[string]any{
+									"capacity":  "2Gi",
+									"className": "foo",
+								},
+							},
+							"prometheusSeed": map[string]any{
+								"retention": "1Gi",
+								"storage": map[string]any{
+									"capacity":  "2Gi",
+									"className": "foo",
+								},
+							},
+							"prometheusAggregate": map[string]any{
+								"retention": "1Gi",
+								"storage": map[string]any{
+									"capacity":  "2Gi",
+									"className": "foo",
+								},
+							},
+						},
+					},
+				},
+			})))
 		})
 	})
 })
