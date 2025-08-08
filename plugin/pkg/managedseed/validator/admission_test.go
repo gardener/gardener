@@ -90,7 +90,7 @@ var _ = Describe("ManagedSeed", func() {
 						Domain: ptr.To(domain),
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.27.5",
+						Version: "1.33.3",
 						VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
 							Enabled: true,
 						},
