@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,6 +22,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	registryrest "k8s.io/apiserver/pkg/registry/rest"
+	clientauthorizationv1 "k8s.io/client-go/kubernetes/typed/authorization/v1"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -35,12 +37,13 @@ import (
 )
 
 func kubeconfigTests(
-	newKubeconfigREST func(getter, kubecorev1listers.SecretLister, gardencorev1beta1listers.InternalSecretLister, kubecorev1listers.ConfigMapLister, time.Duration) *KubeconfigREST,
+	newKubeconfigREST func(getter, kubecorev1listers.SecretLister, gardencorev1beta1listers.InternalSecretLister, kubecorev1listers.ConfigMapLister, time.Duration, clientauthorizationv1.SubjectAccessReviewInterface) *KubeconfigREST,
 	newObjectFunc func() runtime.Object,
 	setExpirationSeconds func(runtime.Object, *int64),
 	getExpirationTimestamp func(runtime.Object) metav1.Time,
 	getKubeconfig func(runtime.Object) []byte,
-	organizationMatcher gomegatypes.GomegaMatcher,
+	systemOrganizationMatcher gomegatypes.GomegaMatcher,
+	projectOrganizationMatcher gomegatypes.GomegaMatcher,
 ) {
 	var (
 		ctx context.Context
@@ -54,10 +57,11 @@ func kubeconfigTests(
 		kcREST           *KubeconfigREST
 		createValidation registryrest.ValidateObjectFunc
 
-		shootGetter          *fakeGetter
-		secretLister         *fakeSecretLister
-		internalSecretLister *fakeInternalSecretLister
-		configMapLister      *fakeConfigMapLister
+		shootGetter           *fakeGetter
+		secretLister          *fakeSecretLister
+		internalSecretLister  *fakeInternalSecretLister
+		configMapLister       *fakeConfigMapLister
+		subjectAccessReviewer *fakeSubjectAccessReviewer
 
 		clusterCACert = []byte("cluster-ca-cert1")
 
@@ -169,10 +173,11 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 		secretLister = &fakeSecretLister{obj: caClusterSecret}
 		internalSecretLister = &fakeInternalSecretLister{obj: caClientSecret}
 		configMapLister = &fakeConfigMapLister{obj: caClusterConfigMap}
+		subjectAccessReviewer = &fakeSubjectAccessReviewer{allowed: true, reason: "allowed"}
 
 		obj = newObjectFunc()
 
-		kcREST = newKubeconfigREST(shootGetter, secretLister, internalSecretLister, configMapLister, time.Hour)
+		kcREST = newKubeconfigREST(shootGetter, secretLister, internalSecretLister, configMapLister, time.Hour, subjectAccessReviewer)
 
 		ctx = request.WithUser(context.Background(), &user.DefaultInfo{
 			Name: userName,
@@ -257,7 +262,8 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 	})
 
 	Context("request succeeds", func() {
-		It("should successfully issue kubeconfig", func() {
+		DescribeTable("should successfully issue kubeconfig", func(sar fakeSubjectAccessReviewer, organizationMatcher gomegatypes.GomegaMatcher) {
+			kcREST.subjectAccessReviewer = &sar
 			actual, err := kcREST.Create(ctx, name, obj, nil, nil)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -331,7 +337,10 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 			Expect(cert.NotAfter.Unix()).To(Equal(getExpirationTimestamp(actual).Unix())) // certificates do not have nano seconds in them
 			Expect(cert.NotBefore.UTC()).To(Equal(secretsutils.AdjustToClockSkew(time.Unix(10, 0).UTC())))
 			Expect(cert.Issuer.CommonName).To(Equal(clientCACertName))
-		})
+		},
+			Entry("gardener system user", fakeSubjectAccessReviewer{allowed: true}, systemOrganizationMatcher),
+			Entry("gardener project user", fakeSubjectAccessReviewer{allowed: false}, projectOrganizationMatcher),
+		)
 	})
 }
 
@@ -387,4 +396,28 @@ func (f fakeConfigMapLister) ConfigMaps(string) kubecorev1listers.ConfigMapNames
 
 func (f fakeConfigMapLister) Get(_ string) (*corev1.ConfigMap, error) {
 	return f.obj, f.err
+}
+
+type fakeSubjectAccessReviewer struct {
+	// allowed has value "true", when the user has gardener system wide permissions to list certain resources
+	allowed         bool
+	reason          string
+	evaluationError string
+}
+
+var _ clientauthorizationv1.SubjectAccessReviewInterface = (*fakeSubjectAccessReviewer)(nil)
+
+func (f *fakeSubjectAccessReviewer) Create(_ context.Context, subjectAccessReview *authorizationv1.SubjectAccessReview, _ metav1.CreateOptions) (*authorizationv1.SubjectAccessReview, error) {
+	ret := subjectAccessReview.DeepCopy()
+	ret.Status = authorizationv1.SubjectAccessReviewStatus{
+		Allowed:         f.allowed,
+		Denied:          !f.allowed,
+		Reason:          f.reason,
+		EvaluationError: f.evaluationError,
+	}
+
+	if f.evaluationError != "" {
+		return nil, errors.New(f.evaluationError)
+	}
+	return ret, nil
 }

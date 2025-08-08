@@ -12,6 +12,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	kubeinformers "k8s.io/client-go/informers"
+	clientauthorizationv1 "k8s.io/client-go/kubernetes/typed/authorization/v1"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -42,6 +43,7 @@ type StorageProvider struct {
 	CredentialsRotationInterval   time.Duration
 	KubeInformerFactory           kubeinformers.SharedInformerFactory
 	CoreInformerFactory           gardencoreinformers.SharedInformerFactory
+	SubjectAccessReviewer         clientauthorizationv1.SubjectAccessReviewInterface
 }
 
 // NewRESTStorage creates a new API group info object and registers the v1beta1 core storage.
@@ -124,6 +126,7 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 		p.AdminKubeconfigMaxExpiration,
 		p.ViewerKubeconfigMaxExpiration,
 		p.CredentialsRotationInterval,
+		p.SubjectAccessReviewer,
 	)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
