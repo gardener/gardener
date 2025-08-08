@@ -128,6 +128,8 @@ var _ = Describe("VPA", func() {
 		deploymentUpdaterFor             func(bool, *metav1.Duration, *metav1.Duration, *int32, *float64, *float64, string) *appsv1.Deployment
 		podDisruptionBudgetUpdater       *policyv1.PodDisruptionBudget
 		vpaUpdater                       *vpaautoscalingv1.VerticalPodAutoscaler
+		serviceUpdaterFor                func(component.ClusterType, bool) *corev1.Service
+		serviceMonitorUpdaterFor         func(clusterType component.ClusterType, isGardenCluster bool) *monitoringv1.ServiceMonitor
 
 		serviceAccountRecommender                    *corev1.ServiceAccount
 		clusterRoleRecommenderMetricsReader          *rbacv1.ClusterRole
@@ -488,6 +490,83 @@ var _ = Describe("VPA", func() {
 				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
+		serviceUpdaterFor = func(clusterType component.ClusterType, isGardenCluster bool) *corev1.Service {
+			obj := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vpa-updater",
+					Namespace: namespace,
+					Labels:    map[string]string{"app": "vpa-updater"},
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{"app": "vpa-updater"},
+					Ports: []corev1.ServicePort{{
+						Port:       8943,
+						TargetPort: intstr.FromInt32(8943),
+						Name:       "metrics",
+					}},
+				},
+			}
+
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8943}]`,
+				}
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8943}]`,
+				}
+			case clusterType == component.ClusterTypeShoot:
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8943}]`,
+				}
+			}
+
+			return obj
+		}
+		serviceMonitorUpdaterFor = func(clusterType component.ClusterType, isGardenCluster bool) *monitoringv1.ServiceMonitor {
+			obj := &monitoringv1.ServiceMonitor{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+				},
+				Spec: monitoringv1.ServiceMonitorSpec{
+					Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "vpa-updater"}},
+					Endpoints: []monitoringv1.Endpoint{{
+						Port: "metrics",
+						RelabelConfigs: []monitoringv1.RelabelConfig{
+							{
+								Action:      "replace",
+								Replacement: ptr.To("vpa-updater"),
+								TargetLabel: "job",
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_container_port_name"},
+								Regex:        "metrics",
+								Action:       "keep",
+							},
+							{
+								Action: "labelmap",
+								Regex:  `__meta_kubernetes_pod_label_(.+)`,
+							},
+						},
+					}},
+				},
+			}
+
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "garden"}
+				obj.Name = "garden-vpa-updater"
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "seed"}
+				obj.Name = "seed-vpa-updater"
+			case clusterType == component.ClusterTypeShoot:
+				obj.Labels = map[string]string{"prometheus": "shoot"}
+				obj.Name = "shoot-vpa-updater"
+			}
+
+			return obj
+		}
 		vpaUpdater = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "vpa-updater",
@@ -694,18 +773,16 @@ var _ = Describe("VPA", func() {
 				},
 			}
 
-			switch clusterType {
-			case "seed":
-				if isGardenCluster {
-					obj.Annotations = map[string]string{
-						"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
-					}
-				} else {
-					obj.Annotations = map[string]string{
-						"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
-					}
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
 				}
-			case "shoot":
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
+				}
+			case clusterType == component.ClusterTypeShoot:
 				obj.Annotations = map[string]string{
 					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
 				}
@@ -925,17 +1002,14 @@ var _ = Describe("VPA", func() {
 				},
 			}
 
-			if clusterType == component.ClusterTypeSeed {
-				if isGardenCluster {
-					obj.Labels = map[string]string{"prometheus": "garden"}
-					obj.Name = "garden-vpa-recommender"
-				} else {
-					obj.Labels = map[string]string{"prometheus": "seed"}
-					obj.Name = "seed-vpa-recommender"
-				}
-			}
-
-			if clusterType == component.ClusterTypeShoot {
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "garden"}
+				obj.Name = "garden-vpa-recommender"
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "seed"}
+				obj.Name = "seed-vpa-recommender"
+			case clusterType == component.ClusterTypeShoot:
 				obj.Labels = map[string]string{"prometheus": "shoot"}
 				obj.Name = "shoot-vpa-recommender"
 			}
@@ -1052,15 +1126,14 @@ var _ = Describe("VPA", func() {
 				},
 			}
 
-			if clusterType == "seed" {
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-world-to-ports", `[{"protocol":"TCP","port":10250}]`)
-				if isGardenCluster {
-					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
-				} else {
-					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
-				}
-			}
-			if clusterType == "shoot" {
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-world-to-ports", `[{"protocol":"TCP","port":10250}]`)
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
+			case clusterType == component.ClusterTypeShoot:
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports", `[{"protocol":"TCP","port":10250}]`)
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
 			}
@@ -1275,17 +1348,14 @@ var _ = Describe("VPA", func() {
 				},
 			}
 
-			if clusterType == component.ClusterTypeSeed {
-				if isGardenCluster {
-					obj.Labels = map[string]string{"prometheus": "garden"}
-					obj.Name = "garden-vpa-admission-controller"
-				} else {
-					obj.Labels = map[string]string{"prometheus": "seed"}
-					obj.Name = "seed-vpa-admission-controller"
-				}
-			}
-
-			if clusterType == component.ClusterTypeShoot {
+			switch {
+			case clusterType == component.ClusterTypeSeed && isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "garden"}
+				obj.Name = "garden-vpa-admission-controller"
+			case clusterType == component.ClusterTypeSeed && !isGardenCluster:
+				obj.Labels = map[string]string{"prometheus": "seed"}
+				obj.Name = "seed-vpa-admission-controller"
+			case clusterType == component.ClusterTypeShoot:
 				obj.Labels = map[string]string{"prometheus": "shoot"}
 				obj.Name = "shoot-vpa-admission-controller"
 			}
@@ -1535,6 +1605,11 @@ var _ = Describe("VPA", func() {
 						serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeSeed, true)
 						Expect(managedResource).To(contain(serviceMonitorRecommender))
 					})
+
+					It("should label vpa-updater ServiceMonitor with `prometheus=garden`", func() {
+						serviceMonitorUpdater := serviceMonitorUpdaterFor(component.ClusterTypeSeed, true)
+						Expect(managedResource).To(contain(serviceMonitorUpdater))
+					})
 				})
 
 				Context("when not deployed in a garden cluster", func() {
@@ -1550,6 +1625,11 @@ var _ = Describe("VPA", func() {
 					It("should label vpa-recommender ServiceMonitor with `prometheus=seed`", func() {
 						serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeSeed, false)
 						Expect(managedResource).To(contain(serviceMonitorRecommender))
+					})
+
+					It("should label vpa-updater ServiceMonitor with `prometheus=seed`", func() {
+						serviceMonitorUpdater := serviceMonitorUpdaterFor(component.ClusterTypeSeed, false)
+						Expect(managedResource).To(contain(serviceMonitorUpdater))
 					})
 				})
 			})
@@ -1610,6 +1690,8 @@ var _ = Describe("VPA", func() {
 						roleBindingLeaderLockingUpdater,
 						deploymentUpdater,
 						vpaUpdater,
+						serviceUpdaterFor(component.ClusterTypeSeed, false),
+						serviceMonitorUpdaterFor(component.ClusterTypeSeed, false),
 					}
 
 					By("Verify vpa-recommender resources")
@@ -1955,6 +2037,16 @@ var _ = Describe("VPA", func() {
 
 						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
 					})
+
+					It("should label vpa-updater ServiceMonitor with `prometheus=shoot`", func() {
+						serviceMonitorExpected := serviceMonitorUpdaterFor(component.ClusterTypeShoot, true)
+						serviceMonitorExpected.ResourceVersion = "1"
+
+						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-updater"}, serviceMonitorActual)).To(Succeed())
+
+						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
+					})
 				})
 
 				Context("when not deployed in a garden cluster", func() {
@@ -1979,6 +2071,16 @@ var _ = Describe("VPA", func() {
 
 						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitorActual)).To(Succeed())
+
+						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
+					})
+
+					It("should label vpa-updater ServiceMonitor with `prometheus=shoot`", func() {
+						serviceMonitorExpected := serviceMonitorUpdaterFor(component.ClusterTypeShoot, false)
+						serviceMonitorExpected.ResourceVersion = "1"
+
+						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-updater"}, serviceMonitorActual)).To(Succeed())
 
 						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
 					})
@@ -2042,6 +2144,18 @@ var _ = Describe("VPA", func() {
 				deploymentUpdater.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentUpdater))
 
+				service := &corev1.Service{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-updater"}, service)).To(Succeed())
+				serviceUpdater := serviceUpdaterFor(component.ClusterTypeShoot, false)
+				serviceUpdater.ResourceVersion = "1"
+				Expect(service).To(Equal(serviceUpdater))
+
+				serviceMonitor := &monitoringv1.ServiceMonitor{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-updater"}, serviceMonitor)).To(Succeed())
+				serviceMonitorUpdater := serviceMonitorUpdaterFor(component.ClusterTypeShoot, false)
+				serviceMonitorUpdater.ResourceVersion = "1"
+				Expect(serviceMonitor).To(Equal(serviceMonitorUpdater))
+
 				vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), vpa)).To(Succeed())
 				vpaUpdater.ResourceVersion = "1"
@@ -2083,7 +2197,7 @@ var _ = Describe("VPA", func() {
 				deploymentRecommender.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentRecommender))
 
-				service := &corev1.Service{}
+				service = &corev1.Service{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, service)).To(Succeed())
 				serviceRecommender := serviceRecommenderFor(component.ClusterTypeShoot, false)
 				serviceRecommender.ResourceVersion = "1"
@@ -2099,7 +2213,7 @@ var _ = Describe("VPA", func() {
 				podDisruptionBudgetRecommender.ResourceVersion = "1"
 				Expect(pdb).To(Equal(podDisruptionBudgetRecommender))
 
-				serviceMonitor := &monitoringv1.ServiceMonitor{}
+				serviceMonitor = &monitoringv1.ServiceMonitor{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitor)).To(Succeed())
 				serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeShoot, false)
 				serviceMonitorRecommender.ResourceVersion = "1"
