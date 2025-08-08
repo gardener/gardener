@@ -845,11 +845,11 @@ images:
         value:
           # https://www.envoyproxy.io/docs/envoy/v1.29.2/intro/arch_overview/security/external_deps
           - name: 'v8'
-            version: '10.7.193.13'
+            version: '12.9.202.27'
           - name: 'grpc'
-            version: '1.59.4'
+            version: '1.63.2'
           - name: 'luajit'
-            version: '2.1.0.beta3'
+            version: '19878ec'
           - name: 'nghttp2'
             version: '1.58.0'
           - name: 'protobuf'
@@ -863,6 +863,10 @@ images:
           # https://luajit.org/extensions.html
           - name: 'lua'
             version: '5.1'
+          - name: curl
+            version: '8.9.1'
+          - name: 'yaml-cpp'
+            version: '0.8.0'
   - name: apiserver-proxy-sidecar
     resourceId:
       name: apiserver-proxy
