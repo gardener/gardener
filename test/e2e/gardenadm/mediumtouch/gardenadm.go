@@ -75,17 +75,6 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			Eventually(ctx, Object(deployment)).Should(BeHealthy(health.CheckDeployment))
 		}, SpecTimeout(time.Minute))
 
-		It("should deploy a bastion with the detected public IPs", func(ctx SpecContext) {
-			bastion := &extensionsv1alpha1.Bastion{ObjectMeta: metav1.ObjectMeta{Name: "gardenadm-bootstrap", Namespace: technicalID}}
-			Eventually(ctx, Object(bastion)).Should(And(
-				HaveField("Spec.Ingress", Not(Or(
-					ContainElement(HaveField("IPBlock.CIDR", "0.0.0.0/0")),
-					ContainElement(HaveField("IPBlock.CIDR", "::/0")),
-				))),
-				BeHealthy(health.CheckExtensionObject),
-			), "should be healthy and not have default (open) ingress CIDRs")
-		}, SpecTimeout(time.Minute))
-
 		It("should deploy the worker", func(ctx SpecContext) {
 			worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: technicalID}}
 			Eventually(ctx, Object(worker)).Should(BeHealthy(health.CheckExtensionObject))
@@ -99,7 +88,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 
 		It("should download gardenadm in the control plane machine", func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) {
-				stdOut, _, err := RunInMachine(ctx, technicalID, 0, "version")
+				stdOut, _, err := RunInMachine(ctx, technicalID, 0, "/opt/bin/gardenadm", "version")
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Eventually(ctx, stdOut).Should(gbytes.Say("gardenadm version"))
 			}).Should(Succeed())
@@ -129,8 +118,31 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			}
 		}, SpecTimeout(time.Minute))
 
-		It("should compile the ShootState", func(ctx SpecContext) {
-			Eventually(ctx, session.Out).Should(gbytes.Say("apiVersion: core.gardener.cloud/v1beta1\nkind: ShootState\n"))
+		It("should deploy a bastion with the detected public IPs", func(ctx SpecContext) {
+			bastion := &extensionsv1alpha1.Bastion{ObjectMeta: metav1.ObjectMeta{Name: "gardenadm-bootstrap", Namespace: technicalID}}
+			Eventually(ctx, Object(bastion)).Should(And(
+				HaveField("Spec.Ingress", Not(Or(
+					ContainElement(HaveField("IPBlock.CIDR", "0.0.0.0/0")),
+					ContainElement(HaveField("IPBlock.CIDR", "::/0")),
+				))),
+				BeHealthy(health.CheckExtensionObject),
+			), "should be healthy and not have default (open) ingress CIDRs")
+		}, SpecTimeout(time.Minute))
+
+		It("should copy the manifests to the first control plane machine", func(ctx SpecContext) {
+			Eventually(ctx, session.Err).Should(gbytes.Say("Copying manifests to the first control plane machine"))
+
+			for file, content := range map[string]string{
+				"manifests/shootstate.yaml":  "apiVersion: core.gardener.cloud/v1beta1\nkind: ShootState\n",
+				"manifests/manifests.yaml":   "apiVersion: core.gardener.cloud/v1beta1\nkind: Shoot\n",
+				"imagevector-overwrite.yaml": "garden.local.gardener.cloud:5001/local-skaffold_gardenadm",
+			} {
+				Eventually(ctx, func(g Gomega) *gbytes.Buffer {
+					stdOut, _, err := RunInMachine(ctx, technicalID, 0, "cat", "/var/lib/gardenadm/"+file)
+					g.Expect(err).NotTo(HaveOccurred())
+					return stdOut
+				}).Should(gbytes.Say(content), "expected file %s to have the right content", file)
+			}
 		}, SpecTimeout(time.Minute))
 
 		It("should finish successfully", func(ctx SpecContext) {
