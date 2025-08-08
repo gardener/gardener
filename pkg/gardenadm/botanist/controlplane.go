@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
@@ -291,9 +292,9 @@ func (b *AutonomousBotanist) staticControlPlanePods(ctx context.Context) (static
 }
 
 // NewClientSetFromFile creates a client set from the specified kubeconfig file.
-func NewClientSetFromFile(kubeconfigPath string) (kubernetes.Interface, error) {
+func NewClientSetFromFile(kubeconfigPath string, scheme *runtime.Scheme) (kubernetes.Interface, error) {
 	return kubernetes.NewClientFromFile("", kubeconfigPath,
-		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+		kubernetes.WithClientOptions(client.Options{Scheme: scheme}),
 		kubernetes.WithClientConnectionOptions(componentbaseconfigv1alpha1.ClientConnectionConfiguration{QPS: 100, Burst: 130}),
 		kubernetes.WithDisabledCachedClient(),
 	)
@@ -301,7 +302,7 @@ func NewClientSetFromFile(kubeconfigPath string) (kubernetes.Interface, error) {
 
 // CreateClientSet creates a client set for the control plane.
 func (b *AutonomousBotanist) CreateClientSet(ctx context.Context) (kubernetes.Interface, error) {
-	clientSet, err := NewClientSetFromFile(PathKubeconfig)
+	clientSet, err := NewClientSetFromFile(PathKubeconfig, kubernetes.SeedScheme)
 	if err != nil {
 		b.Logger.Info("Waiting for kube-apiserver to start", "error", err.Error())
 		return nil, fmt.Errorf("failed creating client set: %w", err)

@@ -2409,7 +2409,7 @@ func expectPaths(graph *graph, edges int, paths map[VertexType][]pathExpectation
 	var pathsCount int
 
 	for vertexType, expectation := range paths {
-		By(fmt.Sprintf("validating path expectations for %s (%d expected paths)", vertexTypes[vertexType], len(expectation)))
+		By(fmt.Sprintf("validating path expectations for %s (%d expected paths)", VertexTypes[vertexType].Kind, len(expectation)))
 		for _, p := range expectation {
 			switch p.matcher.(type) {
 			case *matchers.BeTrueMatcher:
@@ -2417,7 +2417,7 @@ func expectPaths(graph *graph, edges int, paths map[VertexType][]pathExpectation
 				By(fmt.Sprintf("expect edge from %s to %s", newVertex(p.fromType, p.fromNamespace, p.fromName, 0), newVertex(p.toType, p.toNamespace, p.toName, 0)))
 			}
 
-			ExpectWithOffset(1, graph.HasPathFrom(p.fromType, p.fromNamespace, p.fromName, p.toType, p.toNamespace, p.toName)).To(p.matcher, fmt.Sprintf("path expectation from %s:%s/%s to %s:%s/%s", vertexTypes[p.fromType], p.fromNamespace, p.fromName, vertexTypes[p.toType], p.toNamespace, p.toName))
+			ExpectWithOffset(1, graph.HasPathFrom(p.fromType, p.fromNamespace, p.fromName, p.toType, p.toNamespace, p.toName)).To(p.matcher, fmt.Sprintf("path expectation from %s:%s/%s to %s:%s/%s", VertexTypes[p.fromType].Kind, p.fromNamespace, p.fromName, VertexTypes[p.toType].Kind, p.toNamespace, p.toName))
 		}
 	}
 

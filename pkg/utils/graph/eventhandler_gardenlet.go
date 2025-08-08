@@ -82,7 +82,7 @@ func (g *graph) handleGardenletCreateOrUpdate(ctx context.Context, gardenlet *se
 		var (
 			namespace = seedTemplate.Spec.Backup.CredentialsRef.Namespace
 			name      = seedTemplate.Spec.Backup.CredentialsRef.Name
-			vertex    *vertex
+			vertex    *Vertex
 		)
 
 		if seedTemplate.Spec.Backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&

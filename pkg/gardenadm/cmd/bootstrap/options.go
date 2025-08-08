@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -34,8 +33,8 @@ type Options struct {
 
 // ParseArgs parses the arguments to the options.
 func (o *Options) ParseArgs(args []string) error {
-	if o.Kubeconfig == "" {
-		o.Kubeconfig = os.Getenv("KUBECONFIG")
+	if err := cmd.DefaultKubeconfig(&o.Kubeconfig); err != nil {
+		return fmt.Errorf("cloud not default kubeconfig: %w", err)
 	}
 
 	return o.ManifestOptions.ParseArgs(args)
