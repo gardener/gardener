@@ -279,9 +279,9 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
-	DescribeTable("#InternalDNSProviderEqual",
+	DescribeTable("#InternalDNSProviderCredentialsRefEqual",
 		func(oldDNSProvider, newDNSProvider *gardencorev1beta1.SeedDNSProviderConfig, equal bool) {
-			Expect(InternalDNSProviderEqual(oldDNSProvider, newDNSProvider)).To(Equal(equal))
+			Expect(InternalDNSProviderCredentialsRefEqual(oldDNSProvider, newDNSProvider)).To(Equal(equal))
 		},
 
 		Entry("both nil", nil, nil, true),
