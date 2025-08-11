@@ -20,6 +20,15 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+const (
+	// HealthCheckBy is a constant for a label to describe the component performing Prometheus health checks.
+	HealthCheckBy = "health-check-by"
+	// GardenerOperator is a constant for the health-check-by label describing the gardener-operator component.
+	GardenerOperator = "gardener-operator"
+	// Gardenlet is a constant for the health-check-by label describing the gardenlet component.
+	Gardenlet = "gardenlet"
+)
+
 func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1.Prometheus {
 	obj := &monitoringv1.Prometheus{
 		ObjectMeta: metav1.ObjectMeta{
@@ -87,6 +96,10 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 			RuleSelector:          &metav1.LabelSelector{MatchLabels: monitoringutils.Labels(p.values.Name)},
 			RuleNamespaceSelector: &metav1.LabelSelector{},
 		},
+	}
+
+	if p.values.HealthCheckBy != "" {
+		obj.Labels[HealthCheckBy] = p.values.HealthCheckBy
 	}
 
 	if p.values.RestrictToNamespace {

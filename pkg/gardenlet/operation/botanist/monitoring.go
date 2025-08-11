@@ -92,6 +92,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		Retention:           ptr.To(monitoringv1.Duration("30d")),
 		RetentionSize:       "15GB",
 		RestrictToNamespace: true,
+		HealthCheckBy:       prometheus.Gardenlet,
 		ResourceRequests: &corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("150m"),
 			corev1.ResourceMemory: resource.MustParse("400M"),

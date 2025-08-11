@@ -109,6 +109,8 @@ type Values struct {
 	RestrictToNamespace bool
 	// ResourceRequests defines the initial resource requests
 	ResourceRequests *corev1.ResourceList
+	// HealthCheckBy is the value of the health-check-by label for the Prometheus resource.
+	HealthCheckBy string
 }
 
 // CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
