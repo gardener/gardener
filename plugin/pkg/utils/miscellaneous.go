@@ -87,18 +87,18 @@ func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedN
 
 // ValidateInternalDomainChangeForSeed returns an error when the internal domain is changed for a seed that is still in use by shoots.
 func ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorev1beta1listers.ShootLister, kind string) error {
-	// TODO(dimityrmirchev): Remove this if check when dns.internal configuration becomes mandatory (after 1.127 release)
-	if oldSeedSpec.DNS.Internal != nil && newSeedSpec.DNS.Internal != nil {
-		if oldSeedSpec.DNS.Internal.Domain != newSeedSpec.DNS.Internal.Domain {
-			shoots, err := shootLister.List(labels.Everything())
-			if err != nil {
-				return err
-			}
+	// TODO(dimityrmirchev): Remove this if check when dns.internal configuration becomes mandatory (after 1.128 release)
+	if oldSeedSpec.DNS.Internal != nil && newSeedSpec.DNS.Internal != nil &&
+		oldSeedSpec.DNS.Internal.Domain != newSeedSpec.DNS.Internal.Domain {
+		shoots, err := shootLister.List(labels.Everything())
+		if err != nil {
+			return err
+		}
 
-			if IsSeedUsedByShoot(seedName, shoots) {
-				return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot change internal domain as the %s %q is still in use by shoots", kind, seedName))
-			}
+		if IsSeedUsedByShoot(seedName, shoots) {
+			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot change internal domain as the %s %q is still in use by shoots", kind, seedName))
 		}
 	}
+
 	return nil
 }
