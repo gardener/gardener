@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-"$(dirname $0)"/../hack/.ci/set_dependency_version
