@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kuberneteshealth "github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const virtualGardenPrefix = "virtual-garden-"
@@ -87,7 +88,7 @@ func (h *health) Check(ctx context.Context, conditions GardenConditions) []garde
 			return nil
 		},
 		func(_ context.Context) error {
-			newObservabilityCondition := h.checkObservabilityComponents(conditions.observabilityComponentsHealthy, managedResources)
+			newObservabilityCondition := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, managedResources)
 			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityCondition, nil)
 			return nil
 		},
@@ -156,10 +157,19 @@ func (h *health) checkVirtualComponents(ctx context.Context, condition gardencor
 }
 
 // checkObservabilityComponents checks whether the observability components are healthy.
-func (h *health) checkObservabilityComponents(condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
+func (h *health) checkObservabilityComponents(ctx context.Context, condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(operatorv1alpha1.ObservabilityComponentsHealthy)
 	}, nil); exitCondition != nil {
+		return exitCondition
+	}
+
+	filterFunc := func(managedResource resourcesv1alpha1.ManagedResource) bool {
+		return managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(operatorv1alpha1.ObservabilityComponentsHealthy) &&
+			managedResource.Labels[managedresources.LabelKeyManagedBy] == managedresources.LabelValueOperator
+	}
+
+	if exitCondition := h.healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterFunc); exitCondition != nil {
 		return exitCondition
 	}
 
