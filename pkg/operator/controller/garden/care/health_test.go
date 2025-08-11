@@ -6,6 +6,7 @@ package care_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -541,6 +543,193 @@ var _ = Describe("Garden health", func() {
 				})
 			})
 		})
+
+		Context("when there are Managed Resources responsible for Prometheus", func() {
+			var (
+				managedResource     *resourcesv1alpha1.ManagedResource
+				prometheusName      = "foo"
+				prometheusNamespace = v1beta1constants.GardenNamespace
+
+				healthy   = func(_ context.Context, _ string, _ int) (bool, error) { return true, nil }
+				unhealthy = func(_ context.Context, _ string, _ int) (bool, error) { return false, nil }
+				erroring  = func(_ context.Context, _ string, _ int) (bool, error) { return false, errors.New("test error") }
+			)
+
+			BeforeEach(func() {
+				managedResource = healthyManagedResource("prometheus-"+prometheusName, "ObservabilityComponentsHealthy")
+				managedResource.Labels = map[string]string{
+					"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
+					"managed-by":                         "gardener-operator",
+				}
+
+				managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{{
+					ObjectReference: corev1.ObjectReference{
+						Kind:      monitoringv1.PrometheusesKind,
+						Name:      prometheusName,
+						Namespace: prometheusNamespace,
+					}},
+				}
+
+				prometheus := &monitoringv1.Prometheus{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      prometheusName,
+						Namespace: prometheusNamespace,
+					},
+				}
+
+				Expect(runtimeClient.Create(ctx, managedResource)).To(Succeed())
+				Expect(runtimeClient.Create(ctx, prometheus)).To(Succeed())
+			})
+
+			It("should set ObservabilityComponentsHealthy condition to false if Prometheus health check is down", func() {
+				updatedConditions := NewHealth(
+					garden,
+					runtimeClient,
+					gardenClientSet,
+					fakeClock,
+					nil,
+					gardenNamespace,
+					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy)),
+				).Check(ctx, gardenConditions)
+
+				Expect(updatedConditions).To(ContainElements(
+					beConditionOfTypeWithStatusReasonAndMessage(
+						operatorv1alpha1.ObservabilityComponentsHealthy,
+						gardencorev1beta1.ConditionFalse,
+						"PrometheusHealthCheckDown",
+						"There are health issues in Prometheus pod \"garden/prometheus-foo-0\". Access Prometheus UI and query for \"healthcheck:alert\" for more details.")))
+			})
+
+			It("should set ObservabilityComponentsHealthy condition to false if Prometheus health check is erroring", func() {
+				updatedConditions := NewHealth(
+					garden,
+					runtimeClient,
+					gardenClientSet,
+					fakeClock,
+					nil,
+					gardenNamespace,
+					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(erroring)),
+				).Check(ctx, gardenConditions)
+
+				Expect(updatedConditions).To(ContainElements(
+					beConditionOfTypeWithStatusReasonAndMessage(
+						operatorv1alpha1.ObservabilityComponentsHealthy,
+						gardencorev1beta1.ConditionFalse,
+						"PrometheusHealthCheckError",
+						"Querying Prometheus pod \"garden/prometheus-foo-0\" for health checking returned an error: test error")))
+			})
+
+			It("should set ObservabilityComponentsHealthy condition to true if Prometheus is healthy", func() {
+				updatedConditions := NewHealth(
+					garden,
+					runtimeClient,
+					gardenClientSet,
+					fakeClock,
+					nil,
+					gardenNamespace,
+					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(healthy)),
+				).Check(ctx, gardenConditions)
+
+				expectHealthyObservabilityComponents(updatedConditions)
+			})
+
+			Context("when the Managed Resource is filtered out from the health check", func() {
+				var (
+					healthChecker *healthchecker.HealthChecker
+					conditions    []gardencorev1beta1.Condition
+				)
+
+				// Starting from an unhealthy Prometheus that sets the condition to unhealthy, make sure the condition
+				// is set to healthy if the managed resource is filtered out.
+				BeforeEach(func() {
+					healthChecker = healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy))
+					conditions = NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+						healthChecker,
+					).Check(ctx, gardenConditions)
+
+					Expect(conditions).To(ContainElements(
+						beConditionOfTypeWithStatusReasonAndMessage(
+							operatorv1alpha1.ObservabilityComponentsHealthy,
+							gardencorev1beta1.ConditionFalse,
+							"PrometheusHealthCheckDown",
+							"There are health issues in Prometheus pod \"garden/prometheus-foo-0\". Access Prometheus UI and query for \"healthcheck:alert\" for more details.")))
+				})
+
+				It("should ignore the Prometheus resource if the care label is missing", func() {
+					delete(managedResource.Labels, "care.gardener.cloud/condition-type")
+					Expect(runtimeClient.Update(ctx, managedResource)).To(Succeed())
+
+					conditions = NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+						healthChecker,
+					).Check(ctx, gardenConditions)
+
+					expectHealthyObservabilityComponents(conditions)
+				})
+
+				It("should ignore the Prometheus resource if it doesn't have the right care label", func() {
+					managedResource.Labels = map[string]string{"care.gardener.cloud/condition-type": "Foo"}
+					Expect(runtimeClient.Update(ctx, managedResource)).To(Succeed())
+
+					conditions = NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+						healthChecker,
+					).Check(ctx, gardenConditions)
+
+					expectHealthyObservabilityComponents(conditions)
+				})
+
+				It("should ignore the Prometheus resource if the managed-by label is missing", func() {
+					delete(managedResource.Labels, "managed-by")
+					Expect(runtimeClient.Update(ctx, managedResource)).To(Succeed())
+
+					conditions = NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+						healthChecker,
+					).Check(ctx, gardenConditions)
+
+					expectHealthyObservabilityComponents(conditions)
+				})
+
+				It("should ignore the Prometheus resource if it doesn't have the right managed-by label", func() {
+					managedResource.Labels = map[string]string{"managed-by": "Foo"}
+					Expect(runtimeClient.Update(ctx, managedResource)).To(Succeed())
+
+					conditions = NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+						healthChecker,
+					).Check(ctx, gardenConditions)
+
+					expectHealthyObservabilityComponents(conditions)
+				})
+			})
+		})
 	})
 
 	Describe("GardenConditions", func() {
@@ -757,4 +946,14 @@ func newEtcd(namespace, name string, healthy bool) *druidcorev1alpha1.Etcd {
 			Ready: ptr.To(healthy),
 		},
 	}
+}
+
+func expectHealthyObservabilityComponents(conditions []gardencorev1beta1.Condition) {
+	Expect(conditions).To(ContainElements(
+		beConditionOfTypeWithStatusReasonAndMessage(
+			operatorv1alpha1.ObservabilityComponentsHealthy,
+			gardencorev1beta1.ConditionTrue,
+			"ObservabilityComponentsRunning",
+			"All observability components are healthy."),
+	))
 }
