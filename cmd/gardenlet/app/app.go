@@ -443,7 +443,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 
 		seed.Spec = g.config.SeedConfig.Spec
 
-		// TODO(dimityrmirchev): Remove this after 1.127 release
+		// TODO(dimityrmirchev): Remove this after 1.128 release
 		// Preserve current internal dns settings
 		// as these could have been already explicitly set by gardenlet itself
 		// and setting internal dns to nil is forbidden
@@ -477,7 +477,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 	// If the Seed config does not have spec.dns.internal set,
 	// set it automatically based on the global internal domain secret.
 	if g.config.SeedConfig.Spec.DNS.Internal == nil {
-		// TODO(dimityrmirchev): Require internal DNS settings and remove this logic after 1.127 release
+		// TODO(dimityrmirchev): Require internal DNS settings and remove this logic after 1.128 release
 		secret, err := gardenerutils.ReadInternalDomainSecret(ctx, gardenClient, gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name), true)
 		if err != nil {
 			return err
