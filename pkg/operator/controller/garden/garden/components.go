@@ -1418,6 +1418,7 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
 		RuntimeVersion:    r.RuntimeVersion,
 		ExternalLabels:    map[string]string{"landscape": garden.Spec.VirtualCluster.Gardener.ClusterIdentity},
+		HealthCheckBy:     prometheus.GardenerOperator,
 		AdditionalPodLabels: map[string]string{
 			v1beta1constants.LabelNetworkPolicyToPublicNetworks:                                                v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                                               v1beta1constants.LabelNetworkPolicyAllowed,
@@ -1456,6 +1457,7 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 		RetentionSize:     "80GB",
 		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
 		RuntimeVersion:    r.RuntimeVersion,
+		HealthCheckBy:     prometheus.GardenerOperator,
 		AdditionalPodLabels: map[string]string{
 			gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
 		},
