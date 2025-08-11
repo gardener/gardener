@@ -130,6 +130,7 @@ honor_labels: true`
 			RetentionSize:       retentionSize,
 			ExternalLabels:      externalLabels,
 			AdditionalPodLabels: additionalLabels,
+			HealthCheckBy:       "some-component",
 		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
@@ -283,9 +284,10 @@ honor_labels: true`
 					Name:      name,
 					Namespace: namespace,
 					Labels: map[string]string{
-						"app":  "prometheus",
-						"role": "monitoring",
-						"name": name,
+						"app":             "prometheus",
+						"role":            "monitoring",
+						"name":            name,
+						"health-check-by": "some-component",
 					},
 				},
 				Spec: monitoringv1.PrometheusSpec{
