@@ -38,7 +38,7 @@ Reference documentation:
 - [Gardener Architecture](../concepts/architecture.md)
 - [Gardener concepts](https://github.com/gardener/gardener/tree/master/docs#concepts)
 
-In this example, the runtime cluster is also used to host the very first `gardenlet`, which will register this cluster as a `Seed` as well. The `gardenlet` can be deployed to another Kubernetes cluster (recommended for productive setups). Here, using the runtime cluster keeps the amount of unmanaged clusters at a bare minimum.
+In this example, the runtime cluster is also used to host the very first `gardenlet`, which will register this cluster as a `Seed` as well. The `gardenlet` can be deployed to another Kubernetes cluster (recommended for productive setups). In this example, the runtime cluster is reused which keeps the amount of unmanaged clusters at a bare minimum.
 
 ### DNS Zone
 
@@ -66,6 +66,10 @@ Reference documentation:
 - [Gardener Configuration](../operations/configuration.md#system-configuration)
 - [DNS records](../extensions/resources/dnsrecord.md)
 
+### Certificates
+
+Some components of a Gardener landscape require TLS certificates signed by well-known, trusted certificate authority (CA). While it is certainly possible to provide certificates manually, using an ACME service is much more convenient and recommended. Utilizing the [Gardener extension for certificate services](https://github.com/gardener/gardener-extension-shoot-cert-service) allows to automate the creation and renewal of certificates for the Gardener landscape.
+
 ### Backup Bucket
 
 The virtual Garden cluster's `etcd` is governed by [etcd-druid](https://github.com/gardener/etcd-druid). If configured, backups are created continuously and stored to a supported object store. This requires credentials to manage an object store on the chosen infrastructure.
@@ -73,7 +77,7 @@ It is recommended for any productive installation of Gardener.
 
 ### Infrastructure
 
-For each infrastructure supported by Gardener a so-called __provider-extension__ exists. It implements the required interfaces. For this example, the [OpenStack extension](https://github.com/gardener/gardener-extension-provider-openstack) will be used.
+For each infrastructure supported by Gardener a so-called __provider-extension__ exists. It implements the required interfaces. For this example, the [OpenStack extension](https://github.com/gardener/gardener-extension-provider-openstack) will be used. Of course, a single Gardener landscape can support multiple infrastructures, which is a common use case. In this case, the respective provider-extensions need to be deployed as well.
 
 Access to the respective infrastructure is required and needs to be handed over to Gardener in the provider-specific format (e.g., OpenStack application credentials).
 
@@ -93,12 +97,54 @@ The Gardener Operator is provided as a [helm chart](../../charts/gardener/operat
 When setting up a new Gardener landscape, choose the latest version and either install the chart or render the templates e.g.:
 
 ```bash
-helm template ./charts/gardener/operator --namespace garden --set replicaCount=2 --set image.tag=v1.111.0
+helm template ./charts/gardener/operator --namespace garden --set replicaCount=2 --set image.tag=v1.125.0
 ```
 
 Reference documentation:
 
 - [Gardener Operator](../concepts/operator.md)
+
+### Extensions
+
+Gardener is provider-agnostic and relies on a growing set of extensions. An extension can provide support for an infrastructure (required) or add a desired feature to a Kubernetes cluster (often optional).
+
+There are a few extensions considered essential to any Gardener installation:
+
+- at least one [infrastructure provider](../../extensions/README.md#infrastructure-provider) (commonly referred to as provider-extension)
+- at least one [operating system extension](../../extensions/README.md#operating-system) - [Garden Linux](https://github.com/gardener/gardener-extension-os-gardenlinux) is recommended
+- at least one [network plugin (CNI)](../../extensions/README.md#network-plugin)
+- Shoot services
+
+An extension commonly consists of two components - a controller implementing the Gardener's extension contract and an admission controller. The latter is deployed to the runtime cluster and prevents misconfiguration of `Shoot`s. While an extensions primary purpose is to implement functionality for `Shoot` clusters, it can also be deployed to the runtime cluster to provide additional functionality like managing `DNSRecord`s or `BackupBucket`s using the well-known and proven code paths.
+
+#### Choices
+
+For this example, the following choices are made:
+- [Garden Linux OS extension](https://github.com/gardener/gardener-extension-os-gardenlinux)
+- [Provider OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
+- [Calico](https://github.com/gardener/gardener-extension-networking-calico)
+- [DNS service](https://github.com/gardener/gardener-extension-shoot-dns-service)
+- [Cert service](https://github.com/gardener/gardener-extension-shoot-cert-service)
+- [OIDC service](https://github.com/gardener/gardener-extension-shoot-oidc-service)
+
+Reference documentation:
+- [Extension Contract](../extensions/resources/extension.md#contract-extension-resource)
+- [GEP 01 Extensibility](../proposals/01-extensibility.md)
+- [Extension Library](../../extensions/README.md#known-extension-implementations)
+
+#### How to install an extension
+
+An extension is commonly described by an `Extension` resources (API group `operator.gardener.cloud/v1alpha1`) in the runtime cluster. The Gardener Operator will take care of deploying the required resources both to the runtime and to the virtual Garden cluster. More details can be found in the [Extension Resource documentation](../concepts/operator.md#extension-resource).
+
+Typically, only a few extensions are needed on the runtime cluster and the Gardener Operator manages them directly through `ManagedResources`. Most of the extensions however, are registered to the virtual Garden cluster and then installed onto the `Seeds`.
+
+In order to make an extension known to the `Garden`, the Gardener Operator translates the `Extension` into two resources and applies them to the virtual Garden cluster - firstly, a `ControllerDeployment` and secondly, a matching `ControllerRegistration`. With both in place, Gardener-managed `ControllerInstallation`s take care of the actual deployment of the extension to the target environment.
+
+Check the [extension registration documentation](../extensions/registration.md) for more details.
+
+The `ControllerRegistration` is also a useful resource to check, as it declares, which resources it implements. An example of such a `ControllerRegistration`, can be found in the [provider OpenStack](https://github.com/gardener/gardener-extension-provider-openstack) extension's [example file](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/example/controller-registration.yaml).
+
+![extensions](./content/extensions.png)
 
 ### Garden
 
@@ -209,6 +255,18 @@ dns:
 
 Additionally, the `BackupBucket` and credentials to access it are configured alongside. The easiest way to get started is by using and customizing the example linked below.
 
+To further simplify both installation and operations, it is recommended to deploy the certificate service extension to the runtime cluster as well. Follow this [example](https://github.com/gardener/gardener-extension-shoot-cert-service/blob/master/example/extension-shoot-cert-service.yaml) to add a default issuer to the runtime cluster and request the extension to be deployed to where needed. Next, expand the `Garden` resource's [configuration](https://github.com/gardener/gardener-extension-shoot-cert-service/blob/master/docs/operations/deployment.md#providing-trusted-tls-certificate-for-garden-runtime-cluster) to use the extension:
+
+```yaml
+spec:
+  extensions:
+  - type: controlplane-cert-service
+    providerConfig:
+      apiVersion: service.cert.extensions.gardener.cloud/v1alpha1
+      kind: CertConfig
+      generateControlPlaneCertificate: true
+```
+
 ![Garden](./content/garden.png)
 
 Upon the first reconciliation of the `Garden` resource, a Kubernetes control plane will be bootstrapped in the `garden` namespace. `etcd-main` and `etcd-events` are managed by [etcd-druid](https://github.com/gardener/etcd-druid) and use the `BackupBucket` created by the provider-extension.
@@ -233,50 +291,6 @@ Reference documentation and examples:
 - [Backup secret examples](https://github.com/gardener/etcd-backup-restore/tree/master/example/storage-provider-secrets)
 - [Configuration options](../concepts/operator.md#garden-resources)
 - [Accessing the virtual Garden](../concepts/operator.md#virtual-garden-kubeconfig)
-
-### Extensions
-
-Gardener is provider-agnostic and relies on a growing set of extensions. An extension can provide support for an infrastructure (required) or add a desired feature to a Kubernetes cluster (often optional).
-
-There are a few extensions considered essential to any Gardener installation:
-
-- at least one [infrastructure provider](../../extensions/README.md#infrastructure-provider) (commonly referred to as provider-extension)
-- at least one [operating system extension](../../extensions/README.md#operating-system) - [Garden Linux](https://github.com/gardener/gardener-extension-os-gardenlinux) is recommended
-- at least one [network plugin (CNI)](../../extensions/README.md#network-plugin)
-- Shoot services
-
-An extension often consists of two components - a controller implementing the Gardener's extension contract and an admission controller. The latter is deployed to the runtime cluster and prevents misconfiguration of `Shoot`s.
-
-#### Choices
-
-For this example, the following choices are made:
-- [Garden Linux OS extension](https://github.com/gardener/gardener-extension-os-gardenlinux)
-- [Provider OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
-- [Calico](https://github.com/gardener/gardener-extension-networking-calico)
-- [DNS service](https://github.com/gardener/gardener-extension-shoot-dns-service)
-- [Cert service](https://github.com/gardener/gardener-extension-shoot-cert-service)
-- [OIDC service](https://github.com/gardener/gardener-extension-shoot-oidc-service)
-
-Reference documentation:
-- [Extension Contract](../extensions/resources/extension.md#contract-extension-resource)
-- [GEP 01 Extensibility](../proposals/01-extensibility.md)
-- [Extension Library](../../extensions/README.md#known-extension-implementations)
-
-#### How to install an extension
-
-In order to make an extension known to a Gardener landscape, two resources have to be applied to the virtual Garden cluster - firstly, a `ControllerDeployment` and secondly, a matching `ControllerRegistration`. With both in place, Gardener-managed `ControllerInstallation`s take care of the actual deployment of the extension to the target environment.
-
-Check the [extension registration documentation](../extensions/registration.md) for more details.
-
-Now, the classical way of installing `ControllerDeployment` and `ControllerRegistration` is to prepare the resources and apply them to the virtual Garden cluster. The `ControllerDeployment` references an OCI repository containing the extension's helm chart.
-
-For example, to deploy the [provider OpenStack](https://github.com/gardener/gardener-extension-provider-openstack) extension, the [example file](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/example/controller-registration.yaml) can be used.
-
-To simplify this procedure, extensions can be registered through `Extension` resources in the runtime cluster. The Gardener Operator will take care of deploying the required resources to the virtual Garden cluster.
-In addition, this approach allows the extensions and their admission controllers to be deployed to the runtime cluster as well. There, they can provide additional functionality like managing `DNSRecord`s or `BackupBucket`s.
-More details can be found in the [Extension Resource documentation](../concepts/operator.md#extension-resource).
-
-![extensions](./content/extensions.png)
 
 ### Cloud Profile
 
