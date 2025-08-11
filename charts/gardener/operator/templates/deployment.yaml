@@ -57,6 +57,8 @@ spec:
         networking.resources.gardener.cloud/to-virtual-garden-etcd-main-client-tcp-8080: allowed
         networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed
         networking.resources.gardener.cloud/to-gardener-apiserver-tcp-8443: allowed
+        networking.resources.gardener.cloud/to-prometheus-garden-tcp-9090: allowed
+        networking.resources.gardener.cloud/to-prometheus-longterm-tcp-9090: allowed
         {{- if .Values.podLabels }}
 {{ toYaml .Values.podLabels | indent 8 }}
         {{- end }}
