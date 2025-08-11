@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 // DefaultAlertmanager creates a new alertmanager deployer.
@@ -92,6 +93,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		Retention:           ptr.To(monitoringv1.Duration("30d")),
 		RetentionSize:       "15GB",
 		RestrictToNamespace: true,
+		ManagedBy:           managedresources.LabelValueGardenlet,
 		ResourceRequests: &corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("150m"),
 			corev1.ResourceMemory: resource.MustParse("400M"),
