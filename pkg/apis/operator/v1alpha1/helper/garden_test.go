@@ -276,4 +276,26 @@ var _ = Describe("helper", func() {
 			Expect(GetAPIServerSNIDomains(domains, sni)).To(Equal([]string{"api.bar", "bar.foo.bar", "foo.foo.bar"}))
 		})
 	})
+
+	DescribeTable("#GetGardenerOperations",
+		func(annotations map[string]string, expectedResult []string) {
+			Expect(GetGardenerOperations(annotations)).To(Equal(expectedResult))
+		},
+		Entry("annotations are empty", nil, nil),
+		Entry("gardener.cloud/operation annotation is not set", map[string]string{
+			"foo": "bar",
+		}, nil),
+		Entry("gardener.cloud/operation annotation is empty", map[string]string{
+			"gardener.cloud/operation": "",
+		}, nil),
+		Entry("gardener.cloud/operation has single operation", map[string]string{
+			"gardener.cloud/operation": "reconcile",
+		}, []string{"reconcile"}),
+		Entry("gardener.cloud/operation has multiple operations", map[string]string{
+			"gardener.cloud/operation": "reconcile;rorate-credentials-start;rotate-ssh-keypair",
+		}, []string{"reconcile", "rorate-credentials-start", "rotate-ssh-keypair"}),
+		Entry("gardener.cloud/operation has whitespaces", map[string]string{
+			"gardener.cloud/operation": "reconcile ;rorate-credentials-start  ; rotate-ssh-keypair;   ",
+		}, []string{"reconcile", "rorate-credentials-start", "rotate-ssh-keypair", ""}),
+	)
 })
