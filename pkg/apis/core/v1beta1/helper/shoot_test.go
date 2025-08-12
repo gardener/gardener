@@ -1654,11 +1654,11 @@ var _ = Describe("Helper", func() {
 			"gardener.cloud/operation": "reconcile",
 		}, []string{"reconcile"}),
 		Entry("gardener.cloud/operation has multiple operations", map[string]string{
-			"gardener.cloud/operation": "reconcile;rorate-credentials-start;rotate-ssh-keypair",
-		}, []string{"reconcile", "rorate-credentials-start", "rotate-ssh-keypair"}),
+			"gardener.cloud/operation": "reconcile;rotate-credentials-start;rotate-ssh-keypair",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair"}),
 		Entry("gardener.cloud/operation has whitespaces", map[string]string{
-			"gardener.cloud/operation": "reconcile ;rorate-credentials-start  ; rotate-ssh-keypair;   ",
-		}, []string{"reconcile", "rorate-credentials-start", "rotate-ssh-keypair", ""}),
+			"gardener.cloud/operation": "reconcile ;rotate-credentials-start  ; rotate-ssh-keypair;   ",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair", ""}),
 	)
 
 	DescribeTable("#GetShootMaintenanceOperations",
@@ -1676,10 +1676,10 @@ var _ = Describe("Helper", func() {
 			"maintenance.gardener.cloud/operation": "reconcile",
 		}, []string{"reconcile"}),
 		Entry("maintenance.gardener.cloud/operation has multiple operations", map[string]string{
-			"maintenance.gardener.cloud/operation": "reconcile;rorate-credentials-start;rotate-ssh-keypair",
-		}, []string{"reconcile", "rorate-credentials-start", "rotate-ssh-keypair"}),
+			"maintenance.gardener.cloud/operation": "reconcile;rotate-credentials-start;rotate-ssh-keypair",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair"}),
 		Entry("maintenance.gardener.cloud/operation has whitespaces", map[string]string{
-			"maintenance.gardener.cloud/operation": "reconcile ;rorate-credentials-start  ; rotate-ssh-keypair;   ",
-		}, []string{"reconcile", "rorate-credentials-start", "rotate-ssh-keypair", ""}),
+			"maintenance.gardener.cloud/operation": "reconcile ;rotate-credentials-start  ; rotate-ssh-keypair;   ",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair", ""}),
 	)
 })
