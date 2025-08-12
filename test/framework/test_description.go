@@ -45,6 +45,12 @@ func (t TestDescription) Serial() TestDescription {
 	return t.newLabel("SERIAL")
 }
 
+// Disruptive labels a test as disruptive.
+// This kind of test should run with care.
+func (t TestDescription) Disruptive() TestDescription {
+	return t.newLabel("DISRUPTIVE")
+}
+
 func (t TestDescription) newLabel(label string) TestDescription {
 	labels := t.labels.Union(nil)
 	labels.Insert(label)
