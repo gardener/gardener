@@ -12,9 +12,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
@@ -39,9 +41,9 @@ type ControllerInfos struct {
 	// E.g., when re-calculating the infos after a successful Create operation, this field will be set to Reconcile, as
 	// the next operation that should be performed on the shoot is a usual Reconcile operation.
 	OperationType gardencorev1beta1.LastOperationType
-	// ShouldReconcileNow is true if the controller should perform reconciliations immediately.
+	// ShouldReconcileNow describes if the controller should perform reconciliations immediately.
 	// This is supposed to be used in the reconciler only.
-	ShouldReconcileNow bool
+	ShouldReconcileNow ReconcileNowDecision
 	// ShouldOnlySyncClusterResource is true if the controller should not perform reconciliations right now
 	// (ShouldReconcileNow == false) but the controller should still sync the cluster resource to the seed.
 	ShouldOnlySyncClusterResource bool
@@ -72,14 +74,26 @@ type ControllerInfos struct {
 	isNowInEffectiveMaintenanceTimeWindow bool
 	alreadyReconciledDuringThisTimeWindow bool
 
+	// based on seed object
+	isReconciliationPaused bool
+
 	// based on gardenlet config and shoot object
 	syncPeriod time.Duration
+}
+
+// ReconcileNowDecision contains the result of the reconciliation decision
+// and a reason explaining why the decision was made.
+type ReconcileNowDecision struct {
+	// Result is true if the controller should perform reconciliations immediately.
+	Result bool
+	// Reason is a human-readable reason for the decision.
+	Reason string
 }
 
 // CalculateControllerInfos calculates whether and when a given shoot should be reconciled.
 // These results are supposed to be used/handled immediately. Always call CalculateControllerInfos to re-calculate the
 // results before using them.
-func CalculateControllerInfos(shoot *gardencorev1beta1.Shoot, clock clock.Clock, cfg gardenletconfigv1alpha1.ShootControllerConfiguration) ControllerInfos {
+func CalculateControllerInfos(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, clock clock.Clock, cfg gardenletconfigv1alpha1.ShootControllerConfiguration) ControllerInfos {
 	respectSyncPeriodOverwrite := ptr.Deref(cfg.RespectSyncPeriodOverwrite, false)
 
 	i := ControllerInfos{
@@ -97,6 +111,8 @@ func CalculateControllerInfos(shoot *gardencorev1beta1.Shoot, clock clock.Clock,
 		isNowInEffectiveMaintenanceTimeWindow: gardenerutils.IsNowInEffectiveShootMaintenanceTimeWindow(shoot, clock),
 		alreadyReconciledDuringThisTimeWindow: gardenerutils.LastReconciliationDuringThisTimeWindow(shoot, clock),
 
+		isReconciliationPaused: seed != nil && kubernetesutils.HasMetaDataAnnotation(&seed.ObjectMeta, v1beta1constants.AnnotationDisableShootReconciliations, "true"),
+
 		syncPeriod: gardenerutils.SyncPeriodOfShoot(respectSyncPeriodOverwrite, cfg.SyncPeriod.Duration, shoot),
 	}
 
@@ -108,22 +124,33 @@ func CalculateControllerInfos(shoot *gardencorev1beta1.Shoot, clock clock.Clock,
 	return i
 }
 
-func (i ControllerInfos) shouldReconcileNow() bool {
+func (i ControllerInfos) shouldReconcileNow() ReconcileNowDecision {
 	// if the shoot is failed or ignored, it doesn't matter which operation is triggered
 	if i.isFailed || i.isIgnored {
-		return false
+		return ReconcileNowDecision{
+			Result: false,
+			Reason: "Shoot is failed or ignored.",
+		}
+	}
+
+	// Emergency switch: Check Seed annotation to block reconciliation if needed
+	if i.isReconciliationPaused {
+		return ReconcileNowDecision{
+			Result: false,
+			Reason: "Shoot reconciliation blocked by Seed emergency switch",
+		}
 	}
 
 	// in the following checks, we optimize when and how often existing shoots are reconciled
 	// all operations other than Reconcile are excluded from these optimizations as we want to perform the operations immediately
 	if i.OperationType != gardencorev1beta1.LastOperationTypeReconcile {
-		return true
+		return ReconcileNowDecision{Result: true}
 	}
 
 	// if the observedGeneration is outdated (i.e., spec was changed) or the last operation was not successful,
 	// we always want to reconcile immediately
 	if !i.isUpToDate {
-		return true
+		return ReconcileNowDecision{Result: true}
 	}
 
 	// from here on, we have a case of regular reconciliation (i.e., shoot is observed at latest generation and in
@@ -132,7 +159,7 @@ func (i ControllerInfos) shouldReconcileNow() bool {
 	// If we do not confine reconciliations (either by the operator or shoot owner) to the maintenance time window then
 	// we allow immediate reconciliations.
 	if !i.reconcileInMaintenanceOnly && !i.confineSpecUpdateRollout {
-		return true
+		return ReconcileNowDecision{Result: true}
 	}
 
 	// from here on, either:
@@ -142,12 +169,15 @@ func (i ControllerInfos) shouldReconcileNow() bool {
 	// if the shoot is in its maintenance time window right now but has not been reconciled in the time window so far,
 	// now is the time that we have been waiting for :) -> go
 	if i.isNowInEffectiveMaintenanceTimeWindow && !i.alreadyReconciledDuringThisTimeWindow {
-		return true
+		return ReconcileNowDecision{Result: true}
 	}
 
 	// shoot reconciliations are confined, and the shoot's maintenance time window is not met, or it was already
 	// reconciled in this time window -> ¯\_(ツ)_/¯
-	return false
+	return ReconcileNowDecision{
+		Result: false,
+		Reason: "Shoot is not in its effective maintenance time window or was already reconciled during this time window.",
+	}
 }
 
 func (i ControllerInfos) shouldOnlySyncClusterResource() bool {
