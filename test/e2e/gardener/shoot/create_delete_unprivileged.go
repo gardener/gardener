@@ -55,7 +55,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			// Thus, we need to skip the logging tests that case.
 			// TODO(rrhubenov): Remove this once Vali has been replaced.
 			// TODO(rrhubenov): Enable deployment of the logging stack when Vali is replaced.
-			// They have been disabled via example/gardener-local/gardenlet/values-ipv6.yaml
+			// They have been disabled via dev-setup/gardenlet/components/ipv6/kustomization.yaml
 			if os.Getenv("IPFAMILY") == "ipv6" {
 				return
 			}
