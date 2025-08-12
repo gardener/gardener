@@ -18,6 +18,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 )
@@ -80,7 +81,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap
 // HasOperationAnnotation returns a predicate which returns true when the object has an operation annotation.
 func (r *Reconciler) HasOperationAnnotation() predicate.Predicate {
 	hasOperationAnnotation := func(annotations map[string]string) bool {
-		return operatorv1alpha1.AvailableOperationAnnotations.Has(annotations[v1beta1constants.GardenerOperation])
+		operations := helper.GetGardenerOperations(annotations)
+		return operatorv1alpha1.AvailableOperationAnnotations.HasAny(operations...)
 	}
 
 	return predicate.Funcs{
