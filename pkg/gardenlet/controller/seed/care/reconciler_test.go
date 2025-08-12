@@ -190,10 +190,7 @@ var _ = Describe("Seed Care Control", func() {
 
 	Describe("#Reconcile", func() {
 		Describe("emergency switch annotation condition", func() {
-			var (
-				req        reconcile.Request
-				conditions []gardencorev1beta1.Condition
-			)
+			var req reconcile.Request
 
 			BeforeEach(func() {
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: seedName}}
@@ -201,18 +198,6 @@ var _ = Describe("Seed Care Control", func() {
 				controllerConfig = gardenletconfigv1alpha1.SeedCareControllerConfiguration{
 					SyncPeriod: &metav1.Duration{Duration: careSyncPeriod},
 				}
-
-				conditions = []gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.SeedSystemComponentsHealthy,
-						Status: gardencorev1beta1.ConditionTrue,
-						Reason: "foo",
-					},
-				}
-				DeferCleanup(test.WithVars(&NewHealthCheck,
-					healthCheckFunc(func(_ SeedConditions) []gardencorev1beta1.Condition {
-						return conditions
-					})))
 			})
 
 			JustBeforeEach(func() {
@@ -222,7 +207,7 @@ var _ = Describe("Seed Care Control", func() {
 
 			It("should add a condition for a set annotation", func() {
 				seed.Annotations = map[string]string{
-					v1beta1constants.AnnotationDisableShootReconciliations: "true",
+					v1beta1constants.AnnotationEmergencyStopShootReconciliations: "true",
 				}
 				Expect(gardenClient.Update(ctx, seed)).To(Succeed())
 
@@ -230,20 +215,24 @@ var _ = Describe("Seed Care Control", func() {
 
 				updatedSeed := &gardencorev1beta1.Seed{}
 				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
-				Expect(updatedSeed.Status.Conditions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Type":    BeEquivalentTo("SeedDisabledShootReconciliations"),
-					"Status":  BeEquivalentTo("True"),
-					"Reason":  Equal("SeedDisabledShootReconciliations"),
-					"Message": Equal("Reconciliations of Shoots managed by this Seed cluster are currently disabled by annotation."),
-				})))
+				Expect(updatedSeed.Status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type": BeEquivalentTo("SeedSystemComponentsHealthy"),
+					}), MatchFields(IgnoreExtras, Fields{
+						"Type":    BeEquivalentTo("EmergencyStopShootReconciliations"),
+						"Status":  BeEquivalentTo("False"),
+						"Reason":  Equal("EmergencyStopShootReconciliations"),
+						"Message": Equal("Reconciliations of Shoots managed by this Seed cluster are currently disabled by annotation."),
+					}),
+				))
 			})
 
 			It("should remove a previously set condition for a removed annotation", func() {
 				seed.Status.Conditions = []gardencorev1beta1.Condition{
 					{
-						Type:    gardencorev1beta1.SeedDisabledShootReconciliations,
-						Status:  gardencorev1beta1.ConditionTrue,
-						Reason:  string(gardencorev1beta1.SeedDisabledShootReconciliations),
+						Type:    gardencorev1beta1.SeedEmergencyStopShootReconciliations,
+						Status:  gardencorev1beta1.ConditionFalse,
+						Reason:  string(gardencorev1beta1.SeedEmergencyStopShootReconciliations),
 						Message: "Reconciliations of Shoots managed by this Seed cluster are currently disabled by annotation.",
 					},
 				}
@@ -253,7 +242,9 @@ var _ = Describe("Seed Care Control", func() {
 
 				updatedSeed := &gardencorev1beta1.Seed{}
 				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
-				Expect(updatedSeed.Status.Conditions).To(ConsistOf(conditions))
+				Expect(updatedSeed.Status.Conditions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
+					"Type": BeEquivalentTo("SeedSystemComponentsHealthy"),
+				})))
 			})
 		})
 	})

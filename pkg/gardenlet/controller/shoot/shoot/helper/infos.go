@@ -73,7 +73,7 @@ type ControllerInfos struct {
 	alreadyReconciledDuringThisTimeWindow bool
 
 	// based on seed object
-	isReconciliationPaused bool
+	emergencyStopReconciliations bool
 
 	// based on gardenlet config and shoot object
 	syncPeriod time.Duration
@@ -109,7 +109,7 @@ func CalculateControllerInfos(seed *gardencorev1beta1.Seed, shoot *gardencorev1b
 		isNowInEffectiveMaintenanceTimeWindow: gardenerutils.IsNowInEffectiveShootMaintenanceTimeWindow(shoot, clock),
 		alreadyReconciledDuringThisTimeWindow: gardenerutils.LastReconciliationDuringThisTimeWindow(shoot, clock),
 
-		isReconciliationPaused: v1beta1helper.HasShootReconciliationsDisabledAnnotation(seed),
+		emergencyStopReconciliations: v1beta1helper.HasShootReconciliationsDisabledAnnotation(seed),
 
 		syncPeriod: gardenerutils.SyncPeriodOfShoot(respectSyncPeriodOverwrite, cfg.SyncPeriod.Duration, shoot),
 	}
@@ -132,7 +132,7 @@ func (i ControllerInfos) shouldReconcileNow() ReconcileNowDecision {
 	}
 
 	// Emergency switch: Check Seed annotation to block reconciliation if needed
-	if i.isReconciliationPaused {
+	if i.emergencyStopReconciliations {
 		return ReconcileNowDecision{
 			Result: false,
 			Reason: "Shoot reconciliation blocked by Seed emergency switch",

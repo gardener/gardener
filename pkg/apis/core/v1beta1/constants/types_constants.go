@@ -1037,7 +1037,7 @@ const (
 	// the garden cluster should be injected.
 	LabelInjectGardenKubeconfig = "extensions.gardener.cloud/inject-garden-kubeconfig"
 
-	// AnnotationDisableShootReconciliations is the key for the emergency switch annotation for the seed resource
+	// AnnotationEmergencyStopShootReconciliations is the key for the emergency switch annotation for the seed resource
 	// to temporarily pause further shoot reconciliations.
-	AnnotationDisableShootReconciliations = "gardener.cloud/disable-shoot-reconciliations"
+	AnnotationEmergencyStopShootReconciliations = "shoot.gardener.cloud/emergency-stop-reconciliations"
 )

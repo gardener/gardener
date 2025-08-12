@@ -187,7 +187,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			seed := createSeed("some-region", nil, nil)
 			seed.Annotations = map[string]string{
-				constants.AnnotationDisableShootReconciliations: "true",
+				constants.AnnotationEmergencyStopShootReconciliations: "true",
 			}
 			Expect(testClient.Update(ctx, seed)).To(Succeed())
 			shoot := createShoot(cloudProfile.Name, "some-region", nil, ptr.To("somedns.example.com"), nil, nil)

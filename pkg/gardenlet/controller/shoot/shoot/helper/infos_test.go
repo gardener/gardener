@@ -178,7 +178,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "seed",
 						Annotations: map[string]string{
-							v1beta1constants.AnnotationDisableShootReconciliations: "true",
+							v1beta1constants.AnnotationEmergencyStopShootReconciliations: "true",
 						},
 					},
 				}
@@ -187,6 +187,24 @@ var _ = Describe("CalculateControllerInfos", func() {
 			It("should not reconcile the shoot", func() {
 				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldReconcileNow.Reason).To(Equal("Shoot reconciliation blocked by Seed emergency switch"))
+			})
+		})
+
+		Context("seed with inactive emergency switch does not block reconciliations", func() {
+			BeforeEach(func() {
+				seed = &gardencorev1beta1.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "seed",
+						Annotations: map[string]string{
+							v1beta1constants.AnnotationEmergencyStopShootReconciliations: "false",
+						},
+					},
+				}
+			})
+
+			It("should not reconcile the shoot", func() {
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Reason).To(BeEmpty())
 			})
 		})
 	})
@@ -423,7 +441,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "seed",
 						Annotations: map[string]string{
-							v1beta1constants.AnnotationDisableShootReconciliations: "true",
+							v1beta1constants.AnnotationEmergencyStopShootReconciliations: "true",
 						},
 					},
 				}
@@ -432,6 +450,24 @@ var _ = Describe("CalculateControllerInfos", func() {
 			It("should not reconcile the shoot", func() {
 				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldReconcileNow.Reason).To(Equal("Shoot reconciliation blocked by Seed emergency switch"))
+			})
+		})
+
+		Context("seed with inactive emergency switch does not block reconciliations", func() {
+			BeforeEach(func() {
+				seed = &gardencorev1beta1.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "seed",
+						Annotations: map[string]string{
+							v1beta1constants.AnnotationEmergencyStopShootReconciliations: "false",
+						},
+					},
+				}
+			})
+
+			It("should not reconcile the shoot", func() {
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Reason).To(BeEmpty())
 			})
 		})
 	})

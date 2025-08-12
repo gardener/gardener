@@ -213,6 +213,7 @@ var _ = Describe("Seed health", func() {
 
 				Expect(conditions.ConvertToSlice()).To(ConsistOf(
 					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -220,12 +221,14 @@ var _ = Describe("Seed health", func() {
 				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: "SeedSystemComponentsHealthy"},
+						{Type: "EmergencyStopShootReconciliations"},
 						{Type: "Foo"},
 					},
 				})
 
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
 					OfType("SeedSystemComponentsHealthy"),
+					OfType("EmergencyStopShootReconciliations"),
 				))
 			})
 		})
@@ -236,6 +239,7 @@ var _ = Describe("Seed health", func() {
 
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
 					OfType("SeedSystemComponentsHealthy"),
+					OfType("EmergencyStopShootReconciliations"),
 				))
 			})
 		})
@@ -246,6 +250,7 @@ var _ = Describe("Seed health", func() {
 
 				Expect(conditions.ConditionTypes()).To(HaveExactElements(
 					gardencorev1beta1.ConditionType("SeedSystemComponentsHealthy"),
+					gardencorev1beta1.ConditionType("EmergencyStopShootReconciliations"),
 				))
 			})
 		})

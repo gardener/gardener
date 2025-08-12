@@ -133,6 +133,6 @@ func HasShootReconciliationsDisabledAnnotation(seed *gardencorev1beta1.Seed) boo
 	if seed == nil {
 		return false
 	}
-	value, ok := seed.Annotations[v1beta1constants.AnnotationDisableShootReconciliations]
+	value, ok := seed.Annotations[v1beta1constants.AnnotationEmergencyStopShootReconciliations]
 	return ok && value == "true"
 }
