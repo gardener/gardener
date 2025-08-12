@@ -21,6 +21,17 @@ if [ "$1" == "-h" ] || [ "$#" -ne 2 ]; then
   usage
 fi
 
+old_major=$(echo "$1" | cut -d '.' -f 1)
+old_minor=$(echo "$1" | cut -d '.' -f 2)
+new_major=$(echo "$2" | cut -d '.' -f 1)
+new_minor=$(echo "$2" | cut -d '.' -f 2)
+
+# Check if the new version is exactly one minor version higher than the old version
+if [ "$old_major" -ne "$new_major" ] || [ "$((old_minor + 1))" -ne "$new_minor" ]; then
+  echo "Error: The new version must be exactly one minor version higher than the old version."
+  exit 1
+fi
+
 versions=("$1" "$2")
 out_dir=$(mktemp -d)
 function cleanup_output {
