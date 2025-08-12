@@ -376,15 +376,6 @@ kubectl -n kube-system get configmap coredns -ojson | \
   kubectl -n kube-system patch configmap coredns --patch-file /dev/stdin
 
 if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-  # The local registry does only serve HTTP, so we have to make sure it is accessed insecurely.
-  mkdir -p /etc/docker
-  cat <<EOF > /etc/docker/daemon.json
-{
-  "insecure-registries" : [ "garden.local.gardener.cloud:5001" ]
-}
-EOF
-  kill -1 $(pgrep dockerd)
-
   # The CoreDNS pods in the kind cluster can only talk via IPv6, but the nameserver in the kind cluster is set to the
   # host's IPv4 address. Hence, we have to replace it with the IPv6 address to make sure CoreDNS can communicate with
   # it.

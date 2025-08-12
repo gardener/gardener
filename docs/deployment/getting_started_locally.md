@@ -96,7 +96,7 @@ ip6tables -t nat -A POSTROUTING -o $(ip route | grep '^default') -s fd00:10::/64
 make gardener-up
 ```
 
-> If you want to setup an IPv6 ready Gardener, use `make gardener-up IPFAMILY=ipv6` instead.
+> If you want to setup an IPv6 ready Gardener, use `make operator-seed-up IPFAMILY=ipv6` instead.
 
 This will first build the base images (which might take a bit if you do it for the first time).
 Afterwards, the Gardener resources will be deployed into the cluster.
