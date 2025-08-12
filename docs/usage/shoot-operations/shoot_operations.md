@@ -66,6 +66,14 @@ It will also be removed even if the restart of one or more services failed.
 
 > ℹ️ In the example mentioned above, you could additionally verify when/whether the kubelet restarted by using `kubectl describe node <node-name>` and looking for such a `Starting kubelet` event.
 
+## Running operations in parallel
+
+Specific `Shoot` operations can also be ran in parallel by using `;` as separator.
+
+``` bash
+kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation="rotate-ssh-keypair;rotate-ca-start"
+```
+
 ## Force Deletion
 
 When a Shoot fails to be deleted normally, users can force-delete the Shoot if it meets the following conditions:
