@@ -35,7 +35,7 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 	}
 
 	log.Info("Cleaning up prometheus obsolete folders")
-	if err := cleanupPrometheusObsoleteFolders(ctx, log, g.mgr.GetClient()); err != nil {
+	if err := removePrometheusFolderCleanedupAnnotation(ctx, log, g.mgr.GetClient()); err != nil {
 		return fmt.Errorf("failed cleaning up prometheus obsolete folders: %w", err)
 	}
 
@@ -106,8 +106,8 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 	return flow.Parallel(taskFns...)(ctx)
 }
 
-// TODO(vicwicker): Remove this after v1.125 has been released.
-func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seedClient client.Client) error {
+// TODO(vicwicker): Remove this after v1.128 has been released.
+func removePrometheusFolderCleanedupAnnotation(ctx context.Context, log logr.Logger, seedClient client.Client) error {
 	var tasks []flow.TaskFn
 
 	getPrometheusWithPatch := func(ctx context.Context, namespace string) (*monitoringv1.Prometheus, client.Patch, error) {
@@ -147,7 +147,7 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 		return false, nil
 	}
 
-	log.Info("Clean up obsolete Prometheus folders")
+	log.Info("Remove folder cleaned up annotations from Prometheus")
 
 	// check if the Cluster resource is available in the seed cluster
 	gvk := schema.GroupVersionKind{
@@ -166,7 +166,7 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 
 	clusterList := &extensionsv1alpha1.ClusterList{}
 	if err := seedClient.List(ctx, clusterList); err != nil {
-		return fmt.Errorf("failed to list clusters while cleaning up Prometheus obsolete folders: %w", err)
+		return fmt.Errorf("failed to list clusters for annotation removal from Prometheus: %w", err)
 	}
 
 	for _, cluster := range clusterList.Items {
@@ -177,30 +177,26 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 			}
 
 			if skip {
-				log.Info("Skip cleanup for cluster", "cluster", cluster.Name)
+				log.Info("Skip annotation removal for cluster", "cluster", cluster.Name)
 				return nil
 			}
 
 			prometheus, prometheusPatch, err := getPrometheusWithPatch(ctx, cluster.Name)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
-					log.Info("Prometheus resource not found, skipping cleanup", "cluster", cluster.Name)
+					log.Info("Prometheus resource not found, skipping annotation removal", "cluster", cluster.Name)
 					return nil
 				}
 				return fmt.Errorf("failed to get Prometheus resource for cluster %s: %w", cluster.Name, err)
 			}
 
-			if value, ok := prometheus.Annotations[resourcesv1alpha1.PrometheusObsoleteFolderCleanedUp]; ok && value == "true" {
-				// migration already done, nothing to do
+			if _, ok := prometheus.Annotations[resourcesv1alpha1.PrometheusObsoleteFolderCleanedUp]; !ok {
+				// annotation already removed, nothing to do
 				return nil
 			}
 
-			prometheus.Annotations[resourcesv1alpha1.PrometheusObsoleteFolderCleanedUp] = "true"
-			if err := seedClient.Patch(ctx, prometheus, prometheusPatch); err != nil {
-				return fmt.Errorf("failed to mark Prometheus resource as cleaned up for cluster %s: %w", cluster.Name, err)
-			}
-
-			return nil
+			delete(prometheus.Annotations, resourcesv1alpha1.PrometheusObsoleteFolderCleanedUp)
+			return seedClient.Patch(ctx, prometheus, prometheusPatch)
 		})
 	}
 
