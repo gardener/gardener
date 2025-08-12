@@ -1545,4 +1545,48 @@ var _ = Describe("Helper", func() {
 			Expect(GetBackupConfigForShoot(shoot, seed)).To(Equal(shootBackup))
 		})
 	})
+
+	DescribeTable("#GetShootGardenerOperations",
+		func(annotations map[string]string, expectedResult []string) {
+			Expect(GetShootGardenerOperations(annotations)).To(Equal(expectedResult))
+		},
+		Entry("annotations are empty", nil, nil),
+		Entry("gardener.cloud/operation annotation is not set", map[string]string{
+			"maintenance.gardener.cloud/operation": "foo",
+		}, nil),
+		Entry("gardener.cloud/operation annotation is empty", map[string]string{
+			"gardener.cloud/operation": "",
+		}, nil),
+		Entry("gardener.cloud/operation has single operation", map[string]string{
+			"gardener.cloud/operation": "reconcile",
+		}, []string{"reconcile"}),
+		Entry("gardener.cloud/operation has multiple operations", map[string]string{
+			"gardener.cloud/operation": "reconcile;rorate-credentials-start;rotate-ssh-keypair",
+		}, []string{"reconcile", "rorate-credentials-start", "rotate-ssh-keypair"}),
+		Entry("gardener.cloud/operation has whitespaces", map[string]string{
+			"gardener.cloud/operation": "reconcile ;rorate-credentials-start  ; rotate-ssh-keypair;   ",
+		}, []string{"reconcile", "rorate-credentials-start", "rotate-ssh-keypair", ""}),
+	)
+
+	DescribeTable("#GetShootMaintenanceOperations",
+		func(annotations map[string]string, expectedResult []string) {
+			Expect(GetShootMaintenanceOperations(annotations)).To(Equal(expectedResult))
+		},
+		Entry("annotations are empty", nil, nil),
+		Entry("maintenance.gardener.cloud/operation annotation is not set", map[string]string{
+			"gardener.cloud/operation": "foo",
+		}, nil),
+		Entry("maintenance.gardener.cloud/operation annotation is empty", map[string]string{
+			"maintenance.gardener.cloud/operation": "",
+		}, nil),
+		Entry("maintenance.gardener.cloud/operation has single operation", map[string]string{
+			"maintenance.gardener.cloud/operation": "reconcile",
+		}, []string{"reconcile"}),
+		Entry("maintenance.gardener.cloud/operation has multiple operations", map[string]string{
+			"maintenance.gardener.cloud/operation": "reconcile;rorate-credentials-start;rotate-ssh-keypair",
+		}, []string{"reconcile", "rorate-credentials-start", "rotate-ssh-keypair"}),
+		Entry("maintenance.gardener.cloud/operation has whitespaces", map[string]string{
+			"maintenance.gardener.cloud/operation": "reconcile ;rorate-credentials-start  ; rotate-ssh-keypair;   ",
+		}, []string{"reconcile", "rorate-credentials-start", "rotate-ssh-keypair", ""}),
+	)
 })
