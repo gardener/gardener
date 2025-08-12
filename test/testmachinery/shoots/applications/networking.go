@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -56,6 +57,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		}
 		ginkgo.By("Deploy the net test daemon set")
 		framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, "network-nginx-serviceaccount.yaml.tpl", templateParams))
+		framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, "network-nginx-configmap.yaml.tpl", templateParams))
 		framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.NginxDaemonSetName, templateParams))
 
 		err := f.WaitUntilDaemonSetIsRunning(ctx, f.ShootClient.Client(), name, f.Namespace)
@@ -72,7 +74,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 			for _, to := range pods.Items {
 				ginkgo.By(fmt.Sprintf("Testing %s to %s", from.GetName(), to.GetName()))
 				stdout, _, err := f.ShootClient.PodExecutor().Execute(ctx, from.Namespace, from.Name, "pause",
-					"curl", "-L", to.Status.PodIP+":80", "--fail", "-m", "10",
+					"curl", "-L", net.JoinHostPort(to.Status.PodIP, "80"), "--fail", "-m", "10",
 				)
 				if err != nil {
 					allErrs = multierror.Append(allErrs, fmt.Errorf("%s to %s: %w", from.GetName(), to.GetName(), err))
