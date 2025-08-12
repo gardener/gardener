@@ -12,6 +12,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
@@ -250,4 +251,22 @@ func GetEncryptedResourcesInStatus(gardenStatus operatorv1alpha1.GardenStatus) [
 	}
 
 	return nil
+}
+
+// GetGardenerOperations returns the Garden's gardener operations specified in the operation annotation.
+func GetGardenerOperations(annotations map[string]string) []string {
+	return splitAndTrimString(annotations[v1beta1constants.GardenerOperation], ";")
+}
+
+func splitAndTrimString(s, sep string) []string {
+	var res []string
+
+	if len(s) == 0 {
+		return res
+	}
+
+	for _, s0 := range strings.Split(s, sep) {
+		res = append(res, (strings.TrimSpace(s0)))
+	}
+	return res
 }
