@@ -77,6 +77,7 @@ func (k *kubeAPIServer) reconcileServiceMonitor(ctx context.Context, serviceMoni
 					"apiserver_registered_watchers",
 					"apiserver_request_count",
 					"apiserver_request_total",
+					"apiserver_validating_admission_policy_check_total",
 					"apiserver_watch_duration",
 					"apiserver_watch_events_sizes_.+",
 					"apiserver_watch_events_total",
