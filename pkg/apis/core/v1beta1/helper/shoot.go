@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -756,4 +757,27 @@ func GetShootEncryptedResourcesInStatus(shootStatus gardencorev1beta1.ShootStatu
 	}
 
 	return nil
+}
+
+// GetShootGardenerOperations returns the Shoot's gardener operations specified in the operation annotation.
+func GetShootGardenerOperations(annotations map[string]string) []string {
+	return splitAndTrimString(annotations[v1beta1constants.GardenerOperation], ";")
+}
+
+// GetShootMaintenanceOperations returns the Shoot's maintenance operations specified in the operation annotation.
+func GetShootMaintenanceOperations(annotations map[string]string) []string {
+	return splitAndTrimString(annotations[v1beta1constants.GardenerMaintenanceOperation], ";")
+}
+
+func splitAndTrimString(s, sep string) []string {
+	var res []string
+
+	if len(s) == 0 {
+		return res
+	}
+
+	for _, s0 := range strings.Split(s, sep) {
+		res = append(res, (strings.TrimSpace(s0)))
+	}
+	return res
 }
