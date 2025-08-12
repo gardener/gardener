@@ -22,6 +22,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
@@ -180,6 +181,25 @@ var _ = Describe("Scheduler tests", func() {
 				g.Expect(shoot.Spec.SeedName).To(PointTo(Equal(seed.Name)))
 				g.Expect(shoot.Status.LastOperation).To(BeNil())
 			}).Should(Succeed())
+		})
+
+		It("should fail because there is no seed with enabled shoot reconciliations", func() {
+			cloudProfile := createCloudProfile("some-region")
+			seed := createSeed("some-region", nil, nil)
+			seed.Annotations = map[string]string{
+				constants.AnnotationDisableShootReconciliations: "true",
+			}
+			Expect(testClient.Update(ctx, seed)).To(Succeed())
+			shoot := createShoot(cloudProfile.Name, "some-region", nil, ptr.To("somedns.example.com"), nil, nil)
+
+			Eventually(func(g Gomega) string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				g.Expect(shoot.Spec.SeedName).To(BeNil())
+				g.Expect(shoot.Status.LastOperation).NotTo(BeNil())
+				g.Expect(shoot.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeCreate))
+				g.Expect(shoot.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStatePending))
+				return shoot.Status.LastOperation.Description
+			}).Should(ContainSubstring("none of the 1 seeds has enabled shoot reconciliations currently"))
 		})
 	})
 
