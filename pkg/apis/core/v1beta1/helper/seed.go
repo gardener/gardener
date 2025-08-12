@@ -10,6 +10,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // TaintsHave returns true if the given key is part of the taints list.
@@ -125,4 +126,13 @@ func CalculateSeedUsage(shootList []*gardencorev1beta1.Shoot) map[string]int {
 	}
 
 	return m
+}
+
+// HasShootReconciliationsDisabledAnnotation returns true if shoot reconciliations are currently disabled for the given seed.
+func HasShootReconciliationsDisabledAnnotation(seed *gardencorev1beta1.Seed) bool {
+	if seed == nil {
+		return false
+	}
+	value, ok := seed.Annotations[v1beta1constants.AnnotationDisableShootReconciliations]
+	return ok && value == "true"
 }

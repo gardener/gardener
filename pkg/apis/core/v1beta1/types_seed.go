@@ -454,6 +454,8 @@ const (
 	SeedGardenletReady ConditionType = "GardenletReady"
 	// SeedSystemComponentsHealthy is a constant for a condition type indicating the system components health.
 	SeedSystemComponentsHealthy ConditionType = "SeedSystemComponentsHealthy"
+	// SeedDisabledShootReconciliations is a constant for a condition type indicating disabled shoot reconciliations.
+	SeedDisabledShootReconciliations ConditionType = "SeedDisabledShootReconciliations"
 )
 
 // Resource constants for Gardener object types

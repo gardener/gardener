@@ -76,11 +76,27 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		seedConditions,
 	)
 
+	removeExistingReconciliationsBlockedCondition := false
+	if v1beta1helper.HasShootReconciliationsDisabledAnnotation(seed) {
+		updatedConditions = v1beta1helper.MergeConditions(seed.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(
+			r.Clock,
+			v1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedDisabledShootReconciliations),
+			gardencorev1beta1.ConditionTrue,
+			string(gardencorev1beta1.SeedDisabledShootReconciliations),
+			"Reconciliations of Shoots managed by this Seed cluster are currently disabled by annotation.",
+		))
+	} else if v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedDisabledShootReconciliations) != nil {
+		removeExistingReconciliationsBlockedCondition = true
+	}
+
 	// Update Seed status conditions if necessary
-	if v1beta1helper.ConditionsNeedUpdate(seedConditions.ConvertToSlice(), updatedConditions) {
+	if v1beta1helper.ConditionsNeedUpdate(seedConditions.ConvertToSlice(), updatedConditions) || removeExistingReconciliationsBlockedCondition {
 		// Rebuild seed conditions to ensure that only the conditions with the
 		// correct types will be updated, and any other conditions will remain intact
 		conditions := v1beta1helper.BuildConditions(seed.Status.Conditions, updatedConditions, seedConditions.ConditionTypes())
+		if removeExistingReconciliationsBlockedCondition {
+			conditions = v1beta1helper.RemoveConditions(conditions, gardencorev1beta1.SeedDisabledShootReconciliations)
+		}
 
 		log.Info("Updating seed status conditions")
 		patch := client.StrategicMergeFrom(seed.DeepCopy())
