@@ -39,7 +39,7 @@
 {{- if .Values.gardener.garden.deployed -}}
 - containerPort: 31443
   hostPort: 443
-  listenAddress: 172.18.255.3
+  listenAddress: {{ .Values.gardener.garden.virtualGarden.listenAddress }}
 {{- end -}}
 {{- end -}}
 

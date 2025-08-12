@@ -20,6 +20,8 @@ gardener:
   repositoryRoot: "."
   garden:
     deployed: false
+    virtualGarden:
+      listenAddress: 172.18.255.3
 
 backupBucket:
   deployed: true
