@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+  - patch: |
+      # Those CIDRs must match those specified in the kind Cluster configuration.
+      - op: replace
+        path: /spec/runtimeCluster/networking/nodes
+        value:
+        - fd00:10::/64
+      - op: replace
+        path: /spec/runtimeCluster/networking/pods
+        value:
+        - fd00:10:1::/56
+      - op: replace
+        path: /spec/runtimeCluster/networking/services
+        value:
+        - fd00:10:2::/112
+      - op: replace
+        path: /spec/virtualCluster/networking/services
+        value:
+        - fd00:10:4::/112
+    target:
+      group: operator.gardener.cloud
+      kind: Garden
+      name: local
