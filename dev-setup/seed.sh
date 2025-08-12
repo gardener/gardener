@@ -31,7 +31,7 @@ case "$COMMAND" in
     skaffold run \
       -m garden-config \
       --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" \
-		  --status-check=false --platform="linux/$SYSTEM_ARCH" 	# deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
+      --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 
     skaffold $skaffold_command \
       -m gardenlet \
