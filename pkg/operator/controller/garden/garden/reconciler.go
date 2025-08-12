@@ -7,6 +7,7 @@ package garden
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -543,4 +544,17 @@ func getValidVolumeSize(volume *operatorv1alpha1.Volume, size string) string {
 	}
 
 	return size
+}
+
+func valiEnabled(networking operatorv1alpha1.RuntimeNetworking) (bool, error) {
+	for _, cidr := range networking.Pods {
+		if _, ipNet, err := net.ParseCIDR(cidr); err != nil {
+			return false, fmt.Errorf("failed parsing %q as CIDR: %w", networking.Pods, err)
+		} else if ipNet.IP.To4() == nil {
+			// If To4() returns nil, it's IPv6
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
