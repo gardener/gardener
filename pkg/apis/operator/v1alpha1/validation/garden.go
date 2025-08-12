@@ -67,7 +67,7 @@ func init() {
 func ValidateGarden(garden *operatorv1alpha1.Garden, extensions []operatorv1alpha1.Extension) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateOperation(garden.Annotations[v1beta1constants.GardenerOperation], garden, field.NewPath("metadata", "annotations"))...)
+	allErrs = append(allErrs, validateOperation(helper.GetGardenerOperations(garden.Annotations), garden, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, validateDNS(garden.Spec.DNS, field.NewPath("spec", "dns"))...)
 	allErrs = append(allErrs, validateExtensions(garden.Spec.Extensions, extensions, field.NewPath("spec", "extensions"))...)
 	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.DNS, garden.Spec.RuntimeCluster, helper.HighAvailabilityEnabled(garden), field.NewPath("spec", "runtimeCluster"))...)
@@ -610,19 +610,19 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 	return allErrs
 }
 
-func validateOperation(operation string, garden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
+func validateOperation(operations []string, garden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs       = field.ErrorList{}
 		k8sLess134, _ = versionutils.CheckVersionMeetsConstraint(garden.Spec.VirtualCluster.Kubernetes.Version, "< 1.34")
 	)
 
-	if operation == "" {
+	if len(operations) == 0 {
 		return allErrs
 	}
 
 	fldPathOp := fldPath.Key(v1beta1constants.GardenerOperation)
 
-	if operation != "" {
+	for _, operation := range operations {
 		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(operation) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", operation)))
 		}
@@ -631,12 +631,12 @@ func validateOperation(operation string, garden *operatorv1alpha1.Garden, fldPat
 		}
 	}
 
-	allErrs = append(allErrs, validateOperationContext(operation, garden, fldPathOp)...)
+	allErrs = append(allErrs, validateOperationContext(operations, garden, fldPathOp)...)
 
 	return allErrs
 }
 
-func validateOperationContext(operation string, garden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
+func validateOperationContext(operations []string, garden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs                  = field.ErrorList{}
 		encryptedResources       = sets.New[schema.GroupResource]()
@@ -659,110 +659,112 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 	resourcesToEncrypt.Insert(sharedcomponent.GetResourcesForEncryptionFromConfig(encryptionConfig)...)
 	resourcesToEncrypt.Insert(sharedcomponent.GetResourcesForEncryptionFromConfig(gardenerEncryptionConfig)...)
 
-	switch operation {
-	case v1beta1constants.OperationRotateCredentialsStart:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if garden has deletion timestamp"))
-		}
-		if phase := helper.GetCARotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"))
-		}
-		if phase := helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.serviceAccountKey.phase is not 'Completed'"))
-		}
-		if phase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
-		}
-		if phase := helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.workloadIdentityKey.phase is not 'Completed'"))
-		}
-		if !resourcesToEncrypt.Equal(encryptedResources) {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials because a previous encryption configuration change is currently being rolled out"))
-		}
-	case v1beta1constants.OperationRotateCredentialsComplete:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if garden has deletion timestamp"))
-		}
-		if helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
-		}
-		if helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
-		}
-		if k8sLess134 && helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
-		}
-		if helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.workloadIdentityKey.phase is not 'Prepared'"))
-		}
+	for _, operation := range operations {
+		switch operation {
+		case v1beta1constants.OperationRotateCredentialsStart:
+			if garden.DeletionTimestamp != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if garden has deletion timestamp"))
+			}
+			if phase := helper.GetCARotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"))
+			}
+			if phase := helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.serviceAccountKey.phase is not 'Completed'"))
+			}
+			if phase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
+			}
+			if phase := helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.workloadIdentityKey.phase is not 'Completed'"))
+			}
+			if !resourcesToEncrypt.Equal(encryptedResources) {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials because a previous encryption configuration change is currently being rolled out"))
+			}
+		case v1beta1constants.OperationRotateCredentialsComplete:
+			if garden.DeletionTimestamp != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if garden has deletion timestamp"))
+			}
+			if helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
+			}
+			if helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
+			}
+			if k8sLess134 && helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
+			}
+			if helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.workloadIdentityKey.phase is not 'Prepared'"))
+			}
 
-	case v1beta1constants.OperationRotateCAStart:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if garden has deletion timestamp"))
-		}
-		if phase := helper.GetCARotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"))
-		}
-	case v1beta1constants.OperationRotateCAComplete:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete CA rotation if garden has deletion timestamp"))
-		}
-		if helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
-		}
+		case v1beta1constants.OperationRotateCAStart:
+			if garden.DeletionTimestamp != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if garden has deletion timestamp"))
+			}
+			if phase := helper.GetCARotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"))
+			}
+		case v1beta1constants.OperationRotateCAComplete:
+			if garden.DeletionTimestamp != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete CA rotation if garden has deletion timestamp"))
+			}
+			if helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
+			}
 
-	case v1beta1constants.OperationRotateServiceAccountKeyStart:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if garden has deletion timestamp"))
-		}
-		if phase := helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Completed'"))
-		}
-	case v1beta1constants.OperationRotateServiceAccountKeyComplete:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if garden has deletion timestamp"))
-		}
-		if helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
-		}
+		case v1beta1constants.OperationRotateServiceAccountKeyStart:
+			if garden.DeletionTimestamp != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if garden has deletion timestamp"))
+			}
+			if phase := helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Completed'"))
+			}
+		case v1beta1constants.OperationRotateServiceAccountKeyComplete:
+			if garden.DeletionTimestamp != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if garden has deletion timestamp"))
+			}
+			if helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
+			}
 
-	case v1beta1constants.OperationRotateETCDEncryptionKeyStart, v1beta1constants.OperationRotateETCDEncryptionKey:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if garden has deletion timestamp"))
-		}
-		if phase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
-		}
-		if !resourcesToEncrypt.Equal(encryptedResources) {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation because a previous encryption configuration change is currently being rolled out"))
-		}
-	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if garden has deletion timestamp"))
-		}
-		if helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
-		}
+		case v1beta1constants.OperationRotateETCDEncryptionKeyStart, v1beta1constants.OperationRotateETCDEncryptionKey:
+			if garden.DeletionTimestamp != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if garden has deletion timestamp"))
+			}
+			if phase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
+			}
+			if !resourcesToEncrypt.Equal(encryptedResources) {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation because a previous encryption configuration change is currently being rolled out"))
+			}
+		case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
+			if garden.DeletionTimestamp != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if garden has deletion timestamp"))
+			}
+			if helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
+			}
 
-	case v1beta1constants.OperationRotateObservabilityCredentials:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start Observability credentials rotation if garden has deletion timestamp"))
-		}
+		case v1beta1constants.OperationRotateObservabilityCredentials:
+			if garden.DeletionTimestamp != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start Observability credentials rotation if garden has deletion timestamp"))
+			}
 
-	case operatorv1alpha1.OperationRotateWorkloadIdentityKeyStart:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start workload identity key rotation if garden has deletion timestamp"))
-		}
-		if phase := helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start workload identity key rotation if .status.credentials.rotation.workloadIdentityKey.phase is not 'Completed'"))
-		}
+		case operatorv1alpha1.OperationRotateWorkloadIdentityKeyStart:
+			if garden.DeletionTimestamp != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start workload identity key rotation if garden has deletion timestamp"))
+			}
+			if phase := helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start workload identity key rotation if .status.credentials.rotation.workloadIdentityKey.phase is not 'Completed'"))
+			}
 
-	case operatorv1alpha1.OperationRotateWorkloadIdentityKeyComplete:
-		if garden.DeletionTimestamp != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete workload identity key rotation if garden has deletion timestamp"))
-		}
-		if helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete workload identity key rotation if .status.credentials.rotation.workloadIdentityKey.phase is not 'Prepared'"))
+		case operatorv1alpha1.OperationRotateWorkloadIdentityKeyComplete:
+			if garden.DeletionTimestamp != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete workload identity key rotation if garden has deletion timestamp"))
+			}
+			if helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete workload identity key rotation if .status.credentials.rotation.workloadIdentityKey.phase is not 'Prepared'"))
+			}
 		}
 	}
 
