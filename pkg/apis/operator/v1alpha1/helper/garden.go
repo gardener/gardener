@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
@@ -227,4 +228,22 @@ func GetAPIServerSNIDomains(domains []string, sni operatorv1alpha1.SNI) []string
 	}
 
 	return sniDomains
+}
+
+// GetGardenerOperations returns the Garden's gardener operations specified in the operation annotation.
+func GetGardenerOperations(annotations map[string]string) []string {
+	return splitAndTrimString(annotations[v1beta1constants.GardenerOperation], ";")
+}
+
+func splitAndTrimString(s, sep string) []string {
+	var res []string
+
+	if len(s) == 0 {
+		return res
+	}
+
+	for _, s0 := range strings.Split(s, sep) {
+		res = append(res, (strings.TrimSpace(s0)))
+	}
+	return res
 }
