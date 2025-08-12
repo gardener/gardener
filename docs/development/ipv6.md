@@ -18,11 +18,24 @@ If you're on a different OS or don't have IPv6 connectivity in your office envir
 To get started with the IPv6 setup and create a local IPv6 single-stack shoot cluster, run the following commands:
 
 ```bash
-make kind-up gardener-up IPFAMILY=ipv6
+make kind-single-node-up operator-seed-up IPFAMILY=ipv6
+export KUBECONFIG=dev-setup/kubeconfigs/virtual-garden/kubeconfig
 k apply -f example/provider-local/shoot-ipv6.yaml
 ```
 
 Please also take a look at the guide on [Deploying Gardener Locally](../deployment/getting_started_locally.md) for more details on setting up an IPv6 gardener for testing or development purposes.
+
+> [!NOTE]
+> In case you have issues with pushing to the local registry because it only serves HTTP and no HTTPS, you might need to tell the Docker daemon that it should access it insecurely:
+> ```bash
+> $ mkdir -p /etc/docker
+> $ cat <<EOF > /etc/docker/daemon.json
+> {
+>   "insecure-registries" : [ "garden.local.gardener.cloud:5001" ]
+> }
+> EOF
+> $ kill -1 $(pgrep dockerd)
+> ```
 
 ## Container Images
 
