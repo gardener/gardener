@@ -96,6 +96,8 @@ ensure_glgc_resolves_to_localhost() {
     echo "> Adding garden.local.gardener.cloud to /etc/hosts..."
     printf "\n127.0.0.1 garden.local.gardener.cloud\n" >> /etc/hosts
     printf "\n::1 garden.local.gardener.cloud\n" >> /etc/hosts
+    printf "\n127.0.0.3 api.virtual-garden.local.gardener.cloud\n" >> /etc/hosts
+    printf "\n::3 api.virtual-garden.local.gardener.cloud\n" >> /etc/hosts
     echo "> Content of '/etc/hosts' after adding garden.local.gardener.cloud:\n$(cat /etc/hosts)"
   fi
 }

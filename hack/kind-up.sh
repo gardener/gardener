@@ -375,6 +375,32 @@ kubectl -n kube-system get configmap coredns -ojson | \
   kubectl -n kube-system create configmap coredns --from-file Corefile=/dev/stdin --dry-run=client -oyaml | \
   kubectl -n kube-system patch configmap coredns --patch-file /dev/stdin
 
+if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+  # The local registry does only serve HTTP, so we have to make sure it is accessed insecurely.
+  mkdir -p /etc/docker
+  cat <<EOF > /etc/docker/daemon.json
+{
+  "insecure-registries" : [ "garden.local.gardener.cloud:5001" ]
+}
+EOF
+  kill -1 $(pgrep dockerd)
+
+  # The CoreDNS pods in the kind cluster can only talk via IPv6, but the nameserver in the kind cluster is set to the
+  # host's IPv4 address. Hence, we have to replace it with the IPv6 address to make sure CoreDNS can communicate with
+  # it.
+  DOCKER_IPV6_DNS_SERVER="$(docker inspect -f='{{json .NetworkSettings.Networks.kind.IPv6Gateway}}' "${garden_cluster}-control-plane" | jq -r)"
+
+  kubectl -n kube-system get configmap coredns -ojson | \
+    yq '.data.Corefile' | \
+    sed "s%forward . /etc/resolv.conf%forward . $DOCKER_IPV6_DNS_SERVER%" | \
+    kubectl -n kube-system create configmap coredns --from-file Corefile=/dev/stdin --dry-run=client -oyaml | \
+    kubectl -n kube-system patch configmap coredns --patch-file /dev/stdin
+
+  # All outgoing traffic from the cluster is masqueraded to the host's IPv6 address. This is to ensure outgoing traffic
+  # can also be routed back to the cluster.
+  ip6tables -t nat -A POSTROUTING -o $(ip route | grep '^default' | awk '{print $5}') -s $(docker network inspect kind -f='{{json .IPAM.Config}}' | jq -r '.[1].Subnet') -j MASQUERADE
+fi
+
 kubectl -n kube-system rollout restart deployment coredns
 
 if [[ "$DEPLOY_REGISTRY" == "true" ]]; then
