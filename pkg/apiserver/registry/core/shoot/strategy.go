@@ -108,8 +108,8 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 		var (
 			mustIncrease                  bool
 			mustRemoveOperationAnnotation bool
-			operations                    []string
-			patchOperations               []string
+			operations                    = v1beta1helper.GetShootGardenerOperations(newShoot.Annotations)
+			patchOperations               = slices.Clone(operations)
 		)
 
 		switch lastOperation.State {
@@ -119,9 +119,6 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			}
 
 		default:
-			operations = v1beta1helper.GetShootGardenerOperations(newShoot.Annotations)
-			patchOperations = slices.Clone(operations)
-
 			for _, operation := range operations {
 				switch operation {
 				case v1beta1constants.GardenerOperationReconcile:
