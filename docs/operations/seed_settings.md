@@ -139,3 +139,20 @@ use MaxAllowed aligned with the allocatable resources of the largest worker.
 ## Topology-Aware Traffic Routing
 
 Refer to the [Topology-Aware Traffic Routing documentation](./topology_aware_routing.md) as this document contains the documentation for the topology-aware routing Seed setting.
+
+## Temporarily Disabling Shoot Reconciliations
+
+There may be situations where you need to temporarily stop the reconciliation of `Shoot` clusters in a `Seed` cluster.
+This can be achieved by adding the annotation `gardener.cloud/disable-shoot-reconciliations=true` to the `Seed` resource.
+
+While this annotation is present:
+- The `Seed` controller will not reconcile any `Shoot` clusters in the affected `Seed`.
+- New `Shoot` clusters will not be scheduled to this `Seed`.
+- The `Seed` will expose the `SeedDisabledShootReconciliations` condition.
+- This is useful, for example, to prevent faulty updates from propagating further.
+
+To annotate all `Seed` resources at once, run:
+
+```bash
+kubectl annotate seed --all gardener.cloud/disable-shoot-reconciliations=true
+```
