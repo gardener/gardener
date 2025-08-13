@@ -117,5 +117,19 @@ var _ = Describe("Create", func() {
 `))
 			})
 		})
+
+		When("the connect command should be printed", func() {
+			BeforeEach(func() {
+				Expect(command.Flags().Set("print-connect-command", "true")).To(Succeed())
+				Expect(command.Flags().Set("shoot-name", "name")).To(Succeed())
+				Expect(command.Flags().Set("shoot-namespace", "namespace")).To(Succeed())
+			})
+
+			It("should successfully print the connect command", func() {
+				Expect(command.RunE(command, []string{token})).To(Succeed())
+				Eventually(stdOut).Should(Say(`gardenadm connect --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
+`))
+			})
+		})
 	})
 })
