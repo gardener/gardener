@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils"
@@ -26,11 +27,17 @@ type Options struct {
 	Description string
 	// Validity duration of the bootstrap token.
 	Validity time.Duration
-	// PrintJoinCommand specifies whether to print the full `gardenadm join` command.
-	PrintJoinCommand bool
 	// WorkerPoolName is the name of the worker pool to use for the join command. If not provided, it is defaulted to
 	// 'worker'.
 	WorkerPoolName string
+	// Shoot contains the namespace and the name of the Shoot which should be connected to Gardener. This is only
+	// relevant for bootstrap tokens that are used for connecting autonomous shoots via `gardenadm connect`.
+	Shoot types.NamespacedName
+
+	// PrintJoinCommand specifies whether to print the full `gardenadm join` command.
+	PrintJoinCommand bool
+	// PrintConnectCommand specifies whether to print the full `gardenadm connect` command.
+	PrintConnectCommand bool
 }
 
 // Token contains the token ID and secret.
@@ -87,6 +94,14 @@ func (o *Options) Validate() error {
 		return fmt.Errorf("must specify a worker pool name when using --print-join-command")
 	}
 
+	if o.PrintConnectCommand && (len(o.Shoot.Namespace) == 0 || len(o.Shoot.Name) == 0) {
+		return fmt.Errorf("must specify a shoot namespace and name when using --print-connect-command")
+	}
+
+	if len(o.Shoot.Namespace) > 0 && len(o.Shoot.Name) > 0 && len(o.Description) > 0 {
+		return fmt.Errorf("cannot specify a custom description when creating a bootstrap token for the `gardenadm connect` command")
+	}
+
 	return nil
 }
 
@@ -98,12 +113,21 @@ func (o *Options) Complete() error {
 	}
 	o.Token.ID, o.Token.Secret = split[0], split[1]
 
+	if o.Shoot.Namespace != "" && o.Shoot.Name != "" {
+		o.Description = fmt.Sprintf("%s%s to Gardener via `gardenadm connect`", bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix, o.Shoot.String())
+	} else if len(o.Description) == 0 {
+		o.Description = "Used for joining nodes to an autonomous shoot cluster via `gardenadm join`"
+	}
+
 	return nil
 }
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
-	fs.StringVarP(&o.Description, "description", "d", "Used for joining nodes via `gardenadm join`", "Description for the bootstrap token")
+	fs.StringVarP(&o.Description, "description", "d", "", "Description for the bootstrap token used for `gardenadm join`")
 	fs.DurationVarP(&o.Validity, "validity", "", time.Hour, "Validity duration of the bootstrap token. Minimum is 10m, maximum is 24h.")
 	fs.BoolVarP(&o.PrintJoinCommand, "print-join-command", "j", false, "Instead of only printing the token, print the full machine-readable `gardenadm join` command that can be copied and ran on a machine that should join the cluster")
+	fs.BoolVarP(&o.PrintConnectCommand, "print-connect-command", "c", false, "Instead of only printing the token, print the full machine-readable `gardenadm connect` command that can be ran on a machine of a cluster that should be connected to Gardener")
 	fs.StringVarP(&o.WorkerPoolName, "worker-pool-name", "w", "worker", "Name of the worker pool to use for the join command.")
+	fs.StringVarP(&o.Shoot.Namespace, "shoot-namespace", "", "", "Namespace of the Shoot which should be connected to Gardener via `gardenadm connect` with this bootstrap token")
+	fs.StringVarP(&o.Shoot.Name, "shoot-name", "", "", "Name of the Shoot which should be connected to Gardener via `gardenadm connect` with this bootstrap token")
 }
