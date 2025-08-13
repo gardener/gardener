@@ -19,16 +19,6 @@ var _ = Describe("Version", func() {
 			Expect(constraint.Check(version)).To(matcher)
 		},
 
-		Entry("ConstraintK8sGreaterEqual128, success", ConstraintK8sGreaterEqual128, semver.MustParse("1.28.0"), BeTrue()),
-		Entry("ConstraintK8sGreaterEqual128, failure", ConstraintK8sGreaterEqual128, semver.MustParse("1.27.0"), BeFalse()),
-		Entry("ConstraintK8sGreaterEqual128, success w/ suffix", ConstraintK8sGreaterEqual128, semver.MustParse("v1.28.0-foo.12"), BeTrue()),
-		Entry("ConstraintK8sGreaterEqual128, failure w/ suffix", ConstraintK8sGreaterEqual128, semver.MustParse("v1.27.0-foo.12"), BeFalse()),
-
-		Entry("ConstraintK8sGreaterEqual129, success", ConstraintK8sGreaterEqual129, semver.MustParse("1.29.0"), BeTrue()),
-		Entry("ConstraintK8sGreaterEqual129, failure", ConstraintK8sGreaterEqual129, semver.MustParse("1.28.0"), BeFalse()),
-		Entry("ConstraintK8sGreaterEqual129, success w/ suffix", ConstraintK8sGreaterEqual129, semver.MustParse("v1.29.0-foo.12"), BeTrue()),
-		Entry("ConstraintK8sGreaterEqual129, failure w/ suffix", ConstraintK8sGreaterEqual129, semver.MustParse("v1.28.0-foo.12"), BeFalse()),
-
 		Entry("ConstraintK8sLess130, success", ConstraintK8sLess130, semver.MustParse("1.29.1"), BeTrue()),
 		Entry("ConstraintK8sLess130, failure", ConstraintK8sLess130, semver.MustParse("1.30.0"), BeFalse()),
 		Entry("ConstraintK8sLess130, success w/ suffix", ConstraintK8sLess130, semver.MustParse("v1.29.1-foo.12"), BeTrue()),

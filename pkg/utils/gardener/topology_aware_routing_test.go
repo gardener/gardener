@@ -68,7 +68,7 @@ var _ = Describe("TopologyAwareRouting", func() {
 					},
 				}
 
-				ReconcileTopologyAwareRoutingSettings(service, true, semver.MustParse("1.27.1"))
+				ReconcileTopologyAwareRoutingSettings(service, true, semver.MustParse("1.30.1"))
 
 				Expect(service.Annotations).To(HaveKeyWithValue("service.kubernetes.io/topology-mode", "auto"))
 				Expect(service.Annotations).NotTo(HaveKey("service.kubernetes.io/topology-aware-hints"))

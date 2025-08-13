@@ -46,7 +46,7 @@ var _ = Describe("Shoot State controller tests", func() {
 			Spec: gardencorev1beta1.ShootSpec{
 				Region:           "local",
 				CloudProfileName: ptr.To("local"),
-				Kubernetes:       gardencorev1beta1.Kubernetes{Version: "1.27.1"},
+				Kubernetes:       gardencorev1beta1.Kubernetes{Version: "1.33.1"},
 				Provider:         gardencorev1beta1.Provider{Type: "local"},
 				SeedName:         &seedName,
 			},
