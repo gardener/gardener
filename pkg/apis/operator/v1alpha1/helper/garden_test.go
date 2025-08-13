@@ -104,15 +104,15 @@ var _ = Describe("helper", func() {
 
 	DescribeTable("#IsETCDEncryptionKeyRotationSingleOperation",
 		func(credentials *operatorv1alpha1.Credentials, isSingleOperation bool) {
-			Expect(IsETCDEncryptionKeyRotationSingleOperation(credentials)).To(Equal(isSingleOperation))
+			Expect(ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials)).To(Equal(isSingleOperation))
 		},
 
 		Entry("credentials nil", nil, false),
 		Entry("rotation nil", &operatorv1alpha1.Credentials{}, false),
 		Entry("etcdEncryptionKey nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}, false),
-		Entry("isSingleOperationRotation empty", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{}}}, false),
-		Entry("isSingleOperationRotation true", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{IsSingleOperationRotation: ptr.To(true)}}}, true),
-		Entry("isSingleOperationRotation false", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{IsSingleOperationRotation: ptr.To(false)}}}, false),
+		Entry("AutoCompleteAfterPrepared empty", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{}}}, false),
+		Entry("AutoCompleteAfterPrepared true", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(true)}}}, true),
+		Entry("AutoCompleteAfterPrepared false", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(false)}}}, false),
 	)
 
 	Describe("#MutateETCDEncryptionKeyRotation", func() {
