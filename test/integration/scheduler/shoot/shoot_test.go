@@ -199,7 +199,7 @@ var _ = Describe("Scheduler tests", func() {
 				g.Expect(shoot.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeCreate))
 				g.Expect(shoot.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStatePending))
 				return shoot.Status.LastOperation.Description
-			}).Should(ContainSubstring("none of the 1 seeds has enabled shoot reconciliations currently"))
+			}).Should(ContainSubstring("none of the 1 seeds have enabled shoot reconciliations currently"))
 		})
 	})
 

@@ -123,19 +123,19 @@ func CalculateControllerInfos(seed *gardencorev1beta1.Seed, shoot *gardencorev1b
 }
 
 func (i ControllerInfos) shouldReconcileNow() ReconcileNowDecision {
-	// if the shoot is failed or ignored, it doesn't matter which operation is triggered
-	if i.isFailed || i.isIgnored {
-		return ReconcileNowDecision{
-			Result: false,
-			Reason: "Shoot is failed or ignored.",
-		}
-	}
-
 	// Emergency switch: Check Seed annotation to block reconciliation if needed
 	if i.emergencyStopReconciliations {
 		return ReconcileNowDecision{
 			Result: false,
 			Reason: "Shoot reconciliation blocked by Seed emergency switch",
+		}
+	}
+
+	// if the shoot is failed or ignored, it doesn't matter which operation is triggered
+	if i.isFailed || i.isIgnored {
+		return ReconcileNowDecision{
+			Result: false,
+			Reason: "Shoot is failed or ignored.",
 		}
 	}
 

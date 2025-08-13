@@ -152,13 +152,13 @@ for example, to prevent faulty updates from propagating further or to avoid gard
 To temporarily disable reconciliations, add the annotation `shoot.gardener.cloud/emergency-stop-reconciliations=true` to the `Seed` resource.
 
 While this annotation is present:
-- The `Seed` controller will not reconcile any `Shoot` clusters in the affected `Seed`.
+- The `Shoot` controller will not reconcile any `Shoot` clusters in the affected `Seed`.
 - New `Shoot` clusters will not be scheduled to this `Seed`.
 - The `Seed` will expose the `SeedDisabledShootReconciliations` condition.
 
 > [!NOTE]  
 > When you remove this annotation, reconciliation will resume, but `Shoot` clusters will only be reconciled
-during their next scheduled reconciliation window.
+> during their next scheduled reconciliation window.
 > They are not reconciled immediately.
 > This is important if you expect all clusters to be updated right away after re-enabling reconciliations.
 

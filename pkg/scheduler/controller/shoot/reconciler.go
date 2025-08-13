@@ -313,7 +313,7 @@ func filterSeedsWithDisabledShootReconciliations(seedList []gardencorev1beta1.Se
 	}
 
 	if len(seedsWithEnabledReconciliations) == 0 {
-		return nil, fmt.Errorf("none of the %d seeds has enabled shoot reconciliations currently", len(seedList))
+		return nil, fmt.Errorf("none of the %d seeds have enabled shoot reconciliations currently", len(seedList))
 	}
 	return seedsWithEnabledReconciliations, nil
 }
