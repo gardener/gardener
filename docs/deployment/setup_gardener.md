@@ -134,7 +134,7 @@ Reference documentation:
 
 #### How to install an extension
 
-An extension is commonly described by an `Extension` resources (API group `operator.gardener.cloud/v1alpha1`) in the runtime cluster. The Gardener Operator will take care of deploying the required resources both to the runtime and to the virtual Garden cluster. More details can be found in the [Extension Resource documentation](../concepts/operator.md#extension-resource).
+An extension is commonly described by an `Extension` resource (API group `operator.gardener.cloud/v1alpha1`) in the runtime cluster. The Gardener Operator will take care of deploying the required resources both to the runtime and to the virtual Garden cluster. More details can be found in the [Extension Resource documentation](../concepts/operator.md#extension-resource).
 
 Typically, only a few extensions are needed on the runtime cluster and the Gardener Operator manages them directly through `ManagedResources`. Most of the extensions however, are registered to the virtual Garden cluster and then installed onto the `Seeds`.
 
