@@ -59,9 +59,6 @@ type Interface interface {
 	component.DeployWaiter
 	// SetReplicas sets the replicas.
 	SetReplicas(int32)
-	//TODO(@aaronfern): Remove this after v1.123 is released.
-	// MigrateRBAC migrates RBAC permissions from clusterrole/clusterrolebinding to role/rolebinding
-	MigrateRBAC(ctx context.Context) error
 }
 
 // New creates a new instance of DeployWaiter for the machine-controller-manager.
@@ -94,71 +91,6 @@ type Values struct {
 	Replicas int32
 	// AutonomousShoot is true if the machine-controller-manager is deployed for an autonomous shoot cluster.
 	AutonomousShoot bool
-}
-
-// TODO(@aaronfern): Remove this after v1.123 is released.
-func (m *machineControllerManager) MigrateRBAC(ctx context.Context) error {
-	var (
-		roleBinding    = m.emptyRoleBindingRuntime()
-		role           = m.emptyRole()
-		serviceAccount = m.emptyServiceAccount()
-	)
-
-	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, role, func() error {
-		role.Rules = []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{machinev1alpha1.GroupName},
-				Resources: []string{
-					"machineclasses",
-					"machineclasses/status",
-					"machinedeployments",
-					"machinedeployments/status",
-					"machines",
-					"machines/status",
-					"machinesets",
-					"machinesets/status",
-				},
-				Verbs: []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
-			},
-			{
-				APIGroups: []string{corev1.GroupName},
-				Resources: []string{"configmaps", "secrets", "endpoints", "events", "pods"},
-				Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
-			},
-			{
-				APIGroups: []string{coordinationv1.GroupName},
-				Resources: []string{"leases"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups:     []string{coordinationv1.GroupName},
-				Resources:     []string{"leases"},
-				Verbs:         []string{"get", "watch", "update"},
-				ResourceNames: []string{"machine-controller", "machine-controller-manager"},
-			},
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, roleBinding, func() error {
-		roleBinding.RoleRef = rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     role.Name,
-		}
-		roleBinding.Subjects = []rbacv1.Subject{{
-			Kind:      rbacv1.ServiceAccountKind,
-			Name:      serviceAccount.Name,
-			Namespace: m.namespace,
-		}}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	return kubernetesutils.DeleteObject(ctx, m.client, m.emptyClusterRoleBindingRuntime())
 }
 
 func (m *machineControllerManager) Deploy(ctx context.Context) error {
@@ -577,7 +509,6 @@ func (m *machineControllerManager) Destroy(ctx context.Context) error {
 		m.emptyDeployment(),
 		m.newShootAccessSecret().Secret,
 		m.emptyService(),
-		m.emptyClusterRoleBindingRuntime(),
 		m.emptyRoleBindingRuntime(),
 		m.emptyRole(),
 		m.emptyServiceAccount(),
@@ -727,11 +658,6 @@ func (m *machineControllerManager) emptyRole() *rbacv1.Role {
 
 func (m *machineControllerManager) emptyRoleBindingRuntime() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
-}
-
-// TODO(@aaronfern): Remove this after v1.123 is released.
-func (m *machineControllerManager) emptyClusterRoleBindingRuntime() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-" + m.namespace}}
 }
 
 func (m *machineControllerManager) emptyService() *corev1.Service {
