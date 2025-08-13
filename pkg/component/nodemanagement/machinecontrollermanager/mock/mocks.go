@@ -68,20 +68,6 @@ func (mr *MockInterfaceMockRecorder) Destroy(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), ctx)
 }
 
-// MigrateRBAC mocks base method.
-func (m *MockInterface) MigrateRBAC(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MigrateRBAC", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// MigrateRBAC indicates an expected call of MigrateRBAC.
-func (mr *MockInterfaceMockRecorder) MigrateRBAC(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MigrateRBAC", reflect.TypeOf((*MockInterface)(nil).MigrateRBAC), ctx)
-}
-
 // SetReplicas mocks base method.
 func (m *MockInterface) SetReplicas(arg0 int32) {
 	m.ctrl.T.Helper()
