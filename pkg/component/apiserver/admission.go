@@ -19,7 +19,6 @@ import (
 	webhookadmissionv1 "k8s.io/apiserver/pkg/admission/plugin/webhook/config/apis/webhookadmission/v1"
 	webhookadmissionv1alpha1 "k8s.io/apiserver/pkg/admission/plugin/webhook/config/apis/webhookadmission/v1alpha1"
 	apiserverv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
-	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -31,7 +30,6 @@ var admissionCodec runtime.Codec
 func init() {
 	admissionScheme := runtime.NewScheme()
 	utilruntime.Must(apiserverv1.AddToScheme(admissionScheme))
-	utilruntime.Must(apiserverv1alpha1.AddToScheme(admissionScheme))
 	utilruntime.Must(webhookadmissionv1.AddToScheme(admissionScheme))
 	utilruntime.Must(webhookadmissionv1alpha1.AddToScheme(admissionScheme))
 
@@ -42,7 +40,6 @@ func init() {
 			Strict: false,
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
-			apiserverv1alpha1.SchemeGroupVersion,
 			webhookadmissionv1.SchemeGroupVersion,
 			webhookadmissionv1alpha1.SchemeGroupVersion,
 		})
