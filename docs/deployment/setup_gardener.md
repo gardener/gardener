@@ -77,7 +77,7 @@ It is recommended for any productive installation of Gardener.
 
 ### Infrastructure
 
-For each infrastructure supported by Gardener a so-called __provider-extension__ exists. It implements the required interfaces. For this example, the [OpenStack extension](https://github.com/gardener/gardener-extension-provider-openstack) will be used. Of course, a single Gardener landscape can support multiple infrastructures, which is a common use case. In this case, the respective provider-extensions need to be deployed as well.
+For each infrastructure supported by Gardener, a so-called __provider-extension__ exists. It implements the required interfaces. For this example, the [OpenStack extension](https://github.com/gardener/gardener-extension-provider-openstack) will be used. Of course, a single Gardener landscape can support multiple infrastructures, which is a common use case. In this case, the respective provider-extensions need to be deployed as well.
 
 Access to the respective infrastructure is required and needs to be handed over to Gardener in the provider-specific format (e.g., OpenStack application credentials).
 
