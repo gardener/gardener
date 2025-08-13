@@ -198,7 +198,7 @@ func GetAllNodes(ctx context.Context, c kubernetes.Interface) (*corev1.NodeList,
 func GetAllNodesInWorkerPool(ctx context.Context, c kubernetes.Interface, workerGroup *string) (*corev1.NodeList, error) {
 	nodeList := &corev1.NodeList{}
 
-	selectorOption := &client.MatchingLabelsSelector{}
+	selectorOption := &client.MatchingLabelsSelector{Selector: labels.Everything()}
 	if workerGroup != nil && len(*workerGroup) > 0 {
 		selectorOption.Selector = labels.SelectorFromSet(labels.Set{"worker.gardener.cloud/pool": *workerGroup})
 	}
