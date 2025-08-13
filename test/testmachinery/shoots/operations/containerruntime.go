@@ -19,7 +19,7 @@ import (
 var _ = Describe("Shoot container runtime testing", func() {
 	f := framework.NewShootFramework(nil)
 
-	f.Default().Serial().CIt("verify containerd configuration and runtime setup", func(ctx context.Context) {
+	f.Default().Serial().CIt("should verify containerd configuration and runtime setup", func(ctx context.Context) {
 		var shoot = f.Shoot
 
 		if v1beta1helper.IsWorkerless(shoot) {
@@ -29,6 +29,7 @@ var _ = Describe("Shoot container runtime testing", func() {
 		// check the node labels to contain containerd label
 		nodeList, err := framework.GetAllNodes(ctx, f.ShootClient)
 		framework.ExpectNoError(err)
+		Expect(nodeList.Items).NotTo(BeEmpty(), "Expected to find at least one Node in the cluster")
 
 		for _, node := range nodeList.Items {
 			value, found := node.Labels[extensionsv1alpha1.CRINameWorkerLabel]
