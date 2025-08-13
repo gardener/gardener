@@ -142,7 +142,7 @@ To make an extension known to the `Garden`, the Gardener Operator translates the
 
 Check the [extension registration documentation](../extensions/registration.md) for more details.
 
-The `ControllerRegistration` is also a useful resource to check, as it declares, which resources it implements. An example of such a `ControllerRegistration`, can be found in the [provider OpenStack](https://github.com/gardener/gardener-extension-provider-openstack) extension's [example file](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/example/controller-registration.yaml).
+The `ControllerRegistration` is also a useful resource to check, as it declares which resources it implements. An example of such a `ControllerRegistration` can be found in the [provider OpenStack](https://github.com/gardener/gardener-extension-provider-openstack) extension's [example file](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/example/controller-registration.yaml).
 
 ![extensions](./content/extensions.png)
 
