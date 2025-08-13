@@ -609,7 +609,7 @@ func validateOperation(operation string, garden *operatorv1alpha1.Garden, fldPat
 
 	if operation != "" {
 		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(operation) && !k8sLess134 {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, "for Kubernetes versions >= 1.34, annotation is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation"))
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", operation)))
 		}
 		if !operatorv1alpha1.AvailableOperationAnnotations.Has(operation) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(operatorv1alpha1.AvailableOperationAnnotations)))

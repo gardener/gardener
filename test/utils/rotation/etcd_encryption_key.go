@@ -36,7 +36,7 @@ type ETCDEncryptionKeyVerifier struct {
 	RoleLabelValue string
 	// TODO(AleksandarSavchev): Remove this field when the k8s version for the default e2e shoot & garden is >= 1.34.
 	// With k8s >= 1.34 this field should always be set to true.
-	IsSingleOperationRotation bool
+	AutoCompleteAfterPrepared bool
 
 	secretsBefore   SecretConfigNamesToSecrets
 	secretsPrepared SecretConfigNamesToSecrets
@@ -100,7 +100,7 @@ func (v *ETCDEncryptionKeyVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(time.Now().UTC().Sub(etcdEncryptionKeyRotation.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 	g.Expect(etcdEncryptionKeyRotation.LastInitiationFinishedTime).To(BeNil())
 	g.Expect(etcdEncryptionKeyRotation.LastCompletionTriggeredTime).To(BeNil())
-	g.Expect(etcdEncryptionKeyRotation.IsSingleOperationRotation).To(Equal(ptr.To(v.IsSingleOperationRotation)))
+	g.Expect(etcdEncryptionKeyRotation.AutoCompleteAfterPrepared).To(Equal(ptr.To(v.AutoCompleteAfterPrepared)))
 }
 
 // ExpectPreparingWithoutWorkersRolloutStatus is called while waiting for the PreparingWithoutWorkersRollout status.
@@ -111,7 +111,7 @@ func (v *ETCDEncryptionKeyVerifier) ExpectWaitingForWorkersRolloutStatus(_ Gomeg
 
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
-	if v.IsSingleOperationRotation {
+	if v.AutoCompleteAfterPrepared {
 		v.afterCompleted(ctx)
 		return
 	}
@@ -120,7 +120,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 	Expect(etcdEncryptionKeyRotation.Phase).To(Equal(gardencorev1beta1.RotationPrepared), "rotation phase should be 'Prepared'")
 	Expect(etcdEncryptionKeyRotation.LastInitiationFinishedTime).NotTo(BeNil())
 	Expect(etcdEncryptionKeyRotation.LastInitiationFinishedTime.After(etcdEncryptionKeyRotation.LastInitiationTime.Time)).To(BeTrue())
-	Expect(etcdEncryptionKeyRotation.IsSingleOperationRotation).To(Equal(ptr.To(false)))
+	Expect(etcdEncryptionKeyRotation.AutoCompleteAfterPrepared).To(Equal(ptr.To(false)))
 
 	runtimeClient := v.GetRuntimeClient()
 	By("Verify etcd encryption key secrets")
@@ -168,19 +168,19 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 
 // ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *ETCDEncryptionKeyVerifier) ExpectCompletingStatus(g Gomega) {
-	if !v.IsSingleOperationRotation {
+	if !v.AutoCompleteAfterPrepared {
 		etcdEncryptionKeyRotation := v.GetETCDEncryptionKeyRotation()
 		g.Expect(etcdEncryptionKeyRotation.Phase).To(Equal(gardencorev1beta1.RotationCompleting))
 		Expect(etcdEncryptionKeyRotation.LastCompletionTriggeredTime).NotTo(BeNil())
 		Expect(etcdEncryptionKeyRotation.LastCompletionTriggeredTime.Time.Equal(etcdEncryptionKeyRotation.LastInitiationFinishedTime.Time) ||
 			etcdEncryptionKeyRotation.LastCompletionTriggeredTime.After(etcdEncryptionKeyRotation.LastInitiationFinishedTime.Time)).To(BeTrue())
-		Expect(etcdEncryptionKeyRotation.IsSingleOperationRotation).To(Equal(ptr.To(false)))
+		Expect(etcdEncryptionKeyRotation.AutoCompleteAfterPrepared).To(Equal(ptr.To(false)))
 	}
 }
 
 // AfterCompleted is called when the Shoot is in Completed status.
 func (v *ETCDEncryptionKeyVerifier) AfterCompleted(g context.Context) {
-	if !v.IsSingleOperationRotation {
+	if !v.AutoCompleteAfterPrepared {
 		v.afterCompleted(g)
 	}
 }
@@ -191,7 +191,7 @@ func (v *ETCDEncryptionKeyVerifier) afterCompleted(ctx context.Context) {
 	Expect(etcdEncryptionKeyRotation.LastCompletionTime.Time.UTC().After(etcdEncryptionKeyRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 	Expect(etcdEncryptionKeyRotation.LastInitiationFinishedTime).To(BeNil())
 	Expect(etcdEncryptionKeyRotation.LastCompletionTriggeredTime).To(BeNil())
-	Expect(etcdEncryptionKeyRotation.IsSingleOperationRotation).To(BeNil())
+	Expect(etcdEncryptionKeyRotation.AutoCompleteAfterPrepared).To(BeNil())
 
 	var newKeySecret corev1.Secret
 	runtimeClient := v.GetRuntimeClient()
@@ -202,7 +202,7 @@ func (v *ETCDEncryptionKeyVerifier) afterCompleted(ctx context.Context) {
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(1), "there should be only one etcd encryption key")
 		g.Expect(grouped[v.EncryptionKey]).ToNot(ContainElement(v.secretsBefore[v.EncryptionKey][0]), "old etcd encryption key secret should not be kept")
-		if v.IsSingleOperationRotation {
+		if v.AutoCompleteAfterPrepared {
 			newKeySecret = grouped[v.EncryptionKey][0]
 		} else {
 			newKeySecret = v.secretsPrepared[v.EncryptionKey][1]

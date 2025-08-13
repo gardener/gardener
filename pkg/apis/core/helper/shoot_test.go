@@ -246,17 +246,17 @@ var _ = Describe("Helper", func() {
 		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
 	)
 
-	DescribeTable("#IsShootETCDEncryptionKeyRotationSingleOperation",
+	DescribeTable("#ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared",
 		func(credentials *core.ShootCredentials, isSingleOperation bool) {
-			Expect(IsShootETCDEncryptionKeyRotationSingleOperation(credentials)).To(Equal(isSingleOperation))
+			Expect(ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials)).To(Equal(isSingleOperation))
 		},
 
 		Entry("credentials nil", nil, false),
 		Entry("rotation nil", &core.ShootCredentials{}, false),
 		Entry("etcdEncryptionKey nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, false),
-		Entry("isSingleOperationRotation empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{}}}, false),
-		Entry("isSingleOperationRotation true", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{IsSingleOperationRotation: ptr.To(true)}}}, true),
-		Entry("isSingleOperationRotation false", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{IsSingleOperationRotation: ptr.To(false)}}}, false),
+		Entry("AutoCompleteAfterPrepared empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{}}}, false),
+		Entry("AutoCompleteAfterPrepared true", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(true)}}}, true),
+		Entry("AutoCompleteAfterPrepared false", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(false)}}}, false),
 	)
 
 	Describe("#GetAllZonesFromShoot", func() {

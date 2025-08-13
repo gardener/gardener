@@ -235,8 +235,8 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 	oldETCDEncryptionKeyRotationPhase := gardencorehelper.GetShootETCDEncryptionKeyRotationPhase(oldShoot.Status.Credentials)
 	newETCDEncryptionKeyRotationPhase := gardencorehelper.GetShootETCDEncryptionKeyRotationPhase(newShoot.Status.Credentials)
 	if oldETCDEncryptionKeyRotationPhase != newETCDEncryptionKeyRotationPhase &&
-		newETCDEncryptionKeyRotationPhase == core.RotationCompleting &&
-		gardencorehelper.IsShootETCDEncryptionKeyRotationSingleOperation(newShoot.Status.Credentials) {
+		newETCDEncryptionKeyRotationPhase == core.RotationPrepared &&
+		gardencorehelper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(newShoot.Status.Credentials) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 }

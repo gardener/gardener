@@ -384,7 +384,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				},
 				EncryptionKey:             v1beta1constants.SecretNameETCDEncryptionKey,
 				RoleLabelValue:            v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
-				IsSingleOperationRotation: true,
+				AutoCompleteAfterPrepared: true,
 			}}, v1beta1constants.OperationRotateETCDEncryptionKey, "", false)
 
 			ItShouldDeleteShoot(s)

@@ -822,7 +822,7 @@ var _ = Describe("Validation Tests", func() {
 				Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-					"Detail": Equal("for Kubernetes versions >= 1.34, annotation is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation"),
+					"Detail": Equal("for Kubernetes versions >= 1.34, operation 'rotate-etcd-encryption-key-start' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation"),
 				}))))
 			})
 
@@ -832,11 +832,11 @@ var _ = Describe("Validation Tests", func() {
 				Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-					"Detail": Equal("for Kubernetes versions >= 1.34, annotation is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation"),
+					"Detail": Equal("for Kubernetes versions >= 1.34, operation 'rotate-etcd-encryption-key-complete' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation"),
 				}))))
 			})
 
-			DescribeTable("starting single operation ETCD encryption key rotation",
+			DescribeTable("starting ETCD encryption key rotation with automatic completion",
 				func(allowed bool, status operatorv1alpha1.GardenStatus, kubeAPIEncryptionConfig, gardenerEncryptionConfig *gardencorev1beta1.EncryptionConfig, extraMatchers ...gomegatypes.GomegaMatcher) {
 					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key")
 
