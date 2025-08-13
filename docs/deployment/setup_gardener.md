@@ -68,7 +68,7 @@ Reference documentation:
 
 ### Certificates
 
-Some components of a Gardener landscape require TLS certificates signed by well-known, trusted certificate authority (CA). While it is certainly possible to provide certificates manually, using an ACME service is much more convenient and recommended. Utilizing the [Gardener extension for certificate services](https://github.com/gardener/gardener-extension-shoot-cert-service) allows to automate the creation and renewal of certificates for the Gardener landscape.
+Some components of a Gardener landscape require TLS certificates signed by a well-known, trusted certificate authority (CA). While it is certainly possible to provide certificates manually, using an ACME service is much more convenient and recommended. Utilizing the [Gardener extension for certificate services](https://github.com/gardener/gardener-extension-shoot-cert-service) allows automating the creation and renewal of certificates for the Gardener landscape.
 
 ### Backup Bucket
 
