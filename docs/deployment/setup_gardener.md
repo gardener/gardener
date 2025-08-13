@@ -138,7 +138,7 @@ An extension is commonly described by an `Extension` resource (API group `operat
 
 Typically, only a few extensions are needed on the runtime cluster, and the Gardener Operator manages them directly through `ManagedResource`s. Most of the extensions, however, are registered to the virtual Garden cluster and then installed onto the `Seed`s.
 
-In order to make an extension known to the `Garden`, the Gardener Operator translates the `Extension` into two resources and applies them to the virtual Garden cluster - firstly, a `ControllerDeployment` and secondly, a matching `ControllerRegistration`. With both in place, Gardener-managed `ControllerInstallation`s take care of the actual deployment of the extension to the target environment.
+To make an extension known to the `Garden`, the Gardener Operator translates the `Extension` into two resources and applies them to the virtual Garden cluster – firstly, a `ControllerDeployment` and secondly, a matching `ControllerRegistration`. With both in place, Gardener-managed `ControllerInstallation`s take care of the actual deployment of the extension to the target environment.
 
 Check the [extension registration documentation](../extensions/registration.md) for more details.
 
