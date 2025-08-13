@@ -115,7 +115,7 @@ There are a few extensions considered essential to any Gardener installation:
 - at least one [network plugin (CNI)](../../extensions/README.md#network-plugin)
 - Shoot services
 
-An extension commonly consists of two components - a controller implementing the Gardener's extension contract and an admission controller. The latter is deployed to the runtime cluster and prevents misconfiguration of `Shoot`s. While an extensions primary purpose is to implement functionality for `Shoot` clusters, it can also be deployed to the runtime cluster to provide additional functionality like managing `DNSRecord`s or `BackupBucket`s using the well-known and proven code paths.
+An extension commonly consists of two components – a controller implementing the Gardener's extension contract and an admission controller. The latter is deployed to the runtime cluster and prevents misconfiguration of `Shoot`s. While an extension's primary purpose is to implement functionality for `Shoot` clusters, it can also be deployed to the runtime cluster to provide additional functionality like managing `DNSRecord`s or `BackupBucket`s using the well-known and proven code paths.
 
 #### Choices
 
