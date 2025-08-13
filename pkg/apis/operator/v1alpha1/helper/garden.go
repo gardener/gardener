@@ -80,14 +80,14 @@ func GetETCDEncryptionKeyRotationPhase(credentials *operatorv1alpha1.Credentials
 	return ""
 }
 
-// IsETCDEncryptionKeyRotationSingleOperation returns whether the current ETCD encryption key rotation is a single
-// operation rotation or not.
-func IsETCDEncryptionKeyRotationSingleOperation(credentials *operatorv1alpha1.Credentials) bool {
+// ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared returns whether the current ETCD encryption key rotation should
+// be auto completed after prepared status.
+func ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials *operatorv1alpha1.Credentials) bool {
 	if credentials != nil &&
 		credentials.Rotation != nil &&
 		credentials.Rotation.ETCDEncryptionKey != nil &&
-		credentials.Rotation.ETCDEncryptionKey.IsSingleOperationRotation != nil {
-		return *credentials.Rotation.ETCDEncryptionKey.IsSingleOperationRotation
+		credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared != nil {
+		return *credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared
 	}
 	return false
 }

@@ -219,7 +219,7 @@ kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operatio
 
 This will trigger a `Shoot` reconciliation and performs the stages one and two.
 After it is completed, the `.status.credentials.rotation.etcdEncryptionKey.phase` is set to `Completing`.
-This will trigger another `Shoot` reconciliation and performs stage three.
+This will automatically trigger another `Shoot` reconciliation and perform stage three.
 After it is completed, the `.status.credentials.rotation.etcdEncryptionKey.phase` is set to `Completed`.
 
 ### `ServiceAccount` Token Signing Key

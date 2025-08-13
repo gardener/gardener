@@ -126,11 +126,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	// ETCD encryption key rotation requires 2 reconciliations to complete. In completing phase
+	// ETCD encryption key rotation requires 2 reconciliations to complete. In prepared phase
 	// the encrypted data has been decrypted and re-encrypted with the new key, but the old key is still present.
 	// The second reconciliation will remove the old key and set the phase to completed.
-	if etcdEncryptionKeyRotationPhase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationCompleting &&
-		helper.IsETCDEncryptionKeyRotationSingleOperation(garden.Status.Credentials) {
+	if etcdEncryptionKeyRotationPhase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPrepared &&
+		helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(garden.Status.Credentials) {
 		return reconcile.Result{RequeueAfter: 1 * time.Nanosecond}, nil
 	}
 
@@ -207,11 +207,7 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		mustRemoveOperationAnnotation = true
 		startRotationCA(garden, &now)
 		startRotationServiceAccountKey(garden, &now)
-		if k8sLess134 {
-			startRotationETCDEncryptionKey(garden, false, &now)
-		} else {
-			startRotationETCDEncryptionKey(garden, true, &now)
-		}
+		startRotationETCDEncryptionKey(garden, !k8sLess134, &now)
 		startRotationObservability(garden, &now)
 		startRotationWorkloadIdentityKey(garden, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
@@ -257,6 +253,11 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	case operatorv1alpha1.OperationRotateWorkloadIdentityKeyComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationWorkloadIdentityKey(garden, &now)
+	}
+
+	if helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPrepared &&
+		helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(garden.Status.Credentials) {
+		completeRotationETCDEncryptionKey(garden, &now)
 	}
 
 	if err := r.RuntimeClientSet.Client().Status().Update(ctx, garden); err != nil {
@@ -332,20 +333,16 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 
 	switch helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) {
 	case gardencorev1beta1.RotationPreparing:
-		if helper.IsETCDEncryptionKeyRotationSingleOperation(garden.Status.Credentials) {
-			completeRotationETCDEncryptionKey(garden, &now)
-		} else {
-			helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
-				rotation.Phase = gardencorev1beta1.RotationPrepared
-				rotation.LastInitiationFinishedTime = &now
-			})
-		}
+		helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationPrepared
+			rotation.LastInitiationFinishedTime = &now
+		})
 
 	// TODO(AleksandarSavchev): Remove rotation prepared case in a future release after support for Kubernetes v1.33 is dropped.
 	// It is added to forcefully complete the etcd encryption key rotation, since the annotation to complete the rotation
 	// is forbidden for clusters with k8s >= v1.34.
 	case gardencorev1beta1.RotationPrepared:
-		if k8sLess134 {
+		if !k8sLess134 {
 			completeRotationETCDEncryptionKey(garden, &now)
 		}
 
@@ -355,7 +352,7 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 			rotation.LastCompletionTime = &now
 			rotation.LastInitiationFinishedTime = nil
 			rotation.LastCompletionTriggeredTime = nil
-			rotation.IsSingleOperationRotation = nil
+			rotation.AutoCompleteAfterPrepared = nil
 		})
 	}
 
@@ -478,7 +475,7 @@ func startRotationETCDEncryptionKey(garden *operatorv1alpha1.Garden, singleOpera
 		rotation.LastInitiationTime = now
 		rotation.LastInitiationFinishedTime = nil
 		rotation.LastCompletionTriggeredTime = nil
-		rotation.IsSingleOperationRotation = ptr.To(singleOperation)
+		rotation.AutoCompleteAfterPrepared = ptr.To(singleOperation)
 	})
 }
 

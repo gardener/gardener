@@ -415,11 +415,13 @@ const (
 	OperationRotateETCDEncryptionKey = "rotate-etcd-encryption-key"
 	// OperationRotateETCDEncryptionKeyStart is a constant for an annotation on a Shoot indicating that the
 	// rotation of the ETCD encryption key shall be started.
+	//
 	// Deprecated: This annotation is deprecated in favour of `rotate-etcd-encryption-key`, which does a full rotation.
 	// TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
 	OperationRotateETCDEncryptionKeyStart = "rotate-etcd-encryption-key-start"
 	// OperationRotateETCDEncryptionKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the ETCD encryption key shall be completed.
+	//
 	// Deprecated: This annotation is deprecated in favour of `rotate-etcd-encryption-key`, which does a full rotation.
 	// TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
 	OperationRotateETCDEncryptionKeyComplete = "rotate-etcd-encryption-key-complete"
