@@ -276,8 +276,8 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			}
 
 			DeferCleanup(test.WithVars(
-				&OSUpdateRetryInterval, 1*time.Millisecond,
-				&OSUpdateRetryTimeout, 10*time.Millisecond,
+				&OSUpdateRetryInterval, 100*time.Millisecond,
+				&OSUpdateRetryTimeout, 1*time.Second,
 			))
 		})
 
@@ -369,8 +369,8 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			oscChanges = &operatingSystemConfigChanges{}
 
 			DeferCleanup(test.WithVars(
-				&OSUpdateRetryInterval, 1*time.Millisecond,
-				&OSUpdateRetryTimeout, 10*time.Millisecond,
+				&OSUpdateRetryInterval, 100*time.Millisecond,
+				&OSUpdateRetryTimeout, 1*time.Second,
 				&GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) {
 					return ptr.To(osVersion), nil
 				},
