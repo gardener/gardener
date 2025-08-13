@@ -3579,7 +3579,7 @@ func autoConvert_v1beta1_ETCDEncryptionKeyRotation_To_core_ETCDEncryptionKeyRota
 	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastInitiationFinishedTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationFinishedTime))
 	out.LastCompletionTriggeredTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTriggeredTime))
-	out.IsSingleOperationRotation = (*bool)(unsafe.Pointer(in.IsSingleOperationRotation))
+	out.AutoCompleteAfterPrepared = (*bool)(unsafe.Pointer(in.AutoCompleteAfterPrepared))
 	return nil
 }
 
@@ -3594,7 +3594,7 @@ func autoConvert_core_ETCDEncryptionKeyRotation_To_v1beta1_ETCDEncryptionKeyRota
 	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastInitiationFinishedTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationFinishedTime))
 	out.LastCompletionTriggeredTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTriggeredTime))
-	out.IsSingleOperationRotation = (*bool)(unsafe.Pointer(in.IsSingleOperationRotation))
+	out.AutoCompleteAfterPrepared = (*bool)(unsafe.Pointer(in.AutoCompleteAfterPrepared))
 	return nil
 }
 

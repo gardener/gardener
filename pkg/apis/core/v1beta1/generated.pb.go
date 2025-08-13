@@ -10068,9 +10068,9 @@ func (m *ETCDEncryptionKeyRotation) MarshalToSizedBuffer(dAtA []byte) (int, erro
 	_ = i
 	var l int
 	_ = l
-	if m.IsSingleOperationRotation != nil {
+	if m.AutoCompleteAfterPrepared != nil {
 		i--
-		if *m.IsSingleOperationRotation {
+		if *m.AutoCompleteAfterPrepared {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
@@ -20238,7 +20238,7 @@ func (m *ETCDEncryptionKeyRotation) Size() (n int) {
 		l = m.LastCompletionTriggeredTime.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
-	if m.IsSingleOperationRotation != nil {
+	if m.AutoCompleteAfterPrepared != nil {
 		n += 2
 	}
 	return n
@@ -24408,7 +24408,7 @@ func (this *ETCDEncryptionKeyRotation) String() string {
 		`LastInitiationTime:` + strings.Replace(fmt.Sprintf("%v", this.LastInitiationTime), "Time", "v11.Time", 1) + `,`,
 		`LastInitiationFinishedTime:` + strings.Replace(fmt.Sprintf("%v", this.LastInitiationFinishedTime), "Time", "v11.Time", 1) + `,`,
 		`LastCompletionTriggeredTime:` + strings.Replace(fmt.Sprintf("%v", this.LastCompletionTriggeredTime), "Time", "v11.Time", 1) + `,`,
-		`IsSingleOperationRotation:` + valueToStringGenerated(this.IsSingleOperationRotation) + `,`,
+		`AutoCompleteAfterPrepared:` + valueToStringGenerated(this.AutoCompleteAfterPrepared) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -36196,7 +36196,7 @@ func (m *ETCDEncryptionKeyRotation) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 6:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IsSingleOperationRotation", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field AutoCompleteAfterPrepared", wireType)
 			}
 			var v int
 			for shift := uint(0); ; shift += 7 {
@@ -36214,7 +36214,7 @@ func (m *ETCDEncryptionKeyRotation) Unmarshal(dAtA []byte) error {
 				}
 			}
 			b := bool(v != 0)
-			m.IsSingleOperationRotation = &b
+			m.AutoCompleteAfterPrepared = &b
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])

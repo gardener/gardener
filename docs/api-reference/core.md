@@ -5484,8 +5484,8 @@ Kubernetes meta/v1.Time
 <td>
 <em>(Optional)</em>
 <p>LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
-completed.
-Deprecated: This field will be removed in a future release. The field will be no longer needed with
+completed.</p>
+<p>Deprecated: This field will be removed in a future release. The field will be no longer needed with
 the removal <code>rotate-etcd-encryption-key-start</code> &amp; <code>rotate-etcd-encryption-key-complete</code> annotations.
 TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.</p>
 </td>
@@ -5507,16 +5507,17 @@ triggered.</p>
 </tr>
 <tr>
 <td>
-<code>isSingleOperationRotation</code></br>
+<code>autoCompleteAfterPrepared</code></br>
 <em>
 bool
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>IsSingleOperationRotation indicates whether the current ETCD encryption key rotation is a single operation rotation.
-Single operation rotation can be triggered by the <code>rotate-etcd-encryption-key</code> annotation.
-This field is needed while we support two types of key rotations: two-operation and single operation rotation.
+<p>AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after prepared status.
+Such rotation can be triggered by the <code>rotate-etcd-encryption-key</code> annotation.
+This field is needed while we support two types of key rotations: two-operation and single operation rotation.</p>
+<p>Deprecated: This field will be removed in a future release. The field will be no longer needed with
+the removal <code>rotate-etcd-encryption-key-start</code> &amp; <code>rotate-etcd-encryption-key-complete</code> annotations.
 TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.</p>
 </td>
 </tr>
