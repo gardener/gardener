@@ -22,7 +22,6 @@ spec:
       -project-namespace=$PROJECT_NAMESPACE
       -fenced=$FENCED
       -ginkgo.focus="\[DEFAULT\].*\[SERIAL\]"
-      -ginkgo.skip="\[DISRUPTIVE\]"
       -ginkgo.timeout=2h
 
   image: golang:1.24.6
