@@ -1864,8 +1864,8 @@ func (in *ETCDEncryptionKeyRotation) DeepCopyInto(out *ETCDEncryptionKeyRotation
 		in, out := &in.LastCompletionTriggeredTime, &out.LastCompletionTriggeredTime
 		*out = (*in).DeepCopy()
 	}
-	if in.IsSingleOperationRotation != nil {
-		in, out := &in.IsSingleOperationRotation, &out.IsSingleOperationRotation
+	if in.AutoCompleteAfterPrepared != nil {
+		in, out := &in.AutoCompleteAfterPrepared, &out.AutoCompleteAfterPrepared
 		*out = new(bool)
 		**out = **in
 	}

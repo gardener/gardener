@@ -3681,7 +3681,7 @@ func schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref common.Reference
 					},
 					"lastInitiationFinishedTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was completed. Deprecated: This field will be removed in a future release. The field will be no longer needed with the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.",
+							Description: "LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was completed.\n\nDeprecated: This field will be removed in a future release. The field will be no longer needed with the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -3691,9 +3691,9 @@ func schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref common.Reference
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
-					"isSingleOperationRotation": {
+					"autoCompleteAfterPrepared": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IsSingleOperationRotation indicates whether the current ETCD encryption key rotation is a single operation rotation. Single operation rotation can be triggered by the `rotate-etcd-encryption-key` annotation. This field is needed while we support two types of key rotations: two-operation and single operation rotation.",
+							Description: "AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after prepared status. Such rotation can be triggered by the `rotate-etcd-encryption-key` annotation. This field is needed while we support two types of key rotations: two-operation and single operation rotation.\n\nDeprecated: This field will be removed in a future release. The field will be no longer needed with the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
