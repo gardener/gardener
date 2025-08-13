@@ -70,20 +70,20 @@ linters:
           alias: logf
         - pkg: go.uber.org/mock/gomock
           alias: gmock
-        - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2
+        - pkg: github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2
           alias: fluentbitv1alpha2
-        - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/filter
+        - pkg: github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/filter
           alias: fluentbitv1alpha2filter
-        - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/parser
+        - pkg: github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/parser
           alias: fluentbitv1alpha2parser
-        - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/input
+        - pkg: github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/input
           alias: fluentbitv1alpha2input
         # Gardener external imported packages
         - pkg: github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
           alias: machinev1alpha1
         - pkg: github.com/gardener/etcd-druid/api/core/v1alpha1
           alias: druidcorev1alpha1
-        - pkg: github.com/gardener/etcd-druid/api/core/crds
+        - pkg: github.com/gardener/etcd-druid/api/core/v1alpha1/crds
           alias: druidcorecrds
         - pkg: github.com/gardener/cert-management/pkg/apis/cert/v1alpha1
           alias: certv1alpha1
@@ -92,10 +92,8 @@ linters:
         - pkg: github.com/gardener/dependency-watchdog/api/weeder
           alias: weederapi
         # Gardener extension package
-        - pkg: github.com/gardener/gardener/extensions/.*/(\w+)/mock$
+        - pkg: github.com/gardener/gardener/extensions/.*/(\w+)/mock
           alias: extensionsmock${1}
-        - pkg: github.com/gardener/gardener/extensions/pkg/apis/config
-          alias: extensionsconfig
         - pkg: github.com/gardener/gardener/extensions/pkg/apis/config/([\w\d]+)
           alias: extensionsconfig$1
         - pkg: github.com/gardener/gardener/extensions/pkg/controller
@@ -129,8 +127,6 @@ linters:
           alias: $1$2
         - pkg: github.com/gardener/gardener/pkg/apis/([^c]\w+)/([\w\d]+)/([\w\d]+)
           alias: $1$2$3
-        - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config
-          alias: ${1}config
         - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/([a-z]+)
           alias: $1$2
         - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/(v\d[\w\d]*)
@@ -195,8 +191,6 @@ linters:
           alias: mock${1}
         - pkg: github.com/gardener/gardener/third_party/mock/client-go/util/(\w+)
           alias: mock${1}
-        - pkg: github.com/gardener/gardener/pkg/gardenlet/operation/.*/(\w+)/mock$
-          alias: mock${1}
         - pkg: github.com/gardener/gardener/pkg/component/(\w+)/constants
           alias: ${1}constants
         - pkg: github.com/gardener/gardener/pkg/gardenlet/operation/(\w+)
@@ -207,7 +201,7 @@ linters:
           alias: ${1}rest
         - pkg: github.com/gardener/gardener/pkg/apiserver/registry/\w+/([^r]\w+)
           alias: ${1}registry
-        - pkg: github.com/gardener/gardener/pkg/apiserver/registry/\w+/(\w+)/storage$
+        - pkg: github.com/gardener/gardener/pkg/apiserver/registry/\w+/(\w+)/storage
           alias: ${1}store
         - pkg: github.com/gardener/gardener/pkg/resourcemanager/client
           alias: resourcemanagerclient
@@ -284,29 +278,12 @@ linters:
       # allow non-capitalized messages if they start with technical terms
       - path: (.+)\.go$
         text: 'structured logging message should be capitalized: "garden(er-apiserver|er-controller-manager|er-admission-controller|er-operator|er-resource-manager|let)'
-    paths:
-      - .*\.pb\.go$
-      - zz_generated\..*\.go$
-      - openapi_generated\.go$
-      - pkg/client/core
-      - pkg/client/extensions
-      - pkg/client/seedmanagement
-      - pkg/client/settings
-      - third_party$
-      - builtin$
-      - examples$
 formatters:
   settings:
     gofmt:
       rewrite-rules:
         - pattern: interface{}
           replacement: any
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
