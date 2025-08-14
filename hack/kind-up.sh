@@ -368,6 +368,7 @@ kubectl -n kube-system get configmap coredns -ojson | \
       $garden_cluster_ip gardener.virtual-garden.local.gardener.cloud\n\
       $garden_cluster_ip api.virtual-garden.local.gardener.cloud\n\
       $garden_cluster_ip dashboard.ingress.runtime-garden.local.gardener.cloud\n\
+      $garden_cluster_ip discovery.ingress.runtime-garden.local.gardener.cloud\n\
       fallthrough\n\
     }\
 "'/' | \
