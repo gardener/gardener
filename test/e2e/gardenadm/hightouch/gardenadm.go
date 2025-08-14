@@ -57,6 +57,8 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			portForwardCtx    context.Context
 			cancelPortForward context.CancelFunc
 			shootClientSet    kubernetes.Interface
+
+			configDirectory = "/gardenadm/resources"
 		)
 
 		BeforeAll(func() {
@@ -65,7 +67,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 		})
 
 		It("should initialize as control plane node", func(ctx SpecContext) {
-			stdOut, _, err := execute(ctx, 0, "gardenadm", "--log-level=debug", "init", "-d", "/gardenadm/resources")
+			stdOut, _, err := execute(ctx, 0, "gardenadm", "--log-level=debug", "init", "-d", configDirectory)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
@@ -183,6 +185,14 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Name: "kube-scheduler-machine-0", Namespace: "kube-system"}, pod)).To(Succeed())
 				return pod.Labels
 			}).Should(HaveKeyWithValue("injected-by", "provider-local"))
+		}, SpecTimeout(time.Minute))
+
+		It("should ensure that the config dir location has been stored in the well-known location", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) string {
+				stdOut, _, err := execute(ctx, 0, "cat", "/etc/gardenadm/config-directory")
+				g.Expect(err).NotTo(HaveOccurred())
+				return string(stdOut.Contents())
+			}).Should(Equal(configDirectory))
 		}, SpecTimeout(time.Minute))
 
 		It("should generate a bootstrap token and join the worker node", func(ctx SpecContext) {

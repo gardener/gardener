@@ -7,6 +7,8 @@ package init
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -58,6 +60,13 @@ func run(ctx context.Context, opts *Options) error {
 	b, err := bootstrapControlPlane(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("failed bootstrapping control plane: %w", err)
+	}
+
+	if err := b.FS.MkdirAll(filepath.Dir(cmd.ConfigDirLocation), os.ModeDir); err != nil {
+		return fmt.Errorf("failed config directory location file %s: %w", cmd.ConfigDirLocation, err)
+	}
+	if err := b.FS.WriteFile(cmd.ConfigDirLocation, []byte(opts.ConfigDir), 0644); err != nil {
+		return fmt.Errorf("failed writing config directory location file %s: %w", cmd.ConfigDirLocation, err)
 	}
 
 	podNetworkAvailable, err := b.IsPodNetworkAvailable(ctx)
