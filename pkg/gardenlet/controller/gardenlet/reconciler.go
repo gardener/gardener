@@ -160,6 +160,7 @@ func (r *Reconciler) prepareGardenletChartValues(
 		seed,
 		r.ValuesHelper,
 		seedmanagementv1alpha1.BootstrapToken,
+		"",
 		&gardenlet.Spec.Deployment.GardenletDeployment,
 		gardenletConfig,
 		r.GardenNamespace,
