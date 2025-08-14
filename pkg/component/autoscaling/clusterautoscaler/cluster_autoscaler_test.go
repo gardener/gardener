@@ -80,11 +80,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 		machineDeployment5Max  int32 = 5
 		workerPool5Priority          = ptr.To(int32(60))
 		machineDeployments           = []extensionsv1alpha1.MachineDeployment{
-			{Name: machineDeployment1Name, Minimum: machineDeployment1Min, Maximum: machineDeployment1Max, Priority: workerPool1Priority},
-			{Name: machineDeployment2Name, Minimum: machineDeployment2Min, Maximum: machineDeployment2Max, Priority: workerPoll2Priority},
-			{Name: machineDeployment3Name, Minimum: machineDeployment3Min, Maximum: machineDeployment3Max, Priority: nil},
-			{Name: machineDeployment4Name, Minimum: machineDeployment4Min, Maximum: machineDeployment4Max, Priority: workerPool4Priority},
-			{Name: machineDeployment5Name, Minimum: machineDeployment5Min, Maximum: machineDeployment5Max, Priority: workerPool5Priority},
+			{Name: machineDeployment1Name, Minimum: machineDeployment1Min, Maximum: machineDeployment1Max, Priority: *workerPool1Priority},
+			{Name: machineDeployment2Name, Minimum: machineDeployment2Min, Maximum: machineDeployment2Max, Priority: *workerPoll2Priority},
+			{Name: machineDeployment3Name, Minimum: machineDeployment3Min, Maximum: machineDeployment3Max, Priority: 0},
+			{Name: machineDeployment4Name, Minimum: machineDeployment4Min, Maximum: machineDeployment4Max, Priority: *workerPool4Priority},
+			{Name: machineDeployment5Name, Minimum: machineDeployment5Min, Maximum: machineDeployment5Max, Priority: *workerPool5Priority},
 		}
 
 		workerConfig = []gardencorev1beta1.Worker{
@@ -627,7 +627,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Namespace: metav1.NamespaceSystem,
 			},
 			Data: map[string]string{
-				"priorities": "0:\n- pool1\n- pool3\n- irregular-machine-deployment-name\n40:\n- pool2\n50:\n- pool4\n",
+				"priorities": "0:\n- pool1\n- pool3\n40:\n- pool2\n50:\n- pool4\n60:\n- irregular-machine-deployment-name\n",
 			},
 		}
 
