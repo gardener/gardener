@@ -197,7 +197,11 @@ type MachineType struct {
 }
 
 // GetArchitecture returns the architecture of the machine type.
-func (m *MachineType) GetArchitecture() string {
+func (m *MachineType) GetArchitecture(defaultArchitecture string) string {
+	if len(m.Capabilities[constants.ArchitectureName]) == 0 && defaultArchitecture != "" {
+		return defaultArchitecture
+	}
+
 	if len(m.Capabilities[constants.ArchitectureName]) == 1 {
 		return m.Capabilities[constants.ArchitectureName][0]
 	}

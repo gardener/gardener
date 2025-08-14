@@ -64,6 +64,8 @@ func SetupShootWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1
 
 // AddWorker adds a valid default worker to the shoot for the given machineImage and CloudProfile.
 func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, workerZone string) error {
+	defaultArchitecture := v1beta1helper.GetDefaultArchitectureFromCapabilityDefinitions(cloudProfile.Spec.Capabilities)
+
 	if len(cloudProfile.Spec.MachineTypes) == 0 {
 		return fmt.Errorf("no MachineTypes configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
@@ -72,17 +74,16 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 
 	// select first machine type of CPU architecture amd64
 	for _, machine := range cloudProfile.Spec.MachineTypes {
-		if machine.GetArchitecture() == v1beta1constants.ArchitectureAMD64 {
+		if machine.GetArchitecture(defaultArchitecture) == v1beta1constants.ArchitectureAMD64 {
 			machineType = machine
 			break
 		}
 	}
 
-	if machineType.GetArchitecture() != v1beta1constants.ArchitectureAMD64 {
+	if machineType.GetArchitecture(defaultArchitecture) != v1beta1constants.ArchitectureAMD64 {
 		return fmt.Errorf("no MachineTypes of architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
 
-	defaultArchitecture := v1beta1helper.GetDefaultArchitectureFromCapabilityDefinitions(cloudProfile.Spec.Capabilities)
 	machineImage := firstMachineImageWithAMDSupport(cloudProfile.Spec.MachineImages, defaultArchitecture)
 
 	if machineImage == nil {

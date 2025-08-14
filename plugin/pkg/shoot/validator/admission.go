@@ -1154,7 +1154,8 @@ func (c *validationContext) validateMachineImage(idxPath *field.Path, worker cor
 }
 
 func (c *validationContext) validateMachineType(idxPath *field.Path, worker core.Worker, oldWorker core.Worker) *field.Error {
-	isMachinePresentInCloudprofile, architectureSupported, availableInAllZones, isUsableMachine, supportedMachineTypes := validateMachineTypes(c.cloudProfileSpec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.Regions, c.shoot.Spec.Region, worker.Zones)
+	defaultArchitecture := v1beta1helper.GetDefaultArchitectureFromCapabilityDefinitions(c.cloudProfileSpec.Capabilities)
+	isMachinePresentInCloudprofile, architectureSupported, availableInAllZones, isUsableMachine, supportedMachineTypes := validateMachineTypes(c.cloudProfileSpec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.Regions, c.shoot.Spec.Region, worker.Zones, defaultArchitecture)
 	if !isMachinePresentInCloudprofile {
 		return field.NotSupported(idxPath.Child("machine", "type"), worker.Machine.Type, supportedMachineTypes)
 	}
@@ -1478,7 +1479,7 @@ func validateKubernetesVersionConstraints(a admission.Attributes, constraints []
 	return allErrs
 }
 
-func validateMachineTypes(constraints []gardencorev1beta1.MachineType, machine, oldMachine core.Machine, regions []gardencorev1beta1.Region, region string, zones []string) (bool, bool, bool, bool, []string) {
+func validateMachineTypes(constraints []gardencorev1beta1.MachineType, machine, oldMachine core.Machine, regions []gardencorev1beta1.Region, region string, zones []string, defaultArchitecture string) (bool, bool, bool, bool, []string) {
 	if machine.Type == oldMachine.Type && ptr.Equal(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, true, nil
 	}
@@ -1491,7 +1492,7 @@ func validateMachineTypes(constraints []gardencorev1beta1.MachineType, machine, 
 	)
 
 	for _, t := range constraints {
-		if t.GetArchitecture() == ptr.Deref(machine.Architecture, "") {
+		if t.GetArchitecture(defaultArchitecture) == ptr.Deref(machine.Architecture, "") {
 			machinesWithSupportedArchitecture.Insert(t.Name)
 		}
 		if ptr.Deref(t.Usable, false) {

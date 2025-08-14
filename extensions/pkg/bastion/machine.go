@@ -34,7 +34,7 @@ func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile) (vm
 	bastionSpec := profile.Spec.Bastion
 
 	if bastionSpec != nil && bastionSpec.MachineType != nil {
-		vm.MachineTypeName, vm.Architecture, err = getMachine(bastionSpec, profile.Spec.MachineTypes)
+		vm.MachineTypeName, vm.Architecture, err = getMachine(bastionSpec, profile.Spec.MachineTypes, defaultArchitecture)
 		if err != nil {
 			return MachineSpec{}, err
 		}
@@ -54,7 +54,7 @@ func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile) (vm
 }
 
 // getMachine retrieves the bastion machine name and arch
-func getMachine(bastion *gardencorev1beta1.Bastion, machineTypes []gardencorev1beta1.MachineType) (machineName string, machineArch string, err error) {
+func getMachine(bastion *gardencorev1beta1.Bastion, machineTypes []gardencorev1beta1.MachineType, defaultArchitecture string) (machineName string, machineArch string, err error) {
 	machineIndex := slices.IndexFunc(machineTypes, func(machine gardencorev1beta1.MachineType) bool {
 		return machine.Name == bastion.MachineType.Name
 	})
@@ -65,7 +65,7 @@ func getMachine(bastion *gardencorev1beta1.Bastion, machineTypes []gardencorev1b
 	}
 
 	machine := machineTypes[machineIndex]
-	machineArch = machine.GetArchitecture()
+	machineArch = machine.GetArchitecture(defaultArchitecture)
 	if machineArch == "" {
 		return "", "",
 			fmt.Errorf("architecture for specified bastion machine type %s is <nil>", bastion.MachineType.Name)
@@ -209,7 +209,7 @@ func findMostSuitableMachineType(profile *gardencorev1beta1.CloudProfile) (machi
 	var minCpu *int64
 
 	for _, machine := range profile.Spec.MachineTypes {
-		arch := machine.GetArchitecture()
+		arch := machine.GetArchitecture(defaultArchitecture)
 		if arch == "" {
 			continue
 		}
