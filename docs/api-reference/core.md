@@ -5513,7 +5513,7 @@ bool
 </em>
 </td>
 <td>
-<p>AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after prepared status.
+<p>AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after the preparation phase has finished.
 Such rotation can be triggered by the <code>rotate-etcd-encryption-key</code> annotation.
 This field is needed while we support two types of key rotations: two-operation and single operation rotation.</p>
 <p>Deprecated: This field will be removed in a future release. The field will be no longer needed with
