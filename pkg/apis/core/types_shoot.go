@@ -318,7 +318,7 @@ type ETCDEncryptionKeyRotation struct {
 	// LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was
 	// triggered.
 	LastCompletionTriggeredTime *metav1.Time
-	// AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after prepared status.
+	// AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after the preparation phase has finished.
 	// Such rotation can be triggered by the `rotate-etcd-encryption-key` annotation.
 	// This field is needed while we support two types of key rotations: two-operation and single operation rotation.
 	//
