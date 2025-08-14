@@ -115,6 +115,13 @@ External systems can be then configured to trust the workload identity issuer of
 DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up
 ```
 
+The following files are required for workload identity support:
+- `/example/provider-extensions/garden/controlplane/workload-identity-issuer.yaml`
+- `/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml`
+- `/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml`
+
+In addition, the file [`/example/provider-extensions/garden/project/kustomization.yaml`](/example/provider-extensions/garden/project/kustomization.yaml) has to be adapted to include all resources. For that, just remove the `#` in front of the last two lines. 
+
 > [!IMPORTANT]
 > The Gardener Discovery Server is started with a token which is valid for 48 hours.
 > Rerun `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up` in order to renew the token.
