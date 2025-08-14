@@ -102,7 +102,7 @@ var _ = Describe("helper", func() {
 		Entry("phase set", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
 	)
 
-	DescribeTable("#IsETCDEncryptionKeyRotationSingleOperation",
+	DescribeTable("#ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared",
 		func(credentials *operatorv1alpha1.Credentials, isSingleOperation bool) {
 			Expect(ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials)).To(Equal(isSingleOperation))
 		},
