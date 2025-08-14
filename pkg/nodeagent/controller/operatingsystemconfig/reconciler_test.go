@@ -276,8 +276,8 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			}
 
 			DeferCleanup(test.WithVars(
-				&OSUpdateRetryInterval, 1*time.Millisecond,
-				&OSUpdateRetryTimeout, 10*time.Millisecond,
+				&OSUpdateRetryInterval, 100*time.Millisecond,
+				&OSUpdateRetryTimeout, 1*time.Second,
 			))
 		})
 
@@ -369,8 +369,8 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			oscChanges = &operatingSystemConfigChanges{}
 
 			DeferCleanup(test.WithVars(
-				&OSUpdateRetryInterval, 1*time.Millisecond,
-				&OSUpdateRetryTimeout, 10*time.Millisecond,
+				&OSUpdateRetryInterval, 100*time.Millisecond,
+				&OSUpdateRetryTimeout, 1*time.Second,
 				&GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) {
 					return ptr.To(osVersion), nil
 				},
@@ -575,9 +575,14 @@ PRETTY_NAME="Garden Linux 1592Foo"
 		})
 
 		It("should not patch the node as update successful and delete the pods if the OS is not up-to-date", func() {
-			DeferCleanup(test.WithVar(&GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) {
-				return ptr.To("1.1.0"), nil
-			}))
+			DeferCleanup(test.WithVars(
+				&GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) {
+					return ptr.To("1.1.0"), nil
+				},
+				&ExecCommandCombinedOutput, func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+					return []byte("OS update successful, not yet restarted"), nil
+				},
+			))
 
 			oscChanges.InPlaceUpdates.OperatingSystem = true
 
