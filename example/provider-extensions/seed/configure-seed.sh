@@ -92,13 +92,16 @@ ensure-gardener-dns-annotations() {
 
 echo "Ensuring config files"
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml
-ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/workload-identity-issuer.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml
-ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml
-ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml.tmpl
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml
+
+if [[ "$workload_identity_support" == "true" ]]; then
+  ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/workload-identity-issuer.yaml
+  ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml
+  ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml
+fi
 
 echo "Check if essential config options are initialized"
 check-not-initial "$seed_kubeconfig" ""
@@ -114,15 +117,18 @@ check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/pr
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml 'select(document_index == 2) | .spec.namespace'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml '.metadata.namespace'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml '.data'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml '.metadata.namespace'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml '.spec.audiences'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml '.spec.targetSystem.type'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml '.metadata.namespace'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml '.provider.type'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml '.secretRef.namespace'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml '.metadata.namespace'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml '.provider.type'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml '.credentialsRef.namespace'
+
+if [[ "$workload_identity_support" == "true" ]]; then
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml '.metadata.namespace'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml '.spec.audiences'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml '.spec.targetSystem.type'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml '.metadata.namespace'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml '.provider.type'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml '.credentialsRef.namespace'
+fi
 
 role1=$(yq 'select(document_index == 0) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
 role2=$(yq 'select(document_index == 1) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
