@@ -176,17 +176,7 @@ func (c *ClusterOpenIDConnectPreset) Admit(_ context.Context, a admission.Attrib
 	}
 	// We have an OpenIDConnectPreset, use it.
 	if preset != nil {
-		currentVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
-		if err != nil {
-			return apierrors.NewBadRequest(fmt.Errorf("failed to parse shoot version: %w", err).Error())
-		}
-
-		if versionutils.ConstraintK8sGreaterEqual132.Check(currentVersion) {
-			return apierrors.NewBadRequest(errors.New("openidconnectpreset cannot be used for shoot version >=1.32").Error())
-		}
-
 		applier.ApplyOIDCConfiguration(shoot, preset)
-
 		return nil
 	}
 
