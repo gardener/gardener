@@ -21,6 +21,7 @@ addlicense \
   -ignore ".vscode/**" \
   -ignore "dev/**" \
   -ignore "**/*.md" \
+  -ignore "**/*.toml" \
   -ignore "**/*.html" \
   -ignore "**/*.yaml" \
   -ignore "**/Dockerfile" \
