@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
@@ -24,6 +25,7 @@ import (
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	settingsv1alpha1lister "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	applier "github.com/gardener/gardener/plugin/pkg/shoot/oidc"
 )
@@ -128,6 +130,10 @@ func (c *ClusterOpenIDConnectPreset) Admit(_ context.Context, a admission.Attrib
 		return nil
 	}
 
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil {
+		return nil
+	}
+
 	coidcs, err := c.clusterOIDCLister.List(labels.Everything())
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not list existing clusteropenidconnectpresets: %w", err))
@@ -161,7 +167,17 @@ func (c *ClusterOpenIDConnectPreset) Admit(_ context.Context, a admission.Attrib
 	}
 	// We have an OpenIDConnectPreset, use it.
 	if preset != nil {
+		currentVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+		if err != nil {
+			return apierrors.NewBadRequest(fmt.Errorf("failed to parse shoot version: %w", err).Error())
+		}
+
+		if versionutils.ConstraintK8sGreaterEqual132.Check(currentVersion) {
+			return apierrors.NewBadRequest(errors.New("openidconnectpreset cannot be used for shoot version >=1.32").Error())
+		}
+
 		applier.ApplyOIDCConfiguration(shoot, preset)
+
 		return nil
 	}
 
