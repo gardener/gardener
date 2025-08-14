@@ -13,9 +13,7 @@ import (
 )
 
 // featureGateVersionRanges contains the version ranges for all Kubernetes feature gates.
-// Extracted from:
-// - https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
-// - https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates-removed/
+// Extracted from https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/test/compatibility_lifecycle/reference/versioned_feature_list.yaml.
 // To maintain this list for each new Kubernetes version:
 //   - Run `hack/compare-k8s-feature-gates.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-feature-gates.sh v1.33 v1.34`).
 //     It will present 3 lists of feature gates: those added and those removed in `<new-version>` compared to `<old-version>` and

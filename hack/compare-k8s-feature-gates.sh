@@ -39,13 +39,12 @@ function cleanup_output {
 }
 trap cleanup_output EXIT
 
-versions_dir=test/compatibility_lifecycle/reference
 for version in "${versions[@]}"; do
   if [ "$version" \< "1.33" ]; then 
     echo "Versions less than 1.33 are not supported." 
     exit 1 
   fi 
-  wget -q -O - "https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/${versions_dir}/versioned_feature_list.yaml" > "${out_dir}/versioned_featuregates_${version}.yaml"
+  wget -q -O - "https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/test/compatibility_lifecycle/reference/versioned_feature_list.yaml" > "${out_dir}/versioned_featuregates_${version}.yaml"
   yq '.[] | .name' "${out_dir}/versioned_featuregates_${version}.yaml" > "${out_dir}/featuregates_list_${version}.yaml"
   # Sort feature gate list for the diff to function correctly
   sort -o "${out_dir}/featuregates_list_${version}.yaml" "${out_dir}/featuregates_list_${version}.yaml"
