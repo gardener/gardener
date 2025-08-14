@@ -1126,7 +1126,8 @@ func (c *validationContext) validateMachineCapabilities(path *field.Path, worker
 
 func (c *validationContext) validateMachineImage(idxPath *field.Path, worker core.Worker, oldWorker core.Worker, isNewWorkerPool bool, a admission.Attributes) *field.Error {
 	isUpdateStrategyInPlace := helper.IsUpdateStrategyInPlace(worker.UpdateStrategy)
-	isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine)
+	defaultArchitecture := v1beta1helper.GetDefaultArchitectureFromCapabilityDefinitions(c.cloudProfileSpec.Capabilities)
+	isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine, defaultArchitecture)
 	if !isMachineImagePresentInCloudprofile {
 		return field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageVersions))
 	}
@@ -1749,6 +1750,8 @@ func getDefaultMachineImage(
 	isUpdateStrategyInPlace bool,
 	fldPath *field.Path,
 ) (*core.ShootMachineImage, *field.Error) {
+	defaultArchitecture := v1beta1helper.GetDefaultArchitectureFromCapabilityDefinitions(capabilitiesDefinition)
+
 	var imageReference string
 	if image != nil {
 		imageReference = fmt.Sprintf("%s@%s", image.Name, image.Version)
@@ -1776,7 +1779,7 @@ func getDefaultMachineImage(
 		for _, mi := range machineImages {
 			machineImage := mi
 			for _, version := range machineImage.Versions {
-				if v1beta1helper.ArchitectureSupportedByImageVersion(version, *arch) {
+				if v1beta1helper.ArchitectureSupportedByImageVersion(version, *arch, defaultArchitecture) {
 					defaultImage = &machineImage
 					break
 				}
@@ -1821,7 +1824,7 @@ func getDefaultMachineImage(
 	var validVersions []core.MachineImageVersion
 
 	for _, version := range defaultImage.Versions {
-		if !v1beta1helper.ArchitectureSupportedByImageVersion(version, *arch) {
+		if !v1beta1helper.ArchitectureSupportedByImageVersion(version, *arch, defaultArchitecture) {
 			continue
 		}
 
@@ -1868,7 +1871,7 @@ func parseSemanticVersionPart(part string) (*uint64, error) {
 	return ptr.To(v), nil
 }
 
-func validateMachineImagesConstraints(a admission.Attributes, constraints []gardencorev1beta1.MachineImage, isNewWorkerPool, isUpdateStrategyInPlace bool, machine, oldMachine core.Machine) (bool, bool, bool, bool, []string) {
+func validateMachineImagesConstraints(a admission.Attributes, constraints []gardencorev1beta1.MachineImage, isNewWorkerPool, isUpdateStrategyInPlace bool, machine, oldMachine core.Machine, defaultArchitecture string) (bool, bool, bool, bool, []string) {
 	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && ptr.Equal(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, true, nil
 	}
@@ -1899,7 +1902,7 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []gard
 					}
 				}
 
-				if slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(machineVersion), *machine.Architecture) {
+				if slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(machineVersion, defaultArchitecture), *machine.Architecture) {
 					machineImageVersionsWithSupportedArchitecture.Insert(machineImageVersion)
 				}
 

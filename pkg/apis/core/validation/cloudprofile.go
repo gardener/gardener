@@ -154,7 +154,7 @@ func validateCloudProfileMachineTypes(machineTypes []core.MachineType, capabilit
 	allErrs = append(allErrs, validateMachineTypes(machineTypes, capabilities, fldPath)...)
 
 	for i, machineType := range machineTypes {
-		if ptr.Deref(machineType.Architecture, "") == "" && (len(capabilities) == 0 || len(machineType.Capabilities[v1beta1constants.ArchitectureName]) == 0) {
+		if ptr.Deref(machineType.Architecture, "") == "" && len(capabilities) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("architecture"), "must provide an architecture"))
 		}
 		if len(capabilities) == 0 && len(machineType.Capabilities) > 0 {
