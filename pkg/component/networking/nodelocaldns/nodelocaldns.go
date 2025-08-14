@@ -92,8 +92,6 @@ type Interface interface {
 	SetDNSServers([]string)
 	SetIPFamilies([]gardencorev1beta1.IPFamily)
 	SetShootClientSet(kubernetes.Interface)
-	SetSeedClientSet(kubernetes.Interface)
-	SetLogger(logr.Logger)
 }
 
 // Values is a set of configuration values for the node-local-dns component.
@@ -114,8 +112,6 @@ type Values struct {
 	IPFamilies []gardencorev1beta1.IPFamily
 	// ShootClient is the client used to interact with the shoot cluster.
 	ShootClient client.Client
-	// SeedClient is the client used to interact with the seed cluster.
-	SeedClient client.Client
 	// Log is the logger used for logging.
 	Log logr.Logger
 	// Workers is the group of workers for which node-local-dns is deployed.
@@ -375,14 +371,6 @@ func (n *nodeLocalDNS) SetIPFamilies(ipfamilies []gardencorev1beta1.IPFamily) {
 
 func (n *nodeLocalDNS) SetShootClientSet(set kubernetes.Interface) {
 	n.values.ShootClient = set.Client()
-}
-
-func (n *nodeLocalDNS) SetSeedClientSet(set kubernetes.Interface) {
-	n.values.SeedClient = set.Client()
-}
-
-func (n *nodeLocalDNS) SetLogger(log logr.Logger) {
-	n.values.Log = log
 }
 
 func (n *nodeLocalDNS) getIPVSAddress() (ipvsAddress string) {
