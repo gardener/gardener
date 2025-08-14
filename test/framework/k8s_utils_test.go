@@ -5,18 +5,105 @@
 package framework_test
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	. "github.com/gardener/gardener/test/framework"
 	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
 var _ = Describe("Kubernetes Utils", func() {
+	Describe("#GetAllNodesInWorkerPool", func() {
+		var (
+			ctx           context.Context
+			fakeClient    client.Client
+			fakeInterface kubernetes.Interface
+
+			workerPool string
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+			fakeInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+		})
+
+		It("should return all nodes when no worker pool is specified", func() {
+			node1 := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "node1",
+				},
+			}
+			node2 := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "node2",
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, node1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, node2)).To(Succeed())
+
+			nodes, err := GetAllNodesInWorkerPool(ctx, fakeInterface, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(nodes.Items).To(HaveLen(2))
+			Expect(nodes.Items).To(ContainElement(*node1))
+			Expect(nodes.Items).To(ContainElement(*node2))
+		})
+
+		It("should return nodes belonging to a specific worker pool", func() {
+			workerPool = "worker-pool-1"
+			node1 := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "node1",
+					Labels: map[string]string{"worker.gardener.cloud/pool": workerPool},
+				},
+			}
+			node2 := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "node2",
+					Labels: map[string]string{"worker.gardener.cloud/pool": "worker-pool-2"},
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, node1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, node2)).To(Succeed())
+
+			nodes, err := GetAllNodesInWorkerPool(ctx, fakeInterface, &workerPool)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(nodes.Items).To(HaveLen(1))
+			Expect(nodes.Items[0].Name).To(Equal("node1"))
+		})
+
+		It("should return an empty list if no nodes match the worker pool", func() {
+			workerPool = "non-existent-pool"
+			node := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "node1",
+					Labels: map[string]string{"worker.gardener.cloud/pool": "worker-pool-1"},
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, node)).To(Succeed())
+
+			nodes, err := GetAllNodesInWorkerPool(ctx, fakeInterface, &workerPool)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(nodes.Items).To(BeEmpty())
+		})
+	})
+
 	Describe("#ShootReconciliationSuccessful", func() {
 		var (
 			shoot *gardencorev1beta1.Shoot
