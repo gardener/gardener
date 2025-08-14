@@ -1036,4 +1036,8 @@ const (
 	// LabelInjectGardenKubeconfig is a constant for a label on workload resources that indicates that a kubeconfig to
 	// the garden cluster should be injected.
 	LabelInjectGardenKubeconfig = "extensions.gardener.cloud/inject-garden-kubeconfig"
+
+	// AnnotationEmergencyStopShootReconciliations is the key for the emergency switch annotation for the seed resource
+	// to temporarily pause further shoot reconciliations.
+	AnnotationEmergencyStopShootReconciliations = "shoot.gardener.cloud/emergency-stop-reconciliations"
 )

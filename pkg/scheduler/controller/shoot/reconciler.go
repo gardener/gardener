@@ -167,6 +167,10 @@ func (r *Reconciler) DetermineSeed(
 	if err != nil {
 		return nil, err
 	}
+	filteredSeeds, err = filterSeedsWithDisabledShootReconciliations(filteredSeeds)
+	if err != nil {
+		return nil, err
+	}
 	filteredSeeds, err = filterCandidates(shoot, shootList, filteredSeeds)
 	if err != nil {
 		return nil, err
@@ -297,6 +301,21 @@ func filterSeedsForAccessRestrictions(seedList []gardencorev1beta1.Seed, shoot *
 		return nil, fmt.Errorf("none of the %d seeds supports the access restrictions configured in the shoot specification", len(seedList))
 	}
 	return seedsSupportingAccessRestrictions, nil
+}
+
+// filterSeedsWithDisabledShootReconciliations filters seeds which have annotation set to temporarily disable shoot reconciliations.
+func filterSeedsWithDisabledShootReconciliations(seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
+	var seedsWithEnabledReconciliations []gardencorev1beta1.Seed
+	for _, seed := range seedList {
+		if !v1beta1helper.HasShootReconciliationsDisabledAnnotation(&seed) {
+			seedsWithEnabledReconciliations = append(seedsWithEnabledReconciliations, seed)
+		}
+	}
+
+	if len(seedsWithEnabledReconciliations) == 0 {
+		return nil, fmt.Errorf("none of the %d seeds have enabled shoot reconciliations currently", len(seedList))
+	}
+	return seedsWithEnabledReconciliations, nil
 }
 
 func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy schedulerconfigv1alpha1.CandidateDeterminationStrategy, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {

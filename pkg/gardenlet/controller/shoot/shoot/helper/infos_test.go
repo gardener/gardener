@@ -31,6 +31,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 	var (
 		cl    *testclock.FakeClock
 		shoot *gardencorev1beta1.Shoot
+		seed  *gardencorev1beta1.Seed
 		cfg   gardenletconfigv1alpha1.ShootControllerConfiguration
 
 		timeWindow      timewindow.MaintenanceTimeWindow
@@ -62,6 +63,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				},
 			},
 		}
+		seed = nil
 
 		timeWindow = *gardenerutils.EffectiveShootMaintenanceTimeWindow(shoot)
 		m := timeWindow.Begin()
@@ -77,7 +79,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 	})
 
 	JustBeforeEach(func() {
-		infos = CalculateControllerInfos(shoot, cl, cfg)
+		infos = CalculateControllerInfos(seed, shoot, cl, cfg)
 	})
 
 	Context("shoot creation", func() {
@@ -93,7 +95,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("creation is triggered", func() {
 			It("should reconcile the shoot immediately", func() {
-				Expect(infos.ShouldReconcileNow).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 		})
@@ -107,7 +109,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should reconcile the shoot immediately", func() {
-				Expect(infos.ShouldReconcileNow).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 		})
@@ -119,7 +121,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
-				Expect(infos.ShouldReconcileNow).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldOnlySyncClusterResource).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
@@ -138,7 +140,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
-				Expect(infos.ShouldReconcileNow).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldOnlySyncClusterResource).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
@@ -153,7 +155,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				})
 
 				It("should reconcile the shoot immediately", func() {
-					Expect(infos.ShouldReconcileNow).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 					Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 				})
 			})
@@ -164,9 +166,45 @@ var _ = Describe("CalculateControllerInfos", func() {
 				})
 
 				It("should reconcile the shoot immediately", func() {
-					Expect(infos.ShouldReconcileNow).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 					Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 				})
+			})
+		})
+
+		Context("seed with emergency switch to temporarily stop reconciliations", func() {
+			BeforeEach(func() {
+				seed = &gardencorev1beta1.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "seed",
+						Annotations: map[string]string{
+							v1beta1constants.AnnotationEmergencyStopShootReconciliations: "true",
+						},
+					},
+				}
+			})
+
+			It("should not reconcile the shoot", func() {
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Reason).To(Equal("Shoot reconciliation blocked by Seed emergency switch"))
+			})
+		})
+
+		Context("seed with inactive emergency switch does not block reconciliations", func() {
+			BeforeEach(func() {
+				seed = &gardencorev1beta1.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "seed",
+						Annotations: map[string]string{
+							v1beta1constants.AnnotationEmergencyStopShootReconciliations: "false",
+						},
+					},
+				}
+			})
+
+			It("should not reconcile the shoot", func() {
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Reason).To(BeEmpty())
 			})
 		})
 	})
@@ -189,7 +227,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should reconcile the shoot immediately", func() {
-				Expect(infos.ShouldReconcileNow).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 		})
@@ -202,14 +240,14 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should reconcile the shoot immediately", func() {
-				Expect(infos.ShouldReconcileNow).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 		})
 
 		Context("reconciliations are not confined", func() {
 			It("should reconcile the shoot immediately", func() {
-				Expect(infos.ShouldReconcileNow).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 
@@ -241,7 +279,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			testReconciliationsConfined := func() {
 				Context("currently not in maintenance time window", func() {
 					It("should not reconcile the shoot immediately", func() {
-						Expect(infos.ShouldReconcileNow).To(BeFalse())
+						Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 						Expect(infos.ShouldOnlySyncClusterResource).To(BeFalse())
 					})
 
@@ -274,7 +312,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 						It("should reconcile the shoot immediately", func() {
 							// If a reconciliation request is passed to the reconciler (e.g., exponential requeue or requeue after),
 							// handle it immediately instead of calculating a new random time in this time window.
-							Expect(infos.ShouldReconcileNow).To(BeTrue())
+							Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 							Expect(infos.ShouldOnlySyncClusterResource).To(BeFalse())
 						})
 
@@ -297,7 +335,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 						})
 
 						It("should not reconcile the shoot immediately", func() {
-							Expect(infos.ShouldReconcileNow).To(BeFalse())
+							Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 							Expect(infos.ShouldOnlySyncClusterResource).To(BeFalse())
 						})
 
@@ -347,7 +385,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
-				Expect(infos.ShouldReconcileNow).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldOnlySyncClusterResource).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
@@ -365,7 +403,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
-				Expect(infos.ShouldReconcileNow).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldOnlySyncClusterResource).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
@@ -380,7 +418,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				})
 
 				It("should reconcile the shoot immediately", func() {
-					Expect(infos.ShouldReconcileNow).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 					Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 				})
 			})
@@ -391,9 +429,45 @@ var _ = Describe("CalculateControllerInfos", func() {
 				})
 
 				It("should reconcile the shoot immediately", func() {
-					Expect(infos.ShouldReconcileNow).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 					Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 				})
+			})
+		})
+
+		Context("seed with emergency switch to temporarily stop reconciliations", func() {
+			BeforeEach(func() {
+				seed = &gardencorev1beta1.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "seed",
+						Annotations: map[string]string{
+							v1beta1constants.AnnotationEmergencyStopShootReconciliations: "true",
+						},
+					},
+				}
+			})
+
+			It("should not reconcile the shoot", func() {
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Reason).To(Equal("Shoot reconciliation blocked by Seed emergency switch"))
+			})
+		})
+
+		Context("seed with inactive emergency switch does not block reconciliations", func() {
+			BeforeEach(func() {
+				seed = &gardencorev1beta1.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "seed",
+						Annotations: map[string]string{
+							v1beta1constants.AnnotationEmergencyStopShootReconciliations: "false",
+						},
+					},
+				}
+			})
+
+			It("should not reconcile the shoot", func() {
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Reason).To(BeEmpty())
 			})
 		})
 	})
@@ -413,7 +487,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("migration is triggered", func() {
 			It("should reconcile the shoot immediately", func() {
-				Expect(infos.ShouldReconcileNow).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 		})
@@ -426,7 +500,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should reconcile the shoot immediately", func() {
-				Expect(infos.ShouldReconcileNow).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 		})
@@ -438,7 +512,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
-				Expect(infos.ShouldReconcileNow).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldOnlySyncClusterResource).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
@@ -456,7 +530,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
-				Expect(infos.ShouldReconcileNow).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldOnlySyncClusterResource).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
@@ -471,7 +545,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				})
 
 				It("should reconcile the shoot immediately", func() {
-					Expect(infos.ShouldReconcileNow).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 					Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 				})
 			})
@@ -482,7 +556,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				})
 
 				It("should reconcile the shoot immediately", func() {
-					Expect(infos.ShouldReconcileNow).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 					Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 				})
 			})
@@ -506,7 +580,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("restoration is triggered", func() {
 			It("should reconcile the shoot immediately", func() {
-				Expect(infos.ShouldReconcileNow).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 		})
@@ -519,7 +593,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should reconcile the shoot immediately", func() {
-				Expect(infos.ShouldReconcileNow).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 		})
@@ -531,7 +605,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
-				Expect(infos.ShouldReconcileNow).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldOnlySyncClusterResource).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
@@ -549,7 +623,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
-				Expect(infos.ShouldReconcileNow).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldOnlySyncClusterResource).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
@@ -564,7 +638,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				})
 
 				It("should reconcile the shoot immediately", func() {
-					Expect(infos.ShouldReconcileNow).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 					Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 				})
 			})
@@ -575,7 +649,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				})
 
 				It("should reconcile the shoot immediately", func() {
-					Expect(infos.ShouldReconcileNow).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 					Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 				})
 			})
@@ -597,7 +671,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("deletion is triggered", func() {
 			It("should reconcile the shoot immediately", func() {
-				Expect(infos.ShouldReconcileNow).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 		})
@@ -610,7 +684,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should reconcile the shoot immediately", func() {
-				Expect(infos.ShouldReconcileNow).To(BeTrue())
+				Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 		})
@@ -622,7 +696,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
-				Expect(infos.ShouldReconcileNow).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldOnlySyncClusterResource).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
@@ -640,7 +714,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
-				Expect(infos.ShouldReconcileNow).To(BeFalse())
+				Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
 				Expect(infos.ShouldOnlySyncClusterResource).To(BeTrue())
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
@@ -655,7 +729,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				})
 
 				It("should reconcile the shoot immediately", func() {
-					Expect(infos.ShouldReconcileNow).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 					Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 				})
 			})
@@ -666,7 +740,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				})
 
 				It("should reconcile the shoot immediately", func() {
-					Expect(infos.ShouldReconcileNow).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
 					Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 				})
 			})

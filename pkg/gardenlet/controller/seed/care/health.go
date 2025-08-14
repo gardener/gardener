@@ -57,8 +57,12 @@ func (h *health) Check(
 		return conditions.ConvertToSlice()
 	}
 
-	newSystemComponentsCondition := h.checkSystemComponents(conditions.systemComponentsHealthy, managedResources)
-	return []gardencorev1beta1.Condition{v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, newSystemComponentsCondition, nil)}
+	var checkedConditions []gardencorev1beta1.Condition
+	checkedConditions = append(checkedConditions, v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, h.checkSystemComponents(conditions.systemComponentsHealthy, managedResources), nil))
+	if newEmergencyStopShootReconciliations := h.checkEmergencyStopShootReconciliations(conditions.emergencyStopShootReconciliations); newEmergencyStopShootReconciliations != nil {
+		checkedConditions = append(checkedConditions, v1beta1helper.NewConditionOrError(h.clock, conditions.emergencyStopShootReconciliations, newEmergencyStopShootReconciliations, nil))
+	}
+	return checkedConditions
 }
 
 func (h *health) listManagedResources(ctx context.Context) ([]resourcesv1alpha1.ManagedResource, error) {
@@ -84,16 +88,30 @@ func (h *health) checkSystemComponents(condition gardencorev1beta1.Condition, ma
 
 	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
 }
+func (h *health) checkEmergencyStopShootReconciliations(condition gardencorev1beta1.Condition) *gardencorev1beta1.Condition {
+	if !v1beta1helper.HasShootReconciliationsDisabledAnnotation(h.seed) {
+		return nil
+	}
+	return ptr.To(v1beta1helper.UpdatedConditionWithClock(
+		h.clock,
+		condition,
+		gardencorev1beta1.ConditionFalse,
+		string(gardencorev1beta1.SeedEmergencyStopShootReconciliations),
+		"Reconciliations of Shoots managed by this Seed cluster are currently disabled by annotation.",
+	))
+}
 
 // SeedConditions contains all seed related conditions of the seed status subresource.
 type SeedConditions struct {
-	systemComponentsHealthy gardencorev1beta1.Condition
+	systemComponentsHealthy           gardencorev1beta1.Condition
+	emergencyStopShootReconciliations gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the seed conditions as a slice.
 func (s SeedConditions) ConvertToSlice() []gardencorev1beta1.Condition {
 	return []gardencorev1beta1.Condition{
 		s.systemComponentsHealthy,
+		s.emergencyStopShootReconciliations,
 	}
 }
 
@@ -101,6 +119,7 @@ func (s SeedConditions) ConvertToSlice() []gardencorev1beta1.Condition {
 func (s SeedConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
 	return []gardencorev1beta1.ConditionType{
 		s.systemComponentsHealthy.Type,
+		s.emergencyStopShootReconciliations.Type,
 	}
 }
 
@@ -108,6 +127,7 @@ func (s SeedConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
 // All conditions are retrieved from the given 'status' or newly initialized.
 func NewSeedConditions(clock clock.Clock, status gardencorev1beta1.SeedStatus) SeedConditions {
 	return SeedConditions{
-		systemComponentsHealthy: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy),
+		systemComponentsHealthy:           v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy),
+		emergencyStopShootReconciliations: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, gardencorev1beta1.SeedEmergencyStopShootReconciliations),
 	}
 }

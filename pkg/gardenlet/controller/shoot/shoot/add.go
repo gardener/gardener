@@ -67,7 +67,7 @@ func (r *Reconciler) EventHandler(log logr.Logger) handler.EventHandler {
 				return
 			}
 
-			enqueueAfter := CalculateControllerInfos(shoot, r.Clock, *r.Config.Controllers.Shoot).EnqueueAfter
+			enqueueAfter := CalculateControllerInfos(nil, shoot, r.Clock, *r.Config.Controllers.Shoot).EnqueueAfter
 			nextReconciliation := r.Clock.Now().UTC().Add(enqueueAfter)
 
 			log.Info("Scheduling next reconciliation for Shoot",

@@ -152,7 +152,7 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 	reportMetrics(shoot, operationType, r.Clock.Now().UTC().Sub(shoot.CreationTimestamp.UTC()))
 
 	// determine when the next shoot reconciliation is supposed to happen
-	result = helper.CalculateControllerInfos(shoot, r.Clock, *r.Config.Controllers.Shoot).RequeueAfter
+	result = helper.CalculateControllerInfos(o.Seed.GetInfo(), shoot, r.Clock, *r.Config.Controllers.Shoot).RequeueAfter
 	nextReconciliation := r.Clock.Now().UTC().Add(result.RequeueAfter)
 
 	log.Info("Shoot operation finished successfully, scheduling next reconciliation for Shoot", "requeueAfter", result.RequeueAfter, "nextReconciliation", nextReconciliation)
@@ -292,11 +292,25 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 		}
 	}
 
-	i := helper.CalculateControllerInfos(shoot, r.Clock, *r.Config.Controllers.Shoot)
+	i := helper.CalculateControllerInfos(seed, shoot, r.Clock, *r.Config.Controllers.Shoot)
 	log.V(1).Info("Calculated infos", "infos", i)
 
-	if !i.ShouldReconcileNow {
-		log.Info("Skipping shoot because it should not be reconciled right now")
+	if !i.ShouldReconcileNow.Result {
+		log.Info("Skipping shoot because it should not be reconciled right now", "reason", i.ShouldReconcileNow.Reason)
+
+		if shoot.Status.LastOperation == nil {
+			// If the last operation is nil, we initialize it with an empty object so that annotating the shoot
+			// leads to a generation increase and thus a reconciliation.
+			// This is important for the case when the shoot was created but never reconciled
+			// e.g., because of temporarily disabled shoot reconciliations.
+			statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStatePending,
+			}
+			if err := r.GardenClient.Status().Patch(ctx, shoot, statusPatch); err != nil {
+				return nil, reconcile.Result{}, err
+			}
+		}
 
 		if i.ShouldOnlySyncClusterResource {
 			if syncErr := r.syncClusterResourceToSeed(ctx, shoot, project, cloudProfile, seed); syncErr != nil {
