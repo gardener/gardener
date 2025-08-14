@@ -130,6 +130,15 @@ func (c *ClusterOpenIDConnectPreset) Admit(_ context.Context, a admission.Attrib
 		return nil
 	}
 
+	// OIDCConfig is forbidden for clusters with kubernetes version >= 1.32.
+	kubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("failed to parse shoot version: %w", err))
+	}
+	if versionutils.ConstraintK8sGreaterEqual132.Check(kubernetesVersion) {
+		return nil
+	}
+
 	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil {
 		return nil
 	}
