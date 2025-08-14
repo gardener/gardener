@@ -54,6 +54,6 @@ func (o *Options) Complete() error { return nil }
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	fs.BytesBase64Var(&o.CertificateAuthority, "ca-certificate", nil, "Base64-encoded certificate authority bundle of the control plane")
-	fs.StringVar(&o.BootstrapToken, "bootstrap-token", "", "Bootstrap token for joining the cluster (create it with gardenadm token)")
+	fs.StringVar(&o.BootstrapToken, "bootstrap-token", "", "Bootstrap token for joining the cluster (create it with 'gardenadm token' on a control plane node)")
 	fs.StringVar(&o.GardenerNodeAgentSecretName, "gardener-node-agent-secret-name", "", "Name of the Secret from which gardener-node-agent should download its operating system configuration")
 }
