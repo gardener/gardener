@@ -9,8 +9,8 @@ source "$(dirname "$0")/../../../hack/lockfile.sh"
 acquire_lockfile "/tmp/generate-imagevector-overwrite.sh.lock"
 
 dir="$(dirname "$0")/generated"
-patch_file="$dir/.imagevector-overwrite.yaml"
 image_name="$1"
+patch_file="$dir/${2:-.imagevector-overwrite.yaml}"
 ref="$SKAFFOLD_IMAGE"
 
 if [[ ! -f "$patch_file" ]]; then
