@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -32,7 +31,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -42,7 +40,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("NodeLocalDNS", func() {
@@ -607,19 +604,6 @@ status: {}
 		)
 
 		JustBeforeEach(func() {
-			ctrl := gomock.NewController(GinkgoT())
-			shootClient := mockclient.NewMockClient(ctrl)
-			seedClient := mockclient.NewMockClient(ctrl)
-			seedClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					clusterObj, ok := obj.(*extensionsv1alpha1.Cluster)
-					if ok && cluster != nil {
-						*clusterObj = *cluster
-					}
-					return nil
-				}).AnyTimes()
-			values.ShootClient = shootClient
-			values.SeedClient = seedClient
 			component = New(c, namespace, values)
 			Expect(c.Create(ctx, cluster)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
@@ -1238,28 +1222,7 @@ ip6.arpa:53 {
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
-			ctrl := gomock.NewController(GinkgoT())
-			shootClient := mockclient.NewMockClient(ctrl)
-			shootClientSet := kubernetesmock.NewMockInterface(ctrl)
-			shootClientSet.EXPECT().Client().Return(shootClient).AnyTimes()
-			shootClient.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-			shootClient.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-			shootClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-			seedClient := mockclient.NewMockClient(ctrl)
-			seedClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					clusterObj, ok := obj.(*extensionsv1alpha1.Cluster)
-					if ok && cluster != nil {
-						*clusterObj = *cluster
-					}
-					return nil
-				}).AnyTimes()
-			shootClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-			shootClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).Return(nil).AnyTimes()
-			shootClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-			shootClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-			values.ShootClient = shootClient
-			values.SeedClient = seedClient
+			values.ShootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 			scrapeConfig.ResourceVersion = ""
 			scrapeConfigErrors.ResourceVersion = ""
 			component = New(c, namespace, values)

@@ -45,6 +45,7 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 			Config:          v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
 			Workers:         b.Shoot.GetInfo().Spec.Provider.Workers,
 			KubeProxyConfig: b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
+			Log:             b.Logger,
 		},
 	), nil
 }
@@ -69,8 +70,6 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetDNSServers(dnsServers)
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetIPFamilies(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetShootClientSet(b.ShootClientSet)
-	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetSeedClientSet(b.SeedClientSet)
-	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetLogger(b.Logger)
 	if b.Shoot.NodeLocalDNSEnabled {
 		return b.Shoot.Components.SystemComponents.NodeLocalDNS.Deploy(ctx)
 	}
