@@ -23,7 +23,7 @@ gardenadm token create foo123.bar4567890baz123
 gardenadm token create foo123.bar4567890baz123 --print-join-command
 
 # Create a bootstrap token with a specific ID and secret and directly print the 'gardenadm connect' command for connecting a Shoot to Gardener
-gardenadm token create foo123.bar4567890baz123 --print-connect-command
+gardenadm token create foo123.bar4567890baz123 --print-connect-command --shoot-namespace=garden --shoot-name=root
 
 # Generate a random bootstrap token
 gardenadm token create
@@ -32,10 +32,12 @@ gardenadm token create
 ### Options
 
 ```
-  -d, --description string                        Description for the bootstrap token (default "Used for joining nodes via `gardenadm join` or connecting autonomous shoots via `gardenadm connect`")
+  -d, --description gardenadm join                Description for the bootstrap token used for gardenadm join
   -h, --help                                      help for create
   -c, --print-connect-command gardenadm connect   Instead of only printing the token, print the full machine-readable gardenadm connect command that can be ran on a machine of a cluster that should be connected to Gardener
   -j, --print-join-command gardenadm join         Instead of only printing the token, print the full machine-readable gardenadm join command that can be copied and ran on a machine that should join the cluster
+      --shoot-name gardenadm connect              Name of the Shoot which should be connected to Gardener via gardenadm connect with this bootstrap token
+      --shoot-namespace gardenadm connect         Namespace of the Shoot which should be connected to Gardener via gardenadm connect with this bootstrap token
       --validity duration                         Validity duration of the bootstrap token. Minimum is 10m, maximum is 24h. (default 1h0m0s)
   -w, --worker-pool-name string                   Name of the worker pool to use for the join command. (default "worker")
 ```
