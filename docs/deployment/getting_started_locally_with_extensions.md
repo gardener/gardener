@@ -34,7 +34,7 @@ As this setup is running on a real infrastructure, you have to provide credentia
 
 Gardener control plane requires DNS for default and internal domains. Thus, you have to configure a valid DNS provider for your setup.
 
-Please maintain your DNS provider configuration and credentials at [`/example/provider-extensions/garden/controlplane/domain-secrets.yaml`](/example/provider-extensions/garden/controlplane/domain-secrets.yaml).
+Please maintain your DNS provider configuration and credentials at `/example/provider-extensions/garden/controlplane/domain-secrets.yaml`.
 
 You can find a template for the file at [`/example/provider-extensions/garden/controlplane/domain-secrets.yaml.tmpl`](/example/provider-extensions/garden/controlplane/domain-secrets.yaml.tmpl).
 
@@ -42,27 +42,27 @@ You can find a template for the file at [`/example/provider-extensions/garden/co
 
 Infrastructure credentials, `Secrets` and `WorkloadIdentities`, and the corresponding `CredentialsBinding`s should be maintained at:
 
-- [`/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml`](/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml)
-- [`/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml`](/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml)
-- [`/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml`](/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml)
-- [`/example/provider-extensions/garden/project/credentials/secretbindings.yaml`](/example/provider-extensions/garden/project/credentials/secretbindings.yaml)
+- `/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml`
+- `/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml`
+- `/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml`
+- `/example/provider-extensions/garden/project/credentials/secretbindings.yaml`
 
 There are templates with `.tmpl` suffixes for the files in the same folder.
 
 ### Projects
 
-The projects and the namespaces associated with them should be maintained at [`/example/provider-extensions/garden/project/project.yaml`](/example/provider-extensions/garden/project/project.yaml).
+The projects and the namespaces associated with them should be maintained at `/example/provider-extensions/garden/project/project.yaml`.
 
 You can find a template for the file at [`/example/provider-extensions/garden/project/project.yaml.tmpl`](/example/provider-extensions/garden/project/project.yaml.tmpl).
 
 ### Seed Cluster Preparation
 
-The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at [`/example/provider-extensions/seed/kubeconfig`](/example/provider-extensions/seed/kubeconfig).
-Additionally, please maintain the configuration of your seed in [`/example/provider-extensions/gardenlet/values.yaml`](/example/provider-extensions/gardenlet/values.yaml). It is automatically copied from `values.yaml.tmpl` in the same directory when you run `make gardener-extensions-up` for the first time. It also includes explanations of the properties you should set.
+The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at `/example/provider-extensions/seed/kubeconfig`.
+Additionally, please maintain the configuration of your seed in `/example/provider-extensions/gardenlet/values.yaml`. It is automatically copied from `values.yaml.tmpl` in the same directory when you run `make gardener-extensions-up` for the first time. It also includes explanations of the properties you should set.
 
 Using a Gardener Shoot cluster as seed simplifies the process, because some configuration options can be taken from `shoot-info` and creating DNS entries and TLS certificates is automated.
 
-However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of [`/example/provider-extensions/gardenlet/values.yaml`](/example/provider-extensions/gardenlet/values.yaml) upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up`, which is explained later, will pause and tell you what to do.
+However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of `/example/provider-extensions/gardenlet/values.yaml` upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up`, which is explained later, will pause and tell you what to do.
 
 ### External Controllers
 
@@ -78,10 +78,10 @@ There are no demo `CloudProfiles` yet. Thus, please copy `CloudProfiles` from an
 make kind-extensions-up
 ```
 
-This command sets up a new KinD cluster named `gardener-extensions` and stores the kubeconfig in the [`/example/gardener-local/kind/extensions/kubeconfig`](/example/gardener-local/kind/extensions/kubeconfig) file.
+This command sets up a new KinD cluster named `gardener-extensions` and stores the kubeconfig in the `/example/gardener-local/kind/extensions/kubeconfig` file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
-Alternatively, make sure to set your `KUBECONFIG` environment variable to [`/example/gardener-local/kind/extensions/kubeconfig`](/example/gardener-local/kind/extensions/kubeconfig) for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/extensions/kubeconfig`.
+Alternatively, make sure to set your `KUBECONFIG` environment variable to `/example/gardener-local/kind/extensions/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/extensions/kubeconfig`.
 
 All of the following steps assume that you are using this kubeconfig.
 
