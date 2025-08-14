@@ -14,6 +14,7 @@ missing_license_header_files="$(addlicense \
   -ignore ".vscode/**" \
   -ignore "dev/**" \
   -ignore "**/*.md" \
+  -ignore "**/*.toml" \
   -ignore "**/*.html" \
   -ignore "**/*.yaml" \
   -ignore "**/Dockerfile" \
