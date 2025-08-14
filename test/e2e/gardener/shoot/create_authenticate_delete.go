@@ -208,9 +208,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				g.Expect(err).ToNot(HaveOccurred())
 			}).Should(Succeed())
 
-			Expect(selfSubjectReview.Status.UserInfo.Username).To(HaveSuffix(":kubernetes-admin"))
+			// TODO(rfranzke): Remove the regexp once the non-gardener-operator-based local setup has been removed.
+			Expect(selfSubjectReview.Status.UserInfo.Username).To(MatchRegexp("^.*:(kubernetes-admin|admin-user)$"))
 			Expect(selfSubjectReview.Status.UserInfo.Groups).To(Equal([]string{"gardener.cloud:system:viewers", "system:authenticated"}))
-
 		})
 
 		ItShouldDeleteShoot(shoot1)
