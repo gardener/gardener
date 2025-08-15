@@ -453,52 +453,68 @@ func (s *AccessSecret) Reconcile(ctx context.Context, c client.Client) error {
 // object. The access secret name must be the name of a secret containing a JWT token which should be used by the
 // kubeconfig. If the object has multiple containers then the default is to inject it into all of them. If it should
 // only be done for a selection of containers then their respective names must be provided.
+//
+// Function expects that the provided object type is one of:
+// *corev1.Pod, *appsv1.Deployment, *appsv1beta2.Deployment, *appsv1beta1.Deployment, *appsv1.StatefulSet, *appsv1beta2.StatefulSet,
+// *appsv1beta1.StatefulSet, *appsv1.DaemonSet, *appsv1beta2.DaemonSet, *batchv1.Job, *batchv1.CronJob, *batchv1beta1.CronJob,
 func InjectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSecretName string, containerNames ...string) error {
 	return injectGenericKubeconfig(obj, genericKubeconfigName, accessSecretName, "kubeconfig", VolumeMountPathGenericKubeconfig, containerNames...)
 }
 
-func injectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSecretName, volumeName, mountPath string, containerNames ...string) error {
-	var (
-		volume = corev1.Volume{
-			Name: volumeName,
-			VolumeSource: corev1.VolumeSource{
-				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To[int32](420),
-					Sources: []corev1.VolumeProjection{
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: genericKubeconfigName,
-								},
-								Items: []corev1.KeyToPath{{
-									Key:  secrets.DataKeyKubeconfig,
-									Path: secrets.DataKeyKubeconfig,
-								}},
-								Optional: ptr.To(false),
+// GenerateGenericKubeconfigVolume generates a volume for the generic kubeconfig. The volume will contain two
+// projected secrets:
+// - The generic kubeconfig secret with the key 'kubeconfig'.
+// - The access secret with the key 'token'.
+func GenerateGenericKubeconfigVolume(genericKubeconfigName, accessSecretName, volumeName string) corev1.Volume {
+	return corev1.Volume{
+		Name: volumeName,
+		VolumeSource: corev1.VolumeSource{
+			Projected: &corev1.ProjectedVolumeSource{
+				DefaultMode: ptr.To[int32](420),
+				Sources: []corev1.VolumeProjection{
+					{
+						Secret: &corev1.SecretProjection{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: genericKubeconfigName,
 							},
+							Items: []corev1.KeyToPath{{
+								Key:  secrets.DataKeyKubeconfig,
+								Path: secrets.DataKeyKubeconfig,
+							}},
+							Optional: ptr.To(false),
 						},
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: accessSecretName,
-								},
-								Items: []corev1.KeyToPath{{
-									Key:  resourcesv1alpha1.DataKeyToken,
-									Path: resourcesv1alpha1.DataKeyToken,
-								}},
-								Optional: ptr.To(false),
+					},
+					{
+						Secret: &corev1.SecretProjection{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: accessSecretName,
 							},
+							Items: []corev1.KeyToPath{{
+								Key:  resourcesv1alpha1.DataKeyToken,
+								Path: resourcesv1alpha1.DataKeyToken,
+							}},
+							Optional: ptr.To(false),
 						},
 					},
 				},
 			},
-		}
+		},
+	}
+}
 
-		volumeMount = corev1.VolumeMount{
-			Name:      volume.Name,
-			MountPath: mountPath,
-			ReadOnly:  true,
-		}
+// GenerateGenericKubeconfigVolumeMount generates a volume mount for the generic kubeconfig volume.
+func GenerateGenericKubeconfigVolumeMount(volumeName, mountPath string) corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      volumeName,
+		MountPath: mountPath,
+		ReadOnly:  true,
+	}
+}
+
+func injectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSecretName, volumeName, mountPath string, containerNames ...string) error {
+	var (
+		volume      = GenerateGenericKubeconfigVolume(genericKubeconfigName, accessSecretName, volumeName)
+		volumeMount = GenerateGenericKubeconfigVolumeMount(volumeName, mountPath)
 	)
 
 	return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
