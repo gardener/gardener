@@ -251,14 +251,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployPersesCRDs,
 			deployOpenTelemetryCRDs,
 		)
-		// TODO(shreyas-s-rao): Remove this in v1.123.0.
-		_ = g.Add(flow.Task{
-			Name: "Updating etcd VPA target references",
-			Fn: func(ctx context.Context) error {
-				return updateAllEtcdVPATargetRefs(ctx, r.SeedClientSet.Client())
-			},
-			Dependencies: flow.NewTaskIDs(syncPointCRDs),
-		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying VPA for gardenlet",
 			Fn: func(ctx context.Context) error {
