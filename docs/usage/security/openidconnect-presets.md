@@ -28,7 +28,7 @@ Gardener provides an admission controller (OpenIDConnectPreset) which, when enab
   1. `.spec.weight` value.
   1. lexicographically ordering their names (e.g., `002preset` > `001preset`)
 
-- If the `Shoot` already has a `.spec.kubernetes.kubeAPIServer.oidcConfig` or `Shoot` kubernetes version is >= 1.32, then no mutation occurs.
+- If the `Shoot` already has a `.spec.kubernetes.kubeAPIServer.oidcConfig` or а `.spec.kubernetes.kubeAPIServer.StructuredAuthentication` or `Shoot` kubernetes version is >= 1.32, then no mutation occurs.
 
 ### Simple OpenIDConnectPreset Example
 
