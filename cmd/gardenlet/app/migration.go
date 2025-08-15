@@ -345,7 +345,7 @@ func cleanupPrometheusObsoleteFolders(ctx context.Context, log logr.Logger, seed
 	return flow.Parallel(tasks...)(ctx)
 }
 
-// TODO(@vpnachev): Remove this after v1.127.0 has been released
+// TODO(vpnachev): Remove this after v1.128.0 has been released.
 func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log logr.Logger, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
