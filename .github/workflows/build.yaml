@@ -27,7 +27,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
       - name: run-tests
         shell: bash
         run: |
@@ -218,7 +218,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
       - name: build-garden-adm
         shell: bash
         run: |
