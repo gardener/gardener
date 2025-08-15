@@ -6,6 +6,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // +genclient
@@ -35,4 +37,14 @@ type MachineImageVersion struct {
 	Version string `json:"version"`
 	// Image is the image for the machine image.
 	Image string `json:"image"`
+	// CapabilitySets contains provider-specific image identifier of this version with its capabilities.
+	CapabilitySets []CapabilitySet `json:"capabilitySets"`
+}
+
+// CapabilitySet is a provider-specific image identifier with its supported capabilities.
+type CapabilitySet struct {
+	// Image is the image for the machine image.
+	Image string `json:"image"`
+	// Capabilities that are supported by the identifier in this set.
+	Capabilities gardencorev1beta1.Capabilities `json:"capabilities,omitempty"`
 }
