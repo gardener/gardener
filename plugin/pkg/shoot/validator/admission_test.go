@@ -5799,6 +5799,7 @@ var _ = Describe("validator", func() {
 				}
 
 				if !isCapabilitiesCloudprofile {
+					cloudProfile.Spec.Capabilities = []gardencorev1beta1.CapabilityDefinition{}
 					cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
 						{
 							Name:         "machine-type-1",
