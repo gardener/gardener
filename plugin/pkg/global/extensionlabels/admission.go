@@ -242,6 +242,8 @@ func addMetaDataLabelsSeed(seed *core.Seed) {
 	if seed.Spec.DNS.Provider != nil {
 		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordTypePrefix+seed.Spec.DNS.Provider.Type, "true")
 	}
+	metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedProvider, seed.Spec.Provider.Type)
+	metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedRegion, seed.Spec.Provider.Region)
 }
 
 func addMetaDataLabelsSecretBinding(secretBinding *core.SecretBinding) {
