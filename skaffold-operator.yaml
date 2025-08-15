@@ -1012,12 +1012,19 @@ profiles:
   - name: single-node
     activation:
       - env: SCENARIO=single-node
+      - env: SCENARIO=single-node-ipv6
     patches:
       - op: replace
         path: /deploy/helm/releases/0/setValueTemplates/replicaCount
         value: 1
   - name: multi-node
+    activation:
+      - env: SCENARIO=multi-node
+      - env: SCENARIO=multi-node-ipv6
   - name: multi-zone
+    activation:
+      - env: SCENARIO=multi-zone
+      - env: SCENARIO=multi-zone-ipv6
   - name: debug
     activation:
       - command: debug
@@ -1371,6 +1378,14 @@ manifests:
             - dev-setup/extensions/provider-local/components/extension/generate-patch-extension-prow.sh
 deploy:
   kubectl: {}
+profiles:
+  - name: ipv6
+    activation:
+      - env: IPFAMILY=ipv6
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/extensions/provider-local/overlays/operator-ipv6
 resourceSelector:
   # instruct skaffold to inject the built image reference into the image fields in our Extension object
   allow:

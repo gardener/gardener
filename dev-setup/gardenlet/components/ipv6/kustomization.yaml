@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+  - patch: |
+      # vali is unable to cope with IPv6, hence disable logging entirely
+      - op: add
+        path: /spec/config/logging/enabled
+        value: false
+      - op: add
+        path: /spec/config/seedConfig/spec/networks/ipFamilies
+        value:
+        - IPv6
+      # Those CIDRs must match those specified in the kind Cluster configuration.
+      - op: replace
+        path: /spec/config/seedConfig/spec/networks/nodes
+        value: fd00:10::/64
+      - op: replace
+        path: /spec/config/seedConfig/spec/networks/pods
+        value: fd00:10:1::/56
+      - op: replace
+        path: /spec/config/seedConfig/spec/networks/services
+        value: fd00:10:2::/112
+      - op: replace
+        path: /spec/config/seedConfig/spec/networks/shootDefaults
+        value:
+          pods: fd00:10:3::/56
+          services: fd00:10:4::/112
+    target:
+      group: seedmanagement.gardener.cloud
+      kind: Gardenlet
+      name: local
+      namespace: garden

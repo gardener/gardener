@@ -263,7 +263,7 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 # Rules for local environment                                       #
 #####################################################################
 
-kind-% kind2-% gardener-%: export IPFAMILY := $(IPFAMILY)
+kind-% kind2-% gardener-% operator-% garden-% seed-% ci-e2e-kind: export IPFAMILY := $(IPFAMILY)
 # KUBECONFIG
 kind-up kind-down gardener-up gardener-dev gardener-debug gardener-down gardenadm-up gardenadm-down: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2e-local test-e2e-local-gardenadm ci-e2e-kind ci-e2e-kind-upgrade ci-e2e-kind-gardenadm: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)

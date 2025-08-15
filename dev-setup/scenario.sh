@@ -23,6 +23,10 @@ function detect_scenario() {
     exit 1
   fi
 
+  if [[ "$IPFAMILY" == "ipv6" ]]; then
+    export SCENARIO="${SCENARIO}-ipv6"
+  fi
+
   echo "DETECTED SCENARIO: $SCENARIO"
 }
 
@@ -39,6 +43,15 @@ function skaffold_profile() {
       ;;
     multi-zone)
       export SKAFFOLD_PROFILE="multi-zone"
+      ;;
+    single-node-ipv6)
+      export SKAFFOLD_PROFILE="single-node-ipv6"
+      ;;
+    multi-node-ipv6)
+      export SKAFFOLD_PROFILE="multi-node-ipv6"
+      ;;
+    multi-zone-ipv6)
+      export SKAFFOLD_PROFILE="multi-zone-ipv6"
       ;;
   esac
 

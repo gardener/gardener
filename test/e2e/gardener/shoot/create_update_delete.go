@@ -25,6 +25,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/seed"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/bastion"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/zerodowntimevalidator"
@@ -65,7 +66,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
 			ItShouldGetResponsibleSeed(s)
-			ItShouldInitializeSeedClient(s)
+			seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
 			It("Verify shoot access using admin kubeconfig", func(ctx SpecContext) {
 				Eventually(ctx, s.ShootKomega.List(&corev1.NamespaceList{})).Should(Succeed())

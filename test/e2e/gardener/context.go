@@ -105,6 +105,7 @@ func (t *TestContext) ForShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
 // A ShootContext can be initialized using TestContext.ForShoot.
 type ShootContext struct {
 	TestContext
+	SeedContext
 
 	// Shoot object that the test case is working with.
 	Shoot *gardencorev1beta1.Shoot
@@ -120,20 +121,6 @@ type ShootContext struct {
 	//  )
 	ShootKomega komega.Komega
 
-	// Seed is the responsible Seed of the shoot.
-	Seed *gardencorev1beta1.Seed
-
-	// SeedClientSet is a client for the seed cluster. It must be initialized via WithSeedClientSet.
-	SeedClientSet kubernetes.Interface
-	// SeedClient is the controller-runtime client of the SeedClientSet. This is a more convenient equivalent of
-	// SeedClientSet.Client().
-	SeedClient client.Client
-	// SeedKomega is a Komega instance for writing assertions on objects in the seed cluster. E.g.,
-	//  Eventually(ctx, s.SeedKomega.ObjectList(&corev1.NodeList{})).Should(
-	//    HaveField("Items", HaveLen(1)),
-	//  )
-	SeedKomega komega.Komega
-
 	// ControlPlaneNamespace contains the namespace for the Shoot Control Plane in the Seed.
 	// It must be initialized via WithControlPlaneNamespace.
 	ControlPlaneNamespace string
@@ -144,14 +131,6 @@ func (s *ShootContext) WithShootClientSet(clientSet kubernetes.Interface) *Shoot
 	s.ShootClientSet = clientSet
 	s.ShootClient = clientSet.Client()
 	s.ShootKomega = komega.New(s.ShootClient)
-	return s
-}
-
-// WithSeedClientSet initializes the seed clients of this ShootContext from the given client set.
-func (s *ShootContext) WithSeedClientSet(clientSet kubernetes.Interface) *ShootContext {
-	s.SeedClientSet = clientSet
-	s.SeedClient = clientSet.Client()
-	s.SeedKomega = komega.New(s.SeedClient)
 	return s
 }
 
@@ -245,6 +224,17 @@ type SeedContext struct {
 
 	// Seed object the test is working with
 	Seed *gardencorev1beta1.Seed
+
+	// SeedClientSet is a client for the seed cluster. It must be initialized via WithSeedClientSet.
+	SeedClientSet kubernetes.Interface
+	// SeedClient is the controller-runtime client of the SeedClientSet. This is a more convenient equivalent of
+	// SeedClientSet.Client().
+	SeedClient client.Client
+	// SeedKomega is a Komega instance for writing assertions on objects in the seed cluster. E.g.,
+	//  Eventually(ctx, s.SeedKomega.ObjectList(&corev1.NodeList{})).Should(
+	//    HaveField("Items", HaveLen(1)),
+	//  )
+	SeedKomega komega.Komega
 }
 
 // ForSeed copies the receiver TestContext for deriving a SeedContext.
@@ -255,6 +245,14 @@ func (t *TestContext) ForSeed(seed *gardencorev1beta1.Seed) *SeedContext {
 	}
 	s.Log = s.Log.WithValues("seed", client.ObjectKeyFromObject(seed))
 
+	return s
+}
+
+// WithSeedClientSet initializes the seed clients of this SeedContext from the given client set.
+func (s *SeedContext) WithSeedClientSet(clientSet kubernetes.Interface) *SeedContext {
+	s.SeedClientSet = clientSet
+	s.SeedClient = clientSet.Client()
+	s.SeedKomega = komega.New(s.SeedClient)
 	return s
 }
 

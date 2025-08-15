@@ -677,16 +677,31 @@ profiles:
       kustomize:
         paths:
           - dev-setup/gardenlet/overlays/single-node
+  - name: single-node-ipv6
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenlet/overlays/single-node-ipv6
   - name: multi-node
     manifests:
       kustomize:
         paths:
           - dev-setup/gardenlet/overlays/multi-node
+  - name: multi-node-ipv6
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenlet/overlays/multi-node-ipv6
   - name: multi-zone
     manifests:
       kustomize:
         paths:
           - dev-setup/gardenlet/overlays/multi-zone
+  - name: multi-zone-ipv6
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenlet/overlays/multi-zone-ipv6
   - name: multi-node2
     manifests:
       kustomize:
