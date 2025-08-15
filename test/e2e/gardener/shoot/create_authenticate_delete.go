@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	. "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/seed"
 	"github.com/gardener/gardener/test/utils/access"
 )
 
@@ -46,11 +47,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(shoot1)
 		ItShouldGetResponsibleSeed(shoot1)
-		ItShouldInitializeSeedClient(shoot1)
+		seed.ItShouldInitializeSeedClient(&shoot1.SeedContext)
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(shoot2)
 		ItShouldGetResponsibleSeed(shoot2)
-		ItShouldInitializeSeedClient(shoot2)
+		seed.ItShouldInitializeSeedClient(&shoot2.SeedContext)
 
 		var shoot1Client, shoot2Client, shoot1TokenClient, shoot2TokenClient kubernetes.Interface
 
