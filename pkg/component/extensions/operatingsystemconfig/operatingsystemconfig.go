@@ -150,6 +150,8 @@ type OriginalValues struct {
 	NodeLocalDNSEnabled bool
 	// PrimaryIPFamily represents the preferred IP family (IPv4 or IPv6) to be used.
 	PrimaryIPFamily gardencorev1beta1.IPFamily
+	// KubeProxyConfig is the configuration for kube-proxy.
+	KubeProxyConfig *gardencorev1beta1.KubeProxyConfig
 }
 
 // New creates a new instance of Interface.
@@ -990,8 +992,12 @@ func (o *operatingSystemConfig) calculateKeyForVersion(version int, worker *gard
 		return "", err
 	}
 	kubeletConfiguration := v1beta1helper.CalculateEffectiveKubeletConfiguration(o.values.KubeletConfig, worker.Kubernetes)
+	kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{}
+	if o.values.KubeProxyConfig != nil {
+		kubeProxyConfig = o.values.KubeProxyConfig
+	}
 
-	return CalculateKeyForVersion(version, kubernetesVersion, o.values, worker, kubeletConfiguration)
+	return CalculateKeyForVersion(version, kubernetesVersion, o.values, worker, kubeletConfiguration, kubeProxyConfig)
 }
 
 // CalculateKeyForVersion is exposed for testing purposes only
@@ -1003,6 +1009,7 @@ func calculateKeyForVersion(
 	values *Values,
 	worker *gardencorev1beta1.Worker,
 	kubeletConfiguration *gardencorev1beta1.KubeletConfig,
+	kubeProxyConfig *gardencorev1beta1.KubeProxyConfig,
 ) (
 	string,
 	error,
@@ -1012,7 +1019,7 @@ func calculateKeyForVersion(
 		// TODO(MichaelEischer): Remove KeyV1 after support for Kubernetes 1.30 is dropped
 		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
 	case 2:
-		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration), nil
+		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration, kubeProxyConfig), nil
 	default:
 		return "", fmt.Errorf("unsupported osc key hash version %v", version)
 	}
@@ -1046,6 +1053,7 @@ func KeyV2(
 	worker *gardencorev1beta1.Worker,
 	nodeLocalDNSEnabled bool,
 	kubeletConfiguration *gardencorev1beta1.KubeletConfig,
+	kubeProxyConfig *gardencorev1beta1.KubeProxyConfig,
 ) string {
 	if kubernetesVersion == nil {
 		return ""
@@ -1084,7 +1092,8 @@ func KeyV2(
 		}
 	}
 
-	if nodeLocalDNSEnabled {
+	if (version.ConstraintK8sLess134.Check(kubernetesVersion) && nodeLocalDNSEnabled) ||
+		(v1beta1helper.IsKubeProxyIPVSMode(kubeProxyConfig) && nodeLocalDNSEnabled) {
 		data = append(data, "node-local-dns")
 	}
 

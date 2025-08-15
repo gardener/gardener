@@ -18,6 +18,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // HibernationIsEnabled checks if the given shoot's desired state is hibernated.
@@ -695,4 +696,27 @@ func GetBackupConfigForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1b
 // end result is 'api.<domain>'.
 func GetAPIServerDomain(domain string) string {
 	return fmt.Sprintf("%s.%s", v1beta1constants.APIServerFQDNPrefix, domain)
+}
+
+// IsKubeProxyIPVSMode checks if the shoot is running with kube-proxy in IPVS mode.
+func IsKubeProxyIPVSMode(kubeProxyConfig *gardencorev1beta1.KubeProxyConfig) bool {
+	return kubeProxyConfig != nil && kubeProxyConfig.Enabled != nil && *kubeProxyConfig.Enabled &&
+		kubeProxyConfig.Mode != nil && *kubeProxyConfig.Mode == gardencorev1beta1.ProxyModeIPVS
+}
+
+// IsOneWorkerPoolLowerKubernetes134 checks if at least one worker pool has a Kubernetes version lower than 1.34.
+func IsOneWorkerPoolLowerKubernetes134(controlPlaneVersion *semver.Version, workers []gardencorev1beta1.Worker) (bool, error) {
+	atLeastOnePoolLowerKubernetes134 := false
+	for _, worker := range workers {
+		kubernetesVersion, err := CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
+		if err != nil {
+			return false, fmt.Errorf("failed to calculate effective Kubernetes version for worker %q: %w", worker.Name, err)
+		}
+
+		if versionutils.ConstraintK8sLess134.Check(kubernetesVersion) {
+			atLeastOnePoolLowerKubernetes134 = true
+			break
+		}
+	}
+	return atLeastOnePoolLowerKubernetes134, nil
 }
