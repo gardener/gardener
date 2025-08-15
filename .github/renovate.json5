@@ -110,16 +110,6 @@
       ],
     },
     {
-      // Group golang updates in one PR.
-      groupName: 'golang',
-      matchDatasources: [
-        'docker',
-      ],
-      matchPackageNames: [
-        '/golang/',
-      ],
-    },
-    {
       // Group Istio updates in one PR.
       groupName: 'istio',
       groupSlug: 'istio',
