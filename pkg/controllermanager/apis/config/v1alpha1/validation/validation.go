@@ -65,7 +65,7 @@ func validateProjectControllerConfiguration(conf *controllermanagerconfigv1alpha
 func validateProjectQuotaConfiguration(conf controllermanagerconfigv1alpha1.QuotaConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(conf.ProjectSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("projectSelector"))...)
+	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(conf.ProjectSelector, metav1validation.LabelSelectorValidationOptions{}, fldPath.Child("projectSelector"))...)
 
 	return allErrs
 }

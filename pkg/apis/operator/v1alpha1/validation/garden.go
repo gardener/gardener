@@ -512,7 +512,7 @@ func validateGardenerControllerManagerConfig(config *operatorv1alpha1.GardenerCo
 	allErrs = append(allErrs, validateGardenerFeatureGates(config.FeatureGates, fldPath.Child("featureGates"))...)
 
 	for i, quota := range config.DefaultProjectQuotas {
-		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(quota.ProjectSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("defaultProjectQuotas").Index(i).Child("projectSelector"))...)
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(quota.ProjectSelector, metav1validation.LabelSelectorValidationOptions{}, fldPath.Child("defaultProjectQuotas").Index(i).Child("projectSelector"))...)
 	}
 
 	return allErrs
