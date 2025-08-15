@@ -31,5 +31,10 @@ type MachineImage struct {
 	// Version is the logical version of the machine image.
 	Version string `json:"version"`
 	// Image is the image for the machine image.
+	//
+	// Deprecated: This field is deprecated and will be removed in a future release.
+	// Please use the `CapabilitySets[].Image` field instead to specify the machine image.
 	Image string `json:"image"`
+	// CapabilitySets is a set of capabilities that are supported by the machine image.
+	CapabilitySets []CapabilitySet `json:"capabilitySet,omitempty"`
 }
