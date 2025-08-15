@@ -203,6 +203,12 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, be *extensions
 		return reconcile.Result{}, err
 	}
 
+	// re-fetch secretMetadata since r.actuator.Delete might take long, during which the Secret's resourceVersion might change.
+	secretMetadata, err = kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &be.Spec.SecretRef)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
+	}
+
 	if controllerutil.ContainsFinalizer(secretMetadata, FinalizerName) {
 		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secretMetadata))
 		if err := controllerutils.RemoveFinalizers(ctx, r.client, secretMetadata, FinalizerName); err != nil {
