@@ -80,6 +80,22 @@ func GetETCDEncryptionKeyRotationPhase(credentials *operatorv1alpha1.Credentials
 	return ""
 }
 
+// ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared returns whether the current ETCD encryption key rotation should
+// be auto completed after the preparation phase has finished.
+//
+// Deprecated: This function will be removed in a future release. The function will be no longer needed with
+// the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.
+// TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
+func ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials *operatorv1alpha1.Credentials) bool {
+	if credentials != nil &&
+		credentials.Rotation != nil &&
+		credentials.Rotation.ETCDEncryptionKey != nil &&
+		credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared != nil {
+		return *credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared
+	}
+	return false
+}
+
 // MutateETCDEncryptionKeyRotation mutates the .status.credentials.rotation.etcdEncryptionKey field based on the
 // provided mutation function. If the field is nil then it is initialized.
 func MutateETCDEncryptionKeyRotation(garden *operatorv1alpha1.Garden, f func(*gardencorev1beta1.ETCDEncryptionKeyRotation)) {

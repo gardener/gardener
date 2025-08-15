@@ -37,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -120,7 +121,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return result, nil
 	}
 
-	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, garden, operationType)
+	if err := r.updateStatusOperationSuccess(ctx, garden, operationType); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// ETCD encryption key rotation requires 2 reconciliations to complete. In prepared phase
+	// the encrypted data has been decrypted and re-encrypted with the new key, but the old key is still present.
+	// The second reconciliation will remove the old key and set the phase to completed.
+	if etcdEncryptionKeyRotationPhase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPrepared &&
+		helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(garden.Status.Credentials) {
+		return reconcile.Result{RequeueAfter: 1 * time.Nanosecond}, nil
+	}
+
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, nil
 }
 
 func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
@@ -163,6 +176,11 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		mustRemoveOperationAnnotation bool
 	)
 
+	k8sLess134, err := versionutils.CompareVersions(garden.Spec.VirtualCluster.Kubernetes.Version, "<", "1.34")
+	if err != nil {
+		return err
+	}
+
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeReconcile:
 		description = "Reconciliation of Garden cluster initialized."
@@ -188,14 +206,16 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		mustRemoveOperationAnnotation = true
 		startRotationCA(garden, &now)
 		startRotationServiceAccountKey(garden, &now)
-		startRotationETCDEncryptionKey(garden, &now)
+		startRotationETCDEncryptionKey(garden, !k8sLess134, &now)
 		startRotationObservability(garden, &now)
 		startRotationWorkloadIdentityKey(garden, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(garden, &now)
 		completeRotationServiceAccountKey(garden, &now)
-		completeRotationETCDEncryptionKey(garden, &now)
+		if k8sLess134 {
+			completeRotationETCDEncryptionKey(garden, &now)
+		}
 		completeRotationWorkloadIdentityKey(garden, &now)
 
 	case v1beta1constants.OperationRotateCAStart:
@@ -212,9 +232,12 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		mustRemoveOperationAnnotation = true
 		completeRotationServiceAccountKey(garden, &now)
 
+	case v1beta1constants.OperationRotateETCDEncryptionKey:
+		mustRemoveOperationAnnotation = true
+		startRotationETCDEncryptionKey(garden, true, &now)
 	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
 		mustRemoveOperationAnnotation = true
-		startRotationETCDEncryptionKey(garden, &now)
+		startRotationETCDEncryptionKey(garden, false, &now)
 	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationETCDEncryptionKey(garden, &now)
@@ -229,6 +252,11 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	case operatorv1alpha1.OperationRotateWorkloadIdentityKeyComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationWorkloadIdentityKey(garden, &now)
+	}
+
+	if helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPrepared &&
+		helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(garden.Status.Credentials) {
+		completeRotationETCDEncryptionKey(garden, &now)
 	}
 
 	if err := r.RuntimeClientSet.Client().Status().Update(ctx, garden); err != nil {
@@ -249,6 +277,11 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 		now         = metav1.NewTime(r.Clock.Now().UTC())
 		description string
 	)
+
+	k8sLess134, err := versionutils.CompareVersions(garden.Spec.VirtualCluster.Kubernetes.Version, "<", "1.34")
+	if err != nil {
+		return err
+	}
 
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeReconcile:
@@ -304,12 +337,21 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 			rotation.LastInitiationFinishedTime = &now
 		})
 
+	// TODO(AleksandarSavchev): Remove rotation prepared case in a future release after support for Kubernetes v1.33 is dropped.
+	// It is added to forcefully complete the etcd encryption key rotation, since the annotation to complete the rotation
+	// is forbidden for clusters with k8s >= v1.34.
+	case gardencorev1beta1.RotationPrepared:
+		if !k8sLess134 {
+			completeRotationETCDEncryptionKey(garden, &now)
+		}
+
 	case gardencorev1beta1.RotationCompleting:
 		helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 			rotation.Phase = gardencorev1beta1.RotationCompleted
 			rotation.LastCompletionTime = &now
 			rotation.LastInitiationFinishedTime = nil
 			rotation.LastCompletionTriggeredTime = nil
+			rotation.AutoCompleteAfterPrepared = nil
 		})
 	}
 
@@ -426,12 +468,13 @@ func completeRotationServiceAccountKey(garden *operatorv1alpha1.Garden, now *met
 	})
 }
 
-func startRotationETCDEncryptionKey(garden *operatorv1alpha1.Garden, now *metav1.Time) {
+func startRotationETCDEncryptionKey(garden *operatorv1alpha1.Garden, singleOperation bool, now *metav1.Time) {
 	helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing
 		rotation.LastInitiationTime = now
 		rotation.LastInitiationFinishedTime = nil
 		rotation.LastCompletionTriggeredTime = nil
+		rotation.AutoCompleteAfterPrepared = ptr.To(singleOperation)
 	})
 }
 

@@ -56,6 +56,9 @@ var _ = Describe("Reconciler", func() {
 						{Name: "worker5", UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate)},
 					},
 				},
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					Version: "1.33.0",
+				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				Credentials: &gardencorev1beta1.ShootCredentials{

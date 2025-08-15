@@ -43,10 +43,18 @@ import (
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
-var gardenCoreScheme *runtime.Scheme
+var (
+	gardenCoreScheme *runtime.Scheme
+	// TODO(AleksandarSavchev): Remove this variable and the associated validation after support for Kubernetes v1.33 is dropped.
+	forbiddenETCDEncryptionKeyShootOperationsWithK8s134 = sets.New(
+		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+		v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
+	)
+)
 
 func init() {
 	gardenCoreScheme = runtime.NewScheme()
@@ -588,7 +596,10 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 }
 
 func validateOperation(operation string, garden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs       = field.ErrorList{}
+		k8sLess134, _ = versionutils.CheckVersionMeetsConstraint(garden.Spec.VirtualCluster.Kubernetes.Version, "< 1.34")
+	)
 
 	if operation == "" {
 		return allErrs
@@ -596,9 +607,15 @@ func validateOperation(operation string, garden *operatorv1alpha1.Garden, fldPat
 
 	fldPathOp := fldPath.Key(v1beta1constants.GardenerOperation)
 
-	if operation != "" && !operatorv1alpha1.AvailableOperationAnnotations.Has(operation) {
-		allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(operatorv1alpha1.AvailableOperationAnnotations)))
+	if operation != "" {
+		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(operation) && !k8sLess134 {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", operation)))
+		}
+		if !operatorv1alpha1.AvailableOperationAnnotations.Has(operation) {
+			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(operatorv1alpha1.AvailableOperationAnnotations)))
+		}
 	}
+
 	allErrs = append(allErrs, validateOperationContext(operation, garden, fldPathOp)...)
 
 	return allErrs
@@ -611,6 +628,7 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 		resourcesToEncrypt       = sets.New[schema.GroupResource]()
 		encryptionConfig         *gardencorev1beta1.EncryptionConfig
 		gardenerEncryptionConfig *gardencorev1beta1.EncryptionConfig
+		k8sLess134, _            = versionutils.CheckVersionMeetsConstraint(garden.Spec.VirtualCluster.Kubernetes.Version, "< 1.34")
 	)
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig != nil {
@@ -656,7 +674,7 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 		if helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
 		}
-		if helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
+		if k8sLess134 && helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}
 		if helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPrepared {
@@ -693,7 +711,7 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
 		}
 
-	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
+	case v1beta1constants.OperationRotateETCDEncryptionKeyStart, v1beta1constants.OperationRotateETCDEncryptionKey:
 		if garden.DeletionTimestamp != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if garden has deletion timestamp"))
 		}
