@@ -1455,11 +1455,6 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":     Equal(field.ErrorTypeRequired),
-							"Field":    Equal("spec.machineTypes[0].architecture"),
-							"BadValue": Equal(""),
-							"Detail":   Equal("must provide an architecture"),
-						})), PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":     Equal(field.ErrorTypeRequired),
 							"Field":    Equal("spec.capabilities.architecture"),
 							"BadValue": Equal(""),
 							"Detail":   Equal("architecture capability is required"),
@@ -1494,11 +1489,6 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":     Equal(field.ErrorTypeRequired),
-							"Field":    Equal("spec.machineTypes[0].architecture"),
-							"BadValue": Equal(""),
-							"Detail":   Equal("must provide an architecture"),
-						})), PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":     Equal(field.ErrorTypeInvalid),
 							"Field":    Equal("spec.capabilities.architecture"),
 							"BadValue": Equal("custom"),
@@ -1638,11 +1628,6 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":     Equal(field.ErrorTypeRequired),
-							"Field":    Equal("spec.machineTypes[0].architecture"),
-							"BadValue": Equal(""),
-							"Detail":   Equal("must provide an architecture"),
-						})), PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("spec.capabilities"),
 							"Detail": Equal("capabilities are not allowed with disabled CloudProfileCapabilities feature gate"),
