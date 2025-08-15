@@ -243,11 +243,6 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		clusterRoleBinding = p.clusterRoleBinding()
 	}
 
-	prometheus, err := p.prometheus(ctx, cortexConfigMap)
-	if err != nil {
-		return err
-	}
-
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
 		p.service(),
@@ -259,7 +254,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.secretAdditionalAlertmanagerConfigs(),
 		p.secretRemoteWriteBasicAuth(),
 		cortexConfigMap,
-		prometheus,
+		p.prometheus(cortexConfigMap),
 		p.vpa(),
 		p.podDisruptionBudget(),
 		ingress,
