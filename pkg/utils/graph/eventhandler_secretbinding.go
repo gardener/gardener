@@ -22,7 +22,7 @@ func (g *graph) setupSecretBindingWatch(_ context.Context, informer cache.Inform
 			if !ok {
 				return
 			}
-			g.handleSecretBindingCreateOrUpdate(secretBinding)
+			g.HandleSecretBindingCreateOrUpdate(secretBinding)
 		},
 
 		UpdateFunc: func(oldObj, newObj any) {
@@ -37,7 +37,7 @@ func (g *graph) setupSecretBindingWatch(_ context.Context, informer cache.Inform
 			}
 
 			if !apiequality.Semantic.DeepEqual(oldSecretBinding.SecretRef, newSecretBinding.SecretRef) {
-				g.handleSecretBindingCreateOrUpdate(newSecretBinding)
+				g.HandleSecretBindingCreateOrUpdate(newSecretBinding)
 			}
 		},
 
@@ -55,7 +55,7 @@ func (g *graph) setupSecretBindingWatch(_ context.Context, informer cache.Inform
 	return err
 }
 
-func (g *graph) handleSecretBindingCreateOrUpdate(secretBinding *gardencorev1beta1.SecretBinding) {
+func (g *graph) HandleSecretBindingCreateOrUpdate(secretBinding *gardencorev1beta1.SecretBinding) {
 	start := time.Now()
 	defer func() {
 		metricUpdateDuration.WithLabelValues("SecretBinding", "CreateOrUpdate").Observe(time.Since(start).Seconds())

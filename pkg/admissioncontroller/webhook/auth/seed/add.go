@@ -10,7 +10,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	seedauthorizergraph "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
+	"github.com/gardener/gardener/pkg/utils/graph"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
 
@@ -24,17 +24,17 @@ const (
 // AddToManager adds Handler to the given manager.
 func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableDebugHandlers *bool) error {
 	if w.Handler == nil {
-		graph := seedauthorizergraph.New(mgr.GetLogger().WithName("seed-authorizer-graph"), mgr.GetClient())
-		if err := graph.Setup(ctx, mgr.GetCache()); err != nil {
+		g := graph.New(mgr.GetLogger().WithName("seed-authorizer-graph"), mgr.GetClient())
+		if err := g.Setup(ctx, mgr.GetCache()); err != nil {
 			return err
 		}
 
-		authorizer := NewAuthorizer(w.Logger, graph)
+		authorizer := NewAuthorizer(w.Logger, g)
 		w.Handler = &authorizerwebhook.Handler{Logger: w.Logger, Authorizer: authorizer}
 
 		if ptr.Deref(enableDebugHandlers, false) {
 			w.Logger.Info("Registering debug handlers")
-			mgr.GetWebhookServer().Register(seedauthorizergraph.DebugHandlerPath, seedauthorizergraph.NewDebugHandler(graph))
+			mgr.GetWebhookServer().Register(graph.DebugHandlerPath, graph.NewDebugHandler(g))
 		}
 	}
 
