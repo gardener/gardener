@@ -22,4 +22,4 @@ spec:
       -ginkgo.focus="\[BETA\]"
       -ginkgo.skip="\[SERIAL\]"
 
-  image: golang:1.24.6
+  image: golang:1.25.0
