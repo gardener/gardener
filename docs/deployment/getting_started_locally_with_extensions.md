@@ -42,18 +42,22 @@ You can find a template for the file at [`/example/provider-extensions/garden/co
 
 Infrastructure credentials, `Secrets` and `WorkloadIdentities`, and the corresponding `CredentialsBinding`s should be maintained at:
 
-- `/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml`
-- `/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml`
-- `/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml`
-- `/example/provider-extensions/garden/project/credentials/secretbindings.yaml`
+In case infrastructure credentials based on workload identities are used, the following files should be maintained:
 
-There are templates with `.tmpl` suffixes for the files in the same folder.
+- `/example/provider-extensions/garden/project/with-workload-identity/credentials/infrastructure-workloadidentities.yaml`
+- `/example/provider-extensions/garden/project/with-workload-identity/credentials/credentialsbindings.yaml`
+
+If static credentials are used, the following files should be maintained:
+- `/example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml`
+- `/example/provider-extensions/garden/project/without-workload-identity/credentials/secretbindings.yaml`
+
+There are templates with `.tmpl` suffixes for the files in the corresponding folders.
 
 ### Projects
 
-The projects and the namespaces associated with them should be maintained at `/example/provider-extensions/garden/project/project.yaml`.
+The projects and the namespaces associated with them should be maintained at `/example/provider-extensions/garden/project/base/project.yaml`.
 
-You can find a template for the file at [`/example/provider-extensions/garden/project/project.yaml.tmpl`](/example/provider-extensions/garden/project/project.yaml.tmpl).
+You can find a template for the file at [`/example/provider-extensions/garden/project/base/project.yaml.tmpl`](/example/provider-extensions/garden/project/base/project.yaml.tmpl).
 
 ### Seed Cluster Preparation
 
@@ -114,14 +118,6 @@ External systems can be then configured to trust the workload identity issuer of
 ```bash
 DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up
 ```
-
-The following files are required for workload identity support:
-- `/example/provider-extensions/garden/controlplane/workload-identity-issuer.yaml`
-- `/example/provider-extensions/garden/project/credentials/infrastructure-workloadidentities.yaml`
-- `/example/provider-extensions/garden/project/credentials/credentialsbindings.yaml`
-
-In addition, the file [`/example/provider-extensions/garden/project/kustomization.yaml`](/example/provider-extensions/garden/project/kustomization.yaml) has to be adapted to include all resources. For that, just remove the `#` in front of the last two lines. 
-
 > [!IMPORTANT]
 > The Gardener Discovery Server is started with a token which is valid for 48 hours.
 > Rerun `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up` in order to renew the token.

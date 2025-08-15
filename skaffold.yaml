@@ -933,13 +933,22 @@ kind: Config
 metadata:
   name: extensions-env
 profiles:
-  - name: extensions
+  - name: extensions-with-workload-identity
     manifests:
       rawYaml:
         - example/gardener-local/gardenlet/secret-bootstrap-token-extensions.yaml
       kustomize:
         paths:
-          - example/provider-extensions/garden/project
+          - example/provider-extensions/garden/project/with-workload-identity
+    deploy:
+      kubectl: {}
+  - name: extensions-without-workload-identity
+    manifests:
+      rawYaml:
+        - example/gardener-local/gardenlet/secret-bootstrap-token-extensions.yaml
+      kustomize:
+        paths:
+          - example/provider-extensions/garden/project/without-workload-identity
     deploy:
       kubectl: {}
 ---
