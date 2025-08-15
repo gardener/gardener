@@ -179,6 +179,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Seed":                                       schema_pkg_apis_core_v1beta1_Seed(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS":                                    schema_pkg_apis_core_v1beta1_SeedDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider":                            schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig":                      schema_pkg_apis_core_v1beta1_SeedDNSProviderConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedList":                                   schema_pkg_apis_core_v1beta1_SeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks":                               schema_pkg_apis_core_v1beta1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider":                               schema_pkg_apis_core_v1beta1_SeedProvider(ref),
@@ -7822,11 +7823,17 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider"),
 						},
 					},
+					"internal": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Internal configures DNS settings related to seed internal domain.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig"},
 	}
 }
 
@@ -7858,6 +7865,52 @@ func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) 
 		},
 		Dependencies: []string{
 			"k8s.io/api/core/v1.SecretReference"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SeedDNSProviderConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedDNSProviderConfig configures a DNS provider.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the type of the DNS provider.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"domain": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Domain is the domain name to be used by the DNS provider.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"zone": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zone is the zone where the DNS records are managed.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"credentialsRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CredentialsRef is a reference to a resource holding the credentials used for authentication with the DNS provider. As of now, only v1.Secrets are supported.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+				},
+				Required: []string{"type", "domain", "credentialsRef"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.ObjectReference"},
 	}
 }
 
