@@ -86,6 +86,9 @@ func (d *localDriver) applyService(ctx context.Context, req *driver.CreateMachin
 		Type:      corev1.ServiceTypeClusterIP,
 		ClusterIP: corev1.ClusterIPNone,
 		Selector:  maps.Clone(service.Labels),
+		// Publish the machine pod IP, even if the pod is not ready, because this happens only eventually when the Node
+		// joins the cluster (or never in case of `gardenadm bootstrap`).
+		PublishNotReadyAddresses: true,
 		Ports: []corev1.ServicePort{
 			{
 				Name:        "ssh",
