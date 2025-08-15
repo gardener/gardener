@@ -16,6 +16,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/seed"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	shootmigration "github.com/gardener/gardener/test/utils/shoots/migration"
 )
@@ -28,7 +29,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		ItShouldCreateShoot(s)
 		ItShouldWaitForShootToBeReconciledAndHealthy(s)
 		ItShouldGetResponsibleSeed(s)
-		ItShouldInitializeSeedClient(s)
+		seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
 		if !v1beta1helper.IsWorkerless(s.Shoot) && !v1beta1helper.HibernationIsEnabled(s.Shoot) {
 			ItShouldInitializeShootClient(s)
@@ -67,7 +68,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(s)
 		ItShouldGetResponsibleSeed(s)
-		ItShouldInitializeSeedClient(s)
+		seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
 		It("Verify that all secrets have been migrated without regeneration", func(ctx SpecContext) {
 			var secretsAfterMigration map[string]corev1.Secret

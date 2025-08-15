@@ -9,6 +9,7 @@ import (
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	. "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/seed"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal/observability"
 )
 
@@ -33,7 +34,7 @@ func ShootLogging(s *ShootContext) {
 	ItShouldWaitForShootToBeReconciledAndHealthy(s)
 	ItShouldInitializeShootClient(s)
 	ItShouldGetResponsibleSeed(s)
-	ItShouldInitializeSeedClient(s)
+	seed.ItShouldInitializeSeedClient(&s.SeedContext)
 	ItShouldComputeControlPlaneNamespace(s)
 
 	gardenerLoggerAppLabel := "gardener-logger"

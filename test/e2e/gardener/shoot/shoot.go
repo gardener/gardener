@@ -226,34 +226,6 @@ func ItShouldGetResponsibleSeed(s *ShootContext) {
 	}, SpecTimeout(time.Minute))
 }
 
-// ItShouldInitializeSeedClient initializes the context's seed clients from the garden/seed-<name> kubeconfig secret.
-// Requires ItShouldGetResponsibleSeed to be called first.
-func ItShouldInitializeSeedClient(s *ShootContext) {
-	GinkgoHelper()
-
-	It("Initialize Seed client", func(ctx SpecContext) {
-		Expect(s.Seed).NotTo(BeNil(), "ItShouldGetResponsibleSeed should be called first")
-
-		seedSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "seed-" + s.Seed.Name,
-				Namespace: "garden",
-			},
-		}
-		Eventually(ctx, s.GardenKomega.Object(seedSecret)).Should(
-			HaveField("Data", HaveKey(kubernetes.KubeConfig)),
-			"secret %v should contain the seed kubeconfig",
-		)
-
-		clientSet, err := kubernetes.NewClientFromSecretObject(seedSecret,
-			kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
-			kubernetes.WithDisabledCachedClient(),
-		)
-		Expect(err).NotTo(HaveOccurred())
-		s.WithSeedClientSet(clientSet)
-	}, SpecTimeout(time.Minute))
-}
-
 // ItShouldComputeControlPlaneNamespace computes the control plane namespace for the shoot and stores it in ShootContext.ControlPlaneNamespace.
 // It's hard to determine what the namespace of the control-plane will be before shoot creation, thus to compute it we need to first create the Shoot.
 func ItShouldComputeControlPlaneNamespace(s *ShootContext) {
