@@ -80,7 +80,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 
 		It("Should create garden access secret", func(ctx SpecContext) {
 			Eventually(ctx, func() error {
-				if err := s.GardenClient.Create(ctx, accessSecret); !apierrors.IsAlreadyExists(err) {
+				if err := s.SeedClient.Create(ctx, accessSecret); !apierrors.IsAlreadyExists(err) {
 					return err
 				}
 				return StopTrying("access secret already exists")
@@ -137,7 +137,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 		var accessSecretBefore *corev1.Secret
 		It("Should wait for to be populated in garden access secret", func(ctx SpecContext) {
 			Eventually(func(g Gomega) {
-				g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
+				g.Expect(s.SeedClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
 				g.Expect(accessSecret.Data).To(HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(BeEmpty())))
 				accessSecretBefore = accessSecret.DeepCopy()
 			}).Should(Succeed())
@@ -168,7 +168,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 
 		It("Should wait for token to be renewed in garden access secret", func(ctx SpecContext) {
 			Eventually(func(g Gomega) {
-				g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
+				g.Expect(s.SeedClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
 				g.Expect(accessSecret.Data).To(HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(Equal(accessSecretBefore.Data[resourcesv1alpha1.DataKeyToken]))))
 				g.Expect(accessSecret.Annotations).To(HaveKeyWithValue(resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, Not(Equal(accessSecretBefore.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]))))
 			}).Should(Succeed())
