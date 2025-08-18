@@ -11,6 +11,7 @@ import (
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,5 +38,9 @@ func (d *localDriver) GetMachineStatus(ctx context.Context, req *driver.GetMachi
 	return &driver.GetMachineStatusResponse{
 		ProviderID: pod.Name,
 		NodeName:   pod.Name,
+		Addresses: []corev1.NodeAddress{{
+			Type:    corev1.NodeInternalIP,
+			Address: pod.Status.PodIP,
+		}},
 	}, nil
 }
