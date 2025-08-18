@@ -80,6 +80,11 @@ var _ = Describe("admissionplugins", func() {
 				"Detail": Equal("admission plugin \"TaintNodesByCondition\" does not allow specifying external kubeconfig"),
 			})))),
 			Entry("adding kubeconfig secret to admission plugin supporting external kubeconfig", []core.AdmissionPlugin{{Name: "ValidatingAdmissionWebhook", KubeconfigSecretName: ptr.To("test-secret")}}, "1.27.5", BeEmpty()),
+			Entry("admission plugin configuration for plugin that does not take configuration", []core.AdmissionPlugin{{Name: "ExtendedResourceToleration", Config: &runtime.RawExtension{Raw: []byte("foo: bar")}}}, "1.31.1", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+				"Detail": ContainSubstring("admission plugin \"ExtendedResourceToleration\" does not allow configuration. configurable plugins are:"),
+			})))),
 		)
 
 		Describe("validate PodSecurity admissionPlugin config", func() {

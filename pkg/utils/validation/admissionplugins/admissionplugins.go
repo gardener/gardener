@@ -44,13 +44,13 @@ var (
 		"DefaultStorageClass":                  {},
 		"DefaultTolerationSeconds":             {},
 		"DenyServiceExternalIPs":               {},
-		"EventRateLimit":                       {},
+		"EventRateLimit":                       {AllowsConfiguration: true},
 		"ExtendedResourceToleration":           {},
-		"ImagePolicyWebhook":                   {},
+		"ImagePolicyWebhook":                   {AllowsConfiguration: true},
 		"LimitPodHardAntiAffinityTopology":     {},
 		"LimitRanger":                          {},
 		"MutatingAdmissionPolicy":              {VersionRange: versionutils.VersionRange{AddedInVersion: "1.32"}},
-		"MutatingAdmissionWebhook":             {Required: true},
+		"MutatingAdmissionWebhook":             {Required: true, AllowsConfiguration: true},
 		"NamespaceAutoProvision":               {},
 		"NamespaceExists":                      {},
 		"NamespaceLifecycle":                   {Required: true},
@@ -58,19 +58,19 @@ var (
 		"OwnerReferencesPermissionEnforcement": {},
 		"PersistentVolumeClaimResize":          {},
 		"PersistentVolumeLabel":                {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.31"}},
-		"PodNodeSelector":                      {},
-		"PodSecurity":                          {Required: true},
-		"PodTolerationRestriction":             {},
+		"PodNodeSelector":                      {AllowsConfiguration: true},
+		"PodSecurity":                          {Required: true, AllowsConfiguration: true},
+		"PodTolerationRestriction":             {AllowsConfiguration: true},
 		"PodTopologyLabels":                    {VersionRange: versionutils.VersionRange{AddedInVersion: "1.33"}},
 		"Priority":                             {Required: true},
-		"ResourceQuota":                        {},
+		"ResourceQuota":                        {AllowsConfiguration: true},
 		"RuntimeClass":                         {},
 		"SecurityContextDeny":                  {Forbidden: true, VersionRange: versionutils.VersionRange{RemovedInVersion: "1.30"}},
 		"ServiceAccount":                       {},
 		"StorageObjectInUseProtection":         {Required: true},
 		"TaintNodesByCondition":                {},
 		"ValidatingAdmissionPolicy":            {},
-		"ValidatingAdmissionWebhook":           {Required: true},
+		"ValidatingAdmissionWebhook":           {Required: true, AllowsConfiguration: true},
 	}
 
 	admissionPluginsSupportingExternalKubeconfig = sets.New("ValidatingAdmissionWebhook", "MutatingAdmissionWebhook", "ImagePolicyWebhook")
@@ -115,8 +115,9 @@ func IsAdmissionPluginSupported(plugin, version string) (bool, error) {
 type AdmissionPluginVersionRange struct {
 	versionutils.VersionRange
 
-	Forbidden bool
-	Required  bool
+	Forbidden           bool
+	Required            bool
+	AllowsConfiguration bool
 }
 
 func getAllForbiddenPlugins() []string {
@@ -127,6 +128,16 @@ func getAllForbiddenPlugins() []string {
 		}
 	}
 	return allForbiddenPlugins
+}
+
+func getAllConfigurablePlugins() []string {
+	var allConfigurablePlugins []string
+	for name, vr := range admissionPluginsVersionRanges {
+		if vr.AllowsConfiguration {
+			allConfigurablePlugins = append(allConfigurablePlugins, name)
+		}
+	}
+	return allConfigurablePlugins
 }
 
 // ValidateAdmissionPlugins validates the given Kubernetes admission plugins against the given Kubernetes version.
@@ -147,6 +158,9 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 		} else if !supported {
 			allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("admission plugin %q is not supported in Kubernetes version %s", plugin.Name, version)))
 		} else {
+			if admissionPluginHasConfig(plugin) && !admissionPluginAllowsConfiguration(plugin) {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("config"), fmt.Sprintf("admission plugin %q does not allow configuration. configurable plugins are: %+v", plugin.Name, getAllConfigurablePlugins())))
+			}
 			if admissionPluginsVersionRanges[plugin.Name].Forbidden {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("forbidden admission plugin was specified - do not use plugins from the following list: %+v", getAllForbiddenPlugins())))
 			}
@@ -163,6 +177,15 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 	}
 
 	return allErrs
+}
+
+func admissionPluginHasConfig(plugin core.AdmissionPlugin) bool {
+	return plugin.Config != nil && len(plugin.Config.Raw) > 0
+}
+
+func admissionPluginAllowsConfiguration(plugin core.AdmissionPlugin) bool {
+	vr := admissionPluginsVersionRanges[plugin.Name]
+	return vr != nil && vr.AllowsConfiguration
 }
 
 func validateAdmissionPluginConfig(plugin core.AdmissionPlugin, fldPath *field.Path) *field.Error {
