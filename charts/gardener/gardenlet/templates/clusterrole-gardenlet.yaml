@@ -456,8 +456,6 @@ rules:
   - servicemonitors
   - scrapeconfigs
   - prometheusrules
-  # TODO(vicwicker): Remove this after v1.125 has been released.
-  - prometheuses
   verbs:
   - list
   - watch
