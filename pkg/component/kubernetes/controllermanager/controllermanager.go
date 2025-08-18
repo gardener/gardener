@@ -44,6 +44,7 @@ import (
 	netutils "github.com/gardener/gardener/pkg/utils/net"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -719,6 +720,10 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			"pv-protection",
 			"ttl",
 		)
+
+		if versionutils.ConstraintK8sGreaterEqual133.Check(k.values.TargetVersion) {
+			controllersToDisable.Insert("device-taint-eviction-controller")
+		}
 	}
 
 	command = append(command,
