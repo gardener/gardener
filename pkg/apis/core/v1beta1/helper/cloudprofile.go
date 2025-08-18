@@ -22,6 +22,8 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
+// CurrentLifecycleClassification returns the current lifecycle classification of the given version.
+// An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
 func CurrentLifecycleClassification(version v1beta1.ExpirableVersion) v1beta1.VersionClassification {
 	var (
 		currentClassification = v1beta1.ClassificationUnavailable
@@ -73,23 +75,30 @@ func CurrentLifecycleClassification(version v1beta1.ExpirableVersion) v1beta1.Ve
 	return currentClassification
 }
 
+// VersionIsExpired reports whether the given version is expired.
 func VersionIsExpired(version v1beta1.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == v1beta1.ClassificationExpired
 }
 
+// VersionIsActive reports whether the given version is active.
 func VersionIsActive(version v1beta1.ExpirableVersion) bool {
 	curr := CurrentLifecycleClassification(version)
 	return curr != v1beta1.ClassificationExpired && curr != v1beta1.ClassificationUnavailable
 }
 
+// VersionIsSupported reports whether the given version is supported.
 func VersionIsSupported(version v1beta1.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == v1beta1.ClassificationSupported
 }
 
+// VersionIsPreview reports whether the given version is in preview.
 func VersionIsPreview(version v1beta1.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == v1beta1.ClassificationPreview
 }
 
+// DurationUntilNextVersionLifecycleStage returns the duration until the earliest upcoming lifecycle start time
+// of any Kubernetes version or MachineImageVersion in the given <cloudProfile>.
+// If no future lifecyle start is found, it returns 0.
 func DurationUntilNextVersionLifecycleStage(cloudProfile *v1beta1.CloudProfileSpec) time.Duration {
 	var (
 		next time.Time
