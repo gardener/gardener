@@ -613,9 +613,8 @@ profiles:
           - apply
           - -f
           - example/provider-extensions/garden/controlplane/domain-secrets.yaml
-  - name: ipv6
+  - name: dual
     activation:
-      - env: IPFAMILY=ipv6
       - env: IPFAMILY=dual
     patches:
       - op: add
@@ -896,14 +895,6 @@ resourceSelector:
       image:
         - .*
 profiles:
-  - name: ipv6
-    activation:
-      - env: IPFAMILY=ipv6
-    manifests:
-      kustomize:
-        paths:
-          - example/provider-local/garden/skaffold-ipv6
-          - example/provider-local/seed-kind/skaffold
   - name: dual
     activation:
       - env: IPFAMILY=dual
