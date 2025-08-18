@@ -531,11 +531,16 @@ func FilterDeprecatedVersion() func(expirableVersion gardencorev1beta1.Expirable
 	}
 }
 
-func extractArchitecturesFromCapabilitySets(capabilitySets []gardencorev1beta1.CapabilitySet, defaultArchitecture string) []string {
-	architectures := sets.New[string]()
-	if len(capabilitySets) == 0 && defaultArchitecture != "" {
-		return []string{defaultArchitecture}
+func extractArchitecturesFromCapabilitySets(capabilitySets []gardencorev1beta1.CapabilitySet, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []string {
+	if len(capabilitySets) == 0 {
+		for _, capabilityDefinition := range capabilityDefinitions {
+			if capabilityDefinition.Name == constants.ArchitectureName {
+				return capabilityDefinition.Values
+			}
+		}
 	}
+
+	architectures := sets.New[string]()
 	for _, capabilitySet := range capabilitySets {
 		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureName] {
 			architectures.Insert(architectureValue)
@@ -544,26 +549,10 @@ func extractArchitecturesFromCapabilitySets(capabilitySets []gardencorev1beta1.C
 	return architectures.UnsortedList()
 }
 
-// GetDefaultArchitectureFromCapabilityDefinitions returns the default architecture of the capabilitiesDefinitions.
-func GetDefaultArchitectureFromCapabilityDefinitions(capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) string {
-	if len(capabilitiesDefinitions) == 0 {
-		return ""
-	}
-	for _, capabilityDefinition := range capabilitiesDefinitions {
-		if capabilityDefinition.Name == constants.ArchitectureName {
-			if len(capabilityDefinition.Values) == 1 {
-				return capabilityDefinition.Values[0]
-			}
-			break
-		}
-	}
-	return ""
-}
-
 // GetArchitecturesFromImageVersion returns the list of supported architectures for the machine image version.
 // It first tries to retrieve the architectures from the capability sets and falls back to the architectures field if none are found.
-func GetArchitecturesFromImageVersion(imageVersion gardencorev1beta1.MachineImageVersion, defaultArchitecture string) []string {
-	if architectures := extractArchitecturesFromCapabilitySets(imageVersion.CapabilitySets, defaultArchitecture); len(architectures) > 0 {
+func GetArchitecturesFromImageVersion(imageVersion gardencorev1beta1.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []string {
+	if architectures := extractArchitecturesFromCapabilitySets(imageVersion.CapabilitySets, capabilityDefinitions); len(architectures) > 0 {
 		return architectures
 	}
 	return imageVersion.Architectures
@@ -571,8 +560,8 @@ func GetArchitecturesFromImageVersion(imageVersion gardencorev1beta1.MachineImag
 
 // ArchitectureSupportedByImageVersion checks if the machine image version supports the given architecture.
 // The function falls back to the architectures field if the passed capabilities are empty.
-func ArchitectureSupportedByImageVersion(version gardencorev1beta1.MachineImageVersion, architecture, defaultArchitecture string) bool {
-	supportedArchitectures := GetArchitecturesFromImageVersion(version, defaultArchitecture)
+func ArchitectureSupportedByImageVersion(version gardencorev1beta1.MachineImageVersion, architecture string, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) bool {
+	supportedArchitectures := GetArchitecturesFromImageVersion(version, capabilityDefinitions)
 	return slices.Contains(supportedArchitectures, architecture)
 }
 

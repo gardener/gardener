@@ -23,8 +23,7 @@ func FilterMachineImageVersions(
 	machineTypeFromCloudProfile *gardencorev1beta1.MachineType,
 	capabilityDefinitions []gardencorev1beta1.CapabilityDefinition,
 ) *gardencorev1beta1.MachineImage {
-	defaultArchitecture := v1beta1helper.GetDefaultArchitectureFromCapabilityDefinitions(capabilityDefinitions)
-	filteredMachineImageVersions := filterForArchitecture(machineImageFromCloudProfile, worker.Machine.Architecture, defaultArchitecture)
+	filteredMachineImageVersions := filterForArchitecture(machineImageFromCloudProfile, worker.Machine.Architecture, capabilityDefinitions)
 	filteredMachineImageVersions = filterForCapabilities(filteredMachineImageVersions, machineTypeFromCloudProfile.Capabilities, capabilityDefinitions)
 	filteredMachineImageVersions = filterForCRI(filteredMachineImageVersions, worker.CRI)
 	filteredMachineImageVersions = filterForKubeletVersionConstraint(filteredMachineImageVersions, kubeletVersion)
@@ -139,7 +138,7 @@ func DetermineVersionForStrategy(expirableVersions []gardencorev1beta1.Expirable
 	return versionForForceUpdate, nil
 }
 
-func filterForArchitecture(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, arch *string, defaultArchitecture string) *gardencorev1beta1.MachineImage {
+func filterForArchitecture(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, arch *string, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) *gardencorev1beta1.MachineImage {
 	filteredMachineImages := gardencorev1beta1.MachineImage{
 		Name:           machineImageFromCloudProfile.Name,
 		UpdateStrategy: machineImageFromCloudProfile.UpdateStrategy,
@@ -147,7 +146,7 @@ func filterForArchitecture(machineImageFromCloudProfile *gardencorev1beta1.Machi
 	}
 
 	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
-		if slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(cloudProfileVersion, defaultArchitecture), *arch) {
+		if slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(cloudProfileVersion, capabilityDefinitions), *arch) {
 			filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
 		}
 	}
