@@ -290,6 +290,8 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	return nil
 }
 
+var _ admission.ValidationInterface = &ReferenceManager{}
+
 // Validate ensures that referenced resources do actually exist.
 func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
