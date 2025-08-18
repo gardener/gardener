@@ -23,6 +23,7 @@ patches:
           "reconcile": "BeforeKubeAPIServer"
         },
         "type": "local-ext-seed",
+        "clusterCompatibility": ["shoot", "seed"],
         "workerlessSupported": true
       }
     - op: add
