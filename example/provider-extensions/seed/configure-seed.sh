@@ -91,14 +91,17 @@ ensure-gardener-dns-annotations() {
 }
 
 echo "Ensuring config files"
+CREDENTIALSBINDINGS_FOLDER=
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/workload-identity-issuer.yaml
 if [[ "$workload_identity_support" == "true" ]]; then
-  ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/with-workload-identity/credentials/infrastructure-workloadidentities.yaml
-  ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/with-workload-identity/credentials/credentialsbindings.yaml
+  CREDENTIALSBINDINGS_FOLDER="with-workload-identity"
+  ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/"$CREDENTIALSBINDINGS_FOLDER"/credentials/infrastructure-workloadidentities.yaml
+else
+  CREDENTIALSBINDINGS_FOLDER="without-workload-identity"
+  ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/"$CREDENTIALSBINDINGS_FOLDER"/credentials/infrastructure-secrets.yaml
 fi
-ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml
-ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/without-workload-identity/credentials/secretbindings.yaml
+ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/"$CREDENTIALSBINDINGS_FOLDER"/credentials/credentialsbindings.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml.tmpl
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/base/project.yaml
 
@@ -114,18 +117,16 @@ check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/ba
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/base/project.yaml 'select(document_index == 1) | .metadata.labels["project.gardener.cloud/name"]'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/base/project.yaml 'select(document_index == 2) | .metadata.name'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/base/project.yaml 'select(document_index == 2) | .spec.namespace'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml '.metadata.namespace'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml '.data'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/without-workload-identity/credentials/secretbindings.yaml '.metadata.namespace'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/without-workload-identity/credentials/secretbindings.yaml '.provider.type'
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/without-workload-identity/credentials/secretbindings.yaml '.secretRef.namespace'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/"$CREDENTIALSBINDINGS_FOLDER"/credentials/credentialsbindings.yaml '.metadata.namespace'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/"$CREDENTIALSBINDINGS_FOLDER"/credentials/credentialsbindings.yaml '.provider.type'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/"$CREDENTIALSBINDINGS_FOLDER"/credentials/credentialsbindings.yaml '.credentialsRef.namespace'
 if [[ "$workload_identity_support" == "true" ]]; then
   check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/with-workload-identity/credentials/infrastructure-workloadidentities.yaml '.metadata.namespace'
   check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/with-workload-identity/credentials/infrastructure-workloadidentities.yaml '.spec.audiences'
   check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/with-workload-identity/credentials/infrastructure-workloadidentities.yaml '.spec.targetSystem.type'
-  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/with-workload-identity/credentials/credentialsbindings.yaml '.metadata.namespace'
-  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/with-workload-identity/credentials/credentialsbindings.yaml '.provider.type'
-  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/with-workload-identity/credentials/credentialsbindings.yaml '.credentialsRef.namespace'
+else
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml '.metadata.namespace'
+  check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml '.data'
 fi
 
 role1=$(yq 'select(document_index == 0) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
