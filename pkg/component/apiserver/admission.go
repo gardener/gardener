@@ -18,7 +18,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	webhookadmissionv1 "k8s.io/apiserver/pkg/admission/plugin/webhook/config/apis/webhookadmission/v1"
 	webhookadmissionv1alpha1 "k8s.io/apiserver/pkg/admission/plugin/webhook/config/apis/webhookadmission/v1alpha1"
-	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
+	apiserverv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -29,7 +29,7 @@ var admissionCodec runtime.Codec
 
 func init() {
 	admissionScheme := runtime.NewScheme()
-	utilruntime.Must(apiserverv1alpha1.AddToScheme(admissionScheme))
+	utilruntime.Must(apiserverv1.AddToScheme(admissionScheme))
 	utilruntime.Must(webhookadmissionv1.AddToScheme(admissionScheme))
 	utilruntime.Must(webhookadmissionv1alpha1.AddToScheme(admissionScheme))
 
@@ -40,7 +40,6 @@ func init() {
 			Strict: false,
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
-			apiserverv1alpha1.SchemeGroupVersion,
 			webhookadmissionv1.SchemeGroupVersion,
 			webhookadmissionv1alpha1.SchemeGroupVersion,
 		})
@@ -76,7 +75,7 @@ func ReconcileSecretAdmissionKubeconfigs(ctx context.Context, c client.Client, s
 func ReconcileConfigMapAdmission(ctx context.Context, c client.Client, configMap *corev1.ConfigMap, values Values) error {
 	configMap.Data = map[string]string{}
 
-	admissionConfig := &apiserverv1alpha1.AdmissionConfiguration{}
+	admissionConfig := &apiserverv1.AdmissionConfiguration{}
 	for _, plugin := range values.EnabledAdmissionPlugins {
 		rawConfig, err := computeRelevantAdmissionPluginRawConfig(plugin)
 		if err != nil {
@@ -84,7 +83,7 @@ func ReconcileConfigMapAdmission(ctx context.Context, c client.Client, configMap
 		}
 
 		if rawConfig != nil {
-			admissionConfig.Plugins = append(admissionConfig.Plugins, apiserverv1alpha1.AdmissionPluginConfiguration{
+			admissionConfig.Plugins = append(admissionConfig.Plugins, apiserverv1.AdmissionPluginConfiguration{
 				Name: plugin.Name,
 				Path: volumeMountPathAdmissionConfiguration + "/" + admissionPluginsConfigFilename(plugin.Name),
 			})
