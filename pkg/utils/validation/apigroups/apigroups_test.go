@@ -32,8 +32,8 @@ var _ = Describe("apigroups", func() {
 		Entry("Known API Group Version Resource but kubernetes version not present in supported range", "coordination.k8s.io/v1alpha1/leasecandidates", "1.29", false, true),
 		Entry("Known API Group Version and kubernetes version present in supported range", "resource.k8s.io/v1alpha3", "1.31", true, true),
 		Entry("Known API Group Version Resource and kubernetes version present in supported range", "resource.k8s.io/v1alpha2/resourceclaimparameters", "1.30", true, true),
-		Entry("Known API Group Version but kubernetes version range not present", "policy/v1", "1.25", true, true),
-		Entry("Known API Group Version Resource but kubernetes version range not present", "policy/v1/poddisruptionbudgets", "1.25", true, true),
+		Entry("Known API Group Version but kubernetes version range not present", "policy/v1", "1.33", true, true),
+		Entry("Known API Group Version Resource but kubernetes version range not present", "policy/v1/poddisruptionbudgets", "1.33", true, true),
 	)
 
 	DescribeTable("#SplitAPI",

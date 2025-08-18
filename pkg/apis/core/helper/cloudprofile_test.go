@@ -24,14 +24,14 @@ var _ = Describe("CloudProfile Helper", func() {
 	Describe("#CurrentLifecycleClassification", func() {
 		It("version is implicitly supported", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version: "1.28.0",
+				Version: "1.33.0",
 			})
 			Expect(classification).To(Equal(core.ClassificationSupported))
 		})
 
 		It("version is explicitly supported", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version:        "1.28.0",
+				Version:        "1.33.0",
 				Classification: ptr.To(core.ClassificationSupported),
 			})
 			Expect(classification).To(Equal(core.ClassificationSupported))
@@ -39,7 +39,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("version is in preview stage", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version:        "1.28.0",
+				Version:        "1.33.0",
 				Classification: ptr.To(core.ClassificationPreview),
 			})
 			Expect(classification).To(Equal(core.ClassificationPreview))
@@ -47,7 +47,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("version is deprecated ", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version:        "1.28.0",
+				Version:        "1.33.0",
 				Classification: ptr.To(core.ClassificationDeprecated),
 			})
 			Expect(classification).To(Equal(core.ClassificationDeprecated))
@@ -55,7 +55,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("supported version will expire in the future", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version:        "1.28.0",
+				Version:        "1.33.0",
 				Classification: ptr.To(core.ClassificationSupported),
 				ExpirationDate: ptr.To(metav1.NewTime(time.Now().Add(2 * time.Hour))),
 			})
@@ -64,7 +64,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("supported version has already expired", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version:        "1.28.0",
+				Version:        "1.33.0",
 				Classification: ptr.To(core.ClassificationSupported),
 				ExpirationDate: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
 			})
