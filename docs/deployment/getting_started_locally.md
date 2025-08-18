@@ -407,6 +407,8 @@ cat <<EOF | sudo tee -a /etc/hosts
 # Begin of Gardener Operator local setup section
 172.18.255.3 api.virtual-garden.local.gardener.cloud
 172.18.255.3 plutono-garden.ingress.runtime-garden.local.gardener.cloud
+172.18.255.3 dashboard.ingress.runtime-garden.local.gardener.cloud
+172.18.255.3 discovery.ingress.runtime-garden.local.gardener.cloud
 # End of Gardener Operator local setup section
 EOF
 ```
