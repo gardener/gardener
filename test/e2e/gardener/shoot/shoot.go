@@ -223,6 +223,8 @@ func ItShouldGetResponsibleSeed(s *ShootContext) {
 			g.Expect(s.Seed.Name).NotTo(BeEmpty())
 			g.Expect(s.GardenKomega.Get(s.Seed)()).To(Succeed())
 		}).Should(Succeed())
+
+		s.SeedContext = *s.ForSeed(s.Seed)
 	}, SpecTimeout(time.Minute))
 }
 
