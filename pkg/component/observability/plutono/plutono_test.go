@@ -244,25 +244,15 @@ metadata:
 data:
   datasources.yaml: |
     ` + configMapData + `
-immutable: true
 kind: ConfigMap
 metadata:
   creationTimestamp: null
   labels:
     component: plutono
     datasource.monitoring.gardener.cloud/` + clusterLabelKey(values) + `: "true"
-    resources.gardener.cloud/garbage-collectable-reference: "true"
 `
-				var configMapNameSuffix string
-				if values.IsGardenCluster {
-					configMapNameSuffix = "e56271c8"
-				} else if values.ClusterType == comp.ClusterTypeShoot {
-					configMapNameSuffix = "f82429ca"
-				} else {
-					configMapNameSuffix = "46d8c4c5"
-				}
 
-				configMap += `  name: plutono-datasources-` + configMapNameSuffix + `
+				configMap += `  name: plutono-datasources
   namespace: some-namespace
 `
 
