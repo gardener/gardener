@@ -18,6 +18,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+// CurrentLifecycleClassification returns the current lifecycle classification of the given version.
+// An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
 func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionClassification {
 	var (
 		currentClassification = core.ClassificationUnavailable
@@ -69,10 +71,13 @@ func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionC
 	return currentClassification
 }
 
+// VersionIsSupported reports whether the given version is supported.
 func VersionIsSupported(version core.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == core.ClassificationSupported
 }
 
+// SupportedLifecycleClassification returns the lifecycle stage in which the version is classified as supported.
+// It returns nil if no such stage exists.
 func SupportedLifecycleClassification(version core.ExpirableVersion) *core.LifecycleStage {
 	for _, stage := range version.Lifecycle {
 		if stage.Classification == core.ClassificationSupported {
