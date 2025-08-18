@@ -237,7 +237,6 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 		},
 		Data: map[string]string{"datasources" + dataSourcesKeySuffix + ".yaml": p.getDataSource()},
 	}
-	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
 
 	if p.values.OnlyDeployDataSourcesAndDashboards {
 		data, err := registry.AddAllAndSerialize(dataSourceConfigMap)
