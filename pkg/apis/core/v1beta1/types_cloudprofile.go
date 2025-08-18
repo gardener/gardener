@@ -161,7 +161,7 @@ type MachineImageVersion struct {
 	CapabilityFlavors []MachineImageFlavor `json:"capabilityFlavors,omitempty" protobuf:"bytes,6,rep,name=capabilityFlavors"`
 }
 
-// ExpirableVersion contains a version and an expiration date.
+// ExpirableVersion contains a version with associated lifecycle information.
 type ExpirableVersion struct {
 	// Version is the version identifier.
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
@@ -178,6 +178,8 @@ type ExpirableVersion struct {
 	Lifecycle []LifecycleStage `json:"lifecycle,omitempty" protobuf:"bytes,4,opt,name=lifecycle"`
 }
 
+// LifecycleStage describes a stage in the versions lifecycle.
+// Each stage defines the classification of the version and the time at which this classification becomes effective.
 type LifecycleStage struct {
 	// Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
 	Classification VersionClassification `json:"classification" protobuf:"bytes,1,opt,name=classification,casttype=VersionClassification"`
@@ -311,6 +313,7 @@ type CloudProfileStatus struct {
 	MachineImageVersions []MachineImageVersionStatus `json:"machineImageVersions,omitempty" protobuf:"bytes,2,name=machineImageVersions"`
 }
 
+// MachineImageVersionStatus contains the status of a machine image and its version classifications.
 type MachineImageVersionStatus struct {
 	// Name matches the name of the MachineImage the status is represented of.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,name=name"`
