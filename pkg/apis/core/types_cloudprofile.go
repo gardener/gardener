@@ -158,6 +158,9 @@ type ExpirableVersion struct {
 	Lifecycle []LifecycleStage
 }
 
+// LifecycleStage describes a stage in the versions lifecycle.
+// Each stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)
+// and the time at which this classification becomes effective.
 type LifecycleStage struct {
 	// Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
 	Classification VersionClassification
@@ -264,6 +267,7 @@ type CloudProfileStatus struct {
 	MachineImageVersions []MachineImageVersionStatus
 }
 
+// MachineImageVersionStatus contains the status of a machine image and its version classifications.
 type MachineImageVersionStatus struct {
 	// Name matches the name of the MachineImage the status is represented of.
 	Name string
@@ -304,6 +308,7 @@ var order = map[VersionClassification]int{
 	ClassificationExpired:     4,
 }
 
+// Compare compares two VersionClassification objects to determine their order.
 func (c1 VersionClassification) Compare(c2 VersionClassification) int {
 	return order[c1] - order[c2]
 }
