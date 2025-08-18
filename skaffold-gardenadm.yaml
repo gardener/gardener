@@ -14,6 +14,8 @@ build:
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
+            - pkg/admissioncontroller/metrics
+            - pkg/admissioncontroller/seedidentity
             - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
@@ -47,6 +49,7 @@ build:
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
             - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/seedmanagement/v1alpha1/helper
             - pkg/apis/settings
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
@@ -272,6 +275,7 @@ build:
             - pkg/gardenadm/staticpod
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/apis/config/v1alpha1/helper
+            - pkg/gardenlet/bootstrap/util
             - pkg/gardenlet/controller/backupbucket
             - pkg/gardenlet/controller/backupentry
             - pkg/gardenlet/controller/controllerinstallation/controllerinstallation
@@ -318,6 +322,7 @@ build:
             - pkg/utils/gardener/secretsrotation
             - pkg/utils/gardener/shootstate
             - pkg/utils/gardener/tokenrequest
+            - pkg/utils/graph
             - pkg/utils/imagevector
             - pkg/utils/istio
             - pkg/utils/kubernetes

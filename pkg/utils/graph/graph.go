@@ -33,6 +33,10 @@ type Interface interface {
 	HasVertex(vertexType VertexType, vertexNamespace, vertexName string) bool
 	// HasPathFrom returns true when there is a path from <from> to <to>.
 	HasPathFrom(fromType VertexType, fromNamespace, fromName string, toType VertexType, toNamespace, toName string) bool
+	// Nodes returns all nodes of the graph.
+	Nodes() gonumgraph.Nodes
+	// Visit loops over all nodes in the graph.
+	Visit(nodes gonumgraph.Nodes, visitor func(gonumgraph.Node))
 }
 
 type graph struct {
@@ -86,6 +90,10 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 	return nil
 }
 
+func (g *graph) Nodes() gonumgraph.Nodes {
+	return g.graph.Nodes()
+}
+
 func (g *graph) HasVertex(vertexType VertexType, vertexNamespace, vertexName string) bool {
 	g.lock.RLock()
 	defer g.lock.RUnlock()
@@ -96,7 +104,7 @@ func (g *graph) HasVertex(vertexType VertexType, vertexNamespace, vertexName str
 func (g *graph) HasPathFrom(fromType VertexType, fromNamespace, fromName string, toType VertexType, toNamespace, toName string) bool {
 	start := time.Now()
 	defer func() {
-		metricPathCheckDuration.WithLabelValues(vertexTypes[fromType], vertexTypes[toType]).Observe(time.Since(start).Seconds())
+		metricPathCheckDuration.WithLabelValues(VertexTypes[fromType].Kind, VertexTypes[toType].Kind).Observe(time.Since(start).Seconds())
 	}()
 	g.lock.RLock()
 	defer g.lock.RUnlock()
@@ -116,19 +124,19 @@ func (g *graph) HasPathFrom(fromType VertexType, fromNamespace, fromName string,
 	}) != nil
 }
 
-func (g *graph) getOrCreateVertex(vertexType VertexType, namespace, name string) *vertex {
+func (g *graph) getOrCreateVertex(vertexType VertexType, namespace, name string) *Vertex {
 	if v, ok := g.getVertex(vertexType, namespace, name); ok {
 		return v
 	}
 	return g.createVertex(vertexType, namespace, name)
 }
 
-func (g *graph) getVertex(vertexType VertexType, namespace, name string) (*vertex, bool) {
+func (g *graph) getVertex(vertexType VertexType, namespace, name string) (*Vertex, bool) {
 	v, ok := g.vertices[vertexType][namespace][name]
 	return v, ok
 }
 
-func (g *graph) createVertex(vertexType VertexType, namespace, name string) *vertex {
+func (g *graph) createVertex(vertexType VertexType, namespace, name string) *Vertex {
 	typedVertices, ok := g.vertices[vertexType]
 	if !ok {
 		typedVertices = namespaceVertexMapping{}
@@ -137,7 +145,7 @@ func (g *graph) createVertex(vertexType VertexType, namespace, name string) *ver
 
 	namespacedVertices, ok := typedVertices[namespace]
 	if !ok {
-		namespacedVertices = map[string]*vertex{}
+		namespacedVertices = map[string]*Vertex{}
 		typedVertices[namespace] = namespacedVertices
 	}
 
@@ -145,7 +153,7 @@ func (g *graph) createVertex(vertexType VertexType, namespace, name string) *ver
 	namespacedVertices[name] = v
 
 	g.graph.AddNode(v)
-	g.logger.Info(
+	g.logger.V(1).Info(
 		"Added",
 		"vertex", fmt.Sprintf("%s (%d)", v, v.ID()),
 	)
@@ -164,7 +172,7 @@ func (g *graph) deleteVertex(vertexType VertexType, namespace, name string) {
 
 	// Neighbors to which <v> has an outgoing edge can also be removed if they do not have any outgoing edges (to other
 	// vertices) themselves and if they only have one incoming edge (which must be the edge from <v>).
-	g.visit(g.graph.From(v.ID()), func(neighbor gonumgraph.Node) {
+	g.Visit(g.graph.From(v.ID()), func(neighbor gonumgraph.Node) {
 		if g.graph.From(neighbor.ID()).Len() == 0 && g.graph.To(neighbor.ID()).Len() == 1 {
 			verticesToRemove = append(verticesToRemove, neighbor)
 		}
@@ -172,38 +180,38 @@ func (g *graph) deleteVertex(vertexType VertexType, namespace, name string) {
 
 	// Neighbors from which <v> has an incoming edge can also be removed if they do not have any incoming edges (from
 	// other vertices) themselves and if they only have one outgoing edge (which must be the edge to <v>).
-	g.visit(g.graph.To(v.ID()), func(neighbor gonumgraph.Node) {
+	g.Visit(g.graph.To(v.ID()), func(neighbor gonumgraph.Node) {
 		if g.graph.To(neighbor.ID()).Len() == 0 && g.graph.From(neighbor.ID()).Len() == 1 {
 			verticesToRemove = append(verticesToRemove, neighbor)
 		}
 	})
 
 	for _, v := range verticesToRemove {
-		g.removeVertex(v.(*vertex))
+		g.removeVertex(v.(*Vertex))
 	}
 }
 
-func (g *graph) deleteVertexIfIsolated(v *vertex) {
+func (g *graph) deleteVertexIfIsolated(v *Vertex) {
 	if g.graph.From(v.ID()).Len() == 0 && g.graph.To(v.ID()).Len() == 0 {
 		g.removeVertex(v)
 	}
 }
 
-func (g *graph) removeVertex(v *vertex) {
+func (g *graph) removeVertex(v *Vertex) {
 	g.graph.RemoveNode(v.ID())
-	delete(g.vertices[v.vertexType][v.namespace], v.name)
-	if len(g.vertices[v.vertexType][v.namespace]) == 0 {
-		delete(g.vertices[v.vertexType], v.namespace)
+	delete(g.vertices[v.Type][v.Namespace], v.Name)
+	if len(g.vertices[v.Type][v.Namespace]) == 0 {
+		delete(g.vertices[v.Type], v.Namespace)
 	}
-	g.logger.Info(
+	g.logger.V(1).Info(
 		"Removed (with all associated edges)",
 		"vertex", fmt.Sprintf("%s (%d)", v, v.ID()),
 	)
 }
 
-func (g *graph) addEdge(from, to *vertex) {
+func (g *graph) addEdge(from, to *Vertex) {
 	g.graph.SetEdge(g.graph.NewEdge(from, to))
-	g.logger.Info(
+	g.logger.V(1).Info(
 		"Added edge",
 		"from", fmt.Sprintf("%s (%d)", from, from.ID()),
 		"to", fmt.Sprintf("%s (%d)", to, to.ID()),
@@ -226,9 +234,9 @@ func (g *graph) deleteAllIncomingEdges(fromVertexType, toVertexType VertexType, 
 	// Delete all edges from vertices of type <fromVertexType> to <to>. Neighbors from which <to> has an incoming edge
 	// can also be removed if they do not have any incoming edges (from other vertices) themselves and if they only have
 	// one outgoing edge (which must be the edge to <to>).
-	g.visit(g.graph.To(to.ID()), func(neighbor gonumgraph.Node) {
-		from, ok := neighbor.(*vertex)
-		if !ok || from.vertexType != fromVertexType {
+	g.Visit(g.graph.To(to.ID()), func(neighbor gonumgraph.Node) {
+		from, ok := neighbor.(*Vertex)
+		if !ok || from.Type != fromVertexType {
 			return
 		}
 
@@ -240,7 +248,7 @@ func (g *graph) deleteAllIncomingEdges(fromVertexType, toVertexType VertexType, 
 	})
 
 	for _, v := range verticesToRemove {
-		g.removeVertex(v.(*vertex))
+		g.removeVertex(v.(*Vertex))
 	}
 
 	for _, e := range edgesToRemove {
@@ -267,9 +275,9 @@ func (g *graph) deleteAllOutgoingEdges(fromVertexType VertexType, fromNamespace,
 	// Delete all edges from <from> to vertices of type <toVertexType>. Neighbors to which <from> has an outgoing edge
 	// can also be removed if they do not have any outgoing edges (to other vertices) themselves and if they only have
 	// one incoming edge (which must be the edge from <from>).
-	g.visit(g.graph.From(from.ID()), func(neighbor gonumgraph.Node) {
-		to, ok := neighbor.(*vertex)
-		if !ok || to.vertexType != toVertexType {
+	g.Visit(g.graph.From(from.ID()), func(neighbor gonumgraph.Node) {
+		to, ok := neighbor.(*Vertex)
+		if !ok || to.Type != toVertexType {
 			return
 		}
 
@@ -281,7 +289,7 @@ func (g *graph) deleteAllOutgoingEdges(fromVertexType VertexType, fromNamespace,
 	})
 
 	for _, v := range verticesToRemove {
-		g.removeVertex(v.(*vertex))
+		g.removeVertex(v.(*Vertex))
 	}
 
 	for _, e := range edgesToRemove {
@@ -294,14 +302,14 @@ func (g *graph) deleteAllOutgoingEdges(fromVertexType VertexType, fromNamespace,
 
 func (g *graph) removeEdge(edge gonumgraph.Edge) {
 	g.graph.RemoveEdge(edge.From().ID(), edge.To().ID())
-	g.logger.Info(
+	g.logger.V(1).Info(
 		"Removed edge",
 		"from", fmt.Sprintf("%s (%d)", edge.From(), edge.From().ID()),
 		"to", fmt.Sprintf("%s (%d)", edge.To(), edge.To().ID()),
 	)
 }
 
-func (g *graph) visit(nodes gonumgraph.Nodes, visitor func(gonumgraph.Node)) {
+func (g *graph) Visit(nodes gonumgraph.Nodes, visitor func(gonumgraph.Node)) {
 	for nodes.Next() {
 		if node := nodes.Node(); node != nil {
 			visitor(node)

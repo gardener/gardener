@@ -104,7 +104,7 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 		var (
 			namespace = seed.Spec.Backup.CredentialsRef.Namespace
 			name      = seed.Spec.Backup.CredentialsRef.Name
-			vertex    *vertex
+			vertex    *Vertex
 		)
 
 		if seed.Spec.Backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
@@ -155,7 +155,7 @@ func seedDNSProviderSecretRefEqual(oldDNS, newDNS *gardencorev1beta1.SeedDNSProv
 	return false
 }
 
-func addSeedResources(seedSpec gardencorev1beta1.SeedSpec, g *graph, seedVertex *vertex) {
+func addSeedResources(seedSpec gardencorev1beta1.SeedSpec, g *graph, seedVertex *Vertex) {
 	for _, resource := range seedSpec.Resources {
 		// only secrets and configMap are supported here
 		if resource.ResourceRef.APIVersion == "v1" {

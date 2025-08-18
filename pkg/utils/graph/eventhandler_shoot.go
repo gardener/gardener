@@ -28,7 +28,7 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 			if !ok {
 				return
 			}
-			g.handleShootCreateOrUpdate(ctx, shoot)
+			g.HandleShootCreateOrUpdate(ctx, shoot)
 		},
 
 		UpdateFunc: func(oldObj, newObj any) {
@@ -55,7 +55,7 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 				!v1beta1helper.ResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources) ||
 				v1beta1helper.HasManagedIssuer(oldShoot) != v1beta1helper.HasManagedIssuer(newShoot) ||
 				!g.hasExpectedShootBindingEdges(newShoot) {
-				g.handleShootCreateOrUpdate(ctx, newShoot)
+				g.HandleShootCreateOrUpdate(ctx, newShoot)
 			}
 		},
 
@@ -88,7 +88,7 @@ func (g *graph) hasExpectedShootBindingEdges(shoot *gardencorev1beta1.Shoot) boo
 	return hasEdge(VertexTypeSecretBinding, shoot.Spec.SecretBindingName) && hasEdge(VertexTypeCredentialsBinding, shoot.Spec.CredentialsBindingName)
 }
 
-func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencorev1beta1.Shoot) {
+func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencorev1beta1.Shoot) {
 	start := time.Now()
 	defer func() {
 		metricUpdateDuration.WithLabelValues("Shoot", "CreateOrUpdate").Observe(time.Since(start).Seconds())
@@ -127,7 +127,7 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 
 	cloudProfileReference := gardenerutils.BuildV1beta1CloudProfileReference(shoot)
 	if cloudProfileReference != nil {
-		var cloudProfileVertex *vertex
+		var cloudProfileVertex *Vertex
 		switch cloudProfileReference.Kind {
 		case v1beta1constants.CloudProfileReferenceKindCloudProfile:
 			cloudProfileVertex = g.getOrCreateVertex(VertexTypeCloudProfile, "", cloudProfileReference.Name)

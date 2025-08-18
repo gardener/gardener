@@ -237,6 +237,9 @@ func initializeFakeGardenResources(
 		)
 	}
 
+	for _, configMap := range resources.ConfigMaps {
+		objects = append(objects, configMap.DeepCopy())
+	}
 	for _, secret := range resources.Secrets {
 		objects = append(objects, secret.DeepCopy())
 	}

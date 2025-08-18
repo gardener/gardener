@@ -53,6 +53,7 @@ type Resources struct {
 	Shoot                   *gardencorev1beta1.Shoot
 	ControllerRegistrations []*gardencorev1beta1.ControllerRegistration
 	ControllerDeployments   []*gardencorev1.ControllerDeployment
+	ConfigMaps              []*corev1.ConfigMap
 	Secrets                 []*corev1.Secret
 	SecretBinding           *gardencorev1beta1.SecretBinding
 	CredentialsBinding      *securityv1alpha1.CredentialsBinding
@@ -138,6 +139,9 @@ func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
 				controllerRegistration, controllerDeployment := operator.ControllerRegistrationForExtension(typedObj)
 				resources.ControllerRegistrations = append(resources.ControllerRegistrations, controllerRegistration)
 				resources.ControllerDeployments = append(resources.ControllerDeployments, controllerDeployment)
+
+			case *corev1.ConfigMap:
+				resources.ConfigMaps = append(resources.ConfigMaps, typedObj)
 
 			case *corev1.Secret:
 				resources.Secrets = append(resources.Secrets, typedObj)

@@ -73,7 +73,7 @@ func (g *graph) handleBackupBucketCreateOrUpdate(backupBucket *gardencorev1beta1
 
 	var (
 		backupBucketVertex = g.getOrCreateVertex(VertexTypeBackupBucket, "", backupBucket.Name)
-		credentialsVertex  *vertex
+		credentialsVertex  *Vertex
 	)
 
 	if backupBucket.Spec.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && backupBucket.Spec.CredentialsRef.Kind == "WorkloadIdentity" {

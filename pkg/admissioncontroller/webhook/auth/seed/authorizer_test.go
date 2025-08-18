@@ -24,8 +24,6 @@ import (
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
-	graphpkg "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
-	mockgraph "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph/mock"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -33,6 +31,8 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	graphutils "github.com/gardener/gardener/pkg/utils/graph"
+	mockgraph "github.com/gardener/gardener/pkg/utils/graph/mock"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
@@ -143,7 +143,7 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeCloudProfile, "", cloudProfileName, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeCloudProfile, "", cloudProfileName, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
@@ -171,7 +171,7 @@ var _ = Describe("Seed", func() {
 				)
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeCloudProfile, "", cloudProfileName, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeCloudProfile, "", cloudProfileName, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -224,7 +224,7 @@ var _ = Describe("Seed", func() {
 					attrs.Name = "cluster-identity"
 					attrs.Namespace = "kube-system"
 
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeConfigMap, attrs.Namespace, attrs.Name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeConfigMap, attrs.Namespace, attrs.Name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -246,7 +246,7 @@ var _ = Describe("Seed", func() {
 				It("should allow when verb is delete and resource does not exist", func() {
 					attrs.Verb = "delete"
 
-					graph.EXPECT().HasVertex(graphpkg.VertexTypeConfigMap, namespace, name).Return(false)
+					graph.EXPECT().HasVertex(graphutils.VertexTypeConfigMap, namespace, name).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionAllow))
@@ -257,7 +257,7 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeConfigMap, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeConfigMap, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -288,7 +288,7 @@ var _ = Describe("Seed", func() {
 				)
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeConfigMap, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeConfigMap, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -341,7 +341,7 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeSecretBinding, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeSecretBinding, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -374,7 +374,7 @@ var _ = Describe("Seed", func() {
 				)
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeSecretBinding, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeSecretBinding, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -427,7 +427,7 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeCredentialsBinding, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeCredentialsBinding, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -460,7 +460,7 @@ var _ = Describe("Seed", func() {
 				)
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeCredentialsBinding, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeCredentialsBinding, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -513,7 +513,7 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeWorkloadIdentity, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeWorkloadIdentity, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -533,7 +533,7 @@ var _ = Describe("Seed", func() {
 					attrs.Subresource = "token"
 					attrs.Verb = "create"
 
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeWorkloadIdentity, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeWorkloadIdentity, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -559,7 +559,7 @@ var _ = Describe("Seed", func() {
 				)
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeWorkloadIdentity, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeWorkloadIdentity, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -620,7 +620,7 @@ var _ = Describe("Seed", func() {
 				It("should allow when verb is delete and resource does not exist", func() {
 					attrs.Verb = "delete"
 
-					graph.EXPECT().HasVertex(graphpkg.VertexTypeShootState, namespace, name).Return(false)
+					graph.EXPECT().HasVertex(graphutils.VertexTypeShootState, namespace, name).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionAllow))
@@ -632,16 +632,16 @@ var _ = Describe("Seed", func() {
 						attrs.Verb = verb
 
 						if verb == "delete" {
-							graph.EXPECT().HasVertex(graphpkg.VertexTypeShootState, namespace, name).Return(true).Times(2)
+							graph.EXPECT().HasVertex(graphutils.VertexTypeShootState, namespace, name).Return(true).Times(2)
 						}
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeShootState, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeShootState, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeShootState, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeShootState, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -714,7 +714,7 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeNamespacedCloudProfile, namespace, namespacedCloudProfileName, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeNamespacedCloudProfile, namespace, namespacedCloudProfileName, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
@@ -742,7 +742,7 @@ var _ = Describe("Seed", func() {
 				)
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeNamespacedCloudProfile, namespace, namespacedCloudProfileName, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeNamespacedCloudProfile, namespace, namespacedCloudProfileName, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -774,7 +774,7 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeNamespace, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeNamespace, "", name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -807,7 +807,7 @@ var _ = Describe("Seed", func() {
 				)
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeNamespace, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeNamespace, "", name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -859,7 +859,7 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeProject, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeProject, "", name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -892,7 +892,7 @@ var _ = Describe("Seed", func() {
 				)
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeProject, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeProject, "", name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -981,7 +981,7 @@ var _ = Describe("Seed", func() {
 				It("should allow when verb is delete and resource does not exist", func() {
 					attrs.Verb = "delete"
 
-					graph.EXPECT().HasVertex(graphpkg.VertexTypeBackupBucket, "", name).Return(false)
+					graph.EXPECT().HasVertex(graphutils.VertexTypeBackupBucket, "", name).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionAllow))
@@ -994,16 +994,16 @@ var _ = Describe("Seed", func() {
 						attrs.Subresource = subresource
 
 						if verb == "delete" {
-							graph.EXPECT().HasVertex(graphpkg.VertexTypeBackupBucket, "", name).Return(true).Times(2)
+							graph.EXPECT().HasVertex(graphutils.VertexTypeBackupBucket, "", name).Return(true).Times(2)
 						}
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeBackupBucket, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeBackupBucket, "", name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeBackupBucket, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeBackupBucket, "", name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -1079,7 +1079,7 @@ var _ = Describe("Seed", func() {
 				It("should allow when verb is delete and resource does not exist", func() {
 					attrs.Verb = "delete"
 
-					graph.EXPECT().HasVertex(graphpkg.VertexTypeBackupEntry, namespace, name).Return(false)
+					graph.EXPECT().HasVertex(graphutils.VertexTypeBackupEntry, namespace, name).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionAllow))
@@ -1091,13 +1091,13 @@ var _ = Describe("Seed", func() {
 						attrs.Verb = verb
 						attrs.Subresource = subresource
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeBackupEntry, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeBackupEntry, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeBackupEntry, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeBackupEntry, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -1133,7 +1133,7 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeExposureClass, "", exposureClassName, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeExposureClass, "", exposureClassName, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -1166,7 +1166,7 @@ var _ = Describe("Seed", func() {
 				)
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeExposureClass, "", exposureClassName, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeExposureClass, "", exposureClassName, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -1260,13 +1260,13 @@ var _ = Describe("Seed", func() {
 						attrs.Verb = verb
 						attrs.Subresource = subresource
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeBastion, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeBastion, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeBastion, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeBastion, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -1344,13 +1344,13 @@ var _ = Describe("Seed", func() {
 						attrs.Verb = verb
 						attrs.Subresource = subresource
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeManagedSeed, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeManagedSeed, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeManagedSeed, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeManagedSeed, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -1428,13 +1428,13 @@ var _ = Describe("Seed", func() {
 						attrs.Verb = verb
 						attrs.Subresource = subresource
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeGardenlet, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeGardenlet, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeGardenlet, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeGardenlet, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -1511,13 +1511,13 @@ var _ = Describe("Seed", func() {
 						attrs.Verb = verb
 						attrs.Subresource = subresource
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeControllerInstallation, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeControllerInstallation, "", name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeControllerInstallation, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeControllerInstallation, "", name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -1721,13 +1721,13 @@ var _ = Describe("Seed", func() {
 						attrs.Verb = verb
 						attrs.Subresource = subresource
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeShoot, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeShoot, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeShoot, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeShoot, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -1778,7 +1778,7 @@ var _ = Describe("Seed", func() {
 				It("should allow when verb is delete and resource does not exist", func() {
 					attrs.Verb = "delete"
 
-					graph.EXPECT().HasVertex(graphpkg.VertexTypeSeed, "", name).Return(false)
+					graph.EXPECT().HasVertex(graphutils.VertexTypeSeed, "", name).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionAllow))
@@ -1791,16 +1791,16 @@ var _ = Describe("Seed", func() {
 						attrs.Subresource = subresource
 
 						if verb == "delete" {
-							graph.EXPECT().HasVertex(graphpkg.VertexTypeSeed, "", name).Return(true).Times(2)
+							graph.EXPECT().HasVertex(graphutils.VertexTypeSeed, "", name).Return(true).Times(2)
 						}
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeSeed, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeSeed, "", name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeSeed, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeSeed, "", name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -1943,13 +1943,13 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeControllerDeployment, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeControllerDeployment, "", name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeControllerDeployment, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeControllerDeployment, "", name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -2049,7 +2049,7 @@ var _ = Describe("Seed", func() {
 				It("should allow when verb is delete and resource does not exist", func() {
 					attrs.Verb = "delete"
 
-					graph.EXPECT().HasVertex(graphpkg.VertexTypeSecret, namespace, name).Return(false)
+					graph.EXPECT().HasVertex(graphutils.VertexTypeSecret, namespace, name).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionAllow))
@@ -2061,16 +2061,16 @@ var _ = Describe("Seed", func() {
 						attrs.Verb = verb
 
 						if verb == "delete" {
-							graph.EXPECT().HasVertex(graphpkg.VertexTypeSecret, namespace, name).Return(true).Times(2)
+							graph.EXPECT().HasVertex(graphutils.VertexTypeSecret, namespace, name).Return(true).Times(2)
 						}
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeSecret, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeSecret, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeSecret, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeSecret, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -2115,7 +2115,7 @@ var _ = Describe("Seed", func() {
 				It("should allow when verb is delete and resource does not exist", func() {
 					attrs.Verb = "delete"
 
-					graph.EXPECT().HasVertex(graphpkg.VertexTypeInternalSecret, namespace, name).Return(false)
+					graph.EXPECT().HasVertex(graphutils.VertexTypeInternalSecret, namespace, name).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionAllow))
@@ -2127,16 +2127,16 @@ var _ = Describe("Seed", func() {
 						attrs.Verb = verb
 
 						if verb == "delete" {
-							graph.EXPECT().HasVertex(graphpkg.VertexTypeInternalSecret, namespace, name).Return(true).Times(2)
+							graph.EXPECT().HasVertex(graphutils.VertexTypeInternalSecret, namespace, name).Return(true).Times(2)
 						}
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeInternalSecret, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeInternalSecret, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeInternalSecret, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeInternalSecret, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -2231,13 +2231,13 @@ var _ = Describe("Seed", func() {
 						attrs.Verb = verb
 						attrs.Subresource = subresource
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeCertificateSigningRequest, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeCertificateSigningRequest, "", name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeCertificateSigningRequest, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeCertificateSigningRequest, "", name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -2306,7 +2306,7 @@ var _ = Describe("Seed", func() {
 				})
 
 				It("should allow because path to seed exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeClusterRoleBinding, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeClusterRoleBinding, "", name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -2316,7 +2316,7 @@ var _ = Describe("Seed", func() {
 				})
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeClusterRoleBinding, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeClusterRoleBinding, "", name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -2408,13 +2408,13 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeLease, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeLease, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeLease, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeLease, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -2483,7 +2483,7 @@ var _ = Describe("Seed", func() {
 				})
 
 				It("should allow because path to seed exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeServiceAccount, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -2493,7 +2493,7 @@ var _ = Describe("Seed", func() {
 				})
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeServiceAccount, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -2612,13 +2612,13 @@ var _ = Describe("Seed", func() {
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeCertificateSigningRequest, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeCertificateSigningRequest, "", name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeCertificateSigningRequest, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeCertificateSigningRequest, "", name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 						decision, reason, err = authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
@@ -2677,7 +2677,7 @@ var _ = Describe("Seed", func() {
 				})
 
 				It("should allow because path to seed exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeClusterRoleBinding, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeClusterRoleBinding, "", name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -2687,7 +2687,7 @@ var _ = Describe("Seed", func() {
 				})
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeClusterRoleBinding, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeClusterRoleBinding, "", name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -2831,7 +2831,7 @@ var _ = Describe("Seed", func() {
 				})
 
 				It("should allow because path to seed exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeServiceAccount, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(true)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
@@ -2841,7 +2841,7 @@ var _ = Describe("Seed", func() {
 				})
 
 				It("should have no opinion because path to seed does not exists", func() {
-					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeServiceAccount, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeServiceAccount, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
