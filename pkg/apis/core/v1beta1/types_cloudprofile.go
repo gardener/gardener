@@ -216,7 +216,7 @@ func (m *MachineType) GetArchitecture(capabilityDefinitions []CapabilityDefiniti
 
 	// constants.ArchitectureName is a required capability and
 	// machineType.Capabilities[constants.ArchitectureName] can only
-	// be empty for cloudprofiles supporting exactly architecture.
+	// be empty for cloudprofiles supporting exactly one architecture.
 	// we should never reach this point.
 	return ""
 }
