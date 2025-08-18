@@ -33,11 +33,11 @@
         },
         {
             "typeMatchPrefix": "^k8s\\.io/(api|apimachinery/pkg/apis)/",
-            "docsURLTemplate": "https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}"
+            "docsURLTemplate": "https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}"
         },
         {
             "typeMatchPrefix": "^k8s\\.io/apiextensions-apiserver/pkg/apis/",
-            "docsURLTemplate": "https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}-k8s-io"
+            "docsURLTemplate": "https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}-k8s-io"
         }
     ],
     "typeDisplayNamePrefixOverrides": {

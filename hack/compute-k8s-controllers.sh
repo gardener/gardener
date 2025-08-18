@@ -10,7 +10,7 @@ usage() {
   echo "Usage:"
   echo "> compute-k8s-controllers.sh [ -h | <old version> <new version> ]"
   echo
-  echo ">> For example: compute-k8s-controllers.sh 1.26 1.27"
+  echo ">> For example: compute-k8s-controllers.sh 1.32 1.33"
 
   exit 0
 }
