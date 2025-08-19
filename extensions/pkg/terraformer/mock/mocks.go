@@ -433,17 +433,17 @@ func (mr *MockFactoryMockRecorder) DefaultInitializer(c, main, variables, tfVars
 }
 
 // New mocks base method.
-func (m *MockFactory) New(logger logr.Logger, client client.Client, coreV1Client v11.CoreV1Interface, purpose, namespace, name, image string) terraformer.Terraformer {
+func (m *MockFactory) New(logger logr.Logger, arg1 client.Client, coreV1Client v11.CoreV1Interface, purpose, namespace, name, image string) terraformer.Terraformer {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "New", logger, client, coreV1Client, purpose, namespace, name, image)
+	ret := m.ctrl.Call(m, "New", logger, arg1, coreV1Client, purpose, namespace, name, image)
 	ret0, _ := ret[0].(terraformer.Terraformer)
 	return ret0
 }
 
 // New indicates an expected call of New.
-func (mr *MockFactoryMockRecorder) New(logger, client, coreV1Client, purpose, namespace, name, image any) *gomock.Call {
+func (mr *MockFactoryMockRecorder) New(logger, arg1, coreV1Client, purpose, namespace, name, image any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockFactory)(nil).New), logger, client, coreV1Client, purpose, namespace, name, image)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockFactory)(nil).New), logger, arg1, coreV1Client, purpose, namespace, name, image)
 }
 
 // NewForConfig mocks base method.
