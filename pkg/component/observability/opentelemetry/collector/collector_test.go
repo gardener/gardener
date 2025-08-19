@@ -13,7 +13,6 @@ import (
 	"github.com/onsi/gomega/types"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +28,6 @@ import (
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	. "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
-	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -69,7 +67,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		volume                 corev1.Volume
 		volumeMount            corev1.VolumeMount
 		openTelemetryCollector *otelv1beta1.OpenTelemetryCollector
-		scrapeConfig           *monitoringv1alpha1.ScrapeConfig
+		serviceMonitor         *monitoringv1.ServiceMonitor
 	)
 
 	BeforeEach(func() {
@@ -179,55 +177,63 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			"otelcol_exporter_enqueue_failed_spans",
 			"otelcol_exporter_queue_capacity",
 			"otelcol_exporter_queue_size",
-			"otelcol_exporter_send_failed_log_records",
+			"otelcol_exporter_send_failed_log_records_total",
 			"otelcol_exporter_send_failed_metric_points",
 			"otelcol_exporter_send_failed_spans",
 			"otelcol_exporter_sent_log_records",
+			"otelcol_exporter_sent_log_records_total",
 			"otelcol_exporter_sent_metric_points",
 			"otelcol_exporter_sent_spans",
 			"otelcol_process_cpu_seconds",
+			"otelcol_process_cpu_seconds_total",
 			"otelcol_process_memory_rss",
+			"otelcol_process_memory_rss_bytes",
 			"otelcol_process_runtime_heap_alloc_bytes",
-			"otelcol_process_runtime_total_alloc_bytes",
+			"otelcol_process_runtime_total_alloc_bytes_total",
 			"otelcol_process_runtime_total_sys_memory_bytes",
 			"otelcol_process_uptime",
+			"otelcol_process_uptime_seconds_total",
 			"otelcol_processor_incoming_items",
+			"otelcol_processor_incoming_items_total",
 			"otelcol_processor_outgoing_items",
+			"otelcol_processor_outgoing_items_total",
 			"otelcol_receiver_accepted_log_records",
+			"otelcol_receiver_accepted_log_records_total",
 			"otelcol_receiver_accepted_metric_points",
 			"otelcol_receiver_accepted_spans",
 			"otelcol_receiver_refused_log_records",
+			"otelcol_receiver_refused_log_records_total",
 			"otelcol_receiver_refused_metric_points",
 			"otelcol_receiver_refused_spans",
 			"otelcol_scraper_errored_metric_points",
 			"otelcol_scraper_scraped_metric_points",
 		}
 
-		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
+		serviceMonitor = &monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            "shoot-opentelemetry-collector",
-				Namespace:       namespace,
-				Labels:          map[string]string{"prometheus": "shoot"},
-				ResourceVersion: "1",
+				Name:      "shoot-opentelemetry-collector",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "shoot"},
 			},
-			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-					Role:       monitoringv1alpha1.KubernetesRoleService,
-					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "metrics",
+					RelabelConfigs: []monitoringv1.RelabelConfig{
+						// This service monitor is targeting the logging service. Without explicitly overriding the
+						// job label, prometheus-operator would choose job=logging (service name).
+						{
+							Action:      "replace",
+							Replacement: ptr.To("opentelemetry-collector"),
+							TargetLabel: "job",
+						},
+						{
+							Action: "labelmap",
+							Regex:  `__meta_kubernetes_service_label_(.+)`,
+						},
+					},
+					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(allowedMetrics...),
 				}},
-				RelabelConfigs: []monitoringv1.RelabelConfig{
-					{
-						Action:      "replace",
-						Replacement: ptr.To("opentelemetry-collector"),
-						TargetLabel: "job",
-					},
-					{
-						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_service_port_name"},
-						Action:       "keep",
-						Regex:        collectorconstants.ServiceName + `;` + "metrics",
-					},
-				},
-				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(allowedMetrics...),
 			},
 		}
 
@@ -375,7 +381,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
-				scrapeConfig,
+				serviceMonitor,
 			))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
@@ -418,7 +424,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume}
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
-				scrapeConfig,
+				serviceMonitor,
 			))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
