@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/gardener/gardener/pkg/api"
@@ -98,38 +99,34 @@ func VersionIsPreview(version gardencorev1beta1.ExpirableVersion) bool {
 // DurationUntilNextVersionLifecycleStage returns the duration until the earliest upcoming lifecycle start time
 // of any Kubernetes version or MachineImageVersion in the given <cloudProfile>.
 // If no future lifecyle start is found, it returns 0.
+// TODO:(RAPSNX): Consider inject time.Now() instead of define it in the body to easier test it
 func DurationUntilNextVersionLifecycleStage(cloudProfile *gardencorev1beta1.CloudProfileSpec) time.Duration {
-	// TODO: add nil check here
-	var (
-		next time.Time
-		now  = time.Now()
-	)
+	if cloudProfile == nil {
+		return 0
+	}
+
+	var next time.Time
+	now := time.Now()
+
+	evaluate := func(t *metav1.Time) {
+		if t == nil {
+			return
+		}
+		if now.Before(t.Time) && (next.IsZero() || next.After(t.Time)) {
+			next = t.Time
+		}
+	}
 
 	for _, version := range cloudProfile.Kubernetes.Versions {
 		for _, stage := range version.Lifecycle {
-			if stage.StartTime == nil {
-				continue
-			}
-			time := stage.StartTime.Time
-			// TODO: check this maybe a bug
-			if now.Before(time) && next.IsZero() || next.After(time) {
-				next = time
-			}
+			evaluate(stage.StartTime)
 		}
 	}
 
 	for _, image := range cloudProfile.MachineImages {
 		for _, version := range image.Versions {
-
 			for _, stage := range version.Lifecycle {
-				if stage.StartTime == nil {
-					continue
-				}
-				time := stage.StartTime.Time
-				// TODO: check this maybe a bug
-				if now.Before(time) && next.After(time) {
-					next = time
-				}
+				evaluate(stage.StartTime)
 			}
 		}
 	}
