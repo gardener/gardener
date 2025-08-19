@@ -66,9 +66,8 @@ var _ = Describe("KubeControllerManager", func() {
 		_, serviceCIDR2, _       = net.ParseCIDR("2001:db8::/64")
 		serviceCIDRs             = []net.IPNet{*serviceCIDR1, *serviceCIDR2}
 		namespace                = "shoot--foo--bar"
-		version127               = "1.27.3"
-		version133               = "1.33.0"
-		semverVersion, _         = semver.NewVersion(version127)
+		version                  = "1.27.3"
+		semverVersion, _         = semver.NewVersion(version)
 		runtimeKubernetesVersion = semver.MustParse("1.31.1")
 		image                    = "registry.k8s.io/kube-controller-manager:v1.31.1"
 		isWorkerless             = false
@@ -344,6 +343,7 @@ var _ = Describe("KubeControllerManager", func() {
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									Command: commandForKubernetesVersion(
+										version,
 										10257,
 										config.NodeCIDRMaskSize,
 										config.NodeMonitorGracePeriod,
@@ -356,7 +356,6 @@ var _ = Describe("KubeControllerManager", func() {
 										clusterSigningDuration,
 										controllerWorkers,
 										controllerSyncPeriods,
-										version,
 									),
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
@@ -631,7 +630,7 @@ namespace: kube-system
 		DescribeTable("success tests for various kubernetes versions (shoots with workers)",
 			func(config *gardencorev1beta1.KubeControllerManagerConfig, isScaleDownDisabled bool, runtimeKubernetesVersion *semver.Version) {
 				isWorkerless = false
-				semverVersion, err := semver.NewVersion(version127)
+				semverVersion, err := semver.NewVersion(version)
 				Expect(err).NotTo(HaveOccurred())
 
 				values = Values{
@@ -693,20 +692,20 @@ namespace: kube-system
 				verifyDeployment(config, isScaleDownDisabled, controllerWorkers, semverVersion)
 			},
 
-			Entry("w/o config", emptyConfig, false, controllerWorkers, version127),
-			Entry("with scale-down disabled", emptyConfig, true, controllerWorkers, version127),
-			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, controllerWorkers, version127),
-			Entry("with feature flags", configWithFeatureFlags, false, controllerWorkers, version127),
-			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, controllerWorkers, version127),
-			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, false, controllerWorkers, version127),
-			Entry("with NodeMonitorGracePeriod", configWithNodeMonitorGracePeriod, false, controllerWorkers, version127),
-			Entry("with disabled controllers", configWithNodeMonitorGracePeriod, false, controllerWorkersWithDisabledControllers, version127),
-			Entry("with disabled controllers and controllers disabled for >= 1.33", configWithNodeMonitorGracePeriod, false, controllerWorkersWithDisabledControllers, version133),
+			Entry("w/o config for Kubernetes < 1.33", emptyConfig, false, controllerWorkers, version),
+			Entry("w/o config for Kubernetes >= 1.33", emptyConfig, false, controllerWorkers, "1.33.0"),
+			Entry("with scale-down disabled", emptyConfig, true, controllerWorkers, version),
+			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, controllerWorkers, version),
+			Entry("with feature flags", configWithFeatureFlags, false, controllerWorkers, version),
+			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, controllerWorkers, version),
+			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, false, controllerWorkers, version),
+			Entry("with NodeMonitorGracePeriod", configWithNodeMonitorGracePeriod, false, controllerWorkers, version),
+			Entry("with disabled controllers", configWithNodeMonitorGracePeriod, false, controllerWorkersWithDisabledControllers, version),
 		)
 
 		DescribeTable("success tests for various runtime config",
 			func(config *gardencorev1beta1.KubeControllerManagerConfig, runtimeConfig map[string]bool, workerless bool, expectedCommand string) {
-				semverVersion, err := semver.NewVersion(version127)
+				semverVersion, err := semver.NewVersion(version)
 				Expect(err).NotTo(HaveOccurred())
 
 				values = Values{
@@ -973,6 +972,7 @@ namespace: kube-system
 // Utility functions
 
 func commandForKubernetesVersion(
+	version *semver.Version,
 	port int32,
 	nodeCIDRMaskSize *int32,
 	nodeMonitorGracePeriod *metav1.Duration,
@@ -984,7 +984,6 @@ func commandForKubernetesVersion(
 	clusterSigningDuration *time.Duration,
 	controllerWorkers ControllerWorkers,
 	controllerSyncPeriods ControllerSyncPeriods,
-	version *semver.Version,
 ) []string {
 	var (
 		command                       []string
@@ -1044,22 +1043,19 @@ func commandForKubernetesVersion(
 			command = append(command, fmt.Sprintf("--concurrent-statefulset-syncs=%d", *v))
 		}
 	} else {
+		controllers = append(controllers,
+			"-attachdetach",
+			"-cloud-node-lifecycle",
+		)
+
 		if versionutils.ConstraintK8sGreaterEqual133.Check(version) {
-			controllers = append(controllers,
-				"-attachdetach",
-				"-cloud-node-lifecycle",
-				"-device-taint-eviction-controller",
-				"-endpoint",
-				"-ephemeral-volume",
-			)
-		} else {
-			controllers = append(controllers,
-				"-attachdetach",
-				"-cloud-node-lifecycle",
-				"-endpoint",
-				"-ephemeral-volume",
-			)
+			controllers = append(controllers, "-device-taint-eviction-controller")
 		}
+
+		controllers = append(controllers,
+			"-endpoint",
+			"-ephemeral-volume",
+		)
 
 		if controllerWorkers.Namespace != nil && *controllerWorkers.Namespace == 0 {
 			controllers = append(controllers, "-namespace")
