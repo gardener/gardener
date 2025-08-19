@@ -26,6 +26,7 @@ import (
 	sshutils "github.com/gardener/gardener/pkg/utils/ssh"
 )
 
+// ConnectToMachine opens an SSH connection via the Bastion to the n-th machine of the autonomous shoot.
 func (b *AutonomousBotanist) ConnectToMachine(ctx context.Context, index int) (*sshutils.Connection, error) {
 	machineList := &machinev1alpha1.MachineList{}
 	if err := b.SeedClientSet.Client().List(ctx, machineList, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
@@ -116,7 +117,7 @@ func prepareRemoteDirs(conn *sshutils.Connection) error {
 		return fmt.Errorf("error ensuring ownership of directory %q: %w", GardenadmBaseDir, err)
 	}
 
-	// Emtpy manifests dir to start with a clean state on re-runs
+	// Empty manifests dir to start with a clean state on re-runs
 	if _, _, err := conn.Run("rm -rf " + ManifestsDir); err != nil {
 		return fmt.Errorf("error removing manifests dir: %w", err)
 	}
@@ -158,7 +159,7 @@ func (b *AutonomousBotanist) copyShootState(ctx context.Context, conn *sshutils.
 
 	shootStateBytes, err := runtime.Encode(kubernetes.GardenCodec.EncoderForVersion(kubernetes.GardenSerializer, gardencorev1beta1.SchemeGroupVersion), shootState)
 	if err != nil {
-		return fmt.Errorf("error enconding ShootState: %w", err)
+		return fmt.Errorf("error encoding ShootState: %w", err)
 	}
 
 	if err := conn.Copy(ctx, filepath.Join(ManifestsDir, "shootstate.yaml"), manifestFilePermissions, shootStateBytes); err != nil {

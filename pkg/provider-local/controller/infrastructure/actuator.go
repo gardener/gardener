@@ -136,13 +136,13 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *ex
 	)
 }
 
-func (a *actuator) Migrate(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+func (a *actuator) Migrate(context.Context, logr.Logger, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error {
 	// On migration, we don't explicitly delete objects, as we might still need them, e.g., for `gardenadm bootstrap`.
 	// After performing operation=migrate, the machine pods will keep running in the bootstrap cluster (kind), so we still
 	// need `NetworkPolicies`, etc.
-	// When performing an actual control plane migration in with local shoots, we rely on the namespace controller to
-	// delete all namespaced objects and the garbage collector to delete all cluster-scoped objects created by the
-	// Infrastructure controller.
+	// When performing an actual control plane migration of local shoots, we rely on the namespace controller to delete
+	// all namespaced objects and the garbage collector (owner references) to delete all cluster-scoped objects created by
+	// the Infrastructure controller.
 	return nil
 }
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/bramvdbogaerde/go-scp"
 	"golang.org/x/crypto/ssh"
+	"k8s.io/utils/ptr"
 )
 
 var _ = io.Closer(&Connection{})
@@ -20,6 +21,7 @@ var _ = io.Closer(&Connection{})
 // Use Dial to open a new Connection, and ensure to call Connection.Close() for cleanup.
 type Connection struct {
 	*ssh.Client
+
 	SCP *scp.Client
 
 	// OutputPrefix is an optional line prefix added to stdout and stderr in Run and RunWithStreams.
@@ -48,11 +50,9 @@ func Dial(ctx context.Context, addr string, opts ...Option) (*Connection, error)
 	}
 
 	sshClient := ssh.NewClient(conn, chans, reqs)
-	scpClient := scp.NewConfigurer("", nil).SSHClient(sshClient).Create()
-
 	return &Connection{
 		Client: sshClient,
-		SCP:    &scpClient,
+		SCP:    ptr.To(scp.NewConfigurer("", nil).SSHClient(sshClient).Create()),
 	}, nil
 }
 
