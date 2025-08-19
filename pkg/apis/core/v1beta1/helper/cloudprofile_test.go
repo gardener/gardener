@@ -1479,7 +1479,7 @@ var _ = Describe("CloudProfile Helper", func() {
 					})
 				}
 
-				Expect(GetArchitecturesFromImageVersion(imageVersion)).To(ConsistOf(expectedResult))
+				Expect(GetArchitecturesFromImageVersion(imageVersion, []gardencorev1beta1.CapabilityDefinition{})).To(ConsistOf(expectedResult))
 			},
 			Entry("Should return nil", nil, nil, nil),
 			Entry("Should return architecture in set", []string{"amd64", "arm64"}, []string{"ia-64"}, []string{"amd64", "arm64"}),
@@ -1498,7 +1498,7 @@ var _ = Describe("CloudProfile Helper", func() {
 					})
 				}
 
-				Expect(ArchitectureSupportedByImageVersion(imageVersion, requestedArchitecture)).To(Equal(expectedResult))
+				Expect(ArchitectureSupportedByImageVersion(imageVersion, requestedArchitecture, []gardencorev1beta1.CapabilityDefinition{})).To(Equal(expectedResult))
 			},
 			Entry("Should be false for void architectures", nil, "arm64", false),
 			Entry("Should be false for unsupported architecture", []string{"amd64", "arm64"}, "ia-64", false),

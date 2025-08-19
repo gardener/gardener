@@ -531,9 +531,17 @@ func FilterDeprecatedVersion() func(expirableVersion gardencorev1beta1.Expirable
 	}
 }
 
-func extractArchitecturesFromCapabilitySets(capabilities []gardencorev1beta1.CapabilitySet) []string {
+func extractArchitecturesFromCapabilitySets(capabilitySets []gardencorev1beta1.CapabilitySet, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []string {
+	if len(capabilitySets) == 0 {
+		for _, capabilityDefinition := range capabilityDefinitions {
+			if capabilityDefinition.Name == constants.ArchitectureName {
+				return capabilityDefinition.Values
+			}
+		}
+	}
+
 	architectures := sets.New[string]()
-	for _, capabilitySet := range capabilities {
+	for _, capabilitySet := range capabilitySets {
 		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureName] {
 			architectures.Insert(architectureValue)
 		}
@@ -543,8 +551,8 @@ func extractArchitecturesFromCapabilitySets(capabilities []gardencorev1beta1.Cap
 
 // GetArchitecturesFromImageVersion returns the list of supported architectures for the machine image version.
 // It first tries to retrieve the architectures from the capability sets and falls back to the architectures field if none are found.
-func GetArchitecturesFromImageVersion(imageVersion gardencorev1beta1.MachineImageVersion) []string {
-	if architectures := extractArchitecturesFromCapabilitySets(imageVersion.CapabilitySets); len(architectures) > 0 {
+func GetArchitecturesFromImageVersion(imageVersion gardencorev1beta1.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []string {
+	if architectures := extractArchitecturesFromCapabilitySets(imageVersion.CapabilitySets, capabilityDefinitions); len(architectures) > 0 {
 		return architectures
 	}
 	return imageVersion.Architectures
@@ -552,8 +560,8 @@ func GetArchitecturesFromImageVersion(imageVersion gardencorev1beta1.MachineImag
 
 // ArchitectureSupportedByImageVersion checks if the machine image version supports the given architecture.
 // The function falls back to the architectures field if the passed capabilities are empty.
-func ArchitectureSupportedByImageVersion(version gardencorev1beta1.MachineImageVersion, architecture string) bool {
-	supportedArchitectures := GetArchitecturesFromImageVersion(version)
+func ArchitectureSupportedByImageVersion(version gardencorev1beta1.MachineImageVersion, architecture string, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) bool {
+	supportedArchitectures := GetArchitecturesFromImageVersion(version, capabilityDefinitions)
 	return slices.Contains(supportedArchitectures, architecture)
 }
 
@@ -621,22 +629,35 @@ func intersectSlices(slice1, slice2 []string) []string {
 func AreCapabilitiesSupportedByCapabilitySets(
 	capabilities gardencorev1beta1.Capabilities, capabilitySets []gardencorev1beta1.CapabilitySet, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition,
 ) bool {
-	defaultedCapabilitySets := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilitiesDefinitions)
-	defaultedCapabilities := GetCapabilitiesWithAppliedDefaults(capabilities, capabilitiesDefinitions)
+	if len(capabilitySets) == 0 {
+		// if no capability sets are defined, assume all capabilities are supported
+		// this can only occur in cloud profiles with one supported architecture
+		return true
+	}
 
-	for _, capabilitySet := range defaultedCapabilitySets {
-		isSupported := true
-		commonCapabilities := GetCapabilitiesIntersection(capabilitySet.Capabilities, defaultedCapabilities)
-		// If the intersection has at least one value for each capability, the capabilities are supported.
-		for _, values := range commonCapabilities {
-			if len(values) == 0 {
-				isSupported = false
-				break
-			}
-		}
-		if isSupported {
+	for _, capabilitySet := range capabilitySets {
+		if AreCapabilitiesCompatible(capabilitySet.Capabilities, capabilities, capabilitiesDefinitions) {
 			return true
 		}
 	}
 	return false
+}
+
+// AreCapabilitiesCompatible checks if two sets of capabilities are compatible.
+// It applies defaults from the capability definitions to both sets before checking compatibility.
+func AreCapabilitiesCompatible(capabilities1, capabilities2 gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) bool {
+	defaultedCapabilities1 := GetCapabilitiesWithAppliedDefaults(capabilities1, capabilitiesDefinitions)
+	defaultedCapabilities2 := GetCapabilitiesWithAppliedDefaults(capabilities2, capabilitiesDefinitions)
+
+	isSupported := true
+	commonCapabilities := GetCapabilitiesIntersection(defaultedCapabilities1, defaultedCapabilities2)
+	// If the intersection has at least one value for each capability, the capabilities are supported.
+	for _, values := range commonCapabilities {
+		if len(values) == 0 {
+			isSupported = false
+			break
+		}
+	}
+
+	return isSupported
 }

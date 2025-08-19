@@ -197,11 +197,28 @@ type MachineType struct {
 }
 
 // GetArchitecture returns the architecture of the machine type.
-func (m *MachineType) GetArchitecture() string {
+func (m *MachineType) GetArchitecture(capabilityDefinitions []CapabilityDefinition) string {
+	if len(capabilityDefinitions) == 0 {
+		return ptr.Deref(m.Architecture, "")
+	}
+
 	if len(m.Capabilities[constants.ArchitectureName]) == 1 {
 		return m.Capabilities[constants.ArchitectureName][0]
 	}
-	return ptr.Deref(m.Architecture, "")
+
+	if len(m.Capabilities[constants.ArchitectureName]) == 0 {
+		for _, capabilityDefinition := range capabilityDefinitions {
+			if capabilityDefinition.Name == constants.ArchitectureName && len(capabilityDefinition.Values) == 1 {
+				return capabilityDefinition.Values[0]
+			}
+		}
+	}
+
+	// constants.ArchitectureName is a required capability and
+	// machineType.Capabilities[constants.ArchitectureName] can only
+	// be empty for cloudprofiles supporting exactly one architecture.
+	// we should never reach this point.
+	return ""
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
