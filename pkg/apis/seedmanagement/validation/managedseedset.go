@@ -167,7 +167,6 @@ func ValidateManagedSeedTemplateForManagedSeedSet(template *seedmanagement.Manag
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("spec", "shoot"), "shoot is forbidden"))
 	}
 
-	// TODO(timuthy): Remove this check once `config` is required.
 	if template.Spec.Gardenlet.Config != nil {
 		configPath := fldPath.Child("spec", "gardenlet", "config")
 		gardenletConfig, ok := template.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
