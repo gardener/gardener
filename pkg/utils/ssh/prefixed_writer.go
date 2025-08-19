@@ -1,3 +1,6 @@
+// Copyright 2013-2014 Onsi Fakhouri
+// Modifications Copyright 2025 SAP SE or an SAP affiliate company and Gardener contributors
+
 // Copied from https://github.com/onsi/gomega/blob/v1.38.0/gexec/prefixed_writer.go for eliminating unwanted
 // dependencies in production code. We don't want to import ginkgo/gomega as it tends to mess with global flags etc.
 
