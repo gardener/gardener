@@ -16,7 +16,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -24,9 +23,9 @@ import (
 
 // CurrentLifecycleClassification returns the current lifecycle classification of the given version.
 // An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
-func CurrentLifecycleClassification(version v1beta1.ExpirableVersion) v1beta1.VersionClassification {
+func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) gardencorev1beta1.VersionClassification {
 	var (
-		currentClassification = v1beta1.ClassificationUnavailable
+		currentClassification = gardencorev1beta1.ClassificationUnavailable
 		currentTime           = time.Now()
 	)
 
@@ -35,20 +34,20 @@ func CurrentLifecycleClassification(version v1beta1.ExpirableVersion) v1beta1.Ve
 		// this can be removed as soon as we remove the old classification and expiration date fields
 
 		if version.Classification != nil {
-			version.Lifecycle = append(version.Lifecycle, v1beta1.LifecycleStage{
+			version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
 				Classification: *version.Classification,
 			})
 		}
 
 		if version.ExpirationDate != nil {
 			if version.Classification == nil {
-				version.Lifecycle = append(version.Lifecycle, v1beta1.LifecycleStage{
-					Classification: v1beta1.ClassificationSupported,
+				version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
+					Classification: gardencorev1beta1.ClassificationSupported,
 				})
 			}
 
-			version.Lifecycle = append(version.Lifecycle, v1beta1.LifecycleStage{
-				Classification: v1beta1.ClassificationExpired,
+			version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
+				Classification: gardencorev1beta1.ClassificationExpired,
 				StartTime:      version.ExpirationDate,
 			})
 		}
@@ -56,8 +55,8 @@ func CurrentLifecycleClassification(version v1beta1.ExpirableVersion) v1beta1.Ve
 
 	if len(version.Lifecycle) == 0 {
 		// when there is no classification lifecycle defined then default to supported
-		version.Lifecycle = append(version.Lifecycle, v1beta1.LifecycleStage{
-			Classification: v1beta1.ClassificationSupported,
+		version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
+			Classification: gardencorev1beta1.ClassificationSupported,
 		})
 	}
 
@@ -76,30 +75,31 @@ func CurrentLifecycleClassification(version v1beta1.ExpirableVersion) v1beta1.Ve
 }
 
 // VersionIsExpired reports whether the given version is expired.
-func VersionIsExpired(version v1beta1.ExpirableVersion) bool {
-	return CurrentLifecycleClassification(version) == v1beta1.ClassificationExpired
+func VersionIsExpired(version gardencorev1beta1.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationExpired
 }
 
 // VersionIsActive reports whether the given version is active.
-func VersionIsActive(version v1beta1.ExpirableVersion) bool {
+func VersionIsActive(version gardencorev1beta1.ExpirableVersion) bool {
 	curr := CurrentLifecycleClassification(version)
-	return curr != v1beta1.ClassificationExpired && curr != v1beta1.ClassificationUnavailable
+	return curr != gardencorev1beta1.ClassificationExpired && curr != gardencorev1beta1.ClassificationUnavailable
 }
 
 // VersionIsSupported reports whether the given version is supported.
-func VersionIsSupported(version v1beta1.ExpirableVersion) bool {
-	return CurrentLifecycleClassification(version) == v1beta1.ClassificationSupported
+func VersionIsSupported(version gardencorev1beta1.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationSupported
 }
 
 // VersionIsPreview reports whether the given version is in preview.
-func VersionIsPreview(version v1beta1.ExpirableVersion) bool {
-	return CurrentLifecycleClassification(version) == v1beta1.ClassificationPreview
+func VersionIsPreview(version gardencorev1beta1.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationPreview
 }
 
 // DurationUntilNextVersionLifecycleStage returns the duration until the earliest upcoming lifecycle start time
 // of any Kubernetes version or MachineImageVersion in the given <cloudProfile>.
 // If no future lifecyle start is found, it returns 0.
-func DurationUntilNextVersionLifecycleStage(cloudProfile *v1beta1.CloudProfileSpec) time.Duration {
+func DurationUntilNextVersionLifecycleStage(cloudProfile *gardencorev1beta1.CloudProfileSpec) time.Duration {
+	// TODO: add nil check here
 	var (
 		next time.Time
 		now  = time.Now()
@@ -111,6 +111,7 @@ func DurationUntilNextVersionLifecycleStage(cloudProfile *v1beta1.CloudProfileSp
 				continue
 			}
 			time := stage.StartTime.Time
+			// TODO: check this maybe a bug
 			if now.Before(time) && next.IsZero() || next.After(time) {
 				next = time
 			}
@@ -125,6 +126,7 @@ func DurationUntilNextVersionLifecycleStage(cloudProfile *v1beta1.CloudProfileSp
 					continue
 				}
 				time := stage.StartTime.Time
+				// TODO: check this maybe a bug
 				if now.Before(time) && next.After(time) {
 					next = time
 				}
