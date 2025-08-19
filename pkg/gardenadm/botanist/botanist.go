@@ -41,6 +41,8 @@ import (
 )
 
 // GardenadmBaseDir is the directory that gardenadm works with for storing information, transferring manifests, etc.
+// NB: We don't use filepath.Join here, because we explicitly need Linux path separators for the target machine,
+// even when running `gardenadm bootstrap` on Windows.
 const GardenadmBaseDir = "/var/lib/gardenadm"
 
 // AutonomousBotanist is a struct which has methods that perform operations for an autonomous shoot cluster.

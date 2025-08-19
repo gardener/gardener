@@ -75,10 +75,13 @@ func (b *AutonomousBotanist) sshAddressForMachine(machine *machinev1alpha1.Machi
 }
 
 var (
+	// NB: We don't use filepath.Join here, because we explicitly need Linux path separators for the target machine,
+	// even when running `gardenadm bootstrap` on Windows.
+
 	// ImageVectorOverrideFile is the path where the image vector overwrite is copied to on the control plane machine.
-	ImageVectorOverrideFile = filepath.Join(GardenadmBaseDir, "imagevector-overwrite.yaml")
+	ImageVectorOverrideFile = GardenadmBaseDir + "/imagevector-overwrite.yaml"
 	// ManifestsDir is the path where the manifests are copied to on the control plane machine.
-	ManifestsDir = filepath.Join(GardenadmBaseDir, "manifests")
+	ManifestsDir = GardenadmBaseDir + "/manifests"
 
 	manifestFilePermissions = "0600"
 )
