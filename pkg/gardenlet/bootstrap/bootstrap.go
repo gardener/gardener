@@ -43,7 +43,6 @@ func RequestKubeconfigWithBootstrapClient(
 ) (
 	[]byte,
 	string,
-	string,
 	error,
 ) {
 	certificateSubject := &pkix.Name{
@@ -53,13 +52,13 @@ func RequestKubeconfigWithBootstrapClient(
 
 	certData, privateKeyData, csrName, err := certificatesigningrequest.RequestCertificate(ctx, log, bootstrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, validityDuration, SeedCSRPrefix)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
+		return nil, "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
 	}
 
 	log.Info("Storing kubeconfig with bootstrapped certificate in kubeconfig secret on target cluster")
 	kubeconfig, err := gardenletbootstraputil.UpdateGardenKubeconfigSecret(ctx, bootstrapClientSet.RESTConfig(), certData, privateKeyData, seedClient, kubeconfigKey)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("unable to update secret %q with bootstrapped kubeconfig: %w", kubeconfigKey.String(), err)
+		return nil, "", fmt.Errorf("unable to update secret %q with bootstrapped kubeconfig: %w", kubeconfigKey.String(), err)
 	}
 
 	log.Info("Deleting bootstrap kubeconfig secret from target cluster")
@@ -69,9 +68,9 @@ func RequestKubeconfigWithBootstrapClient(
 			Namespace: bootstrapKubeconfigKey.Namespace,
 		},
 	}); err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
-	return kubeconfig, csrName, seedName, nil
+	return kubeconfig, csrName, nil
 }
 
 // DeleteBootstrapAuth checks which authentication mechanism was used to request a certificate

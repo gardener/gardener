@@ -189,12 +189,11 @@ var _ = Describe("Bootstrap", func() {
 				},
 			})
 
-			kubeconfig, csrName, seedName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
+			kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kubeconfig).ToNot(BeEmpty())
 			Expect(csrName).ToNot(BeEmpty())
-			Expect(seedName).ToNot(BeEmpty())
 		})
 
 		It("should return an error - the CSR got denied", func() {
@@ -211,7 +210,7 @@ var _ = Describe("Bootstrap", func() {
 				WithKubernetes(kubeClient).
 				Build()
 
-			_, _, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
+			_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
 			Expect(err).To(MatchError(ContainSubstring("is denied")))
 		})
 
@@ -229,7 +228,7 @@ var _ = Describe("Bootstrap", func() {
 				WithKubernetes(kubeClient).
 				Build()
 
-			_, _, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
+			_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
 			Expect(err).To(MatchError(ContainSubstring("failed")))
 		})
 	})

@@ -218,8 +218,8 @@ var _ = Describe("GardenKubeconfig", func() {
 							&NewClientFromBytes, func(_ []byte, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 								return nil, nil
 							},
-							&RequestKubeconfigWithBootstrapClient, func(_ context.Context, _ logr.Logger, _ client.Client, _ kubernetes.Interface, _, _ client.ObjectKey, seedName string, _ *metav1.Duration) ([]byte, string, string, error) {
-								return requestedKubeconfig, csrName, seedName, nil
+							&RequestKubeconfigWithBootstrapClient, func(_ context.Context, _ logr.Logger, _ client.Client, _ kubernetes.Interface, _, _ client.ObjectKey, seedName string, _ *metav1.Duration) ([]byte, string, error) {
+								return requestedKubeconfig, csrName, nil
 							},
 						))
 
