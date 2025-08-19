@@ -46,10 +46,13 @@ const (
 // Values is the values for OpenTelemetry Collector configurations
 type Values struct {
 	// Image is the collector image.
-	Image              string
+	Image string
+	// KubeRBACProxyImage is the kube-rbac-proxy image.
 	KubeRBACProxyImage string
-	WithRBACProxy      bool
-	LokiEndpoint       string
+	// WithRBACProxy indicates whether the collector should be deployed with kube-rbac-proxy.
+	WithRBACProxy bool
+	// LokiEndpoint is the endpoint of the Loki instance to which logs should be sent.
+	LokiEndpoint string
 }
 
 type otelCollector struct {
@@ -62,6 +65,7 @@ type otelCollector struct {
 // Interface is the interface for the OpenTelemetry Collector deployer.
 type Interface interface {
 	component.DeployWaiter
+	// WithAuthenticationProxy acts as a setter for the WithRBACProxy field in Values.
 	WithAuthenticationProxy(bool)
 }
 

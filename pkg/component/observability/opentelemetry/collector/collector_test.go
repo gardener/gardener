@@ -321,6 +321,9 @@ var _ = Describe("OpenTelemetry Collector", func() {
 													"prometheus": map[string]any{
 														"host": "0.0.0.0",
 														// Field needs to be cast to `float64` due to an issue with serialization during tests.
+														// When fetching the object from the apiserver, since there's no type information regarding this field.
+														// the deserializer will interpret it as a `float64`. By setting the value to `float64` here, we ensure that
+														// when this object is compared to the fetched one, the types match.
 														"port": float64(8888),
 													},
 												},
