@@ -1102,8 +1102,17 @@ func ComputeExpectedGardenletDeploymentSpec(
 			kubernetesutils.MutateMatchLabelKeys(deployment.Template.Spec.TopologySpreadConstraints)
 		}
 
+		deployment.Template.Spec.Containers[0].Env = append(deployment.Template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name: "NAMESPACE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
+			},
+		})
+
 		if deploymentConfiguration.Env != nil {
-			deployment.Template.Spec.Containers[0].Env = deploymentConfiguration.Env
+			deployment.Template.Spec.Containers[0].Env = append(deployment.Template.Spec.Containers[0].Env, deploymentConfiguration.Env...)
 		}
 
 		if deploymentConfiguration.PodLabels != nil {

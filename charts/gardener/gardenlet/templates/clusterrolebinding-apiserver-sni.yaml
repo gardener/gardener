@@ -16,4 +16,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "{{ required ".Values.serviceAccountName is required" .Values.serviceAccountName }}"
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
