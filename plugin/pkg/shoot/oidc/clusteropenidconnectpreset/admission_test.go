@@ -35,7 +35,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 		BeforeEach(func() {
 			namespace := "my-namespace"
-			shootName := "shoot"
+			shootName := "shoot0"
 			presetName := "preset-1"
 			projectName := "project-1"
 			shoot = &core.Shoot{
@@ -45,7 +45,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				},
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
-						Version: "1.31.0",
+						Version: "1.33.0",
 					},
 				},
 			}
@@ -139,8 +139,13 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 			})
 
-			It("preset preset label selector doesn't match", func() {
+			It("preset project label selector doesn't match", func() {
 				preset.Spec.ProjectSelector.MatchLabels = map[string]string{"not": "existing"}
+				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
+			})
+
+			It("preset present", func() {
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 			})
@@ -148,6 +153,15 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			It("oidc settings already exist", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					OIDCConfig: &core.OIDCConfig{},
+				}
+				expected = shoot.DeepCopy()
+			})
+
+			It("structured authentication settings already exist", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					StructuredAuthentication: &core.StructuredAuthentication{
+						ConfigMapName: "test",
+					},
 				}
 				expected = shoot.DeepCopy()
 			})
@@ -191,13 +205,18 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 		})
 
-		Context("should mutate the result", func() {
+		Context("should mutate the result for shoot kubernetes <= 1.32", func() {
 			var (
-				expected *core.Shoot
+				expected     *core.Shoot
+				shootLess132 *core.Shoot // shoot version <1.32
 			)
 
 			BeforeEach(func() {
-				expected = shoot.DeepCopy()
+				shootNameLess132 := "shoot1"
+				shootLess132 = shoot.DeepCopy()
+				shootLess132.Name = shootNameLess132
+				shootLess132.Spec.Kubernetes.Version = "1.31.0"
+				expected = shootLess132.DeepCopy()
 				expected.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					OIDCConfig: &core.OIDCConfig{
 						CABundle:     ptr.To("cert"),
@@ -225,18 +244,18 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs := admission.NewAttributesRecord(shootLess132, nil, core.Kind("Shoot").WithVersion("v1beta1"), shootLess132.Namespace, shootLess132.Name, core.Resource("shoots").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer).NotTo(BeNil())
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig).NotTo(BeNil())
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication).NotTo(BeNil())
-				Expect(shoot).To(Equal(expected))
+				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer).NotTo(BeNil())
+				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer.OIDCConfig).NotTo(BeNil())
+				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication).NotTo(BeNil())
+				Expect(shootLess132).To(Equal(expected))
 			})
 
 			It("shoot's kube-apiserver-oidc settings is not set", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
+				shootLess132.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
 			})
 
 			It("successfully", func() {

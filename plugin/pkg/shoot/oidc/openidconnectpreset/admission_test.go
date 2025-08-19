@@ -31,7 +31,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 		BeforeEach(func() {
 			namespace := "my-namespace"
-			shootName := "shoot"
+			shootName := "shoot0"
 			presetName := "preset-1"
 			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -40,7 +40,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 				},
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
-						Version: "1.31.0",
+						Version: "1.33.0",
 					},
 				},
 			}
@@ -122,6 +122,15 @@ var _ = Describe("OpenID Connect Preset", func() {
 				}
 				expected = shoot.DeepCopy()
 			})
+
+			It("structured authentication settings already exist", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					StructuredAuthentication: &core.StructuredAuthentication{
+						ConfigMapName: "test",
+					},
+				}
+				expected = shoot.DeepCopy()
+			})
 		})
 
 		Context("should return error", func() {
@@ -162,13 +171,18 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 		})
 
-		Context("should mutate the result", func() {
+		Context("should mutate the result for shoot kubernetes <= 1.32", func() {
 			var (
-				expected *core.Shoot
+				expected     *core.Shoot
+				shootLess132 *core.Shoot // shoot version <1.32
 			)
 
 			BeforeEach(func() {
-				expected = shoot.DeepCopy()
+				shootNameLess132 := "shoot1"
+				shootLess132 = shoot.DeepCopy()
+				shootLess132.Name = shootNameLess132
+				shootLess132.Spec.Kubernetes.Version = "1.31.0"
+				expected = shootLess132.DeepCopy()
 				expected.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					OIDCConfig: &core.OIDCConfig{
 						CABundle:     ptr.To("cert"),
@@ -194,18 +208,18 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 			AfterEach(func() {
 				Expect(settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
-				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs := admission.NewAttributesRecord(shootLess132, nil, core.Kind("Shoot").WithVersion("v1beta1"), shootLess132.Namespace, shootLess132.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer).NotTo(BeNil())
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig).NotTo(BeNil())
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication).NotTo(BeNil())
-				Expect(shoot).To(Equal(expected))
+				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer).NotTo(BeNil())
+				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer.OIDCConfig).NotTo(BeNil())
+				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication).NotTo(BeNil())
+				Expect(shootLess132).To(Equal(expected))
 			})
 
 			It("oidc settings is not set", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
+				shootLess132.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
 			})
 
 			It("successfully", func() {
