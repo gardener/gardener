@@ -66,9 +66,9 @@ var _ = Describe("KubeControllerManager", func() {
 		_, serviceCIDR2, _       = net.ParseCIDR("2001:db8::/64")
 		serviceCIDRs             = []net.IPNet{*serviceCIDR1, *serviceCIDR2}
 		namespace                = "shoot--foo--bar"
-		version                  = "1.27.3"
+		version127               = "1.27.3"
 		version133               = "1.33.0"
-		semverVersion, _         = semver.NewVersion(version)
+		semverVersion, _         = semver.NewVersion(version127)
 		runtimeKubernetesVersion = semver.MustParse("1.31.1")
 		image                    = "registry.k8s.io/kube-controller-manager:v1.31.1"
 		isWorkerless             = false
@@ -631,7 +631,7 @@ namespace: kube-system
 		DescribeTable("success tests for various kubernetes versions (shoots with workers)",
 			func(config *gardencorev1beta1.KubeControllerManagerConfig, isScaleDownDisabled bool, runtimeKubernetesVersion *semver.Version) {
 				isWorkerless = false
-				semverVersion, err := semver.NewVersion(version)
+				semverVersion, err := semver.NewVersion(version127)
 				Expect(err).NotTo(HaveOccurred())
 
 				values = Values{
@@ -693,20 +693,20 @@ namespace: kube-system
 				verifyDeployment(config, isScaleDownDisabled, controllerWorkers, semverVersion)
 			},
 
-			Entry("w/o config", emptyConfig, false, controllerWorkers, version),
-			Entry("with scale-down disabled", emptyConfig, true, controllerWorkers, version),
-			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, controllerWorkers, version),
-			Entry("with feature flags", configWithFeatureFlags, false, controllerWorkers, version),
-			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, controllerWorkers, version),
-			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, false, controllerWorkers, version),
-			Entry("with NodeMonitorGracePeriod", configWithNodeMonitorGracePeriod, false, controllerWorkers, version),
-			Entry("with disabled controllers", configWithNodeMonitorGracePeriod, false, controllerWorkersWithDisabledControllers, version),
+			Entry("w/o config", emptyConfig, false, controllerWorkers, version127),
+			Entry("with scale-down disabled", emptyConfig, true, controllerWorkers, version127),
+			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, controllerWorkers, version127),
+			Entry("with feature flags", configWithFeatureFlags, false, controllerWorkers, version127),
+			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, controllerWorkers, version127),
+			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, false, controllerWorkers, version127),
+			Entry("with NodeMonitorGracePeriod", configWithNodeMonitorGracePeriod, false, controllerWorkers, version127),
+			Entry("with disabled controllers", configWithNodeMonitorGracePeriod, false, controllerWorkersWithDisabledControllers, version127),
 			Entry("with disabled controllers and controllers disabled for >= 1.33", configWithNodeMonitorGracePeriod, false, controllerWorkersWithDisabledControllers, version133),
 		)
 
 		DescribeTable("success tests for various runtime config",
 			func(config *gardencorev1beta1.KubeControllerManagerConfig, runtimeConfig map[string]bool, workerless bool, expectedCommand string) {
-				semverVersion, err := semver.NewVersion(version)
+				semverVersion, err := semver.NewVersion(version127)
 				Expect(err).NotTo(HaveOccurred())
 
 				values = Values{
