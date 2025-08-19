@@ -1088,7 +1088,7 @@ message EncryptionProviderStatus {
   optional string type = 1;
 }
 
-// ExpirableVersion contains a version and an expiration date.
+// ExpirableVersion contains a version with associated lifecycle information.
 message ExpirableVersion {
   // Version is the version identifier.
   optional string version = 1;
@@ -1954,6 +1954,8 @@ message LastOperation {
   optional string type = 5;
 }
 
+// LifecycleStage describes a stage in the versions lifecycle.
+// Each stage defines the classification of the version and the time at which this classification becomes effective.
 message LifecycleStage {
   // Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
   optional string classification = 1;
@@ -2082,6 +2084,7 @@ message MachineImageVersion {
   repeated MachineImageFlavor capabilityFlavors = 6;
 }
 
+// MachineImageVersionStatus contains the status of a machine image and its version classifications.
 message MachineImageVersionStatus {
   // Name matches the name of the MachineImage the status is represented of.
   optional string name = 1;
