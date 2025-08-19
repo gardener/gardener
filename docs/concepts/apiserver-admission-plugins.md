@@ -60,7 +60,7 @@ Find all information about it [in this document](../usage/project/projects.md#fo
 Furthermore, this admission controller reacts on `CREATE` or `UPDATE` operations for `Shoot`s.
 It makes sure that the `deletion.gardener.cloud/confirmed-by` annotation is properly maintained in case the `Shoot` deletion is confirmed with above mentioned annotation.
 
-## `ExposureClass`
+## `ShootExposureClass`
 
 **Type**: Mutating. **Enabled by default**: Yes.
 
@@ -215,7 +215,7 @@ This admission controller reacts on `UPDATE` and `DELETE` operations for `Shoot`
 It validates certain configuration values in the specification that are specific to `ManagedSeed`s (e.g. the nginx-addon of the Shoot has to be disabled, the Shoot VPA has to be enabled).
 It rejects the deletion if the `Shoot` is referred to by a `ManagedSeed`.
 
-## `ManagedSeedValidator`
+## `ManagedSeed`
 
 **Type**: Mutating. **Enabled by default**: Yes.
 
