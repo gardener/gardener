@@ -12,7 +12,6 @@ import (
 
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,16 +25,16 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
-	managedResourceName     = "opentelemetry-collector"
-	scrapeJobName           = "opentelemetry-collector"
-	scrapeConfigName        = "opentelemetry-collector"
+	managedResourceName = "opentelemetry-collector"
+	scrapeJobName       = "opentelemetry-collector"
+	serviceMonitorName  = "opentelemetry-collector"
+
 	otelCollectorConfigName = "opentelemetry-collector-config"
 	kubeRBACProxyName       = "kube-rbac-proxy"
 
@@ -110,11 +109,8 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 
 	objects = append(objects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName))
 
-	scrapeConfig, err := o.scrapeConfig(ctx)
-	if err != nil {
-		return err
-	}
-	objects = append(objects, scrapeConfig)
+	serviceMonitor := o.serviceMonitor()
+	objects = append(objects, serviceMonitor)
 
 	serializedResources, err := registry.AddAllAndSerialize(objects...)
 	if err != nil {
@@ -142,11 +138,7 @@ func (o *otelCollector) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, o.client, o.namespace, managedResourceName)
 }
 
-func (o *otelCollector) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
-	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta(scrapeConfigName, o.namespace, shoot.Label)}
-}
-
-func (o *otelCollector) scrapeConfig(ctx context.Context) (*monitoringv1alpha1.ScrapeConfig, error) {
+func (o *otelCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
 	allowedMetrics := []string{
 		"otelcol_exporter_enqueue_failed_log_records",
 		"otelcol_exporter_enqueue_failed_metric_points",
@@ -177,33 +169,29 @@ func (o *otelCollector) scrapeConfig(ctx context.Context) (*monitoringv1alpha1.S
 		"otelcol_scraper_scraped_metric_points",
 	}
 
-	scrapeConfig := o.emptyScrapeConfig()
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, scrapeConfig, func() error {
-		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
-		scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
-			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-				Role:       monitoringv1alpha1.KubernetesRoleService,
-				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{o.namespace}},
+	return &monitoringv1.ServiceMonitor{
+		ObjectMeta: monitoringutils.ConfigObjectMeta(serviceMonitorName, o.namespace, shoot.Label),
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: "metrics",
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					// This service monitor is targeting the logging service. Without explicitly overriding the
+					// job label, prometheus-operator would choose job=logging (service name).
+					{
+						Action:      "replace",
+						Replacement: ptr.To("opentelemetry-collector"),
+						TargetLabel: "job",
+					},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					},
+				},
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(allowedMetrics...),
 			}},
-			RelabelConfigs: []monitoringv1.RelabelConfig{
-				{
-					Action:      "replace",
-					Replacement: ptr.To(scrapeJobName),
-					TargetLabel: "job",
-				},
-				{
-					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_service_port_name"},
-					Action:       "keep",
-					Regex:        collectorconstants.ServiceName + `;` + metricsEndpointName,
-				},
-			},
-			MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(allowedMetrics...),
-		}
-
-		return nil
-	})
-
-	return scrapeConfig, err
+		},
+	}
 }
 
 func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericTokenKubeconfigSecretName string) *otelv1beta1.OpenTelemetryCollector {
@@ -293,8 +281,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 											"exporter": map[string]any{
 												"prometheus": map[string]any{
 													"host": "0.0.0.0",
-													// Field needs to be cast to `float64` due to an issue with serialization during tests.
-													"port": float64(metricsPort),
+													"port": metricsPort,
 												},
 											},
 										},

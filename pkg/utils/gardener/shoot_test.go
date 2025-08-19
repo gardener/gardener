@@ -683,6 +683,94 @@ var _ = Describe("Shoot", func() {
 
 			Expect(podSpec.Containers[1].VolumeMounts).To(BeEmpty())
 		})
+
+	})
+
+	Describe("#GenerateGenericKubeconfigVolume", func() {
+		var (
+			genericTokenKubeconfigSecretName = "generic-token-kubeconfig-12345"
+			volumeName                       = "kubeconfig"
+			accessSecretName                 = "shoot-access-secret"
+
+			volume = corev1.Volume{
+				Name: volumeName,
+				VolumeSource: corev1.VolumeSource{
+					Projected: &corev1.ProjectedVolumeSource{
+						DefaultMode: ptr.To[int32](420),
+						Sources: []corev1.VolumeProjection{
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: genericTokenKubeconfigSecretName,
+									},
+									Items: []corev1.KeyToPath{{
+										Key:  "kubeconfig",
+										Path: "kubeconfig",
+									}},
+									Optional: ptr.To(false),
+								},
+							},
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: accessSecretName,
+									},
+									Items: []corev1.KeyToPath{{
+										Key:  "token",
+										Path: "token",
+									}},
+									Optional: ptr.To(false),
+								},
+							},
+						},
+					},
+				},
+			}
+		)
+
+		It("should return the expected Volume", func() {
+			Expect(GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, accessSecretName, volumeName)).To(Equal(volume))
+		})
+
+	})
+
+	Describe("#GenerateGenericKubeconfigVolumeMount", func() {
+		var (
+			volumeName = "kubeconfig"
+			mountPath  = "/some/path"
+
+			volumeMount = corev1.VolumeMount{
+				Name:      volumeName,
+				MountPath: mountPath,
+				ReadOnly:  true,
+			}
+		)
+
+		It("should return the expected VolumeMount", func() {
+			Expect(GenerateGenericKubeconfigVolumeMount(volumeName, mountPath)).To(Equal(volumeMount))
+		})
+
+	})
+
+	Describe("#GetShootSeedNames", func() {
+		It("returns nil for other objects than Shoot", func() {
+			specSeedName, statusSeedName := GetShootSeedNames(&corev1.Secret{})
+			Expect(specSeedName).To(BeNil())
+			Expect(statusSeedName).To(BeNil())
+		})
+
+		It("returns the correct seed names of a Shoot", func() {
+			specSeedName, statusSeedName := GetShootSeedNames(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					SeedName: ptr.To("spec"),
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					SeedName: ptr.To("status"),
+				},
+			})
+			Expect(specSeedName).To(Equal(ptr.To("spec")))
+			Expect(statusSeedName).To(Equal(ptr.To("status")))
+		})
 	})
 
 	Describe("#GetShootSeedNames", func() {
