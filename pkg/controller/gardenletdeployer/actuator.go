@@ -20,6 +20,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -99,8 +100,8 @@ func (a *Actuator) Reconcile(
 	}
 
 	// Create or update garden namespace in the target cluster
-	log.Info("Ensuring garden namespace in target cluster")
-	a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+	log.Info("Ensuring gardenlet namespace in target cluster")
+	a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 	if err := a.ensureGardenNamespace(ctx, targetClient.Client()); err != nil {
 		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
 		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), fmt.Errorf("could not create or update garden namespace in target cluster: %w", err)
@@ -699,6 +700,12 @@ func PrepareGardenletChartValues(
 			gardenletDeployment.PodLabels,
 		)
 	}
+
+	// gardenlet should manage Lease object in the namespace it is deployed to
+	if gardenletConfig.LeaderElection == nil {
+		gardenletConfig.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
+	}
+	gardenletConfig.LeaderElection.ResourceNamespace = gardenNamespaceTargetCluster
 
 	// Get gardenlet chart values
 	return vp.GetGardenletChartValues(
