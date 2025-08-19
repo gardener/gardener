@@ -67,7 +67,7 @@ else
   echo "Cleaning up kind cluster"
   kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
   kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" annotate project garden confirmation.gardener.cloud/deletion=true
-  kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" annotate -f "$SCRIPT_DIR"/../example/provider-extensions/garden/project/project.yaml confirmation.gardener.cloud/deletion=true
+  kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" annotate -f "$SCRIPT_DIR"/../example/provider-extensions/garden/project/base/project.yaml confirmation.gardener.cloud/deletion=true
   skaffold --kubeconfig="$PATH_GARDEN_KUBECONFIG" delete -m extensions-env -p extensions
   skaffold --kubeconfig="$PATH_GARDEN_KUBECONFIG" delete -m etcd,controlplane -p extensions
   kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" delete ns garden gardener-system-seed-lease gardener-system-shoot-issuer gardener-system-public --ignore-not-found
