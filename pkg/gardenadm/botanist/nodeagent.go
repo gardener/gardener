@@ -136,7 +136,7 @@ func (b *AutonomousBotanist) ApproveNodeAgentCertificateSigningRequest(ctx conte
 	}
 
 	tokenUsername := strings.Split(string(bootstrapToken), ".")[0]
-	username := "system:bootstrap:" + tokenUsername
+	username := bootstraptokenapi.BootstrapUserPrefix + tokenUsername
 
 	csrList := &certificatesv1.CertificateSigningRequestList{}
 	if err := b.SeedClientSet.Client().List(ctx, csrList); err != nil {

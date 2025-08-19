@@ -177,6 +177,22 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 
 	if gardenlet.IsResponsibleForAutonomousShoot() {
 		log.Info("Running in autonomous shoot, starting manager without controllers")
+
+		kubeconfigBootstrapResult := &bootstrappers.KubeconfigBootstrapResult{}
+
+		if err := mgr.Add(&controllerutils.ControlledRunner{
+			Manager: mgr,
+			BootstrapRunnables: []manager.Runnable{
+				&bootstrappers.GardenKubeconfig{
+					RuntimeClient: mgr.GetClient(),
+					Log:           mgr.GetLogger().WithName("bootstrap"),
+					Config:        cfg,
+					Result:        kubeconfigBootstrapResult,
+				},
+			},
+		}); err != nil {
+			return fmt.Errorf("failed adding runnables to manager: %w", err)
+		}
 		return mgr.Start(ctx)
 	}
 
@@ -191,10 +207,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 				SeedConfig: cfg.SeedConfig,
 			},
 			&bootstrappers.GardenKubeconfig{
-				SeedClient: mgr.GetClient(),
-				Log:        mgr.GetLogger().WithName("bootstrap"),
-				Config:     cfg,
-				Result:     kubeconfigBootstrapResult,
+				RuntimeClient: mgr.GetClient(),
+				Log:           mgr.GetLogger().WithName("bootstrap"),
+				Config:        cfg,
+				Result:        kubeconfigBootstrapResult,
 			},
 		},
 		ActualRunnables: []manager.Runnable{
