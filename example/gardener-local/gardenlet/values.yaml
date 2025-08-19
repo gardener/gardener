@@ -39,6 +39,7 @@ config:
     DefaultSeccompProfile: true
     NewWorkerPoolHash: true
     IstioTLSTermination: true
+    OpenTelemetryCollector: true
   logging:
     enabled: true
     vali:
