@@ -307,6 +307,8 @@ func GetMachineImageDiff(old, new []core.MachineImage) MachineImageDiff {
 func FilterVersionsWithClassification(versions []core.ExpirableVersion, classification core.VersionClassification) []core.ExpirableVersion {
 	var result []core.ExpirableVersion
 	for _, version := range versions {
+		// TODO(LucaBernstein): Check whether this behavior should be corrected (i.e. changed) in a later GEP-32-PR.
+		//  The current behavior for nil classifications is treated differently across the codebase.
 		if (version.Classification == nil || *version.Classification != classification) &&
 			!slices.ContainsFunc(version.Lifecycle, func(s core.LifecycleStage) bool {
 				return s.Classification == classification
