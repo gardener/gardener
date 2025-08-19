@@ -3,3 +3,5 @@ appVersion: "1.0"
 description: A Helm chart to deploy the gardener-extension-admission-local application related resources
 name: admission-local-application
 version: 0.1.0
+sources:
+  - https://github.com/gardener/gardener

@@ -3,3 +3,5 @@ description: A Helm chart to deploy the Gardener controlplane (API server, contr
 name: controlplane
 version: 0.1.0
 deprecated: true
+sources:
+  - https://github.com/gardener/gardener
