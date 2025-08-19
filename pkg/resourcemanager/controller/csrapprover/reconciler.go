@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/authentication/user"
 	certificatesclientv1 "k8s.io/client-go/kubernetes/typed/certificates/v1"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -255,7 +256,7 @@ func (r *Reconciler) mustApproveKubeAPIServerClient(ctx context.Context, csr *ce
 	}
 
 	switch {
-	case strings.HasPrefix(csr.Spec.Username, "system:bootstrap:"):
+	case strings.HasPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix):
 		if nodeName != "" {
 			if err := r.TargetClient.Get(ctx, client.ObjectKey{Name: nodeName}, &corev1.Node{}); err == nil {
 				return fmt.Sprintf("Cannot use bootstrap token since gardener-node-agent for machine %q is already bootstrapped", machineName), csrDenied, nil
