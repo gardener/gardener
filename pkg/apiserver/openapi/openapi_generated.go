@@ -3786,7 +3786,7 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ExpirableVersion contains a version and an expiration date.",
+				Description: "ExpirableVersion contains a version with associated lifecycle information.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"version": {
@@ -5644,7 +5644,8 @@ func schema_pkg_apis_core_v1beta1_LifecycleStage(ref common.ReferenceCallback) c
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "LifecycleStage describes a stage in the versions lifecycle. Each stage defines the classification of the version and the time at which this classification becomes effective.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"classification": {
 						SchemaProps: spec.SchemaProps{
@@ -5977,7 +5978,8 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersionStatus(ref common.Reference
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "MachineImageVersionStatus contains the status of a machine image and its version classifications.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {
 						SchemaProps: spec.SchemaProps{

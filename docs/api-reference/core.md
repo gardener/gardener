@@ -5620,7 +5620,7 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/securit
 <a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
 </p>
 <p>
-<p>ExpirableVersion contains a version and an expiration date.</p>
+<p>ExpirableVersion contains a version with associated lifecycle information.</p>
 </p>
 <table>
 <thead>
@@ -5652,7 +5652,8 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>Deprecated: Is replaced by Lifecycle.</p>
+<p>ExpirationDate defines the time at which this version expires.
+Deprecated: Is replaced by Lifecycle.</p>
 </td>
 </tr>
 <tr>
@@ -8318,6 +8319,8 @@ LastOperationType
 <a href="#core.gardener.cloud/v1beta1.ExpirableVersion">ExpirableVersion</a>)
 </p>
 <p>
+<p>LifecycleStage describes a stage in the versions lifecycle.
+Each stage defines the classification of the version and the time at which this classification becomes effective.</p>
 </p>
 <table>
 <thead>
@@ -8775,6 +8778,7 @@ the machine image version.</p>
 <a href="#core.gardener.cloud/v1beta1.CloudProfileStatus">CloudProfileStatus</a>)
 </p>
 <p>
+<p>MachineImageVersionStatus contains the status of a machine image and its version classifications.</p>
 </p>
 <table>
 <thead>
