@@ -160,6 +160,63 @@ var _ = Describe("CloudProfile Helper", func() {
 
 	})
 
+	// TODO:(RAPSNX) Consider change / improve these tests in future, this was a shourtcut to test the function.
+	Describe("Get the duration until the next lifecycle stage from the CloudProfile", func() {
+		var (
+			cloudProfileSpec = gardencorev1beta1.CloudProfileSpec{
+				Kubernetes: gardencorev1beta1.KubernetesSettings{
+					Versions: []gardencorev1beta1.ExpirableVersion{
+						{
+							Lifecycle: []gardencorev1beta1.LifecycleStage{},
+						},
+					},
+				},
+			}
+		)
+
+		It("should return the duration of the next version lifecycle based on a chronological order", func() {
+			Lifecycles := []gardencorev1beta1.LifecycleStage{
+				{
+					StartTime: ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+				},
+				{
+					StartTime: ptr.To(metav1.NewTime(now.Add(5 * time.Hour))),
+				},
+			}
+			cloudProfileSpec.Kubernetes.Versions[0].Lifecycle = Lifecycles
+
+			Expect(DurationUntilNextVersionLifecycleStage(&cloudProfileSpec)).To(BeNumerically("~", 3*time.Hour, 100*time.Millisecond))
+		})
+
+		It("should return the duration of the next version lifecycle without a chronological order", func() {
+			Lifecycles := []gardencorev1beta1.LifecycleStage{
+				{
+					StartTime: ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+				},
+				{
+					StartTime: ptr.To(metav1.NewTime(now.Add(1 * time.Hour))),
+				},
+			}
+			cloudProfileSpec.Kubernetes.Versions[0].Lifecycle = Lifecycles
+
+			Expect(DurationUntilNextVersionLifecycleStage(&cloudProfileSpec)).To(BeNumerically("~", 1*time.Hour, 100*time.Millisecond))
+		})
+
+		It("should return the duration of the next version lifecycle with start time in the past", func() {
+			Lifecycles := []gardencorev1beta1.LifecycleStage{
+				{
+					StartTime: ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+				},
+				{
+					StartTime: ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+				},
+			}
+			cloudProfileSpec.Kubernetes.Versions[0].Lifecycle = Lifecycles
+
+			Expect(DurationUntilNextVersionLifecycleStage(&cloudProfileSpec)).To(BeNumerically("~", 3*time.Hour, 100*time.Millisecond))
+		})
+	})
+
 	Describe("#FindMachineImageVersion", func() {
 		var machineImages []gardencorev1beta1.MachineImage
 
