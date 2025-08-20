@@ -93,7 +93,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 	}
 
 	for _, ipFamily := range cluster.Shoot.Spec.Networking.IPFamilies {
-		ipPoolObj, err := ipPool(infrastructure.Namespace, string(ipFamily), *cluster.Shoot.Spec.Networking.Nodes)
+		ipPoolObj, err := ipPool(cluster.ObjectMeta, string(ipFamily), *cluster.Shoot.Spec.Networking.Nodes)
 		if err != nil {
 			return err
 		}
@@ -136,8 +136,14 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *ex
 	)
 }
 
-func (a *actuator) Migrate(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	return a.Delete(ctx, log, infrastructure, cluster)
+func (a *actuator) Migrate(context.Context, logr.Logger, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error {
+	// On migration, we don't explicitly delete objects, as we might still need them, e.g., for `gardenadm bootstrap`.
+	// After performing operation=migrate, the machine pods will keep running in the bootstrap cluster (kind), so we still
+	// need `NetworkPolicies`, etc.
+	// When performing an actual control plane migration of local shoots, we rely on the namespace controller to delete
+	// all namespaced objects and the garbage collector (owner references) to delete all cluster-scoped objects created by
+	// the Infrastructure controller.
+	return nil
 }
 
 func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
@@ -182,11 +188,16 @@ func IPPoolName(shootNamespace, ipFamily string) string {
 	return "shoot-machine-pods-" + shootNamespace + "-" + strings.ToLower(ipFamily)
 }
 
-func ipPool(shootNamespace, ipFamily, nodeCIDR string) (client.Object, error) {
+func ipPool(clusterMeta metav1.ObjectMeta, ipFamily, nodeCIDR string) (client.Object, error) {
 	return kubernetes.NewManifestReader([]byte(`apiVersion: crd.projectcalico.org/v1
 kind: IPPool
 metadata:
-  name: ` + IPPoolName(shootNamespace, ipFamily) + `
+  name: ` + IPPoolName(clusterMeta.Name, ipFamily) + `
+  ownerReferences:
+  - apiVersion: extensions.gardener.cloud/v1alpha1
+    kind: Cluster
+    name: ` + clusterMeta.Name + `
+    uid: ` + string(clusterMeta.UID) + `
 spec:
   cidr: ` + nodeCIDR + `
   ipipMode: Always

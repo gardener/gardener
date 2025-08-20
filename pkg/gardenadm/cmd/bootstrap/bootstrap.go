@@ -7,6 +7,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -29,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/publicip"
+	sshutils "github.com/gardener/gardener/pkg/utils/ssh"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -214,16 +216,6 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
 
-		deployBastion = g.Add(flow.Task{
-			Name: "Deploying and connecting to bastion host",
-			Fn: func(ctx context.Context) error {
-				b.Bastion.Values.IngressCIDRs = opts.BastionIngressCIDRs
-				return component.OpWait(b.Bastion).Deploy(ctx)
-			},
-			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
-		})
-		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
-
 		// Delete machine-controller-manager to prevent it from interfering with Machine objects that will be migrated to
 		// the autonomous shoot.
 		deleteMachineControllerManager = g.Add(flow.Task{
@@ -256,28 +248,35 @@ func run(ctx context.Context, opts *Options) error {
 			},
 			Dependencies: flow.NewTaskIDs(migrateExtensionResources),
 		})
-		// TODO(timebertt): drop this task again once this flow implements copying of the ShootState to the machines
-		_ = g.Add(flow.Task{
-			Name: "Dump ShootState for testing purposes",
+
+		deployBastion = g.Add(flow.Task{
+			Name: "Deploying and connecting to bastion host",
 			Fn: func(ctx context.Context) error {
-				shootState := &gardencorev1beta1.ShootState{}
-				if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shootState); err != nil {
-					return err
-				}
-
-				shootStateBytes, err := runtime.Encode(kubernetes.GardenCodec.EncoderForVersion(kubernetes.GardenSerializer, gardencorev1beta1.SchemeGroupVersion), shootState)
-				if err != nil {
-					return err
-				}
-
-				_, err = opts.Out.Write(shootStateBytes)
-				return err
+				b.Bastion.Values.IngressCIDRs = opts.BastionIngressCIDRs
+				return component.OpWait(b.Bastion).Deploy(ctx)
 			},
-			Dependencies: flow.NewTaskIDs(compileShootState),
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
+		})
+		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
+
+		connMachine0      *sshutils.Connection
+		connectToMachine0 = g.Add(flow.Task{
+			Name: "Connecting to the first control plane machine",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				connMachine0, err = b.ConnectToMachine(ctx, 0)
+				return err
+			}).RetryUntilTimeout(5*time.Second, 5*time.Minute),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, deployBastion),
+		})
+		copyManifests = g.Add(flow.Task{
+			Name: "Copying manifests to the first control plane machine",
+			Fn: func(ctx context.Context) error {
+				return b.CopyManifests(ctx, connMachine0, os.DirFS(opts.ConfigDir))
+			},
+			Dependencies: flow.NewTaskIDs(connectToMachine0, compileShootState),
 		})
 
-		_ = deployBastion
-		_ = compileShootState
+		_ = copyManifests
 
 		// In contrast to the usual Shoot migrate flow, we don't delete the shoot control plane namespace at the end.
 		// The bootstrap cluster is designed to be temporary and thrown away after successfully executing

@@ -82,7 +82,7 @@ func RunAndWait(ctx context.Context, args ...string) *gexec.Session {
 
 // RunInMachine runs gardenadm in the given machine (sorted lexicographically) with the given arguments and returns the
 // gbytes.Buffers.
-func RunInMachine(ctx context.Context, technicalID string, ordinal int, args ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
+func RunInMachine(ctx context.Context, technicalID string, ordinal int, cmd ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
 	var stdOutBuffer, stdErrBuffer = gbytes.NewBuffer(), gbytes.NewBuffer()
 	podName := machinePodName(ctx, technicalID, ordinal)
 	err := RuntimeClient.PodExecutor().ExecuteWithStreams(
@@ -93,7 +93,7 @@ func RunInMachine(ctx context.Context, technicalID string, ordinal int, args ...
 		nil,
 		io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter(fmt.Sprintf("[%s][out] ", podName), GinkgoWriter)),
 		io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter(fmt.Sprintf("[%s][err] ", podName), GinkgoWriter)),
-		append([]string{"/opt/bin/gardenadm"}, args...)...,
+		cmd...,
 	)
 	return stdOutBuffer, stdErrBuffer, err
 }
