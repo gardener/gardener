@@ -119,7 +119,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				},
 				{
 					APIGroups: []string{certificatesv1.GroupName},
-					Resources: []string{"certificatesigningrequests/seedclient"},
+					Resources: []string{"certificatesigningrequests/seedclient", "certificatesigningrequests/shootclient"},
 					Verbs:     []string{"create"},
 				},
 			},
