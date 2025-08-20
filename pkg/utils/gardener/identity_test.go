@@ -52,20 +52,4 @@ var _ = Describe("Identity", func() {
 			Expect(obj.Labels).To(Equal(map[string]string{"foo": "bar"}))
 		})
 	})
-
-	Describe("#MaintainSeedProviderLabels", func() {
-		It("should maintain the labels", func() {
-			obj := &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"name.seed.gardener.cloud/seed": "true"}},
-				Spec:       gardencorev1beta1.SeedSpec{Provider: gardencorev1beta1.SeedProvider{Type: "provider-type", Region: "provider-region"}},
-			}
-
-			MaintainSeedProviderLabels(obj, obj.Spec.Provider.Type, obj.Spec.Provider.Region)
-
-			Expect(obj.Labels).To(And(
-				HaveKeyWithValue("seed.gardener.cloud/provider", "provider-type"),
-				HaveKeyWithValue("seed.gardener.cloud/region", "provider-region"),
-			))
-		})
-	})
 })
