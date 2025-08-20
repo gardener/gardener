@@ -148,6 +148,7 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 			Image:              collectorImage.String(),
 			KubeRBACProxyImage: kubeRBACProxyImage.String(),
 			LokiEndpoint:       "http://" + valiconstants.ServiceName + ":" + strconv.Itoa(valiconstants.ValiPort) + valiconstants.PushEndpoint,
+			Replicas:           b.Shoot.GetReplicas(1),
 		},
 		b.SecretsManager,
 	), nil

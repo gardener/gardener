@@ -53,6 +53,8 @@ type Values struct {
 	WithRBACProxy bool
 	// LokiEndpoint is the endpoint of the Loki instance to which logs should be sent.
 	LokiEndpoint string
+	// Replicas is the number of replicas for the OpenTelemetry Collector deployment.
+	Replicas int32
 }
 
 type otelCollector struct {
@@ -223,7 +225,8 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			Mode:            "deployment",
 			UpgradeStrategy: "none",
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
-				Image: o.values.Image,
+				Image:    o.values.Image,
+				Replicas: ptr.To(o.values.Replicas),
 				SecurityContext: &corev1.SecurityContext{
 					AllowPrivilegeEscalation: ptr.To(false),
 				},

@@ -52,6 +52,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Image:              image,
 			KubeRBACProxyImage: kubeRBACProxyImage,
 			LokiEndpoint:       lokiEndpoint,
+			Replicas:           1,
 		}
 
 		c         client.Client
@@ -250,7 +251,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				Mode:            "deployment",
 				UpgradeStrategy: "none",
 				OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
-					Image: image,
+					Image:    image,
+					Replicas: ptr.To[int32](1),
 					SecurityContext: &corev1.SecurityContext{
 						AllowPrivilegeEscalation: ptr.To(false),
 					},
