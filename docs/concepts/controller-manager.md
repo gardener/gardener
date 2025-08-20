@@ -43,8 +43,30 @@ On startup, the gardenlet uses a `kubeconfig` with a [bootstrap token](https://k
 
 The controller in `gardener-controller-manager` checks whether the `CertificateSigningRequest` has the expected organization, common name and usages which the gardenlet would request.
 
-It only auto-approves the CSR if the client making the request is allowed to "create" the
-`certificatesigningrequests/seedclient` subresource. Clients with the `system:bootstrappers` group are bound to the `gardener.cloud:system:seed-bootstrapper` `ClusterRole`, hence, they have such privileges. As the bootstrap kubeconfig for the gardenlet contains a bootstrap token which is authenticated as being part of the [`systems:bootstrappers` group](../../charts/gardener/controlplane/charts/application/templates/clusterrolebinding-seed-bootstrapper.yaml), its created CSR gets auto-approved.
+The controller auto-approves CSRs based on the type of gardenlet deployment and validates the appropriate permissions:
+
+#### Seed Client Certificates (`seedclient` subresource)
+
+For regular gardenlets managing seed clusters, the controller auto-approves CSRs when:
+1. The CSR matches the requirements for a seed client certificate (correct organization, common name, and usages)
+2. The requesting client has permission to create the `certificatesigningrequests/seedclient` subresource
+
+#### Autonomous Shoot Client Certificates (`shootclient` subresource)
+
+For gardenlets responsible for autonomous shoots, the controller performs additional security validation:
+1. The CSR must match the requirements for a shoot client certificate (correct organization, common name, and usages)
+2. The requesting client must have permission to create the `certificatesigningrequests/shootclient` subresource
+3. **Bootstrap Token Validation**: The CSR must be requested via a bootstrap token with a specific description format containing the shoot's namespace and name
+4. **Subject Matching**: The certificate request's subject must match the shoot metadata extracted from the bootstrap token description
+
+#### Permission Model
+
+Both types of CSRs rely on the same RBAC setup:
+- Clients in the `system:bootstrappers` group are bound to the `gardener.cloud:system:seed-bootstrapper` `ClusterRole`
+- This ClusterRole grants permission to create both `certificatesigningrequests/seedclient` and `certificatesigningrequests/shootclient` subresources
+- The gardenlet's bootstrap kubeconfig contains a bootstrap token that authenticates it as part of the `system:bootstrappers` group
+
+This dual approval mechanism ensures that both regular seed gardenlets and autonomous shoot gardenlets can obtain client certificates while maintaining appropriate security controls for each deployment model.
 
 ### [`CloudProfile` Controller](../../pkg/controllermanager/controller/cloudprofile)
 
