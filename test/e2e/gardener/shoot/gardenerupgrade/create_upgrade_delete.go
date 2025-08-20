@@ -10,6 +10,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/seed"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/zerodowntimevalidator"
 )
@@ -23,7 +24,7 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 				ItShouldCreateShoot(s)
 				ItShouldWaitForShootToBeReconciledAndHealthy(s)
 				ItShouldGetResponsibleSeed(s)
-				ItShouldInitializeSeedClient(s)
+				seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
 				zeroDowntimeValidatorJob.ItShouldDeployJob(s)
 				zeroDowntimeValidatorJob.ItShouldWaitForJobToBeReady(s)
@@ -31,7 +32,7 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 
 			Describe("Post-Upgrade"+gardenerInfoPostUpgrade, Label("post-upgrade"), func() {
 				ItShouldGetResponsibleSeed(s)
-				ItShouldInitializeSeedClient(s)
+				seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
 				zeroDowntimeValidatorJob.ItShouldEnsureThereWasNoDowntime(s)
 				zeroDowntimeValidatorJob.AfterAllDeleteJob(s)

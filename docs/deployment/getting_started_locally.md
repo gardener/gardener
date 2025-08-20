@@ -77,6 +77,7 @@ First, ensure that your `/etc/hosts` file contains an entry resolving `garden.lo
 
 ```text
 ::1 garden.local.gardener.cloud
+::3 api.virtual-garden.local.gardener.cloud
 ```
 
 Typically, only `ip6-localhost` is mapped to `::1` on linux machines.
@@ -86,7 +87,7 @@ Next, we need to configure NAT for outgoing traffic from the kind network to the
 After executing `make kind-up IPFAMILY=ipv6`, execute the following command to set up the corresponding iptables rules:
 
 ```bash
-ip6tables -t nat -A POSTROUTING -o $(ip route show default | awk '{print $5}') -s fd00:10::/64 -j MASQUERADE
+ip6tables -t nat -A POSTROUTING -o $(ip route | grep '^default') -s fd00:10::/64 -j MASQUERADE
 ```
 
 ## Setting Up Gardener
@@ -95,7 +96,7 @@ ip6tables -t nat -A POSTROUTING -o $(ip route show default | awk '{print $5}') -
 make gardener-up
 ```
 
-> If you want to setup an IPv6 ready Gardener, use `make gardener-up IPFAMILY=ipv6` instead.
+> If you want to setup an IPv6 ready Gardener, use `make operator-seed-up IPFAMILY=ipv6` instead.
 
 This will first build the base images (which might take a bit if you do it for the first time).
 Afterwards, the Gardener resources will be deployed into the cluster.

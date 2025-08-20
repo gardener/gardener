@@ -134,6 +134,11 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
+	enableVali, err := valiEnabled(garden.Spec.RuntimeCluster.Networking)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	extensionList := &operatorv1alpha1.ExtensionList{}
 	if err := r.RuntimeClientSet.Client().List(ctx, extensionList); err != nil {
 		return reconcile.Result{}, err
@@ -551,8 +556,9 @@ func (r *Reconciler) reconcile(
 			Fn:   c.fluentBit.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying Vali",
-			Fn:   c.vali.Deploy,
+			Name:   "Deploying Vali",
+			Fn:     c.vali.Deploy,
+			SkipIf: !enableVali,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying prometheus-operator",

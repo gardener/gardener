@@ -375,6 +375,126 @@ kubectl -n kube-system get configmap coredns -ojson | \
   kubectl -n kube-system create configmap coredns --from-file Corefile=/dev/stdin --dry-run=client -oyaml | \
   kubectl -n kube-system patch configmap coredns --patch-file /dev/stdin
 
+if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+  # The CoreDNS pods in the kind cluster can only talk via IPv6, but the nameserver in the kind cluster is set to the
+  # host's IPv4 address. Hence, we add another CoreDNS, which translates between both worlds and is located in the
+  # host network. It is pretty similar to the kind CoreDNS, but its configuration is different.
+  DOCKER_IPV4_DNS_SERVER="$(docker inspect -f='{{json .NetworkSettings.Networks.kind.Gateway}}' "${garden_cluster}-control-plane" | jq -r)"
+  PASSTHROUGH_IPV6_DNS_SERVER="$(docker inspect -f='{{json .NetworkSettings.Networks.kind.GlobalIPv6Address}}' "${garden_cluster}-control-plane" | jq -r)"
+  COREDNS_IMAGE="$(kubectl -n kube-system get deployment coredns -o jsonpath='{.spec.template.spec.containers[0].image}')"
+
+  cat <<EOF | kubectl -n kube-system apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-ipv6-passthrough
+  namespace: kube-system
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health {
+            lameduck 5s
+        }
+        ready
+        prometheus :9153
+        forward . $DOCKER_IPV4_DNS_SERVER {
+            max_concurrent 1000
+        }
+        cache 30
+        loop
+        reload
+        loadbalance
+    }
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: coredns-ipv6-passthrough
+  namespace: kube-system
+  labels:
+    k8s-app: coredns-ipv6-passthrough
+spec:
+  selector:
+    matchLabels:
+      k8s-app: coredns-ipv6-passthrough
+  template:
+    metadata:
+      labels:
+        k8s-app: coredns-ipv6-passthrough
+    spec:
+      hostNetwork: true
+      dnsPolicy: Default
+      containers:
+      - name: coredns-ipv6-passthrough
+        image: $COREDNS_IMAGE
+        imagePullPolicy: IfNotPresent
+        args: ["-conf", "/etc/coredns/Corefile"]
+        ports:
+        - containerPort: 53
+          name: dns
+          protocol: UDP
+        - containerPort: 53
+          name: dns-tcp
+          protocol: TCP
+        - containerPort: 9153
+          name: metrics
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8181
+            scheme: HTTP
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        livenessProbe:
+          httpGet:
+            path: /ready
+            port: 8181
+            scheme: HTTP
+          failureThreshold: 5
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_BIND_SERVICE
+            drop:
+             - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/coredns
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+      volumes:
+        - name: config-volume
+          configMap:
+            name: coredns-ipv6-passthrough
+            items:
+            - key: Corefile
+              path: Corefile
+EOF
+
+  kubectl -n kube-system get configmap coredns -ojson | \
+    yq '.data.Corefile' | \
+    sed "s%forward . /etc/resolv.conf%forward . $PASSTHROUGH_IPV6_DNS_SERVER%" | \
+    kubectl -n kube-system create configmap coredns --from-file Corefile=/dev/stdin --dry-run=client -oyaml | \
+    kubectl -n kube-system patch configmap coredns --patch-file /dev/stdin
+
+  # All outgoing traffic from the cluster is masqueraded to the host's IPv6 address. This is to ensure outgoing traffic
+  # can also be routed back to the cluster.
+  ip6tables -t nat -A POSTROUTING -o $(ip route | grep '^default' | awk '{print $5}') -s $(docker network inspect kind -f='{{json .IPAM.Config}}' | jq -r '.[1].Subnet') -j MASQUERADE
+fi
+
 kubectl -n kube-system rollout restart deployment coredns
 
 if [[ "$DEPLOY_REGISTRY" == "true" ]]; then

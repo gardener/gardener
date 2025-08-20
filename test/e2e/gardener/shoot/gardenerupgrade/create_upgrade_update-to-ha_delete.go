@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 
 	. "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/seed"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/highavailability"
 )
@@ -26,7 +27,7 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s)
 
 				ItShouldGetResponsibleSeed(s)
-				ItShouldInitializeSeedClient(s)
+				seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
 				ItShouldUpdateShootToHighAvailability(s, GetFailureToleranceType())
 				ItShouldWaitForShootToBeReconciledAndHealthy(s)

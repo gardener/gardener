@@ -10,12 +10,14 @@ import (
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -144,7 +146,12 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 			return err
 		}
 
-		if err := (&service.Reconciler{IsMultiZone: true}).AddToManager(mgr, virtualGardenIstioIngressPredicate); err != nil {
+		if err := (&service.Reconciler{IsMultiZone: true}).AddToManager(mgr, predicate.And(
+			virtualGardenIstioIngressPredicate,
+			predicate.NewPredicateFuncs(func(obj client.Object) bool {
+				return obj.GetNamespace() == "virtual-garden-"+v1beta1constants.DefaultSNIIngressNamespace
+			})),
+		); err != nil {
 			return fmt.Errorf("failed adding Service controller: %w", err)
 		}
 	}

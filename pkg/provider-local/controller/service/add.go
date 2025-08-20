@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controller/service"
 )
 
@@ -54,7 +55,13 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		if err != nil {
 			return err
 		}
-		predicates = append(predicates, istioPredicate)
+		predicates = append(predicates, predicate.And(istioPredicate, predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			namespace := v1beta1constants.DefaultSNIIngressNamespace
+			if zone != nil {
+				namespace = v1beta1constants.DefaultSNIIngressNamespace + "--" + *zone
+			}
+			return obj.GetNamespace() == namespace
+		})))
 	}
 
 	bastionPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{"app": "bastion"}})

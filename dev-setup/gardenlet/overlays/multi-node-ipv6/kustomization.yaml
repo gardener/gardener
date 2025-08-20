@@ -1,11 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-sortOptions:
-  order: fifo
-
 resources:
-- ../skaffold
+- ../../base
 
 components:
-- ../ipv6
+- ../../components/kubeconfigs/seed-local
+- ../../components/ipv6

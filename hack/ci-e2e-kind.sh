@@ -13,6 +13,21 @@ source $(dirname "${0}")/ci-common.sh
 clamp_mss_to_pmtu
 
 ensure_glgc_resolves_to_localhost
+if [[ -n "$IPFAMILY" ]] && [[ "$IPFAMILY" == "ipv6" ]]; then
+  make kind-single-node-up
+
+  # export all container logs and events after test execution
+  trap "
+    ( export_artifacts "gardener-operator-local" )
+    ( make kind-single-node-down )
+  " EXIT
+
+  make operator-seed-up
+  # TODO(rfranzke): Remove this KUBECONFIG environment variable once the ci-e2e-kind setup is switched to gardener-operator.
+  make test-e2e-local KUBECONFIG="$(git rev-parse --show-toplevel)/dev-setup/kubeconfigs/virtual-garden/kubeconfig"
+  make operator-seed-down
+  exit 0
+fi
 
 # test setup
 make kind-up
