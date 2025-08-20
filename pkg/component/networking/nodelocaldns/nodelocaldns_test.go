@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
@@ -35,6 +34,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -269,10 +269,9 @@ var _ = Describe("NodeLocalDNS", func() {
 				},
 			},
 		}
-		encoder := &jsonserializer.Serializer{}
-		rawShoot, err := runtime.Encode(encoder, shoot)
+		shootYAML, err := kubernetesutils.Serialize(shoot, kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(rawShoot).ToNot(BeEmpty())
+		Expect(shootYAML).ToNot(BeEmpty())
 
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -280,7 +279,7 @@ var _ = Describe("NodeLocalDNS", func() {
 			},
 			Spec: extensionsv1alpha1.ClusterSpec{
 				Shoot: runtime.RawExtension{
-					Raw:    rawShoot,
+					Raw:    []byte(shootYAML),
 					Object: shoot,
 				},
 				Seed: runtime.RawExtension{

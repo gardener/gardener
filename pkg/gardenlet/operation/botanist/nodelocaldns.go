@@ -74,10 +74,8 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 		return b.Shoot.Components.SystemComponents.NodeLocalDNS.Deploy(ctx)
 	}
 
-	atLeastOnePoolLowerKubernetes134 := false
-	var err error
-
-	if atLeastOnePoolLowerKubernetes134, err = v1beta1helper.IsOneWorkerPoolLowerKubernetes134(b.Shoot.KubernetesVersion, b.Shoot.GetInfo().Spec.Provider.Workers); err != nil {
+	atLeastOnePoolLowerKubernetes134, err := v1beta1helper.IsOneWorkerPoolLowerKubernetes134(b.Shoot.KubernetesVersion, b.Shoot.GetInfo().Spec.Provider.Workers)
+	if err != nil {
 		return err
 	}
 
