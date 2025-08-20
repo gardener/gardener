@@ -4,7 +4,7 @@ metadata:
   name: crazy-botany
   namespace: garden-dev
 spec:
-  secretBindingName: my-provider-account
+  credentialsBindingName: my-provider-account
   cloudProfile:
     name: cloudprofile1
   region: europe-central-1
