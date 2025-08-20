@@ -127,3 +127,17 @@ func MaintainSeedNameLabels(obj client.Object, names ...*string) {
 
 	obj.SetLabels(labels)
 }
+
+// MaintainSeedProviderLabels maintains the seed.gardener.cloud/provider=<type> and seed.gardener.cloud/region=<region> labels on the given object.
+func MaintainSeedProviderLabels(obj client.Object, providerType, providerRegion string) {
+	labels := obj.GetLabels()
+
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels[v1beta1constants.LabelSeedProvider] = providerType
+	labels[v1beta1constants.LabelSeedRegion] = providerRegion
+
+	obj.SetLabels(labels)
+}
