@@ -22,6 +22,7 @@ import (
 	seedmanagementv1alpha1listers "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Register registers a plugin.
@@ -133,7 +134,8 @@ func (m *MutateSeed) Admit(_ context.Context, attrs admission.Attributes, _ admi
 	}
 
 	gardenerutils.MaintainSeedNameLabels(seed, seedNames...)
-	gardenerutils.MaintainSeedProviderLabels(seed, seed.Spec.Provider.Type, seed.Spec.Provider.Region)
+	metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedProvider, seed.Spec.Provider.Type)
+	metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedRegion, seed.Spec.Provider.Region)
 
 	return nil
 }
