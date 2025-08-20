@@ -14,10 +14,13 @@
   postUpdateOptions: [
     'gomodTidy',
   ],
+  // Add PR footer with empty release note by default.
   prFooter: '**Release note**:\n```other dependency\nNONE\n```',
+  // Only rebase when there are conflicts. Prow tests against the latest state of master branch anyway before merging the PR.
   rebaseWhen: 'conflicted',
   customManagers: [
     {
+      // Generic detection for pod-like image specifications.
       customType: 'regex',
       managerFilePatterns: [
         '/^example/.+\\.yaml$/',
@@ -31,6 +34,7 @@
       datasourceTemplate: 'docker',
     },
     {
+      // Generic detection for install manifests from GitHub releases.
       customType: 'regex',
       managerFilePatterns: [
         '//kustomization\\.yaml$/',
@@ -42,6 +46,7 @@
       datasourceTemplate: 'github-releases',
     },
     {
+      // Generic detection for cli argument image specifications.
       customType: 'regex',
       managerFilePatterns: [
         '/^hack/.+\\.sh$/',
@@ -52,6 +57,7 @@
       datasourceTemplate: 'docker',
     },
     {
+      // Detection for images with prow like tags (e.g. v20240213-749005b2).
       customType: 'regex',
       managerFilePatterns: [
         '/^pkg/provider-local/imagevector/images.yaml$/',
@@ -65,12 +71,14 @@
   separateMinorPatch: true,
   packageRules: [
     {
+      // automerge patch updates
       matchUpdateTypes: [
         'patch',
       ],
       automerge: true,
     },
     {
+      // automerge k8s.io/utils updates
       matchDatasources: [
         'go',
       ],
@@ -83,6 +91,7 @@
       automerge: true,
     },
     {
+      // automerge non-major golang.org/x updates
       matchDatasources: [
         'go',
       ],
@@ -97,9 +106,10 @@
       automerge: true,
     },
     {
+      // Run make generate when Go API packages have been changed because CRDs might have changed.
       matchDatasources: [
         'go',
-        'github-releases',
+        'github-releases', // Required for the gardener groups.
       ],
       postUpgradeTasks: {
         commands: [
@@ -116,6 +126,7 @@
       ],
     },
     {
+      // Group Istio updates in one PR.
       groupName: 'istio',
       groupSlug: 'istio',
       description: 'Group Istio updates in one PR.',
@@ -130,6 +141,7 @@
       ],
     },
     {
+      // Group etcd-druid updates in one PR.
       groupName: 'etcd-druid',
       matchDatasources: [
         'github-releases',
@@ -141,6 +153,7 @@
       ],
     },
     {
+      // Group helm updates in one PR.
       groupName: 'helm',
       matchDatasources: [
         'github-releases',
@@ -152,6 +165,7 @@
       ],
     },
     {
+      // Group Prometheus updates in one PR.
       groupName: 'prometheus',
       matchDatasources: [
         'github-releases',
@@ -162,6 +176,7 @@
       ],
     },
     {
+      // Group prometheus-operator updates in one PR.
       groupName: 'prometheus-operator',
       matchDatasources: [
         'docker',
@@ -173,6 +188,7 @@
       ],
     },
     {
+      // Group gardener-discovery-server updates in one PR.
       groupName: 'gardener-discovery-server',
       matchDatasources: [
         'docker',
@@ -183,6 +199,7 @@
       ],
     },
     {
+      // Group machine-controller-manager updates in one PR.
       groupName: 'machine-controller-manager',
       matchDatasources: [
         'github-releases',
@@ -193,6 +210,7 @@
       ],
     },
     {
+      // Group terminal-controller-manager updates in one PR.
       groupName: 'terminal-controller-manager',
       matchDatasources: [
         'github-releases',
@@ -203,6 +221,7 @@
       ],
     },
     {
+      // Group Vertical Pod Autoscaler (VPA) component updates in one PR.
       groupName: 'vpa-components',
       matchDatasources: [
         'docker',
@@ -214,6 +233,7 @@
       ],
     },
     {
+      // Group Dependency Watchdog updates in one PR.
       groupName: 'dependency-watchdog',
       matchDatasources: [
         'docker',
@@ -225,6 +245,7 @@
       ],
     },
     {
+      // Group Prometheus blackbox-exporter updates in one PR.
       groupName: 'blackbox-exporter',
       matchDatasources: [
         'docker',
@@ -237,6 +258,8 @@
       ],
     },
     {
+      // Ask for manual approval to create PRs for minor and major updates of dependencies which most likely
+      // require manual adaptations of the code.
       matchDatasources: [
         'go',
       ],
@@ -253,6 +276,8 @@
       ],
     },
     {
+      // Ask for manual approval to create PRs for minor and major updates of container images which most likely
+      // require manual adaptations of the code.
       matchDatasources: [
         'docker',
         'github-releases',
@@ -272,6 +297,8 @@
       ],
     },
     {
+      // Ask for manual approval to create PRs for kindest/node image. Minor and major versions are updated when new
+      // versions of Kubernetes are introduced only.
       matchDatasources: [
         'docker',
       ],
@@ -285,12 +312,18 @@
       ],
     },
     {
+      // Prevent unwanted updates of `gopkg.in/yaml.v2` to stay on v2.x.x.
+      // The dependency has to be kept in sync with the cluster-autoscaler.
+      // For context see:
+      // - https://github.com/gardener/gardener/pull/11273
+      // - https://github.com/gardener/autoscaler/blob/edd7d34dfba73f68e6f4d2516bb3212e92732040/cluster-autoscaler/go.mod#L43
       matchPackageNames: [
         'gopkg.in/yaml.v2',
       ],
       allowedVersions: '/^v2\\..+/',
     },
     {
+      // Only patch level updates for golang-test image. Minor and major versions are updated manually.
       matchDatasources: [
         'docker',
       ],
@@ -304,6 +337,9 @@
       enabled: false,
     },
     {
+      // Do not update to patch versions of the Go Toolchain.
+      // Default golang images set the environment variable GOTOOLCHAIN=local
+      // and we don't want to enforce every (test-)image to be on the latest patch level.
       matchManagers: [
         'gomod',
       ],
@@ -316,6 +352,7 @@
       ],
     },
     {
+      // Go versions must be in sync with golangci-lint.
       matchDatasources: [
         'go',
       ],
@@ -325,6 +362,9 @@
       enabled: false,
     },
     {
+      // Update only patch levels for cluster-autoscaler container images.
+      // There is a different minor version for each Kubernetes version active at the same time. In this scenario,
+      // renovate is able to handle patch updates properly only.
       matchDatasources: [
         'docker',
         'github-releases',
@@ -342,6 +382,7 @@
       ],
     },
     {
+      // Do not update etcd images since they have to be in sync with the etcd-druid version.
       matchDatasources: [
         'docker',
       ],
@@ -354,6 +395,7 @@
       ],
     },
     {
+      // Use Docker only for images from the Gardener registry that don't work with GitHub releases.
       matchDatasources: [
         'docker',
       ],
@@ -368,6 +410,7 @@
       ],
     },
     {
+      // Use GitHub releases only for external dependencies we mirror.
       matchDatasources: [
         'github-releases',
       ],
@@ -384,12 +427,14 @@
       ],
     },
     {
+      // Ignore local-skaffold packages because they are virtual packages for local setup only.
       enabled: false,
       matchPackageNames: [
         '/local-skaffold/.+/',
       ],
     },
     {
+      // Ignore dependency updates from k8s.io/kube-openapi because it depends on k8s.io/apiserver.
       matchDatasources: [
         'go',
       ],
@@ -399,6 +444,9 @@
       ],
     },
     {
+      // Disable major updates of jsonpatch/v2.
+      // The major version of this dependency should be kept in sync with controller-runtime:
+      // https://github.com/kubernetes-sigs/controller-runtime/blob/main/go.mod
       matchDatasources: [
         'go',
       ],
@@ -411,6 +459,8 @@
       enabled: false,
     },
     {
+      // TODO(marc1404): Remove when support for Kubernetes v1.27 is dropped.
+      // Restrict updates of ingress-nginx/controller-chroot@v1.11.x for Kubernetes v1.27 to stay below v1.12.0.
       matchFileNames: [
         'imagevector/containers.yaml',
       ],
@@ -421,6 +471,9 @@
       allowedVersions: '<v1.12.0',
     },
     {
+      // TODO(marc1404): Remove when supported for containerd v1 is dropped or the following issue is resolved: https://github.com/gardener/gardener/issues/12600
+      // Disable major updates of go-toml to stay on v1.x.x.
+      // Related issue: https://github.com/gardener/gardener/issues/12600
       matchDatasources: [
         'go',
       ],
@@ -433,6 +486,7 @@
       enabled: false,
     },
     {
+      // Ignore paths which most likely create false positives.
       matchFileNames: [
         'cmd/**',
         'extensions/**',
@@ -444,12 +498,14 @@
       enabled: false,
     },
     {
+      // Enable specific paths which have been disabled by the previous rule.
       matchFileNames: [
         'pkg/provider-local/node/*',
       ],
       enabled: true,
     },
     {
+      // Add PR footer with release notes.
       matchFileNames: [
         'imagevector/**',
       ],
@@ -458,7 +514,13 @@
         'minor',
         'patch',
       ],
-      prFooter: "**Release note**:\n```other dependency\nThe following dependencies have been updated:\n{{#each upgrades as |upgrade|}}\n- `{{upgrade.depName}}` from `{{upgrade.currentVersion}}` to `{{upgrade.newVersion}}`. {{#if (equals upgrade.datasource 'github-releases')}}[Release Notes](https://github.com/{{upgrade.depName}}/releases/tag/{{upgrade.newVersion}}){{/if}}\n{{/each}}\n```",
+      prFooter: "**Release note**:\n\
+```other dependency\n\
+The following dependencies have been updated:\n\
+{{#each upgrades as |upgrade|}}\n\
+- `{{upgrade.depName}}` from `{{upgrade.currentVersion}}` to `{{upgrade.newVersion}}`. {{#if (equals upgrade.datasource 'github-releases')}}[Release Notes](https://github.com/{{upgrade.depName}}/releases/tag/{{upgrade.newVersion}}){{/if}}\n\
+{{/each}}\n\
+```",
     },
   ],
 }
