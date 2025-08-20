@@ -16,8 +16,8 @@ data:
     apiVersion: seedmanagement.gardener.cloud/v1alpha1
     kind: Gardenlet
     metadata:
-      name: {{ .Values.config.seedConfig.metadata.name }}
-      namespace: garden
+      name: {{ if .Values.selfUpgrade.name }}{{ .Values.selfUpgrade.name }}{{ else }}{{ .Values.config.seedConfig.metadata.name }}{{ end }}
+      namespace: {{ .Values.selfUpgrade.namespace | default "garden" }}
     spec:
       deployment:
         helm:
