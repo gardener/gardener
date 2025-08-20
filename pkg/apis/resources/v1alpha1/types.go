@@ -194,6 +194,7 @@ const (
 
 	// PrometheusObsoleteFolderCleanedUp is a temporal annotation to indicate that the obsolete "prometheus-" data folder
 	// from Prometheus has been cleaned up. This is used to mark the clean up as complete and avoid repeated attempts to clean up
+	// TODO(vicwicker): Remove this after v1.128 is released.
 	PrometheusObsoleteFolderCleanedUp = "monitoring.resources.gardener.cloud/prometheus-obsolete-folder-cleaned-up"
 )
 
