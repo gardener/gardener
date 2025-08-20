@@ -17,6 +17,19 @@ This document lists all existing admission plugins with a short explanation of w
 This admission controller reacts on `CREATE` and `UPDATE` operations for `BackupBuckets`s.
 When the backup bucket is using `WorkloadIdentity` as backup credentials, the plugin ensures the backup bucket and the workload identity have the same provider type, i.e. `backupBucket.spec.provider.type` and `workloadIdentity.spec.targetSystem.type` have the same value.
 
+## `Bastion`
+
+**Type**: Mutating. **Enabled by default**: Yes.
+
+This admission controller reacts on `CREATE` and `UPDATE` operations for `Bastion`s.
+It validates that the `Shoot` referenced in the `Bastion` is not in deletion, is assigned to `Seed` and does not disable SSH access for the worker Nodes.
+
+It mutates the `Bastion` in the following way:
+- it sets`.spec.seedName` to the `Shoot` `.spec.seedName`.
+- it sets `.spec.providerType` to the `Shoot` `.spec.provider.type`.
+- it sets the `gardener.cloud/created-by=<username>` annotation for `CREATE` operations.
+- it adds an owner reference to the `Shoot` to ensure the `Bastion` is deleted when the `Shoot` is deleted.
+
 ## `ClusterOpenIDConnectPreset`, `OpenIDConnectPreset`
 
 **Type**: Mutating (for both). **Enabled by default**: Yes (for both).
