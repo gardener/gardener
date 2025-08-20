@@ -133,5 +133,7 @@ func (m *MutateSeed) Admit(_ context.Context, attrs admission.Attributes, _ admi
 	}
 
 	gardenerutils.MaintainSeedNameLabels(seed, seedNames...)
+	gardenerutils.MaintainSeedProviderLabels(seed, seed.Spec.Provider.Type, seed.Spec.Provider.Region)
+
 	return nil
 }

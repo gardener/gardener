@@ -48,7 +48,7 @@ var _ = Describe("mutator", func() {
 		)
 
 		BeforeEach(func() {
-			seed = &core.Seed{ObjectMeta: metav1.ObjectMeta{Name: "the-seed"}}
+			seed = &core.Seed{ObjectMeta: metav1.ObjectMeta{Name: "the-seed"}, Spec: core.SeedSpec{Provider: core.SeedProvider{Type: "the-provider", Region: "the-region"}}}
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{Name: "the-shoot", Namespace: "garden"},
 				Spec:       gardencorev1beta1.ShootSpec{SeedName: ptr.To("parent-seed")},
@@ -83,6 +83,19 @@ var _ = Describe("mutator", func() {
 					HaveKeyWithValue("name.seed.gardener.cloud/parent-seed", "true"),
 				))
 			})
+
+			It("should add the labels for the seed provider and region", func() {
+				Expect(seedManagementInformerFactory.Seedmanagement().V1alpha1().ManagedSeeds().Informer().GetStore().Add(managedSeed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				Expect(handler.Admit(ctx, attrs, nil)).To(Succeed())
+
+				Expect(seed.Labels).To(And(
+					HaveKeyWithValue("seed.gardener.cloud/provider", "the-provider"),
+					HaveKeyWithValue("seed.gardener.cloud/region", "the-region"),
+				))
+			})
 		})
 
 		Context("update", func() {
@@ -103,6 +116,19 @@ var _ = Describe("mutator", func() {
 				Expect(seed.Labels).To(And(
 					HaveKeyWithValue("name.seed.gardener.cloud/the-seed", "true"),
 					HaveKeyWithValue("name.seed.gardener.cloud/parent-seed", "true"),
+				))
+			})
+
+			It("should add the labels for the seed provider and region", func() {
+				Expect(seedManagementInformerFactory.Seedmanagement().V1alpha1().ManagedSeeds().Informer().GetStore().Add(managedSeed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(seed, seed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				Expect(handler.Admit(ctx, attrs, nil)).To(Succeed())
+
+				Expect(seed.Labels).To(And(
+					HaveKeyWithValue("seed.gardener.cloud/provider", "the-provider"),
+					HaveKeyWithValue("seed.gardener.cloud/region", "the-region"),
 				))
 			})
 
