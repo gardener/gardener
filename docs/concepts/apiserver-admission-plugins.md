@@ -177,6 +177,8 @@ More specifically, it adds that the `name.seed.gardener.cloud/<name>=true` label
 - the name of the `Seed` resource (a `Seed` named `foo` will get label `name.seed.gardener.cloud/foo=true`).
 - the name of the parent `Seed` resource in case it is a `ManagedSeed` (a `Seed` named `foo` that is created by a `ManagedSeed` which references a `Shoot` running a `Seed` called `bar` will get label `name.seed.gardener.cloud/bar=true`).
 
+Additionally, it adds the `seed.cloud.gardener/provider=<type>` and `seed.cloud.gardener/region=<region>`, where `<type>` is the seed provider's type and `<region>` is the seed provider's region.
+
 ## `ShootDNS`
 
 **Type**: Mutating. **Enabled by default**: Yes.
