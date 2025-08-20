@@ -9,7 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -72,7 +71,6 @@ var _ = Describe("OpenTelemetry Collector", func() {
 	)
 
 	BeforeEach(func() {
-		format.MaxLength = 0
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
 		component = New(c, namespace, values, fakeSecretManager)

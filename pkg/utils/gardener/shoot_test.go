@@ -683,7 +683,6 @@ var _ = Describe("Shoot", func() {
 
 			Expect(podSpec.Containers[1].VolumeMounts).To(BeEmpty())
 		})
-
 	})
 
 	Describe("#GenerateGenericKubeconfigVolume", func() {
@@ -731,7 +730,6 @@ var _ = Describe("Shoot", func() {
 		It("should return the expected Volume", func() {
 			Expect(GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, accessSecretName, volumeName)).To(Equal(volume))
 		})
-
 	})
 
 	Describe("#GenerateGenericKubeconfigVolumeMount", func() {
@@ -749,7 +747,6 @@ var _ = Describe("Shoot", func() {
 		It("should return the expected VolumeMount", func() {
 			Expect(GenerateGenericKubeconfigVolumeMount(volumeName, mountPath)).To(Equal(volumeMount))
 		})
-
 	})
 
 	Describe("#GetShootSeedNames", func() {
