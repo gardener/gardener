@@ -7,6 +7,8 @@ package garden
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -158,9 +160,10 @@ func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Ga
 
 func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *operatorv1alpha1.Garden, operationType gardencorev1beta1.LastOperationType) error {
 	var (
-		now                           = metav1.NewTime(r.Clock.Now().UTC())
-		description                   string
-		mustRemoveOperationAnnotation bool
+		now             = metav1.NewTime(r.Clock.Now().UTC())
+		operations      = helper.GetGardenerOperations(garden.Annotations)
+		patchOperations = slices.Clone(operations)
+		description     string
 	)
 
 	switch operationType {
@@ -180,64 +183,70 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	garden.Status.Gardener = r.Identity
 	garden.Status.ObservedGeneration = garden.Generation
 
-	switch garden.Annotations[v1beta1constants.GardenerOperation] {
-	case v1beta1constants.GardenerOperationReconcile:
-		mustRemoveOperationAnnotation = true
+	for _, operation := range operations {
+		switch operation {
+		case v1beta1constants.GardenerOperationReconcile:
+			patchOperations = removeOperation(patchOperations, operation)
 
-	case v1beta1constants.OperationRotateCredentialsStart:
-		mustRemoveOperationAnnotation = true
-		startRotationCA(garden, &now)
-		startRotationServiceAccountKey(garden, &now)
-		startRotationETCDEncryptionKey(garden, &now)
-		startRotationObservability(garden, &now)
-		startRotationWorkloadIdentityKey(garden, &now)
-	case v1beta1constants.OperationRotateCredentialsComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationCA(garden, &now)
-		completeRotationServiceAccountKey(garden, &now)
-		completeRotationETCDEncryptionKey(garden, &now)
-		completeRotationWorkloadIdentityKey(garden, &now)
+		case v1beta1constants.OperationRotateCredentialsStart:
+			patchOperations = removeOperation(patchOperations, operation)
+			startRotationCA(garden, &now)
+			startRotationServiceAccountKey(garden, &now)
+			startRotationETCDEncryptionKey(garden, &now)
+			startRotationObservability(garden, &now)
+			startRotationWorkloadIdentityKey(garden, &now)
+		case v1beta1constants.OperationRotateCredentialsComplete:
+			patchOperations = removeOperation(patchOperations, operation)
+			completeRotationCA(garden, &now)
+			completeRotationServiceAccountKey(garden, &now)
+			completeRotationETCDEncryptionKey(garden, &now)
+			completeRotationWorkloadIdentityKey(garden, &now)
 
-	case v1beta1constants.OperationRotateCAStart:
-		mustRemoveOperationAnnotation = true
-		startRotationCA(garden, &now)
-	case v1beta1constants.OperationRotateCAComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationCA(garden, &now)
+		case v1beta1constants.OperationRotateCAStart:
+			patchOperations = removeOperation(patchOperations, operation)
+			startRotationCA(garden, &now)
+		case v1beta1constants.OperationRotateCAComplete:
+			patchOperations = removeOperation(patchOperations, operation)
+			completeRotationCA(garden, &now)
 
-	case v1beta1constants.OperationRotateServiceAccountKeyStart:
-		mustRemoveOperationAnnotation = true
-		startRotationServiceAccountKey(garden, &now)
-	case v1beta1constants.OperationRotateServiceAccountKeyComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationServiceAccountKey(garden, &now)
+		case v1beta1constants.OperationRotateServiceAccountKeyStart:
+			patchOperations = removeOperation(patchOperations, operation)
+			startRotationServiceAccountKey(garden, &now)
+		case v1beta1constants.OperationRotateServiceAccountKeyComplete:
+			patchOperations = removeOperation(patchOperations, operation)
+			completeRotationServiceAccountKey(garden, &now)
 
-	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
-		mustRemoveOperationAnnotation = true
-		startRotationETCDEncryptionKey(garden, &now)
-	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationETCDEncryptionKey(garden, &now)
+		case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
+			patchOperations = removeOperation(patchOperations, operation)
+			startRotationETCDEncryptionKey(garden, &now)
+		case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
+			patchOperations = removeOperation(patchOperations, operation)
+			completeRotationETCDEncryptionKey(garden, &now)
 
-	case v1beta1constants.OperationRotateObservabilityCredentials:
-		mustRemoveOperationAnnotation = true
-		startRotationObservability(garden, &now)
+		case v1beta1constants.OperationRotateObservabilityCredentials:
+			patchOperations = removeOperation(patchOperations, operation)
+			startRotationObservability(garden, &now)
 
-	case operatorv1alpha1.OperationRotateWorkloadIdentityKeyStart:
-		mustRemoveOperationAnnotation = true
-		startRotationWorkloadIdentityKey(garden, &now)
-	case operatorv1alpha1.OperationRotateWorkloadIdentityKeyComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationWorkloadIdentityKey(garden, &now)
+		case operatorv1alpha1.OperationRotateWorkloadIdentityKeyStart:
+			patchOperations = removeOperation(patchOperations, operation)
+			startRotationWorkloadIdentityKey(garden, &now)
+		case operatorv1alpha1.OperationRotateWorkloadIdentityKeyComplete:
+			patchOperations = removeOperation(patchOperations, operation)
+			completeRotationWorkloadIdentityKey(garden, &now)
+		}
 	}
 
 	if err := r.RuntimeClientSet.Client().Status().Update(ctx, garden); err != nil {
 		return err
 	}
 
-	if mustRemoveOperationAnnotation {
+	if len(operations) != len(patchOperations) {
 		patch := client.MergeFrom(garden.DeepCopy())
-		delete(garden.Annotations, v1beta1constants.GardenerOperation)
+		if len(patchOperations) == 0 {
+			delete(garden.Annotations, v1beta1constants.GardenerOperation)
+		} else {
+			garden.Annotations[v1beta1constants.GardenerOperation] = strings.Join(patchOperations, ";")
+		}
 		return r.RuntimeClientSet.Client().Patch(ctx, garden, patch)
 	}
 
@@ -543,4 +552,10 @@ func getValidVolumeSize(volume *operatorv1alpha1.Volume, size string) string {
 	}
 
 	return size
+}
+
+func removeOperation(operations []string, operation string) []string {
+	return slices.DeleteFunc(operations, func(op string) bool {
+		return op == operation
+	})
 }
