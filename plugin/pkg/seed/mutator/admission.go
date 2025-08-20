@@ -11,6 +11,7 @@ import (
 	"io"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -22,7 +23,6 @@ import (
 	seedmanagementv1alpha1listers "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Register registers a plugin.
