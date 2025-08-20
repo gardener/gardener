@@ -62,6 +62,9 @@ func SetDefaultGardenClusterAddress(log logr.Logger, gardenletConfigRaw runtime.
 	return *newGardenletConfigRaw, nil
 }
 
+// ResourcePrefixAutonomousShoot is the prefix for resources related to Gardenlet created for autonomous shoots.
+const ResourcePrefixAutonomousShoot = "autonomous-shoot-"
+
 // IsResponsibleForAutonomousShoot checks if the current process is responsible for managing autonomous shoots. This is
 // determined by checking if the environment variable "NAMESPACE" is set to the kube-system namespace.
 func IsResponsibleForAutonomousShoot() bool {
