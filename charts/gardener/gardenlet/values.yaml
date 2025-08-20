@@ -101,7 +101,7 @@ config:
       syncPeriod: 30s
       staleExtensionHealthChecks:
         enabled: true
-      # threshold: 5m
+        threshold: 5m
       managedResourceProgressingThreshold: 1h
       conditionThresholds:
       - type: APIServerAvailable
@@ -221,3 +221,5 @@ nodeToleration:
 #    helm:
 #      ociRepository:
 #        ref: <url-to-oci-repository-containing-gardenlet-helm-chart>
+#  name: name-of-autonomous-shoot
+#  namespace: namespace-of-autonomous-shoot
