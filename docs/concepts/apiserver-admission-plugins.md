@@ -22,7 +22,11 @@ When the backup bucket is using `WorkloadIdentity` as backup credentials, the pl
 **Type**: Mutating. **Enabled by default**: Yes.
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `Bastion`s.
-It validates that the `Shoot` referenced in the `Bastion` is not in deletion, is assigned to `Seed` and does not disable SSH access for the worker Nodes.
+
+It validates that the `Shoot` referenced in the `Bastion`:
+- is not in deletion.
+- is assigned to a `Seed`.
+- does not disable SSH access for the worker Nodes.
 
 It mutates the `Bastion` in the following way:
 - it sets`.spec.seedName` to the `Shoot` `.spec.seedName`.
