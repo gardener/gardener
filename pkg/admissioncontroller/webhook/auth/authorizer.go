@@ -87,9 +87,6 @@ func WithAllowedSubresources(resources ...string) configFunc {
 // WithFieldSelectors is a config function for setting the field selector field key and value pairs. In case multiple
 // pairs are provided, they are OR-ed, i.e., it is enough for a request to be authorized if one of the selectors
 // matches.
-// TODO(rfranzke): Remove this 'nolint' annotation once the function is used.
-//
-//nolint:unused
 func WithFieldSelectors(keysAndValues ...string) configFunc {
 	return func(req *authzRequest) {
 		if len(keysAndValues)%2 != 0 {

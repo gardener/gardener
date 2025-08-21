@@ -6,6 +6,7 @@ package graph
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -21,6 +22,7 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
@@ -61,6 +63,29 @@ func (g *graph) handleGardenletCreateOrUpdate(ctx context.Context, gardenlet *se
 	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
+
+	if g.forAutonomousShoots {
+		g.handleGardenletCreateOrUpdateForShoots(gardenlet)
+	} else {
+		g.handleGardenletCreateOrUpdateForSeeds(ctx, gardenlet)
+	}
+}
+
+func (g *graph) handleGardenletDelete(name, namespace string) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("Gardenlet", "Delete").Observe(time.Since(start).Seconds())
+	}()
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	g.deleteVertex(VertexTypeGardenlet, namespace, name)
+}
+
+func (g *graph) handleGardenletCreateOrUpdateForSeeds(ctx context.Context, gardenlet *seedmanagementv1alpha1.Gardenlet) {
+	if strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixAutonomousShoot) {
+		return
+	}
 
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeGardenlet, gardenlet.Namespace, gardenlet.Name)
 	g.deleteAllIncomingEdges(VertexTypeWorkloadIdentity, VertexTypeGardenlet, gardenlet.Namespace, gardenlet.Name)
@@ -115,13 +140,21 @@ func (g *graph) handleGardenletCreateOrUpdate(ctx context.Context, gardenlet *se
 	}
 }
 
-func (g *graph) handleGardenletDelete(name, namespace string) {
-	start := time.Now()
-	defer func() {
-		metricUpdateDuration.WithLabelValues("Gardenlet", "Delete").Observe(time.Since(start).Seconds())
-	}()
-	g.lock.Lock()
-	defer g.lock.Unlock()
+func (g *graph) handleGardenletCreateOrUpdateForShoots(gardenlet *seedmanagementv1alpha1.Gardenlet) {
+	if !strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixAutonomousShoot) {
+		return
+	}
 
-	g.deleteVertex(VertexTypeGardenlet, namespace, name)
+	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeGardenlet, gardenlet.Namespace, gardenlet.Name)
+	g.deleteAllOutgoingEdges(VertexTypeGardenlet, gardenlet.Namespace, gardenlet.Name, VertexTypeShoot)
+
+	var (
+		gardenletVertex = g.getOrCreateVertex(VertexTypeGardenlet, gardenlet.Namespace, gardenlet.Name)
+		shootVertex     = g.getOrCreateVertex(VertexTypeShoot, gardenlet.Namespace, strings.TrimPrefix(gardenlet.Name, gardenletutils.ResourcePrefixAutonomousShoot))
+	)
+
+	g.addEdge(gardenletVertex, shootVertex)
+
+	// TODO(rfranzke): Check if we need to support the 'allowBootstrap' logic for autonomous shoots as well (see
+	//  handling for seeds).
 }

@@ -16,6 +16,7 @@ build:
             - imagevector/containers.yaml
             - pkg/admissioncontroller/gardenletidentity
             - pkg/admissioncontroller/gardenletidentity/seed
+            - pkg/admissioncontroller/gardenletidentity/shoot
             - pkg/admissioncontroller/metrics
             - pkg/api
             - pkg/api/extensions
