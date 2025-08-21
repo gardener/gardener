@@ -22,11 +22,11 @@
     {
       // Generic detection for pod-like image specifications.
       customType: 'regex',
-      fileMatch: [
-        '^example/.+\\.yaml$',
-        '^hack/.+\\.yaml$',
-        '^\\.test-defs/.+\\.yaml$',
-        '^charts/.+\\.yaml$',
+      managerFilePatterns: [
+        '/^example/.+\\.yaml$/',
+        '/^hack/.+\\.yaml$/',
+        '/^\\.test-defs/.+\\.yaml$/',
+        '/^charts/.+\\.yaml$/',
       ],
       matchStrings: [
         'image: ["|\']?(?<depName>.*?):(?<currentValue>.*?)["|\']?\\s',
@@ -36,8 +36,8 @@
     {
       // Generic detection for install manifests from GitHub releases.
       customType: 'regex',
-      fileMatch: [
-        '/kustomization\\.yaml$',
+      managerFilePatterns: [
+        '//kustomization\\.yaml$/',
       ],
       matchStrings: [
         'https://github\\.com/(?<depName>[^/]*/[^/]*?)/releases/download/(?<currentValue>.*?)/',
@@ -48,8 +48,8 @@
     {
       // Generic detection for cli argument image specifications.
       customType: 'regex',
-      fileMatch: [
-        '^hack/.+\\.sh$',
+      managerFilePatterns: [
+        '/^hack/.+\\.sh$/',
       ],
       matchStrings: [
         '--image[=| ]["|\']?(?<depName>.*?):(?<currentValue>.*?)["|\']?\\s',
@@ -59,8 +59,8 @@
     {
       // Detection for images with prow like tags (e.g. v20240213-749005b2).
       customType: 'regex',
-      fileMatch: [
-        '^pkg/provider-local/imagevector/images.yaml$',
+      managerFilePatterns: [
+        '/^pkg/provider-local/imagevector/images.yaml$/',
       ],
       matchStrings: [
         '(?<depName>gcr\\.io/k8s-staging-kind/.*?):(?<currentValue>.*?)\\s',
@@ -72,21 +72,37 @@
   packageRules: [
     {
       // automerge patch updates
-      matchUpdateTypes: ['patch'],
+      matchUpdateTypes: [
+        'patch',
+      ],
       automerge: true,
     },
     {
       // automerge k8s.io/utils updates
-      matchDatasources: ['go'],
-      matchPackageNames: ['k8s.io/utils'],
-      matchUpdateTypes: ['digest'],
+      matchDatasources: [
+        'go',
+      ],
+      matchPackageNames: [
+        'k8s.io/utils',
+      ],
+      matchUpdateTypes: [
+        'digest',
+      ],
       automerge: true,
     },
     {
       // automerge non-major golang.org/x updates
-      matchDatasources: ['go'],
-      matchPackageNames: ['golang.org/x/*'],
-      matchUpdateTypes: ['minor', 'patch', 'digest'],
+      matchDatasources: [
+        'go',
+      ],
+      matchPackageNames: [
+        'golang.org/x/*',
+      ],
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+        'digest',
+      ],
       automerge: true,
     },
     {
@@ -104,9 +120,9 @@
       matchPackageNames: [
         '/.+/api/.+/',
         '/.+/apis/.+/',
-        '/.*gardener\/etcd-druid$/',
-        '/.*gardener\/machine-controller-manager$/',
-        '/.*gardener\/terminal-controller-manager$/',
+        '/.*gardener/etcd-druid$/',
+        '/.*gardener/machine-controller-manager$/',
+        '/.*gardener/terminal-controller-manager$/',
       ],
     },
     {
@@ -116,7 +132,7 @@
       description: 'Group Istio updates in one PR.',
       matchDatasources: [
         'docker',
-        'go'
+        'go',
       ],
       matchPackageNames: [
         '/gcr\\.io/istio-release/.+/',
@@ -179,7 +195,7 @@
         'github-releases',
       ],
       matchPackageNames: [
-        '/.+gardener-discovery-server$/'
+        '/.+gardener-discovery-server$/',
       ],
     },
     {
@@ -190,7 +206,7 @@
         'go',
       ],
       matchPackageNames: [
-        '/.*gardener\/machine-controller-manager$/'
+        '/.*gardener/machine-controller-manager$/',
       ],
     },
     {
@@ -201,7 +217,7 @@
         'go',
       ],
       matchPackageNames: [
-        '/.*gardener\/terminal-controller-manager$/'
+        '/.*gardener/terminal-controller-manager$/',
       ],
     },
     {
@@ -225,7 +241,7 @@
         'github-releases',
       ],
       matchPackageNames: [
-        '/.*?gardener\/dependency-watchdog$/',
+        '/.*?gardener/dependency-watchdog$/',
       ],
     },
     {
@@ -302,9 +318,9 @@
       // - https://github.com/gardener/gardener/pull/11273
       // - https://github.com/gardener/autoscaler/blob/edd7d34dfba73f68e6f4d2516bb3212e92732040/cluster-autoscaler/go.mod#L43
       matchPackageNames: [
-        'gopkg.in/yaml.v2'
+        'gopkg.in/yaml.v2',
       ],
-      allowedVersions: "/^v2\\..+/",
+      allowedVersions: '/^v2\\..+/',
     },
     {
       // Only patch level updates for golang-test image. Minor and major versions are updated manually.
