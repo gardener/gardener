@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -103,6 +104,18 @@ func (m *MockInterface) SetIPFamilies(arg0 []v1beta1.IPFamily) {
 func (mr *MockInterfaceMockRecorder) SetIPFamilies(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIPFamilies", reflect.TypeOf((*MockInterface)(nil).SetIPFamilies), arg0)
+}
+
+// SetShootClientSet mocks base method.
+func (m *MockInterface) SetShootClientSet(arg0 kubernetes.Interface) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetShootClientSet", arg0)
+}
+
+// SetShootClientSet indicates an expected call of SetShootClientSet.
+func (mr *MockInterfaceMockRecorder) SetShootClientSet(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetShootClientSet", reflect.TypeOf((*MockInterface)(nil).SetShootClientSet), arg0)
 }
 
 // Wait mocks base method.

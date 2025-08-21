@@ -1545,4 +1545,26 @@ var _ = Describe("Helper", func() {
 			Expect(GetBackupConfigForShoot(shoot, seed)).To(Equal(shootBackup))
 		})
 	})
+
+	DescribeTable("#IsKubeProxyIPVSMode",
+		func(kubeProxyConfig *gardencorev1beta1.KubeProxyConfig, expected bool) {
+			Expect(IsKubeProxyIPVSMode(kubeProxyConfig)).To(Equal(expected))
+		},
+		Entry("with KubeProxy in IPVS mode", nil, false),
+		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{}, false),
+		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(false), Mode: ptr.To(gardencorev1beta1.ProxyModeIPVS)}, false),
+		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(gardencorev1beta1.ProxyModeIPVS)}, true),
+		Entry("with KubeProxy in IPTables mode", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(gardencorev1beta1.ProxyModeIPTables)}, false),
+	)
+
+	DescribeTable("#IsOneWorkerPoolLowerKubernetes134",
+		func(controlplaneVersion *semver.Version, workers []gardencorev1beta1.Worker, expected bool) {
+			Expect(IsOneWorkerPoolLowerKubernetes134(controlplaneVersion, workers)).To(Equal(expected))
+		},
+		Entry("with control plane version lower than 1.34", semver.MustParse("1.31.0"), []gardencorev1beta1.Worker{{}}, true),
+		Entry("with control plane version 1.34", semver.MustParse("1.34.0"), []gardencorev1beta1.Worker{{}}, false),
+		Entry("with control plane version 1.33 and one worker pool with lower version", semver.MustParse("1.33.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("1.31.0")}}}, true),
+		Entry("with control plane version 1.34 and one worker pool with lower version", semver.MustParse("1.34.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("1.31.0")}}}, true),
+		Entry("with control plane version 1.34 and one worker pool with lower version", semver.MustParse("1.34.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("1.34.0")}}}, false),
+	)
 })

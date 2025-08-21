@@ -185,7 +185,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					caBundle = fmt.Sprintf("%s\n%s", caBundle, *worker.CABundle)
 				}
 
-				key := KeyV2(k8sVersion, values.CredentialsRotationStatus, &worker, values.NodeLocalDNSEnabled, kubeletConfig)
+				key := KeyV2(k8sVersion, values.CredentialsRotationStatus, &worker, values.NodeLocalDNSEnabled, kubeletConfig, nil)
 				if inPlaceUpdate {
 					key = fmt.Sprintf("gardener-node-agent-%s", worker.Name)
 				}
@@ -523,6 +523,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				_ *Values,
 				worker *gardencorev1beta1.Worker,
 				_ *gardencorev1beta1.KubeletConfig,
+				_ *gardencorev1beta1.KubeProxyConfig,
 			) (
 				string,
 				error,
@@ -605,6 +606,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				_ *Values,
 				worker *gardencorev1beta1.Worker,
 				_ *gardencorev1beta1.KubeletConfig,
+				_ *gardencorev1beta1.KubeProxyConfig,
 			) (string, error) {
 				switch oscVersion {
 				case 1:
@@ -873,7 +875,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
 						k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
 					}
-					key := KeyV2(k8sVersion, values.CredentialsRotationStatus, &worker, values.NodeLocalDNSEnabled, kubeletConfig)
+					key := KeyV2(k8sVersion, values.CredentialsRotationStatus, &worker, values.NodeLocalDNSEnabled, kubeletConfig, nil)
 
 					extensions = append(extensions,
 						gardencorev1beta1.ExtensionResourceState{
@@ -1436,14 +1438,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 							Version: ptr.To("12.34"),
 						},
 					},
-				}, nil)
+				}, nil, nil)
 			Expect(err).To(Succeed())
 			Expect(key).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
 		})
 
 		It("should return an error for unknown versions", func() {
 			for _, version := range []int{0, 3} {
-				_, err := CalculateKeyForVersion(version, semver.MustParse(kubernetesVersion), nil, nil, nil)
+				_, err := CalculateKeyForVersion(version, semver.MustParse(kubernetesVersion), nil, nil, nil, nil)
 				Expect(err).NotTo(Succeed())
 			}
 		})
@@ -1506,14 +1508,23 @@ var _ = Describe("OperatingSystemConfig", func() {
 				CPUManagerPolicy: nil,
 			}
 
+			kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{
+				Mode:    ptr.To(gardencorev1beta1.ProxyModeIPTables),
+				Enabled: ptr.To(false),
+			}
+
 			var err error
-			hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+			hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		Context("hash value should not change", func() {
 			AfterEach(func() {
-				actual, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{
+					Mode:    ptr.To(gardencorev1beta1.ProxyModeIPTables),
+					Enabled: ptr.To(false),
+				}
+				actual, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(hash))
 			})
@@ -1652,7 +1663,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		Context("hash value should change", func() {
 			AfterEach(func() {
-				actual, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				actual, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).NotTo(Equal(hash))
 			})
@@ -1699,7 +1710,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				var err error
 				credentialStatusWithInitiatedRotation := values.CredentialsRotationStatus.CertificateAuthorities.DeepCopy()
 				values.CredentialsRotationStatus.CertificateAuthorities = nil
-				hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				values.CredentialsRotationStatus.CertificateAuthorities = credentialStatusWithInitiatedRotation
@@ -1714,7 +1725,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				var err error
 				credentialStatusWithInitiatedRotation := values.CredentialsRotationStatus.ServiceAccountKey.DeepCopy()
 				values.CredentialsRotationStatus.ServiceAccountKey = nil
-				hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				values.CredentialsRotationStatus.ServiceAccountKey = credentialStatusWithInitiatedRotation
@@ -1786,6 +1797,46 @@ var _ = Describe("OperatingSystemConfig", func() {
 				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
 					EphemeralStorage: ptr.To(resource.MustParse("100Gi")),
 				}
+			})
+
+			It("when node-local-dns gets enabled and kubernetes version is equal or larger than 1.34", func() {
+				values.NodeLocalDNSEnabled = false
+				var err error
+				kubernetesVersion = semver.MustParse("1.34")
+				hash1, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
+				Expect(err).ToNot(HaveOccurred())
+				values.NodeLocalDNSEnabled = true
+				hash2, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(hash1).To(Equal(hash2))
+			})
+
+			It("when node-local-dns gets disabled and kube-proxy runs in ipvs mode", func() {
+				values.NodeLocalDNSEnabled = true
+				var err error
+				kubernetesVersion = semver.MustParse("1.34")
+				kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{
+					Mode:    ptr.To(gardencorev1beta1.ProxyModeIPVS),
+					Enabled: ptr.To(true),
+				}
+				hash1, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)
+				Expect(err).ToNot(HaveOccurred())
+				values.NodeLocalDNSEnabled = false
+				hash2, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(hash1).ToNot(Equal(hash2))
+			})
+
+			It("when node-local-dns gets enabled and kubernetes version is lower than 1.34", func() {
+				values.NodeLocalDNSEnabled = false
+				var err error
+				kubernetesVersion = semver.MustParse("1.31")
+				hash1, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
+				Expect(err).ToNot(HaveOccurred())
+				values.NodeLocalDNSEnabled = true
+				hash2, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(hash1).ToNot(Equal(hash2))
 			})
 		})
 	})

@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -28,12 +27,14 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -43,11 +44,11 @@ import (
 
 var _ = Describe("NodeLocalDNS", func() {
 	var (
-		ctx = context.Background()
-
+		ctx                 = context.Background()
 		managedResourceName = "shoot-core-node-local-dns"
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
+		alpineImage         = "some-alpine-image:some-tag"
 
 		c         client.Client
 		values    Values
@@ -57,6 +58,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		expectedManifests     []string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+		cluster               *extensionsv1alpha1.Cluster
 
 		ipvsAddress           = "169.254.20.10"
 		labelKey              = "k8s-app"
@@ -88,7 +90,7 @@ var _ = Describe("NodeLocalDNS", func() {
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 					APIServer:  ptr.To("https://kube-apiserver"),
 					Role:       "Pod",
-					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 						Key:                  "token",
@@ -163,7 +165,7 @@ var _ = Describe("NodeLocalDNS", func() {
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 					APIServer:  ptr.To("https://kube-apiserver"),
 					Role:       "Pod",
-					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 						Key:                  "token",
@@ -223,11 +225,17 @@ var _ = Describe("NodeLocalDNS", func() {
 	)
 
 	BeforeEach(func() {
+		expectedManifests = nil
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			Image:             image,
-			KubernetesVersion: semver.MustParse("1.31.1"),
-			IPFamilies:        []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+			Image:       image,
+			AlpineImage: alpineImage,
+			IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+			Workers: []gardencorev1beta1.Worker{
+				{
+					Name: "worker-aaaa",
+				},
+			},
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -240,6 +248,46 @@ var _ = Describe("NodeLocalDNS", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-" + managedResource.Name,
 				Namespace: namespace,
+			},
+		}
+		shoot := &gardencorev1beta1.Shoot{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "core.gardener.cloud/v1beta1",
+				Kind:       "Shoot",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "bar",
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{
+						{
+							Name: "worker-aaaa",
+						},
+					},
+				},
+			},
+		}
+		shootYAML, err := kubernetesutils.Serialize(shoot, kubernetes.GardenScheme)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(shootYAML).ToNot(BeEmpty())
+
+		cluster = &extensionsv1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespace,
+			},
+			Spec: extensionsv1alpha1.ClusterSpec{
+				Shoot: runtime.RawExtension{
+					Raw:    []byte(shootYAML),
+					Object: shoot,
+				},
+				Seed: runtime.RawExtension{
+					Object: &gardencorev1beta1.Seed{},
+				},
+				CloudProfile: runtime.RawExtension{
+					Object: &gardencorev1beta1.CloudProfile{},
+				},
 			},
 		}
 	})
@@ -353,7 +401,7 @@ status:
 						Kind:       "DaemonSet",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "node-local-dns",
+						Name:      "node-local-dns-worker-aaaa",
 						Namespace: metav1.NamespaceSystem,
 						Labels: map[string]string{
 							labelKey:                                    labelValue,
@@ -403,6 +451,7 @@ status:
 								},
 								NodeSelector: map[string]string{
 									v1beta1constants.LabelNodeLocalDNS: "true",
+									"worker.gardener.cloud/pool":       "worker-aaaa",
 								},
 								SecurityContext: &corev1.PodSecurityContext{
 									SeccompProfile: &corev1.SeccompProfile{
@@ -536,7 +585,7 @@ status:
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
-  name: node-local-dns
+  name: node-local-dns-worker-aaaa
   namespace: kube-system
 spec:
   resourcePolicy:
@@ -546,7 +595,7 @@ spec:
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet
-    name: node-local-dns
+    name: node-local-dns-worker-aaaa
   updatePolicy:
     updateMode: Auto
 status: {}
@@ -555,9 +604,10 @@ status: {}
 
 		JustBeforeEach(func() {
 			component = New(c, namespace, values)
+			Expect(c.Create(ctx, cluster)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-			Expect(component.Deploy(ctx)).To(Succeed())
 
+			Expect(component.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1171,14 +1221,15 @@ ip6.arpa:53 {
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
+			values.ShootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 			scrapeConfig.ResourceVersion = ""
 			scrapeConfigErrors.ResourceVersion = ""
-
 			component = New(c, namespace, values)
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 			Expect(c.Create(ctx, scrapeConfig)).To(Succeed())
 			Expect(c.Create(ctx, scrapeConfigErrors)).To(Succeed())
+			Expect(c.Create(ctx, cluster)).To(Succeed())
 
 			Expect(component.Destroy(ctx)).To(Succeed())
 

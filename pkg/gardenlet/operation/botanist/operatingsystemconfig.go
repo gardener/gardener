@@ -77,6 +77,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				NodeLocalDNSEnabled:    v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents),
 				NodeMonitorGracePeriod: *b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod,
 				PrimaryIPFamily:        b.Shoot.GetInfo().Spec.Networking.IPFamilies[0],
+				KubeProxyConfig:        b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
 			},
 		},
 		operatingsystemconfig.DefaultInterval,

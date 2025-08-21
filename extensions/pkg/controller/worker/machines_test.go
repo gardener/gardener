@@ -559,6 +559,58 @@ var _ = Describe("Machines", func() {
 
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
 			})
+
+			It("when node-local-dns gets enabled and kubernetes version is equal or larger than 1.34", func() {
+				c.Shoot.Spec.Kubernetes.Version = "1.34.0"
+				p.KubernetesVersion = ptr.To("1.34.0")
+				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false},
+				}
+				hash1, err := WorkerPoolHashV1(p, c)
+				Expect(err).NotTo(HaveOccurred())
+				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true},
+				}
+				hash2, err := WorkerPoolHashV1(p, c)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash1).To(Equal(hash2))
+			})
+
+			It("when node-local-dns gets disabled and kube-proxy runs in ipvs mode", func() {
+				c.Shoot.Spec.Kubernetes.Version = "1.34.0"
+				p.KubernetesVersion = ptr.To("1.34.0")
+				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true},
+				}
+				c.Shoot.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
+					Mode:    ptr.To(gardencorev1beta1.ProxyModeIPVS),
+					Enabled: ptr.To(true),
+				}
+				hash1, err := WorkerPoolHashV1(p, c)
+				Expect(err).NotTo(HaveOccurred())
+				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false},
+				}
+				hash2, err := WorkerPoolHashV1(p, c)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash1).ToNot(Equal(hash2))
+			})
+
+			It("when node-local-dns gets enabled and kubernetes version is lower than 1.34", func() {
+				c.Shoot.Spec.Kubernetes.Version = "1.31.0"
+				p.KubernetesVersion = ptr.To("1.31.0")
+				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false},
+				}
+				hash1, err := WorkerPoolHashV1(p, c)
+				Expect(err).NotTo(HaveOccurred())
+				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true},
+				}
+				hash2, err := WorkerPoolHashV1(p, c)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(hash1).NotTo(Equal(hash2))
+			})
 		})
 	})
 
