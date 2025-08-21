@@ -62,13 +62,16 @@ func ValidateProjectUpdate(newProject, oldProject *core.Project) field.ErrorList
 func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	reservedNamespaceNames := []string{core.GardenerSeedLeaseNamespace, core.GardenerShootIssuerNamespace, core.GardenerSystemPublicNamespace}
-	if projectSpec.Namespace != nil && slices.Contains(reservedNamespaceNames, *projectSpec.Namespace) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), projectSpec.Namespace, fmt.Sprintf("Project namespaces %q are reserved by Gardener", reservedNamespaceNames)))
-	}
+	if projectSpec.Namespace != nil {
+		reservedNamespaceNames := []string{v1beta1constants.GardenNamespace, core.GardenerSeedLeaseNamespace, core.GardenerShootIssuerNamespace, core.GardenerSystemPublicNamespace}
+		if slices.Contains(reservedNamespaceNames, *projectSpec.Namespace) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), *projectSpec.Namespace, fmt.Sprintf("Project namespaces [%s] are reserved by Gardener", strings.Join(reservedNamespaceNames, ", "))))
+			return allErrs
+		}
 
-	if projectSpec.Namespace != nil && *projectSpec.Namespace != v1beta1constants.GardenNamespace && !strings.HasPrefix(*projectSpec.Namespace, gardenerutils.ProjectNamespacePrefix) {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("namespace"), fmt.Sprintf("must start with %s", gardenerutils.ProjectNamespacePrefix)))
+		if !strings.HasPrefix(*projectSpec.Namespace, gardenerutils.ProjectNamespacePrefix) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), *projectSpec.Namespace, fmt.Sprintf("must start with %s", gardenerutils.ProjectNamespacePrefix)))
+		}
 	}
 
 	ownerFound := false
