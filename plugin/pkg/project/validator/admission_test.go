@@ -70,12 +70,6 @@ var _ = Describe("Admission", func() {
 				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
-			It("should prevent creating the project because namespace prefix is missing", func() {
-				project.Spec.Namespace = ptr.To("foo")
-
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(".spec.namespace must start with garden-")))
-			})
-
 			It("should maintain createdBy and project owner", func() {
 				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 

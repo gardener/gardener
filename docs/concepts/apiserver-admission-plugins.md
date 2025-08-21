@@ -95,9 +95,8 @@ In case of `Shoot`s, the `gardener` finalizer can only be removed if the last op
 _(enabled by default)_
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `Project`s.
-It prevents creating `Project`s with a non-empty `.spec.namespace` if the value in `.spec.namespace` does not start with `garden-`.
 
-In addition, the project specification is initialized during creation:
+When the project specification is initialized during creation:
 - `.spec.createdBy` is set to the user creating the project.
 - `.spec.owner` defaults to the value of `.spec.createdBy` if it is not specified.
 

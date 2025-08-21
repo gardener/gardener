@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/api/validation/path"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -64,6 +66,11 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 	if projectSpec.Namespace != nil && slices.Contains(reservedNamespaceNames, *projectSpec.Namespace) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), projectSpec.Namespace, fmt.Sprintf("Project namespaces %q are reserved by Gardener", reservedNamespaceNames)))
 	}
+
+	if projectSpec.Namespace != nil && *projectSpec.Namespace != v1beta1constants.GardenNamespace && !strings.HasPrefix(*projectSpec.Namespace, gardenerutils.ProjectNamespacePrefix) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("namespace"), fmt.Sprintf("must start with %s", gardenerutils.ProjectNamespacePrefix)))
+	}
+
 	ownerFound := false
 
 	members := make(sets.Set[string], len(projectSpec.Members))

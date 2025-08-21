@@ -139,6 +139,17 @@ var _ = Describe("Project Validation Tests", func() {
 			),
 		)
 
+		It("should forbid Project specification with a non `garden-` prefixed namespace", func() {
+			project.Spec.Namespace = ptr.To("kube-system")
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.namespace"),
+			}))))
+		})
+
 		It("should forbid Project specification with empty or invalid key for description", func() {
 			project.Spec.Description = ptr.To("")
 

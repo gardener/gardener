@@ -6,18 +6,14 @@ package validator
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"slices"
-	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apiserver/pkg/admission"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 )
@@ -57,11 +53,6 @@ func (v *handler) Admit(_ context.Context, a admission.Attributes, _ admission.O
 	project, ok := a.GetObject().(*gardencore.Project)
 	if !ok {
 		return apierrors.NewBadRequest("could not convert object to Project")
-	}
-
-	// TODO: Remove this check in favor of static validation in a future release, see https://github.com/gardener/gardener/pull/4228.
-	if project.Spec.Namespace != nil && *project.Spec.Namespace != v1beta1constants.GardenNamespace && !strings.HasPrefix(*project.Spec.Namespace, gardenerutils.ProjectNamespacePrefix) {
-		return admission.NewForbidden(a, fmt.Errorf(".spec.namespace must start with %s", gardenerutils.ProjectNamespacePrefix))
 	}
 
 	if utils.SkipVerification(a.GetOperation(), project.ObjectMeta) {
