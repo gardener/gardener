@@ -178,11 +178,8 @@ var _ = Describe("OpenID Connect Preset", func() {
 			)
 
 			BeforeEach(func() {
-				shootNameLess132 := "shoot1"
-				shootLess132 = shoot.DeepCopy()
-				shootLess132.Name = shootNameLess132
-				shootLess132.Spec.Kubernetes.Version = "1.31.0"
-				expected = shootLess132.DeepCopy()
+				shoot.Spec.Kubernetes.Version = "1.31.0"
+				expected = shoot.DeepCopy()
 				expected.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					OIDCConfig: &core.OIDCConfig{
 						CABundle:     ptr.To("cert"),
