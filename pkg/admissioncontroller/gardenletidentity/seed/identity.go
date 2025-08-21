@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seedidentity
+package seed
 
 import (
 	"crypto/x509"

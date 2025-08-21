@@ -452,8 +452,8 @@ build:
             - pkg/admissioncontroller/apis/config/v1alpha1
             - pkg/admissioncontroller/apis/config/v1alpha1/helper
             - pkg/admissioncontroller/apis/config/v1alpha1/validation
+            - pkg/admissioncontroller/gardenletidentity/seed
             - pkg/admissioncontroller/metrics
-            - pkg/admissioncontroller/seedidentity
             - pkg/admissioncontroller/webhook
             - pkg/admissioncontroller/webhook/admission
             - pkg/admissioncontroller/webhook/admission/auditpolicy

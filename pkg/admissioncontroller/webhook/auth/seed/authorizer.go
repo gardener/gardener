@@ -24,7 +24,7 @@ import (
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 
-	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
+	seedidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/seed"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
