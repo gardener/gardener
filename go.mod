@@ -9,7 +9,7 @@ require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/bramvdbogaerde/go-scp v1.5.0
 	github.com/containerd/containerd v1.7.28
-	github.com/coreos/go-systemd/v22 v22.5.0
+	github.com/coreos/go-systemd/v22 v22.6.0
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/docker/cli v28.3.3+incompatible
 	github.com/fluent/fluent-operator/v3 v3.3.0
