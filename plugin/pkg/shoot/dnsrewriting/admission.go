@@ -49,7 +49,7 @@ func New(commonSuffixes []string) admission.MutationInterface {
 	}
 }
 
-var _ admission.MutationInterface = &DNSRewriting{}
+var _ admission.MutationInterface = (*DNSRewriting)(nil)
 
 // Admit defaults spec.systemComponents.coreDNS.rewriting.commonSuffixes to the configured values for new shoot clusters.
 func (c *DNSRewriting) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

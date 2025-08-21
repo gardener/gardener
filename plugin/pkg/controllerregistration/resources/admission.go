@@ -67,7 +67,7 @@ func (r *Resources) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.ValidationInterface = &Resources{}
+var _ admission.ValidationInterface = (*Resources)(nil)
 
 // Validate makes admissions decisions based on the resources specified in a ControllerRegistration object.
 // It does reject the request if there is any other existing ControllerRegistration object in the system that

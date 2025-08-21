@@ -36,7 +36,7 @@ func New() admission.MutationInterface {
 	}
 }
 
-var _ admission.MutationInterface = &ShootVPA{}
+var _ admission.MutationInterface = (*ShootVPA)(nil)
 
 // Admit defaults spec.kubernetes.verticalPodAutoscaler.enabled=true for new shoot clusters.
 func (c *ShootVPA) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

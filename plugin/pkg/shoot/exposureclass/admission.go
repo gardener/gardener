@@ -93,7 +93,7 @@ func (e *ExposureClass) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = &ExposureClass{}
+var _ admission.MutationInterface = (*ExposureClass)(nil)
 
 // Admit unite the seed selector and/or tolerations of a Shoot resource
 // with the ones from the referenced ExposureClass.

@@ -75,7 +75,7 @@ func (o *OpenIDConnectPreset) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = &OpenIDConnectPreset{}
+var _ admission.MutationInterface = (*OpenIDConnectPreset)(nil)
 
 // Admit tries to determine a OpenIDConnectPreset hosted zone for the Shoot's external domain.
 func (o *OpenIDConnectPreset) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

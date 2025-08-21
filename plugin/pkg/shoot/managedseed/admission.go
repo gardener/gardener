@@ -84,7 +84,7 @@ func (v *ManagedSeed) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.ValidationInterface = &ManagedSeed{}
+var _ admission.ValidationInterface = (*ManagedSeed)(nil)
 
 // Validate validates changes to the Shoot referenced by a ManagedSeed.
 func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

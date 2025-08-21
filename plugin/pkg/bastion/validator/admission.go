@@ -73,7 +73,7 @@ func (v *Bastion) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = &Bastion{}
+var _ admission.MutationInterface = (*Bastion)(nil)
 
 // Admit validates and if appropriate mutates the given bastion against the shoot that it references.
 func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

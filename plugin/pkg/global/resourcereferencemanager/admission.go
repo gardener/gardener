@@ -290,7 +290,7 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.ValidationInterface = &ReferenceManager{}
+var _ admission.ValidationInterface = (*ReferenceManager)(nil)
 
 // Validate ensures that referenced resources do actually exist.
 func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

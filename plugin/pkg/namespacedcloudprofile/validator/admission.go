@@ -79,7 +79,7 @@ func (v *ValidateNamespacedCloudProfile) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.ValidationInterface = &ValidateNamespacedCloudProfile{}
+var _ admission.ValidationInterface = (*ValidateNamespacedCloudProfile)(nil)
 
 // Validate validates the NamespacedCloudProfile.
 func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

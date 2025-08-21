@@ -93,7 +93,7 @@ func (c *ClusterOpenIDConnectPreset) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = &ClusterOpenIDConnectPreset{}
+var _ admission.MutationInterface = (*ClusterOpenIDConnectPreset)(nil)
 
 // Admit tries to determine a OpenIDConnectPreset hosted zone for the Shoot's external domain.
 func (c *ClusterOpenIDConnectPreset) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

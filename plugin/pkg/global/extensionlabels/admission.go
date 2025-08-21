@@ -118,7 +118,7 @@ func (e *ExtensionLabels) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = &ExtensionLabels{}
+var _ admission.MutationInterface = (*ExtensionLabels)(nil)
 
 // Admit adds extension labels to resources.
 func (e *ExtensionLabels) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

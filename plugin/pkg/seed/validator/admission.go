@@ -95,7 +95,7 @@ func (v *ValidateSeed) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.ValidationInterface = &ValidateSeed{}
+var _ admission.ValidationInterface = (*ValidateSeed)(nil)
 
 // Validate validates the Seed details against existing Shoots
 func (v *ValidateSeed) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
