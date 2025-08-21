@@ -48,7 +48,7 @@ var _ = Describe("mutator", func() {
 		)
 
 		BeforeEach(func() {
-			seed = &core.Seed{ObjectMeta: metav1.ObjectMeta{Name: "the-seed"}, Spec: core.SeedSpec{Provider: core.SeedProvider{Type: "the-provider", Region: "the-region"}}}
+			seed = &core.Seed{ObjectMeta: metav1.ObjectMeta{Name: "the-seed"}}
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{Name: "the-shoot", Namespace: "garden"},
 				Spec:       gardencorev1beta1.ShootSpec{SeedName: ptr.To("parent-seed")},
