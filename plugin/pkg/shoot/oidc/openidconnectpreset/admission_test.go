@@ -173,8 +173,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 		Context("should mutate the result for shoot kubernetes < 1.32", func() {
 			var (
-				expected     *core.Shoot
-				shootLess132 *core.Shoot // shoot version <1.32
+				expected *core.Shoot
 			)
 
 			BeforeEach(func() {
@@ -205,18 +204,18 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 			AfterEach(func() {
 				Expect(settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
-				attrs := admission.NewAttributesRecord(shootLess132, nil, core.Kind("Shoot").WithVersion("v1beta1"), shootLess132.Namespace, shootLess132.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer).NotTo(BeNil())
-				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer.OIDCConfig).NotTo(BeNil())
-				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication).NotTo(BeNil())
-				Expect(shootLess132).To(Equal(expected))
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer).NotTo(BeNil())
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig).NotTo(BeNil())
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication).NotTo(BeNil())
+				Expect(shoot).To(Equal(expected))
 			})
 
 			It("oidc settings is not set", func() {
-				shootLess132.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
 			})
 
 			It("successfully", func() {

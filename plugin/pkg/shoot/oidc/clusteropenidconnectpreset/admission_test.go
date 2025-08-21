@@ -207,8 +207,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 		Context("should mutate the result for shoot kubernetes < 1.32", func() {
 			var (
-				expected     *core.Shoot
-				shootLess132 *core.Shoot // shoot version <1.32
+				expected *core.Shoot
 			)
 
 			BeforeEach(func() {
@@ -241,18 +240,18 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(shootLess132, nil, core.Kind("Shoot").WithVersion("v1beta1"), shootLess132.Namespace, shootLess132.Name, core.Resource("shoots").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer).NotTo(BeNil())
-				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer.OIDCConfig).NotTo(BeNil())
-				Expect(shootLess132.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication).NotTo(BeNil())
-				Expect(shootLess132).To(Equal(expected))
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer).NotTo(BeNil())
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig).NotTo(BeNil())
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication).NotTo(BeNil())
+				Expect(shoot).To(Equal(expected))
 			})
 
 			It("shoot's kube-apiserver-oidc settings is not set", func() {
-				shootLess132.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
 			})
 
 			It("successfully", func() {
