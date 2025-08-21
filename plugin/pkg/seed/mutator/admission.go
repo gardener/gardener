@@ -11,7 +11,6 @@ import (
 	"io"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -134,8 +133,5 @@ func (m *MutateSeed) Admit(_ context.Context, attrs admission.Attributes, _ admi
 	}
 
 	gardenerutils.MaintainSeedNameLabels(seed, seedNames...)
-	metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedProvider, seed.Spec.Provider.Type)
-	metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedRegion, seed.Spec.Provider.Region)
-
 	return nil
 }
