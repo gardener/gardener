@@ -14,8 +14,8 @@ build:
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
+            - pkg/admissioncontroller/gardenletidentity/seed
             - pkg/admissioncontroller/metrics
-            - pkg/admissioncontroller/seedidentity
             - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer

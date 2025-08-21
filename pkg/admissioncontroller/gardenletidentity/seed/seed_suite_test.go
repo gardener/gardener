@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seedidentity_test
+package seed_test
 
 import (
 	"testing"
@@ -13,5 +13,5 @@ import (
 
 func TestSeedIdentity(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController SeedIdentity Suite")
+	RunSpecs(t, "AdmissionController GardenletIdentity Seed Suite")
 }
