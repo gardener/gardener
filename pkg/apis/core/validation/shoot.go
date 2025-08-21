@@ -1619,6 +1619,8 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 
 	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, version, fldPath.Child("featureGates"))...)
 
+	allErrs = append(allErrs, validateAPIAudiences(kubeAPIServer.APIAudiences, fldPath.Child("apiAudiences"))...)
+
 	return allErrs
 }
 
@@ -1713,6 +1715,16 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 
 	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kcm.FeatureGates, version, fldPath.Child("featureGates"))...)
 
+	return allErrs
+}
+
+func validateAPIAudiences(audiences []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	for _, audience := range audiences {
+		if strings.Contains(audience, ",") {
+			allErrs = append(allErrs, field.Invalid(fldPath, audience, "audience must not contain commas"))
+		}
+	}
 	return allErrs
 }
 
