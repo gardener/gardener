@@ -31,6 +31,9 @@ var (
 	//   - Run hack/compare-k8s-admission-plugins.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-admission-plugins.sh 1.26 1.27').
 	//     It will present 2 lists of admission plugins: those added and those removed in <new-version> compared to <old-version> and
 	//   - Add all added admission plugins to the map with <new-version> as AddedInVersion and no RemovedInVersion.
+	//   - Set `AllowsConfiguration` to `true` when the new admission plugin allows configuration.
+	//     To determine whether the admission plugin allows configuration, check the plugin's `Register()` method, whether it uses configuration or not.
+	//     Be careful that functions that are called within the method can take the config as part of their signature, but ultimately do not use it.
 	//   - For any removed admission plugin, add <new-version> as RemovedInVersion to the already existing admission plugin in the map.
 	admissionPluginsVersionRanges = map[string]*AdmissionPluginVersionRange{
 		"AlwaysAdmit":                          {},
