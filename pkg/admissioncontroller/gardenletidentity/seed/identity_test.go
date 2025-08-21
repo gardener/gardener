@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seedidentity_test
+package seed_test
 
 import (
 	"crypto/x509"
@@ -13,7 +13,7 @@ import (
 	authenticationv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
-	. "github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/seed"
 )
 
 var _ = Describe("identity", func() {
