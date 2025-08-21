@@ -35,7 +35,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 		BeforeEach(func() {
 			namespace := "my-namespace"
-			shootName := "shoot0"
+			shootName := "shoot"
 			presetName := "preset-1"
 			projectName := "project-1"
 			shoot = &core.Shoot{
@@ -157,7 +157,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				expected = shoot.DeepCopy()
 			})
 
-			It("structured authentication settings already exist", func() {
+			It("structured authentication settings already exists", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					StructuredAuthentication: &core.StructuredAuthentication{
 						ConfigMapName: "test",
@@ -205,7 +205,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 		})
 
-		Context("should mutate the result for shoot kubernetes <= 1.32", func() {
+		Context("should mutate the result for shoot kubernetes < 1.32", func() {
 			var (
 				expected     *core.Shoot
 				shootLess132 *core.Shoot // shoot version <1.32

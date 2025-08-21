@@ -31,7 +31,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 		BeforeEach(func() {
 			namespace := "my-namespace"
-			shootName := "shoot0"
+			shootName := "shoot"
 			presetName := "preset-1"
 			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -171,7 +171,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 		})
 
-		Context("should mutate the result for shoot kubernetes <= 1.32", func() {
+		Context("should mutate the result for shoot kubernetes < 1.32", func() {
 			var (
 				expected     *core.Shoot
 				shootLess132 *core.Shoot // shoot version <1.32
