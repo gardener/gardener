@@ -271,14 +271,14 @@ var _ = Describe("validator", func() {
 	})
 
 	Describe("#ValidateInitialization", func() {
-		It("should return error if no ShootLister or SeedLister is set", func() {
+		It("should return error if no ShootLister is set", func() {
 			dr, _ := New()
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("missing seed lister"))
+			Expect(err).To(MatchError("missing shoot lister"))
 		})
 
 		It("should return error if no WorkloadIdentityLister is set", func() {
@@ -291,7 +291,7 @@ var _ = Describe("validator", func() {
 			Expect(err).To(MatchError("missing WorkloadIdentity lister"))
 		})
 
-		It("should not return error if ShootLister, SeedLister, and WorkloadIdentityLister are set", func() {
+		It("should not return error if ShootLister and WorkloadIdentityLister are set", func() {
 			dr, _ := New()
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))

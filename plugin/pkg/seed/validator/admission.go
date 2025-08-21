@@ -36,7 +36,6 @@ func Register(plugins *admission.Plugins) {
 type ValidateSeed struct {
 	*admission.Handler
 
-	seedLister             gardencorev1beta1listers.SeedLister
 	shootLister            gardencorev1beta1listers.ShootLister
 	workloadIdentityLister gardensecurityv1alpha1listers.WorkloadIdentityLister
 	readyFunc              admission.ReadyFunc
@@ -64,13 +63,10 @@ func (v *ValidateSeed) AssignReadyFunc(f admission.ReadyFunc) {
 
 // SetCoreInformerFactory gets Lister from SharedInformerFactory.
 func (v *ValidateSeed) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	seedInformer := f.Core().V1beta1().Seeds()
-	v.seedLister = seedInformer.Lister()
-
 	shootInformer := f.Core().V1beta1().Shoots()
 	v.shootLister = shootInformer.Lister()
 
-	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced)
 }
 
 // SetSecurityInformerFactory gets Lister from SharedInformerFactory.
@@ -83,9 +79,6 @@ func (v *ValidateSeed) SetSecurityInformerFactory(f gardensecurityinformers.Shar
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateSeed) ValidateInitialization() error {
-	if v.seedLister == nil {
-		return errors.New("missing seed lister")
-	}
 	if v.shootLister == nil {
 		return errors.New("missing shoot lister")
 	}
