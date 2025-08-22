@@ -18,7 +18,9 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ValidateProject validates a Project object.
@@ -60,10 +62,18 @@ func ValidateProjectUpdate(newProject, oldProject *core.Project) field.ErrorList
 func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	reservedNamespaceNames := []string{core.GardenerSeedLeaseNamespace, core.GardenerShootIssuerNamespace, core.GardenerSystemPublicNamespace}
-	if projectSpec.Namespace != nil && slices.Contains(reservedNamespaceNames, *projectSpec.Namespace) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), projectSpec.Namespace, fmt.Sprintf("Project namespaces %q are reserved by Gardener", reservedNamespaceNames)))
+	if projectSpec.Namespace != nil {
+		reservedNamespaceNames := []string{core.GardenerSeedLeaseNamespace, core.GardenerShootIssuerNamespace, core.GardenerSystemPublicNamespace}
+		if slices.Contains(reservedNamespaceNames, *projectSpec.Namespace) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), *projectSpec.Namespace, fmt.Sprintf("Project namespaces [%s] are reserved by Gardener", strings.Join(reservedNamespaceNames, ", "))))
+			return allErrs
+		}
+
+		if *projectSpec.Namespace != v1beta1constants.GardenNamespace && !strings.HasPrefix(*projectSpec.Namespace, gardenerutils.ProjectNamespacePrefix) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), *projectSpec.Namespace, fmt.Sprintf("must start with %s", gardenerutils.ProjectNamespacePrefix)))
+		}
 	}
+
 	ownerFound := false
 
 	members := make(sets.Set[string], len(projectSpec.Members))
