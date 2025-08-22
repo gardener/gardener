@@ -72,7 +72,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		machineDeployments  worker.MachineDeployments
 	)
 	// Convert the existing capability set to core.CapabilityDefinition for comparison.
-	capabilitiesDefinitions, err := gardencorehelper.GetCoreCapabilitiesDefinitions(w.cluster.CloudProfile.Spec.Capabilities)
+	capabilitiesDefinitions, err := gardencorehelper.ConvertCoreCapabilitiesDefinitions(w.cluster.CloudProfile.Spec.Capabilities)
 	if err != nil {
 		return err
 	}

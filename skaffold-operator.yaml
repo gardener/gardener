@@ -1277,6 +1277,7 @@ build:
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
+            - pkg/provider-local/admission
             - pkg/provider-local/admission/cmd
             - pkg/provider-local/admission/mutator
             - pkg/provider-local/admission/validator

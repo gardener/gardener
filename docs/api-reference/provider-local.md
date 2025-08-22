@@ -269,7 +269,7 @@ string
 </em>
 </td>
 <td>
-<p>CapabilitySets contains provider-specific image identifier of this version with its capabilities.</p>
+<p>CapabilitySets contains provider-specific image identifiers of this version with their capabilities.</p>
 </td>
 </tr>
 </tbody>

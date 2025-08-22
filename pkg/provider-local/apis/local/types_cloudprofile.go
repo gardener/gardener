@@ -36,7 +36,7 @@ type MachineImageVersion struct {
 	Version string
 	// Image is the image for the machine image.
 	Image string
-	// CapabilitySets contains provider-specific image identifier of this version with its capabilities.
+	// CapabilitySets contains provider-specific image identifiers of this version with their capabilities.
 	CapabilitySets []CapabilitySet
 }
 

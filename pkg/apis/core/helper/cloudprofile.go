@@ -311,8 +311,8 @@ func GetCapabilitySetsWithAppliedDefaults(capabilitySets []core.CapabilitySet, c
 	return result
 }
 
-// GetCoreCapabilitiesDefinitions converts v1beta1.CapabilityDefinition objects to core.CapabilityDefinition objects.
-func GetCoreCapabilitiesDefinitions(capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) ([]core.CapabilityDefinition, error) {
+// ConvertCoreCapabilitiesDefinitions converts v1beta1.CapabilityDefinition objects to core.CapabilityDefinition objects.
+func ConvertCoreCapabilitiesDefinitions(capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) ([]core.CapabilityDefinition, error) {
 	var coreCapabilitiesDefinitions []core.CapabilityDefinition
 	for _, capabilityDefinition := range capabilitiesDefinitions {
 		var coreCapabilityDefinition core.CapabilityDefinition

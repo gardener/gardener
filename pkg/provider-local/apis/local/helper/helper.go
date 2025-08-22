@@ -6,6 +6,7 @@ package helper
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -140,7 +141,7 @@ func selectBestCapabilitySet(
 	normalizedSets := make([]local.CapabilitySet, len(compatibleSets))
 	copy(normalizedSets, compatibleSets)
 
-	coreCapabilitiesDefinitions, err := gardencorehelper.GetCoreCapabilitiesDefinitions(capabilitiesDefinitions)
+	coreCapabilitiesDefinitions, err := gardencorehelper.ConvertCoreCapabilitiesDefinitions(capabilitiesDefinitions)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +165,7 @@ func selectBestCapabilitySet(
 
 			// Find sets that support this capability value
 			for _, set := range remainingSets {
-				if sliceContains(set.Capabilities[capabilityDef.Name], capabilityValue) {
+				if slices.Contains(set.Capabilities[capabilityDef.Name], capabilityValue) {
 					setsWithPreferredValue = append(setsWithPreferredValue, set)
 				}
 			}
@@ -187,14 +188,4 @@ func selectBestCapabilitySet(
 	}
 
 	return &remainingSets[0], nil
-}
-
-// sliceContains checks if a string exists in a slice of strings.
-func sliceContains(slice []string, value string) bool {
-	for _, v := range slice {
-		if v == value {
-			return true
-		}
-	}
-	return false
 }

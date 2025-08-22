@@ -18,43 +18,46 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/provider-local/admission"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/provider-local/apis/local/validation"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // NewNamespacedCloudProfileValidator returns a new instance of a NamespacedCloudProfile validator.
 func NewNamespacedCloudProfileValidator(mgr manager.Manager) extensionswebhook.Validator {
-	return &namespacedCloudProfile{
+	return &namespacedCloudProfileValidator{
 		client:  mgr.GetClient(),
 		decoder: serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
 	}
 }
 
-type namespacedCloudProfile struct {
+type namespacedCloudProfileValidator struct {
 	client  client.Client
 	decoder runtime.Decoder
 }
 
 // Validate validates the given NamespacedCloudProfile objects.
-func (p *namespacedCloudProfile) Validate(ctx context.Context, new, _ client.Object) error {
-	profile, ok := new.(*core.NamespacedCloudProfile)
+func (p *namespacedCloudProfileValidator) Validate(ctx context.Context, new, _ client.Object) error {
+	cloudProfile, ok := new.(*core.NamespacedCloudProfile)
 	if !ok {
 		return fmt.Errorf("wrong object type %T", new)
 	}
 
-	if profile.DeletionTimestamp != nil {
+	if cloudProfile.DeletionTimestamp != nil {
 		return nil
 	}
-
-	cloudProfileConfig := &api.CloudProfileConfig{}
-	if profile.Spec.ProviderConfig != nil {
-		if _, _, err := p.decoder.Decode(profile.Spec.ProviderConfig.Raw, nil, cloudProfileConfig); err != nil {
-			return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile for '%s': %w", profile.Name, err)
-		}
+	providerConfigPath := field.NewPath("spec").Child("providerConfig")
+	if cloudProfile.Spec.ProviderConfig == nil {
+		return field.Required(providerConfigPath, "providerConfig must be set for local cloud profiles")
 	}
 
-	parentCloudProfile := profile.Spec.Parent
+	cloudProfileConfig, err := admission.DecodeCloudProfileConfig(p.decoder, cloudProfile.Spec.ProviderConfig)
+	if err != nil {
+		return fmt.Errorf("could not decode providerConfig of NamespacedCloudProfile for '%s': %w", cloudProfile.Name, err)
+	}
+
+	parentCloudProfile := cloudProfile.Spec.Parent
 	if parentCloudProfile.Kind != constants.CloudProfileReferenceKindCloudProfile {
 		return fmt.Errorf("parent reference must be of kind CloudProfile (unsupported kind: %s)", parentCloudProfile.Kind)
 	}
@@ -63,15 +66,15 @@ func (p *namespacedCloudProfile) Validate(ctx context.Context, new, _ client.Obj
 		return err
 	}
 
-	return p.validateNamespacedCloudProfileProviderConfig(cloudProfileConfig, profile.Spec.MachineImages, parentProfile).ToAggregate()
+	return p.validateNamespacedCloudProfileProviderConfig(cloudProfileConfig, cloudProfile.Spec.MachineImages, parentProfile).ToAggregate()
 }
 
-func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfig(providerConfig *api.CloudProfileConfig, machineImages []core.MachineImage, parentProfile *gardencorev1beta1.CloudProfile) field.ErrorList {
+func (p *namespacedCloudProfileValidator) validateNamespacedCloudProfileProviderConfig(providerConfig *api.CloudProfileConfig, machineImages []core.MachineImage, parentProfile *gardencorev1beta1.CloudProfile) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	profileImages := gardenerutils.NewCoreImagesContext(machineImages)
 	parentImages := gardenerutils.NewV1beta1ImagesContext(parentProfile.Spec.MachineImages)
-	providerImages := newProviderImagesContext(providerConfig.MachineImages)
+	providerImages := validation.NewProviderImagesContext(providerConfig.MachineImages)
 
 	for _, machineImage := range profileImages.Images {
 		// Check that for each new image version defined in the NamespacedCloudProfile, the image is also defined in the providerConfig.
@@ -126,13 +129,4 @@ func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfig(pr
 	}
 
 	return allErrs
-}
-
-func newProviderImagesContext(providerImages []api.MachineImages) *gardenerutils.ImagesContext[api.MachineImages, api.MachineImageVersion] {
-	return gardenerutils.NewImagesContext(
-		utils.CreateMapFromSlice(providerImages, func(mi api.MachineImages) string { return mi.Name }),
-		func(mi api.MachineImages) map[string]api.MachineImageVersion {
-			return utils.CreateMapFromSlice(mi.Versions, func(v api.MachineImageVersion) string { return v.Version })
-		},
-	)
 }

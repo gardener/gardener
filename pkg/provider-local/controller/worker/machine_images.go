@@ -53,18 +53,15 @@ type machineImageWithCapabilities struct {
 }
 
 func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, machineCapabilities gardencorev1beta1.Capabilities) (*machineImageWithCapabilities, error) {
-	capabilitySet, err := helper.FindImageFromCloudProfile(w.cloudProfileConfig, name, version, machineCapabilities, w.cluster.CloudProfile.Spec.Capabilities)
-	returnMachineImage := &machineImageWithCapabilities{
-		Name:         name,
-		Version:      version,
-		Image:        "",
-		Capabilities: core.Capabilities{},
+	selectedMachineImage := &machineImageWithCapabilities{
+		Name:    name,
+		Version: version,
 	}
 
-	if err == nil {
-		returnMachineImage.Image = capabilitySet.Image
-		returnMachineImage.Capabilities = capabilitySet.Capabilities
-		return returnMachineImage, nil
+	if capabilitySet, err := helper.FindImageFromCloudProfile(w.cloudProfileConfig, name, version, machineCapabilities, w.cluster.CloudProfile.Spec.Capabilities); err == nil {
+		selectedMachineImage.Image = capabilitySet.Image
+		selectedMachineImage.Capabilities = capabilitySet.Capabilities
+		return selectedMachineImage, nil
 	}
 
 	// Try to look up machine image in worker provider status as it was not found in CloudProfile.
@@ -78,8 +75,9 @@ func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, m
 			if machineImage.Name == name && machineImage.Version == version {
 				// If no capabilitiesDefinitions are specified, return the (legacy) image field as no capabilitySets are used.
 				if len(w.cluster.CloudProfile.Spec.Capabilities) == 0 {
-					returnMachineImage.Image = machineImage.Image
-					return returnMachineImage, nil
+					selectedMachineImage.Image = machineImage.Image
+					selectedMachineImage.Capabilities = core.Capabilities{}
+					return selectedMachineImage, nil
 				}
 
 				bestMatch, err := helper.FindBestCapabilitySet(machineImage.CapabilitySets, machineCapabilities, w.cluster.CloudProfile.Spec.Capabilities)
@@ -87,9 +85,9 @@ func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, m
 					return nil, fmt.Errorf("no machine image found for image %q with version %q and capabilities %v: %w", name, version, machineCapabilities, err)
 				}
 
-				returnMachineImage.Image = bestMatch.Image
-				returnMachineImage.Capabilities = bestMatch.Capabilities
-				return returnMachineImage, nil
+				selectedMachineImage.Image = bestMatch.Image
+				selectedMachineImage.Capabilities = bestMatch.Capabilities
+				return selectedMachineImage, nil
 			}
 		}
 	}
@@ -116,37 +114,31 @@ func appendMachineImage(machineImages []api.MachineImage, machineImage machineIm
 
 	defaultedCapabilities := gardencorehelper.GetCapabilitiesWithAppliedDefaults(machineImage.Capabilities, capabilitiesDefinitions)
 
-	imageExists := false
 	for i, existingMachineImage := range machineImages {
 		if existingMachineImage.Name == machineImage.Name && existingMachineImage.Version == machineImage.Version {
-			imageExists = true
-			capabilitiesExist := false
 			for _, existingCapabilitySet := range existingMachineImage.CapabilitySets {
 				existingDefaultedCapabilities := gardencorehelper.GetCapabilitiesWithAppliedDefaults(existingCapabilitySet.Capabilities, capabilitiesDefinitions)
 				if gardenerutils.AreCapabilitiesEqual(defaultedCapabilities, existingDefaultedCapabilities) {
-					capabilitiesExist = true
+					return machineImages // The image already exists with the same capabilities, so we can return the existing list.
 				}
 			}
-			if !capabilitiesExist {
-				machineImages[i].CapabilitySets = append(machineImages[i].CapabilitySets, api.CapabilitySet{Image: machineImage.Image, Capabilities: machineImage.Capabilities})
-			}
-			break // No need to continue iterating once the image is found
+			machineImages[i].CapabilitySets = append(machineImages[i].CapabilitySets, api.CapabilitySet{Image: machineImage.Image, Capabilities: machineImage.Capabilities})
+			return machineImages // No need to continue iterating once the image is found in existing machine images.
 		}
 	}
 
-	if !imageExists {
-		machineImages = append(machineImages, api.MachineImage{
-			Name:    machineImage.Name,
-			Version: machineImage.Version,
-			Image:   machineImage.Image,
-			CapabilitySets: []api.CapabilitySet{
-				{
-					Image:        machineImage.Image,
-					Capabilities: machineImage.Capabilities,
-				},
+	// If the image does not exist, we create a new machine image entry with the capability set.
+	machineImages = append(machineImages, api.MachineImage{
+		Name:    machineImage.Name,
+		Version: machineImage.Version,
+		Image:   machineImage.Image,
+		CapabilitySets: []api.CapabilitySet{
+			{
+				Image:        machineImage.Image,
+				Capabilities: machineImage.Capabilities,
 			},
-		})
-	}
+		},
+	})
 
 	return machineImages
 }

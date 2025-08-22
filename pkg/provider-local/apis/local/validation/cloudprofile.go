@@ -19,43 +19,41 @@ import (
 // ValidateCloudProfileConfig validates a CloudProfileConfig object.
 func ValidateCloudProfileConfig(cpConfig *api.CloudProfileConfig, machineImages []core.MachineImage, capabilitiesDefinitions []core.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+	machineImagesPath := fldPath.Child("machineImages")
 
 	// Validate machine images section
-	allErrs = append(allErrs, validateMachineImages(cpConfig, capabilitiesDefinitions, fldPath)...)
+	allErrs = append(allErrs, validateMachineImages(cpConfig.MachineImages, capabilitiesDefinitions, machineImagesPath)...)
 	if len(allErrs) > 0 {
 		return allErrs
 	}
 
 	// Validate machine image mappings
-	allErrs = append(allErrs, validateMachineImageMapping(machineImages, cpConfig, capabilitiesDefinitions, field.NewPath("spec").Child("machineImages"))...)
+	allErrs = append(allErrs, validateMachineImageMapping(machineImages, cpConfig.MachineImages, capabilitiesDefinitions, machineImagesPath)...)
 
 	return allErrs
 }
 
 // validateMachineImages validates the machine images section of CloudProfileConfig
-func validateMachineImages(cpConfig *api.CloudProfileConfig, capabilitiesDefinitions []core.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
+func validateMachineImages(machineImages []api.MachineImages, capabilitiesDefinitions []core.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	machineImagesPath := fldPath.Child("machineImages")
 
 	// Ensure at least one machine image is provided
-	if len(cpConfig.MachineImages) == 0 {
-		allErrs = append(allErrs, field.Required(machineImagesPath, "must provide at least one machine image"))
+	if len(machineImages) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
 		return allErrs
 	}
 
-	hasCloudProfileCapabilities := len(capabilitiesDefinitions) > 0
-
 	// Validate each machine image
-	for i, machineImage := range cpConfig.MachineImages {
-		idxPath := machineImagesPath.Index(i)
-		allErrs = append(allErrs, validateMachineImage(machineImage, hasCloudProfileCapabilities, capabilitiesDefinitions, idxPath)...)
+	for i, machineImage := range machineImages {
+		idxPath := fldPath.Index(i)
+		allErrs = append(allErrs, validateMachineImage(machineImage, capabilitiesDefinitions, idxPath)...)
 	}
 
 	return allErrs
 }
 
 // validateMachineImage validates an individual machine image configuration
-func validateMachineImage(machineImage api.MachineImages, hasCloudProfileCapabilities bool, capabilitiesDefinitions []core.CapabilityDefinition, idxPath *field.Path) field.ErrorList {
+func validateMachineImage(machineImage api.MachineImages, capabilitiesDefinitions []core.CapabilityDefinition, idxPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImage.Name) == 0 {
@@ -71,14 +69,14 @@ func validateMachineImage(machineImage api.MachineImages, hasCloudProfileCapabil
 	// Validate each version
 	for j, version := range machineImage.Versions {
 		jdxPath := idxPath.Child("versions").Index(j)
-		allErrs = append(allErrs, validateMachineImageVersion(version, hasCloudProfileCapabilities, capabilitiesDefinitions, jdxPath)...)
+		allErrs = append(allErrs, validateMachineImageVersion(version, capabilitiesDefinitions, jdxPath)...)
 	}
 
 	return allErrs
 }
 
 // validateMachineImageVersion validates a specific machine image version
-func validateMachineImageVersion(version api.MachineImageVersion, hasCloudProfileCapabilities bool, capabilitiesDefinitions []core.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
+func validateMachineImageVersion(version api.MachineImageVersion, capabilitiesDefinitions []core.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(version.Version) == 0 {
@@ -86,7 +84,7 @@ func validateMachineImageVersion(version api.MachineImageVersion, hasCloudProfil
 	}
 
 	// Different validation paths based on whether capabilities are defined
-	if hasCloudProfileCapabilities {
+	if len(capabilitiesDefinitions) > 0 {
 		allErrs = append(allErrs, validateWithCapabilities(version, capabilitiesDefinitions, jdxPath)...)
 	} else {
 		allErrs = append(allErrs, validateWithoutCapabilities(version, jdxPath)...)
@@ -126,22 +124,22 @@ func validateWithoutCapabilities(version api.MachineImageVersion, jdxPath *field
 		allErrs = append(allErrs, field.Required(jdxPath.Child("image"), "must provide an image"))
 	}
 
-	// When not using capabilities, capabilitySets must not be used
+	// When not using capabilities, capabilitySets must NOT be used
 	if len(version.CapabilitySets) > 0 {
 		allErrs = append(allErrs, field.Forbidden(jdxPath.Child("capabilitySets"),
-			"must not be set as CloudProfile does not define capabilities. Use regions instead."))
+			"must not be set as CloudProfile does not define capabilities. Use the image field directly."))
 	}
 
 	return allErrs
 }
 
-// validateMachineImageMapping validates that for each machine image there is a corresponding cpConfig image.
-func validateMachineImageMapping(machineImages []core.MachineImage, cpConfig *api.CloudProfileConfig, capabilitiesDefinitions []core.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
+// validateMachineImageMapping validates that for each machine image there is a corresponding providerConfig entry.
+func validateMachineImageMapping(coreMachineImages []core.MachineImage, machineImages []api.MachineImages, capabilitiesDefinitions []core.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	providerImages := NewProviderImagesContext(cpConfig.MachineImages)
+	providerImages := NewProviderImagesContext(machineImages)
 
 	// validate machine images
-	for idxImage, machineImage := range machineImages {
+	for idxImage, machineImage := range coreMachineImages {
 		if len(machineImage.Versions) == 0 {
 			continue
 		}
@@ -160,7 +158,7 @@ func validateMachineImageMapping(machineImages []core.MachineImage, cpConfig *ap
 	return allErrs
 }
 
-// validateMachineImageVersionMapping validates that versions in a machine image have corresponding mappings
+// validateMachineImageVersionMapping validates that versions in a machine image have corresponding mappings in the providerConfig.
 func validateMachineImageVersionMapping(machineImage core.MachineImage, providerImages *gardenerutils.ImagesContext[api.MachineImages, api.MachineImageVersion], capabilitiesDefinitions []core.CapabilityDefinition, machineImagePath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
