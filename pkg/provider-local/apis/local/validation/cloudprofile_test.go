@@ -22,6 +22,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 		machineImages           []core.MachineImage
 		capabilitiesDefinitions []core.CapabilityDefinition
 		imageString             string
+		fldPath                 = field.NewPath("spec")
 	)
 
 	BeforeEach(func() {
@@ -90,44 +91,44 @@ var _ = Describe("CloudProfileConfig validation", func() {
 	Describe("#ValidateCloudProfileConfig", func() {
 		Context("basic validation", func() {
 			It("should succeed with valid configuration", func() {
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should fail with empty machine images", func() {
 				cloudProfileConfig.MachineImages = []api.MachineImages{}
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
-					"Field":  Equal("machineImages"),
+					"Field":  Equal("spec.machineImages"),
 					"Detail": ContainSubstring("must provide at least one machine image"),
 				}))))
 			})
 
 			It("should fail with empty machine image name", func() {
 				cloudProfileConfig.MachineImages[0].Name = ""
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("machineImages[0].name"),
+					"Field": Equal("spec.machineImages[0].name"),
 				}))))
 			})
 
 			It("should fail with empty versions", func() {
 				cloudProfileConfig.MachineImages[0].Versions = []api.MachineImageVersion{}
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("machineImages[0].versions"),
+					"Field": Equal("spec.machineImages[0].versions"),
 				}))))
 			})
 
 			It("should fail with empty version string", func() {
 				cloudProfileConfig.MachineImages[0].Versions[0].Version = ""
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("machineImages[0].versions[0].version"),
+					"Field": Equal("spec.machineImages[0].versions[0].version"),
 				}))))
 			})
 		})
@@ -142,23 +143,23 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should succeed with valid configuration", func() {
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should fail with empty image string", func() {
 				cloudProfileConfig.MachineImages[0].Versions[0].Image = ""
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("machineImages[0].versions[0].image"),
+					"Field": Equal("spec.machineImages[0].versions[0].image"),
 				}))))
 			})
 
 			It("should fail when machine image doesn't exist in provider config", func() {
 				machineImages[0].Name = "debian"
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
 					"Field":  Equal("spec.machineImages[0]"),
@@ -168,29 +169,26 @@ var _ = Describe("CloudProfileConfig validation", func() {
 		})
 
 		Context("with capabilities", func() {
-			BeforeEach(func() {
-			})
-
 			It("should succeed with valid capability sets", func() {
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should fail if image string  is set when using capabilities", func() {
+			It("should fail if image string is set when using capabilities", func() {
 				cloudProfileConfig.MachineImages[0].Versions[0].Image = "ubuntu-18.04"
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("machineImages[0].versions[0].image"),
+					"Field": Equal("spec.machineImages[0].versions[0].image"),
 				}))))
 			})
 
 			It("should fail if capability sets contain invalid capability", func() {
 				cloudProfileConfig.MachineImages[0].Versions[0].CapabilitySets[0].Capabilities["invalid"] = []string{"value"}
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("machineImages[0].versions[0].capabilitySets[0].capabilities"),
+					"Field": Equal("spec.machineImages[0].versions[0].capabilitySets[0].capabilities"),
 				}))))
 			})
 
@@ -204,7 +202,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					},
 				}
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
 					"Field":  Equal("spec.machineImages[0].versions[0]"),
@@ -214,19 +212,19 @@ var _ = Describe("CloudProfileConfig validation", func() {
 
 			It("should fail when capability set has empty image", func() {
 				cloudProfileConfig.MachineImages[0].Versions[0].CapabilitySets[0].Image = ""
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("machineImages[0].versions[0].capabilitySets[0].image"),
+					"Field": Equal("spec.machineImages[0].versions[0].capabilitySets[0].image"),
 				}))))
 			})
 
 			It("should fail when capability values are not from defined set", func() {
 				cloudProfileConfig.MachineImages[0].Versions[0].CapabilitySets[0].Capabilities["cap1"] = []string{"invalid-value"}
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeNotSupported),
-					"Field":  Equal("machineImages[0].versions[0].capabilitySets[0].capabilities.cap1[0]"),
+					"Field":  Equal("spec.machineImages[0].versions[0].capabilitySets[0].capabilities.cap1[0]"),
 					"Detail": ContainSubstring("supported values: \"value1\", \"value2\""),
 				}))))
 			})
@@ -241,7 +239,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					}},
 				})
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
 					"Field":  Equal("spec.machineImages[0].versions[1]"),
@@ -257,7 +255,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 						},
 					})
 
-				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, nil)
+				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
 					"Field":  Equal("spec.machineImages[0].versions[0].capabilitySets[2]"),
