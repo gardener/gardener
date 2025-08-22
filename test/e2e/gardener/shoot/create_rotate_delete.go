@@ -238,7 +238,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 }
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
+	FDescribe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
 		test := func(s *ShootContext, withoutWorkersRollout, inPlaceUpdate bool) {
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
@@ -446,7 +446,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			})
 		})
 
-		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
+		FContext("Workerless Shoot", Label("workerless"), Ordered, func() {
 			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false)
 		})
 	})

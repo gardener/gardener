@@ -17,7 +17,6 @@ import (
 )
 
 var _ = Describe("Helper Functions", func() {
-
 	Context("#FindImageFromCloudProfile", func() {
 		var (
 			cloudProfileConfig    *local.CloudProfileConfig
