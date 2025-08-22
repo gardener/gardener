@@ -715,13 +715,8 @@ status:
 					})
 
 					It("should successfully deploy all resources", func() {
-
 						dashboardConfigMapName := "plutono-dashboards-garden"
 						dashboardCount := 28
-						GinkgoHelper()
-
-						deployment := deploymentYAMLFor(values)
-						utilruntime.Must(references.InjectAnnotations(deployment))
 
 						Expect(manifests).To(ConsistOf(
 							dataSourceConfigMapYAMLFor(values),
@@ -736,7 +731,6 @@ status:
 							availableDashboards.Insert(key)
 						}
 						Expect(availableDashboards).To(HaveLen(dashboardCount), "The number of deployed dashboards differs from the expected one")
-
 					})
 				})
 
