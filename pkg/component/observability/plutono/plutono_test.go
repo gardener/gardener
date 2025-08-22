@@ -260,7 +260,7 @@ metadata:
     datasource.monitoring.gardener.cloud/` + clusterLabelKey(values) + `: "true"
 `
 
-				configMap += `  name: plutono-datasources
+				configMap += `  name: plutono-datasources` + dataSourcesKeySuffix + `
   namespace: some-namespace
 `
 
