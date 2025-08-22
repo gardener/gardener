@@ -71,7 +71,7 @@ func (v *ValidateBackupBucket) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.ValidationInterface = &ValidateBackupBucket{}
+var _ admission.ValidationInterface = (*ValidateBackupBucket)(nil)
 
 // Validate validates the BackupBucket details against existing Workload Identities
 func (v *ValidateBackupBucket) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

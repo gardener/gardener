@@ -110,7 +110,7 @@ func (e *ExtensionValidator) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.ValidationInterface = &ExtensionValidator{}
+var _ admission.ValidationInterface = (*ExtensionValidator)(nil)
 
 // Validate makes admissions decisions based on the extension types.
 func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

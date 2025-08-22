@@ -40,7 +40,7 @@ func New() (*handler, error) {
 	}, nil
 }
 
-var _ admission.MutationInterface = &handler{}
+var _ admission.MutationInterface = (*handler)(nil)
 
 func (v *handler) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Ignore all kinds other than Project

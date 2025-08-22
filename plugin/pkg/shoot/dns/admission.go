@@ -104,7 +104,7 @@ func (d *DNS) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = &DNS{}
+var _ admission.MutationInterface = (*DNS)(nil)
 
 // Admit tries to determine a DNS hosted zone for the Shoot's external domain.
 func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

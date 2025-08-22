@@ -87,7 +87,7 @@ func (m *MutateSeed) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = &MutateSeed{}
+var _ admission.MutationInterface = (*MutateSeed)(nil)
 
 // Admit mutates the Seed.
 func (m *MutateSeed) Admit(_ context.Context, attrs admission.Attributes, _ admission.ObjectInterfaces) error {

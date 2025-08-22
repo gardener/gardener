@@ -105,6 +105,8 @@ func (c *ResourceReservation) ValidateInitialization() error {
 	return nil
 }
 
+var _ admission.MutationInterface = (*ResourceReservation)(nil)
+
 // Admit injects default resource reservations into worker pools of shoot objects
 func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced

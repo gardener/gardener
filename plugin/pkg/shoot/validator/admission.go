@@ -181,7 +181,7 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = &ValidateShoot{}
+var _ admission.MutationInterface = (*ValidateShoot)(nil)
 
 // Admit validates the Shoot details against the referenced CloudProfile.
 func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

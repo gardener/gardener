@@ -36,6 +36,8 @@ func New() admission.MutationInterface {
 	}
 }
 
+var _ admission.MutationInterface = (*ShootNodeLocalDNS)(nil)
+
 // Admit defaults spec.systemComponents.nodeLocalDNS.enabled=true for new shoot clusters.
 func (c *ShootNodeLocalDNS) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	switch {

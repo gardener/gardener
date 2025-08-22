@@ -85,7 +85,7 @@ func (v *Shoot) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.ValidationInterface = &Shoot{}
+var _ admission.ValidationInterface = (*Shoot)(nil)
 
 // Validate validates if the ManagedSeed can be deleted.
 func (v *Shoot) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {

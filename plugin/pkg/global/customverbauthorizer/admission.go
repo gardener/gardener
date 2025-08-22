@@ -111,7 +111,7 @@ func (c *CustomVerbAuthorizer) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.ValidationInterface = &CustomVerbAuthorizer{}
+var _ admission.ValidationInterface = (*CustomVerbAuthorizer)(nil)
 
 // Validate makes admissions decisions based on custom verbs.
 func (c *CustomVerbAuthorizer) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
