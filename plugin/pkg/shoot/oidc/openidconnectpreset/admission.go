@@ -11,6 +11,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -21,6 +22,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	settingsv1alpha1lister "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	applier "github.com/gardener/gardener/plugin/pkg/shoot/oidc"
 )
@@ -107,6 +109,19 @@ func (o *OpenIDConnectPreset) Admit(_ context.Context, a admission.Attributes, _
 
 	// Ignore if the Shoot manifest specifies OIDCConfig.
 	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig != nil {
+		return nil
+	}
+
+	// OIDCConfig is forbidden for clusters with kubernetes version >= 1.32.
+	kubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("failed to parse shoot version '%s': %w", shoot.Spec.Kubernetes.Version, err))
+	}
+	if versionutils.ConstraintK8sGreaterEqual132.Check(kubernetesVersion) {
+		return nil
+	}
+
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil {
 		return nil
 	}
 

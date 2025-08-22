@@ -45,7 +45,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				},
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
-						Version: "1.31.0",
+						Version: "1.33.0",
 					},
 				},
 			}
@@ -139,8 +139,13 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 			})
 
-			It("preset preset label selector doesn't match", func() {
+			It("preset project label selector doesn't match", func() {
 				preset.Spec.ProjectSelector.MatchLabels = map[string]string{"not": "existing"}
+				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
+			})
+
+			It("preset present", func() {
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 			})
@@ -148,6 +153,15 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			It("oidc settings already exist", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					OIDCConfig: &core.OIDCConfig{},
+				}
+				expected = shoot.DeepCopy()
+			})
+
+			It("structured authentication settings already exists", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					StructuredAuthentication: &core.StructuredAuthentication{
+						ConfigMapName: "test",
+					},
 				}
 				expected = shoot.DeepCopy()
 			})
@@ -191,12 +205,13 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 		})
 
-		Context("should mutate the result", func() {
+		Context("should mutate the result for shoot kubernetes < 1.32", func() {
 			var (
 				expected *core.Shoot
 			)
 
 			BeforeEach(func() {
+				shoot.Spec.Kubernetes.Version = "1.31.0"
 				expected = shoot.DeepCopy()
 				expected.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					OIDCConfig: &core.OIDCConfig{
