@@ -231,7 +231,7 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 	}
 	dataSourceConfigMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "plutono-datasources",
+			Name:      "plutono-datasources" + dataSourcesKeySuffix,
 			Namespace: p.namespace,
 			Labels:    utils.MergeStringMaps(getLabels(), map[string]string{p.dataSourceLabel(): labelValueTrue}),
 		},
