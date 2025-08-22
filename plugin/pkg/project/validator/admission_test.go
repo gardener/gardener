@@ -13,10 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/plugin/pkg/project/validator"
 )
 
@@ -28,12 +26,10 @@ var _ = Describe("Admission", func() {
 			admissionHandler admission.MutationInterface
 			attrs            admission.Attributes
 
-			namespaceName = "garden-my-project"
-			projectName   = "my-project"
-			projectBase   = core.Project{
+			projectName = "my-project"
+			projectBase = core.Project{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      projectName,
-					Namespace: namespaceName,
+					Name: projectName,
 				},
 			}
 
@@ -52,22 +48,6 @@ var _ = Describe("Admission", func() {
 		When("project is created", func() {
 			BeforeEach(func() {
 				attrs = admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-			})
-
-			It("should allow creating the project (namespace nil)", func() {
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
-			})
-
-			It("should allow creating the project(namespace non-nil)", func() {
-				project.Spec.Namespace = &namespaceName
-
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
-			})
-
-			It("should allow creating the project (namespace is 'garden')", func() {
-				project.Spec.Namespace = ptr.To(v1beta1constants.GardenNamespace)
-
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should maintain createdBy and project owner", func() {
