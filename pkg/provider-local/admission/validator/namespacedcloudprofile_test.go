@@ -61,6 +61,9 @@ var _ = Describe("NamespacedCloudProfile Validator", func() {
 					Name: "cloud-profile",
 					Kind: "CloudProfile",
 				},
+				ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"local.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig"}`)},
 			},
 		}
 		cloudProfile = &v1beta1.CloudProfile{
@@ -112,7 +115,6 @@ var _ = Describe("NamespacedCloudProfile Validator", func() {
 		})
 
 		It("should fail for NamespacedCloudProfile with invalid parent kind", func() {
-			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte{}}
 			namespacedCloudProfile.Spec.Parent = core.CloudProfileReference{
 				Name: "cloud-profile",
 				Kind: "NamespacedCloudProfile",
