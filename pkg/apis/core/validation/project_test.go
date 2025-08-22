@@ -127,22 +127,13 @@ var _ = Describe("Project Validation Tests", func() {
 				Expect(errorList).To(matcher)
 			},
 
-			Entry("should forbid Project with namespace garden",
-				"garden",
-				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("spec.namespace"),
-					"BadValue": Equal("garden"),
-					"Detail":   Equal("Project namespaces [garden, gardener-system-seed-lease, gardener-system-shoot-issuer, gardener-system-public] are reserved by Gardener"),
-				}))),
-			),
 			Entry("should forbid Project with namespace gardener-system-seed-lease",
 				"gardener-system-seed-lease",
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("spec.namespace"),
 					"BadValue": Equal("gardener-system-seed-lease"),
-					"Detail":   Equal("Project namespaces [garden, gardener-system-seed-lease, gardener-system-shoot-issuer, gardener-system-public] are reserved by Gardener"),
+					"Detail":   Equal("Project namespaces [gardener-system-seed-lease, gardener-system-shoot-issuer, gardener-system-public] are reserved by Gardener"),
 				}))),
 			),
 			Entry("should forbid Project with namespace gardener-system-shoot-issuer",
@@ -151,7 +142,7 @@ var _ = Describe("Project Validation Tests", func() {
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("spec.namespace"),
 					"BadValue": Equal("gardener-system-shoot-issuer"),
-					"Detail":   Equal("Project namespaces [garden, gardener-system-seed-lease, gardener-system-shoot-issuer, gardener-system-public] are reserved by Gardener"),
+					"Detail":   Equal("Project namespaces [gardener-system-seed-lease, gardener-system-shoot-issuer, gardener-system-public] are reserved by Gardener"),
 				}))),
 			),
 			Entry("should forbid Project with namespace gardener-system-public",
@@ -160,7 +151,7 @@ var _ = Describe("Project Validation Tests", func() {
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("spec.namespace"),
 					"BadValue": Equal("gardener-system-public"),
-					"Detail":   Equal("Project namespaces [garden, gardener-system-seed-lease, gardener-system-shoot-issuer, gardener-system-public] are reserved by Gardener"),
+					"Detail":   Equal("Project namespaces [gardener-system-seed-lease, gardener-system-shoot-issuer, gardener-system-public] are reserved by Gardener"),
 				}))),
 			),
 			Entry("should forbid Project with a non `garden-` prefixed namespace",
@@ -171,6 +162,10 @@ var _ = Describe("Project Validation Tests", func() {
 					"BadValue": Equal("foo"),
 					"Detail":   Equal("must start with garden-"),
 				}))),
+			),
+			Entry("should allow Project with namespace garden",
+				"garden",
+				BeEmpty(),
 			),
 		)
 

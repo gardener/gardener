@@ -63,13 +63,13 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 	allErrs := field.ErrorList{}
 
 	if projectSpec.Namespace != nil {
-		reservedNamespaceNames := []string{v1beta1constants.GardenNamespace, core.GardenerSeedLeaseNamespace, core.GardenerShootIssuerNamespace, core.GardenerSystemPublicNamespace}
+		reservedNamespaceNames := []string{core.GardenerSeedLeaseNamespace, core.GardenerShootIssuerNamespace, core.GardenerSystemPublicNamespace}
 		if slices.Contains(reservedNamespaceNames, *projectSpec.Namespace) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), *projectSpec.Namespace, fmt.Sprintf("Project namespaces [%s] are reserved by Gardener", strings.Join(reservedNamespaceNames, ", "))))
 			return allErrs
 		}
 
-		if !strings.HasPrefix(*projectSpec.Namespace, gardenerutils.ProjectNamespacePrefix) {
+		if *projectSpec.Namespace != v1beta1constants.GardenNamespace && !strings.HasPrefix(*projectSpec.Namespace, gardenerutils.ProjectNamespacePrefix) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), *projectSpec.Namespace, fmt.Sprintf("must start with %s", gardenerutils.ProjectNamespacePrefix)))
 		}
 	}
