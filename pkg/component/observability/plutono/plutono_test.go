@@ -6,6 +6,8 @@ package plutono_test
 
 import (
 	"context"
+	"strconv"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -201,7 +203,7 @@ metadata:
       access: proxy
       url: http://prometheus-` + prometheusSuffix + `:80
       basicAuth: false
-      isDefault: true
+      isDefault: ` + strconv.FormatBool(!values.OnlyDeployDataSourcesAndDashboards) + `
       version: 1
       editable: false
       jsonData:
@@ -232,17 +234,23 @@ metadata:
         timeInterval: 1m
 `
 				}
-
-				configMapData += `    - name: vali
+				if !values.OnlyDeployDataSourcesAndDashboards {
+					configMapData += `    - name: vali
       type: vali
       access: proxy
       url: http://logging.` + namespace + `.svc:3100
       jsonData:
         maxLines: ` + maxLine
 
+				}
+				configMapData = strings.TrimSuffix(configMapData, "\n")
+				var dataSourcesKeySuffix string
+				if values.OnlyDeployDataSourcesAndDashboards {
+					dataSourcesKeySuffix = "-seed"
+				}
 				configMap := `apiVersion: v1
 data:
-  datasources.yaml: |
+  datasources` + dataSourcesKeySuffix + `.yaml: |
     ` + configMapData + `
 kind: ConfigMap
 metadata:
@@ -252,7 +260,7 @@ metadata:
     datasource.monitoring.gardener.cloud/` + clusterLabelKey(values) + `: "true"
 `
 
-				configMap += `  name: plutono-datasources
+				configMap += `  name: plutono-datasources` + dataSourcesKeySuffix + `
   namespace: some-namespace
 `
 
@@ -577,6 +585,10 @@ status:
 
 		JustBeforeEach(func() {
 			component = New(c, namespace, fakeSecretManager, values)
+			if values.OnlyDeployDataSourcesAndDashboards {
+				managedResource.Name = "plutono-seed-config-only"
+
+			}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
@@ -694,6 +706,31 @@ status:
 
 					It("should successfully deploy all resources", func() {
 						checkDeployedResources("plutono-dashboards-garden", 31)
+					})
+				})
+
+				Context("managed by gardener-operator", func() {
+					BeforeEach(func() {
+						values.OnlyDeployDataSourcesAndDashboards = true
+					})
+
+					It("should successfully deploy all resources", func() {
+						dashboardConfigMapName := "plutono-dashboards-garden"
+						dashboardCount := 28
+
+						Expect(manifests).To(ConsistOf(
+							dataSourceConfigMapYAMLFor(values),
+						), "Resource manifests do not match the expected ones")
+
+						dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: dashboardConfigMapName, Namespace: namespace}}
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed(), "Could not successfully get dashboards configMap")
+						Expect(dashboardsConfigMap.Labels).To(HaveKeyWithValue("dashboard.monitoring.gardener.cloud/"+clusterLabelKey(values), "true"), "Dashboards configMap does not contain expected key")
+
+						availableDashboards := sets.Set[string]{}
+						for key := range dashboardsConfigMap.Data {
+							availableDashboards.Insert(key)
+						}
+						Expect(availableDashboards).To(HaveLen(dashboardCount), "The number of deployed dashboards differs from the expected one")
 					})
 				})
 
