@@ -615,6 +615,43 @@ var _ = Describe("Worker", func() {
 			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(HaveOccurred())
 		})
 
+		It("should return error when resource is not ready", func() {
+			obj := w.DeepCopy()
+			obj.Status.LastError = &gardencorev1beta1.LastError{
+				Description:    "Some error",
+				LastUpdateTime: &metav1.Time{Time: now.UTC()},
+			}
+			Expect(c.Create(ctx, obj)).To(Succeed(), "creating worker succeeds")
+
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(HaveOccurred(), "worker indicates error")
+		})
+
+		It("should return error if we haven't observed the latest timestamp annotation", func() {
+			defer test.WithVars(
+				&worker.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			By("Deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			By("Patch object")
+			patch := client.MergeFrom(w.DeepCopy())
+			w.Status.LastError = nil
+			// remove operation annotation, add old timestamp annotation
+			w.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
+			}
+			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			}
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			By("Wait")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).NotTo(Succeed(), "worker indicates error")
+		})
+
 		It("should return error when status.machineDeploymentsLastUpdateTime remains nil", func() {
 			obj := w.DeepCopy()
 			Expect(c.Create(ctx, obj)).To(Succeed(), "creating worker succeeds")
@@ -649,6 +686,10 @@ var _ = Describe("Worker", func() {
 			w.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
+			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
+			}
 			// update the MachineDeploymentsLastUpdateTime in the worker status
 			w.Status.MachineDeploymentsLastUpdateTime = &metav1Now
 			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
@@ -676,6 +717,10 @@ var _ = Describe("Worker", func() {
 			// remove operation annotation, add up-to-date timestamp annotation
 			w.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+			}
+			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 			}
 			// update the MachineDeploymentsLastUpdateTime in the worker status
 			lastUpdateTime := metav1.NewTime(metav1Now.Add(1 * time.Second))
