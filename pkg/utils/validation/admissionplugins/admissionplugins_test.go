@@ -71,8 +71,8 @@ var _ = Describe("admissionplugins", func() {
 			})))),
 			Entry("adding forbidden admission plugin", []core.AdmissionPlugin{{Name: "SecurityContextDeny"}}, "1.27.4", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
-				"Detail": Equal("forbidden admission plugin was specified - do not use plugins from the following list: [SecurityContextDeny]"),
+				"Field":  Equal(field.NewPath("admissionPlugins").String()),
+				"Detail": Equal("forbidden admission plugin(s) [SecurityContextDeny] - do not use plugins from the following list for Kubernetes version 1.27.4: [SecurityContextDeny]"),
 			})))),
 			Entry("adding kubeconfig secret to admission plugin not supporting external kubeconfig", []core.AdmissionPlugin{{Name: "TaintNodesByCondition", KubeconfigSecretName: ptr.To("test-secret")}}, "1.27.5", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
@@ -80,6 +80,11 @@ var _ = Describe("admissionplugins", func() {
 				"Detail": Equal("admission plugin \"TaintNodesByCondition\" does not allow specifying external kubeconfig"),
 			})))),
 			Entry("adding kubeconfig secret to admission plugin supporting external kubeconfig", []core.AdmissionPlugin{{Name: "ValidatingAdmissionWebhook", KubeconfigSecretName: ptr.To("test-secret")}}, "1.27.5", BeEmpty()),
+			Entry("admission plugin configuration for plugin that does not take configuration", []core.AdmissionPlugin{{Name: "ExtendedResourceToleration", Config: &runtime.RawExtension{Raw: []byte("foo: bar")}}}, "1.31.1", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
+				"Detail": Equal(`admission plugin "ExtendedResourceToleration" does not allow configuration`),
+			})))),
 		)
 
 		Describe("validate PodSecurity admissionPlugin config", func() {

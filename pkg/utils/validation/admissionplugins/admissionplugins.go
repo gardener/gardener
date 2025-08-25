@@ -31,6 +31,9 @@ var (
 	//   - Run hack/compare-k8s-admission-plugins.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-admission-plugins.sh 1.26 1.27').
 	//     It will present 2 lists of admission plugins: those added and those removed in <new-version> compared to <old-version> and
 	//   - Add all added admission plugins to the map with <new-version> as AddedInVersion and no RemovedInVersion.
+	//   - Set `AllowsConfiguration` to `true` when the new admission plugin allows configuration.
+	//     To determine whether the admission plugin allows configuration, check the plugin's `Register()` method, whether it uses configuration or not.
+	//     Be careful that functions that are called within the method can take the config as part of their signature, but ultimately do not use it.
 	//   - For any removed admission plugin, add <new-version> as RemovedInVersion to the already existing admission plugin in the map.
 	admissionPluginsVersionRanges = map[string]*AdmissionPluginVersionRange{
 		"AlwaysAdmit":                          {},
@@ -44,13 +47,13 @@ var (
 		"DefaultStorageClass":                  {},
 		"DefaultTolerationSeconds":             {},
 		"DenyServiceExternalIPs":               {},
-		"EventRateLimit":                       {},
+		"EventRateLimit":                       {AllowsConfiguration: true},
 		"ExtendedResourceToleration":           {},
-		"ImagePolicyWebhook":                   {},
+		"ImagePolicyWebhook":                   {AllowsConfiguration: true},
 		"LimitPodHardAntiAffinityTopology":     {},
 		"LimitRanger":                          {},
 		"MutatingAdmissionPolicy":              {VersionRange: versionutils.VersionRange{AddedInVersion: "1.32"}},
-		"MutatingAdmissionWebhook":             {Required: true},
+		"MutatingAdmissionWebhook":             {Required: true, AllowsConfiguration: true},
 		"NamespaceAutoProvision":               {},
 		"NamespaceExists":                      {},
 		"NamespaceLifecycle":                   {Required: true},
@@ -58,19 +61,19 @@ var (
 		"OwnerReferencesPermissionEnforcement": {},
 		"PersistentVolumeClaimResize":          {},
 		"PersistentVolumeLabel":                {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.31"}},
-		"PodNodeSelector":                      {},
-		"PodSecurity":                          {Required: true},
-		"PodTolerationRestriction":             {},
+		"PodNodeSelector":                      {AllowsConfiguration: true},
+		"PodSecurity":                          {Required: true, AllowsConfiguration: true},
+		"PodTolerationRestriction":             {AllowsConfiguration: true},
 		"PodTopologyLabels":                    {VersionRange: versionutils.VersionRange{AddedInVersion: "1.33"}},
 		"Priority":                             {Required: true},
-		"ResourceQuota":                        {},
+		"ResourceQuota":                        {AllowsConfiguration: true},
 		"RuntimeClass":                         {},
 		"SecurityContextDeny":                  {Forbidden: true, VersionRange: versionutils.VersionRange{RemovedInVersion: "1.30"}},
 		"ServiceAccount":                       {},
 		"StorageObjectInUseProtection":         {Required: true},
 		"TaintNodesByCondition":                {},
 		"ValidatingAdmissionPolicy":            {},
-		"ValidatingAdmissionWebhook":           {Required: true},
+		"ValidatingAdmissionWebhook":           {Required: true, AllowsConfiguration: true},
 	}
 
 	admissionPluginsSupportingExternalKubeconfig = sets.New("ValidatingAdmissionWebhook", "MutatingAdmissionWebhook", "ImagePolicyWebhook")
@@ -115,23 +118,39 @@ func IsAdmissionPluginSupported(plugin, version string) (bool, error) {
 type AdmissionPluginVersionRange struct {
 	versionutils.VersionRange
 
-	Forbidden bool
-	Required  bool
+	Forbidden           bool
+	Required            bool
+	AllowsConfiguration bool
 }
 
-func getAllForbiddenPlugins() []string {
+func getAllForbiddenPlugins(version string) ([]string, error) {
 	var allForbiddenPlugins []string
 	for name, vr := range admissionPluginsVersionRanges {
-		if vr.Forbidden {
+		var (
+			inRange bool
+			err     error
+		)
+		if inRange, err = vr.Contains(version); err != nil {
+			return nil, err
+		}
+
+		if inRange && vr.Forbidden {
 			allForbiddenPlugins = append(allForbiddenPlugins, name)
 		}
 	}
-	return allForbiddenPlugins
+	return allForbiddenPlugins, nil
 }
 
 // ValidateAdmissionPlugins validates the given Kubernetes admission plugins against the given Kubernetes version.
 func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	forbiddenPlugins := []string{}
+	allForbiddenPlugins, pluginErr := getAllForbiddenPlugins(version)
+	if pluginErr != nil {
+		allErrs = append(allErrs, field.InternalError(fldPath, pluginErr))
+		return allErrs
+	}
 
 	for i, plugin := range admissionPlugins {
 		idxPath := fldPath.Index(i)
@@ -147,8 +166,11 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 		} else if !supported {
 			allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("admission plugin %q is not supported in Kubernetes version %s", plugin.Name, version)))
 		} else {
+			if admissionPluginHasConfig(plugin) && !admissionPluginAllowsConfiguration(plugin) {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("config"), fmt.Sprintf("admission plugin %q does not allow configuration", plugin.Name)))
+			}
 			if admissionPluginsVersionRanges[plugin.Name].Forbidden {
-				allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("forbidden admission plugin was specified - do not use plugins from the following list: %+v", getAllForbiddenPlugins())))
+				forbiddenPlugins = append(forbiddenPlugins, plugin.Name)
 			}
 			if ptr.Deref(plugin.Disabled, false) && admissionPluginsVersionRanges[plugin.Name].Required {
 				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("admission plugin %q cannot be disabled", plugin.Name)))
@@ -162,7 +184,20 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 		}
 	}
 
+	if len(forbiddenPlugins) > 0 {
+		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("forbidden admission plugin(s) %+v - do not use plugins from the following list for Kubernetes version %s: %+v", forbiddenPlugins, version, allForbiddenPlugins)))
+	}
+
 	return allErrs
+}
+
+func admissionPluginHasConfig(plugin core.AdmissionPlugin) bool {
+	return plugin.Config != nil && len(plugin.Config.Raw) > 0
+}
+
+func admissionPluginAllowsConfiguration(plugin core.AdmissionPlugin) bool {
+	vr := admissionPluginsVersionRanges[plugin.Name]
+	return vr != nil && vr.AllowsConfiguration
 }
 
 func validateAdmissionPluginConfig(plugin core.AdmissionPlugin, fldPath *field.Path) *field.Error {
