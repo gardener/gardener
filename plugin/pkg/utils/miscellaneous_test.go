@@ -165,4 +165,76 @@ var _ = Describe("Miscellaneous", func() {
 			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(MatchError(ContainSubstring("cannot remove zones")))
 		})
 	})
+
+	Describe("#ValidateInternalDomainChangeForSeed", func() {
+		var (
+			seedName = "foo"
+			kind     = "foo"
+
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
+			shootLister         gardencorev1beta1listers.ShootLister
+
+			oldSeedSpec, newSeedSpec *core.SeedSpec
+			shoot                    *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			shootLister = coreInformerFactory.Core().V1beta1().Shoots().Lister()
+
+			oldSeedSpec = &core.SeedSpec{
+				DNS: core.SeedDNS{
+					Internal: &core.SeedDNSProviderConfig{
+						Domain: "foo.internal",
+					},
+				},
+			}
+			newSeedSpec = oldSeedSpec.DeepCopy()
+
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					SeedName: &seedName,
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					SeedName: &seedName,
+				},
+			}
+		})
+
+		It("should do nothing if internal domain is unchanged", func() {
+			Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should do nothing if old or new internal domain is nil", func() {
+			oldSeedSpec.DNS.Internal = nil
+			Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+
+			// TODO(dimityrmirchev): Remove this test after 1.129 release
+			oldSeedSpec.DNS.Internal = &core.SeedDNSProviderConfig{Domain: "foo.internal"}
+			newSeedSpec.DNS.Internal = nil
+			Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should do nothing if internal domain changed but no shoots exist", func() {
+			newSeedSpec.DNS.Internal.Domain = "bar.internal"
+			Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should return error if internal domain changed and shoots exist for this seed", func() {
+			newSeedSpec.DNS.Internal.Domain = "bar.internal"
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			err := ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("cannot change internal domain"))
+		})
+
+		It("should do nothing if internal domain changed but shoots exist for other seeds", func() {
+			newSeedSpec.DNS.Internal.Domain = "bar.internal"
+			otherSeed := "other-seed"
+			shoot.Spec.SeedName = &otherSeed
+			shoot.Status.SeedName = &otherSeed
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+	})
 })

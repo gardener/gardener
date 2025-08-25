@@ -2643,6 +2643,10 @@ message SeedDNS {
   // Provider configures a DNSProvider
   // +optional
   optional SeedDNSProvider provider = 2;
+
+  // Internal configures DNS settings related to seed internal domain.
+  // +optional
+  optional SeedDNSProviderConfig internal = 3;
 }
 
 // SeedDNSProvider configures a DNSProvider for Seeds
@@ -2652,6 +2656,24 @@ message SeedDNSProvider {
 
   // SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
   optional .k8s.io.api.core.v1.SecretReference secretRef = 2;
+}
+
+// SeedDNSProviderConfig configures a DNS provider.
+message SeedDNSProviderConfig {
+  // Type is the type of the DNS provider.
+  optional string type = 1;
+
+  // Domain is the domain name to be used by the DNS provider.
+  optional string domain = 2;
+
+  // Zone is the zone where the DNS records are managed.
+  // +optional
+  optional string zone = 3;
+
+  // CredentialsRef is a reference to a resource holding the credentials used for
+  // authentication with the DNS provider.
+  // As of now, only v1.Secrets are supported.
+  optional .k8s.io.api.core.v1.ObjectReference credentialsRef = 4;
 }
 
 // SeedList is a collection of Seeds.
