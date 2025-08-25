@@ -74,6 +74,17 @@ config:
       # backupLeaderElection:
       #   reelectionPeriod: 5s
       #   etcdConnectionTimeout: 5s
+      # monitoring:
+      #   prometheusGarden:
+      #     retention: 190GB
+      #     storage:
+      #       capacity: 200Gi
+      #       class: default
+      #   prometheusLongterm:
+      #     retention: 80GB
+      #     storage:
+      #       capacity: 100Gi
+      #       class: default
     gardenCare:
       syncPeriod: 1m
       conditionThresholds:
@@ -87,6 +98,23 @@ config:
         duration: 1m
     gardenletDeployer:
       concurrentSyncs: 5
+      # monitoring:
+      #   seed:
+      #     prometheusCache:
+      #       retention: 8GB
+      #       storage:
+      #         capacity: 10Gi
+      #         class: default
+      #     prometheusSeed:
+      #       retention: 85GB
+      #       storage:
+      #         capacity: 100Gi
+      #         class: default
+      #     prometheusAggregate:
+      #        retention: 15GB
+      #        storage:
+      #          capacity: 20Gi
+      #          class: default
     networkPolicy:
       concurrentSyncs: 5
     # additionalNamespaceSelectors:
