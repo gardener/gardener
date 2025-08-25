@@ -981,6 +981,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 				))
 			})
+
+			DescribeTable("secretBindingName validation for Kubernetes >= 1.34",
+				func(kubernetesVersion string) {
+					shoot.Spec.SecretBindingName = ptr.To("my-secret")
+					shoot.Spec.Kubernetes.Version = kubernetesVersion
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.secretBindingName"),
+						"Detail": Equal("is no longer supported for Kubernetes >= 1.34, use spec.credentialsBindingName instead"),
+					}))))
+				},
+				Entry("should forbid secretBindingName for Kubernetes = 1.34", "1.34.0"),
+				Entry("should forbid secretBindingName for Kubernetes > 1.34", "1.35.0"),
+			)
 		})
 
 		It("should forbid adding invalid/duplicate emails", func() {

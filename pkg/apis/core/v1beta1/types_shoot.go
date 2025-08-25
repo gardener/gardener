@@ -104,6 +104,8 @@ type ShootSpec struct {
 	// The field is mutually exclusive with CredentialsBindingName.
 	// This field is immutable.
 	// +optional
+	//
+	// Deprecated: Use CredentialsBindingName instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
 	SecretBindingName *string `json:"secretBindingName,omitempty" protobuf:"bytes,13,opt,name=secretBindingName"`
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot.
 	// +optional
