@@ -83,7 +83,7 @@ var _ = Describe("admissionplugins", func() {
 			Entry("admission plugin configuration for plugin that does not take configuration", []core.AdmissionPlugin{{Name: "ExtendedResourceToleration", Config: &runtime.RawExtension{Raw: []byte("foo: bar")}}}, "1.31.1", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
-				"Detail": ContainSubstring("admission plugin \"ExtendedResourceToleration\" does not allow configuration. configurable plugins are:"),
+				"Detail": Equal(`admission plugin "ExtendedResourceToleration" does not allow configuration`),
 			})))),
 		)
 
