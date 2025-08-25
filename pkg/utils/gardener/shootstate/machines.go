@@ -46,56 +46,67 @@ func computeMachineState(ctx context.Context, seedClient client.Client, namespac
 		return nil, err
 	}
 
-	machineSetToMachines, err := getMachineSetToMachinesMap(ctx, seedClient, namespace)
+	machineSetOrDeploymentToMachines, err := getMachineSetOrDeploymentToMachinesMap(ctx, seedClient, namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	var allMachines []machinev1alpha1.Machine
 	for _, machineDeployment := range machineDeployments.Items {
 		machineSets, ok := machineDeploymentToMachineSets[machineDeployment.Name]
 		if !ok {
 			continue
 		}
 
-		for i, machineSet := range machineSets {
-			// remove irrelevant data from the machine set
-			machineSets[i].ObjectMeta = metav1.ObjectMeta{
-				Name:        machineSet.Name,
-				Namespace:   machineSet.Namespace,
-				Annotations: machineSet.Annotations,
-				Labels:      machineSet.Labels,
-			}
-			machineSets[i].Status = machinev1alpha1.MachineSetStatus{}
+		// get machines that have a machine deployment as owner
+		machinesForMachineDeployment := machineSetOrDeploymentToMachines[machineDeployment.Name]
+		for i := range machinesForMachineDeployment {
+			removeIrrelevantDataFromObject(&machinesForMachineDeployment[i])
+		}
 
-			// fetch machines related to the machine set/deployment
-			machines := append(machineSetToMachines[machineSet.Name], machineSetToMachines[machineDeployment.Name]...)
-			if len(machines) == 0 {
+		for i, machineSet := range machineSets {
+			removeIrrelevantDataFromObject(&machineSets[i])
+
+			// get machines that have a machine set as owner
+			machinesForMachineSet := machineSetOrDeploymentToMachines[machineSet.Name]
+			if len(machinesForMachineSet) == 0 {
 				continue
 			}
 
-			for j, machine := range machines {
-				// remove irrelevant data from the machine
-				machines[j].ObjectMeta = metav1.ObjectMeta{
-					Name:        machine.Name,
-					Namespace:   machine.Namespace,
-					Annotations: machine.Annotations,
-					Labels:      machine.Labels,
-				}
-				machines[j].Status = machinev1alpha1.MachineStatus{}
+			for j := range machinesForMachineSet {
+				removeIrrelevantDataFromObject(&machinesForMachineSet[j])
 			}
 
-			allMachines = append(allMachines, machines...)
+			machinesForMachineDeployment = append(machinesForMachineDeployment, machinesForMachineSet...)
 		}
 
 		state.MachineDeployments[machineDeployment.Name] = &MachineDeploymentState{
 			Replicas:    machineDeployment.Spec.Replicas,
 			MachineSets: machineSets,
-			Machines:    allMachines,
+			Machines:    machinesForMachineDeployment,
 		}
 	}
 
 	return state, nil
+}
+
+func removeIrrelevantDataFromObject(obj client.Object) {
+	switch o := obj.(type) {
+	case *machinev1alpha1.Machine:
+		resetObjectMeta(&o.ObjectMeta)
+		o.Status = machinev1alpha1.MachineStatus{}
+	case *machinev1alpha1.MachineSet:
+		resetObjectMeta(&o.ObjectMeta)
+		o.Status = machinev1alpha1.MachineSetStatus{}
+	}
+}
+
+func resetObjectMeta(meta *metav1.ObjectMeta) {
+	*meta = metav1.ObjectMeta{
+		Name:        meta.Name,
+		Namespace:   meta.Namespace,
+		Annotations: meta.Annotations,
+		Labels:      meta.Labels,
+	}
 }
 
 func getMachineDeploymentToMachineSetsMap(ctx context.Context, c client.Client, namespace string) (map[string][]machinev1alpha1.MachineSet, error) {
@@ -113,7 +124,7 @@ func getMachineDeploymentToMachineSetsMap(ctx context.Context, c client.Client, 
 	return gardenerutils.BuildOwnerToMachineSetsMap(existingMachineSets.Items), nil
 }
 
-func getMachineSetToMachinesMap(ctx context.Context, seedClient client.Client, namespace string) (map[string][]machinev1alpha1.Machine, error) {
+func getMachineSetOrDeploymentToMachinesMap(ctx context.Context, seedClient client.Client, namespace string) (map[string][]machinev1alpha1.Machine, error) {
 	existingMachines := &machinev1alpha1.MachineList{}
 	if err := seedClient.List(ctx, existingMachines, client.InNamespace(namespace)); err != nil {
 		return nil, err
