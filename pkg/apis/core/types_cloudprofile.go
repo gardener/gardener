@@ -27,6 +27,8 @@ type CloudProfile struct {
 
 	// Spec defines the provider environment properties.
 	Spec CloudProfileSpec
+	// Status contains the current status of the cloud profile.
+	Status CloudProfileStatus
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -147,10 +149,23 @@ type ExpirableVersion struct {
 	// Version is the version identifier.
 	Version string
 	// ExpirationDate defines the time at which this version expires.
+	// Deprecated: Is replaced by Lifecycle.
 	ExpirationDate *metav1.Time
 	// Classification defines the state of a version (preview, supported, deprecated).
-	// To get the currently valid classification, use CurrentLifecycleClassification().
+	// Deprecated: Is replaced by Lifecycle.
 	Classification *VersionClassification
+	// Lifecycle defines the lifecycle stages for this version. Cannot be used in combination with deprecated Classification and ExpirationDate.
+	Lifecycle []LifecycleStage
+}
+
+// LifecycleStage describes a stage in the versions lifecycle.
+// Each stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)
+// and the time at which this classification becomes effective.
+type LifecycleStage struct {
+	// Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
+	Classification VersionClassification
+	// StartTime defines when this lifecycle stage becomes active.
+	StartTime *metav1.Time
 }
 
 // MachineType contains certain properties of a machine type.
@@ -252,6 +267,30 @@ type BastionMachineType struct {
 	Name string
 }
 
+// CloudProfileStatus contains the status of the cloud profile.
+type CloudProfileStatus struct {
+	// KubernetesVersions contains the statuses of the kubernetes versions.
+	KubernetesVersions []ExpirableVersionStatus
+	// MachineImageVersions contains the statuses of the machine image versions.
+	MachineImageVersions []MachineImageVersionStatus
+}
+
+// MachineImageVersionStatus contains the status of a machine image and its version classifications.
+type MachineImageVersionStatus struct {
+	// Name matches the name of the MachineImage the status is represented of.
+	Name string
+	// Versions contains the statuses of the machine image versions.
+	Versions []ExpirableVersionStatus
+}
+
+// ExpirableVersionStatus defines the current status of an expirable version.
+type ExpirableVersionStatus struct {
+	// Version is the version identifier.
+	Version string
+	// Classification reflects the current state in the classification lifecycle.
+	Classification VersionClassification
+}
+
 // Limits configures operational limits for Shoot clusters using this CloudProfile.
 // See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
 type Limits struct {
@@ -269,9 +308,17 @@ const (
 // VersionClassification is the logical state of a version.
 type VersionClassification string
 
-// IsActive returns whether the version can be used.
-func (v VersionClassification) IsActive() bool {
-	return v != ClassificationExpired && v != ClassificationUnavailable
+var order = map[VersionClassification]int{
+	ClassificationUnavailable: 0,
+	ClassificationPreview:     1,
+	ClassificationSupported:   2,
+	ClassificationDeprecated:  3,
+	ClassificationExpired:     4,
+}
+
+// Compare compares two VersionClassification objects to determine their order.
+func (c1 VersionClassification) Compare(c2 VersionClassification) int {
+	return order[c1] - order[c2]
 }
 
 const (
