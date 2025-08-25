@@ -64,6 +64,7 @@ import (
 	cacheprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
 	seedprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
@@ -703,6 +704,9 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		kubernetesdashboard.CentralLoggingConfiguration,
 	}
 
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		centralLoggingConfigurations = append(centralLoggingConfigurations, collector.CentralLoggingConfiguration)
+	}
 	if !seedIsGarden {
 		centralLoggingConfigurations = append(centralLoggingConfigurations, logging.GardenCentralLoggingConfigurations...)
 	}

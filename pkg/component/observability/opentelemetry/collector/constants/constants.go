@@ -13,6 +13,8 @@ const (
 	// ServiceName is the name the OpenTelemetry Operator will use for the Collector service.
 	// Note: Currently, the OpenTelemetry Operator hardcodes the service name to be the same as the resource name with a '-collector' suffix.
 	ServiceName = OpenTelemetryCollectorResourceName + "-collector"
+	// ServiceAccountName is the name of the ServiceAccount used by the OpenTelemetry Collector.
+	ServiceAccountName = OpenTelemetryCollectorResourceName
 	// PushEndpoint is the endpoint where the OpenTelemetry Collector receives logs from log shippers.
 	PushEndpoint = "/loki/api/v1/push"
 	// PushPort is the port that the Loki receiver listens on in the OpenTelemetry Collector deployment.

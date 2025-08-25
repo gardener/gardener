@@ -68,6 +68,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		volumeMount            corev1.VolumeMount
 		openTelemetryCollector *otelv1beta1.OpenTelemetryCollector
 		serviceMonitor         *monitoringv1.ServiceMonitor
+		serviceAccount         *corev1.ServiceAccount
+		kubeRBACServicePort    corev1.ServicePort
 	)
 
 	BeforeEach(func() {
@@ -135,6 +137,15 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			ReadOnly:  true,
 		}
 
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "opentelemetry-collector",
+				Namespace: namespace,
+				Labels:    getLabels(),
+			},
+			AutomountServiceAccountToken: ptr.To(false),
+		}
+
 		kubeRBACProxyContainer = corev1.Container{
 			Name:  "kube-rbac-proxy",
 			Image: kubeRBACProxyImage,
@@ -157,13 +168,6 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				RunAsGroup:               ptr.To[int64](65534),
 				RunAsNonRoot:             ptr.To(true),
 				ReadOnlyRootFilesystem:   ptr.To(true),
-			},
-			Ports: []corev1.ContainerPort{
-				{
-					Name:          "kube-rbac-proxy",
-					ContainerPort: 8080,
-					Protocol:      corev1.ProtocolTCP,
-				},
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				volumeMount,
@@ -236,6 +240,11 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			},
 		}
 
+		kubeRBACServicePort = corev1.ServicePort{
+			Name: "kube-rbac-proxy",
+			Port: 8080,
+		}
+
 		openTelemetryCollector = &otelv1beta1.OpenTelemetryCollector{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "opentelemetry-collector",
@@ -249,18 +258,20 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				Mode:            "deployment",
 				UpgradeStrategy: "none",
 				OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
-					Image:    image,
-					Replicas: ptr.To[int32](1),
+					Image:             image,
+					Replicas:          ptr.To[int32](1),
+					PriorityClassName: "gardener-system-100",
 					SecurityContext: &corev1.SecurityContext{
 						AllowPrivilegeEscalation: ptr.To(false),
 					},
-					Ports: []otelv1beta1.PortsSpec{
-						{
-							ServicePort: corev1.ServicePort{
-								Name: "kube-rbac-proxy",
-								Port: 8080,
-							},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("10m"),
+							corev1.ResourceMemory: resource.MustParse("50Mi"),
 						},
+					},
+					ServiceAccount: "opentelemetry-collector",
+					Ports: []otelv1beta1.PortsSpec{
 						{
 							ServicePort: corev1.ServicePort{
 								Name: "metrics",
@@ -385,6 +396,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
 				serviceMonitor,
+				serviceAccount,
 			))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
@@ -425,9 +437,13 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
 			openTelemetryCollector.Spec.AdditionalContainers = []corev1.Container{kubeRBACProxyContainer}
 			openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume}
+			openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
+				ServicePort: kubeRBACServicePort,
+			})
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
 				serviceMonitor,
+				serviceAccount,
 			))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())

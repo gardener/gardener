@@ -115,8 +115,8 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 
 	objects = append(objects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName))
 
-	serviceMonitor := o.serviceMonitor()
-	objects = append(objects, serviceMonitor)
+	objects = append(objects, o.serviceMonitor())
+	objects = append(objects, o.serviceAccount())
 
 	serializedResources, err := registry.AddAllAndSerialize(objects...)
 	if err != nil {
@@ -142,6 +142,17 @@ func (o *otelCollector) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, o.client, o.namespace, managedResourceName)
+}
+
+func (o *otelCollector) serviceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      collectorconstants.ServiceAccountName,
+			Namespace: o.namespace,
+			Labels:    getLabels(),
+		},
+		AutomountServiceAccountToken: ptr.To(false),
+	}
 }
 
 func (o *otelCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
@@ -225,18 +236,20 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			Mode:            "deployment",
 			UpgradeStrategy: "none",
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
-				Image:    o.values.Image,
-				Replicas: ptr.To(o.values.Replicas),
+				Image:             o.values.Image,
+				Replicas:          ptr.To(o.values.Replicas),
+				PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("10m"),
+						corev1.ResourceMemory: resource.MustParse("50Mi"),
+					},
+				},
 				SecurityContext: &corev1.SecurityContext{
 					AllowPrivilegeEscalation: ptr.To(false),
 				},
+				ServiceAccount: collectorconstants.ServiceAccountName,
 				Ports: []otelv1beta1.PortsSpec{
-					{
-						ServicePort: corev1.ServicePort{
-							Name: kubeRBACProxyName,
-							Port: collectorconstants.KubeRBACProxyPort,
-						},
-					},
 					{
 						ServicePort: corev1.ServicePort{
 							Name: metricsEndpointName,
@@ -329,6 +342,12 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 	}
 
 	if o.values.WithRBACProxy {
+		obj.Spec.Ports = append(obj.Spec.Ports, otelv1beta1.PortsSpec{
+			ServicePort: corev1.ServicePort{
+				Name: kubeRBACProxyName,
+				Port: collectorconstants.KubeRBACProxyPort,
+			},
+		})
 		obj.Spec.AdditionalContainers = []corev1.Container{
 			{
 				Name:  kubeRBACProxyName,
@@ -352,13 +371,6 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					RunAsGroup:               ptr.To[int64](65534),
 					RunAsNonRoot:             ptr.To(true),
 					ReadOnlyRootFilesystem:   ptr.To(true),
-				},
-				Ports: []corev1.ContainerPort{
-					{
-						Name:          kubeRBACProxyName,
-						ContainerPort: collectorconstants.KubeRBACProxyPort,
-						Protocol:      corev1.ProtocolTCP,
-					},
 				},
 			},
 		}
