@@ -8,7 +8,6 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +28,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	netutils "github.com/gardener/gardener/pkg/utils/net"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -199,10 +197,8 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
-		directoryOrCreate  = corev1.HostPathDirectoryOrCreate
-		fileOrCreate       = corev1.HostPathFileOrCreate
-		k8sGreaterEqual128 = versionutils.ConstraintK8sGreaterEqual128.Check(pool.KubernetesVersion)
-		k8sGreaterEqual129 = versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion)
+		directoryOrCreate = corev1.HostPathDirectoryOrCreate
+		fileOrCreate      = corev1.HostPathFileOrCreate
 
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -234,7 +230,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 							v1beta1constants.LabelWorkerPool:              pool.Name,
 							v1beta1constants.LabelWorkerKubernetesVersion: pool.KubernetesVersion.String(),
 						},
-						InitContainers:    k.getInitContainers(pool.KubernetesVersion, pool.Image),
+						InitContainers:    k.getInitContainers(pool.Image),
 						PriorityClassName: "system-node-critical",
 						SecurityContext: &corev1.PodSecurityContext{
 							SeccompProfile: &corev1.SeccompProfile{
@@ -254,7 +250,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 						HostNetwork:        true,
 						ServiceAccountName: k.serviceAccount.Name,
 						Containers: []corev1.Container{
-							k.getKubeProxyContainer(k8sGreaterEqual129, k8sGreaterEqual128, pool.Image, false),
+							k.getKubeProxyContainer(pool.Image, false),
 							{
 								// sidecar container with fix for conntrack
 								Name:            containerNameConntrackFix,
@@ -372,10 +368,8 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 		daemonSet.Spec.Template.Spec.Containers[0].Resources.Limits = corev1.ResourceList{
 			corev1.ResourceMemory: resource.MustParse("2048Mi"),
 		}
-		if k8sGreaterEqual129 {
-			daemonSet.Spec.Template.Spec.InitContainers[1].Resources.Limits = corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("256Mi"),
-			}
+		daemonSet.Spec.Template.Spec.InitContainers[1].Resources.Limits = corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		}
 	}
 
@@ -484,7 +478,7 @@ func (k *kubeProxy) getMode() kubeproxyconfigv1alpha1.ProxyMode {
 	return "iptables"
 }
 
-func (k *kubeProxy) getInitContainers(kubernetesVersion *semver.Version, image string) []corev1.Container {
+func (k *kubeProxy) getInitContainers(image string) []corev1.Container {
 	initContainers := []corev1.Container{
 		{
 			Name:            "cleanup",
@@ -533,16 +527,12 @@ func (k *kubeProxy) getInitContainers(kubernetesVersion *semver.Version, image s
 		},
 	}
 
-	k8sGreaterEqual129 := versionutils.ConstraintK8sGreaterEqual129.Check(kubernetesVersion)
-	if k8sGreaterEqual129 {
-		k8sGreaterEqual128 := versionutils.ConstraintK8sGreaterEqual128.Check(kubernetesVersion)
-		initContainers = append(initContainers, k.getKubeProxyContainer(k8sGreaterEqual129, k8sGreaterEqual128, image, true))
-	}
+	initContainers = append(initContainers, k.getKubeProxyContainer(image, true))
 
 	return initContainers
 }
 
-func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129, k8sGreaterEqual128 bool, image string, init bool) corev1.Container {
+func (k *kubeProxy) getKubeProxyContainer(image string, init bool) corev1.Container {
 	container := corev1.Container{
 		Name:            containerName,
 		Image:           image,
@@ -589,14 +579,12 @@ func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129, k8sGreaterEqual128
 		},
 	}
 
-	if !k8sGreaterEqual129 || init {
-		container.SecurityContext = &corev1.SecurityContext{
-			Privileged: ptr.To(true),
-		}
-	}
 	if init {
 		container.Name += "-init"
 		container.Command = append(container.Command, "--init-only")
+		container.SecurityContext = &corev1.SecurityContext{
+			Privileged: ptr.To(true),
+		}
 	} else {
 		container.Ports = []corev1.ContainerPort{{
 			Name:          portNameMetrics,
@@ -605,14 +593,10 @@ func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129, k8sGreaterEqual128
 			Protocol:      corev1.ProtocolTCP,
 		}}
 
-		urlPath := "/healthz"
-		if k8sGreaterEqual128 {
-			urlPath = "/livez"
-		}
 		container.ReadinessProbe = &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path:   urlPath,
+					Path:   "/livez",
 					Port:   intstr.FromInt32(portHealthz),
 					Scheme: corev1.URISchemeHTTP,
 				},

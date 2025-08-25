@@ -27,18 +27,15 @@ var _ = Describe("featuregates", func() {
 		},
 
 		Entry("TopologyAwareHints is supported in 1.27.4", "TopologyAwareHints", "1.27.4", true, true),                   // AddedInVersion: 1.21
-		Entry("StorageVersionMigrator is not supported in 1.29.8", "StorageVersionMigrator", "1.29.8", false, true),      // AddedInVersion: 1.30
-		Entry("CSIMigrationAzureFile is not supported in 1.31.4", "CSIMigrationAzureFile", "1.31.4", false, true),        // RemovedInVersion: 1.30
 		Entry("AllowServiceLBStatusOnNonLB is supported in 1.30.3", "AllowServiceLBStatusOnNonLB", "1.30.3", true, true), // AddedInVersion: 1.29
 		Entry("SecurityContextDeny is supported in 1.29.3", "SecurityContextDeny", "1.29.3", true, true),                 // RemovedInVersion: 1.30
-		Entry("Foo is unknown in 1.25.8", "Foo", "1.25.8", false, false),                                                 // Unknown
+		Entry("CSIMigrationRBD is supported in 1.27.1", "CSIMigrationRBD", "1.27.1", true, true),                         // RemovedInVersion: 1.31
 
-		Entry("AnyVolumeDataSource is supported in 1.24.9", "AnyVolumeDataSource", "1.24.9", true, true),                                    // AddedInVersion: 1.18
-		Entry("SELinuxMountReadWriteOncePod is supported in 1.29.1", "SELinuxMountReadWriteOncePod", "1.29.1", true, true),                  // AddedInVersion: 1.25
-		Entry("PodHasNetworkCondition is not supported in 1.29.2", "PodHasNetworkCondition", "1.29.2", false, true),                         // RemovedInVersion: 1.28
-		Entry("CSIMigrationRBD is supported in 1.27.1", "CSIMigrationRBD", "1.27.1", true, true),                                            // RemovedInVersion: 1.31
-		Entry("UserNamespacesStatelessPodsSupport is not supported in 1.29.4", "UserNamespacesStatelessPodsSupport", "1.29.4", false, true), // RemovedInVersion: 1.28
-		Entry("Foo is unknown in 1.27.0", "Foo", "1.27.0", false, false),                                                                    // Unknown
+		Entry("StorageVersionMigrator is not supported in 1.29.8", "StorageVersionMigrator", "1.29.8", false, true),       // AddedInVersion: 1.30
+		Entry("SupplementalGroupsPolicy is not supported in 1.30.8", "SupplementalGroupsPolicy", "1.30.8", false, true),   // AddedInVersion: 1.31
+		Entry("CSIMigrationAzureFile is not supported in 1.31.4", "CSIMigrationAzureFile", "1.31.4", false, true),         // RemovedInVersion: 1.30
+		Entry("ValidatingAdmissionPolicy is not supported in 1.33.3", "ValidatingAdmissionPolicy", "1.33.3", false, true), // RemovedInVersion: 1.32
+		Entry("Foo is unknown in 1.25.8", "Foo", "1.25.8", false, false),                                                  // Unknown
 
 		Entry("AllAlpha is supported in 1.17.0", "AllAlpha", "1.17.0", true, true),        // AddedInVersion: 1.17
 		Entry("AllAlpha is not supported in 1.16.15", "AllAlpha", "1.16.15", false, true), // AddedInVersion: 1.17

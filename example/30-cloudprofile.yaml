@@ -30,10 +30,11 @@ spec:
 #   values: [amd64,arm64]
   kubernetes:
     versions:
-    - version: 1.30.1
-    - version: 1.29.2
-    - version: 1.28.3
-    - version: 1.27.8
+    - version: 1.33.2
+    - version: 1.32.4
+    - version: 1.31.6
+    - version: 1.30.8
+    - version: 1.29.10
       expirationDate: 2022-11-30T01:02:03Z # optional
   machineImages:
   - name: gardenlinux

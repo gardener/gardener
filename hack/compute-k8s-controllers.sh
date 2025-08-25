@@ -10,7 +10,7 @@ usage() {
   echo "Usage:"
   echo "> compute-k8s-controllers.sh [ -h | <old version> <new version> ]"
   echo
-  echo ">> For example: compute-k8s-controllers.sh 1.26 1.27"
+  echo ">> For example: compute-k8s-controllers.sh 1.32 1.33"
 
   exit 0
 }
@@ -82,11 +82,6 @@ declare -A path_map=(
 )
 
 for version in "${versions[@]}"; do
-  if [ "$version" \< "1.28" ]; then
-    echo "Versions less than 1.28 are not supported."
-    exit 1
-  fi
-
   rm -rf "${out_dir}/kubernetes-${version}"
   rm -f "${out_dir}/k8s-controllers-${version}.txt"
 

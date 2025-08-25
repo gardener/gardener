@@ -51,9 +51,9 @@ var _ = Describe("Component", func() {
 		component = New()
 	})
 
-	DescribeTable("#Config", func(k8sVersion, additionalData string, protectKernelDefaults *bool, sysctls map[string]string, kubeProxyEnabled bool) {
+	DescribeTable("#Config", func(additionalData string, protectKernelDefaults *bool, sysctls map[string]string, kubeProxyEnabled bool) {
 		units, files, err := component.Config(components.Context{
-			KubernetesVersion: semver.MustParse(k8sVersion),
+			KubernetesVersion: semver.MustParse("1.32.0"),
 			KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
 				ProtectKernelDefaults: protectKernelDefaults,
 			},
@@ -97,12 +97,12 @@ var _ = Describe("Component", func() {
 		Expect(units).To(ConsistOf(systemdSysctlUnit))
 		Expect(files).To(ConsistOf(kernelSettingsFile))
 	},
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.27.0", kubeletSysctlConfig, nil, nil, true),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.27.0", "", ptr.To(false), nil, true),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", kubeletSysctlConfig, nil, nil, true),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "", ptr.To(false), nil, true),
 		// This test prevents from unknowingly upgrading to a newer k8s version which may have different sysctl settings.
-		Entry("should return the expected units and files if k8s version has not been upgraded", "1.27.0", hardCodedKubeletSysctlConfig, nil, nil, true),
-		Entry("should return the expected units and files if configured to add kernel settings", "1.27.0", dummySettingConfig, ptr.To(false), dummySettingMap, true),
-		Entry("should return the expected units and files if kube-proxy is disabled", "1.27.0", nonKubeProxyData, ptr.To(false), nil, false),
+		Entry("should return the expected units and files if k8s version has not been upgraded", hardCodedKubeletSysctlConfig, nil, nil, true),
+		Entry("should return the expected units and files if configured to add kernel settings", dummySettingConfig, ptr.To(false), dummySettingMap, true),
+		Entry("should return the expected units and files if kube-proxy is disabled", nonKubeProxyData, ptr.To(false), nil, false),
 	)
 })
 

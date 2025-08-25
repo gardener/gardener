@@ -65,10 +65,6 @@ func (k *kubeAPIServer) reconcileServiceMonitor(ctx context.Context, serviceMoni
 					"apiserver_request_duration_seconds_count",
 					"apiserver_request_terminations_total",
 					"apiserver_response_sizes_.+",
-					// TODO: The apiserver_storage_db_total_size_in_bytes metric is replaced by
-					//  apiserver_storage_size_bytes in K8s 1.28 (https://github.com/kubernetes/kubernetes/pull/118812).
-					//  Remove this metric when we remove support for K8s 1.28.
-					"apiserver_storage_db_total_size_in_bytes",
 					"apiserver_storage_list_.+",
 					"apiserver_storage_objects",
 					"apiserver_storage_transformation_duration_seconds_.+",

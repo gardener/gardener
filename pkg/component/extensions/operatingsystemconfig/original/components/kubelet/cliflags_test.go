@@ -17,8 +17,7 @@ import (
 
 var _ = Describe("CLIFlags", func() {
 	DescribeTable("#CLIFlags",
-		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, cliFlags components.ConfigurableKubeletCLIFlags, preferIPv6 bool, matcher gomegatypes.GomegaMatcher) {
-			v := semver.MustParse(kubernetesVersion)
+		func(criName extensionsv1alpha1.CRIName, cliFlags components.ConfigurableKubeletCLIFlags, preferIPv6 bool, matcher gomegatypes.GomegaMatcher) {
 			nodeLabels := map[string]string{
 				"test":  "foo",
 				"test2": "bar",
@@ -30,12 +29,11 @@ var _ = Describe("CLIFlags", func() {
 				"worker.gardener.cloud/pool":                    "worker", // allowed
 				"containerruntime.worker.gardener.cloud/gvisor": "true",   // allowed
 			}
-			Expect(kubelet.CLIFlags(v, nodeLabels, criName, cliFlags, preferIPv6)).To(matcher)
+			Expect(kubelet.CLIFlags(semver.MustParse("1.32.0"), nodeLabels, criName, cliFlags, preferIPv6)).To(matcher)
 		},
 
 		Entry(
-			"kubernetes 1.27 w/ containerd",
-			"1.27.0",
+			"w/ containerd",
 			extensionsv1alpha1.CRINameContainerD,
 			components.ConfigurableKubeletCLIFlags{},
 			false,
@@ -43,7 +41,7 @@ var _ = Describe("CLIFlags", func() {
 				"--bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap",
 				"--config=/var/lib/kubelet/config/kubelet",
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
-				"--node-labels=worker.gardener.cloud/kubernetes-version=1.27.0",
+				"--node-labels=worker.gardener.cloud/kubernetes-version=1.32.0",
 				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
 				"--node-labels=kubernetes.io/arch=amd64",
 				"--node-labels=test=foo",
@@ -55,8 +53,7 @@ var _ = Describe("CLIFlags", func() {
 			),
 		),
 		Entry(
-			"kubernetes 1.27 w/ containerd w/ preferIPv6",
-			"1.27.0",
+			"w/ containerd w/ preferIPv6",
 			extensionsv1alpha1.CRINameContainerD,
 			components.ConfigurableKubeletCLIFlags{},
 			true,
@@ -64,7 +61,7 @@ var _ = Describe("CLIFlags", func() {
 				"--bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap",
 				"--config=/var/lib/kubelet/config/kubelet",
 				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
-				"--node-labels=worker.gardener.cloud/kubernetes-version=1.27.0",
+				"--node-labels=worker.gardener.cloud/kubernetes-version=1.32.0",
 				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
 				"--node-labels=kubernetes.io/arch=amd64",
 				"--node-labels=test=foo",
