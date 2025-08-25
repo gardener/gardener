@@ -7,6 +7,7 @@ package gardenlet
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
@@ -24,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -84,9 +86,10 @@ func (r *Reconciler) OperatorResponsiblePredicate(ctx context.Context) predicate
 		if !ok {
 			return false
 		}
-		return hasForceRedeployOperationAnnotation(gardenlet) ||
-			r.seedDoesNotExist(ctx, gardenlet) ||
-			gardenlet.Spec.KubeconfigSecretRef != nil
+		return !strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixAutonomousShoot) &&
+			(hasForceRedeployOperationAnnotation(gardenlet) ||
+				r.seedDoesNotExist(ctx, gardenlet) ||
+				gardenlet.Spec.KubeconfigSecretRef != nil)
 	})
 }
 
