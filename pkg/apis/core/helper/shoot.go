@@ -125,6 +125,22 @@ func GetShootETCDEncryptionKeyRotationPhase(credentials *core.ShootCredentials) 
 	return ""
 }
 
+// ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared returns whether the current ETCD encryption key rotation should
+// be auto completed after the preparation phase has finished.
+//
+// Deprecated: This function will be removed in a future release. The function will be no longer needed with
+// the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.
+// TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
+func ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials *core.ShootCredentials) bool {
+	if credentials != nil &&
+		credentials.Rotation != nil &&
+		credentials.Rotation.ETCDEncryptionKey != nil &&
+		credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared != nil {
+		return *credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared
+	}
+	return false
+}
+
 // GetAllZonesFromShoot returns the set of all availability zones defined in the worker pools of the Shoot specification.
 func GetAllZonesFromShoot(shoot *core.Shoot) sets.Set[string] {
 	out := sets.New[string]()
