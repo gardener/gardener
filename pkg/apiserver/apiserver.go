@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	kubeinformers "k8s.io/client-go/informers"
+	clientauthorizationv1 "k8s.io/client-go/kubernetes/typed/authorization/v1"
 	"k8s.io/client-go/util/keyutil"
 
 	corerest "github.com/gardener/gardener/pkg/apiserver/registry/core/rest"
@@ -76,7 +77,7 @@ func (cfg *Config) Complete() CompletedConfig {
 }
 
 // New returns a new instance of GardenerServer from the given config.
-func (c completedConfig) New() (*GardenerServer, error) {
+func (c completedConfig) New(subjectAccessReviewer clientauthorizationv1.SubjectAccessReviewInterface) (*GardenerServer, error) {
 	genericServer, err := c.GenericConfig.New("gardener-apiserver", genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return nil, err
@@ -103,6 +104,7 @@ func (c completedConfig) New() (*GardenerServer, error) {
 			CredentialsRotationInterval:   c.ExtraConfig.CredentialsRotationInterval,
 			KubeInformerFactory:           c.kubeInformerFactory,
 			CoreInformerFactory:           c.coreInformerFactory,
+			SubjectAccessReviewer:         subjectAccessReviewer,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
