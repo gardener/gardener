@@ -47,14 +47,14 @@ func (p *namespacedCloudProfileValidator) Validate(ctx context.Context, new, _ c
 	if cloudProfile.DeletionTimestamp != nil {
 		return nil
 	}
-	providerConfigPath := field.NewPath("spec").Child("providerConfig")
-	if cloudProfile.Spec.ProviderConfig == nil {
-		return field.Required(providerConfigPath, "providerConfig must be set for local cloud profiles")
-	}
+	cloudProfileConfig := &api.CloudProfileConfig{}
 
-	cloudProfileConfig, err := admission.DecodeCloudProfileConfig(p.decoder, cloudProfile.Spec.ProviderConfig)
-	if err != nil {
-		return fmt.Errorf("could not decode providerConfig of NamespacedCloudProfile for '%s': %w", cloudProfile.Name, err)
+	if cloudProfile.Spec.ProviderConfig != nil {
+		cpConfig, err := admission.DecodeCloudProfileConfig(p.decoder, cloudProfile.Spec.ProviderConfig)
+		if err != nil {
+			return fmt.Errorf("could not decode providerConfig of NamespacedCloudProfile for '%s': %w", cloudProfile.Name, err)
+		}
+		cloudProfileConfig = cpConfig
 	}
 
 	parentCloudProfile := cloudProfile.Spec.Parent
