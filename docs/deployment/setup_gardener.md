@@ -429,17 +429,7 @@ spec:
   - key: seed.gardener.cloud/protected
 ```
 
-Up next, a `gardenlet` has to be installed on to this `Shoot` and it needs to be registered as a `Seed`. The recommended way is to create a `ManagedSeed` resource in the virtual Garden. The configuration for the `Seed` needs to be crafted carefully to avoid overlapping CIDR ranges etc. Additionally, the virtual Garden's API endpoint needs to be added. When deploying a `gardenlet` to the runtime cluster, cluster-internal communication through the `Service`'s cluster DNS record works well. Now with the new `gardenlet` running on a different Kubernetes cluster, the public endpoint is required in the `gardenlet`'s configuration within the `ManagedSeed` resource.
-
-```yaml
-spec:
-  gardenlet:
-    config:
-      apiVersion: gardenlet.config.gardener.cloud/v1alpha1
-      kind: GardenletConfiguration
-      gardenClientConnection:
-        gardenClusterAddress: https://api.garden.crazy-botany.gardener.cloud
-```
+Up next, a `gardenlet` has to be installed on to this `Shoot` and it needs to be registered as a `Seed`. The recommended way is to create a `ManagedSeed` resource in the virtual Garden. The configuration for the `Seed` needs to be crafted carefully to avoid overlapping CIDR ranges etc.
 
 ![managed seed](./content/managedseed.png)
 
