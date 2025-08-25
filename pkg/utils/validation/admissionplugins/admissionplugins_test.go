@@ -72,7 +72,7 @@ var _ = Describe("admissionplugins", func() {
 			Entry("adding forbidden admission plugin", []core.AdmissionPlugin{{Name: "SecurityContextDeny"}}, "1.27.4", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
-				"Detail": Equal("forbidden admission plugin was specified - do not use plugins from the following list: [SecurityContextDeny]"),
+				"Detail": Equal("forbidden admission plugin was specified - do not use plugins from the following list for Kubernetes version 1.27.4: [SecurityContextDeny]"),
 			})))),
 			Entry("adding kubeconfig secret to admission plugin not supporting external kubeconfig", []core.AdmissionPlugin{{Name: "TaintNodesByCondition", KubeconfigSecretName: ptr.To("test-secret")}}, "1.27.5", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
