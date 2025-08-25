@@ -3,3 +3,20 @@ kind: Component
 
 resources:
 - extension.yaml
+
+patches:
+- patch: |
+    - op: replace
+      path: /spec/deployment/admission/runtimeCluster/helm/ociRepository/ref
+      value: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/extensions/admission-cilium-runtime:v1.42.0
+    - op: replace
+      path: /spec/deployment/admission/virtualCluster/helm/ociRepository/ref
+      value: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/extensions/admission-cilium-application:v1.42.0
+    - op: replace
+      path: /spec/deployment/extension/helm/ociRepository/ref
+      value: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/extensions/networking-cilium:v1.42.0
+  target:
+    version: v1alpha1
+    group: operator.gardener.cloud
+    kind: Extension
+    name: networking-cilium
