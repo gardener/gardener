@@ -123,26 +123,33 @@ type AdmissionPluginVersionRange struct {
 	AllowsConfiguration bool
 }
 
-func getAllForbiddenPlugins(version string) []string {
+func getAllForbiddenPlugins(version string) ([]string, error) {
 	var allForbiddenPlugins []string
 	for name, vr := range admissionPluginsVersionRanges {
-		var inRange bool
-		var err error
+		var (
+			inRange bool
+			err     error
+		)
 		if inRange, err = vr.Contains(version); err != nil {
-			// If we cannot determine whether the plugin is supported, we assume it is not forbidden.
-			continue
+			return nil, err
 		}
 
 		if inRange && vr.Forbidden {
 			allForbiddenPlugins = append(allForbiddenPlugins, name)
 		}
 	}
-	return allForbiddenPlugins
+	return allForbiddenPlugins, nil
 }
 
 // ValidateAdmissionPlugins validates the given Kubernetes admission plugins against the given Kubernetes version.
 func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	forbiddenPlugins := []string{}
+	allForbiddenPlugins, pluginErr := getAllForbiddenPlugins(version)
+	if pluginErr != nil {
+		allErrs = append(allErrs, field.InternalError(fldPath, pluginErr))
+	}
 
 	for i, plugin := range admissionPlugins {
 		idxPath := fldPath.Index(i)
@@ -162,7 +169,7 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("config"), fmt.Sprintf("admission plugin %q does not allow configuration", plugin.Name)))
 			}
 			if admissionPluginsVersionRanges[plugin.Name].Forbidden {
-				allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("forbidden admission plugin was specified - do not use plugins from the following list for Kubernetes version %s: %+v", version, getAllForbiddenPlugins(version))))
+				forbiddenPlugins = append(forbiddenPlugins, plugin.Name)
 			}
 			if ptr.Deref(plugin.Disabled, false) && admissionPluginsVersionRanges[plugin.Name].Required {
 				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("admission plugin %q cannot be disabled", plugin.Name)))
@@ -174,6 +181,10 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 				allErrs = append(allErrs, err)
 			}
 		}
+	}
+
+	if len(forbiddenPlugins) > 0 {
+		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("forbidden admission plugin(s) %+v - do not use plugins from the following list for Kubernetes version %s: %+v", forbiddenPlugins, version, allForbiddenPlugins)))
 	}
 
 	return allErrs
