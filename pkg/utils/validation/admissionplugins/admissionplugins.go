@@ -149,6 +149,7 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 	allForbiddenPlugins, pluginErr := getAllForbiddenPlugins(version)
 	if pluginErr != nil {
 		allErrs = append(allErrs, field.InternalError(fldPath, pluginErr))
+		return allErrs
 	}
 
 	for i, plugin := range admissionPlugins {
