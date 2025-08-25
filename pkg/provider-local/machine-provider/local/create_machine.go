@@ -71,6 +71,7 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 	return &driver.CreateMachineResponse{
 		ProviderID: pod.Name,
 		NodeName:   pod.Name,
+		Addresses:  addressesFromStatus(pod.Status),
 	}, nil
 }
 

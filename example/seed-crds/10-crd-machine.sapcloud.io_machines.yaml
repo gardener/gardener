@@ -224,6 +224,25 @@ spec:
           status:
             description: Status contains fields depicting the status
             properties:
+              addresses:
+                description: |-
+                  Addresses of this machines. This field is only present if the MCM provider runs without a target cluster and may
+                  be used by clients to determine how to connect to the machine, instead of the `Node.status.addresses` field.
+                items:
+                  description: NodeAddress contains information for the node's address.
+                  properties:
+                    address:
+                      description: The node address.
+                      type: string
+                    type:
+                      description: Node address type, one of Hostname, ExternalIP
+                        or InternalIP.
+                      type: string
+                  required:
+                  - address
+                  - type
+                  type: object
+                type: array
               conditions:
                 description: Conditions of this machine, same as node
                 items:
