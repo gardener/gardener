@@ -454,7 +454,7 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	if g.config.GardenClientConnection.KubeconfigSecret != nil {
-		certificateManager, err := certificate.NewCertificateManager(log, gardenCluster, g.mgr.GetClient(), g.config)
+		certificateManager, err := certificate.NewCertificateManager(log, gardenCluster, g.mgr.GetClient(), g.config, g.autonomousShootMeta)
 		if err != nil {
 			return fmt.Errorf("failed to create a new certificate manager: %w", err)
 		}
