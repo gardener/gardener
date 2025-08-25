@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-logr/logr"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
@@ -44,6 +46,9 @@ var (
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
+	configMapResource                 = corev1.Resource("configmaps")
+	eventCoreResource                 = corev1.Resource("events")
+	eventResource                     = eventsv1.Resource("events")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 )
 
@@ -79,6 +84,12 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				authwebhook.WithAllowedSubresources("shootclient"),
 			)
 
+		case configMapResource:
+			return requestAuthorizer.CheckRead(graph.VertexTypeConfigMap, attrs)
+
+		case eventCoreResource, eventResource:
+			return a.authorizeEvent(log, attrs)
+
 		case gardenletResource:
 			return requestAuthorizer.Check(graph.VertexTypeGardenlet, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
@@ -99,4 +110,16 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 	}
 
 	return auth.DecisionNoOpinion, "", nil
+}
+
+func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (auth.Decision, string, error) {
+	if ok, reason := authwebhook.CheckVerb(log, attrs, "create", "patch"); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	if ok, reason := authwebhook.CheckSubresource(log, attrs); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	return auth.DecisionAllow, "", nil
 }

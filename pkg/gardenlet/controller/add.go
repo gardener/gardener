@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/healthz"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 // AddToManager adds all gardenlet controllers to the given manager.
@@ -52,13 +53,20 @@ func AddToManager(
 		return err
 	}
 
-	configMap := &corev1.ConfigMap{}
-	if err := gardenCluster.GetClient().Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: v1beta1constants.ClusterIdentity}, configMap); err != nil {
-		return fmt.Errorf("failed getting cluster-identity ConfigMap in garden cluster: %w", err)
-	}
-	gardenClusterIdentity, ok := configMap.Data[v1beta1constants.ClusterIdentity]
-	if !ok {
-		return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
+	// TODO(rfranzke): Remove this code again once the Shoot object gets registered in the garden cluster - then we can
+	//  adapt the shoot authorizer (via the resource dependency graph) to allow 'read' access to this ConfigMap (similar
+	//  to how it's done for seeds).
+	gardenClusterIdentity := ""
+	if !gardenletutils.IsResponsibleForAutonomousShoot() {
+		configMap := &corev1.ConfigMap{}
+		if err := gardenCluster.GetClient().Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: v1beta1constants.ClusterIdentity}, configMap); err != nil {
+			return fmt.Errorf("failed getting cluster-identity ConfigMap in garden cluster: %w", err)
+		}
+		var ok bool
+		gardenClusterIdentity, ok = configMap.Data[v1beta1constants.ClusterIdentity]
+		if !ok {
+			return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
+		}
 	}
 
 	seedClientSet, err := kubernetes.NewWithConfig(
@@ -69,6 +77,18 @@ func AddToManager(
 	)
 	if err != nil {
 		return fmt.Errorf("failed creating seed clientset: %w", err)
+	}
+
+	if gardenletutils.IsResponsibleForAutonomousShoot() {
+		mgr.GetLogger().Info("Running in autonomous shoot, registering minimal set of controllers")
+
+		if err := (&gardenlet.Reconciler{
+			Config: *cfg,
+		}).AddToManager(mgr, gardenCluster, seedClientSet); err != nil {
+			return fmt.Errorf("failed adding Gardenlet controller: %w", err)
+		}
+
+		return nil
 	}
 
 	if err := (&backupbucket.Reconciler{
