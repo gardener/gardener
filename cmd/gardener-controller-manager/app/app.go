@@ -17,7 +17,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	"go.uber.org/automaxprocs/maxprocs"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -74,15 +73,6 @@ func NewCommand() *cobra.Command {
 
 func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alpha1.ControllerManagerConfiguration) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
-
-	// This is like importing the automaxprocs package for its init func (it will in turn call maxprocs.Set).
-	// Here we pass a custom logger, so that the result of the library gets logged to the same logger we use for the
-	// component itself.
-	if _, err := maxprocs.Set(maxprocs.Logger(func(s string, i ...any) {
-		log.Info(fmt.Sprintf(s, i...)) //nolint:logcheck
-	})); err != nil {
-		log.Error(err, "Failed to set GOMAXPROCS")
-	}
 
 	log.Info("Getting rest config")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
