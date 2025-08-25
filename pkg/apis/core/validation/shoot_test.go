@@ -2587,6 +2587,38 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
+			Context("Audience validation", func() {
+				It("should allow specifying individual audiences", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.APIAudiences = []string{"foo", "bar"}
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should not allow specifying audiences with the delimiter included", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.APIAudiences = []string{"foo,baz", "bar"}
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.apiAudiences[0]"),
+						"Detail": Equal("audience must not contain commas"),
+					}))))
+				})
+
+				It("should not contain duplicates", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.APIAudiences = []string{"foo", "bar", "foo"}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeDuplicate),
+						"Field":    Equal("spec.kubernetes.kubeAPIServer.apiAudiences[2]"),
+						"BadValue": Equal("foo"),
+					}))))
+				})
+			})
+
 			It("should not allow to specify a negative event ttl duration", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: -1}
 
