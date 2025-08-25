@@ -14,6 +14,8 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,11 +47,20 @@ type Manager struct {
 	gardenClientSet        kubernetes.Interface
 	seedClient             client.Client
 	gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection
-	seedName               string
+	newTargetedObject      func() client.Object
 }
 
 // NewCertificateManager creates a certificate manager that can be used to rotate gardenlet's client certificate for the Garden cluster
-func NewCertificateManager(log logr.Logger, gardenCluster cluster.Cluster, seedClient client.Client, config *gardenletconfigv1alpha1.GardenletConfiguration) (*Manager, error) {
+func NewCertificateManager(
+	log logr.Logger,
+	gardenCluster cluster.Cluster,
+	seedClient client.Client,
+	config *gardenletconfigv1alpha1.GardenletConfiguration,
+	autonomousShootMeta *types.NamespacedName,
+) (
+	*Manager,
+	error,
+) {
 	gardenClientSet, err := kubernetes.NewWithConfig(
 		kubernetes.WithRESTConfig(gardenCluster.GetConfig()),
 		kubernetes.WithRuntimeAPIReader(gardenCluster.GetAPIReader()),
@@ -60,14 +71,24 @@ func NewCertificateManager(log logr.Logger, gardenCluster cluster.Cluster, seedC
 		return nil, fmt.Errorf("failed creating garden clientset: %w", err)
 	}
 
-	seedName := gardenletbootstraputil.GetSeedName(config.SeedConfig)
+	logger := log.WithName("certificate-manager")
+	if autonomousShootMeta != nil {
+		logger = logger.WithValues("shootNamespace", autonomousShootMeta.Namespace, "shootName", autonomousShootMeta.Name)
+	} else {
+		logger = logger.WithValues("seedName", gardenletbootstraputil.GetSeedName(config.SeedConfig))
+	}
 
 	return &Manager{
-		log:                    log.WithName("certificate-manager").WithValues("seedName", seedName),
+		log:                    logger,
 		gardenClientSet:        gardenClientSet,
 		seedClient:             seedClient,
 		gardenClientConnection: config.GardenClientConnection,
-		seedName:               seedName,
+		newTargetedObject: func() client.Object {
+			if autonomousShootMeta != nil {
+				return &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: autonomousShootMeta.Namespace, Name: autonomousShootMeta.Name}}
+			}
+			return &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: gardenletbootstraputil.GetSeedName(config.SeedConfig)}}
+		},
 	}, nil
 }
 
@@ -94,12 +115,12 @@ func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCan
 			return retry.Ok()
 		}); err != nil {
 			cr.log.Error(err, "Failed to rotate the kubeconfig for the Garden API Server", "certificateExpirationTime", certificateExpirationTime)
-			seed, err := cr.getTargetedSeed(ctx)
+			obj, err := cr.getTargetedObject(ctx)
 			if err != nil {
-				cr.log.Error(err, "Failed to record event on Seed announcing the failed certificate rotation")
+				cr.log.Error(err, "Failed to record event on my Seed or Shoot object announcing the failed certificate rotation")
 				return
 			}
-			recorder.Event(seed, corev1.EventTypeWarning, EventGardenletCertificateRotationFailed, fmt.Sprintf("Failed to rotate the kubeconfig for the Garden API Server. Certificate expires in %s (%s): %v", certificateExpirationTime.UTC().Sub(time.Now().UTC()).Round(time.Second).String(), certificateExpirationTime.Round(time.Second).String(), err))
+			recorder.Event(obj, corev1.EventTypeWarning, EventGardenletCertificateRotationFailed, fmt.Sprintf("Failed to rotate the kubeconfig for the Garden API Server. Certificate expires in %s (%s): %v", certificateExpirationTime.UTC().Sub(time.Now().UTC()).Round(time.Second).String(), certificateExpirationTime.Round(time.Second).String(), err))
 			return
 		}
 
@@ -109,13 +130,13 @@ func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCan
 	return nil
 }
 
-// getTargetedSeed returns the Seed that this Gardenlet is reconciling
-func (cr *Manager) getTargetedSeed(ctx context.Context) (*gardencorev1beta1.Seed, error) {
-	seed := &gardencorev1beta1.Seed{}
-	if err := cr.gardenClientSet.Client().Get(ctx, client.ObjectKey{Name: cr.seedName}, seed); err != nil {
+// getTargetedObject returns the Seed or the autonomous Shoot that this Gardenlet is reconciling.
+func (cr *Manager) getTargetedObject(ctx context.Context) (client.Object, error) {
+	obj := cr.newTargetedObject()
+	if err := cr.gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 		return nil, err
 	}
-	return seed, nil
+	return obj, nil
 }
 
 // waitForCertificateRotation determines and waits for the certificate rotation deadline.
