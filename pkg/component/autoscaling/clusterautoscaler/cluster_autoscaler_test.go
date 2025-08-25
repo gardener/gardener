@@ -60,31 +60,31 @@ var _ = Describe("ClusterAutoscaler", func() {
 		image              = "registry.k8s.io/cluster-autoscaler:v1.2.3"
 		replicas     int32 = 1
 
-		machineDeployment1Name           = "pool1"
-		machineDeployment1Min      int32 = 2
-		machineDeployment1Max      int32 = 4
-		machineDeployment1Priority       = ptr.To(int32(0))
-		machineDeployment2Name           = "pool2"
-		machineDeployment2Min      int32 = 3
-		machineDeployment2Max      int32 = 5
-		machineDeployment2Priority       = ptr.To(int32(40))
-		machineDeployment3Name           = "pool3"
-		machineDeployment3Min      int32 = 3
-		machineDeployment3Max      int32 = 5
-		machineDeployment4Name           = "pool4"
-		machineDeployment4Min      int32 = 3
-		machineDeployment4Max      int32 = 5
-		workerPool4Priority              = ptr.To(int32(50))
-		machineDeployment5Name           = "irregular-machine-deployment-name"
-		machineDeployment5Min      int32 = 3
-		machineDeployment5Max      int32 = 5
-		workerPool5Priority              = ptr.To(int32(60))
-		machineDeployments               = []extensionsv1alpha1.MachineDeployment{
-			{Name: machineDeployment1Name, Minimum: machineDeployment1Min, Maximum: machineDeployment1Max, Priority: machineDeployment1Priority},
-			{Name: machineDeployment2Name, Minimum: machineDeployment2Min, Maximum: machineDeployment2Max, Priority: machineDeployment2Priority},
-			{Name: machineDeployment3Name, Minimum: machineDeployment3Min, Maximum: machineDeployment3Max},
-			{Name: machineDeployment4Name, Minimum: machineDeployment4Min, Maximum: machineDeployment4Max},
-			{Name: machineDeployment5Name, Minimum: machineDeployment5Min, Maximum: machineDeployment5Max},
+		machineDeployment1Name       = "pool1"
+		machineDeployment1Min  int32 = 2
+		machineDeployment1Max  int32 = 4
+		workerPool1Priority          = ptr.To(int32(0))
+		machineDeployment2Name       = "pool2"
+		machineDeployment2Min  int32 = 3
+		machineDeployment2Max  int32 = 5
+		workerPoll2Priority          = ptr.To(int32(40))
+		machineDeployment3Name       = "pool3"
+		machineDeployment3Min  int32 = 3
+		machineDeployment3Max  int32 = 5
+		machineDeployment4Name       = "pool4"
+		machineDeployment4Min  int32 = 3
+		machineDeployment4Max  int32 = 5
+		workerPool4Priority          = ptr.To(int32(50))
+		machineDeployment5Name       = "irregular-machine-deployment-name"
+		machineDeployment5Min  int32 = 3
+		machineDeployment5Max  int32 = 5
+		workerPool5Priority          = ptr.To(int32(60))
+		machineDeployments           = []extensionsv1alpha1.MachineDeployment{
+			{Name: machineDeployment1Name, Minimum: machineDeployment1Min, Maximum: machineDeployment1Max, Priority: *workerPool1Priority},
+			{Name: machineDeployment2Name, Minimum: machineDeployment2Min, Maximum: machineDeployment2Max, Priority: *workerPoll2Priority},
+			{Name: machineDeployment3Name, Minimum: machineDeployment3Min, Maximum: machineDeployment3Max, Priority: 0},
+			{Name: machineDeployment4Name, Minimum: machineDeployment4Min, Maximum: machineDeployment4Max, Priority: *workerPool4Priority},
+			{Name: machineDeployment5Name, Minimum: machineDeployment5Min, Maximum: machineDeployment5Max, Priority: *workerPool5Priority},
 		}
 
 		workerConfig = []gardencorev1beta1.Worker{
@@ -92,13 +92,13 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Name:     machineDeployment1Name,
 				Minimum:  machineDeployment1Min,
 				Maximum:  machineDeployment1Max,
-				Priority: machineDeployment1Priority,
+				Priority: workerPool1Priority,
 			},
 			{
 				Name:     machineDeployment2Name,
 				Minimum:  machineDeployment2Min,
 				Maximum:  machineDeployment2Max,
-				Priority: machineDeployment2Priority,
+				Priority: workerPoll2Priority,
 			},
 			{
 				Name:    machineDeployment3Name,
@@ -627,7 +627,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Namespace: metav1.NamespaceSystem,
 			},
 			Data: map[string]string{
-				"priorities": "0:\n- pool1\n- pool3\n- irregular-machine-deployment-name\n40:\n- pool2\n50:\n- pool4\n",
+				"priorities": "0:\n- pool1\n- pool3\n40:\n- pool2\n50:\n- pool4\n60:\n- irregular-machine-deployment-name\n",
 			},
 		}
 

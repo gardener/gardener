@@ -656,41 +656,11 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string,
 	return registry.AddAllAndSerialize(objects...)
 }
 
-type poolPriorityDefaults struct {
-	namespace string
-	poolMap   map[string]int32
-}
-
-func buildPoolPriorityDefaultsMap(workerConfig []gardencorev1beta1.Worker, namespace string) *poolPriorityDefaults {
-	fallbackMap := &poolPriorityDefaults{
-		poolMap:   make(map[string]int32, len(workerConfig)),
-		namespace: namespace,
-	}
-	for _, pool := range workerConfig {
-		fallbackMap.poolMap[pool.Name] = ptr.Deref(pool.Priority, 0)
-	}
-	return fallbackMap
-}
-
-func (p *poolPriorityDefaults) forDeployment(machineDeploymentName string) int32 {
-	name := strings.TrimPrefix(machineDeploymentName, p.namespace+"-")
-	zoneIndex := strings.LastIndex(name, "-z")
-	if zoneIndex != -1 {
-		name = name[:zoneIndex]
-	}
-	return p.poolMap[name]
-}
-
 func (c *clusterAutoscaler) generatePriorityExpanderConfigMap() (*corev1.ConfigMap, error) {
 	priorities := map[int32][]string{}
-	priorityDefaults := buildPoolPriorityDefaultsMap(c.workerConfig, c.namespace)
 
 	for _, machineDeployment := range c.machineDeployments {
-		// TODO(tobschli): Remove this once all well-known extensions have revendored to use the generic actuator that sets the priorities.
-		// In the case the priority is nil, the extension did not set the priorities that were configured in the worker.
-		// Fall back to try to determine the pool name.
-		priority := ptr.Deref(machineDeployment.Priority, priorityDefaults.forDeployment(machineDeployment.Name))
-		priorities[priority] = append(priorities[priority], machineDeployment.Name)
+		priorities[machineDeployment.Priority] = append(priorities[machineDeployment.Priority], machineDeployment.Name)
 	}
 	// `gopkg.in/yaml.v2` is needed here for marshaling, as the cluster-autoscaler uses it for unmarshalling.
 	// yaml Marshalers from `sigs.k8s.io/yaml` e.g. produce yaml that is not unmarshallable for `gopkg.in/yaml.v2`.
