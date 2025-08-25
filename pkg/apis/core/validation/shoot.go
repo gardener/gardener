@@ -1720,10 +1720,20 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 
 func validateAPIAudiences(audiences []string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	for _, audience := range audiences {
-		if strings.Contains(audience, ",") {
-			allErrs = append(allErrs, field.Invalid(fldPath, audience, "audience must not contain commas"))
+
+	audienceSet := sets.New[string]()
+
+	for i, audience := range audiences {
+		idxPath := fldPath.Index(i)
+
+		if audienceSet.Has(audience) {
+			allErrs = append(allErrs, field.Duplicate(idxPath, audience))
 		}
+		if strings.Contains(audience, ",") {
+			allErrs = append(allErrs, field.Invalid(idxPath, audience, "audience must not contain commas"))
+		}
+
+		audienceSet.Insert(audience)
 	}
 	return allErrs
 }
