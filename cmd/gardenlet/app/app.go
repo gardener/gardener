@@ -371,7 +371,7 @@ func (g *garden) Start(ctx context.Context) error {
 						// Gardenlet does not have the required RBAC permissions for listing/watching the following
 						// resources on cluster level. Hence, we need to watch them individually with the help of a
 						// SingleObject cache.
-						// TODO(rfranzke): Insert resources here as 'gardenadm connect' progresses.
+						&corev1.ConfigMap{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ConfigMap{}),
 					},
 					kubernetes.GardenScheme,
 				)(config, opts)
@@ -468,22 +468,18 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
-	if gardenlet.IsResponsibleForAutonomousShoot() {
-		log.Info("Running in autonomous shoot, starting manager without controllers")
-	} else {
-		log.Info("Adding controllers to manager")
-		if err := controller.AddToManager(
-			ctx,
-			g.mgr,
-			g.cancel,
-			gardenCluster,
-			g.mgr,
-			shootClientMap,
-			g.config,
-			g.healthManager,
-		); err != nil {
-			return fmt.Errorf("failed adding controllers to manager: %w", err)
-		}
+	log.Info("Adding controllers to manager")
+	if err := controller.AddToManager(
+		ctx,
+		g.mgr,
+		g.cancel,
+		gardenCluster,
+		g.mgr,
+		shootClientMap,
+		g.config,
+		g.healthManager,
+	); err != nil {
+		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 
 	return nil
