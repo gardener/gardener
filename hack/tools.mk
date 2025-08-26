@@ -186,6 +186,7 @@ $(IMPORT_BOSS): $(call tool_version_file,$(IMPORT_BOSS),$(K8S_VERSION))
 	mkdir -p hack/tools/bin/work/import-boss
 	curl -L -o hack/tools/bin/work/import-boss/main.go https://raw.githubusercontent.com/kubernetes/kubernetes/$(K8S_VERSION)/cmd/import-boss/main.go
 	go build -o $(IMPORT_BOSS) ./hack/tools/bin/work/import-boss
+	rm -rf hack/tools/bin/work/import-boss
 
 $(KIND): $(call tool_version_file,$(KIND),$(KIND_VERSION))
 	curl -L -o $(KIND) https://kind.sigs.k8s.io/dl/$(KIND_VERSION)/kind-$(SYSTEM_NAME)-$(SYSTEM_ARCH)
