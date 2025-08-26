@@ -1808,6 +1808,15 @@ func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, fldPath
 			}
 		}
 
+		if kubeMaxPDVols := ks.KubeMaxPDVols; kubeMaxPDVols != nil {
+			num, err := strconv.Atoi(*kubeMaxPDVols)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeMaxPDVols"), *kubeMaxPDVols, fmt.Sprintf("conversion error: %v", err)))
+			} else if num < 1 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeMaxPDVols"), *kubeMaxPDVols, "must be positive"))
+			}
+		}
+
 		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(ks.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
 

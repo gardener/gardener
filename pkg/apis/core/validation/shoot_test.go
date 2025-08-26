@@ -3265,6 +3265,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.kubernetes.kubeScheduler.profile"),
 				}))))
 			})
+
+			It("should succeed when setting valid kubeMaxPDVols", func() {
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("127")
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should fail when setting invalid kubeMaxPDVols", func() {
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("foo")
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeScheduler.kubeMaxPDVols"),
+				}))))
+			})
+
+			It("should fail when setting invalid non positive kubeMaxPDVols", func() {
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("0")
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeScheduler.kubeMaxPDVols"),
+				}))))
+			})
 		})
 
 		Context("KubeProxy validation", func() {
