@@ -52,7 +52,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	}
 
 	if shoot.Spec.SecretBindingName != nil {
-		warnings = append(warnings, "spec.secretBindingName is deprecated and will be removed after support for Kubernetes 1.34 is dropped. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md")
+		warnings = append(warnings, "spec.secretBindingName is deprecated and will be disallowed starting with Kubernetes 1.34. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md")
 	}
 
 	return warnings

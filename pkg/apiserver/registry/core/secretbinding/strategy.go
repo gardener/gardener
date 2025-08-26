@@ -65,7 +65,7 @@ func (secretBindingStrategy) ValidateUpdate(_ context.Context, newObj, oldObj ru
 	return validation.ValidateSecretBindingUpdate(newBinding, oldBinding)
 }
 
-const secretBindingDeprecationWarning = "SecretBinding is deprecated and will be removed after support for Kubernetes 1.34 is dropped." +
+const secretBindingDeprecationWarning = "SecretBinding is deprecated and will be disallowed starting with Kubernetes 1.34." +
 	" For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md"
 
 // WarningsOnCreate returns warnings to the client performing a create.

@@ -268,7 +268,7 @@ var _ = Describe("Warnings", func() {
 			},
 
 			Entry("should return a warning when secretBindingName is set", ptr.To("my-secret-binding"),
-				ContainElement(Equal("spec.secretBindingName is deprecated and will be removed after support for Kubernetes 1.34 is dropped. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md"))),
+				ContainElement(Equal("spec.secretBindingName is deprecated and will be disallowed starting with Kubernetes 1.34. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md"))),
 			Entry("should not return a warning when secretBindingName is not set", nil, BeEmpty()),
 		)
 
