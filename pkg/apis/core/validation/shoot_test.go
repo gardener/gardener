@@ -5971,6 +5971,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}
 				shoot.Spec.Kubernetes.KubeAPIServer = nil
 				shoot.Spec.Kubernetes.Version = "1.34.0"
+				shoot.Spec.SecretBindingName = nil
+				shoot.Spec.CredentialsBindingName = ptr.To("creds")
 				shoot.Spec.CloudProfileName = nil
 				cloudProfileRef := &core.CloudProfileReference{
 					Kind: "CloudProfile",
