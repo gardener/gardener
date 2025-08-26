@@ -1368,6 +1368,15 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, versio
 	if autoScaler.EvictAfterOOMThreshold != nil {
 		allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.EvictAfterOOMThreshold, fldPath.Child("evictAfterOOMThreshold"))...)
 	}
+	if autoScaler.EvictionRateBurst != nil && *autoScaler.EvictionRateBurst < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("evictionRateBurst"), *autoScaler.EvictionRateBurst, "must be non-negative"))
+	}
+	if fraction := autoScaler.EvictionTolerance; fraction != nil {
+		allErrs = append(allErrs, validateFraction(*fraction, fldPath.Child("evictionTolerance"))...)
+	}
+	if fraction := autoScaler.RecommendationMarginFraction; fraction != nil {
+		allErrs = append(allErrs, validateFraction(*fraction, fldPath.Child("recommendationMarginFraction"))...)
+	}
 	if autoScaler.UpdaterInterval != nil {
 		allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.UpdaterInterval, fldPath.Child("updaterInterval"))...)
 	}
@@ -1427,6 +1436,15 @@ func ValidateVerticalPodAutoscalerMaxAllowed(maxAllowed corev1.ResourceList, fld
 		}
 
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
+	}
+
+	return allErrs
+}
+
+func validateFraction(fraction float64, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if fraction < 0.0 || fraction >= 1.0 {
+		allErrs = append(allErrs, field.Invalid(fldPath, fraction, "fraction value must be in the range [0, 1)"))
 	}
 
 	return allErrs
