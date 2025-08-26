@@ -6320,6 +6320,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("scheduler name", func() {
+			It("forbid setting an invalid scheduler name", func() {
+				shoot.Spec.SchedulerName = ptr.To("!nvalid")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.schedulerName"),
+					"BadValue": Equal("!nvalid"),
+				}))))
+			})
+
 			It("allow setting the default scheduler name when name was 'nil'", func() {
 				shoot.Spec.SchedulerName = nil
 				oldShoot := shoot.DeepCopy()

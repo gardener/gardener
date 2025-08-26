@@ -310,6 +310,10 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), *spec.SeedName, "cannot set seedName for autonomous shoots"))
 	}
 
+	if spec.SchedulerName != nil {
+		allErrs = append(allErrs, validateDNS1123Label(*spec.SchedulerName, fldPath.Child("schedulerName"))...)
+	}
+
 	return allErrs
 }
 
