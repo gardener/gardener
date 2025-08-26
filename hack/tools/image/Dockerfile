@@ -12,12 +12,13 @@ RUN echo "Installing Packages ..." \
 		&& rm -rf /var/lib/apt/lists/*
 
 # builder
-FROM base as builder
+FROM base AS builder
 ARG GOPROXY=https://proxy.golang.org,direct
 ENV GOPROXY=$GOPROXY
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
 RUN make create-tools-bin TOOLS_BIN_DIR=hack/tools/bin
+RUN rm -rf /go/src/github.com/gardener/gardener/hack/tools/bin/work
 
 # golang-test
 FROM base AS golang-test
