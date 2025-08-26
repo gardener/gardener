@@ -3681,7 +3681,7 @@ func schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref common.Reference
 					},
 					"lastInitiationFinishedTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was completed.\n\nDeprecated: This field will be removed in a future release. The field will be no longer needed with the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.",
+							Description: "LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was completed.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},

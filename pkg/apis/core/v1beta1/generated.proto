@@ -988,11 +988,6 @@ message ETCDEncryptionKeyRotation {
 
   // LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
   // completed.
-  //
-  // Deprecated: This field will be removed in a future release. The field will be no longer needed with
-  // the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.
-  // TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
-  // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
 
   // LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was
