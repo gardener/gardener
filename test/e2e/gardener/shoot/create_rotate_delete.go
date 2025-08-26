@@ -369,7 +369,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
 			ItShouldGetResponsibleSeed(s)
-			ItShouldInitializeSeedClient(s)
+			seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
 			testCredentialRotation(s, nil, rotationutils.Verifiers{&rotationutils.ETCDEncryptionKeyVerifier{
 				GetETCDSecretNamespace: func() string {
