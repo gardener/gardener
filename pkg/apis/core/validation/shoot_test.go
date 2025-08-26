@@ -1027,6 +1027,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				{Key: "foo"},
 				{Key: "bar", Value: ptr.To("baz")},
 				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "!nvalid", Value: ptr.To("va!ue")},
+				{Key: strings.Repeat("n", 64)},
 			}
 
 			errorList := ValidateShoot(shoot)
@@ -1043,6 +1045,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("spec.tolerations[4]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.tolerations[5].key"),
+					"BadValue": Equal("!nvalid"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.tolerations[5].value"),
+					"BadValue": Equal("va!ue"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.tolerations[6].key"),
+					"Detail": Equal("name part must be no more than 63 characters"),
 				})),
 			))
 		})
