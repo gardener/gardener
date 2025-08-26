@@ -310,10 +310,6 @@ type ETCDEncryptionKeyRotation struct {
 	LastInitiationTime *metav1.Time
 	// LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
 	// completed.
-	//
-	// Deprecated: This field will be removed in a future release. The field will be no longer needed with
-	// the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.
-	// TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
 	LastInitiationFinishedTime *metav1.Time
 	// LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was
 	// triggered.
