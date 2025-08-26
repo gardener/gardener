@@ -36,7 +36,7 @@ type SecretBinding struct {
 
 // SecretBindingProvider defines the provider type of the SecretBinding.
 //
-// Deprecated: Use CredentialsBinding instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
+// Deprecated: Use CredentialsBindingProvider instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
 type SecretBindingProvider struct {
 	// Type is the type of the provider.
 	//
@@ -49,7 +49,7 @@ type SecretBindingProvider struct {
 
 // SecretBindingList is a collection of SecretBindings.
 //
-// Deprecated: Use CredentialsBinding instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
+// Deprecated: Use CredentialsBindingList instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
 type SecretBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard list object metadata.

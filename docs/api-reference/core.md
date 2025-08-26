@@ -10684,7 +10684,7 @@ Defaults to true.</p>
 </p>
 <p>
 <p>SecretBindingProvider defines the provider type of the SecretBinding.</p>
-<p>Deprecated: Use CredentialsBinding instead. See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md</a> for migration instructions.</p>
+<p>Deprecated: Use CredentialsBindingProvider instead. See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md</a> for migration instructions.</p>
 </p>
 <table>
 <thead>
