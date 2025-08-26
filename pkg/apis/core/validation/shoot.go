@@ -291,6 +291,10 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		}
 	}
 
+	if spec.SchedulerName != nil {
+		allErrs = append(allErrs, validateDNS1123Label(*spec.SchedulerName, fldPath.Child("schedulerName"))...)
+	}
+
 	return allErrs
 }
 
