@@ -401,6 +401,7 @@
       ],
       matchFileNames: [
         'imagevector/**',
+        'dev-setup/extensions/**/extension.yaml',
       ],
       enabled: false,
       matchPackageNames: [
