@@ -45,13 +45,6 @@ const (
 	// beta: v1.126.0
 	NewWorkerPoolHash featuregate.Feature = "NewWorkerPoolHash"
 
-	// NewVPN enables the new implementation of the VPN (go rewrite) using an IPv6 transfer network.
-	// owner: @MartinWeindel @ScheererJ @axel7born @DockToFuture
-	// alpha: v1.104.0
-	// beta: v1.115.0
-	// GA: v1.116.0
-	NewVPN featuregate.Feature = "NewVPN"
-
 	// CredentialsRotationWithoutWorkersRollout enables starting the credentials rotation without immediately causing
 	// a rolling update of all worker nodes. Instead, the rolling update can be triggered manually by the user at a
 	// later point in time of their convenience.
@@ -122,7 +115,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	UseNamespacedCloudProfile:                {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:                        {Default: true, PreRelease: featuregate.Beta},
-	NewVPN:                                   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CredentialsRotationWithoutWorkersRollout: {Default: true, PreRelease: featuregate.Beta},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
 	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},

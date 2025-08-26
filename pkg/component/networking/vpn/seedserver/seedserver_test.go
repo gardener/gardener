@@ -68,7 +68,7 @@ var _ = Describe("VpnSeedServer", func() {
 	)
 
 	var (
-		template = func(nodeNetworks []net.IPNet, highAvailability, disableNewVPN bool) *corev1.PodTemplateSpec {
+		template = func(nodeNetworks []net.IPNet, highAvailability bool) *corev1.PodTemplateSpec {
 			hostPathCharDev := corev1.HostPathCharDev
 			nodes := ""
 			if len(nodeNetworks) > 0 {
@@ -172,6 +172,20 @@ var _ = Describe("VpnSeedServer", func() {
 									Name:      "tlsauth",
 									MountPath: "/srv/secrets/tlsauth",
 								},
+							},
+						},
+					},
+					InitContainers: []corev1.Container{
+						{
+							Name:            "setup",
+							Image:           vpnSeedServerImage,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command: []string{
+								"/bin/vpn-server",
+								"setup",
+							},
+							SecurityContext: &corev1.SecurityContext{
+								Privileged: ptr.To(true),
 							},
 						},
 					},
@@ -314,16 +328,6 @@ var _ = Describe("VpnSeedServer", func() {
 					},
 					VolumeMounts: []corev1.VolumeMount{mount},
 				}
-				if disableNewVPN {
-					exporterContainer.Command = []string{
-						"/openvpn-exporter",
-						"-openvpn.status_paths",
-						"/srv/status/openvpn.status",
-						"-web.listen-address",
-						":15000",
-					}
-					exporterContainer.Env = nil
-				}
 				template.Spec.Containers = append(template.Spec.Containers, exporterContainer)
 				template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
 					Name: "openvpn-status",
@@ -343,23 +347,6 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 					},
 				})
-			}
-
-			if !disableNewVPN {
-				template.Spec.InitContainers = []corev1.Container{
-					{
-						Name:            "setup",
-						Image:           vpnSeedServerImage,
-						ImagePullPolicy: corev1.PullIfNotPresent,
-						Command: []string{
-							"/bin/vpn-server",
-							"setup",
-						},
-						SecurityContext: &corev1.SecurityContext{
-							Privileged: ptr.To(true),
-						},
-					},
-				}
 			}
 
 			return template
@@ -392,7 +379,7 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 						Type: appsv1.RollingUpdateDeploymentStrategyType,
 					},
-					Template: *template(nodeNetworks, false, false),
+					Template: *template(nodeNetworks, false),
 				},
 			}
 
@@ -400,7 +387,7 @@ var _ = Describe("VpnSeedServer", func() {
 			return deploy
 		}
 
-		statefulSet = func(nodeNetworks []net.IPNet, disableNewVPN bool) *appsv1.StatefulSet {
+		statefulSet = func(nodeNetworks []net.IPNet) *appsv1.StatefulSet {
 			sts := &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpn-seed-server",
@@ -421,7 +408,7 @@ var _ = Describe("VpnSeedServer", func() {
 					UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 						Type: appsv1.RollingUpdateStatefulSetStrategyType,
 					},
-					Template: *template(nodeNetworks, true, disableNewVPN),
+					Template: *template(nodeNetworks, true),
 				},
 			}
 
@@ -740,7 +727,7 @@ var _ = Describe("VpnSeedServer", func() {
 	Describe("#Deploy", func() {
 		Context("secret information available", func() {
 			JustBeforeEach(func() {
-				statefulSet := statefulSet(values.Network.NodeCIDRs, false)
+				statefulSet := statefulSet(values.Network.NodeCIDRs)
 				statefulSet.ResourceVersion = ""
 				Expect(c.Create(ctx, statefulSet)).To(Succeed())
 
@@ -926,7 +913,7 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(actualScrapeConfig).To(DeepEqual(expectedScrapeConfig))
 
 				actualStatefulSet := &appsv1.StatefulSet{}
-				expectedStatefulSet := statefulSet(values.Network.NodeCIDRs, false)
+				expectedStatefulSet := statefulSet(values.Network.NodeCIDRs)
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedStatefulSet.Namespace, Name: expectedStatefulSet.Name}, actualStatefulSet)).To(Succeed())
 				Expect(actualStatefulSet).To(DeepEqual(expectedStatefulSet))
 
@@ -939,7 +926,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 	Describe("#Destroy", func() {
 		JustBeforeEach(func() {
-			statefulSet := statefulSet(values.Network.NodeCIDRs, false)
+			statefulSet := statefulSet(values.Network.NodeCIDRs)
 			statefulSet.ResourceVersion = ""
 			Expect(c.Create(ctx, statefulSet)).To(Succeed())
 

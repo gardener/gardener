@@ -15,9 +15,9 @@ import (
 var _ = Describe("Features", func() {
 	Describe("#GetFeatures", func() {
 		It("should return the spec for the given feature gate", func() {
-			Expect(GetFeatures("DefaultSeccompProfile", "NewVPN", "Foo")).To(Equal(map[featuregate.Feature]featuregate.FeatureSpec{
-				DefaultSeccompProfile: {Default: false, PreRelease: featuregate.Alpha},
-				NewVPN:                {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+			Expect(GetFeatures("DefaultSeccompProfile", "UseNamespacedCloudProfile", "Foo")).To(Equal(map[featuregate.Feature]featuregate.FeatureSpec{
+				DefaultSeccompProfile:     {Default: false, PreRelease: featuregate.Alpha},
+				UseNamespacedCloudProfile: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 			}))
 		})
 	})
