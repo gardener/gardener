@@ -38,11 +38,15 @@ func NewHealth(
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 ) HealthCheck {
 	return &health{
-		seedClient:    seedClient,
-		seed:          seed,
-		clock:         clock,
-		namespace:     namespace,
-		healthChecker: healthchecker.NewHealthChecker(seedClient, clock, conditionThresholds, seed.Status.LastOperation),
+		seedClient: seedClient,
+		seed:       seed,
+		clock:      clock,
+		namespace:  namespace,
+		healthChecker: healthchecker.NewHealthChecker(
+			seedClient,
+			clock,
+			healthchecker.WithConditionThresholds(conditionThresholds),
+			healthchecker.WithLastOperation(seed.Status.LastOperation)),
 	}
 }
 

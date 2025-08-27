@@ -50,7 +50,10 @@ func NewHealth(
 		virtualClient:       virtualClient,
 		clock:               clock,
 		conditionThresholds: conditionThresholds,
-		healthChecker:       healthchecker.NewHealthChecker(runtimeClient, clock, conditionThresholds, nil),
+		healthChecker: healthchecker.NewHealthChecker(
+			runtimeClient,
+			clock,
+			healthchecker.WithConditionThresholds(conditionThresholds)),
 	}
 }
 

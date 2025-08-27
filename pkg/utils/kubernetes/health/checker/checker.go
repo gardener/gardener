@@ -56,17 +56,32 @@ type HealthChecker struct {
 }
 
 // NewHealthChecker creates a new health checker.
-func NewHealthChecker(
-	reader client.Reader,
-	clock clock.Clock,
-	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
-	lastOperation *gardencorev1beta1.LastOperation,
-) *HealthChecker {
-	return &HealthChecker{
-		reader:              reader,
-		clock:               clock,
-		conditionThresholds: conditionThresholds,
-		lastOperation:       lastOperation,
+func NewHealthChecker(reader client.Reader, clock clock.Clock, opts ...option) *HealthChecker {
+	healthChecker := &HealthChecker{
+		reader: reader,
+		clock:  clock,
+	}
+
+	for _, opt := range opts {
+		opt(healthChecker)
+	}
+
+	return healthChecker
+}
+
+type option func(*HealthChecker)
+
+// WithConditionThresholds sets the condition thresholds to be used for condition transitions.
+func WithConditionThresholds(thresholds map[gardencorev1beta1.ConditionType]time.Duration) option {
+	return func(h *HealthChecker) {
+		h.conditionThresholds = thresholds
+	}
+}
+
+// WithLastOperation sets the last operation to be used for condition transitions.
+func WithLastOperation(lastOp *gardencorev1beta1.LastOperation) option {
+	return func(h *HealthChecker) {
+		h.lastOperation = lastOp
 	}
 }
 
