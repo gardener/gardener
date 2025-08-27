@@ -1854,6 +1854,8 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 
 	if len(provider.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must specify a provider type"))
+	} else {
+		allErrs = append(allErrs, validateDNS1123Label(provider.Type, fldPath.Child("type"))...)
 	}
 
 	if workerless {
