@@ -1064,6 +1064,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
+		It("should forbid invalid provider type", func() {
+			shoot.Spec.Provider.Type = "!nvalid"
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.provider.type"),
+				})),
+			))
+		})
+
 		It("should forbid updating some cloud keys", func() {
 			newShoot := prepareShootForUpdate(shoot)
 			shoot.Spec.CloudProfileName = ptr.To("another-profile")

@@ -1902,6 +1902,8 @@ func validateProvider(shootNamespace string, provider core.Provider, kubernetes 
 
 	if len(provider.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must specify a provider type"))
+	} else {
+		allErrs = append(allErrs, validateDNS1123Label(provider.Type, fldPath.Child("type"))...)
 	}
 
 	if workerless {
