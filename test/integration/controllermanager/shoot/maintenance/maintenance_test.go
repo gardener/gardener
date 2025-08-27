@@ -11,6 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -32,6 +34,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		shoot130     *gardencorev1beta1.Shoot
 		shoot131     *gardencorev1beta1.Shoot
 		shoot132     *gardencorev1beta1.Shoot
+		shoot133     *gardencorev1beta1.Shoot
 
 		// Test Machine Image
 		machineImageName             = "foo-image"
@@ -103,6 +106,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 						},
 						{
 							Version: "1.33.0",
+						},
+						{
+							Version: "1.34.0",
 						},
 						testKubernetesVersionLowPatchLowMinor,
 						testKubernetesVersionHighestPatchLowMinor,
@@ -375,6 +381,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		shoot130 = shoot.DeepCopy()
 		shoot131 = shoot.DeepCopy()
 		shoot132 = shoot.DeepCopy()
+		shoot133 = shoot.DeepCopy()
 		// set dummy kubernetes version to shoot
 		shoot.Spec.Kubernetes.Version = testKubernetesVersionLowPatchLowMinor.Version
 
@@ -1971,6 +1978,121 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(shoot130.Spec.Kubernetes.Version).To(Equal("1.31.0"))
 					return *shoot130.Spec.Provider.Workers[0].Kubernetes.Version
 				}).Should(Equal("1.31.0"))
+			})
+
+			It("should migrate from SecretBinding to CredentialsBinding when force updating to Kubernetes 1.34", func() {
+				var (
+					secretBinding      *gardencorev1beta1.SecretBinding
+					credentialsBinding *securityv1alpha1.CredentialsBinding
+					secret             *corev1.Secret
+					secretBindingName  = "test-secret-binding"
+				)
+
+				shoot133.Spec.Kubernetes.Version = "1.33.0"
+				shoot133.Spec.SecretBindingName = &secretBindingName
+
+				secret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: testID + "-secret-",
+						Namespace:    testNamespace.Name,
+					},
+					Data: map[string][]byte{
+						"serviceaccount.json": []byte(`{"type": "service_account"}`),
+					},
+				}
+				Expect(testClient.Create(ctx, secret)).To(Succeed())
+
+				DeferCleanup(func() {
+					By("Delete Secret")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret))).To(Succeed())
+				})
+
+				secretBinding = &gardencorev1beta1.SecretBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      secretBindingName,
+						Namespace: testNamespace.Name,
+					},
+					SecretRef: corev1.SecretReference{
+						Name:      secret.Name,
+						Namespace: secret.Namespace,
+					},
+					Provider: &gardencorev1beta1.SecretBindingProvider{
+						Type: "test-provider",
+					},
+					Quotas: []corev1.ObjectReference{
+						{
+							APIVersion: "v1",
+							Kind:       "Quota",
+							Name:       "test-quota",
+							Namespace:  testNamespace.Name,
+						},
+					},
+				}
+				Expect(testClient.Create(ctx, secretBinding)).To(Succeed())
+
+				DeferCleanup(func() {
+					By("Delete SecretBinding")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, secretBinding))).To(Succeed())
+				})
+
+				By("Create Shoot with k8s v1.33 and SecretBinding")
+				Expect(testClient.Create(ctx, shoot133)).To(Succeed())
+				log.Info("Created shoot with k8s v1.33 and SecretBinding for test", "shoot", client.ObjectKeyFromObject(shoot133))
+
+				DeferCleanup(func() {
+					By("Delete Shoot with k8s v1.33")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot133))).To(Succeed())
+				})
+
+				Expect(shoot133.Spec.SecretBindingName).NotTo(BeNil())
+				Expect(*shoot133.Spec.SecretBindingName).To(Equal(secretBindingName))
+				Expect(shoot133.Spec.CredentialsBindingName).To(BeNil())
+
+				By("Expire Shoot's kubernetes version in the CloudProfile to force update to 1.34")
+				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot133.Spec.CloudProfile.Name, "1.33.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+				By("Wait until manager has observed the CloudProfile update")
+				waitKubernetesVersionToBeExpiredInCloudProfile(shoot133.Spec.CloudProfile.Name, "1.33.0", &expirationDateInThePast)
+
+				By("Trigger maintenance")
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot133, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				By("Wait for maintenance to complete and verify migration")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot133), shoot133)).To(Succeed())
+					g.Expect(shoot133.Status.LastMaintenance).NotTo(BeNil())
+
+					g.Expect(shoot133.Spec.Kubernetes.Version).To(Equal("1.34.0"))
+
+					g.Expect(shoot133.Spec.SecretBindingName).To(BeNil(), "SecretBindingName should be unset after migration")
+					g.Expect(shoot133.Spec.CredentialsBindingName).NotTo(BeNil(), "CredentialsBindingName should be set after migration")
+
+					g.Expect(shoot133.Status.LastMaintenance.Description).To(ContainSubstring(".spec.secretBindingName was migrated to .spec.credentialsBindingName. Reason: SecretBinding is deprecated and can no longer be used for Shoot clusters using Kubernetes version 1.34+"))
+					g.Expect(shoot133.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot133.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+				}).Should(Succeed())
+
+				By("Verify CredentialsBinding was created with correct properties")
+				credentialsBindingName := *shoot133.Spec.CredentialsBindingName
+				credentialsBinding = &securityv1alpha1.CredentialsBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      credentialsBindingName,
+						Namespace: testNamespace.Name,
+					},
+				}
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(credentialsBinding), credentialsBinding)).To(Succeed())
+
+				Expect(credentialsBinding.Provider.Type).To(Equal("test-provider"))
+				Expect(credentialsBinding.CredentialsRef.APIVersion).To(Equal("v1"))
+				Expect(credentialsBinding.CredentialsRef.Kind).To(Equal("Secret"))
+				Expect(credentialsBinding.CredentialsRef.Name).To(Equal(secret.Name))
+				Expect(credentialsBinding.CredentialsRef.Namespace).To(Equal(secret.Namespace))
+				Expect(credentialsBinding.Quotas).To(Equal(secretBinding.Quotas))
+
+				DeferCleanup(func() {
+					By("Delete CredentialsBinding")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, credentialsBinding))).To(Succeed())
+				})
 			})
 		})
 	})
