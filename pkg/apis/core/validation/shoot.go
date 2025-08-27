@@ -266,7 +266,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), "is incompatible with credentialsBindingName"))
 		}
 
-		// TODO(dimityrmirchev) Remove once we drop support for Kubernetes 1.34
+		// TODO(dimityrmirchev) Remove once we drop support for Kubernetes <= 1.33
 		// Forbid secretBindingName for Kubernetes versions >= 1.34
 		if spec.SecretBindingName != nil && len(*spec.SecretBindingName) > 0 &&
 			k8sVersion != nil && versionutils.ConstraintK8sGreaterEqual134.Check(k8sVersion) {
