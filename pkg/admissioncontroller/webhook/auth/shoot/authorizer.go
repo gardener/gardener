@@ -7,6 +7,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -22,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
 	shootidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/shoot"
 	authwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/graph"
@@ -56,6 +58,7 @@ var (
 	eventResource                     = eventsv1.Resource("events")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 	secretResource                    = corev1.Resource("secrets")
+	shootResource                     = gardencorev1beta1.Resource("shoots")
 )
 
 func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth.Decision, string, error) {
@@ -107,6 +110,18 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 
 		case secretResource:
 			return a.authorizeSecret(ctx, requestAuthorizer, attrs)
+
+		case shootResource:
+			// This allows the gardenlet to read its own Shoot resource even if it does not yet exist in the system.
+			// For other verbs, the graph-based authorization takes over.
+			if slices.Contains([]string{"get", "list", "watch"}, attrs.GetVerb()) &&
+				attrs.GetName() == shootName && attrs.GetNamespace() == shootNamespace {
+				return auth.DecisionAllow, "", nil
+			}
+
+			return requestAuthorizer.Check(graph.VertexTypeShoot, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch"),
+			)
 
 		default:
 			log.Info(
