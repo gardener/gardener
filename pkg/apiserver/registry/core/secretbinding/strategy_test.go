@@ -99,7 +99,7 @@ var _ = Describe("Strategy", func() {
 	Describe("#WarningsOnCreate", func() {
 		It("should return deprecation warning", func() {
 			warnings := secretbindingregistry.Strategy.WarningsOnCreate(context.TODO(), secretBinding)
-			expected := "SecretBinding is deprecated and will be disallowed starting with Kubernetes 1.34. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md"
+			expected := "SecretBinding is deprecated in favour of CredentialsBinding. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md"
 			Expect(warnings).To(HaveLen(1))
 			Expect(warnings[0]).To(Equal(expected))
 		})
@@ -108,7 +108,7 @@ var _ = Describe("Strategy", func() {
 	Describe("#WarningsOnUpdate", func() {
 		It("should return deprecation warning", func() {
 			warnings := secretbindingregistry.Strategy.WarningsOnUpdate(context.TODO(), secretBinding, secretBinding)
-			expected := "SecretBinding is deprecated and will be disallowed starting with Kubernetes 1.34. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md"
+			expected := "SecretBinding is deprecated in favour of CredentialsBinding. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md"
 			Expect(warnings).To(HaveLen(1))
 			Expect(warnings[0]).To(Equal(expected))
 		})
