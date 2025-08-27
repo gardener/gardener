@@ -17,6 +17,9 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+// PrometheusHealthChecker is a function type that checks for health issues in a Prometheus instance.
+type PrometheusHealthChecker func(ctx context.Context, endpoint string, port int) (bool, error)
+
 // IsPrometheusHealthy checks for health issues in a Prometheus instance.
 func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (bool, error) {
 	client, err := prom.NewClient(prom.Config{Address: fmt.Sprintf("http://%s:%d", endpoint, port)})
