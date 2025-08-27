@@ -107,7 +107,7 @@ It ensures that the finalizers of these resources are not removed by users, as l
 For `CredentialsBinding`s and `SecretBinding`s this means, that the `gardener` finalizer can only be removed if the binding is not referenced by any `Shoot`.
 In case of `Shoot`s, the `gardener` finalizer can only be removed if the last operation of the `Shoot` indicates a successful deletion. 
 
-## `ProjectValidator`
+## `ProjectMutator`
 
 **Type**: Mutating. **Enabled by default**: Yes.
 

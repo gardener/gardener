@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package validator_test
+package mutator_test
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	. "github.com/gardener/gardener/plugin/pkg/project/validator"
+	. "github.com/gardener/gardener/plugin/pkg/project/mutator"
 )
 
 var _ = Describe("Admission", func() {
@@ -162,7 +162,7 @@ var _ = Describe("Admission", func() {
 
 			registered := plugins.Registered()
 			Expect(registered).To(HaveLen(1))
-			Expect(registered).To(ContainElement("ProjectValidator"))
+			Expect(registered).To(ContainElement("ProjectMutator"))
 		})
 	})
 
