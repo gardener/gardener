@@ -1938,6 +1938,15 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 	}
 
 	if worker.Volume != nil {
+		if name := worker.Volume.Name; name != nil {
+			if len(*name) > 0 {
+				allErrs = append(allErrs, validateDNS1123Label(*name, fldPath.Child("volume", "name"))...)
+			}
+			if len(*name) > maxVolumeNameLength {
+				allErrs = append(allErrs, field.TooLong(fldPath.Child("volume", "name"), *name, maxVolumeNameLength))
+			}
+		}
+
 		if !volumeSizeRegex.MatchString(worker.Volume.VolumeSize) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("volume", "size"), worker.Volume.VolumeSize, fmt.Sprintf("volume size must match the regex %s", volumeSizeRegex)))
 		}
