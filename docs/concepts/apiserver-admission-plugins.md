@@ -100,7 +100,7 @@ This admission controller reacts on `CREATE` and `UPDATE` operations for `Backup
 
 ## `FinalizerRemoval`
 
-**Type**: Mutating. **Enabled by default**: Yes.
+**Type**: Validating. **Enabled by default**: Yes.
 
 This admission controller reacts on `UPDATE` operations for `CredentialsBinding`s, `SecretBinding`s, `Shoot`s. 
 It ensures that the finalizers of these resources are not removed by users, as long as the affected resource is still in use.

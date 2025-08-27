@@ -80,7 +80,7 @@ func (f *FinalizerRemoval) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.ValidationInterface = &FinalizerRemoval{}
+var _ admission.ValidationInterface = (*FinalizerRemoval)(nil)
 
 // Validate ensures that finalizers from objects can only be removed if they are not needed anymore.
 func (f *FinalizerRemoval) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
