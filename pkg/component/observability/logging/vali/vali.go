@@ -36,6 +36,8 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -75,8 +77,8 @@ const (
 	telegrafVolumeMountPath    = "/etc/telegraf"
 	telegrafVolumeName         = "telegraf-config-volume"
 
-	kubeRBACProxyName = "kube-rbac-proxy"
-	kubeRBACProxyPort = 8080
+	kubeRBACProxyName       = "kube-rbac-proxy"
+	kubeRBACProxyPort int32 = 8080
 
 	initLargeDirName = "init-large-dir"
 )
@@ -345,7 +347,19 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 }
 
 func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
-	pathType := networkingv1.PathTypePrefix
+	var (
+		pathType = networkingv1.PathTypePrefix
+
+		serviceName = valiServiceName
+		endpoint    = valiconstants.PushEndpoint
+		port        = kubeRBACProxyPort
+	)
+
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		serviceName = collectorconstants.ServiceName
+		endpoint = collectorconstants.PushEndpoint
+		port = collectorconstants.KubeRBACProxyPort
+	}
 
 	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -366,11 +380,11 @@ func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
 						Paths: []networkingv1.HTTPIngressPath{{
 							Backend: networkingv1.IngressBackend{
 								Service: &networkingv1.IngressServiceBackend{
-									Name: valiServiceName,
-									Port: networkingv1.ServiceBackendPort{Number: kubeRBACProxyPort},
+									Name: serviceName,
+									Port: networkingv1.ServiceBackendPort{Number: port},
 								},
 							},
-							Path:     valiconstants.PushEndpoint,
+							Path:     endpoint,
 							PathType: &pathType,
 						}},
 					},
@@ -790,6 +804,10 @@ func (v *vali) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rb
 }
 
 func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
+	endpoint := valiconstants.PushEndpoint
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		endpoint = collectorconstants.PushEndpoint
+	}
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   valitailClusterRoleName,
@@ -812,7 +830,7 @@ func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
 				},
 			},
 			{
-				NonResourceURLs: []string{valiconstants.PushEndpoint},
+				NonResourceURLs: []string{endpoint},
 				Verbs:           []string{"create"},
 			},
 		},

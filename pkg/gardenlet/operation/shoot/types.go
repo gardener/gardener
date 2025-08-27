@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
+	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	shootsystem "github.com/gardener/gardener/pkg/component/shoot/system"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -137,7 +138,7 @@ type ControlPlane struct {
 	Prometheus               prometheus.Interface
 	ResourceManager          resourcemanager.Interface
 	Vali                     vali.Interface
-	OtelCollector            component.DeployWaiter
+	OtelCollector            collector.Interface
 	VerticalPodAutoscaler    vpa.Interface
 	VPNSeedServer            vpnseedserver.Interface
 }

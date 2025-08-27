@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	mockvali "github.com/gardener/gardener/pkg/component/observability/logging/vali/mock"
+	mockcollector "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/mock"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -46,7 +47,7 @@ var _ = Describe("Logging", func() {
 		k8sSeedClient         kubernetes.Interface
 		botanist              *Botanist
 		eventLoggerDeployer   *mockcomponent.MockDeployer
-		otelCollectorDeployer *mockcomponent.MockDeployWaiter
+		otelCollectorDeployer *mockcollector.MockInterface
 		valiDeployer          *mockvali.MockInterface
 		fakeSecretManager     secretsmanager.Interface
 		chartApplier          *mock.MockChartApplier
@@ -72,7 +73,7 @@ var _ = Describe("Logging", func() {
 			Build()
 
 		eventLoggerDeployer = mockcomponent.NewMockDeployer(ctrl)
-		otelCollectorDeployer = mockcomponent.NewMockDeployWaiter(ctrl)
+		otelCollectorDeployer = mockcollector.NewMockInterface(ctrl)
 		valiDeployer = mockvali.NewMockInterface(ctrl)
 		fakeSecretManager = fakesecretsmanager.New(c, controlPlaneNamespace)
 
@@ -237,9 +238,10 @@ var _ = Describe("Logging", func() {
 							*obj.(*appsv1.Deployment) = *deployment
 							return nil
 						}),
-						valiDeployer.EXPECT().WithAuthenticationProxy(true),
+						valiDeployer.EXPECT().WithAuthenticationProxy(false),
 
 						eventLoggerDeployer.EXPECT().Deploy(ctx),
+						otelCollectorDeployer.EXPECT().WithAuthenticationProxy(true),
 						otelCollectorDeployer.EXPECT().Deploy(ctx),
 						valiDeployer.EXPECT().Deploy(ctx),
 					)
