@@ -47,10 +47,26 @@ case "$COMMAND" in
           -n gardenadm-high-touch \
           -m provider-local-node,machine
       fi
+
+      # Export global resources for `gardenadm connect` scenario in case they will be needed later
+      mkdir -p "$(dirname "$0")/gardenadm/resources/generated/connect"
+      # We don't need to export Controller{Registration,Deployment}s since they already get registered by
+      # gardener-operator.
+      yq '. | select(.kind == "Project" or .kind == "Namespace" or .kind == "CloudProfile")' \
+        < "$(dirname "$0")/gardenadm/resources/generated/$SCENARIO/manifests.yaml" \
+        > "$(dirname "$0")/gardenadm/resources/generated/connect/manifests.yaml"
     else
+      if [[ ! -f "$(dirname "$0")/gardenadm/resources/generated/connect/manifests.yaml" ]]; then
+        echo "Error: Must run 'make gardenadm-up' first." >&2
+        exit 1
+      fi
+
       make operator-up garden-up \
         -f "$(dirname "$0")/../Makefile" \
         KUBECONFIG="$KUBECONFIG"
+
+      echo "Creating global resources in the virtual garden cluster as preparation for running 'gardenadm connect'..."
+      kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" apply -f "$(dirname "$0")/gardenadm/resources/generated/connect/manifests.yaml"
     fi
     ;;
 
