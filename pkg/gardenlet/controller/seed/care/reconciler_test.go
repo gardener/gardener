@@ -220,7 +220,7 @@ var _ = Describe("Seed Care Control", func() {
 						"Type": BeEquivalentTo("SeedSystemComponentsHealthy"),
 					}), MatchFields(IgnoreExtras, Fields{
 						"Type":    BeEquivalentTo("EmergencyStopShootReconciliations"),
-						"Status":  BeEquivalentTo("False"),
+						"Status":  BeEquivalentTo("True"),
 						"Reason":  Equal("EmergencyStopShootReconciliations"),
 						"Message": Equal("Reconciliations of Shoots managed by this Seed cluster are currently disabled by annotation."),
 					}),
