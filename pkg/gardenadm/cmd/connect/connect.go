@@ -6,10 +6,14 @@ package connect
 
 import (
 	"context"
+	"crypto/x509/pkix"
 	"fmt"
+	"net"
+	"time"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -20,13 +24,16 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -76,7 +83,8 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed creating client set for autonomous shoot: %w", err)
 	}
 
-	gardenClientSet, err := kubernetes.NewWithConfig(kubernetes.WithRESTConfig(&rest.Config{
+	// TODO(rfranzke): Skip this if gardenlet is already connected (see subsequent commit).
+	bootstrapClientSet, err := kubernetes.NewWithConfig(kubernetes.WithRESTConfig(&rest.Config{
 		Host:            opts.ControlPlaneAddress,
 		TLSClientConfig: rest.TLSClientConfig{CAData: opts.CertificateAuthority},
 		BearerToken:     opts.BootstrapToken,
@@ -84,17 +92,28 @@ func run(ctx context.Context, opts *Options) error {
 	if err != nil {
 		return fmt.Errorf("failed creating garden client set: %w", err)
 	}
-	b.GardenClient = gardenClientSet.Client()
-
-	gardenletDeployer := newGardenletDeployer(b, gardenClientSet)
 
 	var (
 		g = flow.NewGraph("connect")
 
+		retrieveShortLivedKubeconfig = g.Add(flow.Task{
+			Name: "Retrieving short-lived kubeconfig for garden cluster to prepare Gardener resources",
+			Fn: func(ctx context.Context) error {
+				return requestShortLivedClientCertificateForGarden(ctx, b, bootstrapClientSet)
+			},
+		})
+		prepareGardenerResources = g.Add(flow.Task{
+			Name: "Preparing Gardener resources in garden cluster",
+			Fn: func(ctx context.Context) error {
+				// TODO(rfranzke): Dummy call with garden client - replaced in a subsequent commit with actual logic.
+				return b.GardenClient.List(ctx, &corev1.NodeList{})
+			},
+			Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
+		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying gardenlet into autonomous shoot cluster",
 			Fn: func(ctx context.Context) error {
-				_, err := gardenletDeployer.Reconcile(
+				_, err := newGardenletDeployer(b, bootstrapClientSet).Reconcile(
 					ctx,
 					b.Logger,
 					b.Shoot.GetInfo(),
@@ -106,6 +125,7 @@ func run(ctx context.Context, opts *Options) error {
 				)
 				return err
 			},
+			Dependencies: flow.NewTaskIDs(prepareGardenerResources),
 		})
 	)
 
@@ -136,6 +156,32 @@ become outdated:
   rm -rf %[3]s
 `, b.Shoot.ControlPlaneNamespace, opts.BootstrapToken, opts.ConfigDir)
 
+	return nil
+}
+
+func requestShortLivedClientCertificateForGarden(ctx context.Context, b *botanist.AutonomousBotanist, bootstrapClientSet kubernetes.Interface) error {
+	certificateSubject := &pkix.Name{
+		Organization: []string{v1beta1constants.ShootsGroup},
+		CommonName:   v1beta1constants.GardenadmUserNamePrefix + b.Shoot.GetInfo().Namespace + ":" + b.Shoot.GetInfo().Name,
+	}
+
+	certData, privateKeyData, _, err := certificatesigningrequest.RequestCertificate(ctx, b.Logger, bootstrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, &metav1.Duration{Duration: 10 * time.Minute}, "gardenadm-connect-csr-")
+	if err != nil {
+		return fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
+	}
+
+	kubeconfig, err := gardenletbootstraputil.CreateGardenletKubeconfigWithClientCertificate(bootstrapClientSet.RESTConfig(), privateKeyData, certData)
+	if err != nil {
+		return fmt.Errorf("failed creating short-lived kubeconfig with the retrieved client certificate: %w", err)
+	}
+
+	gardenClientSet, err := kubernetes.NewClientFromBytes(kubeconfig)
+	if err != nil {
+		return fmt.Errorf("failed creating garden client set from short-lived kubeconfig: %w", err)
+	}
+
+	b.Logger.Info("Successfully retrieved short-lived kubeconfig for garden cluster")
+	b.GardenClient = gardenClientSet.Client()
 	return nil
 }
 
