@@ -24,6 +24,7 @@ import (
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/shoot"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
@@ -610,6 +611,59 @@ var _ = Describe("Shoot", func() {
 					Entry("get", "get"),
 					Entry("list", "list"),
 					Entry("watch", "watch"),
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+			})
+
+			Context("when requested for Shoots", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = shootName, shootNamespace
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "shoots",
+						ResourceRequest: true,
+						Verb:            "list",
+					}
+				})
+
+				DescribeTable("should allow without consulting the graph because verb is get, list, or watch",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+
+					},
+
 					Entry("create", "create"),
 					Entry("update", "update"),
 					Entry("patch", "patch"),
