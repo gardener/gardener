@@ -67,7 +67,7 @@ func (b *Botanist) DeployCoreDNS(ctx context.Context) error {
 		return err
 	}
 
-	ipFamiliesLen, err := b.getCoreDNSPodIPFamilies(ctx)
+	minPodIPCount, err := b.getMinCoreDNSPodIPCount(ctx)
 	if err != nil {
 		return err
 	}
@@ -81,13 +81,16 @@ func (b *Botanist) DeployCoreDNS(ctx context.Context) error {
 		return fmt.Errorf("no CoreDNS cluster IPs available")
 	}
 
-	if ipFamiliesLen == 1 && len(shootIPFamilies) >= 1 {
+	// Use single-stack configuration if any CoreDNS pod has only one IP
+	// This ensures we don't configure dual-stack service before all pods are ready
+	if minPodIPCount == 1 && len(shootIPFamilies) >= 1 {
 		b.Shoot.Components.SystemComponents.CoreDNS.SetIPFamilies([]gardencorev1beta1.IPFamily{shootIPFamilies[0]})
 		b.Shoot.Components.SystemComponents.CoreDNS.SetClusterIPs([]net.IP{b.Shoot.Networks.CoreDNS[0]})
 	} else {
 		b.Shoot.Components.SystemComponents.CoreDNS.SetIPFamilies(shootIPFamilies)
 		b.Shoot.Components.SystemComponents.CoreDNS.SetClusterIPs(b.Shoot.Networks.CoreDNS)
 	}
+
 	b.Shoot.Components.SystemComponents.CoreDNS.SetNodeNetworkCIDRs(b.Shoot.Networks.Nodes)
 	b.Shoot.Components.SystemComponents.CoreDNS.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
 	b.Shoot.Components.SystemComponents.CoreDNS.SetPodAnnotations(restartedAtAnnotations)
@@ -122,7 +125,7 @@ func (b *Botanist) getCoreDNSRestartedAtAnnotations(ctx context.Context) (map[st
 	return nil, nil
 }
 
-func (b *Botanist) getCoreDNSPodIPFamilies(ctx context.Context) (int, error) {
+func (b *Botanist) getMinCoreDNSPodIPCount(ctx context.Context) (int, error) {
 	podList := &corev1.PodList{}
 	if err := b.ShootClientSet.Client().List(ctx, podList,
 		client.InNamespace(metav1.NamespaceSystem),
@@ -134,11 +137,9 @@ func (b *Botanist) getCoreDNSPodIPFamilies(ctx context.Context) (int, error) {
 		return 0, nil
 	}
 
-	minIPCount := len(podList.Items[0].Status.PodIPs)
-	for _, pod := range podList.Items[1:] {
-		if ipCount := len(pod.Status.PodIPs); ipCount < minIPCount {
-			minIPCount = ipCount
-		}
+	minIPCount := 2
+	for _, pod := range podList.Items {
+		minIPCount = min(minIPCount, len(pod.Status.PodIPs))
 	}
 
 	return minIPCount, nil

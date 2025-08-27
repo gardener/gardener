@@ -66,17 +66,17 @@ Nodes must support the new network protocol. However, node rollout is a manual s
 
 Cluster owners can monitor the progress of this step by checking the `DualStackNodesMigrationReady` constraint in the shoot status. During shoot reconciliation, the system verifies if all nodes support dual-stack networking and updates the migration state accordingly.
 
-### Step 5: Final Reconciliation
+### Step 5: Control Plane and CNI Configuration
 
-Once all nodes are migrated, the remaining control plane components and the Container Network Interface (CNI) are configured for dual-stack networking. The nodes migration constraint is removed at the end of this step and the constraint `
+Once all nodes are migrated, the remaining control plane components and the Container Network Interface (CNI) are configured for dual-stack networking. The nodes migration constraint is removed at the end of this step and the constraint `DNSServiceMigrationReady` is added with status `progressing`.
 
 ### Step 6: Restart of CoreDNS Pods
 
-With the next reconciliation, CoreDNS pods are restarted and get IPv6 addresses.
+With the next reconciliation, CoreDNS pods are restarted to obtain IPv6 addresses. The constraint `DNSServiceMigrationReady` is set to status `true` once all pods have both IPv4 and IPv6 addresses.
 
 ### Step 7: Switch Service `kube-dns` to Dual-Stack
 
-When all CoreDNS pods have IPv6 addresses, the `kube-dns` service will be configured as a dual-stack service with both IPv4 and IPv6 cluster IPs.
+When all CoreDNS pods have IPv6 addresses, the `kube-dns` service will be configured as a dual-stack service with both IPv4 and IPv6 cluster IPs and the constraint `DNSServiceMigrationReady` will be removed.
 
 ## Post-Migration Behavior
 
@@ -87,3 +87,4 @@ After completing the migration:
 - New pods will receive IP addresses from both address families.
 - Existing pods will only receive a second IP address upon recreation.
 - If full dual-stack networking is required, all pods need to be rolled.
+- Existing services remain IPv4-only until recreated with dual-stack configuration.

@@ -18,9 +18,7 @@ import (
 )
 
 // DetermineUpdateFunction determines the update function for the shoot's status based on dual-stack migration readiness.
-func (b *Botanist) DetermineUpdateFunction(networkReadyForDualStackMigration bool,
-	nodeList *corev1.NodeList,
-) func(*gardencorev1beta1.Shoot) error {
+func (b *Botanist) DetermineUpdateFunction(networkReadyForDualStackMigration bool, nodeList *corev1.NodeList) func(*gardencorev1beta1.Shoot) error {
 	if networkReadyForDualStackMigration {
 		return func(shoot *gardencorev1beta1.Shoot) error {
 			shoot.Status.Constraints = v1beta1helper.RemoveConditions(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
