@@ -878,52 +878,90 @@ func (r *Reconciler) migrateSecretBindingToCredentialsBinding(ctx context.Contex
 		return fmt.Errorf("failed to get SecretBinding %s: %w", client.ObjectKeyFromObject(secretBinding), err)
 	}
 
-	credentialsBindingName := "migrated-" + secretBindingName
-	credentialsBinding := &securityv1alpha1.CredentialsBinding{
+	// First, check if the migration-created CredentialsBinding exists
+	migratedCredentialsBindingName := "force-migrated-" + secretBindingName
+	migratedCredentialsBinding := &securityv1alpha1.CredentialsBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      credentialsBindingName,
+			Name:      migratedCredentialsBindingName,
 			Namespace: shoot.Namespace,
 		},
 	}
-	err := r.Client.Get(ctx, client.ObjectKeyFromObject(credentialsBinding), credentialsBinding)
 
-	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed to check for existing CredentialsBinding %s: %w", client.ObjectKeyFromObject(credentialsBinding), err)
-	}
-
-	if apierrors.IsNotFound(err) {
-		credentialsBinding = &securityv1alpha1.CredentialsBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      credentialsBindingName,
-				Namespace: shoot.Namespace,
-			},
-			Provider: securityv1alpha1.CredentialsBindingProvider{
-				Type: secretBinding.Provider.Type,
-			},
-			CredentialsRef: corev1.ObjectReference{
-				APIVersion: "v1",
-				Kind:       "Secret",
-				Name:       secretBinding.SecretRef.Name,
-				Namespace:  secretBinding.SecretRef.Namespace,
-			},
-			Quotas: secretBinding.Quotas,
+	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(migratedCredentialsBinding), migratedCredentialsBinding); err == nil {
+		// Migration-created CredentialsBinding exists, validate it
+		if migratedCredentialsBinding.CredentialsRef.Kind != "Secret" ||
+			migratedCredentialsBinding.CredentialsRef.APIVersion != "v1" ||
+			migratedCredentialsBinding.CredentialsRef.Name != secretBinding.SecretRef.Name ||
+			migratedCredentialsBinding.CredentialsRef.Namespace != secretBinding.SecretRef.Namespace {
+			return fmt.Errorf("existing CredentialsBinding %s/%s does not reference the same Secret as SecretBinding %s/%s",
+				shoot.Namespace, migratedCredentialsBindingName, shoot.Namespace, secretBindingName)
 		}
 
-		if err := r.Client.Create(ctx, credentialsBinding); err != nil {
-			return fmt.Errorf("failed to create CredentialsBinding %s: %w", client.ObjectKeyFromObject(credentialsBinding), err)
+		if !quotasEqual(migratedCredentialsBinding.Quotas, secretBinding.Quotas) {
+			return fmt.Errorf("existing CredentialsBinding %s/%s does not have the same Quotas as SecretBinding %s/%s",
+				shoot.Namespace, migratedCredentialsBindingName, shoot.Namespace, secretBindingName)
 		}
-	} else if credentialsBinding.CredentialsRef.Kind != "Secret" ||
-		credentialsBinding.CredentialsRef.APIVersion != "v1" ||
-		credentialsBinding.CredentialsRef.Name != secretBinding.SecretRef.Name ||
-		credentialsBinding.CredentialsRef.Namespace != secretBinding.SecretRef.Namespace {
-		return fmt.Errorf("existing CredentialsBinding %s/%s does not reference the same Secret as SecretBinding %s/%s",
-			shoot.Namespace, credentialsBindingName, shoot.Namespace, secretBindingName)
-	} else if !quotasEqual(credentialsBinding.Quotas, secretBinding.Quotas) {
-		return fmt.Errorf("existing CredentialsBinding %s/%s does not have the same Quotas as SecretBinding %s/%s",
-			shoot.Namespace, credentialsBindingName, shoot.Namespace, secretBindingName)
+
+		shoot.Spec.CredentialsBindingName = &migratedCredentialsBindingName
+		shoot.Spec.SecretBindingName = nil
+		return nil
+	} else if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to check for existing CredentialsBinding %s: %w", client.ObjectKeyFromObject(migratedCredentialsBinding), err)
 	}
 
-	shoot.Spec.CredentialsBindingName = &credentialsBindingName
+	// Migration-created CredentialsBinding doesn't exist, search for user-created ones
+	credentialsBindingList := &securityv1alpha1.CredentialsBindingList{}
+	if err := r.Client.List(ctx, credentialsBindingList, client.InNamespace(shoot.Namespace)); err != nil {
+		return fmt.Errorf("failed to list CredentialsBindings in namespace %s: %w", shoot.Namespace, err)
+	}
+
+	// Find matching CredentialsBindings that reference the same Secret and have the same Quotas
+	var matchingCredentialsBindings []securityv1alpha1.CredentialsBinding
+	for _, cb := range credentialsBindingList.Items {
+		if cb.CredentialsRef.Kind == "Secret" &&
+			cb.CredentialsRef.APIVersion == "v1" &&
+			cb.CredentialsRef.Name == secretBinding.SecretRef.Name &&
+			cb.CredentialsRef.Namespace == secretBinding.SecretRef.Namespace &&
+			quotasEqual(cb.Quotas, secretBinding.Quotas) {
+			matchingCredentialsBindings = append(matchingCredentialsBindings, cb)
+		}
+	}
+
+	if len(matchingCredentialsBindings) > 0 {
+		// Sort by name for stable selection (use the first one alphabetically)
+		slices.SortFunc(matchingCredentialsBindings, func(a, b securityv1alpha1.CredentialsBinding) int {
+			return strings.Compare(a.Name, b.Name)
+		})
+
+		selectedCredentialsBinding := matchingCredentialsBindings[0]
+		shoot.Spec.CredentialsBindingName = &selectedCredentialsBinding.Name
+		shoot.Spec.SecretBindingName = nil
+		return nil
+	}
+
+	// No existing CredentialsBinding found, create a new migration-created one
+	credentialsBinding := &securityv1alpha1.CredentialsBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      migratedCredentialsBindingName,
+			Namespace: shoot.Namespace,
+		},
+		Provider: securityv1alpha1.CredentialsBindingProvider{
+			Type: secretBinding.Provider.Type,
+		},
+		CredentialsRef: corev1.ObjectReference{
+			APIVersion: "v1",
+			Kind:       "Secret",
+			Name:       secretBinding.SecretRef.Name,
+			Namespace:  secretBinding.SecretRef.Namespace,
+		},
+		Quotas: secretBinding.Quotas,
+	}
+
+	if err := r.Client.Create(ctx, credentialsBinding); err != nil {
+		return fmt.Errorf("failed to create CredentialsBinding %s: %w", client.ObjectKeyFromObject(credentialsBinding), err)
+	}
+
+	shoot.Spec.CredentialsBindingName = &migratedCredentialsBindingName
 	shoot.Spec.SecretBindingName = nil
 
 	return nil

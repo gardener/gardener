@@ -1644,11 +1644,11 @@ var _ = Describe("Shoot Maintenance", func() {
 
 			Expect(shoot.Spec.SecretBindingName).To(BeNil())
 			Expect(shoot.Spec.CredentialsBindingName).NotTo(BeNil())
-			Expect(*shoot.Spec.CredentialsBindingName).To(Equal("migrated-" + secretBindingName))
+			Expect(*shoot.Spec.CredentialsBindingName).To(Equal("force-migrated-" + secretBindingName))
 
 			createdCredentialsBinding := &securityv1alpha1.CredentialsBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "migrated-" + secretBindingName,
+					Name:      "force-migrated-" + secretBindingName,
 					Namespace: namespace,
 				},
 			}
@@ -1662,7 +1662,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(createdCredentialsBinding.CredentialsRef.Namespace).To(Equal(secretNamespace))
 		})
 
-		It("should use existing CredentialsBinding when it references the same Secret", func() {
+		It("should use existing user-created CredentialsBinding when it references the same Secret and Quotas match", func() {
 			Expect(fakeClient.Create(ctx, secretBinding)).To(Succeed())
 
 			existingCredentialsBinding := &securityv1alpha1.CredentialsBinding{
@@ -1687,7 +1687,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 			Expect(shoot.Spec.SecretBindingName).To(BeNil())
 			Expect(shoot.Spec.CredentialsBindingName).NotTo(BeNil())
-			Expect(*shoot.Spec.CredentialsBindingName).To(Equal("migrated-" + secretBindingName))
+			Expect(*shoot.Spec.CredentialsBindingName).To(Equal(secretBindingName))
 		})
 
 		It("should fail when existing CredentialsBinding references a different Secret", func() {
@@ -1695,7 +1695,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 			existingCredentialsBinding := &securityv1alpha1.CredentialsBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "migrated-" + secretBindingName,
+					Name:      "force-migrated-" + secretBindingName,
 					Namespace: namespace,
 				},
 				Provider: securityv1alpha1.CredentialsBindingProvider{
@@ -1723,7 +1723,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 			existingCredentialsBinding := &securityv1alpha1.CredentialsBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "migrated-" + secretBindingName,
+					Name:      "force-migrated-" + secretBindingName,
 					Namespace: namespace,
 				},
 				Provider: securityv1alpha1.CredentialsBindingProvider{
@@ -1744,7 +1744,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 			Expect(shoot.Spec.SecretBindingName).To(BeNil())
 			Expect(shoot.Spec.CredentialsBindingName).NotTo(BeNil())
-			Expect(*shoot.Spec.CredentialsBindingName).To(Equal("migrated-" + secretBindingName))
+			Expect(*shoot.Spec.CredentialsBindingName).To(Equal("force-migrated-" + secretBindingName))
 		})
 
 		It("should fail when existing CredentialsBinding has different quotas", func() {
@@ -1756,7 +1756,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			quota3 := corev1.ObjectReference{APIVersion: "v1", Kind: "Quota", Name: "quota3", Namespace: "ns3"}
 			existingCredentialsBinding := &securityv1alpha1.CredentialsBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "migrated-" + secretBindingName,
+					Name:      "force-migrated-" + secretBindingName,
 					Namespace: namespace,
 				},
 				Provider: securityv1alpha1.CredentialsBindingProvider{
