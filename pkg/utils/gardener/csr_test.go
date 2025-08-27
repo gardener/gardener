@@ -53,4 +53,24 @@ var _ = Describe("csr", func() {
 		Entry("common name with too many parts", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:shoot:test:shoot:extra", Organization: []string{"gardener.cloud:system:shoots"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, false, ContainSubstring("common name must follow this structure")),
 		Entry("everything matches", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:shoot:test:shoot", Organization: []string{"gardener.cloud:system:shoots"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, true, Equal("")),
 	)
+
+	DescribeTable("#IsGardenadmClientCert",
+		func(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage, expectedStatus bool, expectedReason gomegatypes.GomegaMatcher) {
+			status, reason := IsGardenadmClientCert(x509cr, usages)
+			Expect(status).To(Equal(expectedStatus))
+			Expect(reason).To(expectedReason)
+		},
+
+		Entry("org does not match", &x509.CertificateRequest{}, nil, false, ContainSubstring("organization")),
+		Entry("dns names given", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:gardenadm:shoot:test:shoot", Organization: []string{"gardener.cloud:system:shoots"}}, DNSNames: []string{"foo"}}, nil, false, ContainSubstring("DNSNames")),
+		Entry("email addresses given", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:gardenadm:shoot:test:shoot", Organization: []string{"gardener.cloud:system:shoots"}}, EmailAddresses: []string{"foo"}}, nil, false, ContainSubstring("EmailAddresses")),
+		Entry("ip addresses given", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:gardenadm:shoot:test:shoot", Organization: []string{"gardener.cloud:system:shoots"}}, IPAddresses: []net.IP{{}}}, nil, false, ContainSubstring("IPAddresses")),
+		Entry("key usages do not match", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:gardenadm:shoot:test:shoot", Organization: []string{"gardener.cloud:system:shoots"}}}, nil, false, ContainSubstring("key usages")),
+		Entry("common name does not start with prefix", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "invalid:name", Organization: []string{"gardener.cloud:system:shoots"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, false, ContainSubstring("common name does not start with")),
+		Entry("common name missing namespace", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:gardenadm:shoot:", Organization: []string{"gardener.cloud:system:shoots"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, false, ContainSubstring("common name must follow this structure")),
+		Entry("common name missing shoot name", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:gardenadm:shoot:test:", Organization: []string{"gardener.cloud:system:shoots"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, false, ContainSubstring("common name must follow this structure")),
+		Entry("common name with empty namespace", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:gardenadm:shoot::shoot", Organization: []string{"gardener.cloud:system:shoots"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, false, ContainSubstring("common name must follow this structure")),
+		Entry("common name with too many parts", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:gardenadm:shoot:test:shoot:extra", Organization: []string{"gardener.cloud:system:shoots"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, false, ContainSubstring("common name must follow this structure")),
+		Entry("everything matches", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:gardenadm:shoot:test:shoot", Organization: []string{"gardener.cloud:system:shoots"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, true, Equal("")),
+	)
 })

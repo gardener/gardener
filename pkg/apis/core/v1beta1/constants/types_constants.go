@@ -819,6 +819,9 @@ const (
 	// ShootUserNamePrefix is the identity username prefix for gardenlets running in autonomous shoot clusters when
 	// authenticating to the API server.
 	ShootUserNamePrefix = "gardener.cloud:system:shoot:"
+	// GardenadmUserNamePrefix is the identity username prefix for `gardenadm connect` when it bootstraps the
+	// gardenlet.
+	GardenadmUserNamePrefix = "gardener.cloud:gardenadm:shoot:"
 
 	// ClusterRoleNameGardenerAdministrators is the name of a cluster role in the garden cluster defining privileges
 	// for administrators.

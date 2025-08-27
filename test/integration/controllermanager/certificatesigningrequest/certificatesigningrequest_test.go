@@ -151,4 +151,53 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 			}).Should(Succeed())
 		})
 	})
+
+	Context("gardenadm client certificate", func() {
+		var (
+			shootNamespace = "shoot-namespace"
+			shootName      = "shoot-name"
+		)
+
+		BeforeEach(func() {
+			certificateSubject = &pkix.Name{
+				Organization: []string{v1beta1constants.ShootsGroup},
+				CommonName:   v1beta1constants.GardenadmUserNamePrefix + shootNamespace + ":" + shootName,
+			}
+			csrData, err = certutil.MakeCSR(privateKey, certificateSubject, nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+			csr.Spec.Request = csrData
+			csr.Spec.Username = "system:bootstrap:123abc"
+
+			bootstrapTokenSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bootstrap-token-" + bootstrapTokenID,
+					Namespace: "kube-system",
+					Labels:    map[string]string{testID: testRunID},
+				},
+				Data: map[string][]byte{
+					"description": []byte(fmt.Sprintf("Used for connecting the autonomous Shoot %s/%s", shootNamespace, shootName)),
+				},
+			}
+
+			By("Create bootstrap token Secret")
+			Expect(testClient.Create(ctx, bootstrapTokenSecret)).To(Succeed())
+			log.Info("Created bootstrap token Secret for test", "secret", client.ObjectKeyFromObject(bootstrapTokenSecret))
+
+			DeferCleanup(func() {
+				By("Delete BootstrapToken Secret")
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, bootstrapTokenSecret))).To(Succeed())
+			})
+		})
+
+		It("should approve the csr", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+				g.Expect(csr.Status.Conditions).To(ContainElement(And(
+					HaveField("Type", certificatesv1.CertificateApproved),
+					HaveField("Reason", "AutoApproved"),
+					HaveField("Message", "Auto approving gardenlet client certificate after SubjectAccessReview."),
+				)))
+			}).Should(Succeed())
+		})
+	})
 })

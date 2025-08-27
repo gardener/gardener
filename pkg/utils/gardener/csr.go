@@ -38,22 +38,34 @@ func IsSeedClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.K
 	return areCSRRequirementsMet(x509cr, usages)
 }
 
+// IsGardenadmClientCert returns true when the given CSR and usages match the requirements for a client
+// certificate for an autonomous shoot with the `gardenadm connect` prefix. If false is returned, a reason will be
+// returned explaining which requirement was not met.
+func IsGardenadmClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage) (bool, string) {
+	return isAutonomousShootClientCert(x509cr, usages, v1beta1constants.GardenadmUserNamePrefix)
+}
+
 // IsShootClientCert returns true when the given CSR and usages match the requirements for a client certificate for an
-// autonomous shoot. If false is returned, a reason will be returned explaining which requirement was not met.
+// autonomous shoot with the gardenlet prefix. If false is returned, a reason will be returned explaining which
+// requirement was not met.
 func IsShootClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage) (bool, string) {
+	return isAutonomousShootClientCert(x509cr, usages, v1beta1constants.ShootUserNamePrefix)
+}
+
+func isAutonomousShootClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage, prefix string) (bool, string) {
 	requiredOrganizations := []string{v1beta1constants.ShootsGroup}
 
 	if !reflect.DeepEqual(requiredOrganizations, x509cr.Subject.Organization) {
 		return false, fmt.Sprintf("subject's organization is not set to %v", requiredOrganizations)
 	}
 
-	if !strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.ShootUserNamePrefix) {
-		return false, fmt.Sprintf("subject's common name does not start with %q", v1beta1constants.ShootUserNamePrefix)
+	if !strings.HasPrefix(x509cr.Subject.CommonName, prefix) {
+		return false, fmt.Sprintf("subject's common name does not start with %q", prefix)
 	}
 
-	if parts := strings.Split(strings.TrimPrefix(x509cr.Subject.CommonName, v1beta1constants.ShootUserNamePrefix), ":"); len(parts) != 2 ||
+	if parts := strings.Split(strings.TrimPrefix(x509cr.Subject.CommonName, prefix), ":"); len(parts) != 2 ||
 		parts[0] == "" || parts[1] == "" {
-		return false, fmt.Sprintf("subject's common name must follow this structure: %q", v1beta1constants.ShootUserNamePrefix+"<namespace>:<name>")
+		return false, fmt.Sprintf("subject's common name must follow this structure: %q", prefix+"<namespace>:<name>")
 	}
 
 	return areCSRRequirementsMet(x509cr, usages)
