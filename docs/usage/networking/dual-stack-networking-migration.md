@@ -68,12 +68,22 @@ Cluster owners can monitor the progress of this step by checking the `DualStackN
 
 ### Step 5: Final Reconciliation
 
-Once all nodes are migrated, the remaining control plane components and the Container Network Interface (CNI) are configured for dual-stack networking. The migration constraint is removed at the end of this step.
+Once all nodes are migrated, the remaining control plane components and the Container Network Interface (CNI) are configured for dual-stack networking. The nodes migration constraint is removed at the end of this step and the constraint `
+
+### Step 6: Restart of CoreDNS Pods
+
+With the next reconciliation, CoreDNS pods are restarted and get IPv6 addresses.
+
+### Step 7: Switch Service `kube-dns` to Dual-Stack
+
+When all CoreDNS pods have IPv6 addresses, the `kube-dns` service will be configured as a dual-stack service with both IPv4 and IPv6 cluster IPs.
 
 ## Post-Migration Behavior
 
 After completing the migration:
 - The shoot cluster supports dual-stack networking.
+- The `kube-dns` service operates with both IPv4 and IPv6 cluster IPs.
+- CoreDNS pods handle DNS queries for both address families.
 - New pods will receive IP addresses from both address families.
 - Existing pods will only receive a second IP address upon recreation.
-- If full dual-stack networking is required all pods need to be rolled.
+- If full dual-stack networking is required, all pods need to be rolled.

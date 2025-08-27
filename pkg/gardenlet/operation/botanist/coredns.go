@@ -6,9 +6,12 @@ package botanist
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,6 +21,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
+	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -62,11 +66,31 @@ func (b *Botanist) DeployCoreDNS(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	ipFamiliesLen, err := b.getCoreDNSPodIPFamilies(ctx)
+	if err != nil {
+		return err
+	}
+
+	shootIPFamilies := b.Shoot.GetInfo().Spec.Networking.IPFamilies
+	if len(shootIPFamilies) == 0 {
+		return fmt.Errorf("no IP families configured in shoot spec")
+	}
+
+	if len(b.Shoot.Networks.CoreDNS) == 0 {
+		return fmt.Errorf("no CoreDNS cluster IPs available")
+	}
+
+	if ipFamiliesLen == 1 && len(shootIPFamilies) >= 1 {
+		b.Shoot.Components.SystemComponents.CoreDNS.SetIPFamilies([]gardencorev1beta1.IPFamily{shootIPFamilies[0]})
+		b.Shoot.Components.SystemComponents.CoreDNS.SetClusterIPs([]net.IP{b.Shoot.Networks.CoreDNS[0]})
+	} else {
+		b.Shoot.Components.SystemComponents.CoreDNS.SetIPFamilies(shootIPFamilies)
+		b.Shoot.Components.SystemComponents.CoreDNS.SetClusterIPs(b.Shoot.Networks.CoreDNS)
+	}
 	b.Shoot.Components.SystemComponents.CoreDNS.SetNodeNetworkCIDRs(b.Shoot.Networks.Nodes)
 	b.Shoot.Components.SystemComponents.CoreDNS.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
-	b.Shoot.Components.SystemComponents.CoreDNS.SetClusterIPs(b.Shoot.Networks.CoreDNS)
 	b.Shoot.Components.SystemComponents.CoreDNS.SetPodAnnotations(restartedAtAnnotations)
-	b.Shoot.Components.SystemComponents.CoreDNS.SetIPFamilies(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 
 	return b.Shoot.Components.SystemComponents.CoreDNS.Deploy(ctx)
 }
@@ -82,6 +106,10 @@ func (b *Botanist) getCoreDNSRestartedAtAnnotations(ctx context.Context) (map[st
 		return map[string]string{key: NowFunc().UTC().Format(time.RFC3339)}, nil
 	}
 
+	if constraint := v1beta1helper.GetCondition(b.Shoot.GetInfo().Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady); constraint != nil && constraint.Status == gardencorev1beta1.ConditionProgressing {
+		return map[string]string{key: NowFunc().UTC().Format(time.RFC3339)}, nil
+	}
+
 	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: coredns.DeploymentName, Namespace: metav1.NamespaceSystem}}
 	if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(deployment), deployment); client.IgnoreNotFound(err) != nil {
 		return nil, err
@@ -92,6 +120,28 @@ func (b *Botanist) getCoreDNSRestartedAtAnnotations(ctx context.Context) (map[st
 	}
 
 	return nil, nil
+}
+
+func (b *Botanist) getCoreDNSPodIPFamilies(ctx context.Context) (int, error) {
+	podList := &corev1.PodList{}
+	if err := b.ShootClientSet.Client().List(ctx, podList,
+		client.InNamespace(metav1.NamespaceSystem),
+		client.MatchingLabels{corednsconstants.LabelKey: corednsconstants.LabelValue}); err != nil {
+		return 0, err
+	}
+
+	if len(podList.Items) == 0 {
+		return 0, nil
+	}
+
+	minIPCount := len(podList.Items[0].Status.PodIPs)
+	for _, pod := range podList.Items[1:] {
+		if ipCount := len(pod.Status.PodIPs); ipCount < minIPCount {
+			minIPCount = ipCount
+		}
+	}
+
+	return minIPCount, nil
 }
 
 func getCommonSuffixesForRewriting(systemComponents *gardencorev1beta1.SystemComponents) []string {
