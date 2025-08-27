@@ -1168,6 +1168,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 			})
 
+			It("should forbid passing an extension w/ invalid type information", func() {
+				extension := core.Extension{
+					Type: "!nvalid",
+				}
+				shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.extensions[0].type"),
+					}))))
+			})
+
 			It("should allow passing an extension w/ type information", func() {
 				extension := core.Extension{
 					Type: "arbitrary",
