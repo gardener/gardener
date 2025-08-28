@@ -165,6 +165,7 @@ This webhook reacts on the `OperatingSystemConfig` containing the configuration 
 This webhook reacts on events for the `dependency-watchdog-probe` `Deployment`, the `blackbox-exporter` `Deployment`, as well as on events for `Pod`s created when the `machine-controller-manager` reconciles `Machine`s.
 All these pods need to be able to resolve the DNS names for shoot clusters.
 It sets the `.spec.dnsPolicy=None` and `.spec.dnsConfig.nameServers` to the cluster IP of the `coredns` `Service` created in the `gardener-extension-provider-local-coredns` namespaces so that these pods can resolve the DNS records for shoot clusters (see the [Bootstrapping section](#bootstrapping) for more details).
+It also adds the necessary `NetworkPolicy` labels to allow the communication to the `coredns` pods.
 
 #### Node
 
