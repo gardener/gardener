@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestValidator(t *testing.T) {
+func TestMutator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionPlugin Project Validator Suite")
+	RunSpecs(t, "AdmissionPlugin Project Mutator Suite")
 }
