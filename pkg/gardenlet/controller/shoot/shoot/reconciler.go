@@ -613,7 +613,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	var mustRemoveOperationAnnotation bool
 	k8sLess134, err := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.34")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed comparing Shoot k8s version to 1.34: %w", err)
 	}
 
 	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
@@ -739,7 +739,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 
 	k8sLess134, err := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.34")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed comparing Shoot k8s version to 1.34: %w", err)
 	}
 
 	switch operationType {
