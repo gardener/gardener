@@ -271,13 +271,10 @@ func GetShootETCDEncryptionKeyRotationPhase(credentials *gardencorev1beta1.Shoot
 // the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.
 // TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
 func ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials *gardencorev1beta1.ShootCredentials) bool {
-	if credentials != nil &&
+	return credentials != nil &&
 		credentials.Rotation != nil &&
 		credentials.Rotation.ETCDEncryptionKey != nil &&
-		credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared != nil {
-		return *credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared
-	}
-	return false
+		ptr.Deref(credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared, false)
 }
 
 // MutateShootETCDEncryptionKeyRotation mutates the .status.credentials.rotation.etcdEncryptionKey field based on the

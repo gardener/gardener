@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -87,13 +88,10 @@ func GetETCDEncryptionKeyRotationPhase(credentials *operatorv1alpha1.Credentials
 // the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.
 // TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
 func ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials *operatorv1alpha1.Credentials) bool {
-	if credentials != nil &&
+	return credentials != nil &&
 		credentials.Rotation != nil &&
 		credentials.Rotation.ETCDEncryptionKey != nil &&
-		credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared != nil {
-		return *credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared
-	}
-	return false
+		ptr.Deref(credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared, false)
 }
 
 // MutateETCDEncryptionKeyRotation mutates the .status.credentials.rotation.etcdEncryptionKey field based on the
