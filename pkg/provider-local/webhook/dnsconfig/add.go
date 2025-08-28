@@ -59,6 +59,10 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		Target:   extensionswebhook.TargetSeed,
 		Path:     name,
 		Webhook:  &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
+		// This webhook should not act on the local setup for the gardenadm high-touch scenario.
+		NamespaceSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: corev1.LabelMetadataName, Operator: metav1.LabelSelectorOpNotIn, Values: []string{"gardenadm-high-touch"}},
+		}},
 		ObjectSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 			{Key: "app", Operator: metav1.LabelSelectorOpIn, Values: []string{
 				"machine",
