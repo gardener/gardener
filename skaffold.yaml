@@ -207,7 +207,7 @@ build:
             - plugin/pkg/managedseed/shoot
             - plugin/pkg/managedseed/validator
             - plugin/pkg/namespacedcloudprofile/validator
-            - plugin/pkg/project/validator
+            - plugin/pkg/project/mutator
             - plugin/pkg/seed/mutator
             - plugin/pkg/seed/validator
             - plugin/pkg/shoot/dns
