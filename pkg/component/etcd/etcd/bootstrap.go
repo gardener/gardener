@@ -509,6 +509,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					Port: metricsPortName,
 					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
 						"etcddruid_compaction_jobs_total",
+						"etcddruid_compaction_full_snapshot_triggered_total",
 						"etcddruid_compaction_jobs_current",
 						"etcddruid_compaction_job_duration_seconds_bucket",
 						"etcddruid_compaction_job_duration_seconds_sum",
