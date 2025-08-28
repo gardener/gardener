@@ -281,6 +281,10 @@ func deployMachineDeployments(
 					},
 				},
 			}
+			if existingMachineDeployment != nil {
+				machineDeployment.Spec.Template.Annotations = existingMachineDeployment.Spec.Template.Annotations
+			}
+
 			log.Info("Deploying machine deployment", "machineDeploymentName", machineDeployment.Name, "replicas", machineDeployment.Spec.Replicas)
 			return nil
 		}); err != nil {
