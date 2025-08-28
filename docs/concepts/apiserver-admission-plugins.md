@@ -198,7 +198,7 @@ Operators can provide an optional label selector via the `selector` field to lim
 
 ## `ShootVPAEnabledByDefault`
 
-**Type**: Mutating. **Enabled by default**: No.
+**Type**: Mutating. **Enabled by default**: Yes.
 
 This admission controller reacts on `CREATE` operations for `Shoot`s.
 If enabled, it will enable the managed `VerticalPodAutoscaler` components (for more information, see [Vertical Pod Auto-Scaling](../usage/autoscaling/shoot_autoscaling.md#vertical-pod-auto-scaling))

@@ -147,6 +147,7 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameBackupBucketValidator,           // BackupBucketValidator
 		mutatingwebhook.PluginName,                // MutatingAdmissionWebhook
 		validatingwebhook.PluginName,              // ValidatingAdmissionWebhook
+		PluginNameShootVPAEnabledByDefault,        // ShootVPAEnabledByDefault
 		// TODO(ary1992): Ennable the plugin once our base clusters are updated to k8s >= 1.30
 		// validating.PluginName,                     // ValidatingAdmissionPolicy
 		resourcequota.PluginName, // ResourceQuota
