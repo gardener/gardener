@@ -14,7 +14,7 @@ Version | Expected Release Date | Release Responsibles                          
 --------|-----------------------|----------------------------------------------------------------------------------------------|
 v1.32   | December 11, 2024     | [@marc1404](https://github.com/marc1404), [@LucaBernstein](https://github.com/LucaBernstein) |
 v1.33   | April 23, 2025        | [@Kostov6](https://github.com/Kostov6), [@plkokanov](https://github.com/plkokanov)           |
-v1.34   | August 27, 2025        | [@tobschli](https://github.com/tobschli), [@ScheererJ](https://github.com/ScheererJ)         |
+v1.34   | August 27, 2025       | [@tobschli](https://github.com/tobschli), [@ScheererJ](https://github.com/ScheererJ)         |
 v1.35   | December ?, 2025      | [@timuthy](https://github.com/timuthy), [@rfranzke](https://github.com/rfranzke)             |
 v1.36   | April ?, 2026         | [@oliver-goetz](https://github.com/oliver-goetz), [@ary1992](https://github.com/ary1992)     |
 v1.37   | August ?, 2026        | [@acumino](https://github.com/acumino), [@shafeeqes](https://github.com/shafeeqes)           |
