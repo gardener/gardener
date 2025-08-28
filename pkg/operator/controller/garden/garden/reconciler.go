@@ -179,7 +179,7 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 
 	k8sLess134, err := versionutils.CompareVersions(garden.Spec.VirtualCluster.Kubernetes.Version, "<", "1.34")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed comparing Virtual Cluster k8s version to 1.34: %w", err)
 	}
 
 	switch operationType {
@@ -281,7 +281,7 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 
 	k8sLess134, err := versionutils.CompareVersions(garden.Spec.VirtualCluster.Kubernetes.Version, "<", "1.34")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed comparing Virtual Cluster k8s version to 1.34: %w", err)
 	}
 
 	switch operationType {
