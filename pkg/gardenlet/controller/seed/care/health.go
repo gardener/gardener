@@ -7,7 +7,6 @@ package care
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -35,18 +34,14 @@ func NewHealth(
 	seedClient client.Client,
 	clock clock.Clock,
 	namespace *string,
-	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
+	healthChecker *healthchecker.HealthChecker,
 ) HealthCheck {
 	return &health{
-		seedClient: seedClient,
-		seed:       seed,
-		clock:      clock,
-		namespace:  namespace,
-		healthChecker: healthchecker.NewHealthChecker(
-			seedClient,
-			clock,
-			healthchecker.WithConditionThresholds(conditionThresholds),
-			healthchecker.WithLastOperation(seed.Status.LastOperation)),
+		seedClient:    seedClient,
+		seed:          seed,
+		clock:         clock,
+		namespace:     namespace,
+		healthChecker: healthChecker,
 	}
 }
 
