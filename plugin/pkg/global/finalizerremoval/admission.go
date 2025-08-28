@@ -80,10 +80,10 @@ func (f *FinalizerRemoval) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = (*FinalizerRemoval)(nil)
+var _ admission.ValidationInterface = (*FinalizerRemoval)(nil)
 
-// Admit ensures that finalizers from objects can only be removed if they are not needed anymore.
-func (f *FinalizerRemoval) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+// Validate ensures that finalizers from objects can only be removed if they are not needed anymore.
+func (f *FinalizerRemoval) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if f.readyFunc == nil {
 		f.AssignReadyFunc(func() bool {
@@ -99,10 +99,7 @@ func (f *FinalizerRemoval) Admit(_ context.Context, a admission.Attributes, _ ad
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
 
-	var (
-		err            error
-		newObj, oldObj client.Object
-	)
+	var newObj, oldObj client.Object
 
 	oldObj, ok := a.GetOldObject().(client.Object)
 	if !ok {
@@ -163,9 +160,6 @@ func (f *FinalizerRemoval) Admit(_ context.Context, a admission.Attributes, _ ad
 		}
 	}
 
-	if err != nil {
-		return admission.NewForbidden(a, err)
-	}
 	return nil
 }
 
