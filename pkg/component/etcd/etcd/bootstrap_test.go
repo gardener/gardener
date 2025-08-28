@@ -679,7 +679,7 @@ var _ = Describe("Etcd", func() {
 							MetricRelabelConfigs: []monitoringv1.RelabelConfig{
 								{
 									Action: "keep",
-									Regex:  "^(etcddruid_compaction_jobs_total|etcddruid_compaction_jobs_current|etcddruid_compaction_job_duration_seconds_bucket|etcddruid_compaction_job_duration_seconds_sum|etcddruid_compaction_job_duration_seconds_count|etcddruid_compaction_num_delta_events)$",
+									Regex:  "^(etcddruid_compaction_jobs_total|etcddruid_compaction_full_snapshot_triggered_total|etcddruid_compaction_jobs_current|etcddruid_compaction_job_duration_seconds_bucket|etcddruid_compaction_job_duration_seconds_sum|etcddruid_compaction_job_duration_seconds_count|etcddruid_compaction_num_delta_events)$",
 									SourceLabels: []monitoringv1.LabelName{
 										"__name__",
 									},
