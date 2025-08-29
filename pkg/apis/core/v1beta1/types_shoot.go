@@ -2026,6 +2026,8 @@ const (
 	ShootReadyForMigration ConditionType = "ReadyForMigration"
 	// ShootDualStackNodesMigrationReady is a constant for a condition type indicating whether all nodes are migrated to dual-stack .
 	ShootDualStackNodesMigrationReady ConditionType = "DualStackNodesMigrationReady"
+	// ShootDNSServiceMigrationReady is a constant for a condition type indicating whether the kube-dns service is migrated.
+	ShootDNSServiceMigrationReady ConditionType = "DNSServiceMigrationReady"
 )
 
 // ShootPurpose is a type alias for string.

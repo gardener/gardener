@@ -620,6 +620,14 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployNetwork),
 		})
 		_ = g.Add(flow.Task{
+			Name: "Check coreDNS migration",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.CheckDNSServiceMigration(ctx)
+			}),
+			SkipIf:       o.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(waitUntilNetworkIsReady),
+		})
+		_ = g.Add(flow.Task{
 			Name: "Deploying shoot cluster identity",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.DeployClusterIdentity(ctx)

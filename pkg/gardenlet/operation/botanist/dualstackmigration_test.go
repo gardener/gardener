@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock/testing"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -40,7 +41,7 @@ var _ = Describe("DualStackMigration", func() {
 	})
 
 	Describe("#DetermineUpdateFunction", func() {
-		It("Removes the constraint when network is ready for dual-stack migration", func() {
+		It("Removes the constraint when network is ready for dual-stack migration and adds DNSServiceMigrationReady", func() {
 			nodeList := &corev1.NodeList{
 				Items: []corev1.Node{
 					{Spec: corev1.NodeSpec{PodCIDRs: []string{"10.1.0.0/24", "fd01::/64"}}},
@@ -48,6 +49,11 @@ var _ = Describe("DualStackMigration", func() {
 			}
 
 			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-shoot",
+					Namespace:   "test-namespace",
+					Annotations: map[string]string{},
+				},
 				Status: gardencorev1beta1.ShootStatus{
 					Constraints: []gardencorev1beta1.Condition{
 						v1beta1helper.InitConditionWithClock(mockClock, gardencorev1beta1.ShootDualStackNodesMigrationReady),
@@ -58,7 +64,11 @@ var _ = Describe("DualStackMigration", func() {
 			updateFunc := botanist.DetermineUpdateFunction(true, nodeList)
 			err := updateFunc(shoot)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(shoot.Status.Constraints).To(BeEmpty())
+			condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+			Expect(condition).To(BeNil())
+
+			condition = v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady)
+			Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionProgressing))
 		})
 
 		It("Updates the constraint to ConditionTrue when all nodes are dual-stack", func() {
@@ -110,5 +120,58 @@ var _ = Describe("DualStackMigration", func() {
 			Expect(condition.Reason).To(Equal("NodesNotMigrated"))
 			Expect(condition.Message).To(Equal("The shoot is migrating to dual-stack networking."))
 		})
+		It("Updates the constraint to ConditionProgressing if coredns pods not are migrated", func() {
+
+			shoot := &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					Constraints: []gardencorev1beta1.Condition{},
+				},
+			}
+
+			updateFunc := botanist.DetermineUpdateFunctionDNS(false, false)
+			err := updateFunc(shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady)
+			Expect(condition).NotTo(BeNil())
+			Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionProgressing))
+		})
+
+		It("Updates the constraint to ConditionTrue if all coredns pods are migrated", func() {
+
+			shoot := &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					Constraints: []gardencorev1beta1.Condition{
+						v1beta1helper.InitConditionWithClock(mockClock, gardencorev1beta1.ShootDNSServiceMigrationReady),
+					},
+				},
+			}
+
+			updateFunc := botanist.DetermineUpdateFunctionDNS(false, true)
+			err := updateFunc(shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady)
+			Expect(condition).NotTo(BeNil())
+			Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue))
+		})
+		It("Removes the constraint if svc is migrated", func() {
+
+			shoot := &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					Constraints: []gardencorev1beta1.Condition{
+						v1beta1helper.InitConditionWithClock(mockClock, gardencorev1beta1.ShootDNSServiceMigrationReady),
+					},
+				},
+			}
+
+			updateFunc := botanist.DetermineUpdateFunctionDNS(true, true)
+			err := updateFunc(shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady)
+			Expect(condition).To(BeNil())
+		})
+
 	})
 })
