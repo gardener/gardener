@@ -748,8 +748,12 @@ const (
 	OperatingSystemConfigUnitNameValitailService = "valitail.service"
 	// OperatingSystemConfigFilePathValitailConfig is a constant for a path to a file in the operating system config that contains the kubelet configuration.
 	OperatingSystemConfigFilePathValitailConfig = "/var/lib/valitail/config/config"
+	// OperatingSystemConfigUnitNameOpenTelemetryCollector is a constant for a unit in the operating system config that contains the opentelemetry-collector service.
+	OperatingSystemConfigUnitNameOpenTelemetryCollector = "opentelemetry-collector.service"
 	// OperatingSystemConfigFilePathBinaries is a constant for a path to a directory in the operating system config that contains the binaries.
 	OperatingSystemConfigFilePathBinaries = "/opt/bin"
+	// OperatingSystemConfigFilePathOpenTelemetryCollector is a constant for a path to a file in the operating system config that contains the opentelemetry collector configuration.
+	OperatingSystemConfigFilePathOpenTelemetryCollector = "/var/lib/opentelemetry-collector/config/config"
 
 	// FluentBitConfigMapKubernetesFilter is a constant for the Fluent Bit ConfigMap's section regarding Kubernetes filters
 	FluentBitConfigMapKubernetesFilter = "filter-kubernetes.conf"
