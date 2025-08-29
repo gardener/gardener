@@ -2665,6 +2665,11 @@ message SeedDNS {
   // Internal configures DNS settings related to seed internal domain.
   // +optional
   optional SeedDNSProviderConfig internal = 3;
+
+  // Defaults configures DNS settings related to seed default domains.
+  // When determining the DNS settings for a Shoot, the first matching entry in this list will take precedence.
+  // +optional
+  repeated SeedDNSProviderConfig defaults = 4;
 }
 
 // SeedDNSProvider configures a DNSProvider for Seeds

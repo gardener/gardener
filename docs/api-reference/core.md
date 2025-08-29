@@ -10775,6 +10775,21 @@ SeedDNSProviderConfig
 <p>Internal configures DNS settings related to seed internal domain.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>defaults</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedDNSProviderConfig">
+[]SeedDNSProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defaults configures DNS settings related to seed default domains.
+When determining the DNS settings for a Shoot, the first matching entry in this list will take precedence.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedDNSProvider">SeedDNSProvider
