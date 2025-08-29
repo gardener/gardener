@@ -16,6 +16,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
@@ -67,7 +68,12 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 	}
 
 	metav1.SetMetaDataLabel(podMeta, local.LabelNetworkPolicyToIstioIngressGateway, v1beta1constants.LabelNetworkPolicyAllowed)
+	// allow egress to the provider-local coredns service
+	metav1.SetMetaDataLabel(podMeta, resourcesv1alpha1.NetworkPolicyLabelKeyPrefix+"to-"+service.Namespace+"-"+service.Name+"-tcp-9053", v1beta1constants.LabelNetworkPolicyAllowed)
+	metav1.SetMetaDataLabel(podMeta, resourcesv1alpha1.NetworkPolicyLabelKeyPrefix+"to-"+service.Namespace+"-"+service.Name+"-udp-9053", v1beta1constants.LabelNetworkPolicyAllowed)
+
 	injectDNSConfig(podSpec, newObj.GetNamespace(), service.Spec.ClusterIPs)
+
 	return nil
 }
 

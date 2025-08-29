@@ -3,4 +3,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: gardener-extension-provider-local-coredns
+  labels:
+    # enable gardener's NetworkPolicy controllers for this namespace
+    gardener.cloud/role: extension
 {{- end -}}

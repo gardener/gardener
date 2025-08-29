@@ -46,29 +46,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	var (
-		protocolTCP = corev1.ProtocolTCP
-		protocolUDP = corev1.ProtocolUDP
-	)
-
-	networkPolicyAllowToProviderLocalCoreDNS := emptyNetworkPolicy("allow-to-provider-local-coredns", namespace.Name)
-	networkPolicyAllowToProviderLocalCoreDNS.Spec = networkingv1.NetworkPolicySpec{
-		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{{
-				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "gardener-extension-provider-local-coredns"}},
-				PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"app": "coredns"}},
-			}},
-			Ports: []networkingv1.NetworkPolicyPort{
-				{Port: ptr.To(intstr.FromInt32(9053)), Protocol: &protocolTCP},
-				{Port: ptr.To(intstr.FromInt32(9053)), Protocol: &protocolUDP},
-			},
-		}},
-		PodSelector: metav1.LabelSelector{
-			MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed},
-		},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-	}
-
 	networkPolicyAllowToIstioIngressGateway := emptyNetworkPolicy("allow-to-istio-ingress-gateway", namespace.Name)
 	networkPolicyAllowToIstioIngressGateway.Spec = networkingv1.NetworkPolicySpec{
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
@@ -80,9 +57,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				}},
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{
-				{Port: ptr.To(intstr.FromInt32(8132)), Protocol: &protocolTCP},
-				{Port: ptr.To(intstr.FromInt32(8443)), Protocol: &protocolTCP},
-				{Port: ptr.To(intstr.FromInt32(9443)), Protocol: &protocolTCP},
+				{Port: ptr.To(intstr.FromInt32(8132)), Protocol: ptr.To(corev1.ProtocolTCP)},
+				{Port: ptr.To(intstr.FromInt32(8443)), Protocol: ptr.To(corev1.ProtocolTCP)},
+				{Port: ptr.To(intstr.FromInt32(9443)), Protocol: ptr.To(corev1.ProtocolTCP)},
 			},
 		}},
 		PodSelector: metav1.LabelSelector{
@@ -102,16 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	for _, obj := range []client.Object{
-		networkPolicyAllowToProviderLocalCoreDNS,
-		networkPolicyAllowToIstioIngressGateway,
-	} {
-		if err := r.Client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
-			return reconcile.Result{}, err
-		}
-	}
-
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.Client.Patch(ctx, networkPolicyAllowToIstioIngressGateway, client.Apply, local.FieldOwner, client.ForceOwnership)
 }
 
 func emptyNetworkPolicy(name, namespace string) *networkingv1.NetworkPolicy {

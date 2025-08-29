@@ -3,6 +3,3 @@ kind: Kustomization
 
 components:
 - ../../components/extension
-
-patches:
-- path: patch-extension-provider-local-disable-coredns.yaml

@@ -4,6 +4,11 @@ kind: Service
 metadata:
   labels:
     app: coredns
+  annotations:
+    # Create NetworkPolicies in garden and shoot namespaces to allow traffic to provider-local coredns service.
+    # The dnsconfig webhook injects the corresponding NetworkPolicy labels when injecting the pod DNS configuration
+    # using this coredns service.
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"metadata.name":"garden"}},{"matchLabels":{"gardener.cloud/role":"shoot"}}]'
   name: coredns
   namespace: gardener-extension-provider-local-coredns
 spec:
