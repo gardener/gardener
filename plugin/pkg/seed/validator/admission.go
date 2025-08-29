@@ -140,6 +140,10 @@ func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
 		return err
 	}
 
+	if err := admissionutils.ValidateInternalDomainChangeForSeed(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, "Seed"); err != nil {
+		return err
+	}
+
 	return v.validateCredentialsRef(a, newSeed)
 }
 

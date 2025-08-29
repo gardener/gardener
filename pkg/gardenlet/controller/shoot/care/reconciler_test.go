@@ -93,6 +93,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 			gardenSecrets []corev1.Secret
 			req           reconcile.Request
+			seed          *gardencorev1beta1.Seed
 		)
 
 		BeforeEach(func() {
@@ -116,6 +117,12 @@ var _ = Describe("Shoot Care Control", func() {
 					},
 				},
 			}
+
+			seed = &gardencorev1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: seedName,
+				},
+			}
 		})
 
 		JustBeforeEach(func() {
@@ -124,6 +131,8 @@ var _ = Describe("Shoot Care Control", func() {
 			for _, secret := range gardenSecrets {
 				Expect(gardenClient.Create(ctx, secret.DeepCopy())).To(Succeed())
 			}
+
+			Expect(gardenClient.Create(ctx, seed)).To(Succeed())
 		})
 
 		Context("when health check setup is broken", func() {
@@ -227,7 +236,7 @@ var _ = Describe("Shoot Care Control", func() {
 					}
 
 					_, err := reconciler.Reconcile(ctx, req)
-					Expect(err).To(MatchError("error reading Garden secrets: need an internal domain secret but found none"))
+					Expect(err).To(MatchError("error reading Garden internal domain secret: need an internal domain secret but found none"))
 				})
 			})
 		})
@@ -587,6 +596,7 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 		_ *gardencorev1beta1.Gardener,
 		_ string,
 		_ map[string]*corev1.Secret,
+		_ *gardenerutils.Domain,
 		_ *gardencorev1beta1.Shoot,
 	) (*operation.Operation, error) {
 		return op, err

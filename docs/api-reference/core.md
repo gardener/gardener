@@ -10737,6 +10737,20 @@ SeedDNSProvider
 <p>Provider configures a DNSProvider</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>internal</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedDNSProviderConfig">
+SeedDNSProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Internal configures DNS settings related to seed internal domain.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedDNSProvider">SeedDNSProvider
@@ -10778,6 +10792,74 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <p>SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedDNSProviderConfig">SeedDNSProviderConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedDNS">SeedDNS</a>)
+</p>
+<p>
+<p>SeedDNSProviderConfig configures a DNS provider.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type is the type of the DNS provider.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>domain</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Domain is the domain name to be used by the DNS provider.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zone</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zone is the zone where the DNS records are managed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<p>CredentialsRef is a reference to a resource holding the credentials used for
+authentication with the DNS provider.
+As of now, only v1.Secrets are supported.</p>
 </td>
 </tr>
 </tbody>

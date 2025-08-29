@@ -121,6 +121,8 @@ type Backup struct {
 type SeedDNS struct {
 	// Provider configures a DNSProvider
 	Provider *SeedDNSProvider
+	// Internal configures DNS settings related to seed internal domain.
+	Internal *SeedDNSProviderConfig
 }
 
 // SeedDNSProvider configures a DNS provider
@@ -129,6 +131,20 @@ type SeedDNSProvider struct {
 	Type string
 	// SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
 	SecretRef corev1.SecretReference
+}
+
+// SeedDNSProviderConfig configures a DNS provider.
+type SeedDNSProviderConfig struct {
+	// Type is the type of the DNS provider.
+	Type string
+	// Domain is the domain name to be used by the DNS provider.
+	Domain string
+	// Zone is the zone where the DNS records are managed.
+	Zone *string
+	// CredentialsRef is a reference to a resource holding the credentials used for
+	// authentication with the DNS provider.
+	// As of now, only v1.Secrets are supported.
+	CredentialsRef corev1.ObjectReference
 }
 
 // Ingress configures the Ingress specific settings of the Seed cluster

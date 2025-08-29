@@ -6282,6 +6282,9 @@ var _ = Describe("validator", func() {
 				oldSeedName string
 				oldSeed     *gardencorev1beta1.Seed
 				oldShoot    *core.Shoot
+
+				internalDNS1 gardencorev1beta1.SeedDNSProviderConfig
+				internalDNS2 gardencorev1beta1.SeedDNSProviderConfig
 			)
 			BeforeEach(func() {
 				oldSeedName = fmt.Sprintf("old-%s", seedName)
@@ -6290,6 +6293,15 @@ var _ = Describe("validator", func() {
 
 				oldShoot = shoot.DeepCopy()
 				oldShoot.Spec.SeedName = &oldSeedName
+
+				internalDNS1 = gardencorev1beta1.SeedDNSProviderConfig{
+					Type:   "internal",
+					Domain: "test1.internal",
+				}
+				internalDNS2 = gardencorev1beta1.SeedDNSProviderConfig{
+					Type:   "internal",
+					Domain: "test2.internal",
+				}
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -6356,6 +6368,26 @@ var _ = Describe("validator", func() {
 				Entry("should reject networking status if it is not disjoint with seed network (HA control plane)", &core.NetworkingStatus{Nodes: []string{seedNodesCIDR}, Pods: []string{seedPodsCIDR}, Services: []string{seedServicesCIDR}}, true, BeForbiddenError()),
 				Entry("should pass networking status if it is not disjoint with seed network (non-HA control plane)", &core.NetworkingStatus{Nodes: []string{seedNodesCIDR}, Pods: []string{seedPodsCIDR}, Services: []string{seedServicesCIDR}}, false, Not(HaveOccurred())),
 				Entry("should allow networking status with only egressCIDRs filled", &core.NetworkingStatus{EgressCIDRs: []string{"1.2.3.4/5"}}, false, Not(HaveOccurred())),
+			)
+
+			DescribeTable("Validating internal dns secret reference change by migration",
+				func(oldDNSInternalRef, newDNSInternalRef *gardencorev1beta1.SeedDNSProviderConfig, matcher types.GomegaMatcher) {
+					oldSeed.Spec.DNS.Internal = oldDNSInternalRef
+					seed.Spec.DNS.Internal = newDNSInternalRef
+
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(oldSeed)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(matcher)
+				},
+				Entry("should allow both internal DNS refs nil", nil, nil, Not(HaveOccurred())),
+				Entry("should allow equal internal DNS refs", &internalDNS1, &internalDNS1, Not(HaveOccurred())),
+				Entry("should reject changing from nil to set internal DNS ref", nil, &internalDNS1, BeForbiddenError()),
+				Entry("should reject changing from set to nil internal DNS ref", &internalDNS1, nil, BeForbiddenError()),
+				Entry("should reject for different internal DNS refs", &internalDNS1, &internalDNS2, BeForbiddenError()),
 			)
 		})
 

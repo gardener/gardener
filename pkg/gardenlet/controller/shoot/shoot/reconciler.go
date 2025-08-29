@@ -363,7 +363,23 @@ func (r *Reconciler) initializeOperation(
 	*operation.Operation,
 	error,
 ) {
-	gardenSecrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.Name), true)
+	gardenSecrets, err := gardenerutils.ReadGardenSecrets(
+		ctx,
+		log,
+		r.GardenClient,
+		gardenerutils.ComputeGardenNamespace(seed.Name),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	internalDomain, err := gardenerutils.ReadGardenInternalDomain(
+		ctx,
+		r.GardenClient,
+		gardenerutils.ComputeGardenNamespace(seed.Name),
+		true,
+		seed.Spec.DNS.Internal,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +387,7 @@ func (r *Reconciler) initializeOperation(
 	gardenObj, err := garden.
 		NewBuilder().
 		WithProject(project).
-		WithInternalDomainFromSecrets(gardenSecrets).
+		WithInternalDomain(internalDomain).
 		WithDefaultDomainsFromSecrets(gardenSecrets).
 		Build(ctx)
 	if err != nil {
@@ -409,6 +425,7 @@ func (r *Reconciler) initializeOperation(
 		WithGardenerInfo(r.Identity).
 		WithGardenClusterIdentity(r.GardenClusterIdentity).
 		WithSecrets(gardenSecrets).
+		WithInternalDomain(gardenObj.InternalDomain).
 		WithGarden(gardenObj).
 		WithSeed(seedObj).
 		WithShoot(shootObj).
