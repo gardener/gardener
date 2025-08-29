@@ -295,9 +295,10 @@ var _ = Describe("Etcd", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"gardener.cloud/role":                            "etcd-druid",
-								"networking.gardener.cloud/to-dns":               "allowed",
-								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
+								"gardener.cloud/role":                                                         "etcd-druid",
+								"networking.gardener.cloud/to-dns":                                            "allowed",
+								"networking.gardener.cloud/to-runtime-apiserver":                              "allowed",
+								"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": "allowed",
 							},
 							Annotations: map[string]string{
 								references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
@@ -390,9 +391,10 @@ var _ = Describe("Etcd", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"gardener.cloud/role":                            "etcd-druid",
-								"networking.gardener.cloud/to-dns":               "allowed",
-								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
+								"gardener.cloud/role":                                                         "etcd-druid",
+								"networking.gardener.cloud/to-dns":                                            "allowed",
+								"networking.gardener.cloud/to-runtime-apiserver":                              "allowed",
+								"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": "allowed",
 							},
 							Annotations: map[string]string{
 								references.AnnotationKey(references.KindConfigMap, configMapName):     configMapName,
