@@ -86,6 +86,8 @@ type ShootSpec struct {
 	// The credentials inside the provider secret will be used to create the shoot in the respective account.
 	// The field is mutually exclusive with CredentialsBindingName.
 	// This field is immutable.
+	//
+	// Deprecated: Use CredentialsBindingName instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
 	SecretBindingName *string
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot.
 	SeedName *string

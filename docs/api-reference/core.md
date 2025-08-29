@@ -1483,6 +1483,7 @@ Kubernetes core/v1.ObjectReference
 </h3>
 <p>
 <p>SecretBinding represents a binding to a secret in the same or another namespace.</p>
+<p>Deprecated: Use CredentialsBinding instead. See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md</a> for migration instructions.</p>
 </p>
 <table>
 <thead>
@@ -2042,6 +2043,7 @@ string
 The credentials inside the provider secret will be used to create the shoot in the respective account.
 The field is mutually exclusive with CredentialsBindingName.
 This field is immutable.</p>
+<p>Deprecated: Use CredentialsBindingName instead. See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md</a> for migration instructions.</p>
 </td>
 </tr>
 <tr>
@@ -10682,6 +10684,7 @@ Defaults to true.</p>
 </p>
 <p>
 <p>SecretBindingProvider defines the provider type of the SecretBinding.</p>
+<p>Deprecated: Use CredentialsBindingProvider instead. See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md</a> for migration instructions.</p>
 </p>
 <table>
 <thead>
@@ -13083,6 +13086,7 @@ string
 The credentials inside the provider secret will be used to create the shoot in the respective account.
 The field is mutually exclusive with CredentialsBindingName.
 This field is immutable.</p>
+<p>Deprecated: Use CredentialsBindingName instead. See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md</a> for migration instructions.</p>
 </td>
 </tr>
 <tr>
@@ -13813,6 +13817,7 @@ string
 The credentials inside the provider secret will be used to create the shoot in the respective account.
 The field is mutually exclusive with CredentialsBindingName.
 This field is immutable.</p>
+<p>Deprecated: Use CredentialsBindingName instead. See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md</a> for migration instructions.</p>
 </td>
 </tr>
 <tr>

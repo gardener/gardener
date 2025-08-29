@@ -2587,6 +2587,8 @@ message SSHAccess {
 }
 
 // SecretBinding represents a binding to a secret in the same or another namespace.
+//
+// Deprecated: Use CredentialsBinding instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
 message SecretBinding {
   // Standard object metadata.
   // +optional
@@ -2608,6 +2610,8 @@ message SecretBinding {
 }
 
 // SecretBindingList is a collection of SecretBindings.
+//
+// Deprecated: Use CredentialsBindingList instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
 message SecretBindingList {
   // Standard list object metadata.
   // +optional
@@ -2618,6 +2622,8 @@ message SecretBindingList {
 }
 
 // SecretBindingProvider defines the provider type of the SecretBinding.
+//
+// Deprecated: Use CredentialsBindingProvider instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
 message SecretBindingProvider {
   // Type is the type of the provider.
   //
@@ -3272,6 +3278,8 @@ message ShootSpec {
   // The field is mutually exclusive with CredentialsBindingName.
   // This field is immutable.
   // +optional
+  //
+  // Deprecated: Use CredentialsBindingName instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
   optional string secretBindingName = 13;
 
   // SeedName is the name of the seed cluster that runs the control plane of the Shoot.
