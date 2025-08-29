@@ -725,6 +725,7 @@ spec:
                   - maximum
                   - minimum
                   - name
+                  - priority
                   - userDataSecretRef
                   type: object
                 type: array
@@ -907,6 +908,7 @@ spec:
                   - maximum
                   - minimum
                   - name
+                  - priority
                   type: object
                 type: array
               machineDeploymentsLastUpdateTime:

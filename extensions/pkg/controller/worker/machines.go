@@ -43,7 +43,7 @@ type MachineDeployment struct {
 	SecretName                   string
 	Minimum                      int32
 	Maximum                      int32
-	Priority                     *int32
+	Priority                     int32
 	Strategy                     machinev1alpha1.MachineDeploymentStrategy
 	Labels                       map[string]string
 	Annotations                  map[string]string
