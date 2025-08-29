@@ -4571,6 +4571,13 @@ func (in *SeedDNS) DeepCopyInto(out *SeedDNS) {
 		*out = new(SeedDNSProviderConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Defaults != nil {
+		in, out := &in.Defaults, &out.Defaults
+		*out = make([]SeedDNSProviderConfig, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 
