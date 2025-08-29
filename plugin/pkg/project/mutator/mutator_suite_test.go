@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package validator_test
+package mutator_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestValidator(t *testing.T) {
+func TestMutator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionPlugin Project Validator Suite")
+	RunSpecs(t, "AdmissionPlugin Project Mutator Suite")
 }
