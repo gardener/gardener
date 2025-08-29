@@ -142,6 +142,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance":                                 schema_pkg_apis_core_v1beta1_Maintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate":                       schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow":                       schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ManualWorkerPoolRollout":                     schema_pkg_apis_core_v1beta1_ManualWorkerPoolRollout(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MemorySwapConfiguration":                     schema_pkg_apis_core_v1beta1_MemorySwapConfiguration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring":                                  schema_pkg_apis_core_v1beta1_Monitoring(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference":                      schema_pkg_apis_core_v1beta1_NamedResourceReference(ref),
@@ -6064,6 +6065,47 @@ func schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref common.ReferenceCall
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ManualWorkerPoolRollout(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ManualWorkerPoolRollout contains information about the worker pool rollout progress that has been initiated via the gardener.cloud/operation=rollout-workers annotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the time when the last worker pool rollout was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the time when the last worker pool rollout was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"pendingWorkersRollouts": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PendingWorkersRollouts contains the names of the worker pools that are still pending rollout.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_MemorySwapConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6875,7 +6917,7 @@ func schema_pkg_apis_core_v1beta1_PendingWorkersRollout(ref common.ReferenceCall
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to credentials rotation.",
+				Description: "PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {
@@ -6888,7 +6930,7 @@ func schema_pkg_apis_core_v1beta1_PendingWorkersRollout(ref common.ReferenceCall
 					},
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationTime is the most recent time when the credential rotation was initiated.",
+							Description: "LastInitiationTime is the most recent time when the worker rollout was initiated.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -9972,12 +10014,18 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatesStatus"),
 						},
 					},
+					"manualWorkerPoolRollout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ManualWorkerPoolRollout contains information about the worker pool rollout progress.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ManualWorkerPoolRollout"),
+						},
+					},
 				},
 				Required: []string{"gardener", "hibernated", "technicalID", "uid"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatesStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NetworkingStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatesStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ManualWorkerPoolRollout", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NetworkingStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

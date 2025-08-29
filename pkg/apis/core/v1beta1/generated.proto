@@ -2050,6 +2050,21 @@ message MaintenanceTimeWindow {
   optional string end = 2;
 }
 
+// ManualWorkerPoolRollout contains information about the worker pool rollout progress that has been initiated via the gardener.cloud/operation=rollout-workers annotation.
+message ManualWorkerPoolRollout {
+  // LastCompletionTime is the time when the last worker pool rollout was successfully completed.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+
+  // LastInitiationTime is the time when the last worker pool rollout was initiated.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
+
+  // PendingWorkersRollouts contains the names of the worker pools that are still pending rollout.
+  // +optional
+  repeated PendingWorkersRollout pendingWorkersRollouts = 6;
+}
+
 // MemorySwapConfiguration contains kubelet swap configuration
 // For more information, please see KEP: 2400-node-swap
 message MemorySwapConfiguration {
@@ -2346,13 +2361,12 @@ message PendingWorkerUpdates {
   repeated string manualInPlaceUpdate = 2;
 }
 
-// PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
-// credentials rotation.
+// PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout.
 message PendingWorkersRollout {
   // Name is the name of a worker pool.
   optional string name = 1;
 
-  // LastInitiationTime is the most recent time when the credential rotation was initiated.
+  // LastInitiationTime is the most recent time when the worker rollout was initiated.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 2;
 }
@@ -3490,6 +3504,10 @@ message ShootStatus {
   // InPlaceUpdates contains information about in-place updates for the Shoot workers.
   // +optional
   optional InPlaceUpdatesStatus inPlaceUpdates = 20;
+
+  // ManualWorkerPoolRollout contains information about the worker pool rollout progress.
+  // +optional
+  optional ManualWorkerPoolRollout manualWorkerPoolRollout = 21;
 }
 
 // ShootTemplate is a template for creating a Shoot object.
