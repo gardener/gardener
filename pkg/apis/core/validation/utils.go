@@ -489,6 +489,7 @@ func validateExtensions(extensions []core.Extension, fldPath *field.Path) field.
 		} else if types.Has(extension.Type) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), extension.Type))
 		} else {
+			allErrs = append(allErrs, validateDNS1123Label(extension.Type, fldPath.Index(i).Child("type"))...)
 			types.Insert(extension.Type)
 		}
 	}
