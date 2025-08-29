@@ -438,8 +438,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(labels(), map[string]string{
-							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToDNS:                                      v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                         v1beta1constants.LabelNetworkPolicyAllowed,
+							"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": v1beta1constants.LabelNetworkPolicyAllowed,
 						}),
 					},
 					Spec: corev1.PodSpec{
@@ -509,6 +510,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					Port: metricsPortName,
 					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
 						"etcddruid_compaction_jobs_total",
+						"etcddruid_compaction_full_snapshot_triggered_total",
 						"etcddruid_compaction_jobs_current",
 						"etcddruid_compaction_job_duration_seconds_bucket",
 						"etcddruid_compaction_job_duration_seconds_sum",
