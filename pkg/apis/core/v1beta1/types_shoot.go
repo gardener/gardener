@@ -396,6 +396,7 @@ type ETCDEncryptionKeyRotation struct {
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
 	// LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
 	// completed.
+	// +optional
 	LastInitiationFinishedTime *metav1.Time `json:"lastInitiationFinishedTime,omitempty" protobuf:"bytes,4,opt,name=lastInitiationFinishedTime"`
 	// LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was
 	// triggered.
@@ -408,6 +409,7 @@ type ETCDEncryptionKeyRotation struct {
 	// Deprecated: This field will be removed in a future release. The field will be no longer needed with
 	// the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.
 	// TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
+	// +optional
 	AutoCompleteAfterPrepared *bool `json:"autoCompleteAfterPrepared,omitempty" protobuf:"varint,6,opt,name=autoCompleteAfterPrepared"`
 }
 

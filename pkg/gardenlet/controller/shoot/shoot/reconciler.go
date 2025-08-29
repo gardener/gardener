@@ -613,7 +613,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	var mustRemoveOperationAnnotation bool
 	k8sLess134, err := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.34")
 	if err != nil {
-		return fmt.Errorf("failed comparing Shoot k8s version to 1.34: %w", err)
+		return fmt.Errorf("failed checking if Shoot k8s version is less than 1.34: %w", err)
 	}
 
 	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
@@ -707,8 +707,11 @@ func (r *Reconciler) updateShootStatusOperationStart(
 
 	removeNonExistentPoolsFromPendingWorkersRollouts(shoot, v1beta1helper.HibernationIsEnabled(shoot))
 
+	// TODO(AleksandarSavchev): Remove the k8s version check in a future release after support for Kubernetes v1.33 is dropped.
+	// It is added to forcefully complete the etcd encryption key rotation, since the annotation to complete the rotation
+	// is forbidden for clusters with k8s >= v1.34.
 	if v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) == gardencorev1beta1.RotationPrepared &&
-		v1beta1helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(shoot.Status.Credentials) {
+		(v1beta1helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(shoot.Status.Credentials) || !k8sLess134) {
 		completeRotationETCDEncryptionKey(shoot, &now)
 	}
 
@@ -736,11 +739,6 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 		description                string
 		setConditionsToProgressing bool
 	)
-
-	k8sLess134, err := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.34")
-	if err != nil {
-		return fmt.Errorf("failed comparing Shoot k8s version to 1.34: %w", err)
-	}
 
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
@@ -878,14 +876,6 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 			rotation.Phase = gardencorev1beta1.RotationPrepared
 			rotation.LastInitiationFinishedTime = &now
 		})
-
-	// TODO(AleksandarSavchev): Remove rotation prepared case in a future release after support for Kubernetes v1.33 is dropped.
-	// It is added to forcefully complete the etcd encryption key rotation, since the annotation to complete the rotation
-	// is forbidden for clusters with k8s >= v1.34.
-	case gardencorev1beta1.RotationPrepared:
-		if !k8sLess134 {
-			completeRotationETCDEncryptionKey(shoot, &now)
-		}
 
 	case gardencorev1beta1.RotationCompleting:
 		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
@@ -1194,13 +1184,13 @@ func completeRotationServiceAccountKey(shoot *gardencorev1beta1.Shoot, now *meta
 	})
 }
 
-func startRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, singleOperation bool, now *metav1.Time) {
+func startRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, autoCompleteAfterPrepared bool, now *metav1.Time) {
 	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing
 		rotation.LastInitiationTime = now
 		rotation.LastInitiationFinishedTime = nil
 		rotation.LastCompletionTriggeredTime = nil
-		rotation.AutoCompleteAfterPrepared = ptr.To(singleOperation)
+		rotation.AutoCompleteAfterPrepared = ptr.To(autoCompleteAfterPrepared)
 	})
 }
 

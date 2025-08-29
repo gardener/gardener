@@ -5482,6 +5482,7 @@ Kubernetes meta/v1.Time
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
 completed.</p>
 </td>
@@ -5509,6 +5510,7 @@ bool
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after the preparation phase has finished.
 Such rotation can be triggered by the <code>rotate-etcd-encryption-key</code> annotation.
 This field is needed while we support two types of key rotations: two-operation and single operation rotation.</p>

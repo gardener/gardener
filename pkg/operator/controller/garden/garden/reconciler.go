@@ -131,7 +131,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// The second reconciliation will remove the old key and set the phase to completed.
 	if etcdEncryptionKeyRotationPhase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPrepared &&
 		helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(garden.Status.Credentials) {
-		return reconcile.Result{RequeueAfter: 1 * time.Nanosecond}, nil
+		return reconcile.Result{RequeueAfter: 5 * time.Millisecond}, nil
 	}
 
 	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, nil
@@ -179,7 +179,7 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 
 	k8sLess134, err := versionutils.CompareVersions(garden.Spec.VirtualCluster.Kubernetes.Version, "<", "1.34")
 	if err != nil {
-		return fmt.Errorf("failed comparing Virtual Cluster k8s version to 1.34: %w", err)
+		return fmt.Errorf("failed checking if Virtual Cluster k8s version is less than 1.34: %w", err)
 	}
 
 	switch operationType {
@@ -255,8 +255,11 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		completeRotationWorkloadIdentityKey(garden, &now)
 	}
 
+	// TODO(AleksandarSavchev): Remove the k8s version check in a future release after support for Kubernetes v1.33 is dropped.
+	// It is added to forcefully complete the etcd encryption key rotation, since the annotation to complete the rotation
+	// is forbidden for clusters with k8s >= v1.34.
 	if helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPrepared &&
-		helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(garden.Status.Credentials) {
+		(helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(garden.Status.Credentials) || !k8sLess134) {
 		completeRotationETCDEncryptionKey(garden, &now)
 	}
 
@@ -278,11 +281,6 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 		now         = metav1.NewTime(r.Clock.Now().UTC())
 		description string
 	)
-
-	k8sLess134, err := versionutils.CompareVersions(garden.Spec.VirtualCluster.Kubernetes.Version, "<", "1.34")
-	if err != nil {
-		return fmt.Errorf("failed comparing Virtual Cluster k8s version to 1.34: %w", err)
-	}
 
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeReconcile:
@@ -337,14 +335,6 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 			rotation.Phase = gardencorev1beta1.RotationPrepared
 			rotation.LastInitiationFinishedTime = &now
 		})
-
-	// TODO(AleksandarSavchev): Remove rotation prepared case in a future release after support for Kubernetes v1.33 is dropped.
-	// It is added to forcefully complete the etcd encryption key rotation, since the annotation to complete the rotation
-	// is forbidden for clusters with k8s >= v1.34.
-	case gardencorev1beta1.RotationPrepared:
-		if !k8sLess134 {
-			completeRotationETCDEncryptionKey(garden, &now)
-		}
 
 	case gardencorev1beta1.RotationCompleting:
 		helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
@@ -469,13 +459,13 @@ func completeRotationServiceAccountKey(garden *operatorv1alpha1.Garden, now *met
 	})
 }
 
-func startRotationETCDEncryptionKey(garden *operatorv1alpha1.Garden, singleOperation bool, now *metav1.Time) {
+func startRotationETCDEncryptionKey(garden *operatorv1alpha1.Garden, autoCompleteAfterPrepared bool, now *metav1.Time) {
 	helper.MutateETCDEncryptionKeyRotation(garden, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing
 		rotation.LastInitiationTime = now
 		rotation.LastInitiationFinishedTime = nil
 		rotation.LastCompletionTriggeredTime = nil
-		rotation.AutoCompleteAfterPrepared = ptr.To(singleOperation)
+		rotation.AutoCompleteAfterPrepared = ptr.To(autoCompleteAfterPrepared)
 	})
 }
 
