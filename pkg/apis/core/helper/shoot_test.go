@@ -247,8 +247,8 @@ var _ = Describe("Helper", func() {
 	)
 
 	DescribeTable("#ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared",
-		func(credentials *core.ShootCredentials, isSingleOperation bool) {
-			Expect(ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials)).To(Equal(isSingleOperation))
+		func(credentials *core.ShootCredentials, autoCompleteAfterPrepared bool) {
+			Expect(ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials)).To(Equal(autoCompleteAfterPrepared))
 		},
 
 		Entry("credentials nil", nil, false),
