@@ -22,7 +22,7 @@ var _ = Describe("Add", func() {
 		reconciler = &Reconciler{}
 	})
 
-	Describe("ShootUnassignedPredicate", func() {
+	Describe("#ShootUnassignedPredicate", func() {
 		var (
 			predicate predicate.Predicate
 			shoot     *gardencorev1beta1.Shoot
@@ -103,7 +103,7 @@ var _ = Describe("Add", func() {
 		})
 	})
 
-	Describe("ShootSpecChangedPredicate", func() {
+	Describe("#ShootSpecChangedPredicate", func() {
 		var (
 			predicate predicate.Predicate
 			shootNew  *gardencorev1beta1.Shoot
@@ -149,6 +149,47 @@ var _ = Describe("Add", func() {
 				shootNew.Spec.Tolerations = []gardencorev1beta1.Toleration{{Key: "foo"}}
 			})
 
+			It("should be true", func() {
+				Expect(predicate.Create(createEvent)).To(BeTrue())
+				Expect(predicate.Update(updateEvent)).To(BeTrue())
+				Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+				Expect(predicate.Generic(genericEvent)).To(BeTrue())
+			})
+		})
+	})
+
+	Describe("#ShootIsNotAutonomous", func() {
+		var (
+			predicate predicate.Predicate
+			shoot     *gardencorev1beta1.Shoot
+
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		BeforeEach(func() {
+			predicate = reconciler.ShootIsNotAutonomous()
+			shoot = &gardencorev1beta1.Shoot{}
+
+			createEvent = event.CreateEvent{Object: shoot}
+			updateEvent = event.UpdateEvent{ObjectOld: shoot, ObjectNew: shoot}
+			deleteEvent = event.DeleteEvent{Object: shoot}
+			genericEvent = event.GenericEvent{Object: shoot}
+		})
+
+		Context("shoot is autonomous", func() {
+			It("should be false", func() {
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}})
+				Expect(predicate.Create(createEvent)).To(BeFalse())
+				Expect(predicate.Update(updateEvent)).To(BeFalse())
+				Expect(predicate.Delete(deleteEvent)).To(BeFalse())
+				Expect(predicate.Generic(genericEvent)).To(BeFalse())
+			})
+		})
+
+		Context("shoot is not autonomous", func() {
 			It("should be true", func() {
 				Expect(predicate.Create(createEvent)).To(BeTrue())
 				Expect(predicate.Update(updateEvent)).To(BeTrue())

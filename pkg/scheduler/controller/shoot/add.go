@@ -16,6 +16,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -40,6 +41,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(
 			r.ShootUnassignedPredicate(),
 			r.ShootSpecChangedPredicate(),
+			r.ShootIsNotAutonomous(),
 			predicate.Not(predicateutils.IsDeleting()),
 		)).
 		WithOptions(controller.Options{
@@ -76,4 +78,15 @@ func (r *Reconciler) ShootSpecChangedPredicate() predicate.Predicate {
 			return !apiequality.Semantic.DeepEqual(shootNew.Spec, shootOld.Spec)
 		},
 	}
+}
+
+// ShootIsNotAutonomous is a predicate that returns true if a shoot is not mark as 'autonomous shoot cluster' (meaning,
+// that the control plane components run in the same cluster, hence, no seed selection is required).
+func (r *Reconciler) ShootIsNotAutonomous() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok {
+			return !helper.IsShootAutonomous(shoot)
+		}
+		return true
+	})
 }
