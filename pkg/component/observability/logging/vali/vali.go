@@ -62,8 +62,10 @@ const (
 	valiMountPathConfig           = "/etc/vali"
 	valiMountPathInitScript       = "/"
 
-	valitailName            = "gardener-valitail"
-	valitailClusterRoleName = "gardener.cloud:logging:valitail"
+	valitailName                 = "gardener-valitail"
+	openTelemetryCollectorName   = "gardener-opentelemetry-collector"
+	valitailClusterRoleName      = "gardener.cloud:logging:valitail"
+	openTelemetryClusterRoleName = "gardener.cloud:logging:opentelemetry-collector"
 
 	curatorName            = "curator"
 	curatorPort            = 2718
@@ -279,6 +281,13 @@ func (v *vali) Destroy(ctx context.Context) error {
 }
 
 func (v *vali) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		return gardenerutils.NewShootAccessSecret("opentelemetry-collector", v.namespace).
+			WithServiceAccountName(openTelemetryCollectorName).
+			WithTokenExpirationDuration("720h").
+			WithTargetSecret(valiconstants.OpenTelemetryCollectorSecretName, metav1.NamespaceSystem)
+	}
+
 	return gardenerutils.NewShootAccessSecret("valitail", v.namespace).
 		WithServiceAccountName(valitailName).
 		WithTokenExpirationDuration("720h").
@@ -805,13 +814,17 @@ func (v *vali) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rb
 
 func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
 	endpoint := valiconstants.PushEndpoint
+	appName := valitailName
+	clusterRoleName := valitailClusterRoleName
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
 		endpoint = collectorconstants.PushEndpoint
+		appName = openTelemetryCollectorName
+		clusterRoleName = openTelemetryClusterRoleName
 	}
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   valitailClusterRoleName,
-			Labels: map[string]string{v1beta1constants.LabelApp: valitailName},
+			Name:   clusterRoleName,
+			Labels: map[string]string{v1beta1constants.LabelApp: appName},
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -838,15 +851,23 @@ func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
 }
 
 func (v *vali) getValitailClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+	name := "gardener.cloud:logging:valitail"
+	clusterRoleName := valitailClusterRoleName
+	appName := valitailName
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		name = "gardener.cloud:monitoring:opentelemetry-collector"
+		clusterRoleName = openTelemetryClusterRoleName
+		appName = openTelemetryCollectorName
+	}
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "gardener.cloud:logging:valitail",
-			Labels: map[string]string{v1beta1constants.LabelApp: valitailName},
+			Name:   name,
+			Labels: map[string]string{v1beta1constants.LabelApp: appName},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     valitailClusterRoleName,
+			Name:     clusterRoleName,
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
