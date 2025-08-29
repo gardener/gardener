@@ -616,7 +616,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail %s] in \"kube-system\" namespace", machineSecretName)))
+				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector %s] in \"kube-system\" namespace", machineSecretName)))
 			},
 				Entry("get", "get"),
 				Entry("list", "list"),
@@ -641,7 +641,7 @@ var _ = Describe("Authorizer", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionDeny))
-					Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail %s] in \"kube-system\" namespace", machineSecretName)))
+					Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector %s] in \"kube-system\" namespace", machineSecretName)))
 				}
 			},
 				Entry("get", "get"),

@@ -40,6 +40,7 @@ func NewAuthorizer(logger logr.Logger, sourceClient, targetClient client.Client,
 }
 
 const valitailTokenSecretName = "gardener-valitail"
+const openTelemetryCollectorTokenSecretName = "gardener-opentelemetry-collector"
 
 var (
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
@@ -269,7 +270,7 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 		return auth.DecisionDeny, reason, nil
 	}
 
-	validSecrets := []string{valitailTokenSecretName}
+	validSecrets := []string{valitailTokenSecretName, openTelemetryCollectorTokenSecretName}
 
 	if a.machineNamespace != nil {
 		machine := &machinev1alpha1.Machine{}
