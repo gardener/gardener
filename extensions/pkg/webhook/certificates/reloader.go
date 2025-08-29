@@ -7,9 +7,11 @@ package certificates
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
@@ -67,7 +69,7 @@ func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager, source
 		apiReader = sourceCluster.GetAPIReader()
 	}
 
-	found, _, serverCert, serverKey, err := r.getServerCert(ctx, apiReader)
+	found, _, serverCert, serverKey, err := r.getServerCert(ctx, mgr.GetLogger().WithName(certificateReloaderName), apiReader)
 	if err != nil {
 		return err
 	}
@@ -117,7 +119,7 @@ func (r *reloader) Reconcile(ctx context.Context, _ reconcile.Request) (reconcil
 
 	log.V(1).Info("Reloading server certificate from secret")
 
-	found, secretName, serverCert, serverKey, err := r.getServerCert(ctx, r.reader)
+	found, secretName, serverCert, serverKey, err := r.getServerCert(ctx, log, r.reader)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("error retrieving secret %q from namespace %q", r.ServerSecretName, r.Namespace)
 	}
@@ -147,7 +149,7 @@ func (r *reloader) Reconcile(ctx context.Context, _ reconcile.Request) (reconcil
 	return reconcile.Result{RequeueAfter: r.SyncPeriod}, nil
 }
 
-func (r *reloader) getServerCert(ctx context.Context, reader client.Reader) (bool, string, []byte, []byte, error) {
+func (r *reloader) getServerCert(ctx context.Context, log logr.Logger, reader client.Reader) (bool, string, []byte, []byte, error) {
 	secretList := &corev1.SecretList{}
 	if err := reader.List(ctx, secretList, client.InNamespace(r.Namespace), client.MatchingLabels{
 		secretsmanager.LabelKeyName:            r.ServerSecretName,
@@ -157,11 +159,22 @@ func (r *reloader) getServerCert(ctx context.Context, reader client.Reader) (boo
 		return false, "", nil, nil, err
 	}
 
-	if len(secretList.Items) != 1 {
+	var s corev1.Secret
+	switch len(secretList.Items) {
+	case 0:
+		log.V(1).Info("No matching secrets found", "name", r.ServerSecretName, "identity", r.Identity)
 		return false, "", nil, nil, nil
+	case 1:
+		s = secretList.Items[0]
+	default:
+		// During certificate rotation, controller restarts may leave outdated secrets in the cluster.
+		// Select the most recently created secret to ensure the latest certificate is used.
+		s = slices.MaxFunc(secretList.Items, func(a, b corev1.Secret) int {
+			return a.CreationTimestamp.Compare(b.CreationTimestamp.Time)
+		})
+		log.Info("Found multiple secrets matching the given config name and identity, using the most recent one", "secretName", s.Name, "configName", r.ServerSecretName, "identity", r.Identity)
 	}
 
-	s := secretList.Items[0]
 	return true, s.Name, s.Data[secretsutils.DataKeyCertificate], s.Data[secretsutils.DataKeyPrivateKey], nil
 }
 
