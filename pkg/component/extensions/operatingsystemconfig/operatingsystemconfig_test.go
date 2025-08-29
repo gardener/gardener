@@ -93,12 +93,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 					MemoryAvailable: &evictionHardMemoryAvailable,
 				},
 			}
-			kubeletDataVolumeName   = "foo"
-			machineTypes            []gardencorev1beta1.MachineType
-			sshPublicKeys           = []string{"ssh-public-key", "ssh-public-key-b"}
-			kubernetesVersion       = semver.MustParse("1.2.3")
-			workerKubernetesVersion = "4.5.6"
-			valitailEnabled         = false
+			kubeletDataVolumeName                   = "foo"
+			machineTypes                            []gardencorev1beta1.MachineType
+			sshPublicKeys                           = []string{"ssh-public-key", "ssh-public-key-b"}
+			kubernetesVersion                       = semver.MustParse("1.2.3")
+			workerKubernetesVersion                 = "4.5.6"
+			valitailEnabled                         = false
+			openTelemetryCollectorLogShipperEnabled = false
 
 			//nolint:unparam
 			initConfigFn = func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentconfigv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
@@ -134,6 +135,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						{Path: cctx.KubernetesVersion.String()},
 						{Path: fmt.Sprintf("%s", cctx.SSHPublicKeys)},
 						{Path: strconv.FormatBool(cctx.ValitailEnabled)},
+						{Path: strconv.FormatBool(cctx.OpenTelemetryCollectorLogShipperEnabled)},
 						{Path: fmt.Sprintf("%+v", cctx.Taints)},
 					},
 					nil
@@ -216,11 +218,12 @@ var _ = Describe("OperatingSystemConfig", func() {
 							"memory.available": evictionHardMemoryAvailable,
 						},
 					},
-					KubeletDataVolumeName: &kubeletDataVolumeName,
-					KubernetesVersion:     k8sVersion,
-					SSHAccessEnabled:      true,
-					SSHPublicKeys:         sshPublicKeys,
-					ValitailEnabled:       valitailEnabled,
+					KubeletDataVolumeName:                   &kubeletDataVolumeName,
+					KubernetesVersion:                       k8sVersion,
+					SSHAccessEnabled:                        true,
+					SSHPublicKeys:                           sshPublicKeys,
+					ValitailEnabled:                         valitailEnabled,
+					OpenTelemetryCollectorLogShipperEnabled: openTelemetryCollectorLogShipperEnabled,
 				}
 
 				if worker.ControlPlane != nil {
@@ -445,14 +448,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 					APIServerURL: apiServerURL,
 				},
 				OriginalValues: OriginalValues{
-					CABundle:            caBundle,
-					ClusterDNSAddresses: clusterDNSAddresses,
-					ClusterDomain:       clusterDomain,
-					Images:              images,
-					KubeletConfig:       kubeletConfig,
-					MachineTypes:        machineTypes,
-					SSHPublicKeys:       sshPublicKeys,
-					ValitailEnabled:     valitailEnabled,
+					CABundle:                                caBundle,
+					ClusterDNSAddresses:                     clusterDNSAddresses,
+					ClusterDomain:                           clusterDomain,
+					Images:                                  images,
+					KubeletConfig:                           kubeletConfig,
+					MachineTypes:                            machineTypes,
+					SSHPublicKeys:                           sshPublicKeys,
+					ValitailEnabled:                         valitailEnabled,
+					OpenTelemetryCollectorLogShipperEnabled: openTelemetryCollectorLogShipperEnabled,
 				},
 			}
 
@@ -701,14 +705,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 							APIServerURL: apiServerURL,
 						},
 						OriginalValues: OriginalValues{
-							CABundle:            caBundle,
-							ClusterDNSAddresses: clusterDNSAddresses,
-							ClusterDomain:       clusterDomain,
-							Images:              images,
-							KubeletConfig:       kubeletConfig,
-							MachineTypes:        machineTypes,
-							SSHPublicKeys:       sshPublicKeys,
-							ValitailEnabled:     valitailEnabled,
+							CABundle:                                caBundle,
+							ClusterDNSAddresses:                     clusterDNSAddresses,
+							ClusterDomain:                           clusterDomain,
+							Images:                                  images,
+							KubeletConfig:                           kubeletConfig,
+							MachineTypes:                            machineTypes,
+							SSHPublicKeys:                           sshPublicKeys,
+							ValitailEnabled:                         valitailEnabled,
+							OpenTelemetryCollectorLogShipperEnabled: openTelemetryCollectorLogShipperEnabled,
 						},
 						CredentialsRotationStatus: &gardencorev1beta1.ShootCredentialsRotation{
 							CertificateAuthorities: &gardencorev1beta1.CARotation{
