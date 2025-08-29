@@ -103,7 +103,7 @@ func extractID(line string) string {
 	return id
 }
 
-// MaintainSeedNameLabels maintains the seed.gardener.cloud/<name>=true labels on the given object.
+// MaintainSeedNameLabels maintains the name.seed.gardener.cloud/<name>=true labels on the given object.
 func MaintainSeedNameLabels(obj client.Object, names ...*string) {
 	labels := obj.GetLabels()
 
