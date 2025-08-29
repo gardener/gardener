@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -87,62 +88,64 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed creating client set for autonomous shoot: %w", err)
 	}
 
-	// TODO(rfranzke): Skip this if gardenlet is already connected (see subsequent commit).
-	bootstrapClientSet, err := kubernetes.NewWithConfig(kubernetes.WithRESTConfig(&rest.Config{
-		Host:            opts.ControlPlaneAddress,
-		TLSClientConfig: rest.TLSClientConfig{CAData: opts.CertificateAuthority},
-		BearerToken:     opts.BootstrapToken,
-	}), kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}), kubernetes.WithDisabledCachedClient())
-	if err != nil {
-		return fmt.Errorf("failed creating garden client set: %w", err)
-	}
+	if alreadyConnected, err := isGardenletDeployed(ctx, b); err != nil {
+		return fmt.Errorf("failed checking if gardenlet is already deployed: %w", err)
+	} else if !alreadyConnected || opts.Force {
+		bootstrapClientSet, err := kubernetes.NewWithConfig(kubernetes.WithRESTConfig(&rest.Config{
+			Host:            opts.ControlPlaneAddress,
+			TLSClientConfig: rest.TLSClientConfig{CAData: opts.CertificateAuthority},
+			BearerToken:     opts.BootstrapToken,
+		}), kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}), kubernetes.WithDisabledCachedClient())
+		if err != nil {
+			return fmt.Errorf("failed creating garden client set: %w", err)
+		}
+		var (
+			g = flow.NewGraph("connect")
 
-	var (
-		g = flow.NewGraph("connect")
+			retrieveShortLivedKubeconfig = g.Add(flow.Task{
+				Name: "Retrieving short-lived kubeconfig for garden cluster to prepare Gardener resources",
+				Fn: func(ctx context.Context) error {
+					return requestShortLivedClientCertificateForGarden(ctx, b, bootstrapClientSet)
+				},
+			})
+			prepareResources = g.Add(flow.Task{
+				Name:         "Preparing Gardener resources in garden cluster",
+				Fn:           func(ctx context.Context) error { return prepareGardenerResources(ctx, b) },
+				Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
+			})
+			deployGardenlet = g.Add(flow.Task{
+				Name: "Deploying gardenlet into autonomous shoot cluster",
+				Fn: func(ctx context.Context) error {
+					_, err := newGardenletDeployer(b, bootstrapClientSet).Reconcile(
+						ctx,
+						b.Logger,
+						b.Shoot.GetInfo(),
+						nil,
+						&seedmanagementv1alpha1.GardenletDeployment{},
+						&runtime.RawExtension{Object: &gardenletconfigv1alpha1.GardenletConfiguration{}},
+						seedmanagementv1alpha1.BootstrapToken,
+						false,
+					)
+					return err
+				},
+				Dependencies: flow.NewTaskIDs(prepareResources),
+			})
+			_ = g.Add(flow.Task{
+				Name: "Waiting until gardenlet is ready",
+				Fn: func(ctx context.Context) error {
+					timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Minute)
+					defer cancel()
+					return retry.Until(timeoutCtx, 2*time.Second, health.IsDeploymentUpdated(b.SeedClientSet.Client(), &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenlet, Namespace: b.Shoot.ControlPlaneNamespace}}))
+				},
+				Dependencies: flow.NewTaskIDs(deployGardenlet),
+			})
+		)
 
-		retrieveShortLivedKubeconfig = g.Add(flow.Task{
-			Name: "Retrieving short-lived kubeconfig for garden cluster to prepare Gardener resources",
-			Fn: func(ctx context.Context) error {
-				return requestShortLivedClientCertificateForGarden(ctx, b, bootstrapClientSet)
-			},
-		})
-		prepareResources = g.Add(flow.Task{
-			Name:         "Preparing Gardener resources in garden cluster",
-			Fn:           func(ctx context.Context) error { return prepareGardenerResources(ctx, b) },
-			Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
-		})
-		deployGardenlet = g.Add(flow.Task{
-			Name: "Deploying gardenlet into autonomous shoot cluster",
-			Fn: func(ctx context.Context) error {
-				_, err := newGardenletDeployer(b, bootstrapClientSet).Reconcile(
-					ctx,
-					b.Logger,
-					b.Shoot.GetInfo(),
-					nil,
-					&seedmanagementv1alpha1.GardenletDeployment{},
-					&runtime.RawExtension{Object: &gardenletconfigv1alpha1.GardenletConfiguration{}},
-					seedmanagementv1alpha1.BootstrapToken,
-					false,
-				)
-				return err
-			},
-			Dependencies: flow.NewTaskIDs(prepareResources),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Waiting until gardenlet is ready",
-			Fn: func(ctx context.Context) error {
-				timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Minute)
-				defer cancel()
-				return retry.Until(timeoutCtx, 2*time.Second, health.IsDeploymentUpdated(b.SeedClientSet.Client(), &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenlet, Namespace: b.Shoot.ControlPlaneNamespace}}))
-			},
-			Dependencies: flow.NewTaskIDs(deployGardenlet),
-		})
-	)
-
-	if err := g.Compile().Run(ctx, flow.Opts{
-		Log: opts.Log,
-	}); err != nil {
-		return flow.Errors(err)
+		if err := g.Compile().Run(ctx, flow.Opts{
+			Log: opts.Log,
+		}); err != nil {
+			return flow.Errors(err)
+		}
 	}
 
 	fmt.Fprintf(opts.Out, `
@@ -167,6 +170,24 @@ become outdated:
 `, b.Shoot.ControlPlaneNamespace, opts.BootstrapToken, opts.ConfigDir)
 
 	return nil
+}
+
+func isGardenletDeployed(ctx context.Context, b *botanist.AutonomousBotanist) (bool, error) {
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenlet}, &appsv1.Deployment{}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, fmt.Errorf("failed checking if gardenlet deployment already exists: %w", err)
+		}
+		return false, nil
+	}
+
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: gardenletdeployer.GardenletDefaultKubeconfigSecretName}, &corev1.Secret{}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, fmt.Errorf("failed checking if gardenlet's kubeconfig secret already exists: %w", err)
+		}
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func requestShortLivedClientCertificateForGarden(ctx context.Context, b *botanist.AutonomousBotanist, bootstrapClientSet kubernetes.Interface) error {
