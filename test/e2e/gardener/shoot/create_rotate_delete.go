@@ -371,21 +371,39 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldGetResponsibleSeed(s)
 			seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
-			testCredentialRotation(s, nil, rotationutils.Verifiers{&rotationutils.ETCDEncryptionKeyVerifier{
-				GetETCDSecretNamespace: func() string {
-					return s.Shoot.Status.TechnicalID
+			testCredentialRotation(s, nil, rotationutils.Verifiers{
+				&rotationutils.ETCDEncryptionKeyVerifier{
+					GetETCDSecretNamespace: func() string {
+						return s.Shoot.Status.TechnicalID
+					},
+					GetRuntimeClient: func() client.Client {
+						return s.SeedClient
+					},
+					SecretsManagerLabelSelector: rotation.ManagedByGardenletSecretsManager,
+					GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
+						return s.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey
+					},
+					EncryptionKey:             v1beta1constants.SecretNameETCDEncryptionKey,
+					RoleLabelValue:            v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
+					AutoCompleteAfterPrepared: true,
 				},
-				GetRuntimeClient: func() client.Client {
-					return s.SeedClient
-				},
-				SecretsManagerLabelSelector: rotation.ManagedByGardenletSecretsManager,
-				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
-					return s.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey
-				},
-				EncryptionKey:             v1beta1constants.SecretNameETCDEncryptionKey,
-				RoleLabelValue:            v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
-				AutoCompleteAfterPrepared: true,
-			}}, v1beta1constants.OperationRotateETCDEncryptionKey, "", false)
+				// advanced verifiers testing things from the user's perspective
+				&rotationutils.EncryptedDataVerifier{
+					NewTargetClientFunc: func(ctx context.Context) (kubernetes.Interface, error) {
+						return access.CreateShootClientFromAdminKubeconfig(ctx, s.GardenClientSet, s.Shoot)
+					},
+					Resources: []rotationutils.EncryptedResource{
+						{
+							NewObject: func() client.Object {
+								return &corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{GenerateName: "test-foo-", Namespace: "default"},
+									StringData: map[string]string{"content": "foo"},
+								}
+							},
+							NewEmptyList: func() client.ObjectList { return &corev1.SecretList{} },
+						},
+					},
+				}}, v1beta1constants.OperationRotateETCDEncryptionKey, "", false)
 
 			ItShouldDeleteShoot(s)
 			ItShouldWaitForShootToBeDeleted(s)
@@ -479,7 +497,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		})
 
 		// TODO(AleksandarSavchev): Remove this e2e test when the k8s version for the default shoots is >= 1.34.
-		// For cluseters with version >= 1.34 the single operation rotation is used by `rotate-credentials-start`.
+		// For clusters with version >= 1.34 the single operation rotation is used by `rotate-credentials-start`.
 		Context("Rotate etcd encryption key with single operation", Label("rotate-etcd-encryption-key"), Ordered, func() {
 			testETCDEncryptionKeyRotation(NewTestContext().ForShoot(DefaultShoot("e2e-rot-etcd")))
 		})
