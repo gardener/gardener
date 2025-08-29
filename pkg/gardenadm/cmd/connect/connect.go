@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,7 +36,9 @@ import (
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/oci"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -108,7 +111,7 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           func(ctx context.Context) error { return prepareGardenerResources(ctx, b) },
 			Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
 		})
-		_ = g.Add(flow.Task{
+		deployGardenlet = g.Add(flow.Task{
 			Name: "Deploying gardenlet into autonomous shoot cluster",
 			Fn: func(ctx context.Context) error {
 				_, err := newGardenletDeployer(b, bootstrapClientSet).Reconcile(
@@ -124,6 +127,15 @@ func run(ctx context.Context, opts *Options) error {
 				return err
 			},
 			Dependencies: flow.NewTaskIDs(prepareResources),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until gardenlet is ready",
+			Fn: func(ctx context.Context) error {
+				timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Minute)
+				defer cancel()
+				return retry.Until(timeoutCtx, 2*time.Second, health.IsDeploymentUpdated(b.SeedClientSet.Client(), &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenlet, Namespace: b.Shoot.ControlPlaneNamespace}}))
+			},
+			Dependencies: flow.NewTaskIDs(deployGardenlet),
 		})
 	)
 
