@@ -13,10 +13,12 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kernelconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/varlibkubeletmount"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // ComponentsFn is a function that returns the list of original operating system config components.
@@ -46,7 +48,6 @@ func Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1al
 // Components computes the original operating system config components.
 func Components(sshAccessEnabled bool) []components.Component {
 	components := []components.Component{
-		valitail.New(),
 		varlibkubeletmount.New(),
 		rootcertificates.New(),
 		containerd.New(),
@@ -55,6 +56,12 @@ func Components(sshAccessEnabled bool) []components.Component {
 		kubelet.New(),
 		sshdensurer.New(),
 		nodeagent.New(),
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		components = append(components, opentelemetrycollector.New())
+	} else {
+		components = append(components, valitail.New())
 	}
 
 	if sshAccessEnabled {
