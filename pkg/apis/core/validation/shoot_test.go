@@ -2379,6 +2379,22 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
 					)),
+					Entry("invalid (core/resource name with casing", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							Resource:  "Secrets",
+							CacheSize: 42,
+						}},
+					}, ConsistOf(
+						field.Invalid(field.NewPath("resources[0].resource"), "Secrets", "must be lower case"),
+					)),
+					Entry("invalid (core/resource name with illegal character", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							Resource:  "secrets#",
+							CacheSize: 42,
+						}},
+					}, ConsistOf(
+						field.Invalid(field.NewPath("resources[0].resource"), "secrets#", `must not contain any of the following characters: ",. #"`),
+					)),
 
 					// APIGroup set
 					Entry("valid (apps/deployments=0)", &core.WatchCacheSizes{
@@ -2411,6 +2427,24 @@ var _ = Describe("Shoot Validation Tests", func() {
 						}},
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
+					)),
+					Entry("invalid (Apps/deployments name with casing", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							APIGroup:  ptr.To("Apps"),
+							Resource:  "deployments",
+							CacheSize: 42,
+						}},
+					}, ConsistOf(
+						field.Invalid(field.NewPath("resources[0].apiGroup"), "Apps", "must be lower case"),
+					)),
+					Entry("invalid (core/resource name with illegal character", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							APIGroup:  ptr.To("apps#"),
+							Resource:  "deployments",
+							CacheSize: 42,
+						}},
+					}, ConsistOf(
+						field.Invalid(field.NewPath("resources[0].apiGroup"), "apps#", `must not contain any of the following characters: ",. #"`),
 					)),
 				)
 			})
