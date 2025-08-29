@@ -69,15 +69,11 @@ func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager, source
 		apiReader = sourceCluster.GetAPIReader()
 	}
 
-	found, _, serverCert, serverKey, err := r.getServerCert(ctx, mgr.GetLogger().WithName(certificateReloaderName), apiReader)
+	_, serverCert, serverKey, err := r.getServerCert(ctx, mgr.GetLogger().WithName(certificateReloaderName), apiReader)
 	if err != nil {
+		// Errors can occur if we can't find a server cert secret on startup, since the leader has not yet generated one.
+		// Exit and retry on next restart.
 		return err
-	}
-
-	if !found {
-		// if we can't find a server cert secret on startup, the leader has not yet generated one
-		// exit and retry on next restart
-		return fmt.Errorf("couldn't find webhook server secret with name %q managed by secrets manager %q in namespace %q", r.ServerSecretName, r.Identity, r.Namespace)
 	}
 
 	if err = writeCertificatesToDisk(r.certDir, serverCert, serverKey); err != nil {
@@ -119,14 +115,9 @@ func (r *reloader) Reconcile(ctx context.Context, _ reconcile.Request) (reconcil
 
 	log.V(1).Info("Reloading server certificate from secret")
 
-	found, secretName, serverCert, serverKey, err := r.getServerCert(ctx, log, r.reader)
+	secretName, serverCert, serverKey, err := r.getServerCert(ctx, log, r.reader)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error retrieving secret %q from namespace %q", r.ServerSecretName, r.Namespace)
-	}
-
-	if !found {
-		log.Info("Couldn't find webhook server secret, retrying")
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{}, fmt.Errorf("error retrieving server certificate: %w", err)
 	}
 
 	log = log.WithValues("secretName", secretName)
@@ -149,21 +140,20 @@ func (r *reloader) Reconcile(ctx context.Context, _ reconcile.Request) (reconcil
 	return reconcile.Result{RequeueAfter: r.SyncPeriod}, nil
 }
 
-func (r *reloader) getServerCert(ctx context.Context, log logr.Logger, reader client.Reader) (bool, string, []byte, []byte, error) {
+func (r *reloader) getServerCert(ctx context.Context, log logr.Logger, reader client.Reader) (string, []byte, []byte, error) {
 	secretList := &corev1.SecretList{}
 	if err := reader.List(ctx, secretList, client.InNamespace(r.Namespace), client.MatchingLabels{
 		secretsmanager.LabelKeyName:            r.ServerSecretName,
 		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
 		secretsmanager.LabelKeyManagerIdentity: r.Identity,
 	}); err != nil {
-		return false, "", nil, nil, err
+		return "", nil, nil, err
 	}
 
 	var s corev1.Secret
 	switch len(secretList.Items) {
 	case 0:
-		log.V(1).Info("No matching secrets found", "name", r.ServerSecretName, "identity", r.Identity)
-		return false, "", nil, nil, nil
+		return "", nil, nil, fmt.Errorf("couldn't find webhook server secret with name %q managed by secrets manager %q in namespace %q", r.ServerSecretName, r.Identity, r.Namespace)
 	case 1:
 		s = secretList.Items[0]
 	default:
@@ -175,7 +165,7 @@ func (r *reloader) getServerCert(ctx context.Context, log logr.Logger, reader cl
 		log.Info("Found multiple secrets matching the given config name and identity, using the most recent one", "secretName", s.Name, "configName", r.ServerSecretName, "identity", r.Identity)
 	}
 
-	return true, s.Name, s.Data[secretsutils.DataKeyCertificate], s.Data[secretsutils.DataKeyPrivateKey], nil
+	return s.Name, s.Data[secretsutils.DataKeyCertificate], s.Data[secretsutils.DataKeyPrivateKey], nil
 }
 
 type nonLeaderElectionRunnable struct {
