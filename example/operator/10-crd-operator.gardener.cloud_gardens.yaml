@@ -2065,6 +2065,15 @@ spec:
                         description: ETCDEncryptionKey contains information about
                           the ETCD encryption key credential rotation.
                         properties:
+                          autoCompleteAfterPrepared:
+                            description: |-
+                              AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after the preparation phase has finished.
+                              Such rotation can be triggered by the `rotate-etcd-encryption-key` annotation.
+                              This field is needed while we support two types of key rotations: two-operation and single operation rotation.
+
+                              Deprecated: This field will be removed in a future release. The field will be no longer needed with
+                              the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.
+                            type: boolean
                           lastCompletionTime:
                             description: |-
                               LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully

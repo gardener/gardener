@@ -264,6 +264,19 @@ func GetShootETCDEncryptionKeyRotationPhase(credentials *gardencorev1beta1.Shoot
 	return ""
 }
 
+// ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared returns whether the current ETCD encryption key rotation should
+// be auto completed after the preparation phase has finished.
+//
+// Deprecated: This function will be removed in a future release. The function will be no longer needed with
+// the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.
+// TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
+func ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials *gardencorev1beta1.ShootCredentials) bool {
+	return credentials != nil &&
+		credentials.Rotation != nil &&
+		credentials.Rotation.ETCDEncryptionKey != nil &&
+		ptr.Deref(credentials.Rotation.ETCDEncryptionKey.AutoCompleteAfterPrepared, false)
+}
+
 // MutateShootETCDEncryptionKeyRotation mutates the .status.credentials.rotation.etcdEncryptionKey field based on the
 // provided mutation function. If the field is nil then it is initialized.
 func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ETCDEncryptionKeyRotation)) {

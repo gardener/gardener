@@ -246,6 +246,19 @@ var _ = Describe("Helper", func() {
 		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
 	)
 
+	DescribeTable("#ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared",
+		func(credentials *core.ShootCredentials, autoCompleteAfterPrepared bool) {
+			Expect(ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(credentials)).To(Equal(autoCompleteAfterPrepared))
+		},
+
+		Entry("credentials nil", nil, false),
+		Entry("rotation nil", &core.ShootCredentials{}, false),
+		Entry("etcdEncryptionKey nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, false),
+		Entry("AutoCompleteAfterPrepared empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{}}}, false),
+		Entry("AutoCompleteAfterPrepared true", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(true)}}}, true),
+		Entry("AutoCompleteAfterPrepared false", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(false)}}}, false),
+	)
+
 	Describe("#GetAllZonesFromShoot", func() {
 		It("should return an empty list because there are no zones", func() {
 			Expect(sets.List(GetAllZonesFromShoot(&core.Shoot{}))).To(BeEmpty())
