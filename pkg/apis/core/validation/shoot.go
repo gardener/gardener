@@ -1103,6 +1103,9 @@ func validateNetworkingStatus(networking *core.NetworkingStatus, fldPath *field.
 // ValidateWatchCacheSizes validates the given WatchCacheSizes fields.
 func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	invalidCharacters := ",. #"
+
 	if sizes != nil {
 		if defaultSize := sizes.Default; defaultSize != nil {
 			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultSize), fldPath.Child("default"))...)
@@ -1110,9 +1113,29 @@ func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) f
 
 		for idx, resourceWatchCacheSize := range sizes.Resources {
 			idxPath := fldPath.Child("resources").Index(idx)
-			if len(resourceWatchCacheSize.Resource) == 0 {
+			cacheResource := resourceWatchCacheSize.Resource
+			cacheAPIGroup := resourceWatchCacheSize.APIGroup
+
+			if len(cacheResource) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("resource"), "must not be empty"))
+			} else {
+				if strings.ToLower(cacheResource) != cacheResource {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("resource"), cacheResource, "must be lower case"))
+				}
+				if strings.ContainsAny(cacheResource, invalidCharacters) {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("resource"), cacheResource, fmt.Sprintf("must not contain any of the following characters: %q", invalidCharacters)))
+				}
 			}
+
+			if cacheAPIGroup != nil && len(*cacheAPIGroup) > 0 {
+				if strings.ToLower(*cacheAPIGroup) != *cacheAPIGroup {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("apiGroup"), *cacheAPIGroup, "must be lower case"))
+				}
+				if strings.ContainsAny(*cacheAPIGroup, invalidCharacters) {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("apiGroup"), *cacheAPIGroup, fmt.Sprintf("must not contain any of the following characters: %q", invalidCharacters)))
+				}
+			}
+
 			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(resourceWatchCacheSize.CacheSize), idxPath.Child("size"))...)
 		}
 	}
