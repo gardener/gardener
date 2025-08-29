@@ -160,6 +160,10 @@ type SeedDNS struct {
 	// Internal configures DNS settings related to seed internal domain.
 	// +optional
 	Internal *SeedDNSProviderConfig `json:"internal,omitempty" protobuf:"bytes,3,opt,name=internal"`
+	// Defaults configures DNS settings related to seed default domains.
+	// When determining the DNS settings for a Shoot, the first matching entry in this list will take precedence.
+	// +optional
+	Defaults []SeedDNSProviderConfig `json:"defaults,omitempty" protobuf:"bytes,4,rep,name=defaults"`
 }
 
 // SeedDNSProviderConfig configures a DNS provider.

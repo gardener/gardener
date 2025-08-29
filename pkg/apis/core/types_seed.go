@@ -123,6 +123,9 @@ type SeedDNS struct {
 	Provider *SeedDNSProvider
 	// Internal configures DNS settings related to seed internal domain.
 	Internal *SeedDNSProviderConfig
+	// Defaults configures DNS settings related to seed default domains.
+	// When determining the DNS settings for a Shoot, the first matching entry in this list will take precedence.
+	Defaults []SeedDNSProviderConfig
 }
 
 // SeedDNSProvider configures a DNS provider
