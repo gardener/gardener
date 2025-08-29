@@ -74,18 +74,18 @@ Once a new Go version is released, please consider the guidance below for updati
 
 1. Check the [release notes](https://go.dev/doc/devel/release) to see whether there are any relevant changes that might be useful or affect us in another way.
 
-1. Maintain the image variants of the [`krte`](https://github.com/gardener/ci-infra/tree/master/images/krte) image used for end-to-end testing in [KinD](https://kind.sigs.k8s.io/) in the [`hack/tools/image/variants.yaml`](../../hack/tools/image/variants.yaml) file.
+2. Maintain the image variants of the [`krte`](https://github.com/gardener/ci-infra/tree/master/images/krte) image used for end-to-end testing in [KinD](https://kind.sigs.k8s.io/) in the [`hack/tools/image/variants.yaml`](../../hack/tools/image/variants.yaml) file.
    Remove older Go versions [if they are no longer supported](https://endoflife.date/go) and add the new version ([example](https://github.com/gardener/gardener/pull/12770)).  
    Check the registry to see when the new image variants are available:
    * [europe-docker.pkg.dev/gardener-project/releases/ci-infra/krte](https://console.cloud.google.com/artifacts/docker/gardener-project/europe/releases/ci-infra%2Fkrte)
    * [europe-docker.pkg.dev/gardener-project/releases/ci-infra/golang-test](https://console.cloud.google.com/artifacts/docker/gardener-project/europe/releases/ci-infra%2Fgolang-test)
 
-1. The images used by the CI jobs are maintained in the [ci-infra repository](https://github.com/gardener/ci-infra).
+3. The images used by the CI jobs are maintained in the [ci-infra repository](https://github.com/gardener/ci-infra).
    Update the references for the end-to-end tests with the new `krte` image and for unit- and integration tests with the new `golang-test` image ([example](https://github.com/gardener/ci-infra/pull/4338)).
    As a courtesy, consider removing references to no longer maintained image variants and updating to newer images wherever possible ([example](https://github.com/gardener/ci-infra/pull/4352)).
 
-   > [!NOTE]  
-   > Go maintains a [strong backward compatibility promise](https://go.dev/blog/compat), even if a tool has been built for an older Go version try running it with the latest version and update accordingly.
+> [!NOTE]  
+> Go maintains a [strong backward compatibility promise](https://go.dev/blog/compat), even if a tool has been built for an older Go version, try running it with the latest version and update accordingly.
 
-1. Finally, update the Go version references inside this repository (mainly GitHub Actions workflows and image references) to the newer version ([example](https://github.com/gardener/gardener/pull/12753)).
+4. Finally, update the Go version references inside this repository (mainly GitHub Actions workflows and image references) to the newer version ([example](https://github.com/gardener/gardener/pull/12753)).
    In the [`go.mod`](../../go.mod) file, ensure that the language version directive and, if defined, the toolchain directive are set to the lowest supported Go version.
