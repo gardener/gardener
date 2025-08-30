@@ -16,3 +16,4 @@ configMapGenerator:
 
 patches:
 - path: patch-calico-node-daemonset.yaml
+- path: patch-calico-default-ippool.yaml

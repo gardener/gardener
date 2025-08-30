@@ -76,7 +76,8 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 
 	if os.Getenv("IPFAMILY") == "ipv6" {
 		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
-		shoot.Spec.Networking.Nodes = ptr.To("fd00:10:a::/64")
+		// Must be within fd00:10:1:100::/56 (subnet of kind pod CIDR fd00:10:1::/48, but disjoint with seed pod CIDR fd00:10:1::/56).
+		shoot.Spec.Networking.Nodes = ptr.To("fd00:10:1:100::/56")
 		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"ipv6":{"sourceNATEnabled":true}}`)}
 	}
 

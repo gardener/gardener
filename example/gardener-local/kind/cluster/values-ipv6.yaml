@@ -12,5 +12,5 @@ gardener:
 
 networking:
   ipFamily: ipv6
-  podSubnet: "fd00:10:1::/56"
+  podSubnet: "fd00:10:1::/48"
   serviceSubnet: "fd00:10:2::/112"
