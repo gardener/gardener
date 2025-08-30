@@ -14,5 +14,6 @@ configMapGenerator:
   files:
   - cni_network_config=cni_network_config.json
 
-patchesStrategicMerge:
-- patch-calico-node-daemonset.yaml
+patches:
+- path: patch-calico-node-daemonset.yaml
+- path: ../ipv4/patch-calico-default-ippool.yaml

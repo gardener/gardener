@@ -67,8 +67,9 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 		RegistryBurst:       ptr.To[int32](20),
 	}
 	shoot.Spec.Networking = &gardencorev1beta1.Networking{
-		Type:  ptr.To("calico"),
-		Nodes: ptr.To("10.10.0.0/16"),
+		Type: ptr.To("calico"),
+		// Must be within 10.0.0.0/16 (subnet of kind pod CIDR 10.0.0.0/15, but disjoint with seed pod CIDR 10.1.0.0/16).
+		Nodes: ptr.To("10.0.0.0/16"),
 	}
 	shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker("local", nil))
 	shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{Type: "local-ext-shoot-after-worker"})

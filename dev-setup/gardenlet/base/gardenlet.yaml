@@ -66,7 +66,7 @@ spec:
             kind: nginx
         networks:
           nodes: 172.18.0.0/16
-          # Those CIDRs must match those specified in the kind Cluster configuration.
+          # Subnet for automatic pod IP assignment (calico default IPPool) in the kind cluster.
           pods: 10.1.0.0/16
           services: 10.2.0.0/16
           shootDefaults:

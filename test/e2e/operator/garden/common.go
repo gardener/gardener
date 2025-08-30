@@ -47,6 +47,7 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 			}},
 			RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 				Networking: operatorv1alpha1.RuntimeNetworking{
+					// Subnet for automatic pod IP assignment (calico default IPPool) in the kind cluster.
 					Pods:     []string{"10.1.0.0/16"},
 					Services: []string{"10.2.0.0/16"},
 				},
