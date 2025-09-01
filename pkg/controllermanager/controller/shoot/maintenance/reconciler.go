@@ -27,6 +27,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -200,6 +201,22 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 				maintainedShoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete = nil
 
 				reason := ".spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete is set to nil. Reason: The field was deprecated in favour of `.spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism` and can no longer be enabled for Shoot clusters using Kubernetes version 1.33+"
+				operations = append(operations, reason)
+			}
+		}
+	}
+
+	// Migrate from secretBindingName to credentialsBindingName when Shoot cluster is being forcefully updated to K8s >= 1.34.
+	// Gardener forbids setting secretBindingName for Shoots with K8s 1.34+.
+	{
+		oldK8sLess134 := versionutils.ConstraintK8sLess134.Check(oldShootKubernetesVersion)
+		newK8sGreaterEqual134 := versionutils.ConstraintK8sGreaterEqual134.Check(shootKubernetesVersion)
+		if oldK8sLess134 && newK8sGreaterEqual134 && maintainedShoot.Spec.SecretBindingName != nil && maintainedShoot.Spec.CredentialsBindingName == nil {
+			if err := r.migrateSecretBindingToCredentialsBinding(ctx, maintainedShoot); err != nil {
+				log.Error(err, "Failed to migrate SecretBinding to CredentialsBinding")
+				operations = append(operations, fmt.Sprintf("Failed to migrate from secretBindingName to credentialsBindingName: %v", err))
+			} else {
+				reason := ".spec.secretBindingName was migrated to .spec.credentialsBindingName. Reason: SecretBinding is deprecated and can no longer be used for Shoot clusters using Kubernetes version 1.34+"
 				operations = append(operations, reason)
 			}
 		}
@@ -845,4 +862,147 @@ func maintainAdmissionPluginsForShoot(shoot *gardencorev1beta1.Shoot) []string {
 	}
 
 	return reasons
+}
+
+// migrateSecretBindingToCredentialsBinding migrates a shoot from using SecretBinding to CredentialsBinding
+func (r *Reconciler) migrateSecretBindingToCredentialsBinding(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+	secretBindingName := *shoot.Spec.SecretBindingName
+
+	secretBinding := &gardencorev1beta1.SecretBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretBindingName,
+			Namespace: shoot.Namespace,
+		},
+	}
+	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(secretBinding), secretBinding); err != nil {
+		return fmt.Errorf("failed to get SecretBinding %s: %w", client.ObjectKeyFromObject(secretBinding), err)
+	}
+
+	// First, check if the migration-created CredentialsBinding exists
+	migratedCredentialsBindingName := "force-migrated-" + secretBindingName
+	migratedCredentialsBinding := &securityv1alpha1.CredentialsBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      migratedCredentialsBindingName,
+			Namespace: shoot.Namespace,
+		},
+	}
+
+	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(migratedCredentialsBinding), migratedCredentialsBinding); err == nil {
+		// Migration-created CredentialsBinding exists, validate it
+		if migratedCredentialsBinding.CredentialsRef.Kind != "Secret" ||
+			migratedCredentialsBinding.CredentialsRef.APIVersion != "v1" ||
+			migratedCredentialsBinding.CredentialsRef.Name != secretBinding.SecretRef.Name ||
+			migratedCredentialsBinding.CredentialsRef.Namespace != secretBinding.SecretRef.Namespace {
+			return fmt.Errorf("existing CredentialsBinding %s/%s does not reference the same Secret as SecretBinding %s/%s",
+				shoot.Namespace, migratedCredentialsBindingName, shoot.Namespace, secretBindingName)
+		}
+
+		if !quotasEqual(migratedCredentialsBinding.Quotas, secretBinding.Quotas) {
+			return fmt.Errorf("existing CredentialsBinding %s/%s does not have the same Quotas as SecretBinding %s/%s",
+				shoot.Namespace, migratedCredentialsBindingName, shoot.Namespace, secretBindingName)
+		}
+
+		shoot.Spec.CredentialsBindingName = &migratedCredentialsBindingName
+		shoot.Spec.SecretBindingName = nil
+		return nil
+	} else if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to check for existing CredentialsBinding %s: %w", client.ObjectKeyFromObject(migratedCredentialsBinding), err)
+	}
+
+	// Migration-created CredentialsBinding doesn't exist, search for user-created ones
+	credentialsBindingList := &securityv1alpha1.CredentialsBindingList{}
+	if err := r.Client.List(ctx, credentialsBindingList, client.InNamespace(shoot.Namespace)); err != nil {
+		return fmt.Errorf("failed to list CredentialsBindings in namespace %s: %w", shoot.Namespace, err)
+	}
+
+	// Find matching CredentialsBindings that reference the same Secret and have the same Quotas
+	var matchingCredentialsBindings []securityv1alpha1.CredentialsBinding
+	for _, cb := range credentialsBindingList.Items {
+		if cb.CredentialsRef.Kind == "Secret" &&
+			cb.CredentialsRef.APIVersion == "v1" &&
+			cb.CredentialsRef.Name == secretBinding.SecretRef.Name &&
+			cb.CredentialsRef.Namespace == secretBinding.SecretRef.Namespace &&
+			quotasEqual(cb.Quotas, secretBinding.Quotas) {
+			matchingCredentialsBindings = append(matchingCredentialsBindings, cb)
+		}
+	}
+
+	if len(matchingCredentialsBindings) > 0 {
+		// Sort by name for stable selection (use the first one alphabetically)
+		slices.SortFunc(matchingCredentialsBindings, func(a, b securityv1alpha1.CredentialsBinding) int {
+			return strings.Compare(a.Name, b.Name)
+		})
+
+		selectedCredentialsBinding := matchingCredentialsBindings[0]
+		shoot.Spec.CredentialsBindingName = &selectedCredentialsBinding.Name
+		shoot.Spec.SecretBindingName = nil
+		return nil
+	}
+
+	// No existing CredentialsBinding found, create a new migration-created one
+	credentialsBinding := &securityv1alpha1.CredentialsBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      migratedCredentialsBindingName,
+			Namespace: shoot.Namespace,
+			Labels: map[string]string{
+				"credentialsbinding.gardener.cloud/status": "force-migrated",
+			},
+		},
+		Provider: securityv1alpha1.CredentialsBindingProvider{
+			Type: secretBinding.Provider.Type,
+		},
+		CredentialsRef: corev1.ObjectReference{
+			APIVersion: "v1",
+			Kind:       "Secret",
+			Name:       secretBinding.SecretRef.Name,
+			Namespace:  secretBinding.SecretRef.Namespace,
+		},
+		Quotas: secretBinding.Quotas,
+	}
+
+	if err := r.Client.Create(ctx, credentialsBinding); err != nil {
+		return fmt.Errorf("failed to create CredentialsBinding %s: %w", client.ObjectKeyFromObject(credentialsBinding), err)
+	}
+
+	shoot.Spec.CredentialsBindingName = &migratedCredentialsBindingName
+	shoot.Spec.SecretBindingName = nil
+
+	return nil
+}
+
+// quotasEqual compares two quota slices as sets, ignoring order
+func quotasEqual(a, b []corev1.ObjectReference) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	aMap := make(map[string]corev1.ObjectReference, len(a))
+	for _, quota := range a {
+		name := quota.Name
+		if quota.Namespace != "" {
+			name = quota.Namespace + "/" + name
+		}
+		aMap[name] = quota
+	}
+
+	for _, quota := range b {
+		name := quota.Name
+		if quota.Namespace != "" {
+			name = quota.Namespace + "/" + name
+		}
+
+		aQuota, exists := aMap[name]
+		if !exists {
+			return false
+		}
+
+		if aQuota.APIVersion != quota.APIVersion ||
+			aQuota.Kind != quota.Kind ||
+			aQuota.Name != quota.Name ||
+			aQuota.Namespace != quota.Namespace {
+			return false
+		}
+	}
+
+	return true
 }

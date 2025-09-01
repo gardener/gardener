@@ -265,6 +265,13 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		} else if len(ptr.Deref(spec.SecretBindingName, "")) != 0 && len(ptr.Deref(spec.CredentialsBindingName, "")) != 0 {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), "is incompatible with credentialsBindingName"))
 		}
+
+		// TODO(dimityrmirchev) Remove once we drop support for Kubernetes <= 1.33
+		// Forbid secretBindingName for Kubernetes versions >= 1.34
+		if spec.SecretBindingName != nil && len(*spec.SecretBindingName) > 0 &&
+			k8sVersion != nil && versionutils.ConstraintK8sGreaterEqual134.Check(k8sVersion) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), "is no longer supported for Kubernetes >= 1.34, use spec.credentialsBindingName instead"))
+		}
 	}
 	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed name must not be empty when providing the key"))

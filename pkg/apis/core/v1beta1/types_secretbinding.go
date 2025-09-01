@@ -13,6 +13,8 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SecretBinding represents a binding to a secret in the same or another namespace.
+//
+// Deprecated: Use CredentialsBinding instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
 type SecretBinding struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
@@ -33,6 +35,8 @@ type SecretBinding struct {
 }
 
 // SecretBindingProvider defines the provider type of the SecretBinding.
+//
+// Deprecated: Use CredentialsBindingProvider instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
 type SecretBindingProvider struct {
 	// Type is the type of the provider.
 	//
@@ -44,6 +48,8 @@ type SecretBindingProvider struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SecretBindingList is a collection of SecretBindings.
+//
+// Deprecated: Use CredentialsBindingList instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.
 type SecretBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard list object metadata.

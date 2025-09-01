@@ -51,6 +51,10 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, "you are setting the spec.cloudProfileName field. The field is deprecated and will be forcefully set empty starting with Kubernetes 1.34. Use the new spec.cloudProfile.name field instead.")
 	}
 
+	if shoot.Spec.SecretBindingName != nil {
+		warnings = append(warnings, "spec.secretBindingName is deprecated and will be disallowed starting with Kubernetes 1.34. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md")
+	}
+
 	return warnings
 }
 

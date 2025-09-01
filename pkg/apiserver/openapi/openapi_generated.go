@@ -7627,7 +7627,7 @@ func schema_pkg_apis_core_v1beta1_SecretBinding(ref common.ReferenceCallback) co
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SecretBinding represents a binding to a secret in the same or another namespace.",
+				Description: "SecretBinding represents a binding to a secret in the same or another namespace.\n\nDeprecated: Use CredentialsBinding instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -7691,7 +7691,7 @@ func schema_pkg_apis_core_v1beta1_SecretBindingList(ref common.ReferenceCallback
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SecretBindingList is a collection of SecretBindings.",
+				Description: "SecretBindingList is a collection of SecretBindings.\n\nDeprecated: Use CredentialsBindingList instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -7742,7 +7742,7 @@ func schema_pkg_apis_core_v1beta1_SecretBindingProvider(ref common.ReferenceCall
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SecretBindingProvider defines the provider type of the SecretBinding.",
+				Description: "SecretBindingProvider defines the provider type of the SecretBinding.\n\nDeprecated: Use CredentialsBindingProvider instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {
@@ -9463,7 +9463,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"secretBindingName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretBindingName is the name of a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account. The field is mutually exclusive with CredentialsBindingName. This field is immutable.",
+							Description: "SecretBindingName is the name of a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account. The field is mutually exclusive with CredentialsBindingName. This field is immutable.\n\nDeprecated: Use CredentialsBindingName instead. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md for migration instructions.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
