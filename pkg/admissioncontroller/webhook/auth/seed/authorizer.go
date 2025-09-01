@@ -321,6 +321,12 @@ func (a *authorizer) authorizeSecret(log logr.Logger, seedName string, attrs aut
 }
 
 func (a *authorizer) authorizeConfigMap(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	if attrs.GetVerb() == "get" &&
+		attrs.GetNamespace() == gardencorev1beta1.GardenerSystemPublicNamespace &&
+		attrs.GetName() == v1beta1constants.ConfigMapNameGardenerInfo {
+		return auth.DecisionAllow, "", nil
+	}
+
 	return a.authorize(log, seedName, graph.VertexTypeConfigMap, attrs,
 		[]string{"get", "patch", "update", "delete", "list", "watch"},
 		[]string{"create"},

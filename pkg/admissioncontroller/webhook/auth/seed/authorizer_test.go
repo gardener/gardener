@@ -220,6 +220,17 @@ var _ = Describe("Seed", func() {
 					}
 				})
 
+				It("should allow reading the public gardener-info ConfigMap without consulting the graph", func() {
+					attrs.Name = "gardener-info"
+					attrs.Namespace = "gardener-system-public"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
 				It("should allow because cluster-identity is retrieved", func() {
 					attrs.Name = "cluster-identity"
 					attrs.Namespace = "kube-system"
