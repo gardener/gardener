@@ -353,6 +353,17 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
+		// The ETCD encryption key rotation is done in 2 reconciliations. We cannot gurantee that
+		// the rotation is completed when the Garden is reconciled and helthy, therefore we need
+		// we wait until the second reconciliation is started (the rotation is in Completing phase).
+		It("Wait for ETCD encryption key rotation to reach Completing phase", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) bool {
+				g.Expect(s.GardenKomega.Get(s.Garden)()).To(Succeed())
+
+				return s.Garden.Status.Credentials.Rotation.ETCDEncryptionKey.Phase == gardencorev1beta1.RotationCompleting
+			}).WithPolling(15 * time.Second).Should(BeTrue())
+		}, SpecTimeout(10*time.Minute))
+
 		ItShouldWaitForGardenToBeReconciledAndHealthy(s)
 
 		for _, vv := range v {
@@ -360,8 +371,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				vv.AfterPrepared(ctx)
 			}, SpecTimeout(5*time.Minute))
 		}
-
-		ItShouldWaitForGardenToBeReconciledAndHealthy(s)
 
 		for _, vv := range v {
 			if cleanup, ok := vv.(rotationutils.CleanupVerifier); ok {
