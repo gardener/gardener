@@ -127,7 +127,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	defaultDomains, err := gardenerutils.GetDefaultDomains(secrets)
+	defaultDomains, err := gardenerutils.ReadGardenDefaultDomains(
+		ctx,
+		r.Client,
+		gardenerutils.ComputeGardenNamespace(seed.Name),
+		seed.Spec.DNS.Defaults,
+	)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
