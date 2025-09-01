@@ -87,6 +87,6 @@ func (r *Reconciler) ShootIsNotAutonomous() predicate.Predicate {
 		if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok {
 			return !helper.IsShootAutonomous(shoot)
 		}
-		return true
+		return false
 	})
 }
