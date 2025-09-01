@@ -40,35 +40,6 @@ type Domain struct {
 	SecretData map[string][]byte
 }
 
-// GetDefaultDomains finds all the default domain secrets within the given map and returns a list of
-// objects that contains all relevant information about the default domains.
-func GetDefaultDomains(secrets map[string]*corev1.Secret) ([]*Domain, error) {
-	var defaultDomains []*Domain
-
-	for key, secret := range secrets {
-		if strings.HasPrefix(key, v1beta1constants.GardenRoleDefaultDomain) {
-			domain, err := constructDomainFromSecret(secret)
-			if err != nil {
-				return nil, fmt.Errorf("error getting information out of default domain secret: %+v", err)
-			}
-			defaultDomains = append(defaultDomains, domain)
-		}
-	}
-
-	return defaultDomains, nil
-}
-
-// GetInternalDomain finds the internal domain secret within the given map and returns the object
-// that contains all relevant information about the internal domain.
-func GetInternalDomain(secrets map[string]*corev1.Secret) (*Domain, error) {
-	internalDomainSecret, ok := secrets[v1beta1constants.GardenRoleInternalDomain]
-	if !ok {
-		return nil, nil
-	}
-
-	return constructDomainFromSecret(internalDomainSecret)
-}
-
 func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
 	provider, domain, zone, err := GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
