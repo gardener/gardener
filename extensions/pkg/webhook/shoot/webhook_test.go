@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -85,6 +86,7 @@ var _ = Describe("Webhook", func() {
 			namespace3 *corev1.Namespace
 			namespace4 *corev1.Namespace
 			namespace5 *corev1.Namespace
+			namespace6 *corev1.Namespace
 
 			cluster3 *extensionsv1alpha1.Cluster
 			cluster4 *extensionsv1alpha1.Cluster
@@ -134,11 +136,26 @@ var _ = Describe("Webhook", func() {
 				},
 			}
 
+			namespace6 = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "namespace6",
+					Labels: map[string]string{
+						"gardener.cloud/role":                      "shoot",
+						"networking.shoot.gardener.cloud/provider": extensionType,
+					},
+					DeletionTimestamp: ptr.To(metav1.Now()),
+				},
+				Status: corev1.NamespaceStatus{
+					Phase: corev1.NamespaceTerminating,
+				},
+			}
+
 			Expect(fakeClient.Create(ctx, namespace1)).To(Succeed())
 			Expect(fakeClient.Create(ctx, namespace2)).To(Succeed())
 			Expect(fakeClient.Create(ctx, namespace3)).To(Succeed())
 			Expect(fakeClient.Create(ctx, namespace4)).To(Succeed())
 			Expect(fakeClient.Create(ctx, namespace5)).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespace6)).To(Succeed())
 
 			cluster3 = &extensionsv1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: namespace3.Name},
@@ -181,6 +198,7 @@ var _ = Describe("Webhook", func() {
 			expectWebhookConfigReconciliation(ctx, fakeClient, namespace3.Name, managedResourceName, shootWebhookConfigs.MutatingWebhookConfig, consistOf)
 			expectWebhookConfigReconciliation(ctx, fakeClient, namespace4.Name, managedResourceName, shootWebhookConfigs.MutatingWebhookConfig, consistOf)
 			expectNoWebhookConfigReconciliation(ctx, fakeClient, namespace5.Name, managedResourceName)
+			expectNoWebhookConfigReconciliation(ctx, fakeClient, namespace6.Name, managedResourceName)
 		})
 
 		It("should return an error because cluster for namespace3 is missing", func() {
