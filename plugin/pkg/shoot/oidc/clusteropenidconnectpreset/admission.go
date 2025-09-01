@@ -26,13 +26,17 @@ import (
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	settingsv1alpha1lister "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
-	plugin "github.com/gardener/gardener/plugin/pkg"
 	applier "github.com/gardener/gardener/plugin/pkg/shoot/oidc"
+)
+
+const (
+	// PluginName indicates the name of admission plug-in
+	PluginName = "ClusterOpenIDConnectPreset"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameClusterOpenIDConnectPreset, func(_ io.Reader) (admission.Interface, error) {
+	plugins.Register(PluginName, func(_ io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

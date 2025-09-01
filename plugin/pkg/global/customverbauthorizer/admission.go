@@ -27,7 +27,6 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 const (
@@ -50,11 +49,13 @@ const (
 	// CustomVerbNamespacedCloudProfileRaiseLimits is a constant for the custom verb that allows raising the
 	// `.spec.limits` limits in `NamespacedCloudProfile` resources above values defined in the parent `CloudProfile`.
 	CustomVerbNamespacedCloudProfileRaiseLimits = "raise-spec-limits"
+	// PluginName indicates the name of admission plug-in
+	PluginName = "CustomVerbAuthorizer"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameCustomVerbAuthorizer, NewFactory)
+	plugins.Register(PluginName, NewFactory)
 }
 
 // NewFactory creates a new PluginFactory.

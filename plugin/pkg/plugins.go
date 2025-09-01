@@ -12,96 +12,68 @@ import (
 	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
 	mutatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
 	validatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/validating"
-)
 
-const (
-	// PluginNameBastion is the name of the Bastion admission plugin.
-	PluginNameBastion = "Bastion"
-	// PluginNameControllerRegistrationResources is the name of the ControllerRegistrationResources admission plugin.
-	PluginNameControllerRegistrationResources = "ControllerRegistrationResources"
-	// PluginNameCustomVerbAuthorizer is the name of the CustomVerbAuthorizer admission plugin.
-	PluginNameCustomVerbAuthorizer = "CustomVerbAuthorizer"
-	// PluginNameDeletionConfirmation is the name of the DeletionConfirmation admission plugin.
-	PluginNameDeletionConfirmation = "DeletionConfirmation"
-	// PluginNameExtensionLabels is the name of the ExtensionLabels admission plugin.
-	PluginNameExtensionLabels = "ExtensionLabels"
-	// PluginNameExtensionValidator is the name of the ExtensionValidator admission plugin.
-	PluginNameExtensionValidator = "ExtensionValidator"
-	// PluginNameFinalizerRemoval is the name of the FinalizerRemoval admission plugin.
-	PluginNameFinalizerRemoval = "FinalizerRemoval"
-	// PluginNameResourceReferenceManager is the name of the ResourceReferenceManager admission plugin.
-	PluginNameResourceReferenceManager = "ResourceReferenceManager"
-	// PluginNameManagedSeedShoot is the name of the ManagedSeedShoot admission plugin.
-	PluginNameManagedSeedShoot = "ManagedSeedShoot"
-	// PluginNameManagedSeed is the name of the ManagedSeed admission plugin.
-	PluginNameManagedSeed = "ManagedSeed"
-	// PluginNameNamespacedCloudProfileValidator is the name of the NamespacedCloudProfileValidator admission plugin.
-	PluginNameNamespacedCloudProfileValidator = "NamespacedCloudProfileValidator"
-	// PluginNameProjectValidator is the name of the ProjectValidator admission plugin.
-	PluginNameProjectValidator = "ProjectValidator"
-	// PluginNameSeedValidator is the name of the SeedValidator admission plugin.
-	PluginNameSeedValidator = "SeedValidator"
-	// PluginNameSeedMutator is the name of the SeedMutator admission plugin.
-	PluginNameSeedMutator = "SeedMutator"
-	// PluginNameShootDNS is the name of the ShootDNS admission plugin.
-	PluginNameShootDNS = "ShootDNS"
-	// PluginNameShootDNSRewriting is the name of the ShootDNSRewriting admission plugin.
-	PluginNameShootDNSRewriting = "ShootDNSRewriting"
-	// PluginNameShootExposureClass is the name of the ShootExposureClass admission plugin.
-	PluginNameShootExposureClass = "ShootExposureClass"
-	// PluginNameShootManagedSeed is the name of the ShootManagedSeed admission plugin.
-	PluginNameShootManagedSeed = "ShootManagedSeed"
-	// PluginNameShootNodeLocalDNSEnabledByDefault is the name of the ShootNodeLocalDNSEnabledByDefault admission plugin.
-	PluginNameShootNodeLocalDNSEnabledByDefault = "ShootNodeLocalDNSEnabledByDefault"
-	// PluginNameClusterOpenIDConnectPreset is the name of the ClusterOpenIDConnectPreset admission plugin.
-	PluginNameClusterOpenIDConnectPreset = "ClusterOpenIDConnectPreset"
-	// PluginNameOpenIDConnectPreset is the name of the OpenIDConnectPreset admission plugin.
-	PluginNameOpenIDConnectPreset = "OpenIDConnectPreset"
-	// PluginNameShootQuotaValidator is the name of the ShootQuotaValidator admission plugin.
-	PluginNameShootQuotaValidator = "ShootQuotaValidator"
-	// PluginNameShootTolerationRestriction is the name of the ShootTolerationRestriction admission plugin.
-	PluginNameShootTolerationRestriction = "ShootTolerationRestriction"
-	// PluginNameShootValidator is the name of the ShootValidator admission plugin.
-	PluginNameShootValidator = "ShootValidator"
-	// PluginNameShootVPAEnabledByDefault is the name of the ShootVPAEnabledByDefault admission plugin.
-	PluginNameShootVPAEnabledByDefault = "ShootVPAEnabledByDefault"
-	// PluginNameShootResourceReservation is the name of the ShootResourceReservation admission plugin.
-	PluginNameShootResourceReservation = "ShootResourceReservation"
-	// PluginNameBackupBucketValidator is the name of the BackupBucketValidator admission plugin.
-	PluginNameBackupBucketValidator = "BackupBucketValidator"
+	backupbucketvalidator "github.com/gardener/gardener/plugin/pkg/backupbucket/validator"
+	bastion "github.com/gardener/gardener/plugin/pkg/bastion/validator"
+	"github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
+	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
+	"github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
+	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
+	"github.com/gardener/gardener/plugin/pkg/global/extensionlabels"
+	"github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
+	"github.com/gardener/gardener/plugin/pkg/global/finalizerremoval"
+	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
+	managedseedshoot "github.com/gardener/gardener/plugin/pkg/managedseed/shoot"
+	managedseed "github.com/gardener/gardener/plugin/pkg/managedseed/validator"
+	namespacedcloudprofilevalidator "github.com/gardener/gardener/plugin/pkg/namespacedcloudprofile/validator"
+	projectvalidator "github.com/gardener/gardener/plugin/pkg/project/validator"
+	seedmutator "github.com/gardener/gardener/plugin/pkg/seed/mutator"
+	seedvalidator "github.com/gardener/gardener/plugin/pkg/seed/validator"
+	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
+	shootdnsrewriting "github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting"
+	shootexposureclass "github.com/gardener/gardener/plugin/pkg/shoot/exposureclass"
+	shootmanagedseed "github.com/gardener/gardener/plugin/pkg/shoot/managedseed"
+	shootnodelocaldns "github.com/gardener/gardener/plugin/pkg/shoot/nodelocaldns"
+	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
+	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
+	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
+	shootresourcereservation "github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation"
+	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction"
+	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
+	shootvpa "github.com/gardener/gardener/plugin/pkg/shoot/vpa"
 )
 
 // AllPluginNames returns the names of all plugins.
 func AllPluginNames() []string {
 	return []string{
-		lifecycle.PluginName,                        // NamespaceLifecycle
-		PluginNameResourceReferenceManager,          // ResourceReferenceManager
-		PluginNameExtensionValidator,                // ExtensionValidator
-		PluginNameExtensionLabels,                   // ExtensionLabels
-		PluginNameShootTolerationRestriction,        // ShootTolerationRestriction
-		PluginNameShootExposureClass,                // ShootExposureClass
-		PluginNameShootDNS,                          // ShootDNS
-		PluginNameShootManagedSeed,                  // ShootManagedSeed
-		PluginNameShootNodeLocalDNSEnabledByDefault, // ShootNodeLocalDNSEnabledByDefault
-		PluginNameShootDNSRewriting,                 // ShootDNSRewriting
-		PluginNameShootQuotaValidator,               // ShootQuotaValidator
-		PluginNameShootValidator,                    // ShootValidator
-		PluginNameSeedValidator,                     // SeedValidator
-		PluginNameSeedMutator,                       // SeedMutator
-		PluginNameControllerRegistrationResources,   // ControllerRegistrationResources
-		PluginNameNamespacedCloudProfileValidator,   // NamespacedCloudProfileValidator
-		PluginNameProjectValidator,                  // ProjectValidator
-		PluginNameDeletionConfirmation,              // DeletionConfirmation
-		PluginNameFinalizerRemoval,                  // FinalizerRemoval
-		PluginNameOpenIDConnectPreset,               // OpenIDConnectPreset
-		PluginNameClusterOpenIDConnectPreset,        // ClusterOpenIDConnectPreset
-		PluginNameCustomVerbAuthorizer,              // CustomVerbAuthorizer
-		PluginNameShootVPAEnabledByDefault,          // ShootVPAEnabledByDefault
-		PluginNameShootResourceReservation,          // ShootResourceReservation
-		PluginNameManagedSeed,                       // ManagedSeed
-		PluginNameManagedSeedShoot,                  // ManagedSeedShoot
-		PluginNameBastion,                           // Bastion
-		PluginNameBackupBucketValidator,             // BackupBucketValidator
+		lifecycle.PluginName,                       // NamespaceLifecycle
+		resourcereferencemanager.PluginName,        // ResourceReferenceManager
+		extensionvalidation.PluginName,             // ExtensionValidator
+		extensionlabels.PluginName,                 // ExtensionLabels
+		tolerationrestriction.PluginName,           // ShootTolerationRestriction
+		shootexposureclass.PluginName,              // ShootExposureClass
+		shootdns.PluginName,                        // ShootDNS
+		shootmanagedseed.PluginName,                // ShootManagedSeed
+		shootnodelocaldns.PluginName,               // ShootNodeLocalDNSEnabledByDefault
+		shootdnsrewriting.PluginName,               // ShootDNSRewriting
+		shootquotavalidator.PluginName,             // ShootQuotaValidator
+		shootvalidator.PluginName,                  // ShootValidator
+		seedvalidator.PluginName,                   // SeedValidator
+		seedmutator.PluginName,                     // SeedMutator
+		resources.PluginName,                       // ControllerRegistrationResources
+		namespacedcloudprofilevalidator.PluginName, // NamespacedCloudProfileValidator
+		projectvalidator.PluginName,                // ProjectValidator
+		deletionconfirmation.PluginName,            // DeletionConfirmation
+		finalizerremoval.PluginName,                // FinalizerRemoval
+		openidconnectpreset.PluginName,             // OpenIDConnectPreset
+		clusteropenidconnectpreset.PluginName,      // ClusterOpenIDConnectPreset
+		customverbauthorizer.PluginName,            // CustomVerbAuthorizer
+		shootvpa.PluginName,                        // ShootVPAEnabledByDefault
+		shootresourcereservation.PluginName,        // ShootResourceReservation
+		managedseed.PluginName,                     // ManagedSeed
+		managedseedshoot.PluginName,                // ManagedSeedShoot
+		bastion.PluginName,                         // Bastion
+		backupbucketvalidator.PluginName,           // BackupBucketValidator
 
 		// new admission plugins should generally be inserted above here
 		// webhook, and resourcequota plugins must go at the end
@@ -120,33 +92,33 @@ func AllPluginNames() []string {
 // DefaultOnPlugins is the set of admission plugins that are enabled by default.
 func DefaultOnPlugins() sets.Set[string] {
 	return sets.New[string](
-		lifecycle.PluginName,                      // NamespaceLifecycle
-		PluginNameResourceReferenceManager,        // ResourceReferenceManager
-		PluginNameExtensionValidator,              // ExtensionValidator
-		PluginNameExtensionLabels,                 // ExtensionLabels
-		PluginNameShootTolerationRestriction,      // ShootTolerationRestriction
-		PluginNameShootExposureClass,              // ShootExposureClass
-		PluginNameShootDNS,                        // ShootDNS
-		PluginNameShootManagedSeed,                // ShootManagedSeed
-		PluginNameShootResourceReservation,        // ShootResourceReservation
-		PluginNameShootQuotaValidator,             // ShootQuotaValidator
-		PluginNameShootValidator,                  // ShootValidator
-		PluginNameSeedValidator,                   // SeedValidator
-		PluginNameSeedMutator,                     // SeedMutator
-		PluginNameControllerRegistrationResources, // ControllerRegistrationResources
-		PluginNameNamespacedCloudProfileValidator, // NamespacedCloudProfileValidator
-		PluginNameProjectValidator,                // ProjectValidator
-		PluginNameDeletionConfirmation,            // DeletionConfirmation
-		PluginNameFinalizerRemoval,                // FinalizerRemoval
-		PluginNameOpenIDConnectPreset,             // OpenIDConnectPreset
-		PluginNameClusterOpenIDConnectPreset,      // ClusterOpenIDConnectPreset
-		PluginNameCustomVerbAuthorizer,            // CustomVerbAuthorizer
-		PluginNameManagedSeed,                     // ManagedSeed
-		PluginNameManagedSeedShoot,                // ManagedSeedShoot
-		PluginNameBastion,                         // Bastion
-		PluginNameBackupBucketValidator,           // BackupBucketValidator
-		mutatingwebhook.PluginName,                // MutatingAdmissionWebhook
-		validatingwebhook.PluginName,              // ValidatingAdmissionWebhook
+		lifecycle.PluginName,                       // NamespaceLifecycle
+		resourcereferencemanager.PluginName,        // ResourceReferenceManager
+		extensionvalidation.PluginName,             // ExtensionValidator
+		extensionlabels.PluginName,                 // ExtensionLabels
+		tolerationrestriction.PluginName,           // ShootTolerationRestriction
+		shootexposureclass.PluginName,              // ShootExposureClass
+		shootdns.PluginName,                        // ShootDNS
+		shootmanagedseed.PluginName,                // ShootManagedSeed
+		shootresourcereservation.PluginName,        // ShootResourceReservation
+		shootquotavalidator.PluginName,             // ShootQuotaValidator
+		shootvalidator.PluginName,                  // ShootValidator
+		seedvalidator.PluginName,                   // SeedValidator
+		seedmutator.PluginName,                     // SeedMutator
+		controllerregistrationresources.PluginName, // ControllerRegistrationResources
+		namespacedcloudprofilevalidator.PluginName, // NamespacedCloudProfileValidator
+		projectvalidator.PluginName,                // ProjectValidator
+		deletionconfirmation.PluginName,            // DeletionConfirmation
+		finalizerremoval.PluginName,                // FinalizerRemoval
+		openidconnectpreset.PluginName,             // OpenIDConnectPreset
+		clusteropenidconnectpreset.PluginName,      // ClusterOpenIDConnectPreset
+		customverbauthorizer.PluginName,            // CustomVerbAuthorizer
+		managedseed.PluginName,                     // ManagedSeed
+		managedseedshoot.PluginName,                // ManagedSeedShoot
+		bastion.PluginName,                         // Bastion
+		backupbucketvalidator.PluginName,           // BackupBucketValidator
+		mutatingwebhook.PluginName,                 // MutatingAdmissionWebhook
+		validatingwebhook.PluginName,               // ValidatingAdmissionWebhook
 		// TODO(ary1992): Ennable the plugin once our base clusters are updated to k8s >= 1.30
 		// validating.PluginName,                     // ValidatingAdmissionPolicy
 		resourcequota.PluginName, // ResourceQuota
