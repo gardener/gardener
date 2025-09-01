@@ -36,9 +36,10 @@ var _ = Describe("VerifyVersion", func() {
 	})
 
 	Describe("#VerifyGardenerVersion", func() {
-		It("should fail if the gardener-info ConfigMap does not exist", func() {
-			Expect(VerifyGardenerVersion(ctx, log, fakeClient)).To(MatchError(ContainSubstring("failed reading ConfigMap gardener")))
-		})
+		// TODO(rfranzke): Enable this test once the `gardener/controlplane` chart is removed.
+		// It("should fail if the gardener-info ConfigMap does not exist", func() {
+		// 	Expect(VerifyGardenerVersion(ctx, log, fakeClient)).To(MatchError(ContainSubstring("failed reading ConfigMap gardener")))
+		// })
 
 		It("should fail if the gardener-apiserver information data cannot be parsed", func() {
 			configMap.Data = map[string]string{"gardenerAPIServer": "CANNOT-PARSE-THIS"}

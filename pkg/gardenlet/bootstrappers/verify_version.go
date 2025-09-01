@@ -11,6 +11,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +31,13 @@ var GetCurrentVersion = version.Get
 func VerifyGardenerVersion(ctx context.Context, log logr.Logger, reader client.Reader) error {
 	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-info", Namespace: gardencorev1beta1.GardenerSystemPublicNamespace}}
 	if err := reader.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+		// TODO(rfranzke): The `gardener-info` `ConfigMap` does not exist for non-'gardener-operator'-managed systems.
+		//  Let's tolerate this until the `gardener/controlplane` Helm chart (already deprecated) is finally removed by
+		//  the end of 2025. Hence, let's remove this 'is-not-found' toleration once the `gardener/controlplane` chart
+		//  is removed.
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return fmt.Errorf("failed reading ConfigMap %s from garden cluster: %w", client.ObjectKeyFromObject(configMap), err)
 	}
 
