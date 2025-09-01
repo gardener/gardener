@@ -26,7 +26,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  | `1.125` |
 | NewWorkerPoolHash                        | `true`  | `Beta`  | `1.126` |         |
 | CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` | `1.120` |
-| CredentialsRotationWithoutWorkersRollout | `true`  | `Beta`  | `1.121` |         |
+| CredentialsRotationWithoutWorkersRollout | `true`  | `Beta`  | `1.121` | `1.126` |
+| CredentialsRotationWithoutWorkersRollout | `true`  | `GA`    | `1.127` |         |
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
 | IstioTLSTermination                      | `false` | `Alpha` | `1.114` |         |
 | CloudProfileCapabilities                 | `false` | `Alpha` | `1.117` |         |

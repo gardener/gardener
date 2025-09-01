@@ -51,6 +51,7 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.112.0
 	// beta: v1.121.0
+	// GA: v1.127.0
 	CredentialsRotationWithoutWorkersRollout featuregate.Feature = "CredentialsRotationWithoutWorkersRollout"
 
 	// InPlaceNodeUpdates enables setting the update strategy of worker pools to `AutoInPlaceUpdate` or `ManualInPlaceUpdate` in the Shoot API.
@@ -115,7 +116,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	UseNamespacedCloudProfile:                {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:                        {Default: true, PreRelease: featuregate.Beta},
-	CredentialsRotationWithoutWorkersRollout: {Default: true, PreRelease: featuregate.Beta},
+	CredentialsRotationWithoutWorkersRollout: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
 	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},
 	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha},
