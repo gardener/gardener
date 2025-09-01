@@ -385,11 +385,21 @@ func (r *Reconciler) initializeOperation(
 		return nil, err
 	}
 
+	defaultDomains, err := gardenerutils.ReadGardenDefaultDomains(
+		ctx,
+		r.GardenClient,
+		gardenerutils.ComputeGardenNamespace(seed.Name),
+		seed.Spec.DNS.Defaults,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	gardenObj, err := garden.
 		NewBuilder().
 		WithProject(project).
 		WithInternalDomain(internalDomain).
-		WithDefaultDomainsFromSecrets(gardenSecrets).
+		WithDefaultDomains(defaultDomains).
 		Build(ctx)
 	if err != nil {
 		return nil, err
@@ -427,6 +437,7 @@ func (r *Reconciler) initializeOperation(
 		WithGardenClusterIdentity(r.GardenClusterIdentity).
 		WithSecrets(gardenSecrets).
 		WithInternalDomain(gardenObj.InternalDomain).
+		WithDefaultDomains(gardenObj.DefaultDomains).
 		WithGarden(gardenObj).
 		WithSeed(seedObj).
 		WithShoot(shootObj).

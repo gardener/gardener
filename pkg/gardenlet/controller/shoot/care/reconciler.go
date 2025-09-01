@@ -58,6 +58,7 @@ type Reconciler struct {
 
 	gardenSecrets        map[string]*corev1.Secret
 	gardenInternalDomain *gardenerutils.Domain
+	gardenDefaultDomains []*gardenerutils.Domain
 }
 
 // Reconcile executes care operations, e.g. health checks or garbage collection.
@@ -130,8 +131,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			return reconcile.Result{}, fmt.Errorf("error reading Garden internal domain secret: %w", err)
 		}
 
+		defaultDomains, err := gardenerutils.ReadGardenDefaultDomains(
+			careCtx,
+			r.GardenClient,
+			gardenerutils.ComputeGardenNamespace(*shoot.Status.SeedName),
+			seed.Spec.DNS.Defaults,
+		)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("error reading Garden default domains: %w", err)
+		}
+
 		r.gardenSecrets = secrets
 		r.gardenInternalDomain = internalDomain
+		r.gardenDefaultDomains = defaultDomains
 	}
 
 	o, err := NewOperation(
@@ -145,6 +157,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		r.GardenClusterIdentity,
 		r.gardenSecrets,
 		r.gardenInternalDomain,
+		r.gardenDefaultDomains,
 		shoot,
 	)
 	if err != nil {
