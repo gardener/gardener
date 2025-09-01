@@ -6,7 +6,6 @@ package gardener_test
 
 import (
 	"context"
-	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,114 +27,6 @@ import (
 )
 
 var _ = Describe("Garden", func() {
-	Describe("#GetDefaultDomains", func() {
-		It("should return all default domain", func() {
-			var (
-				provider = "aws"
-				domain   = "example.com"
-				data     = map[string][]byte{
-					"foo": []byte("bar"),
-				}
-
-				secret = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							DNSProvider: provider,
-							DNSDomain:   domain,
-						},
-					},
-					Data: data,
-				}
-				secrets = map[string]*corev1.Secret{
-					fmt.Sprintf("%s-%s", constants.GardenRoleDefaultDomain, domain): secret,
-				}
-			)
-
-			defaultDomains, err := GetDefaultDomains(secrets)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(defaultDomains).To(Equal([]*Domain{
-				{
-					Domain:     domain,
-					Provider:   provider,
-					SecretData: data,
-				},
-			}))
-		})
-
-		It("should return an error", func() {
-			secrets := map[string]*corev1.Secret{
-				fmt.Sprintf("%s-%s", constants.GardenRoleDefaultDomain, "nip"): {
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							DNSProvider: "aws",
-						},
-					},
-				},
-			}
-
-			_, err := GetDefaultDomains(secrets)
-
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Describe("#GetInternalDomain", func() {
-		It("should return the internal domain", func() {
-			var (
-				provider = "aws"
-				domain   = "example.com"
-				data     = map[string][]byte{
-					"foo": []byte("bar"),
-				}
-
-				secret = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							DNSProvider: provider,
-							DNSDomain:   domain,
-						},
-					},
-					Data: data,
-				}
-				secrets = map[string]*corev1.Secret{
-					constants.GardenRoleInternalDomain: secret,
-				}
-			)
-
-			internalDomain, err := GetInternalDomain(secrets)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(internalDomain).To(Equal(&Domain{
-				Domain:     domain,
-				Provider:   provider,
-				SecretData: data,
-			}))
-		})
-
-		It("should return an error due to incomplete secrets map", func() {
-			_, err := GetInternalDomain(map[string]*corev1.Secret{})
-
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error", func() {
-			secrets := map[string]*corev1.Secret{
-				constants.GardenRoleInternalDomain: {
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							DNSProvider: "aws",
-						},
-					},
-				},
-			}
-
-			_, err := GetInternalDomain(secrets)
-
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
 	var (
 		defaultDomainProvider   = "default-domain-provider"
 		defaultDomainSecretData = map[string][]byte{"default": []byte("domain")}
