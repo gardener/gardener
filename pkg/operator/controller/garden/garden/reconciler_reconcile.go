@@ -1264,11 +1264,6 @@ func getDNSProvider(dns operatorv1alpha1.DNSManagement, providerName *string) *o
 }
 
 func reconcileGardenerInfoConfigMap(ctx context.Context, log logr.Logger, virtualGardenClient client.Client, secretsManager secretsmanager.Interface, workloadIdentityIssuerURL string) error {
-	const (
-		configMapName            = "gardener-info"
-		gardenerAPIServerDataKey = "gardenerAPIServer"
-	)
-
 	var gardenerAPIServerVersion string
 	if ver := getGardenerAPIServerVersion(log, secretsManager); ver != nil {
 		gardenerAPIServerVersion = *ver
@@ -1278,26 +1273,21 @@ func reconcileGardenerInfoConfigMap(ctx context.Context, log logr.Logger, virtua
 		log.Info("Failed to retrieve actual Gardener API Server version, will use the version of the Gardener Operator", "version", gardenerAPIServerVersion)
 	}
 
-	gardenerInfo := struct {
-		Version                   string `json:"version" yaml:"version"`
-		WorkloadIdentityIssuerURL string `json:"workloadIdentityIssuerURL" yaml:"workloadIdentityIssuerURL"`
-	}{
+	rawGardenerAPIServerInfo, err := yaml.Marshal(gardenerutils.APIServerInfo{
 		Version:                   gardenerAPIServerVersion,
 		WorkloadIdentityIssuerURL: workloadIdentityIssuerURL,
-	}
-
-	marshalled, err := yaml.Marshal(gardenerInfo)
+	})
 	if err != nil {
 		return err
 	}
 
-	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardencorev1beta1.GardenerSystemPublicNamespace, Name: configMapName}}
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardencorev1beta1.GardenerSystemPublicNamespace, Name: v1beta1constants.ConfigMapNameGardenerInfo}}
 	log.Info("Reconciling gardener-info ConfigMap", "configMap", configMap)
 	_, err = controllerutils.CreateOrGetAndMergePatch(ctx, virtualGardenClient, configMap, func() error {
 		if configMap.Data == nil {
 			configMap.Data = make(map[string]string)
 		}
-		configMap.Data[gardenerAPIServerDataKey] = string(marshalled)
+		configMap.Data[v1beta1constants.GardenerInfoConfigMapDataKeyGardenerAPIServer] = string(rawGardenerAPIServerInfo)
 		return nil
 	})
 	return err
