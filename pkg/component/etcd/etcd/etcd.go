@@ -289,12 +289,12 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		e.etcd.Spec.PriorityClassName = &e.values.PriorityClassName
 		e.etcd.Spec.Annotations = annotations
 		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
-			v1beta1constants.LabelApp:                                                     LabelAppValue,
-			v1beta1constants.LabelNetworkPolicyToDNS:                                      v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToPublicNetworks:                           v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                          v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                         v1beta1constants.LabelNetworkPolicyAllowed,
-			"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelApp:                                           LabelAppValue,
+			v1beta1constants.LabelNetworkPolicyToDNS:                            v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToPublicNetworks:                 v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:               v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToAllShootsEtcdMainClientTCP8080: v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 
 		if e.values.HighAvailabilityEnabled {
