@@ -1,0 +1,32 @@
+{{- if eq (include "coredns.enabled" .) "true" -}}
+# This NetworkPolicy allows ingress traffic from all IPs in the kind cluster pod network (10.1.0.0/16) to coredns.
+# The shoot machine pods use a dedicated calico IPPool with a CIDR outside the kind pod network
+# (see https://github.com/gardener/gardener/pull/9752).
+# With this, routing of traffic from machine pods doesn't work correctly in all cases. E.g., kube-proxy treats such
+# traffic as external and SNATs it, even though it actually originates from inside the cluster.
+# In combination with calico's IPIP tunneling, this breaks NetworkPolicies for cross-node traffic, because traffic
+# doesn't appear to come from a pod IP anymore but a node IP on the tunl0 interface (which is actually an IP within
+# the kind pod network).
+# I.e., this NetworkPolicy is a workaround to allow cross-node traffic from machine pods to the local coredns.
+# TODO(timebertt): remove this workaround once the shoot machine pods use pod IPs from the kind pod network
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-provider-local-coredns
+  namespace: gardener-extension-provider-local-coredns
+spec:
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 10.1.0.0/16 # kind pod network
+    ports:
+    - port: 9053
+      protocol: TCP
+    - port: 9053
+      protocol: UDP
+  podSelector:
+    matchLabels:
+      app: coredns
+  policyTypes:
+  - Ingress
+{{- end -}}
