@@ -276,20 +276,6 @@ func ReadGardenSecrets(
 	}
 
 	for _, secret := range secretList.Items {
-		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
-		// a label indicating the Garden role default-domain.
-		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
-			_, domain, _, err := GetDomainInfoFromAnnotations(secret.Annotations)
-			if err != nil {
-				log.Error(err, "Error getting information out of default domain secret", "secret", client.ObjectKeyFromObject(&secret))
-				continue
-			}
-
-			defaultDomainSecret := secret
-			secretsMap[fmt.Sprintf("%s-%s", v1beta1constants.GardenRoleDefaultDomain, domain)] = &defaultDomainSecret
-			logInfo = append(logInfo, fmt.Sprintf("default domain secret %q for domain %q", secret.Name, domain))
-		}
-
 		// Retrieve the alerting secret to configure alerting. Either in cluster email alerting or
 		// external alertmanager configuration.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleAlerting {
