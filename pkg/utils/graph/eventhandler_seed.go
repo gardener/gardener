@@ -45,7 +45,7 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) err
 			}
 
 			if !v1beta1helper.SeedBackupCredentialsRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) ||
-				!v1beta1helper.InternalDNSProviderCredentialsRefEqual(oldSeed.Spec.DNS.Internal, newSeed.Spec.DNS.Internal) ||
+				!v1beta1helper.DNSProviderCredentialsRefEqual(oldSeed.Spec.DNS.Internal, newSeed.Spec.DNS.Internal) ||
 				!v1beta1helper.ResourceReferencesEqual(oldSeed.Spec.Resources, newSeed.Spec.Resources) ||
 				!seedDNSProviderSecretRefEqual(oldSeed.Spec.DNS.Provider, newSeed.Spec.DNS.Provider) {
 				g.handleSeedCreateOrUpdate(newSeed)
