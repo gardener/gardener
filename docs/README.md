@@ -227,6 +227,7 @@
 * [Force Deletion](extensions/force-deletion.md)
 * [Extending project roles](extensions/project-roles.md)
 * [Referenced resources](extensions/referenced-resources.md)
+* [Validation Guidelines For Extensions](extensions/validation-guidelines-for-extensions.md)
 
 ## Deployment
 
