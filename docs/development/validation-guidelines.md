@@ -109,7 +109,7 @@ The validation functions are defined in the [`github.com/gardener/gardener/pkg/a
 #### `operator.gardener.cloud` API group
 
 The [gardener-operator](../concepts/operator.md) is responsible for the management of the garden cluster environment.
-It does this using the `Garden` and `Extension` CRDs from the `operator.gardener.cloud` API group.
+It does this by using the `Garden` and `Extension` CRDs from the `operator.gardener.cloud` API group.
 The CRDs are validated by the `gardener-operator`'s validating webhook. See [`gardener-operator` validation section](../concepts/operator.md#validation).
 The validation functions are defined in the [`github.com/gardener/gardener/pkg/apis/operator/v1alpha1/validation`](https://pkg.go.dev/github.com/gardener/gardener/pkg/apis/operator/v1alpha1/validation) package.
 
