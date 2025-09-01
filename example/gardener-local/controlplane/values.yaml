@@ -148,8 +148,6 @@ global:
           -----END RSA PRIVATE KEY-----
     # speed-up re-deploying of gardener-apiserver
     minReadySeconds: 0
-    enableAdmissionPlugins:
-    - ShootVPAEnabledByDefault
     # disable audit log, it is enough to set path to empty string
     audit:
       log:

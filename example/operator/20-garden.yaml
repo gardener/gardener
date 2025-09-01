@@ -202,7 +202,6 @@ spec:
       clusterIdentity: local
       gardenerAPIServer:
         admissionPlugins:
-        - name: ShootVPAEnabledByDefault
     #   - name: ShootDNSRewriting
     #     disabled: false
     #     config:
