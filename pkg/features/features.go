@@ -43,6 +43,7 @@ const (
 	// owner: @MichaelEischer
 	// alpha: v1.98.0
 	// beta: v1.126.0
+	// GA: v1.128.0
 	NewWorkerPoolHash featuregate.Feature = "NewWorkerPoolHash"
 
 	// CredentialsRotationWithoutWorkersRollout enables starting the credentials rotation without immediately causing
@@ -114,7 +115,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DefaultSeccompProfile:                    {Default: false, PreRelease: featuregate.Alpha},
 	UseNamespacedCloudProfile:                {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
-	NewWorkerPoolHash:                        {Default: true, PreRelease: featuregate.Beta},
+	NewWorkerPoolHash:                        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CredentialsRotationWithoutWorkersRollout: {Default: true, PreRelease: featuregate.Beta},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
 	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},

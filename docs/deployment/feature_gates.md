@@ -23,8 +23,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | DefaultSeccompProfile                    | `false` | `Alpha` | `1.54`  |         |
 | ShootCredentialsBinding                  | `false` | `Alpha` | `1.98`  | `1.106` |
 | ShootCredentialsBinding                  | `true`  | `Beta`  | `1.107` |         |
-| NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  | `1.125` |
-| NewWorkerPoolHash                        | `true`  | `Beta`  | `1.126` |         |
 | CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` | `1.120` |
 | CredentialsRotationWithoutWorkersRollout | `true`  | `Beta`  | `1.121` |         |
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
@@ -200,6 +198,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | UseNamespacedCloudProfile                    | `false` | `Alpha`      | `1.92`  | `1.111` |
 | UseNamespacedCloudProfile                    | `true`  | `Beta`       | `1.112` | `1.124` |
 | UseNamespacedCloudProfile                    | `true`  | `GA`         | `1.125` |         |
+| NewWorkerPoolHash                            | `false` | `Alpha`      | `1.98`  | `1.125` |
+| NewWorkerPoolHash                            | `true`  | `Beta`       | `1.126` | `1.127` |
+| NewWorkerPoolHash                            | `true`  | `GA`         | `1.128` |         |
 
 ## Using a Feature
 
