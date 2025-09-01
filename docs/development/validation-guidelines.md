@@ -92,6 +92,7 @@ For reference, check out Gardener API server admission plugins that accepts conf
   - The listers' initialization should be validated by implementing the `ValidateInitialization` function. Example: [`SeedValidator` `ValidateInitialization` implementation](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/plugin/pkg/seed/validator/admission.go#L80-L89).
   - An admission plugin should wait the cache of the informers (from which the listers are obtained from) to be synced. Example: [`SeedValidator` wait until cache sync](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/plugin/pkg/seed/validator/admission.go#L95-L109).
 - Perform validation in a validating admission plugin. Do not use a mutating admission plugin for validation purposes. Example: https://github.com/gardener/gardener/pull/12786
+- An admission plugin can only be added for resources served by the corresponding API server. Gardener API server can have an admission plugin only for resources it serves. For validation of resources served by the Kubernetes API server, use a validating webhook.
 
 ### Validation for CustomResourceDefinitions
 
