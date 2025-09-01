@@ -54,11 +54,6 @@ rules:
   - ""
   resources:
   - configmaps
-  verbs:
-  - get
-- apiGroups:
-  - ""
-  resources:
   - namespaces
   - secrets
   - serviceaccounts

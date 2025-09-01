@@ -887,12 +887,6 @@ func clusterRole() *rbacv1.ClusterRole {
 				APIGroups: []string{""},
 				Resources: []string{
 					"configmaps",
-				},
-				Verbs: []string{"get"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{
 					"namespaces",
 					"secrets",
 					"serviceaccounts",

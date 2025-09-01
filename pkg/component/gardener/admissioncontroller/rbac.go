@@ -61,12 +61,6 @@ func (a *gardenerAdmissionController) clusterRole() *rbacv1.ClusterRole {
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{
 					"configmaps",
-				},
-				Verbs: []string{"get"},
-			},
-			{
-				APIGroups: []string{corev1.GroupName},
-				Resources: []string{
 					"namespaces",
 					"secrets",
 					"serviceaccounts",
