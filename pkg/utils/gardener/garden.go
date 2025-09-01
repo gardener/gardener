@@ -7,6 +7,8 @@ package gardener
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -133,6 +135,87 @@ func ReadGardenInternalDomain(
 	}
 
 	return domain, nil
+}
+
+// ReadGardenDefaultDomains reads the default domain information from the Garden cluster.
+func ReadGardenDefaultDomains(
+	ctx context.Context,
+	c client.Reader,
+	namespace string,
+	seedDNSDefaults []gardencorev1beta1.SeedDNSProviderConfig,
+) (
+	[]*Domain,
+	error,
+) {
+	var domains []*Domain
+
+	if len(seedDNSDefaults) > 0 {
+		for _, seedDNSDefault := range seedDNSDefaults {
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      seedDNSDefault.CredentialsRef.Name,
+				Namespace: seedDNSDefault.CredentialsRef.Namespace,
+			}}
+
+			if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+				return nil, fmt.Errorf("cannot fetch default domain secret %s: %w", client.ObjectKeyFromObject(secret), err)
+			}
+
+			domain := &Domain{
+				Domain:     seedDNSDefault.Domain,
+				Provider:   seedDNSDefault.Type,
+				Zone:       ptr.Deref(seedDNSDefault.Zone, ""),
+				SecretData: secret.Data,
+			}
+			domains = append(domains, domain)
+		}
+
+		return domains, nil
+	}
+
+	// Fall back to reading default domain secrets from the namespace
+	secretList := &corev1.SecretList{}
+	if err := c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
+	}); err != nil {
+		return nil, err
+	}
+
+	// Sort domain secrets by DNSDefaultDomainPriority to get the domain with the highest priority first
+	sort.SliceStable(secretList.Items, func(i, j int) bool {
+		iAnnotations := secretList.Items[i].GetAnnotations()
+		jAnnotations := secretList.Items[j].GetAnnotations()
+		var iPriority, jPriority int
+		var err error
+
+		if iAnnotations != nil {
+			if domainPriority, ok := iAnnotations[DNSDefaultDomainPriority]; ok {
+				iPriority, err = strconv.Atoi(domainPriority)
+				if err != nil {
+					iPriority = 0
+				}
+			}
+		}
+		if jAnnotations != nil {
+			if domainPriority, ok := jAnnotations[DNSDefaultDomainPriority]; ok {
+				jPriority, err = strconv.Atoi(domainPriority)
+				if err != nil {
+					jPriority = 0
+				}
+			}
+		}
+
+		return iPriority > jPriority
+	})
+
+	for _, secret := range secretList.Items {
+		domain, err := constructDomainFromSecret(&secret)
+		if err != nil {
+			return nil, fmt.Errorf("error constructing default domain from secret %s: %w", client.ObjectKeyFromObject(&secret), err)
+		}
+		domains = append(domains, domain)
+	}
+
+	return domains, nil
 }
 
 // ReadInternalDomainSecret reads the internal domain secret from the given namespace.
