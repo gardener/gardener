@@ -944,6 +944,9 @@ func (r *Reconciler) migrateSecretBindingToCredentialsBinding(ctx context.Contex
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      migratedCredentialsBindingName,
 			Namespace: shoot.Namespace,
+			Labels: map[string]string{
+				"credentialsbinding.gardener.cloud/status": "force-migrated",
+			},
 		},
 		Provider: securityv1alpha1.CredentialsBindingProvider{
 			Type: secretBinding.Provider.Type,

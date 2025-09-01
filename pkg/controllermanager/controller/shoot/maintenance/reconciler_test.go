@@ -1655,11 +1655,25 @@ var _ = Describe("Shoot Maintenance", func() {
 			err = fakeClient.Get(ctx, client.ObjectKeyFromObject(createdCredentialsBinding), createdCredentialsBinding)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(createdCredentialsBinding.Provider.Type).To(Equal(providerType))
-			Expect(createdCredentialsBinding.CredentialsRef.Kind).To(Equal("Secret"))
-			Expect(createdCredentialsBinding.CredentialsRef.APIVersion).To(Equal("v1"))
-			Expect(createdCredentialsBinding.CredentialsRef.Name).To(Equal(secretName))
-			Expect(createdCredentialsBinding.CredentialsRef.Namespace).To(Equal(secretNamespace))
+			Expect(createdCredentialsBinding).To(Equal(&securityv1alpha1.CredentialsBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "force-migrated-" + secretBindingName,
+					Namespace: namespace,
+					Labels: map[string]string{
+						"credentialsbinding.gardener.cloud/status": "force-migrated",
+					},
+					ResourceVersion: "1",
+				},
+				Provider: securityv1alpha1.CredentialsBindingProvider{
+					Type: providerType,
+				},
+				CredentialsRef: corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Name:       secretName,
+					Namespace:  secretNamespace,
+				},
+			}))
 		})
 
 		It("should use existing user-created CredentialsBinding when it references the same Secret and Quotas match", func() {
