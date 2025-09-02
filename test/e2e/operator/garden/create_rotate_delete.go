@@ -353,7 +353,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
-		// The ETCD encryption key rotation is done in 2 reconciliations. We cannot gurantee that
+		// The ETCD encryption key rotation is done in 2 reconciliations. We cannot guarantee that
 		// the rotation is completed when the Garden is reconciled and helthy, therefore we need
 		// we wait until the second reconciliation is started (the rotation is in Completing phase).
 		It("Wait for ETCD encryption key rotation to reach Completing phase", func(ctx SpecContext) {
