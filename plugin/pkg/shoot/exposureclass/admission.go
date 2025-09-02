@@ -20,12 +20,16 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	plugin "github.com/gardener/gardener/plugin/pkg"
+)
+
+const (
+	// PluginName indicates the name of admission plug-in
+	PluginName = "ShootExposureClass"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameShootExposureClass, func(_ io.Reader) (admission.Interface, error) {
+	plugins.Register(PluginName, func(_ io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

@@ -55,13 +55,17 @@ import (
 	seedmanagementv1alpha1listers "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
+)
+
+const (
+	// PluginName indicates the name of admission plug-in
+	PluginName = "ResourceReferenceManager"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameResourceReferenceManager, func(_ io.Reader) (admission.Interface, error) {
+	plugins.Register(PluginName, func(_ io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

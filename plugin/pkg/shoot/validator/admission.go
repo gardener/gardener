@@ -49,15 +49,18 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
-	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
-const internalVersionErrorMsg = "must not use apiVersion 'internal'"
+const (
+	internalVersionErrorMsg = "must not use apiVersion 'internal'"
+	// PluginName indicates the name of admission plug-in
+	PluginName = "ShootValidator"
+)
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameShootValidator, func(_ io.Reader) (admission.Interface, error) {
+	plugins.Register(PluginName, func(_ io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

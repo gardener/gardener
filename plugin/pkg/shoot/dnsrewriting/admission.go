@@ -14,13 +14,17 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	plugin "github.com/gardener/gardener/plugin/pkg"
 	"github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting/validation"
+)
+
+const (
+	// PluginName indicates the name of admission plug-in
+	PluginName = "ShootDNSRewriting"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameShootDNSRewriting, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
 		cfg, err := LoadConfiguration(config)
 		if err != nil {
 			return nil, err

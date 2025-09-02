@@ -27,12 +27,16 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	plugin "github.com/gardener/gardener/plugin/pkg"
+)
+
+const (
+	// PluginName indicates the name of admission plug-in
+	PluginName = "ExtensionValidator"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameExtensionValidator, NewFactory)
+	plugins.Register(PluginName, NewFactory)
 }
 
 // NewFactory creates a new PluginFactory.

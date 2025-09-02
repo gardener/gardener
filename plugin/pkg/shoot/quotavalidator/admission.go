@@ -31,7 +31,11 @@ import (
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	timeutils "github.com/gardener/gardener/pkg/utils/time"
-	plugin "github.com/gardener/gardener/plugin/pkg"
+)
+
+const (
+	// PluginName indicates the name of admission plug-in
+	PluginName = "ShootQuotaValidator"
 )
 
 var (
@@ -46,7 +50,7 @@ var (
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameShootQuotaValidator, func(_ io.Reader) (admission.Interface, error) {
+	plugins.Register(PluginName, func(_ io.Reader) (admission.Interface, error) {
 		return New(timeutils.DefaultOps())
 	})
 }

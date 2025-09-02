@@ -23,7 +23,6 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 const (
@@ -31,11 +30,13 @@ const (
 	kib
 	mib
 	gib
+	// PluginName indicates the name of admission plug-in
+	PluginName = "ShootResourceReservation"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameShootResourceReservation, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
 		cfg, err := LoadConfiguration(config)
 		if err != nil {
 			return nil, err

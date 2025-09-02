@@ -14,12 +14,16 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
-	plugin "github.com/gardener/gardener/plugin/pkg"
+)
+
+const (
+	// PluginName indicates the name of admission plug-in
+	PluginName = "ShootVPAEnabledByDefault"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameShootVPAEnabledByDefault, func(_ io.Reader) (admission.Interface, error) {
+	plugins.Register(PluginName, func(_ io.Reader) (admission.Interface, error) {
 		return New(), nil
 	})
 }
