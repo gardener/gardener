@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package validator
+package mutator
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameProjectValidator, func(_ io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameProjectMutator, func(_ io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }
