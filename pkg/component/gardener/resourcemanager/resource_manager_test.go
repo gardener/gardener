@@ -338,6 +338,7 @@ var _ = Describe("ResourceManager", func() {
 			DefaultSeccompProfileEnabled:              false,
 			EndpointSliceHintsEnabled:                 false,
 			PodTopologySpreadConstraintsEnabled:       true,
+			VpaInPlaceOrRecreateUpdateModeEnabled:     false,
 			LogLevel:                                  "info",
 			LogFormat:                                 "json",
 			Zones:                                     []string{"a", "b"},
@@ -504,6 +505,7 @@ var _ = Describe("ResourceManager", func() {
 				config.Webhooks.CRDDeletionProtection.Enabled = true
 				config.Webhooks.ExtensionValidation.Enabled = true
 				config.Webhooks.SeccompProfile.Enabled = true
+				config.Webhooks.VpaInPlaceOrRecreateUpdateMode.Enabled = true
 			}
 
 			if responsibilityMode == ForSource {
@@ -1299,7 +1301,41 @@ var _ = Describe("ResourceManager", func() {
 				MatchPolicy:             &matchPolicyExact,
 				SideEffects:             &sideEffect,
 				TimeoutSeconds:          ptr.To[int32](10),
-			})
+			},
+				admissionregistrationv1.MutatingWebhook{
+					Name: "vpa-in-place-or-recreate-update-mode.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"autoscaling.k8s.io"},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"verticalpodautoscalers"},
+						},
+						Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+					}},
+					NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
+					ObjectSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      resourcesv1alpha1.VpaInPlaceOrRecreateUpdateModeSkip,
+								Operator: metav1.LabelSelectorOpDoesNotExist,
+							},
+						},
+					},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      ptr.To("/webhooks/vpa-in-place-or-recreate-update-mode"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					ReinvocationPolicy:      &reinvocationPolicyNever,
+					FailurePolicy:           &failurePolicyFail,
+					MatchPolicy:             &matchPolicyEquivalent,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          ptr.To[int32](10),
+				},
+			)
 
 			return obj
 		}
@@ -2511,6 +2547,7 @@ subjects:
 				cfg.SchedulingProfile = nil
 				cfg.ResponsibilityMode = ForSource
 				cfg.PodKubeAPIServerLoadBalancingWebhook.Enabled = true
+				cfg.VpaInPlaceOrRecreateUpdateModeEnabled = true
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -2610,6 +2647,7 @@ subjects:
 				utilruntime.Must(references.InjectAnnotations(deployment))
 
 				cfg.DefaultSeccompProfileEnabled = true
+				cfg.VpaInPlaceOrRecreateUpdateModeEnabled = true
 				cfg.SchedulingProfile = nil
 				cfg.ResponsibilityMode = ForSourceAndTarget
 				resourceManager = New(c, deployNamespace, sm, cfg)

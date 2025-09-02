@@ -67,6 +67,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/systemcomponentsconfig"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/vpainplaceorrecreateupdatemode"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -333,6 +334,8 @@ type Values struct {
 	NodeAgentAuthorizerAuthorizeWithSelectors *bool
 	// PodKubeAPIServerLoadBalancingWebhook specifies the settings of pod-kube-apiserver-load-balancing webhook.
 	PodKubeAPIServerLoadBalancingWebhook PodKubeAPIServerLoadBalancingWebhook
+	// VpaInPlaceOrRecreateUpdateModeEnabled specifies if a vpa-in-place-pod-vertical-scaling webhook should be enabled.
+	VpaInPlaceOrRecreateUpdateModeEnabled bool
 }
 
 // PodKubeAPIServerLoadBalancingWebhook specifies the settings of pod-kube-apiserver-load-balancing webhook.
@@ -617,6 +620,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
+			},
+			VpaInPlaceOrRecreateUpdateMode: resourcemanagerconfigv1alpha1.VpaInPlaceOrRecreateUpdateModeConfig{
+				Enabled: r.values.VpaInPlaceOrRecreateUpdateModeEnabled,
 			},
 		},
 	}
@@ -1395,6 +1401,10 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, NewPodTopologySpreadConstraintsMutatingWebhook(r.values.NamePrefix, namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
+	if r.values.VpaInPlaceOrRecreateUpdateModeEnabled {
+		webhooks = append(webhooks, NewInPlaceOrRecreateUpdateModeWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+	}
+
 	r.skipStaticPods(webhooks)
 	return webhooks
 }
@@ -1931,6 +1941,45 @@ func NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, highavailabilityconfig.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		MatchPolicy:             ptr.To(admissionregistrationv1.Equivalent),
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		TimeoutSeconds:          ptr.To[int32](10),
+	}
+}
+
+// NewInPlaceOrRecreateUpdateModeWebhook returns the VerticalPodAutoscaler mutating webhook for the resourcemanager component for reuse
+// between the component and integration tests.
+func NewInPlaceOrRecreateUpdateModeWebhook(
+	namespaceSelector *metav1.LabelSelector,
+	secretServerCA *corev1.Secret,
+	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
+) admissionregistrationv1.MutatingWebhook {
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "vpa-in-place-or-recreate-update-mode.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{vpaautoscalingv1.SchemeGroupVersion.Group},
+				APIVersions: []string{vpaautoscalingv1.SchemeGroupVersion.Version},
+				Resources:   []string{"verticalpodautoscalers"},
+			},
+			Operations: []admissionregistrationv1.OperationType{
+				admissionregistrationv1.Create,
+				admissionregistrationv1.Update,
+			},
+		}},
+		NamespaceSelector: namespaceSelector,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      resourcesv1alpha1.VpaInPlaceOrRecreateUpdateModeSkip,
+					Operator: metav1.LabelSelectorOpDoesNotExist,
+				},
+			},
+		},
+		ClientConfig:            buildClientConfigFn(secretServerCA, vpainplaceorrecreateupdatemode.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		ReinvocationPolicy:      ptr.To(admissionregistrationv1.NeverReinvocationPolicy),
 		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
 		MatchPolicy:             ptr.To(admissionregistrationv1.Equivalent),
 		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
