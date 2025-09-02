@@ -133,6 +133,91 @@ var _ = Describe("validator", func() {
 				})
 			})
 
+			Context("Default Domains", func() {
+				BeforeEach(func() {
+					oldSeed = seedBase.DeepCopy()
+					newSeed = seedBase.DeepCopy()
+
+					oldSeed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
+						{
+							Type:   "aws-route53",
+							Domain: "example.com",
+						},
+						{
+							Type:   "gcp-clouddns",
+							Domain: "test.com",
+						},
+					}
+					newSeed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
+						{
+							Type:   "aws-route53",
+							Domain: "example.com",
+						},
+					}
+				})
+
+				It("should allow default domains addition when there are no shoots", func() {
+					newSeed.Spec.DNS.Defaults = append(newSeed.Spec.DNS.Defaults, core.SeedDNSProviderConfig{
+						Type:   "azure-dns",
+						Domain: "new.com",
+					})
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should allow default domains addition when there are shoots", func() {
+					newSeed.Spec.DNS.Defaults = append(newSeed.Spec.DNS.Defaults, core.SeedDNSProviderConfig{
+						Type:   "azure-dns",
+						Domain: "new.com",
+					})
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should allow default domains removal when there are no shoots", func() {
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should allow default domains removal when there are shoots but the removed domain is not used", func() {
+					shootWithDifferentDomain := shoot.DeepCopy()
+					shootWithDifferentDomain.Spec.DNS = &gardencorev1beta1.DNS{
+						Domain: ptr.To("my-shoot.unused.com"),
+					}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootWithDifferentDomain)).To(Succeed())
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should forbid default domains removal when there are shoots using the removed domain", func() {
+					shootUsingRemovedDomain := shoot.DeepCopy()
+					shootUsingRemovedDomain.Spec.DNS = &gardencorev1beta1.DNS{
+						Domain: ptr.To("my-shoot.test.com"),
+					}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootUsingRemovedDomain)).To(Succeed())
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+				})
+
+				It("should allow default domains modification when domain change does not affect shoots", func() {
+					newSeed.Spec.DNS.Defaults[0].Type = "cloudflare"
+					shootWithDifferentDomain := shoot.DeepCopy()
+					shootWithDifferentDomain.Spec.DNS = &gardencorev1beta1.DNS{
+						Domain: ptr.To("my-shoot.other.com"),
+					}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootWithDifferentDomain)).To(Succeed())
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+			})
+
 			Context("Backup provider with WorkloadIdentity credentials", func() {
 				BeforeEach(func() {
 					oldSeed = seedBase.DeepCopy()
