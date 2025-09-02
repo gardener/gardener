@@ -146,9 +146,9 @@ build:
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns
             - pkg/component/networking/nodelocaldns/constants
+            - pkg/component/networking/nodelocaldns/resources/cleanup.sh
             - pkg/component/networking/vpn/envoy
             - pkg/component/networking/vpn/envoy/templates/envoy.yaml.tpl
-            - pkg/component/networking/nodelocaldns/resources/cleanup.sh
             - pkg/component/networking/vpn/seedserver
             - pkg/component/networking/vpn/shoot
             - pkg/component/nodemanagement/dependencywatchdog

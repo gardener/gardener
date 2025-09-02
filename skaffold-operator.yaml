@@ -57,19 +57,55 @@ build:
             - pkg/apis/security/v1alpha1/constants
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
+            - pkg/apis/seedmanagement/helper
             - pkg/apis/seedmanagement/install
             - pkg/apis/seedmanagement/v1alpha1
             - pkg/apis/seedmanagement/v1alpha1/helper
             - pkg/apis/settings
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
+            - pkg/apiserver/admission/initializer
             - pkg/chartrenderer
+            - pkg/client/core/clientset/versioned
+            - pkg/client/core/clientset/versioned/scheme
+            - pkg/client/core/clientset/versioned/typed/core/v1
+            - pkg/client/core/clientset/versioned/typed/core/v1beta1
+            - pkg/client/core/informers/externalversions
+            - pkg/client/core/informers/externalversions/core
+            - pkg/client/core/informers/externalversions/core/v1
+            - pkg/client/core/informers/externalversions/core/v1beta1
+            - pkg/client/core/informers/externalversions/internalinterfaces
+            - pkg/client/core/listers/core/v1
             - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/client/kubernetes/clientmap
             - pkg/client/kubernetes/clientmap/builder
             - pkg/client/kubernetes/clientmap/keys
+            - pkg/client/security/clientset/versioned
+            - pkg/client/security/clientset/versioned/scheme
+            - pkg/client/security/clientset/versioned/typed/security/v1alpha1
+            - pkg/client/security/informers/externalversions
+            - pkg/client/security/informers/externalversions/internalinterfaces
+            - pkg/client/security/informers/externalversions/security
+            - pkg/client/security/informers/externalversions/security/v1alpha1
+            - pkg/client/security/listers/security/v1alpha1
+            - pkg/client/seedmanagement/clientset/versioned
+            - pkg/client/seedmanagement/clientset/versioned/scheme
+            - pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1
+            - pkg/client/seedmanagement/informers/externalversions
+            - pkg/client/seedmanagement/informers/externalversions/internalinterfaces
+            - pkg/client/seedmanagement/informers/externalversions/seedmanagement
+            - pkg/client/seedmanagement/informers/externalversions/seedmanagement/v1alpha1
+            - pkg/client/seedmanagement/listers/seedmanagement/v1alpha1
+            - pkg/client/settings/clientset/versioned
+            - pkg/client/settings/clientset/versioned/scheme
+            - pkg/client/settings/clientset/versioned/typed/settings/v1alpha1
+            - pkg/client/settings/informers/externalversions
+            - pkg/client/settings/informers/externalversions/internalinterfaces
+            - pkg/client/settings/informers/externalversions/settings
+            - pkg/client/settings/informers/externalversions/settings/v1alpha1
+            - pkg/client/settings/listers/settings/v1alpha1
             - pkg/component
             - pkg/component/apiserver
             - pkg/component/autoscaling/vpa
@@ -230,6 +266,7 @@ build:
             - pkg/controller/service
             - pkg/controller/vpaevictionrequirements
             - pkg/controllermanager/apis/config/v1alpha1
+            - pkg/controllermanager/controller/namespacedcloudprofile
             - pkg/controllerutils
             - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate
@@ -311,6 +348,7 @@ build:
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
+            - pkg/utils/time
             - pkg/utils/timewindow
             - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
@@ -322,6 +360,46 @@ build:
             - pkg/utils/version
             - pkg/utils/workloadidentity
             - plugin/pkg
+            - plugin/pkg/backupbucket/validator
+            - plugin/pkg/bastion/validator
+            - plugin/pkg/controllerregistration/resources
+            - plugin/pkg/global/customverbauthorizer
+            - plugin/pkg/global/deletionconfirmation
+            - plugin/pkg/global/extensionlabels
+            - plugin/pkg/global/extensionvalidation
+            - plugin/pkg/global/finalizerremoval
+            - plugin/pkg/global/resourcereferencemanager
+            - plugin/pkg/managedseed/shoot
+            - plugin/pkg/managedseed/validator
+            - plugin/pkg/namespacedcloudprofile/validator
+            - plugin/pkg/project/validator
+            - plugin/pkg/seed/mutator
+            - plugin/pkg/seed/validator
+            - plugin/pkg/shoot/dns
+            - plugin/pkg/shoot/dnsrewriting
+            - plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting
+            - plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting/install
+            - plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting/v1alpha1
+            - plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting/validation
+            - plugin/pkg/shoot/exposureclass
+            - plugin/pkg/shoot/managedseed
+            - plugin/pkg/shoot/nodelocaldns
+            - plugin/pkg/shoot/oidc
+            - plugin/pkg/shoot/oidc/clusteropenidconnectpreset
+            - plugin/pkg/shoot/oidc/openidconnectpreset
+            - plugin/pkg/shoot/quotavalidator
+            - plugin/pkg/shoot/resourcereservation
+            - plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation
+            - plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation/install
+            - plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation/v1alpha1
+            - plugin/pkg/shoot/tolerationrestriction
+            - plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction
+            - plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction/install
+            - plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction/v1alpha1
+            - plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction/validation
+            - plugin/pkg/shoot/validator
+            - plugin/pkg/shoot/vpa
+            - plugin/pkg/utils
             - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:

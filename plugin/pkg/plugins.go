@@ -15,7 +15,6 @@ import (
 
 	backupbucketvalidator "github.com/gardener/gardener/plugin/pkg/backupbucket/validator"
 	bastion "github.com/gardener/gardener/plugin/pkg/bastion/validator"
-	"github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 	"github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
@@ -60,7 +59,7 @@ func AllPluginNames() []string {
 		shootvalidator.PluginName,                  // ShootValidator
 		seedvalidator.PluginName,                   // SeedValidator
 		seedmutator.PluginName,                     // SeedMutator
-		resources.PluginName,                       // ControllerRegistrationResources
+		controllerregistrationresources.PluginName, // ControllerRegistrationResources
 		namespacedcloudprofilevalidator.PluginName, // NamespacedCloudProfileValidator
 		projectvalidator.PluginName,                // ProjectValidator
 		deletionconfirmation.PluginName,            // DeletionConfirmation
