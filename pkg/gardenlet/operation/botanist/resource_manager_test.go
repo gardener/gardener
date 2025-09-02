@@ -32,6 +32,7 @@ import (
 	mockresourcemanager "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/mock"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	"github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -142,6 +143,19 @@ var _ = Describe("ResourceManager", func() {
 			Expect(resourceManager).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues().NodeAgentAuthorizerAuthorizeWithSelectors).To(PointTo(Equal(true)))
+		})
+
+		When("VpaInPlacePodVerticalScaling feature gate is enabled", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VpaInPlacePodVerticalScaling, true))
+			})
+
+			FIt("should successfully set VpaInPlacePodVerticalScalingEnabled=true if VpaInPlacePodVerticalScaling is enabled in the Gardenlet", func() {
+				resourceManager, err := botanist.DefaultResourceManager()
+				Expect(resourceManager).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resourceManager.GetValues().VpaInPlaceOrRecreateUpdateModeEnabled).To(Equal(true))
+			})
 		})
 	})
 
