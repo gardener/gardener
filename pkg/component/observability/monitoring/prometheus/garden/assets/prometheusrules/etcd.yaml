@@ -123,10 +123,10 @@ spec:
       annotations:
         summary: >-
           Virtual garden etcd {{$labels.role}} DB size is approaching its current
-          practical limit in landscape {{$externalLabels.landscape}}. Current DB size: {{ humanize1024(etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"}) }}.
+          practical limit in landscape {{$externalLabels.landscape}}. Current DB size: {{ etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"} }}.
         description: >-
           Virtual garden etcd {{$labels.role}} DB size is approaching its current
-          practical limit of 8GB. Current DB size: {{ humanize1024(etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"}) }}. Etcd quota might need to be increased.
+          practical limit of 8GB. Current DB size: {{ etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"} }}. Etcd quota might need to be increased.
 
     - alert: EtcdDbSizeLimitCrossed
       expr: |
@@ -139,10 +139,10 @@ spec:
       annotations:
         summary: >-
           Virtual garden etcd {{$labels.role}} DB size has crossed its current
-          practical limit in landscape {{$externalLabels.landscape}}. Current DB size: {{ humanize1024(etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"}) }}.
+          practical limit in landscape {{$externalLabels.landscape}}. Current DB size: {{ etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"} }}.
         description: >-
           Virtual garden etcd {{$labels.role}} DB size has crossed its current
-          practical limit of 8GB. Current DB size: {{ humanize1024(etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"}) }}. Etcd quota must be increased to allow updates.
+          practical limit of 8GB. Current DB size: {{ etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"} }}. Etcd quota must be increased to allow updates.
 
     - alert: EtcdDeltaBackupFailed
       expr: |
