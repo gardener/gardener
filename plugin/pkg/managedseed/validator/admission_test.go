@@ -910,6 +910,52 @@ var _ = Describe("ManagedSeed", func() {
 						})),
 					))
 				})
+
+				It("should forbid default domain change when at least one shoot is scheduled to seed", func() {
+					oldGardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					oldGardenletConfig.SeedConfig.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+						{
+							Type:   "aws-route53",
+							Domain: "old-default.com",
+						},
+						{
+							Type:   "gcp-clouddns",
+							Domain: "another-default.com",
+						},
+					}
+
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					newGardenletConfig.SeedConfig.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+						{
+							Type:   "aws-route53",
+							Domain: "old-default.com",
+						},
+					}
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					shoot := &gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							SeedName: &newManagedSeed.Name,
+							DNS: &gardencorev1beta1.DNS{
+								Domain: ptr.To("my-shoot.another-default.com"),
+							},
+						},
+					}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ContainElement(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.dns.defaults"),
+							"Detail": ContainSubstring("default domains must not be removed while shoots are still using them"),
+						})),
+					))
+				})
 			})
 		})
 	})
