@@ -5237,6 +5237,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Kind: "CloudProfile",
 					Name: "my-profile",
 				}
+				shoot.Spec.SecretBindingName = nil
+				shoot.Spec.CredentialsBindingName = ptr.To("creds")
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-complete")
 				shoot.Status = core.ShootStatus{
 					LastOperation: &core.LastOperation{
