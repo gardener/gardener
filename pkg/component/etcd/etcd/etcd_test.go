@@ -218,10 +218,9 @@ var _ = Describe("Etcd", func() {
 						"role":                             role,
 						"app":                              "etcd-statefulset",
 						"networking.gardener.cloud/to-dns": "allowed",
-						"networking.gardener.cloud/to-public-networks":                                "allowed",
-						"networking.gardener.cloud/to-private-networks":                               "allowed",
-						"networking.gardener.cloud/to-runtime-apiserver":                              "allowed",
-						"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": "allowed",
+						"networking.gardener.cloud/to-public-networks":   "allowed",
+						"networking.gardener.cloud/to-private-networks":  "allowed",
+						"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 					},
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
