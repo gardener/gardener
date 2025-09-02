@@ -18,8 +18,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
-	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -47,14 +45,9 @@ func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 		return extensionsv1alpha1.File{}, err
 	}
 
-	endpoint := valiconstants.PushEndpoint
-	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		endpoint = collectorconstants.PushEndpoint
-	}
-
 	var config bytes.Buffer
 	if err := tplValitail.Execute(&config, map[string]any{
-		"clientURL":         "https://" + ctx.ValiIngress + endpoint,
+		"clientURL":         "https://" + ctx.ValiIngress + valiconstants.PushEndpoint,
 		"pathCACert":        PathCACert,
 		"valiIngress":       ctx.ValiIngress,
 		"pathAuthToken":     PathAuthToken,
