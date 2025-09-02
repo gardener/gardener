@@ -340,6 +340,11 @@ func (g *garden) Start(ctx context.Context) error {
 		}
 	}
 
+	log.Info("Perform Gardener version verification")
+	if err := bootstrappers.VerifyGardenerVersion(ctx, g.mgr.GetLogger(), gardenCluster.GetAPIReader()); err != nil {
+		return fmt.Errorf("failed verifying Gardener version: %w", err)
+	}
+
 	log.Info("Adding field indexes to informers")
 	if err := addAllFieldIndexes(ctx, gardenCluster.GetFieldIndexer()); err != nil {
 		return fmt.Errorf("failed adding indexes: %w", err)

@@ -1040,4 +1040,10 @@ const (
 	// AnnotationEmergencyStopShootReconciliations is the key for the emergency switch annotation for the seed resource
 	// to temporarily pause further shoot reconciliations.
 	AnnotationEmergencyStopShootReconciliations = "shoot.gardener.cloud/emergency-stop-reconciliations"
+
+	// ConfigMapNameGardenerInfo is the name of the gardener-info ConfigMap.
+	ConfigMapNameGardenerInfo = "gardener-info"
+	// GardenerInfoConfigMapDataKeyGardenerAPIServer is the data key in the gardener-info ConfigMap that contains
+	// information about gardener-apiserver.
+	GardenerInfoConfigMapDataKeyGardenerAPIServer = "gardenerAPIServer"
 )
