@@ -85,6 +85,12 @@ const (
 	// owner: @rrhubenov
 	// alpha: v1.124.0
 	OpenTelemetryCollector featuregate.Feature = "OpenTelemetryCollector"
+
+	// VpaInPlaceOrRecreateUpdateMode enables the usage of in-place Pod resource updates in the Vertical Pod Autoscaler deployments.
+	// resources to perform in-place Pod resource updates.
+	// owner: @vitanovs
+	// alpha: v1.128.0
+	VpaInPlaceOrRecreateUpdateMode featuregate.Feature = "VpaInPlaceOrRecreateUpdateMode"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -122,6 +128,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha},
 	DoNotCopyBackupCredentials:               {Default: true, PreRelease: featuregate.Beta},
 	OpenTelemetryCollector:                   {Default: false, PreRelease: featuregate.Alpha},
+	VpaInPlaceOrRecreateUpdateMode:           {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
