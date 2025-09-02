@@ -32,6 +32,7 @@ import (
 	mockresourcemanager "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/mock"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	"github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -143,6 +144,54 @@ var _ = Describe("ResourceManager", func() {
 			Expect(resourceManager).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues().NodeAgentAuthorizerAuthorizeWithSelectors).To(PointTo(Equal(true)))
+		})
+
+		When("VpaInPlaceOrRecreateUpdateMode feature gate is enabled", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VpaInPlaceOrRecreateUpdateMode, true))
+			})
+
+			Context("with Shoot Vertical Pod Autoscaler InPlaceOrRecreate featuer gate enabled", func() {
+				BeforeEach(func() {
+					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Kubernetes: gardencorev1beta1.Kubernetes{
+								VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
+									FeatureGates: map[string]bool{"InPlaceOrRecreate": true},
+								},
+							},
+						},
+					})
+				})
+
+				It("should set VpaInPlaceOrRecreateUpdateModeEnabled=true", func() {
+					resourceManager, err := botanist.DefaultResourceManager()
+					Expect(resourceManager).NotTo(BeNil())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(resourceManager.GetValues().VpaInPlaceOrRecreateUpdateModeEnabled).To(BeTrue())
+				})
+			})
+
+			Context("with Shoot Vertical Pod Autoscaler InPlaceOrRecreate featuer gate disabled", func() {
+				BeforeEach(func() {
+					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Kubernetes: gardencorev1beta1.Kubernetes{
+								VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
+									FeatureGates: map[string]bool{"InPlaceOrRecreate": false},
+								},
+							},
+						},
+					})
+				})
+
+				It("should set VpaInPlaceOrRecreateUpdateModeEnabled=false", func() {
+					resourceManager, err := botanist.DefaultResourceManager()
+					Expect(resourceManager).NotTo(BeNil())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(resourceManager.GetValues().VpaInPlaceOrRecreateUpdateModeEnabled).To(BeFalse())
+				})
+			})
 		})
 	})
 
