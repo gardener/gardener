@@ -86,6 +86,7 @@ func AllPluginNames() []string {
 		PluginNameShootDNSRewriting,                 // ShootDNSRewriting
 		PluginNameShootQuotaValidator,               // ShootQuotaValidator
 		PluginNameShootValidator,                    // ShootValidator
+		PluginNameShootVPAEnabledByDefault,          // ShootVPAEnabledByDefault
 		PluginNameSeedValidator,                     // SeedValidator
 		PluginNameSeedMutator,                       // SeedMutator
 		PluginNameControllerRegistrationResources,   // ControllerRegistrationResources
@@ -96,7 +97,6 @@ func AllPluginNames() []string {
 		PluginNameOpenIDConnectPreset,               // OpenIDConnectPreset
 		PluginNameClusterOpenIDConnectPreset,        // ClusterOpenIDConnectPreset
 		PluginNameCustomVerbAuthorizer,              // CustomVerbAuthorizer
-		PluginNameShootVPAEnabledByDefault,          // ShootVPAEnabledByDefault
 		PluginNameShootResourceReservation,          // ShootResourceReservation
 		PluginNameManagedSeed,                       // ManagedSeed
 		PluginNameManagedSeedShoot,                  // ManagedSeedShoot
@@ -131,6 +131,7 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameShootResourceReservation,        // ShootResourceReservation
 		PluginNameShootQuotaValidator,             // ShootQuotaValidator
 		PluginNameShootValidator,                  // ShootValidator
+		PluginNameShootVPAEnabledByDefault,        // ShootVPAEnabledByDefault
 		PluginNameSeedValidator,                   // SeedValidator
 		PluginNameSeedMutator,                     // SeedMutator
 		PluginNameControllerRegistrationResources, // ControllerRegistrationResources
@@ -147,7 +148,6 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameBackupBucketValidator,           // BackupBucketValidator
 		mutatingwebhook.PluginName,                // MutatingAdmissionWebhook
 		validatingwebhook.PluginName,              // ValidatingAdmissionWebhook
-		PluginNameShootVPAEnabledByDefault,        // ShootVPAEnabledByDefault
 		// TODO(ary1992): Ennable the plugin once our base clusters are updated to k8s >= 1.30
 		// validating.PluginName,                     // ValidatingAdmissionPolicy
 		resourcequota.PluginName, // ResourceQuota
