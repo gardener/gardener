@@ -739,12 +739,11 @@ func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSe
 		featureGates = settings.VerticalPodAutoscaler.FeatureGates
 	}
 
-	return sharedcomponent.NewVerticalPodAutoscaler(
+	verticalPodAutoscaler, err := sharedcomponent.NewVerticalPodAutoscaler(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		r.SeedVersion,
 		secretsManager,
-		vpaEnabled(settings),
 		v1beta1helper.SeedSettingVerticalPodAutoscalerMaxAllowed(settings),
 		v1beta1constants.SecretNameCASeed,
 		v1beta1constants.PriorityClassNameSeedSystem800,
@@ -753,6 +752,16 @@ func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSe
 		isGardenCluster,
 		featureGates,
 	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !vpaEnabled(settings) {
+		return component.OpDestroyWithoutWait(verticalPodAutoscaler), nil
+	}
+
+	return verticalPodAutoscaler, nil
 }
 
 func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {

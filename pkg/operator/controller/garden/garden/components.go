@@ -452,12 +452,11 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 		featureGates = garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates
 	}
 
-	return sharedcomponent.NewVerticalPodAutoscaler(
+	verticalPodAutoscaler, err := sharedcomponent.NewVerticalPodAutoscaler(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		r.RuntimeVersion,
 		secretsManager,
-		vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 		helper.VerticalPodAutoscalerMaxAllowed(garden.Spec.RuntimeCluster.Settings),
 		operatorv1alpha1.SecretNameCARuntime,
 		v1beta1constants.PriorityClassNameGardenSystem300,
@@ -466,6 +465,16 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 		true,
 		featureGates,
 	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !vpaEnabled(garden.Spec.RuntimeCluster.Settings) {
+		return component.OpDestroyWithoutWait(verticalPodAutoscaler), nil
+	}
+
+	return verticalPodAutoscaler, nil
 }
 
 func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {

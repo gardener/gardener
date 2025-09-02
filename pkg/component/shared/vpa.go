@@ -26,7 +26,6 @@ func NewVerticalPodAutoscaler(
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
 	secretsManager secretsmanager.Interface,
-	enabled bool,
 	maxAllowed corev1.ResourceList,
 	secretNameServerCA string,
 	priorityClassNameAdmissionController string,
@@ -60,7 +59,6 @@ func NewVerticalPodAutoscaler(
 		vpa.Values{
 			ClusterType:              component.ClusterTypeSeed,
 			IsGardenCluster:          isGardenCluster,
-			Enabled:                  enabled,
 			SecretNameServerCA:       secretNameServerCA,
 			RuntimeKubernetesVersion: runtimeVersion,
 			AdmissionController: vpa.ValuesAdmissionController{
