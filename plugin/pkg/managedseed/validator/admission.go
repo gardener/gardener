@@ -290,6 +290,7 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 		seedConfigSpecBasePath  = field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec")
 		zonesFieldPath          = seedConfigSpecBasePath.Child("provider", "zones")
 		internalDomainFieldPath = seedConfigSpecBasePath.Child("dns", "internal", "domain")
+		defaultDomainsFieldPath = seedConfigSpecBasePath.Child("dns", "defaults")
 	)
 
 	oldSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(oldManagedSeed)
@@ -307,6 +308,10 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 
 	if err := admissionutils.ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
 		allErrs = append(allErrs, field.Forbidden(internalDomainFieldPath, "internal domain must not be changed while shoots are still scheduled onto seed"))
+	}
+
+	if err := admissionutils.ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
+		allErrs = append(allErrs, field.Forbidden(defaultDomainsFieldPath, "default domains must not be removed while shoots are still using them"))
 	}
 
 	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)
