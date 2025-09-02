@@ -6676,7 +6676,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
-		DescribeTable("should reject if volume name does not match expected regex", func(name string, errType field.ErrorType) {
+		DescribeTable("volume name validation", func(name string, errType field.ErrorType) {
 			maxSurge := intstr.FromInt32(1)
 			maxUnavailable := intstr.FromInt32(0)
 			vol := core.Volume{Name: &name, VolumeSize: "75Gi"}
@@ -6702,6 +6702,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		},
 			Entry("too long name", "vol1-name-is-too-long-for-test", field.ErrorTypeTooLong),
 			Entry("invalid name", "not%dns/1123", field.ErrorTypeInvalid),
+			Entry("empty name", "", field.ErrorTypeRequired),
 		)
 
 		It("should reject if data volume size does not match size regex", func() {
