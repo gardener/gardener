@@ -40,6 +40,7 @@ func (g *gardenerScheduler) clusterRole() *rbacv1.ClusterRole {
 				Resources: []string{
 					"cloudprofiles",
 					"namespacedcloudprofiles",
+					"projects",
 					"seeds",
 				},
 				Verbs: []string{"get", "list", "watch"},
