@@ -42,7 +42,7 @@ require (
 	github.com/prometheus/common v0.65.0
 	github.com/robfig/cron v1.2.0
 	github.com/spf13/afero v1.14.0
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.9
 	github.com/spf13/viper v1.20.1
 	github.com/texttheater/golang-levenshtein v1.0.1
