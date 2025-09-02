@@ -58,16 +58,16 @@ func VerifyGardenerVersion(ctx context.Context, log logr.Logger, reader client.R
 	if gardenletVersionTooHigh, err := versionutils.CompareVersions(gardenletVersion.String(), ">", gardenerAPIServerVersion.String()); err != nil {
 		return fmt.Errorf("failed comparing versions: %w", err)
 	} else if gardenletVersionTooHigh {
-		return fmt.Errorf("gardenlet version must not be newer than gardener-apiserver version (gardener-apiserver version: %s, my version: %s), please consult https://gardener.cloud/docs/gardener/deployment/version_skew_policy/#version-skew-policy", gardenerAPIServerVersion, gardenletVersion)
+		return fmt.Errorf("gardenlet version must not be newer than gardener-apiserver version (gardener-apiserver version: %s, gardenlet version: %s), please consult https://gardener.cloud/docs/gardener/deployment/version_skew_policy/#version-skew-policy", gardenerAPIServerVersion, gardenletVersion)
 	}
 
 	// IncMinor implicitly sets the patch version to '0'.
 	if gardenletVersionTooLow, err := versionutils.CompareVersions(gardenletVersion.IncMinor().IncMinor().String(), "<", fmt.Sprintf("%d.%d.0", gardenerAPIServerVersion.Major(), gardenerAPIServerVersion.Minor())); err != nil {
 		return fmt.Errorf("failed comparing versions: %w", err)
 	} else if gardenletVersionTooLow {
-		return fmt.Errorf("gardenlet version must not be older than two minor gardener-apiserver versions (gardener-apiserver version: %s, my version: %s), please consult https://gardener.cloud/docs/gardener/deployment/version_skew_policy/#version-skew-policy", gardenerAPIServerVersion, gardenletVersion)
+		return fmt.Errorf("gardenlet version must not be older than two minor gardener-apiserver versions (gardener-apiserver version: %s, gardenlet version: %s), please consult https://gardener.cloud/docs/gardener/deployment/version_skew_policy/#version-skew-policy", gardenerAPIServerVersion, gardenletVersion)
 	}
 
-	log.Info("Successfully verified Gardener version skew")
+	log.Info("Successfully verified Gardener version skew", "gardener-apiserver", gardenerAPIServerVersion.String(), "gardenlet", gardenletVersion.String())
 	return nil
 }
