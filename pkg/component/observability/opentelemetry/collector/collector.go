@@ -261,10 +261,10 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			Config: otelv1beta1.Config{
 				Receivers: otelv1beta1.AnyConfig{
 					Object: map[string]any{
-						"loki": map[string]any{
+						"otlp": map[string]any{
 							"protocols": map[string]any{
-								"http": map[string]any{
-									"endpoint": "0.0.0.0:" + strconv.Itoa(collectorconstants.PushPort),
+								"grpc": map[string]any{
+									"endpoint": "127.0.0.1:" + strconv.Itoa(collectorconstants.PushPort),
 								},
 							},
 						},
@@ -328,7 +328,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 								"loki",
 							},
 							Receivers: []string{
-								"loki",
+								"otlp",
 							},
 							Processors: []string{
 								"attributes/labels",
@@ -357,6 +357,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					fmt.Sprintf("--upstream=http://127.0.0.1:%d/", collectorconstants.PushPort),
 					"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
 					"--logtostderr=true",
+					"--upstream-force-h2c",
 					"--v=6",
 				},
 				Resources: corev1.ResourceRequirements{

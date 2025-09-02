@@ -154,6 +154,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				"--upstream=http://127.0.0.1:4317/",
 				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--logtostderr=true",
+				"--upstream-force-h2c",
 				"--v=6",
 			},
 			Resources: corev1.ResourceRequirements{
@@ -283,10 +284,10 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				Config: otelv1beta1.Config{
 					Receivers: otelv1beta1.AnyConfig{
 						Object: map[string]any{
-							"loki": map[string]any{
+							"otlp": map[string]any{
 								"protocols": map[string]any{
-									"http": map[string]any{
-										"endpoint": "0.0.0.0:4317",
+									"grpc": map[string]any{
+										"endpoint": "127.0.0.1:4317",
 									},
 								},
 							},
@@ -351,7 +352,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						Pipelines: map[string]*otelv1beta1.Pipeline{
 							"logs": {
 								Exporters:  []string{"loki"},
-								Receivers:  []string{"loki"},
+								Receivers:  []string{"otlp"},
 								Processors: []string{"attributes/labels", "batch"},
 							},
 						},
