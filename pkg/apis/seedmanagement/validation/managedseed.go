@@ -93,7 +93,7 @@ func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *fiel
 		allErrs = append(allErrs, validateShoot(spec.Shoot, fldPath.Child("shoot"), inTemplate)...)
 	}
 
-	allErrs = append(allErrs, validateGardenlet(&spec.Gardenlet, fldPath.Child("gardenlet"), inTemplate)...)
+	allErrs = append(allErrs, validateGardenlet(&spec.Gardenlet, fldPath.Child("gardenlet"))...)
 
 	return allErrs
 }
@@ -131,7 +131,7 @@ func validateShoot(shoot *seedmanagement.Shoot, fldPath *field.Path, inTemplate 
 	return allErrs
 }
 
-func validateGardenlet(gardenlet *seedmanagement.GardenletConfig, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func validateGardenlet(gardenlet *seedmanagement.GardenletConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if gardenlet.Deployment != nil {
@@ -139,7 +139,7 @@ func validateGardenlet(gardenlet *seedmanagement.GardenletConfig, fldPath *field
 	}
 
 	if gardenlet.Config != nil {
-		allErrs = append(allErrs, validateGardenletConfig(gardenlet.Config, ptr.Deref(gardenlet.Bootstrap, seedmanagement.BootstrapNone), ptr.Deref(gardenlet.MergeWithParent, false), fldPath.Child("config"), inTemplate)...)
+		allErrs = append(allErrs, validateGardenletConfig(gardenlet.Config, ptr.Deref(gardenlet.Bootstrap, seedmanagement.BootstrapNone), ptr.Deref(gardenlet.MergeWithParent, false), fldPath.Child("config"))...)
 	}
 
 	if gardenlet.Bootstrap != nil {
@@ -152,7 +152,7 @@ func validateGardenlet(gardenlet *seedmanagement.GardenletConfig, fldPath *field
 	return allErrs
 }
 
-func validateGardenletConfig(config runtime.Object, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func validateGardenletConfig(config runtime.Object, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	gardenletConfig, ok := config.(*gardenletconfigv1alpha1.GardenletConfiguration)
@@ -162,7 +162,7 @@ func validateGardenletConfig(config runtime.Object, bootstrap seedmanagement.Boo
 	}
 
 	// Validate gardenlet config
-	allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, bootstrap, mergeWithParent, fldPath, inTemplate)...)
+	allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, bootstrap, mergeWithParent, fldPath)...)
 
 	return allErrs
 }
@@ -251,7 +251,7 @@ func validateImage(image *seedmanagement.Image, fldPath *field.Path) field.Error
 	return allErrs
 }
 
-func validateGardenletConfiguration(gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func validateGardenletConfiguration(gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// Ensure name is not specified since it will be set by the controller
@@ -260,7 +260,7 @@ func validateGardenletConfiguration(gardenletConfig *gardenletconfigv1alpha1.Gar
 	}
 
 	// Validate gardenlet config
-	allErrs = append(allErrs, gardenletvalidation.ValidateGardenletConfiguration(gardenletConfig, fldPath, inTemplate)...)
+	allErrs = append(allErrs, gardenletvalidation.ValidateGardenletConfiguration(gardenletConfig, fldPath)...)
 
 	if gardenletConfig.GardenClientConnection != nil {
 		allErrs = append(allErrs, validateGardenClientConnection(gardenletConfig.GardenClientConnection, bootstrap, mergeWithParent, fldPath.Child("gardenClientConnection"))...)

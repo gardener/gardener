@@ -25,7 +25,7 @@ import (
 )
 
 // ValidateGardenletConfiguration validates a GardenletConfiguration object.
-func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfiguration, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.GardenClientConnection != nil {

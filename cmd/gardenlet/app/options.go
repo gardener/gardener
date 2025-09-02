@@ -66,7 +66,7 @@ func (o *options) Complete() error {
 }
 
 func (o *options) Validate() error {
-	if errs := gardenletvalidation.ValidateGardenletConfiguration(o.config, nil, false); len(errs) > 0 {
+	if errs := gardenletvalidation.ValidateGardenletConfiguration(o.config, nil); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
 
