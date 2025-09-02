@@ -500,15 +500,9 @@ var _ = Describe("GardenletConfiguration", func() {
 		})
 
 		Context("seed config", func() {
-			It("should require a seedConfig", func() {
+			It("should not require a seedConfig", func() {
 				cfg.SeedConfig = nil
-
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("seedConfig"),
-				}))))
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
 			})
 		})
 
