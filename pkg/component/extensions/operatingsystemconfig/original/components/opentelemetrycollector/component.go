@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -23,8 +23,8 @@ const (
 
 	// PathDirectory is the path for the opentelemetry-collector's directory.
 	PathDirectory = "/var/lib/opentelemetry-collector"
-	// PathAuthToken is the path for the file containing opentelemetry-collector's authentication token for communication with the Vali
-	// sidecar proxy.
+	// PathAuthToken is the path for the file containing opentelemetry-collector's authentication that gets
+	// validated by the kube-rbac-proxy.
 	PathAuthToken = PathDirectory + "/auth-token"
 	// PathConfig is the path for the opentelemetry-collector's configuration file.
 	PathConfig = v1beta1constants.OperatingSystemConfigFilePathOpenTelemetryCollector
@@ -42,10 +42,12 @@ func New() *component {
 	return &component{}
 }
 
+// Name returns the name of the component.
 func (component) Name() string {
 	return "opentelemetry-collector"
 }
 
+// Config returns the units and files for the opentelemetry-collector component.
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var (
 		units []extensionsv1alpha1.Unit
