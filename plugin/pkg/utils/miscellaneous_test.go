@@ -237,4 +237,116 @@ var _ = Describe("Miscellaneous", func() {
 			Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
 		})
 	})
+
+	Describe("#ValidateDefaultDomainsChangeForSeed", func() {
+		var (
+			seedName = "foo"
+			kind     = "foo"
+
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
+			shootLister         gardencorev1beta1listers.ShootLister
+
+			oldSeedSpec, newSeedSpec *core.SeedSpec
+			shoot                    *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			shootLister = coreInformerFactory.Core().V1beta1().Shoots().Lister()
+
+			oldSeedSpec = &core.SeedSpec{
+				DNS: core.SeedDNS{
+					Defaults: []core.SeedDNSProviderConfig{
+						{Domain: "example.com"},
+						{Domain: "test.org"},
+					},
+				},
+			}
+			newSeedSpec = oldSeedSpec.DeepCopy()
+
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					SeedName: &seedName,
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					SeedName: &seedName,
+				},
+			}
+		})
+
+		It("should do nothing if default domains are unchanged", func() {
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should do nothing if domains are reordered but same domains exist", func() {
+			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{
+				{Domain: "test.org"},
+				{Domain: "example.com"},
+			}
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should do nothing if default domains are empty in both specs", func() {
+			oldSeedSpec.DNS.Defaults = nil
+			newSeedSpec.DNS.Defaults = nil
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should do nothing if default domains changed but no shoots exist", func() {
+			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{
+				{Domain: "new-domain.com"},
+			}
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should do nothing if default domains added (even with shoots on the seed)", func() {
+			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{
+				{Domain: "example.com"},
+				{Domain: "test.org"},
+				{Domain: "new-domain.com"},
+			}
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should do nothing if default domains removed but no shoots are using them", func() {
+			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{
+				{Domain: "example.com"},
+			}
+			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.other-domain.com")}
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should return error if default domains removed and shoots are using them", func() {
+			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{
+				{Domain: "test.org"},
+			}
+			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.example.com")}
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			err := ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(`cannot remove default domains [example.com] from foo "foo" as they are still being used by shoots`))
+		})
+
+		It("should return error if multiple default domains removed and shoots are using them", func() {
+			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{}
+			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.test.org")}
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			err := ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("cannot remove default domains"))
+			Expect(err.Error()).To(ContainSubstring("test.org"))
+		})
+
+		It("should do nothing if default domains changed but shoots exist for other seeds", func() {
+			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{}
+			otherSeed := "other-seed"
+			shoot.Spec.SeedName = &otherSeed
+			shoot.Status.SeedName = &otherSeed
+			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.example.com")}
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+	})
 })

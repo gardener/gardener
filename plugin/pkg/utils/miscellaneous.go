@@ -6,6 +6,7 @@ package utils
 
 import (
 	"fmt"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,10 +27,7 @@ func SkipVerification(operation admission.Operation, metadata metav1.ObjectMeta)
 // IsSeedUsedByShoot checks whether there is a shoot cluster referencing the provided seed name
 func IsSeedUsedByShoot(seedName string, shoots []*gardencorev1beta1.Shoot) bool {
 	for _, shoot := range shoots {
-		if shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName {
-			return true
-		}
-		if shoot.Status.SeedName != nil && *shoot.Status.SeedName == seedName {
+		if isSeedUsedByShoot(seedName, shoot) {
 			return true
 		}
 	}
@@ -101,4 +99,69 @@ func ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec
 	}
 
 	return nil
+}
+
+// ValidateDefaultDomainsChangeForSeed returns an error when default domains that are being used by a shoot scheduled on the seed are removed.
+func ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorev1beta1listers.ShootLister, kind string) error {
+	oldDomains := sets.New[string]()
+	for _, defaultDomain := range oldSeedSpec.DNS.Defaults {
+		oldDomains.Insert(defaultDomain.Domain)
+	}
+
+	newDomains := sets.New[string]()
+	for _, defaultDomain := range newSeedSpec.DNS.Defaults {
+		newDomains.Insert(defaultDomain.Domain)
+	}
+
+	removedDomains := oldDomains.Difference(newDomains)
+	if removedDomains.Len() == 0 {
+		// No domains removed, no validation needed
+		return nil
+	}
+
+	shoots, err := shootLister.List(labels.Everything())
+	if err != nil {
+		return err
+	}
+
+	usedRemovedDomains := sets.New[string]()
+	for _, shoot := range shoots {
+		if !isSeedUsedByShoot(seedName, shoot) {
+			continue
+		}
+
+		if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
+			continue
+		}
+
+		shootDomain := *shoot.Spec.DNS.Domain
+
+		for removedDomain := range removedDomains {
+			if strings.HasSuffix(shootDomain, "."+removedDomain) {
+				usedRemovedDomains.Insert(removedDomain)
+				break
+			}
+		}
+	}
+
+	if usedRemovedDomains.Len() > 0 {
+		formatted := make([]string, 0, usedRemovedDomains.Len())
+		for domain := range usedRemovedDomains {
+			formatted = append(formatted, domain)
+		}
+		return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove default domains %v from %s %q as they are still being used by shoots", formatted, kind, seedName))
+	}
+
+	return nil
+}
+
+// isSeedUsedByShoot checks whether the provided shoot is using the specified seed name
+func isSeedUsedByShoot(seedName string, shoot *gardencorev1beta1.Shoot) bool {
+	if shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName {
+		return true
+	}
+	if shoot.Status.SeedName != nil && *shoot.Status.SeedName == seedName {
+		return true
+	}
+	return false
 }
