@@ -6700,6 +6700,62 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
+		It("should reject if volume size does not match size regex", func() {
+			maxSurge := intstr.FromInt32(1)
+			maxUnavailable := intstr.FromInt32(0)
+			name := "vol1-name"
+			vol := core.Volume{Name: &name, VolumeSize: "12MiB"}
+			worker := core.Worker{
+				Name: "worker-name",
+				Machine: core.Machine{
+					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
+					Architecture: ptr.To("amd64"),
+				},
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Volume:         &vol,
+			}
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
+			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("volume.size"),
+				"BadValue": Equal("12MiB"),
+			}))))
+		})
+
+		DescribeTable("volume name validation", func(name string, errType field.ErrorType) {
+			maxSurge := intstr.FromInt32(1)
+			maxUnavailable := intstr.FromInt32(0)
+			vol := core.Volume{Name: &name, VolumeSize: "75Gi"}
+			worker := core.Worker{
+				Name: "worker-name",
+				Machine: core.Machine{
+					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
+					Architecture: ptr.To("amd64"),
+				},
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Volume:         &vol,
+			}
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
+			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(errType),
+				"Field": Equal("volume.name"),
+			}))))
+		},
+			Entry("too long name", "vol1-name-is-too-long-for-test", field.ErrorTypeTooLong),
+			Entry("invalid name", "not%dns/1123", field.ErrorTypeInvalid),
+			Entry("empty name", "", field.ErrorTypeRequired),
+		)
+
 		It("should reject if data volume size does not match size regex", func() {
 			maxSurge := intstr.FromInt32(1)
 			maxUnavailable := intstr.FromInt32(0)
@@ -6734,7 +6790,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			maxUnavailable := intstr.FromInt32(0)
 			name1 := "vol1-name-is-too-long-for-test"
 			name2 := "not%dns/1123"
-			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
+			vol := core.Volume{VolumeSize: "75Gi"}
 			dataVolumes := []core.DataVolume{{VolumeSize: "75Gi"}, {Name: name1, VolumeSize: "75Gi"}, {Name: name2, VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",

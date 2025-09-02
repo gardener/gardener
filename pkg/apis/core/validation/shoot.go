@@ -1967,6 +1967,9 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 	}
 
 	if worker.Volume != nil {
+		if worker.Volume.Name != nil {
+			allErrs = append(allErrs, validateVolumeName(*worker.Volume.Name, fldPath.Child("volume", "name"))...)
+		}
 		if !volumeSizeRegex.MatchString(worker.Volume.VolumeSize) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("volume", "size"), worker.Volume.VolumeSize, fmt.Sprintf("volume size must match the regex %s", volumeSizeRegex)))
 		}
@@ -1979,14 +1982,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 		}
 		for idx, volume := range worker.DataVolumes {
 			idxPath := fldPath.Child("dataVolumes").Index(idx)
-			if len(volume.Name) == 0 {
-				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must specify a name"))
-			} else {
-				allErrs = append(allErrs, validateDNS1123Label(volume.Name, idxPath.Child("name"))...)
-			}
-			if len(volume.Name) > maxVolumeNameLength {
-				allErrs = append(allErrs, field.TooLong(idxPath.Child("name"), volume.Name, maxVolumeNameLength))
-			}
+			allErrs = append(allErrs, validateVolumeName(volume.Name, idxPath.Child("name"))...)
 			if _, keyExist := volumeNames[volume.Name]; keyExist {
 				volumeNames[volume.Name]++
 				allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), volume.Name))
@@ -2036,6 +2032,19 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("priority"), *worker.Priority, "can not be less than -1"))
 	}
 
+	return allErrs
+}
+
+func validateVolumeName(name string, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+	if len(name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must specify a name"))
+	} else {
+		allErrs = append(allErrs, validateDNS1123Label(name, fldPath)...)
+	}
+	if len(name) > maxVolumeNameLength {
+		allErrs = append(allErrs, field.TooLong(fldPath, name, maxVolumeNameLength))
+	}
 	return allErrs
 }
 
