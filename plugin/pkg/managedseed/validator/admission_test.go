@@ -32,7 +32,6 @@ import (
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/managedseed/validator"
 )
@@ -57,6 +56,7 @@ var _ = Describe("ManagedSeed", func() {
 			secret                  *corev1.Secret
 			dnsSecret               *corev1.Secret
 			seed                    *core.Seed
+			parentSeed              *gardencorev1beta1.Seed
 			credentialsBinding      *securityv1alpha1.CredentialsBinding
 			secretBinding           *gardencorev1beta1.SecretBinding
 			coreInformerFactory     gardencoreinformers.SharedInformerFactory
@@ -115,13 +115,6 @@ var _ = Describe("ManagedSeed", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
-					Labels: map[string]string{
-						v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
-					},
-					Annotations: map[string]string{
-						gardenerutils.DNSProvider: dnsProvider,
-						gardenerutils.DNSDomain:   domain,
-					},
 				},
 			}
 
@@ -187,6 +180,45 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
+			parentSeed = &gardencorev1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "parent-seed",
+				},
+				Spec: gardencorev1beta1.SeedSpec{
+					DNS: gardencorev1beta1.SeedDNS{
+						Provider: &gardencorev1beta1.SeedDNSProvider{
+							Type: dnsProvider,
+							SecretRef: corev1.SecretReference{
+								Name:      name,
+								Namespace: namespace,
+							},
+						},
+						Defaults: []gardencorev1beta1.SeedDNSProviderConfig{
+							{
+								Type:   dnsProvider,
+								Domain: "example.com",
+								CredentialsRef: corev1.ObjectReference{
+									APIVersion: "v1",
+									Kind:       "Secret",
+									Name:       name,
+									Namespace:  namespace,
+								},
+							},
+						},
+					},
+					Networks: gardencorev1beta1.SeedNetworks{
+						Nodes:    ptr.To("10.250.0.0/16"),
+						Pods:     "100.96.0.0/11",
+						Services: "100.64.0.0/13",
+					},
+					Provider: gardencorev1beta1.SeedProvider{
+						Type:   provider,
+						Region: region,
+						Zones:  []string{zone1, zone2},
+					},
+				},
+			}
+
 			var err error
 			admissionHandler, err = New()
 			Expect(err).ToNot(HaveOccurred())
@@ -208,6 +240,8 @@ var _ = Describe("ManagedSeed", func() {
 			admissionHandler.SetSecurityInformerFactory(securityInformerFactory)
 
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(parentSeed)).To(Succeed())
+			Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 		})
 
 		It("should do nothing if the resource is not a ManagedSeed", func() {
