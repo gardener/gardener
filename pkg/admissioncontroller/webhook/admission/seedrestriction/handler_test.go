@@ -1839,7 +1839,7 @@ var _ = Describe("handler", func() {
 									Allowed: false,
 									Result: &metav1.Status{
 										Code:    int32(http.StatusInternalServerError),
-										Message: "no seed config found for managedseed ",
+										Message: `seed template is nil for ManagedSeed ""`,
 									},
 								},
 							}))

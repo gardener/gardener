@@ -205,7 +205,7 @@ var _ = Describe("ManagedSeed", func() {
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(BeInternalServerError())
-				Expect(err).To(MatchError(ContainSubstring("cannot extract the seed template")))
+				Expect(err).To(MatchError(ContainSubstring("seed template is unset in gardenlet config")))
 			})
 
 			It("should forbid Shoot update when zones have changed but still configured in ManagedSeed", func() {
