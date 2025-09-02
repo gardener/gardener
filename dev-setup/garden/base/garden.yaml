@@ -56,7 +56,6 @@ spec:
         admissionPlugins:
         - name: ShootVPAEnabledByDefault
         featureGates:
-          CredentialsRotationWithoutWorkersRollout: true
           CloudProfileCapabilities: true
           InPlaceNodeUpdates: true
       gardenerDashboard: {}

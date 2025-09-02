@@ -2777,22 +2777,6 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("annotations %s and %s must not be equal", fldPathOp, fldPathMaintOp)))
 	}
 
-	// TODO(rfranzke): Remove this block once the CredentialsRotationWithoutWorkersRollout feature gate gets promoted
-	//  to GA.
-	if !features.DefaultFeatureGate.Enabled(features.CredentialsRotationWithoutWorkersRollout) {
-		restrictedOperations := sets.New(
-			v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
-			v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
-			v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
-		)
-		if operation != "" && (restrictedOperations.Has(operation) || strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers)) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("the %s operation can only be used when the CredentialsRotationWithoutWorkersRollout feature gate is enabled", operation)))
-		}
-		if maintenanceOperation != "" && (restrictedOperations.Has(maintenanceOperation) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers)) {
-			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("the %s operation can only be used when the CredentialsRotationWithoutWorkersRollout feature gate is enabled", maintenanceOperation)))
-		}
-	}
-
 	if operation != "" {
 		if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(availableShootOperations)))
