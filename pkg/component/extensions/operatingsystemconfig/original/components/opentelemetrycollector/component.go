@@ -32,7 +32,7 @@ const (
 	PathCACert = PathDirectory + "/ca.crt"
 
 	openTelemetryCollectorBinaryPath     = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/opentelemetry-collector"
-	OpenTelemetryCollectorKubeconfigPath = PathDirectory + "/kubeconfig"
+	openTelemetryCollectorKubeconfigPath = PathDirectory + "/kubeconfig"
 )
 
 type component struct{}
@@ -80,7 +80,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 				},
 			},
 		}, extensionsv1alpha1.File{
-			Path:        OpenTelemetryCollectorKubeconfigPath,
+			Path:        openTelemetryCollectorKubeconfigPath,
 			Permissions: ptr.To[uint32](0600),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{

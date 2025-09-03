@@ -133,6 +133,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/kernelconfig
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector
+            - pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector/templates/opentelemetry-collector-config.yaml.tpl
             - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
             - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer
@@ -582,13 +584,14 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector
+            - pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector/templates/opentelemetry-collector-config.yaml.tpl
             - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
             - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail/templates/valitail-config.tpl.yaml
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/observability/logging/vali/constants
-            - pkg/component/observability/opentelemetry/collector/constants
             - pkg/controllerutils
             - pkg/controllerutils/predicate
             - pkg/controllerutils/routes

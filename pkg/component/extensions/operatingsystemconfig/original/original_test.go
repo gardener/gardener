@@ -138,7 +138,7 @@ var _ = Describe("Original", func() {
 		})
 	})
 
-	Describe("#Components with OpenTelemetryCollector feauture gate enabled", func() {
+	Describe("#Components with OpenTelemetryCollector feature gate enabled", func() {
 		BeforeEach(func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, true))
 		})
