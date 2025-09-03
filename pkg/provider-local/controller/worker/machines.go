@@ -20,7 +20,6 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
-	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -71,11 +70,6 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		machineImages       []api.MachineImage
 		machineDeployments  worker.MachineDeployments
 	)
-	// Convert the existing capability set to core.CapabilityDefinition for comparison.
-	capabilitiesDefinitions, err := gardencorehelper.ConvertCoreCapabilitiesDefinitions(w.cluster.CloudProfile.Spec.Capabilities)
-	if err != nil {
-		return err
-	}
 
 	for _, pool := range w.worker.Spec.Pools {
 		workerPoolHash, err := worker.WorkerPoolHash(pool, w.cluster, nil, nil, nil)
@@ -88,7 +82,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		machineImages = appendMachineImage(machineImages, *image, capabilitiesDefinitions)
+		machineImages = appendMachineImage(machineImages, *image, w.cluster.CloudProfile.Spec.Capabilities)
 
 		userData, err := worker.FetchUserData(ctx, w.client, w.worker.Namespace, pool)
 		if err != nil {

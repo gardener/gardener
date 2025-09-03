@@ -12,7 +12,6 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
-	core "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	local "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	conversion "k8s.io/apimachinery/pkg/conversion"
@@ -91,7 +90,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_CapabilitySet_To_local_CapabilitySet(in *CapabilitySet, out *local.CapabilitySet, s conversion.Scope) error {
 	out.Image = in.Image
-	out.Capabilities = *(*core.Capabilities)(unsafe.Pointer(&in.Capabilities))
+	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
 	return nil
 }
 
@@ -135,7 +134,7 @@ func autoConvert_v1alpha1_MachineImage_To_local_MachineImage(in *MachineImage, o
 	out.Name = in.Name
 	out.Version = in.Version
 	out.Image = in.Image
-	out.CapabilitySets = *(*[]local.CapabilitySet)(unsafe.Pointer(&in.CapabilitySets))
+	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
 	return nil
 }
 
@@ -148,7 +147,7 @@ func autoConvert_local_MachineImage_To_v1alpha1_MachineImage(in *local.MachineIm
 	out.Name = in.Name
 	out.Version = in.Version
 	out.Image = in.Image
-	out.CapabilitySets = *(*[]CapabilitySet)(unsafe.Pointer(&in.CapabilitySets))
+	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
 	return nil
 }
 

@@ -491,6 +491,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				test(s, true, true)
 			})
 		})
+
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
 			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false)
 		})
