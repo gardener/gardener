@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +38,10 @@ func (b *AutonomousBotanist) ConnectToMachine(ctx context.Context, index int) (*
 		return nil, fmt.Errorf("only %q machines founds, but wanted to connect to machine with index %d", len(machineList.Items), index)
 	}
 	machine := machineList.Items[index]
-	machineAddr := b.sshAddressForMachine(&machine)
+	machineAddr, err := b.sshAddressForMachine(&machine)
+	if err != nil {
+		return nil, err
+	}
 
 	sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
 	if !found {
@@ -59,34 +63,26 @@ func (b *AutonomousBotanist) ConnectToMachine(ctx context.Context, index int) (*
 	return conn, nil
 }
 
-func (b *AutonomousBotanist) sshAddressForMachine(machine *machinev1alpha1.Machine) string {
-	var hostname, ip string
+var addressTypePreference = map[corev1.NodeAddressType]int{
+	// internal names have priority, as we jump via a bastion host
+	corev1.NodeInternalIP:  0,
+	corev1.NodeInternalDNS: -1,
+	corev1.NodeExternalIP:  -2,
+	corev1.NodeExternalDNS: -3,
+	// this should be returned by all providers, and is actually locally resolvable in many infrastructures
+	corev1.NodeHostName: -4,
+}
 
-	for _, address := range machine.Status.Addresses {
-		switch address.Type {
-		case corev1.NodeInternalIP:
-			ip = address.Address
-		case corev1.NodeInternalDNS:
-			hostname = address.Address
-
-		// internal names have priority, as we jump via a bastion host
-		case corev1.NodeExternalIP:
-			if ip == "" {
-				ip = address.Address
-			}
-		case corev1.NodeExternalDNS:
-			if hostname == "" {
-				hostname = address.Address
-			}
-		}
+func (b *AutonomousBotanist) sshAddressForMachine(machine *machinev1alpha1.Machine) (string, error) {
+	if len(machine.Status.Addresses) == 0 {
+		return "", fmt.Errorf("no addresses found in status of machine %s", machine.Name)
 	}
 
-	// prefer IP over hostname
-	host := ip
-	if host == "" {
-		host = hostname
-	}
-	return net.JoinHostPort(host, "22")
+	address := slices.MaxFunc(machine.Status.Addresses, func(a, b corev1.NodeAddress) int {
+		return addressTypePreference[a.Type] - addressTypePreference[b.Type]
+	})
+
+	return net.JoinHostPort(address.Address, "22"), nil
 }
 
 var (
