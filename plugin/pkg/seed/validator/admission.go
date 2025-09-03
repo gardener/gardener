@@ -13,6 +13,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
+	kubeinformers "k8s.io/client-go/informers"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
@@ -37,12 +39,14 @@ type ValidateSeed struct {
 	*admission.Handler
 
 	shootLister            gardencorev1beta1listers.ShootLister
+	secretLister           kubecorev1listers.SecretLister
 	workloadIdentityLister gardensecurityv1alpha1listers.WorkloadIdentityLister
 	readyFunc              admission.ReadyFunc
 }
 
 var (
 	_ = admissioninitializer.WantsCoreInformerFactory(&ValidateSeed{})
+	_ = admissioninitializer.WantsKubeInformerFactory(&ValidateSeed{})
 	_ = admissioninitializer.WantsSecurityInformerFactory(&ValidateSeed{})
 
 	readyFuncs []admission.ReadyFunc
@@ -77,10 +81,21 @@ func (v *ValidateSeed) SetSecurityInformerFactory(f gardensecurityinformers.Shar
 	readyFuncs = append(readyFuncs, wiInformer.Informer().HasSynced)
 }
 
+// SetKubeInformerFactory gets Lister from SharedInformerFactory.
+func (v *ValidateSeed) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
+	secretInformer := f.Core().V1().Secrets()
+	v.secretLister = secretInformer.Lister()
+
+	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced)
+}
+
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateSeed) ValidateInitialization() error {
 	if v.shootLister == nil {
 		return errors.New("missing shoot lister")
+	}
+	if v.secretLister == nil {
+		return errors.New("missing secret lister")
 	}
 	if v.workloadIdentityLister == nil {
 		return errors.New("missing WorkloadIdentity lister")
@@ -144,7 +159,7 @@ func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
 		return err
 	}
 
-	if err := admissionutils.ValidateDefaultDomainsChangeForSeed(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, "Seed"); err != nil {
+	if err := admissionutils.ValidateDefaultDomainsChangeForSeed(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, v.secretLister, "Seed"); err != nil {
 		return err
 	}
 
