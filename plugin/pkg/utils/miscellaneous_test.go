@@ -7,12 +7,16 @@ package utils_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	kubeinformers "k8s.io/client-go/informers"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	. "github.com/gardener/gardener/plugin/pkg/utils"
@@ -244,7 +248,9 @@ var _ = Describe("Miscellaneous", func() {
 			kind     = "foo"
 
 			coreInformerFactory gardencoreinformers.SharedInformerFactory
+			kubeInformerFactory kubeinformers.SharedInformerFactory
 			shootLister         gardencorev1beta1listers.ShootLister
+			secretLister        kubecorev1listers.SecretLister
 
 			oldSeedSpec, newSeedSpec *core.SeedSpec
 			shoot                    *gardencorev1beta1.Shoot
@@ -253,6 +259,9 @@ var _ = Describe("Miscellaneous", func() {
 		BeforeEach(func() {
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			shootLister = coreInformerFactory.Core().V1beta1().Shoots().Lister()
+
+			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
+			secretLister = kubeInformerFactory.Core().V1().Secrets().Lister()
 
 			oldSeedSpec = &core.SeedSpec{
 				DNS: core.SeedDNS{
@@ -275,7 +284,7 @@ var _ = Describe("Miscellaneous", func() {
 		})
 
 		It("should do nothing if default domains are unchanged", func() {
-			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)).To(Succeed())
 		})
 
 		It("should do nothing if domains are reordered but same domains exist", func() {
@@ -283,20 +292,20 @@ var _ = Describe("Miscellaneous", func() {
 				{Domain: "test.org"},
 				{Domain: "example.com"},
 			}
-			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)).To(Succeed())
 		})
 
 		It("should do nothing if default domains are empty in both specs", func() {
 			oldSeedSpec.DNS.Defaults = nil
 			newSeedSpec.DNS.Defaults = nil
-			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)).To(Succeed())
 		})
 
 		It("should do nothing if default domains changed but no shoots exist", func() {
 			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{
 				{Domain: "new-domain.com"},
 			}
-			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)).To(Succeed())
 		})
 
 		It("should do nothing if default domains added (even with shoots on the seed)", func() {
@@ -306,7 +315,7 @@ var _ = Describe("Miscellaneous", func() {
 				{Domain: "new-domain.com"},
 			}
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
-			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)).To(Succeed())
 		})
 
 		It("should do nothing if default domains removed but no shoots are using them", func() {
@@ -315,7 +324,7 @@ var _ = Describe("Miscellaneous", func() {
 			}
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.other-domain.com")}
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
-			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)).To(Succeed())
 		})
 
 		It("should return error if default domains removed and shoots are using them", func() {
@@ -324,7 +333,7 @@ var _ = Describe("Miscellaneous", func() {
 			}
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.example.com")}
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
-			err := ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+			err := ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring(`cannot remove default domains [example.com] from foo "foo" as they are still being used by shoots`))
 		})
@@ -333,7 +342,7 @@ var _ = Describe("Miscellaneous", func() {
 			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{}
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.test.org")}
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
-			err := ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+			err := ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("cannot remove default domains"))
 			Expect(err.Error()).To(ContainSubstring("test.org"))
@@ -346,7 +355,69 @@ var _ = Describe("Miscellaneous", func() {
 			shoot.Status.SeedName = &otherSeed
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.example.com")}
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
-			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)).To(Succeed())
+		})
+
+		Context("when transitioning from global defaults to explicit defaults", func() {
+			var globalDefaultSecret *corev1.Secret
+
+			BeforeEach(func() {
+				oldSeedSpec.DNS.Defaults = nil
+
+				globalDefaultSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "default-domain-secret",
+						Namespace: v1beta1constants.GardenNamespace,
+						Labels: map[string]string{
+							v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
+						},
+						Annotations: map[string]string{
+							"dns.gardener.cloud/domain":   "global-default.com",
+							"dns.gardener.cloud/provider": "aws-route53",
+						},
+					},
+				}
+			})
+
+			It("should succeed when explicit defaults cover all used global defaults", func() {
+				newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{
+					{Domain: "global-default.com"},
+					{Domain: "additional.com"},
+				}
+
+				shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.global-default.com")}
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(globalDefaultSecret)).To(Succeed())
+
+				Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)).To(Succeed())
+			})
+
+			It("should fail when explicit defaults do not cover used global defaults", func() {
+				newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{
+					{Domain: "different.com"},
+				}
+
+				shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.global-default.com")}
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(globalDefaultSecret)).To(Succeed())
+
+				err := ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("cannot configure explicit default domains"))
+				Expect(err.Error()).To(ContainSubstring("global-default.com"))
+			})
+
+			It("should succeed when no shoots use global defaults", func() {
+				newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{
+					{Domain: "different.com"},
+				}
+
+				shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.other-domain.com")}
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(globalDefaultSecret)).To(Succeed())
+
+				Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)).To(Succeed())
+			})
 		})
 	})
 })
