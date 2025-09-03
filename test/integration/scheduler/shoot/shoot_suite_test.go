@@ -48,6 +48,7 @@ var (
 
 	testNamespace     *corev1.Namespace
 	testSecretBinding *gardencorev1beta1.SecretBinding
+	testProject       *gardencorev1beta1.Project
 )
 
 var _ = BeforeSuite(func() {
@@ -104,6 +105,8 @@ var _ = BeforeSuite(func() {
 	By("Create Project")
 	Expect(testClient.Create(ctx, project)).To(Succeed())
 	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
+
+	testProject = project
 
 	DeferCleanup(func() {
 		By("Delete Project")
