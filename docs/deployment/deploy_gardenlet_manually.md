@@ -478,6 +478,14 @@ spec:
               namespace: garden
             type: local
             domain: internal.local.gardener.cloud
+          defaults:
+          - credentialsRef:
+              apiVersion: v1
+              kind: Secret
+              name: default-domain-external-local-gardener-cloud
+              namespace: garden
+            type: local
+            domain: external.local.gardener.cloud
         ingress:
           controller:
             kind: nginx
