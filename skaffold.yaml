@@ -377,6 +377,7 @@ build:
             - cmd/utils/initrun
             - pkg/api
             - pkg/api/extensions
+            - pkg/api/indexer
             - pkg/apis/authentication
             - pkg/apis/authentication/install
             - pkg/apis/authentication/v1alpha1
@@ -1094,9 +1095,9 @@ build:
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns
             - pkg/component/networking/nodelocaldns/constants
+            - pkg/component/networking/nodelocaldns/resources/cleanup.sh
             - pkg/component/networking/vpn/envoy
             - pkg/component/networking/vpn/envoy/templates/envoy.yaml.tpl
-            - pkg/component/networking/nodelocaldns/resources/cleanup.sh
             - pkg/component/networking/vpn/seedserver
             - pkg/component/networking/vpn/shoot
             - pkg/component/nodemanagement/dependencywatchdog
