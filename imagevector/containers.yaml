@@ -796,8 +796,8 @@ images:
   # API Server SNI, VPN-SeedServer and Kube-ApiServer Proxy
   - name: envoy-proxy
     sourceRepository: github.com/envoyproxy/envoy
-    repository: europe-docker.pkg.dev/gardener-project/releases/3rd/envoyproxy/envoy-distroless
-    tag: "v1.35.0"
+    repository: europe-docker.pkg.dev/gardener-project/releases/3rd/envoyproxy/envoy
+    tag: "distroless-v1.35.0"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
