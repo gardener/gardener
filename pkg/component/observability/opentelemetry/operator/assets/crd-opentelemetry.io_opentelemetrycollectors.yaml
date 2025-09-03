@@ -4936,6 +4936,16 @@ spec:
                 - sidecar
                 - statefulset
                 type: string
+              networkPolicy:
+                description: NetworkPolicy defines the network policy to be applied
+                  to the OpenTelemetry Collector pods.
+                properties:
+                  enabled:
+                    description: |-
+                      Enable enables the NetworkPolicy.
+                      The default value is taken from the operator feature-gate `--feature-gates=+operand.networkpolicy`.
+                    type: boolean
+                type: object
               nodeSelector:
                 additionalProperties:
                   type: string
