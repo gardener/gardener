@@ -83,14 +83,23 @@ func (s *shootValidator) ValidateShootNodesCIDR(newShoot, oldShoot *core.Shoot) 
 	}
 
 	if cidr.Addr().Is4() {
-		if !shootAllowedNodesCIDRIPv4.Contains(cidr.Addr()) {
+		if !isSubnet(shootAllowedNodesCIDRIPv4, cidr) {
 			allErrs = append(allErrs, field.Invalid(nodesPath, *newShoot.Spec.Networking.Nodes, fmt.Sprintf("nodes CIDR must be a subnet of %s", shootAllowedNodesCIDRIPv4.String())))
 		}
 	} else {
-		if !shootAllowedNodesCIDRIPv6.Contains(cidr.Addr()) {
+		if !isSubnet(shootAllowedNodesCIDRIPv6, cidr) {
 			allErrs = append(allErrs, field.Invalid(nodesPath, *newShoot.Spec.Networking.Nodes, fmt.Sprintf("nodes CIDR must be a subnet of %s", shootAllowedNodesCIDRIPv6.String())))
 		}
 	}
 
 	return allErrs
+}
+
+// isSubnet returns true if sub is a subnet of net. Both net and sub must be valid netip.Prefix.
+// The function assumes that net and sub are of the same IP family (both IPv4 or both IPv6).
+func isSubnet(net, sub netip.Prefix) bool {
+	// A is a subnet of B if:
+	// - B's prefix length is shorter or equal to A's (B is a broader network).
+	// - B contains the canonical starting IP address of A.
+	return net.Bits() <= sub.Bits() && net.Contains(sub.Masked().Addr())
 }

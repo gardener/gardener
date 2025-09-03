@@ -52,6 +52,11 @@ var _ = Describe("Shoot Validator", func() {
 			Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of 10.0.0.0/16")))
 		})
 
+		It("should fail for invalid IPv4 nodes CIDR with shorter prefix", func() {
+			shoot.Spec.Networking.Nodes = ptr.To("10.0.0.0/15")
+			Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of 10.0.0.0/16")))
+		})
+
 		It("should succeed for valid IPv6 nodes CIDR", func() {
 			shoot.Spec.Networking.Nodes = ptr.To("fd00:10:1:100::/64")
 			Expect(shootValidator.Validate(ctx, shoot, nil)).To(Succeed())
@@ -59,6 +64,11 @@ var _ = Describe("Shoot Validator", func() {
 
 		It("should fail for invalid IPv6 nodes CIDR", func() {
 			shoot.Spec.Networking.Nodes = ptr.To("fd00:20:1:100::/64")
+			Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of fd00:10:1:100::/56")))
+		})
+
+		It("should fail for invalid IPv6 nodes CIDR with shorter prefix", func() {
+			shoot.Spec.Networking.Nodes = ptr.To("fd00:10:1::/48")
 			Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of fd00:10:1:100::/56")))
 		})
 
