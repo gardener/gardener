@@ -546,7 +546,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	resourcesToAdd = append(resourcesToAdd, service)
 
 	if b.networkLabelToCommunicateWithManagedEtcds != nil {
-		deployment.Spec.Template.ObjectMeta.Labels[*b.networkLabelToCommunicateWithManagedEtcds] = v1beta1constants.LabelNetworkPolicyAllowed
+		deployment.Spec.Template.Labels[*b.networkLabelToCommunicateWithManagedEtcds] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
 
 	if b.imageVectorOverwrite != nil {
