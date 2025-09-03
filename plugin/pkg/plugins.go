@@ -86,7 +86,6 @@ func AllPluginNames() []string {
 		PluginNameShootDNSRewriting,                 // ShootDNSRewriting
 		PluginNameShootQuotaValidator,               // ShootQuotaValidator
 		PluginNameShootValidator,                    // ShootValidator
-		PluginNameShootVPAEnabledByDefault,          // ShootVPAEnabledByDefault
 		PluginNameSeedValidator,                     // SeedValidator
 		PluginNameSeedMutator,                       // SeedMutator
 		PluginNameControllerRegistrationResources,   // ControllerRegistrationResources
@@ -97,6 +96,7 @@ func AllPluginNames() []string {
 		PluginNameOpenIDConnectPreset,               // OpenIDConnectPreset
 		PluginNameClusterOpenIDConnectPreset,        // ClusterOpenIDConnectPreset
 		PluginNameCustomVerbAuthorizer,              // CustomVerbAuthorizer
+		PluginNameShootVPAEnabledByDefault,          // ShootVPAEnabledByDefault
 		PluginNameShootResourceReservation,          // ShootResourceReservation
 		PluginNameManagedSeed,                       // ManagedSeed
 		PluginNameManagedSeedShoot,                  // ManagedSeedShoot
