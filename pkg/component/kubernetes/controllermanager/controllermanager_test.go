@@ -1052,6 +1052,10 @@ func commandForKubernetesVersion(
 			controllers = append(controllers, "-device-taint-eviction-controller")
 		}
 
+		if versionutils.ConstraintK8sGreaterEqual134.Check(version) {
+			controllers = append(controllers, "-podcertificaterequest-cleaner-controller")
+		}
+
 		controllers = append(controllers,
 			"-endpoint",
 			"-ephemeral-volume",
