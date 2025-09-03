@@ -93,7 +93,7 @@ func (b *AutonomousBotanist) deployOperatingSystemConfig(ctx context.Context) (*
 		return nil, "", fmt.Errorf("failed deploying OperatingSystemConfig resource: %w", err)
 	}
 
-	controlPlaneWorkerPool := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo())
+	controlPlaneWorkerPool := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers)
 	if controlPlaneWorkerPool == nil {
 		return nil, "", fmt.Errorf("failed fetching the control plane worker pool for the shoot")
 	}
@@ -236,7 +236,7 @@ func (b *AutonomousBotanist) ControlPlaneBootstrapOperatingSystemConfig() (opera
 	}
 	image.WithOptionalTag(version.Get().GitVersion)
 
-	worker := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo())
+	worker := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers)
 	if worker == nil {
 		return nil, fmt.Errorf("did not find the control plane worker pool of the shoot")
 	}

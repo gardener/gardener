@@ -28,7 +28,7 @@ const (
 // implementations when the standard sidecar container is required.
 // The shoot object can be read from the `Cluster` object, e.g., using the GardenContext.GetCluster method in webhooks.
 func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamespace, providerName, image string) corev1.Container {
-	autonomousShoot := v1beta1helper.IsShootAutonomous(shoot)
+	autonomousShoot := v1beta1helper.IsShootAutonomous(shoot.Spec.Provider.Workers)
 
 	c := corev1.Container{
 		Name:            providerSidecarContainerName(providerName),
