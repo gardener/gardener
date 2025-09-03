@@ -20,4 +20,4 @@ spec:
       -ginkgo.focus="\[RELEASE\]"
       -ginkgo.skip="\[SERIAL\]"
 
-  image: golang:1.25.0
+  image: golang:1.25.1

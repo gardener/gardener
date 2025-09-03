@@ -24,4 +24,4 @@ spec:
       -ginkgo.focus="\[DEFAULT\].*\[SERIAL\]"
       -ginkgo.timeout=2h
 
-  image: golang:1.25.0
+  image: golang:1.25.1
