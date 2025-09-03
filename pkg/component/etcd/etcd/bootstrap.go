@@ -88,6 +88,7 @@ func NewBootstrapper(
 	secretsManager secretsmanager.Interface,
 	secretNameServerCA string,
 	priorityClassName string,
+	networkLabelToCommunicateWithManagedEtcds *string,
 ) component.DeployWaiter {
 	return &bootstrapper{
 		client:               c,
@@ -98,18 +99,20 @@ func NewBootstrapper(
 		secretsManager:       secretsManager,
 		secretNameServerCA:   secretNameServerCA,
 		priorityClassName:    priorityClassName,
+		networkLabelToCommunicateWithManagedEtcds: networkLabelToCommunicateWithManagedEtcds,
 	}
 }
 
 type bootstrapper struct {
-	client               client.Client
-	namespace            string
-	etcdConfig           *gardenletconfigv1alpha1.ETCDConfig
-	image                string
-	imageVectorOverwrite *string
-	secretsManager       secretsmanager.Interface
-	secretNameServerCA   string
-	priorityClassName    string
+	client                                    client.Client
+	namespace                                 string
+	etcdConfig                                *gardenletconfigv1alpha1.ETCDConfig
+	image                                     string
+	imageVectorOverwrite                      *string
+	secretsManager                            secretsmanager.Interface
+	secretNameServerCA                        string
+	priorityClassName                         string
+	networkLabelToCommunicateWithManagedEtcds *string
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
@@ -438,9 +441,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(labels(), map[string]string{
-							v1beta1constants.LabelNetworkPolicyToDNS:                            v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:               v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyToAllShootsEtcdMainClientTCP8080: v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 						}),
 					},
 					Spec: corev1.PodSpec{
@@ -542,6 +544,10 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
 
 	resourcesToAdd = append(resourcesToAdd, service)
+
+	if b.networkLabelToCommunicateWithManagedEtcds != nil {
+		deployment.Spec.Template.ObjectMeta.Labels[*b.networkLabelToCommunicateWithManagedEtcds] = v1beta1constants.LabelNetworkPolicyAllowed
+	}
 
 	if b.imageVectorOverwrite != nil {
 		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *b.imageVectorOverwrite}
