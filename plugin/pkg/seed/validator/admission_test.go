@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -396,6 +397,7 @@ var _ = Describe("validator", func() {
 		It("should return error if no WorkloadIdentityLister is set", func() {
 			dr, _ := New()
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 
@@ -403,14 +405,26 @@ var _ = Describe("validator", func() {
 			Expect(err).To(MatchError("missing WorkloadIdentity lister"))
 		})
 
-		It("should not return error if ShootLister and WorkloadIdentityLister are set", func() {
+		It("should not return error if all listers are set", func() {
+			dr, _ := New()
+			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
+
+			err := dr.ValidateInitialization()
+
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should return error if no SecretLister is set", func() {
 			dr, _ := New()
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("missing secret lister"))
 		})
 	})
 

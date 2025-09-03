@@ -875,7 +875,7 @@ var _ = Describe("ManagedSeed", func() {
 						return true, shoot, nil
 					})
 
-					shoot := &core.Shoot{Spec: core.ShootSpec{SeedName: &newManagedSeed.Name}}
+					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name}}
 					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
