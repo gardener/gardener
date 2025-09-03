@@ -168,15 +168,19 @@ var _ = Describe("Virtual", func() {
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update", "manage-members", "modify-spec-tolerations-whitelist", "modify-spec-kubernetes", "modify-spec-machineimages", "modify-spec-providerconfig", "mark-autonomous"},
+				},
+				{
 					APIGroups: []string{
-						"core.gardener.cloud",
 						"seedmanagement.gardener.cloud",
 						"dashboard.gardener.cloud",
 						"settings.gardener.cloud",
 						"operations.gardener.cloud",
 					},
 					Resources: []string{"*"},
-					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update", "manage-members", "modify-spec-tolerations-whitelist", "modify-spec-kubernetes", "modify-spec-machineimages", "modify-spec-providerconfig"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{"security.gardener.cloud"},
