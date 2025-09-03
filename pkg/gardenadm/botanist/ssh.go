@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -59,20 +60,33 @@ func (b *AutonomousBotanist) ConnectToMachine(ctx context.Context, index int) (*
 }
 
 func (b *AutonomousBotanist) sshAddressForMachine(machine *machinev1alpha1.Machine) string {
-	// For now, we expect that the Bastion can connect to the control plane machine via its hostname and that the hostname
-	// is equal to the machine's name.
-	// More cases will be supported once https://github.com/gardener/machine-controller-manager/pull/1012 gets released.
-	// TODO(timebertt): prefer Machine.status.addresses if present once mcm has been updated in gardener
-	machineHostname := machine.Name
+	var hostname, ip string
 
-	// Until machine-controller-manager-provider-local reports the correct hostname/IP in Machine.status.addresses, we
-	// prefix the machine name with "machine-" because we know that this is the hostname of local machines.
-	// TODO(timebertt): drop this shortcut once https://github.com/gardener/gardener/pull/12489 has been merged.
-	if b.Shoot.GetInfo().Spec.Provider.Type == "local" {
-		machineHostname = "machine-" + machineHostname
+	for _, address := range machine.Status.Addresses {
+		switch address.Type {
+		case corev1.NodeInternalIP:
+			ip = address.Address
+		case corev1.NodeInternalDNS:
+			hostname = address.Address
+
+		// internal names have priority, as we jump via a bastion host
+		case corev1.NodeExternalIP:
+			if ip == "" {
+				ip = address.Address
+			}
+		case corev1.NodeExternalDNS:
+			if hostname == "" {
+				hostname = address.Address
+			}
+		}
 	}
 
-	return net.JoinHostPort(machineHostname, "22")
+	// prefer IP over hostname
+	host := ip
+	if host == "" {
+		host = hostname
+	}
+	return net.JoinHostPort(host, "22")
 }
 
 var (
