@@ -887,12 +887,6 @@ func clusterRole() *rbacv1.ClusterRole {
 				APIGroups: []string{""},
 				Resources: []string{
 					"configmaps",
-				},
-				Verbs: []string{"get"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{
 					"namespaces",
 					"secrets",
 					"serviceaccounts",
@@ -1241,7 +1235,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					Rule: admissionregistrationv1.Rule{
 						APIGroups:   []string{""},
 						APIVersions: []string{"v1"},
-						Resources:   []string{"secrets", "serviceaccounts"},
+						Resources:   []string{"configmaps", "secrets", "serviceaccounts"},
 					},
 				},
 				{

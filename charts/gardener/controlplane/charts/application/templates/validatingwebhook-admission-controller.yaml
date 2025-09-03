@@ -105,6 +105,7 @@ webhooks:
     operations:
     - CREATE
     resources:
+    # - configmaps # intentionally not enabled in this deprecated Helm chart since it races with gardener-apiserver start-up
     - secrets
     - serviceaccounts
   - apiGroups:

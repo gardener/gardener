@@ -302,7 +302,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 					Rule: admissionregistrationv1.Rule{
 						APIGroups:   []string{corev1.GroupName},
 						APIVersions: []string{"v1"},
-						Resources:   []string{"secrets", "serviceaccounts"},
+						Resources:   []string{"configmaps", "secrets", "serviceaccounts"},
 					},
 				},
 				{
