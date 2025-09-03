@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	. "github.com/gardener/gardener/pkg/provider-local/apis/local/validation"
@@ -20,7 +21,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 	var (
 		cloudProfileConfig      *api.CloudProfileConfig
 		machineImages           []core.MachineImage
-		capabilitiesDefinitions []core.CapabilityDefinition
+		capabilitiesDefinitions []v1beta1.CapabilityDefinition
 		imageString             string
 		fldPath                 = field.NewPath("spec")
 	)
@@ -37,13 +38,13 @@ var _ = Describe("CloudProfileConfig validation", func() {
 							CapabilitySets: []api.CapabilitySet{
 								{
 									Image: imageString,
-									Capabilities: core.Capabilities{
+									Capabilities: v1beta1.Capabilities{
 										v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 									},
 								},
 								{
 									Image: imageString,
-									Capabilities: core.Capabilities{
+									Capabilities: v1beta1.Capabilities{
 										v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
 									},
 								},
@@ -76,7 +77,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			},
 		}
 
-		capabilitiesDefinitions = []core.CapabilityDefinition{
+		capabilitiesDefinitions = []v1beta1.CapabilityDefinition{
 			{
 				Name:   v1beta1constants.ArchitectureName,
 				Values: []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64},
@@ -139,7 +140,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				cloudProfileConfig.MachineImages[0].Versions[0].CapabilitySets = []api.CapabilitySet{}
 				cloudProfileConfig.MachineImages[0].Versions[0].Image = "ubuntu-18.04-amd64"
 				machineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{}
-				capabilitiesDefinitions = []core.CapabilityDefinition{}
+				capabilitiesDefinitions = []v1beta1.CapabilityDefinition{}
 			})
 
 			It("should succeed with valid configuration", func() {

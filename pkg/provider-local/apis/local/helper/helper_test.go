@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local"
@@ -65,14 +64,14 @@ var _ = Describe("Helper Functions", func() {
 								CapabilitySets: []local.CapabilitySet{
 									{
 										Image: imageVersion + suffixOne,
-										Capabilities: core.Capabilities{
+										Capabilities: v1beta1.Capabilities{
 											v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 											"cap1":                            []string{"value1"},
 										},
 									},
 									{
 										Image: imageVersion + suffixTwo,
-										Capabilities: core.Capabilities{
+										Capabilities: v1beta1.Capabilities{
 											v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 											"cap1":                            []string{"value2"},
 										},
@@ -84,13 +83,13 @@ var _ = Describe("Helper Functions", func() {
 								CapabilitySets: []local.CapabilitySet{
 									{
 										Image: latestImageVersion + suffixOne,
-										Capabilities: core.Capabilities{
+										Capabilities: v1beta1.Capabilities{
 											v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
 										},
 									},
 									{
 										Image: latestImageVersion + suffixTwo,
-										Capabilities: core.Capabilities{
+										Capabilities: v1beta1.Capabilities{
 											v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 										},
 									},
@@ -143,7 +142,7 @@ var _ = Describe("Helper Functions", func() {
 				cloudProfileConfig.MachineImages[0].Versions[1].CapabilitySets = []local.CapabilitySet{
 					{
 						Image: latestImageVersion + suffixOne,
-						Capabilities: core.Capabilities{
+						Capabilities: v1beta1.Capabilities{
 							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 							"cap1":                            []string{"value2"}, // Lower priority
 							"cap2":                            []string{"valueA"},
@@ -151,7 +150,7 @@ var _ = Describe("Helper Functions", func() {
 					},
 					{
 						Image: latestImageVersion + suffixTwo,
-						Capabilities: core.Capabilities{
+						Capabilities: v1beta1.Capabilities{
 							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 							"cap1":                            []string{"value1"}, // Higher priority (should be selected)
 							"cap2":                            []string{"valueB"}, // cap2 should not affect decision as cap1 already differentiates
@@ -170,14 +169,14 @@ var _ = Describe("Helper Functions", func() {
 				cloudProfileConfig.MachineImages[0].Versions[1].CapabilitySets = []local.CapabilitySet{
 					{
 						Image: latestImageVersion + suffixOne,
-						Capabilities: core.Capabilities{
+						Capabilities: v1beta1.Capabilities{
 							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 							"cap2":                            []string{"valueA", "valueB"}, // valueB is higher priority
 						},
 					},
 					{
 						Image: latestImageVersion + suffixTwo,
-						Capabilities: core.Capabilities{
+						Capabilities: v1beta1.Capabilities{
 							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 							"cap2":                            []string{"valueA", "valueC"}, // valueC is lower priority than valueB
 						},
@@ -197,13 +196,13 @@ var _ = Describe("Helper Functions", func() {
 				cloudProfileConfig.MachineImages[0].Versions[1].CapabilitySets = []local.CapabilitySet{
 					{
 						Image: latestImageVersion + suffixOne,
-						Capabilities: core.Capabilities{
+						Capabilities: v1beta1.Capabilities{
 							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 						},
 					},
 					{
 						Image: latestImageVersion + suffixTwo,
-						Capabilities: core.Capabilities{
+						Capabilities: v1beta1.Capabilities{
 							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 						},
 					},

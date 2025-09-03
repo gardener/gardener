@@ -19,7 +19,7 @@ import (
 const (
 	// Name is a name for a validation webhook.
 	Name = "validator"
-	// SecretsValidatorName is the name of the secrets validator.
+	// SecretsValidatorName is the name of the Secrets validator.
 	SecretsValidatorName = "secrets." + Name
 )
 

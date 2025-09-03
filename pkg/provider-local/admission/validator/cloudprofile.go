@@ -16,6 +16,7 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/provider-local/admission"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/validation"
 )
@@ -47,5 +48,9 @@ func (cp *cloudProfileValidator) Validate(_ context.Context, newObj, _ client.Ob
 	if err != nil {
 		return fmt.Errorf("could not decode providerConfig of CloudProfile for '%s': %w", cloudProfile.Name, err)
 	}
-	return validation.ValidateCloudProfileConfig(cpConfig, cloudProfile.Spec.MachineImages, cloudProfile.Spec.Capabilities, providerConfigPath).ToAggregate()
+	capabilitiesDefinition, err := helper.ConvertV1beta1CapabilitiesDefinitions(cloudProfile.Spec.Capabilities)
+	if err != nil {
+		return field.InternalError(field.NewPath("spec").Child("capabilities"), err)
+	}
+	return validation.ValidateCloudProfileConfig(cpConfig, cloudProfile.Spec.MachineImages, capabilitiesDefinition, providerConfigPath).ToAggregate()
 }
