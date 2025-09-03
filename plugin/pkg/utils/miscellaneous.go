@@ -13,10 +13,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // SkipVerification is a common function to skip object verification during admission
@@ -101,8 +104,9 @@ func ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec
 	return nil
 }
 
-// ValidateDefaultDomainsChangeForSeed returns an error when default domains that are being used by a shoot scheduled on the seed are removed.
-func ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorev1beta1listers.ShootLister, kind string) error {
+// ValidateDefaultDomainsChangeForSeed returns an error when default domains that are being used by a shoot scheduled on the seed are removed,
+// or when default domains are being added but do not cover all the globally available default domains used by shoots on the seed.
+func ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorev1beta1listers.ShootLister, secretLister kubecorev1listers.SecretLister, kind string) error {
 	oldDomains := sets.New[string]()
 	for _, defaultDomain := range oldSeedSpec.DNS.Defaults {
 		oldDomains.Insert(defaultDomain.Domain)
@@ -113,46 +117,106 @@ func ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec
 		newDomains.Insert(defaultDomain.Domain)
 	}
 
-	removedDomains := oldDomains.Difference(newDomains)
-	if removedDomains.Len() == 0 {
-		// No domains removed, no validation needed
-		return nil
-	}
-
 	shoots, err := shootLister.List(labels.Everything())
 	if err != nil {
 		return err
 	}
 
-	usedRemovedDomains := sets.New[string]()
+	// Get shoots on this seed
+	seedShoots := make([]*gardencorev1beta1.Shoot, 0)
 	for _, shoot := range shoots {
-		if !isSeedUsedByShoot(seedName, shoot) {
-			continue
-		}
-
-		if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
-			continue
-		}
-
-		shootDomain := *shoot.Spec.DNS.Domain
-
-		for removedDomain := range removedDomains {
-			if strings.HasSuffix(shootDomain, "."+removedDomain) {
-				usedRemovedDomains.Insert(removedDomain)
-				break
-			}
+		if isSeedUsedByShoot(seedName, shoot) {
+			seedShoots = append(seedShoots, shoot)
 		}
 	}
 
-	if usedRemovedDomains.Len() > 0 {
-		formatted := make([]string, 0, usedRemovedDomains.Len())
-		for domain := range usedRemovedDomains {
-			formatted = append(formatted, domain)
+	removedDomains := oldDomains.Difference(newDomains)
+	if removedDomains.Len() > 0 {
+		usedRemovedDomains := sets.New[string]()
+		for _, shoot := range seedShoots {
+			if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
+				continue
+			}
+
+			shootDomain := *shoot.Spec.DNS.Domain
+
+			for removedDomain := range removedDomains {
+				if strings.HasSuffix(shootDomain, "."+removedDomain) {
+					usedRemovedDomains.Insert(removedDomain)
+					break
+				}
+			}
 		}
-		return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove default domains %v from %s %q as they are still being used by shoots", formatted, kind, seedName))
+
+		if usedRemovedDomains.Len() > 0 {
+			formatted := make([]string, 0, usedRemovedDomains.Len())
+			for domain := range usedRemovedDomains {
+				formatted = append(formatted, domain)
+			}
+			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove default domains %v from %s %q as they are still being used by shoots", formatted, kind, seedName))
+		}
+	}
+
+	// Validate addition of explicit domain configuration when transitioning from global defaults
+	// TODO(dimityrmirchev): This logic would become obsolete once explicit DNS configuration becomes mandatory
+	// remove it after release v1.131
+	if len(oldDomains) == 0 && len(newDomains) > 0 {
+		// Old seed had no explicit DNS defaults (used global defaults), new seed has explicit defaults
+		// Need to ensure all globally configured default domains used by shoots are covered
+		globalDefaultDomains, err := getGlobalDefaultDomains(secretLister)
+		if err != nil {
+			return err
+		}
+
+		usedGlobalDomains := sets.New[string]()
+		for _, shoot := range seedShoots {
+			if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
+				continue
+			}
+
+			shootDomain := *shoot.Spec.DNS.Domain
+
+			for _, globalDomain := range globalDefaultDomains {
+				if strings.HasSuffix(shootDomain, "."+globalDomain) {
+					usedGlobalDomains.Insert(globalDomain)
+					break
+				}
+			}
+		}
+
+		missingDomains := usedGlobalDomains.Difference(newDomains)
+		if missingDomains.Len() > 0 {
+			formatted := make([]string, 0, missingDomains.Len())
+			for domain := range missingDomains {
+				formatted = append(formatted, domain)
+			}
+			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot configure explicit default domains for %s %q without including domains %v that are currently being used by shoots", kind, seedName, formatted))
+		}
 	}
 
 	return nil
+}
+
+// getGlobalDefaultDomains retrieves the globally configured default domain secrets
+func getGlobalDefaultDomains(secretLister kubecorev1listers.SecretLister) ([]string, error) {
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s", v1beta1constants.GardenRole, v1beta1constants.GardenRoleDefaultDomain))
+	if err != nil {
+		return nil, apierrors.NewInternalError(err)
+	}
+	domainSecrets, err := secretLister.Secrets(v1beta1constants.GardenNamespace).List(selector)
+	if err != nil {
+		return nil, apierrors.NewInternalError(err)
+	}
+
+	var globalDefaultDomains []string
+	for _, domainSecret := range domainSecrets {
+		_, domain, _, err := gardenerutils.GetDomainInfoFromAnnotations(domainSecret.GetAnnotations())
+		if err != nil {
+			return nil, err
+		}
+		globalDefaultDomains = append(globalDefaultDomains, domain)
+	}
+	return globalDefaultDomains, nil
 }
 
 // isSeedUsedByShoot checks whether the provided shoot is using the specified seed name
