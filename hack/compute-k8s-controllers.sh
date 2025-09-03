@@ -57,6 +57,7 @@ declare -A path_map=(
   ["persistentvolume-binder-controller"]="pkg/controller/volume/persistentvolume/pv_controller_base.go"
   ["persistentvolume-expander-controller"]="pkg/controller/volume/expand/expand_controller.go"
   ["pod-garbage-collector-controller"]="pkg/controller/podgc/gc_controller.go"
+  ["podcertificaterequest-cleaner-controller"]="pkg/controller/certificates/cleaner/pcrcleaner.go"
   ["persistentvolume-protection-controller"]="pkg/controller/volume/pvprotection/pv_protection_controller.go"
   ["persistentvolumeclaim-protection-controller"]="pkg/controller/volume/pvcprotection/pvc_protection_controller.go"
   ["replicaset-controller"]="pkg/controller/replicaset/replica_set.go"
