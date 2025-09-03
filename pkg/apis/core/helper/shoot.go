@@ -5,6 +5,7 @@
 package helper
 
 import (
+	"slices"
 	"strconv"
 
 	"github.com/Masterminds/semver/v3"
@@ -307,4 +308,27 @@ func IsLegacyAnonymousAuthenticationSet(kubeAPIServerConfig *core.KubeAPIServerC
 func IsKubeProxyIPVSMode(kubeProxyConfig *core.KubeProxyConfig) bool {
 	return kubeProxyConfig != nil && kubeProxyConfig.Enabled != nil && *kubeProxyConfig.Enabled &&
 		kubeProxyConfig.Mode != nil && *kubeProxyConfig.Mode == core.ProxyModeIPVS
+}
+
+// IsShootAutonomous returns true if the shoot has a worker pool dedicated for running the control plane components.
+func IsShootAutonomous(workers []core.Worker) bool {
+	return slices.ContainsFunc(workers, func(worker core.Worker) bool {
+		return worker.ControlPlane != nil
+	})
+}
+
+// ControlPlaneWorkerPoolForShoot returns the worker pool running the control plane in case the shoot is autonomous.
+func ControlPlaneWorkerPoolForShoot(workers []core.Worker) *core.Worker {
+	if !IsShootAutonomous(workers) {
+		return nil
+	}
+
+	idx := slices.IndexFunc(workers, func(worker core.Worker) bool {
+		return worker.ControlPlane != nil
+	})
+	if idx == -1 {
+		return nil
+	}
+
+	return &workers[idx]
 }
