@@ -60,8 +60,7 @@ var _ = Describe("Etcd", func() {
 		imageVectorOverwriteFull = ptr.To("some overwrite")
 		secretNameCA             = "ca"
 
-		priorityClassName                         = "some-priority-class"
-		networkLabelToCommunicateWithManagedEtcds = "some-network-labels"
+		priorityClassName = "some-priority-class"
 
 		featureGates map[string]bool
 
@@ -97,7 +96,7 @@ var _ = Describe("Etcd", func() {
 		// Create CA secret for etcd-components webhook handler
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretNameCA, Namespace: namespace}})).To(Succeed())
 
-		bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName, &networkLabelToCommunicateWithManagedEtcds)
+		bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName, false)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -296,10 +295,10 @@ var _ = Describe("Etcd", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"gardener.cloud/role":                            "etcd-druid",
-								"networking.gardener.cloud/to-dns":               "allowed",
-								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
-								"some-network-labels":                            "allowed",
+								"gardener.cloud/role":                                                         "etcd-druid",
+								"networking.gardener.cloud/to-dns":                                            "allowed",
+								"networking.gardener.cloud/to-runtime-apiserver":                              "allowed",
+								"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": "allowed",
 							},
 							Annotations: map[string]string{
 								references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
@@ -392,10 +391,10 @@ var _ = Describe("Etcd", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"gardener.cloud/role":                            "etcd-druid",
-								"networking.gardener.cloud/to-dns":               "allowed",
-								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
-								"some-network-labels":                            "allowed",
+								"gardener.cloud/role":                                                         "etcd-druid",
+								"networking.gardener.cloud/to-dns":                                            "allowed",
+								"networking.gardener.cloud/to-runtime-apiserver":                              "allowed",
+								"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": "allowed",
 							},
 							Annotations: map[string]string{
 								references.AnnotationKey(references.KindConfigMap, configMapName):     configMapName,
@@ -766,7 +765,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, sm, secretNameCA, priorityClassName, &networkLabelToCommunicateWithManagedEtcds)
+				bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, sm, secretNameCA, priorityClassName, false)
 
 				expectedResources = append(expectedResources,
 					deploymentWithImageVectorOverwrite,

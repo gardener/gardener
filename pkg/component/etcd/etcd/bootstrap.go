@@ -88,31 +88,31 @@ func NewBootstrapper(
 	secretsManager secretsmanager.Interface,
 	secretNameServerCA string,
 	priorityClassName string,
-	networkLabelToCommunicateWithManagedEtcds *string,
+	managedbyGardenerOperator bool,
 ) component.DeployWaiter {
 	return &bootstrapper{
-		client:               c,
-		namespace:            namespace,
-		etcdConfig:           etcdConfig,
-		image:                image,
-		imageVectorOverwrite: imageVectorOverwrite,
-		secretsManager:       secretsManager,
-		secretNameServerCA:   secretNameServerCA,
-		priorityClassName:    priorityClassName,
-		networkLabelToCommunicateWithManagedEtcds: networkLabelToCommunicateWithManagedEtcds,
+		client:                    c,
+		namespace:                 namespace,
+		etcdConfig:                etcdConfig,
+		image:                     image,
+		imageVectorOverwrite:      imageVectorOverwrite,
+		secretsManager:            secretsManager,
+		secretNameServerCA:        secretNameServerCA,
+		priorityClassName:         priorityClassName,
+		managedbyGardenerOperator: managedbyGardenerOperator,
 	}
 }
 
 type bootstrapper struct {
-	client                                    client.Client
-	namespace                                 string
-	etcdConfig                                *gardenletconfigv1alpha1.ETCDConfig
-	image                                     string
-	imageVectorOverwrite                      *string
-	secretsManager                            secretsmanager.Interface
-	secretNameServerCA                        string
-	priorityClassName                         string
-	networkLabelToCommunicateWithManagedEtcds *string
+	client                    client.Client
+	namespace                 string
+	etcdConfig                *gardenletconfigv1alpha1.ETCDConfig
+	image                     string
+	imageVectorOverwrite      *string
+	secretsManager            secretsmanager.Interface
+	secretNameServerCA        string
+	priorityClassName         string
+	managedbyGardenerOperator bool
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
@@ -441,8 +441,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(labels(), map[string]string{
-							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToDNS:                                      v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                         v1beta1constants.LabelNetworkPolicyAllowed,
+							"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": v1beta1constants.LabelNetworkPolicyAllowed,
 						}),
 					},
 					Spec: corev1.PodSpec{
@@ -545,8 +546,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 
 	resourcesToAdd = append(resourcesToAdd, service)
 
-	if b.networkLabelToCommunicateWithManagedEtcds != nil {
-		deployment.Spec.Template.Labels[*b.networkLabelToCommunicateWithManagedEtcds] = v1beta1constants.LabelNetworkPolicyAllowed
+	if b.managedbyGardenerOperator {
+		deployment.Spec.Template.Labels["networking.resources.gardener.cloud/to-virtual-garden-etcd-main-client-tcp-8080"] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
 
 	if b.imageVectorOverwrite != nil {

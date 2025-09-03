@@ -523,10 +523,6 @@ const (
 	// LabelNetworkPolicyToRuntimeAPIServer allows Egress from pods labeled with 'networking.gardener.cloud/to-runtime-apiserver=allowed' to runtime Kubernetes
 	// API Server.
 	LabelNetworkPolicyToRuntimeAPIServer = "networking.gardener.cloud/to-runtime-apiserver"
-	// LabelNetworkPolicyToAllShootsEtcdMainClientTCP8080 allows Egress from pods labeled with 'networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080=allowed' to all Shoot's etcd main client TCP 8080 endpoints.
-	LabelNetworkPolicyToAllShootsEtcdMainClientTCP8080 = "networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080"
-	// LabelNetworkPolicyToVirtualGardenEtcdMainClientTCP8080 allows Egress from pods labeled with 'networking.resources.gardener.cloud/to-virtual-garden-etcd-main-client-tcp-8080=allowed' to the Virtual Garden's etcd main client TCP 8080 endpoint.
-	LabelNetworkPolicyToVirtualGardenEtcdMainClientTCP8080 = "networking.resources.gardener.cloud/to-virtual-garden-etcd-main-client-tcp-8080"
 	// LabelNetworkPolicyFromPrometheus allows Ingress from Prometheus to pods labeled with 'networking.gardener.cloud/from-prometheus=allowed' and ports
 	// named 'metrics' in the PodSpecification.
 	//
