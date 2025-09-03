@@ -91,7 +91,7 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 
 	groups, err := r.userGroupsFunc(ctx, userInfo, r.subjectAccessReviewer)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get user groups: %w", err)
 	}
 
 	// prepare: get shoot object
