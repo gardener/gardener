@@ -12,8 +12,13 @@ The `Seed`s involved in the control plane migration must have backups enabled - 
 
 Triggering the migration is done by changing the `Shoot`'s `.spec.seedName` to a `Seed` that differs from the `.status.seedName`, we call this `Seed` a `"Destination Seed"`.
 This action can only be performed by an operator (see [Triggering the Migration](#triggering-the-migration)).
-If the `Destination Seed` does not have a backup and restore configuration or has an internal domain that differs from the internal domain of the original `Seed`, the change to `spec.seedName` is rejected.
-Additionally, this Seed must not be set for deletion and must be healthy.
+
+The change to `spec.seedName` is rejected if any of the following is true: 
+- the `Destination Seed` does not have a backup and restore configuration
+- the `Destination Seed` has an internal domain that differs from the internal domain of the original `Seed`
+- the `Destination Seed` has a default domains configuration that cannot handle the default domain used by the `Shoot`
+- the `Destination Seed` is set for deletion
+- the `Destination Seed` is unhealthy
 
 If the `Shoot` has different `.spec.seedName` and `.status.seedName`, a process is started to prepare the Control Plane for migration:
 
