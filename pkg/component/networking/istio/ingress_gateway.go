@@ -78,7 +78,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 
 		cpuRequests := "300m"
 		if enableAPIServerTLSTermination {
-			cpuRequests = "500m"
+			cpuRequests = "450m"
 		}
 
 		values := map[string]any{

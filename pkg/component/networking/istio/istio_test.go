@@ -705,7 +705,7 @@ var _ = Describe("istiod", func() {
 		Context("With IstioTLSTermination feature gate enabled", func() {
 			BeforeEach(func() {
 				expectAPIServerTLSTermination = true
-				expectedCPURequests = "500m"
+				expectedCPURequests = "450m"
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
 			})
 
@@ -717,7 +717,7 @@ var _ = Describe("istiod", func() {
 		Context("With IstioTLSTermination feature gate disabled but with shoots still using the feature", func() {
 			BeforeEach(func() {
 				expectAPIServerTLSTermination = true
-				expectedCPURequests = "500m"
+				expectedCPURequests = "450m"
 
 				envoyFilter := istionetworkingv1alpha3.EnvoyFilter{
 					ObjectMeta: metav1.ObjectMeta{
