@@ -6,8 +6,11 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener/imagevector"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	"github.com/gardener/gardener/pkg/features"
@@ -64,6 +67,15 @@ func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
 
 	if err := b.Shoot.Components.SystemComponents.VPNShoot.Deploy(ctx); err != nil {
 		return err
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.UseUnifiedHTTPProxyPort) {
+		return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
+			condition := v1beta1helper.GetOrInitConditionWithClock(b.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootUsesUnifiedHTTPProxyPort)
+			condition = v1beta1helper.UpdatedConditionWithClock(b.Clock, condition, gardencorev1beta1.ConditionTrue, "ShootUsesUnifiedHTTPProxyPort", fmt.Sprintf("Shoot uses http-proxy port %d for VPN", vpnseedserver.HTTPProxyGatewayPort))
+			shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
+			return nil
+		})
 	}
 
 	return nil

@@ -12,15 +12,23 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockvpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot/mock"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("VPNShoot", func() {
@@ -30,7 +38,10 @@ var _ = Describe("VPNShoot", func() {
 	)
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		botanist = &Botanist{Operation: &operation.Operation{}}
+
+		botanist = &Botanist{Operation: &operation.Operation{
+			Clock: clock.RealClock{},
+		}}
 	})
 
 	AfterEach(func() {
@@ -81,12 +92,19 @@ var _ = Describe("VPNShoot", func() {
 		var (
 			vpnShoot *mockvpnshoot.MockInterface
 			ctx      = context.TODO()
+			shoot    *gardencorev1beta1.Shoot
 			fakeErr  = errors.New("fake err")
 		)
 
 		BeforeEach(func() {
 			vpnShoot = mockvpnshoot.NewMockInterface(ctrl)
 
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "foo",
+				},
+			}
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					SystemComponents: &shootpkg.SystemComponents{
@@ -99,6 +117,10 @@ var _ = Describe("VPNShoot", func() {
 					Nodes:    []net.IPNet{{IP: []byte("10.181.0.0"), Mask: []byte("16")}},
 				},
 			}
+
+			botanist.Shoot.SetInfo(shoot)
+			gardenClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.Shoot{}).WithObjects(shoot).Build()
+			botanist.GardenClient = gardenClient
 		})
 
 		BeforeEach(func() {
@@ -110,6 +132,25 @@ var _ = Describe("VPNShoot", func() {
 		It("should set the network ranges and deploy", func() {
 			vpnShoot.EXPECT().Deploy(ctx)
 			Expect(botanist.DeployVPNShoot(ctx)).To(Succeed())
+
+			Expect(botanist.GardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			Expect(shoot.Status.Constraints).NotTo(ContainCondition(
+				OfType(gardencorev1beta1.ShootUsesUnifiedHTTPProxyPort),
+			))
+		})
+
+		It("should report a constraint if feature gate UseUnifiedHTTPProxyPort is enabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseUnifiedHTTPProxyPort, true))
+
+			vpnShoot.EXPECT().Deploy(ctx)
+			Expect(botanist.DeployVPNShoot(ctx)).To(Succeed())
+			Expect(botanist.GardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+
+			Expect(shoot.Status.Constraints).To(ContainCondition(
+				OfType(gardencorev1beta1.ShootUsesUnifiedHTTPProxyPort),
+				WithStatus(gardencorev1beta1.ConditionTrue),
+				WithReason("ShootUsesUnifiedHTTPProxyPort"),
+			))
 		})
 
 		It("should fail when the deploy function fails", func() {
