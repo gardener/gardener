@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	goruntime "runtime"
+	"sort"
 	"strconv"
 	"time"
 
@@ -449,7 +450,10 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		}, g.config.SeedConfig.Labels)
 
-		internalDNS := seed.Spec.DNS.Internal
+		var (
+			internalDNS = seed.Spec.DNS.Internal
+			defaultDNS  = seed.Spec.DNS.Defaults
+		)
 
 		seed.Spec = g.config.SeedConfig.Spec
 
@@ -459,6 +463,13 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 		// and setting internal dns to nil is forbidden
 		if internalDNS != nil && g.config.SeedConfig.Spec.DNS.Internal == nil {
 			seed.Spec.DNS.Internal = internalDNS
+		}
+
+		// TODO(dimityrmirchev): Remove this after 1.131 release
+		// Preserve current defaults dns settings
+		// as these could have been already explicitly set by gardenlet itself
+		if defaultDNS != nil && g.config.SeedConfig.Spec.DNS.Defaults == nil {
+			seed.Spec.DNS.Defaults = defaultDNS
 		}
 
 		return nil
@@ -519,6 +530,48 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 		}
 	}
 
+	// If the Seed config does not have spec.dns.defaults set,
+	// set it automatically based on the global default domain secrets.
+	if len(g.config.SeedConfig.Spec.DNS.Defaults) == 0 {
+		defaultDomainSecrets, err := g.readDefaultDomainSecrets(ctx, gardenClient)
+		if err != nil {
+			return err
+		}
+
+		if len(defaultDomainSecrets) > 0 {
+			patch := client.MergeFrom(seed.DeepCopy())
+			seed.Spec.DNS.Defaults = make([]gardencorev1beta1.SeedDNSProviderConfig, 0, len(defaultDomainSecrets))
+
+			for _, secret := range defaultDomainSecrets {
+				providerType, domain, zone, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
+				if err != nil {
+					return err
+				}
+
+				dnsConfig := gardencorev1beta1.SeedDNSProviderConfig{
+					Type:   providerType,
+					Domain: domain,
+				}
+				if len(zone) > 0 {
+					dnsConfig.Zone = &zone
+				}
+
+				dnsConfig.CredentialsRef = corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Namespace:  v1beta1constants.GardenNamespace, // explicitly set the garden namespace
+					Name:       secret.Name,
+				}
+
+				seed.Spec.DNS.Defaults = append(seed.Spec.DNS.Defaults, dnsConfig)
+			}
+
+			if err := gardenClient.Patch(ctx, seed, patch); err != nil {
+				return fmt.Errorf("could not patch default dns settings for seed %q: %w", seed.Name, err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -528,6 +581,44 @@ func init() {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(seedmanagementv1alpha1.AddToScheme(scheme))
 	seedManagementDecoder = serializer.NewCodecFactory(scheme).UniversalDeserializer()
+}
+
+// readDefaultDomainSecrets reads and sorts default domain secrets by priority
+func (g *garden) readDefaultDomainSecrets(ctx context.Context, gardenClient client.Client) ([]corev1.Secret, error) {
+	secretList := &corev1.SecretList{}
+	if err := gardenClient.List(ctx, secretList, client.InNamespace(gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name)), client.MatchingLabels{
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
+	}); err != nil {
+		return nil, err
+	}
+
+	if len(secretList.Items) == 0 {
+		return nil, nil
+	}
+
+	sort.SliceStable(secretList.Items, func(i, j int) bool {
+		iAnnotations := secretList.Items[i].GetAnnotations()
+		jAnnotations := secretList.Items[j].GetAnnotations()
+		var iPriority, jPriority int
+
+		if iAnnotations != nil {
+			if domainPriority, ok := iAnnotations[gardenerutils.DNSDefaultDomainPriority]; ok {
+				if p, err := strconv.Atoi(domainPriority); err == nil {
+					iPriority = p
+				}
+			}
+		}
+		if jAnnotations != nil {
+			if domainPriority, ok := jAnnotations[gardenerutils.DNSDefaultDomainPriority]; ok {
+				if p, err := strconv.Atoi(domainPriority); err == nil {
+					jPriority = p
+				}
+			}
+		}
+		return iPriority > jPriority
+	})
+
+	return secretList.Items, nil
 }
 
 func (g *garden) createSelfUpgradeConfig(ctx context.Context, log logr.Logger, gardenClient client.Client) error {
