@@ -63,14 +63,15 @@ func (b *AutonomousBotanist) ConnectToMachine(ctx context.Context, index int) (*
 	return conn, nil
 }
 
-var addressTypePreference = map[corev1.NodeAddressType]int{
+// addressTypePriority when retrieving the SSH Address of a machine. 0 is the highest priority
+var addressTypePriority = map[corev1.NodeAddressType]int{
 	// internal names have priority, as we jump via a bastion host
 	corev1.NodeInternalIP:  0,
-	corev1.NodeInternalDNS: -1,
-	corev1.NodeExternalIP:  -2,
-	corev1.NodeExternalDNS: -3,
+	corev1.NodeInternalDNS: 1,
+	corev1.NodeExternalIP:  2,
+	corev1.NodeExternalDNS: 3,
 	// this should be returned by all providers, and is actually locally resolvable in many infrastructures
-	corev1.NodeHostName: -4,
+	corev1.NodeHostName: 4,
 }
 
 func (b *AutonomousBotanist) sshAddressForMachine(machine *machinev1alpha1.Machine) (string, error) {
@@ -78,8 +79,8 @@ func (b *AutonomousBotanist) sshAddressForMachine(machine *machinev1alpha1.Machi
 		return "", fmt.Errorf("no addresses found in status of machine %s", machine.Name)
 	}
 
-	address := slices.MaxFunc(machine.Status.Addresses, func(a, b corev1.NodeAddress) int {
-		return addressTypePreference[a.Type] - addressTypePreference[b.Type]
+	address := slices.MinFunc(machine.Status.Addresses, func(a, b corev1.NodeAddress) int {
+		return addressTypePriority[a.Type] - addressTypePriority[b.Type]
 	})
 
 	return net.JoinHostPort(address.Address, "22"), nil
