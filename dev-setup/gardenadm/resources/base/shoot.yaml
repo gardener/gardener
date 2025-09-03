@@ -7,6 +7,8 @@ spec:
   cloudProfile:
     kind: CloudProfile
     name: local
+  dns:
+    domain: root.garden.external.local.gardener.cloud
   region: local
   provider:
     type: local

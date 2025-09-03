@@ -5,3 +5,8 @@ metadata:
   namespace: garden
 spec:
   secretBindingName: local
+  dns:
+    providers:
+    - type: local
+      primary: true
+      # secretName omitted, using secret of the secret binding
