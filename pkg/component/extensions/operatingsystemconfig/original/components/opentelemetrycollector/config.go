@@ -99,9 +99,9 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-Environment=KUBECONFIG=` + OpenTelemetryCollectorKubeconfigPath + `
+Environment=KUBECONFIG=` + openTelemetryCollectorKubeconfigPath + `
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/opentelemetry-collector --config=` + PathConfig),
-		FilePaths: []string{PathConfig, PathCACert, openTelemetryCollectorBinaryPath, OpenTelemetryCollectorKubeconfigPath},
+		FilePaths: []string{PathConfig, PathCACert, openTelemetryCollectorBinaryPath, openTelemetryCollectorKubeconfigPath},
 	}
 }
