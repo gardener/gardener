@@ -115,7 +115,6 @@ reconciliation is possible.</p>
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.MachineImage">MachineImage</a>, 
 <a href="#local.provider.extensions.gardener.cloud/v1alpha1.MachineImageVersion">MachineImageVersion</a>)
 </p>
 <p>
@@ -207,15 +206,13 @@ Please use the <code>CapabilitySets[].Image</code> field instead to specify the 
 </tr>
 <tr>
 <td>
-<code>capabilitySet</code></br>
+<code>Capabilities</code></br>
 <em>
-<a href="#local.provider.extensions.gardener.cloud/v1alpha1.CapabilitySet">
-[]CapabilitySet
-</a>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
 </em>
 </td>
 <td>
-<p>CapabilitySets is a set of capabilities that are supported by the machine image.</p>
+<p>Capabilities of the machine image.</p>
 </td>
 </tr>
 </tbody>

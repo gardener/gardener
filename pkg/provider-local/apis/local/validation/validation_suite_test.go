@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHelper(t *testing.T) {
+func TestCloudProfile(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "API Validation Suite")
+	RunSpecs(t, "Provider-Local APIs Validation Suite")
 }

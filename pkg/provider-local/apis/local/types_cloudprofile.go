@@ -7,7 +7,7 @@ package local
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -45,5 +45,15 @@ type CapabilitySet struct {
 	// Image is the image for the machine image.
 	Image string
 	// Capabilities that are supported by the identifier in this set.
-	Capabilities core.Capabilities
+	Capabilities gardencorev1beta1.Capabilities
+}
+
+// GetCapabilities returns the Capabilities of a CapabilitySet
+func (cs *CapabilitySet) GetCapabilities() gardencorev1beta1.Capabilities {
+	return cs.Capabilities
+}
+
+// SetCapabilities sets the Capabilities on a CapabilitySet
+func (cs *CapabilitySet) SetCapabilities(capabilities gardencorev1beta1.Capabilities) {
+	cs.Capabilities = capabilities
 }

@@ -14,7 +14,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -309,18 +308,4 @@ func GetCapabilitySetsWithAppliedDefaults(capabilitySets []core.CapabilitySet, c
 		}
 	}
 	return result
-}
-
-// ConvertCoreCapabilitiesDefinitions converts v1beta1.CapabilityDefinition objects to core.CapabilityDefinition objects.
-func ConvertCoreCapabilitiesDefinitions(capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) ([]core.CapabilityDefinition, error) {
-	var coreCapabilitiesDefinitions []core.CapabilityDefinition
-	for _, capabilityDefinition := range capabilitiesDefinitions {
-		var coreCapabilityDefinition core.CapabilityDefinition
-		err := gardencorev1beta1.Convert_v1beta1_CapabilityDefinition_To_core_CapabilityDefinition(&capabilityDefinition, &coreCapabilityDefinition, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert capability definition: %w", err)
-		}
-		coreCapabilitiesDefinitions = append(coreCapabilitiesDefinitions, coreCapabilityDefinition)
-	}
-	return coreCapabilitiesDefinitions, nil
 }

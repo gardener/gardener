@@ -13,8 +13,11 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -650,7 +653,7 @@ func AreCapabilitiesCompatible(capabilities1, capabilities2 gardencorev1beta1.Ca
 	defaultedCapabilities2 := GetCapabilitiesWithAppliedDefaults(capabilities2, capabilitiesDefinitions)
 
 	isSupported := true
-	commonCapabilities := GetCapabilitiesIntersection(defaultedCapabilities1, defaultedCapabilities2)
+	commonCapabilities := getCapabilitiesIntersection(defaultedCapabilities1, defaultedCapabilities2)
 	// If the intersection has at least one value for each capability, the capabilities are supported.
 	for _, values := range commonCapabilities {
 		if len(values) == 0 {
@@ -660,4 +663,105 @@ func AreCapabilitiesCompatible(capabilities1, capabilities2 gardencorev1beta1.Ca
 	}
 
 	return isSupported
+}
+
+// ConvertV1beta1CapabilitiesDefinitions converts core.CapabilityDefinition objects to v1beta1.CapabilityDefinition objects.
+func ConvertV1beta1CapabilitiesDefinitions(capabilitiesDefinitions []core.CapabilityDefinition) ([]gardencorev1beta1.CapabilityDefinition, error) {
+	var v1beta1CapabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition
+	for _, capabilityDefinition := range capabilitiesDefinitions {
+		var v1beta1CapabilityDefinition gardencorev1beta1.CapabilityDefinition
+		err := api.Scheme.Convert(&capabilityDefinition, &v1beta1CapabilityDefinition, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert capability definition: %w", err)
+		}
+		v1beta1CapabilitiesDefinitions = append(v1beta1CapabilitiesDefinitions, v1beta1CapabilityDefinition)
+	}
+	return v1beta1CapabilitiesDefinitions, nil
+}
+
+// AreCapabilitiesEqual checks if two capabilities are semantically equal.
+func AreCapabilitiesEqual(a, b gardencorev1beta1.Capabilities) bool {
+	return areCapabilitiesSubsetOf(a, b) && areCapabilitiesSubsetOf(b, a)
+}
+
+// areCapabilitiesSubsetOf verifies if all keys and values in `source` exist in `target`.
+func areCapabilitiesSubsetOf(source, target gardencorev1beta1.Capabilities) bool {
+	for key, valuesSource := range source {
+		valuesTarget, exists := target[key]
+		if !exists {
+			return false
+		}
+		for _, value := range valuesSource {
+			if !slices.Contains(valuesTarget, value) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// ValidateCapabilities validates the capabilities of a machine type or machine image against the capabilitiesDefinition located in a cloud profile at spec.capabilities.
+// It checks if the capabilities are supported by the cloud profile and if the architecture is defined correctly.
+// It returns a list of field errors if any validation fails.
+func ValidateCapabilities(capabilities gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// create map from capabilitiesDefinitions
+	capabilitiesDefinition := make(map[string][]string)
+	for _, capabilityDefinition := range capabilitiesDefinitions {
+		capabilitiesDefinition[capabilityDefinition.Name] = capabilityDefinition.Values
+	}
+	supportedCapabilityKeys := slices.Collect(maps.Keys(capabilitiesDefinition))
+
+	// Check if all capabilities are supported by the cloud profile
+	for capabilityKey, capability := range capabilities {
+		supportedValues, keyExists := capabilitiesDefinition[capabilityKey]
+		if !keyExists {
+			allErrs = append(allErrs, field.NotSupported(fldPath, capabilityKey, supportedCapabilityKeys))
+			continue
+		}
+		for i, value := range capability {
+			if !slices.Contains(supportedValues, value) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child(capabilityKey).Index(i), value, supportedValues))
+			}
+		}
+	}
+
+	// Check additional requirements for architecture
+	// - must be defined when multiple architectures are supported by the cloud profile
+	supportedArchitectures := capabilitiesDefinition[constants.ArchitectureName]
+	architectures := capabilities[constants.ArchitectureName]
+	if len(supportedArchitectures) > 1 && len(architectures) != 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child(constants.ArchitectureName), architectures, "must define exactly one architecture when multiple architectures are supported by the cloud profile"))
+	}
+
+	return allErrs
+}
+
+// getCapabilitiesIntersection returns the intersection of multiple capabilities objects.
+func getCapabilitiesIntersection(capabilitiesList ...gardencorev1beta1.Capabilities) gardencorev1beta1.Capabilities {
+	intersection := make(gardencorev1beta1.Capabilities)
+
+	if len(capabilitiesList) == 0 {
+		return intersection
+	}
+
+	// Initialize intersection with the first capabilities object
+	maps.Copy(intersection, capabilitiesList[0])
+
+	intersect := func(slice1, slice2 []string) []string {
+		elementSet1 := sets.New(slice1...)
+		elementSet2 := sets.New(slice2...)
+
+		return elementSet1.Intersection(elementSet2).UnsortedList()
+	}
+
+	// Iterate through the remaining capabilities objects and refine the intersection
+	for _, capabilities := range capabilitiesList[1:] {
+		for key, values := range intersection {
+			intersection[key] = intersect(values, capabilities[key])
+		}
+	}
+
+	return intersection
 }
