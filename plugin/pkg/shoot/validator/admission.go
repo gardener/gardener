@@ -535,7 +535,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because internal domain would change from %q to %q", oldDomain, newDomain))
 		}
 
-		if err := c.validateDefaultDomainCompatibilityForRescheduling(oldSeed, seedLister); err != nil {
+		if err := c.validateDefaultDomainCompatibilityForRescheduling(oldSeed); err != nil {
 			return admission.NewForbidden(a, err)
 		}
 	} else if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
@@ -2201,17 +2201,14 @@ func validateMaxNodesTotal(workers []core.Worker, maxNodesTotal int32) field.Err
 	return allErrs
 }
 
-func (c *validationContext) validateDefaultDomainCompatibilityForRescheduling(oldSeed *gardencorev1beta1.Seed, seedLister gardencorev1beta1listers.SeedLister) error {
+func (c *validationContext) validateDefaultDomainCompatibilityForRescheduling(oldSeed *gardencorev1beta1.Seed) error {
 	if c.shoot.Spec.DNS == nil || c.shoot.Spec.DNS.Domain == nil {
 		return nil
 	}
 
 	shootDomain := *c.shoot.Spec.DNS.Domain
 
-	oldDefaultDomains, err := getDefaultDomainsForSeed(oldSeed)
-	if err != nil {
-		return fmt.Errorf("failed to get default domains for old seed %q: %w", oldSeed.Name, err)
-	}
+	oldDefaultDomains := getDefaultDomainsForSeed(oldSeed)
 
 	var (
 		usesDefaultDomain bool
@@ -2230,10 +2227,7 @@ func (c *validationContext) validateDefaultDomainCompatibilityForRescheduling(ol
 		return nil
 	}
 
-	newDefaultDomains, err := getDefaultDomainsForSeed(c.seed)
-	if err != nil {
-		return fmt.Errorf("failed to get default domains for new seed %q: %w", c.seed.Name, err)
-	}
+	newDefaultDomains := getDefaultDomainsForSeed(c.seed)
 
 	if slices.Contains(newDefaultDomains, usedDefaultDomain) {
 		return nil
@@ -2242,17 +2236,17 @@ func (c *validationContext) validateDefaultDomainCompatibilityForRescheduling(ol
 	return fmt.Errorf("cannot reschedule shoot %q to seed %q because the shoot uses default domain %q which is not supported by the new seed (supported domains: %v)", c.shoot.Name, c.seed.Name, usedDefaultDomain, newDefaultDomains)
 }
 
-func getDefaultDomainsForSeed(seed *gardencorev1beta1.Seed) ([]string, error) {
+func getDefaultDomainsForSeed(seed *gardencorev1beta1.Seed) []string {
 	var defaultDomains []string
 
 	if len(seed.Spec.DNS.Defaults) > 0 {
 		for _, seedDNSDefault := range seed.Spec.DNS.Defaults {
 			defaultDomains = append(defaultDomains, seedDNSDefault.Domain)
 		}
-		return defaultDomains, nil
+		return defaultDomains
 	}
 
-	return defaultDomains, nil
+	return defaultDomains
 }
 
 func addCreatedByAnnotation(shoot *core.Shoot, userName string) {
