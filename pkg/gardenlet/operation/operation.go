@@ -47,7 +47,7 @@ func NewBuilder() *Builder {
 		configFunc: func() (*gardenletconfigv1alpha1.GardenletConfiguration, error) {
 			return nil, errors.New("config is required but not set")
 		},
-		gardenFunc: func(context.Context, map[string]*corev1.Secret, *gardenerutils.Domain, []*gardenerutils.Domain) (*garden.Garden, error) {
+		gardenFunc: func(context.Context, *gardenerutils.Domain, []*gardenerutils.Domain) (*garden.Garden, error) {
 			return nil, errors.New("garden object is required but not set")
 		},
 		gardenerInfoFunc: func() (*gardencorev1beta1.Gardener, error) {
@@ -85,7 +85,7 @@ func (b *Builder) WithConfig(cfg *gardenletconfigv1alpha1.GardenletConfiguration
 
 // WithGarden sets the gardenFunc attribute at the Builder.
 func (b *Builder) WithGarden(g *garden.Garden) *Builder {
-	b.gardenFunc = func(context.Context, map[string]*corev1.Secret, *gardenerutils.Domain, []*gardenerutils.Domain) (*garden.Garden, error) {
+	b.gardenFunc = func(context.Context, *gardenerutils.Domain, []*gardenerutils.Domain) (*garden.Garden, error) {
 		return g, nil
 	}
 	return b
@@ -93,7 +93,7 @@ func (b *Builder) WithGarden(g *garden.Garden) *Builder {
 
 // WithGardenFrom sets the gardenFunc attribute at the Builder which will build a new Garden object.
 func (b *Builder) WithGardenFrom(reader client.Reader, namespace string) *Builder {
-	b.gardenFunc = func(ctx context.Context, secrets map[string]*corev1.Secret, internalDomain *gardenerutils.Domain, defaultDomains []*gardenerutils.Domain) (*garden.Garden, error) {
+	b.gardenFunc = func(ctx context.Context, internalDomain *gardenerutils.Domain, defaultDomains []*gardenerutils.Domain) (*garden.Garden, error) {
 		return garden.
 			NewBuilder().
 			WithProjectFrom(reader, namespace).
@@ -241,7 +241,7 @@ func (b *Builder) Build(
 		return nil, err
 	}
 
-	garden, err := b.gardenFunc(ctx, secrets, internalDomain, defaultDomains)
+	garden, err := b.gardenFunc(ctx, internalDomain, defaultDomains)
 	if err != nil {
 		return nil, err
 	}
