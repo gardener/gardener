@@ -544,6 +544,7 @@ func viewerClusterRoleBindings() []client.Object {
 
 // ClusterRoleBindings is function generating the shoot ClusterRoleBindings related
 // to the AdminKubeconfig and ViewerKubeconfig deployed in the shoot cluster.
+//
 // Deprecated: Do not use, this function is deprecated and will be removed after v1.128.0 has been released.
 // TODO(vpnachev): Remove this func after v1.128.0 has been released.
 func ClusterRoleBindings() []client.Object {
