@@ -154,7 +154,7 @@ make gardener-extensions-down SEED_NAME=<seed-name>
 ```
 
 If it is not the last seed, this command will only remove the seed, but leave the local Gardener cluster and the other seeds untouched.
-To remove all seeds and to clean-up the local Gardener cluster, you have to run the command for each seed.
+To remove all seeds and to clean up the local Gardener cluster, you have to run the command for each seed.
 
 > [!TIP]
 > If using development setup that supports workload identity pass `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true` when removing the seed that was used to host the [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server).

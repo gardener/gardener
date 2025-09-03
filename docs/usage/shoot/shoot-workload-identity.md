@@ -31,7 +31,7 @@ Gardener API Server, as JWT issuer, set the following standard claims as per [RF
 Gardener API Server is using the private namespace `gardener.cloud` to set additional claims in the JWT.
 Their purpose is to bear Gardener specific information about the context of usage of the JWT.
 The always set claim in this private namespace is `workloadIdentity` which contains the name, namespace and uid of the `WorkloadIdentity` resource used to issue the JWT.
-When Gardenlet is requesting the JWT, Gardener API Server takes care to set even more claims.
+When Gardenlet is requesting the JWT, Gardener API Server takes care to enhance the token with additional claims.
 In the scenario where `WorkloadIdentity` is used as Shoot infrastructure credentials, such additional claims are:
 
 - **shoot**: contains the name, namespace and uid of the Shoot using the JWT.
@@ -57,11 +57,11 @@ Here is an example payload of workload identity JWT requested by Gardenlet:
         },
         "shoot": {
             "name": "shoot-1",
-            "namespace": "garden-foo",
+            "namespace": "garden-dev",
             "uid": "a309d47b-4a30-4cc8-9371-5ef569e7c23e"
         },
         "project": {
-            "name": "local",
+            "name": "dev",
             "uid": "5660a988-506a-421b-b362-95f101629981"
         },
         "seed": {
