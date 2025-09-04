@@ -82,6 +82,12 @@ var _ = Describe("Reconciler", func() {
 						ManualInPlaceUpdate: []string{"worker2", "worker5"},
 					},
 				},
+				ManualWorkerPoolRollout: &gardencorev1beta1.ManualWorkerPoolRollout{
+					PendingWorkersRollouts: []gardencorev1beta1.PendingWorkersRollout{
+						{Name: "worker1"},
+						{Name: "worker3"},
+					},
+				},
 			},
 		}
 	})
@@ -103,6 +109,10 @@ var _ = Describe("Reconciler", func() {
 			Expect(shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts).To(ConsistOf(
 				gardencorev1beta1.PendingWorkersRollout{Name: "worker3"},
 				gardencorev1beta1.PendingWorkersRollout{Name: "worker4"},
+			))
+
+			Expect(shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts).To(ConsistOf(
+				gardencorev1beta1.PendingWorkersRollout{Name: "worker3"},
 			))
 
 			Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker4"))
@@ -141,6 +151,22 @@ var _ = Describe("Reconciler", func() {
 				Expect(gardenClient.Delete(ctx, shoot)).To(Succeed())
 				Expect(gardenClient.Delete(ctx, namespace)).To(Succeed())
 			})
+		})
+
+		It("should set the manual worker rollout completion time, clean the pending workers and maintain last initiation time", func() {
+			now := metav1.Now()
+
+			shoot.Status.ManualWorkerPoolRollout.LastInitiationTime = ptr.To(now)
+			shoot.Status.ManualWorkerPoolRollout.LastCompletionTime = nil
+			shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts = []gardencorev1beta1.PendingWorkersRollout{{Name: "worker-1"}}
+			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
+
+			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
+
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			Expect(shoot.Status.ManualWorkerPoolRollout.LastInitiationTime.Unix()).To(Equal(now.Unix()))
+			Expect(shoot.Status.ManualWorkerPoolRollout.LastCompletionTime).ToNot(BeNil())
+			Expect(shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts).To(BeNil())
 		})
 
 		It("should not set the rotation status to Prepared if current status is Preparing and manual in-place update pending workers are present", func() {
