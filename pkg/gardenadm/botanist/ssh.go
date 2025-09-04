@@ -12,8 +12,10 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -36,7 +38,10 @@ func (b *AutonomousBotanist) ConnectToMachine(ctx context.Context, index int) (*
 		return nil, fmt.Errorf("only %q machines founds, but wanted to connect to machine with index %d", len(machineList.Items), index)
 	}
 	machine := machineList.Items[index]
-	machineAddr := b.sshAddressForMachine(&machine)
+	machineAddr, err := b.sshAddressForMachine(&machine)
+	if err != nil {
+		return nil, err
+	}
 
 	sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
 	if !found {
@@ -58,21 +63,27 @@ func (b *AutonomousBotanist) ConnectToMachine(ctx context.Context, index int) (*
 	return conn, nil
 }
 
-func (b *AutonomousBotanist) sshAddressForMachine(machine *machinev1alpha1.Machine) string {
-	// For now, we expect that the Bastion can connect to the control plane machine via its hostname and that the hostname
-	// is equal to the machine's name.
-	// More cases will be supported once https://github.com/gardener/machine-controller-manager/pull/1012 gets released.
-	// TODO(timebertt): prefer Machine.status.addresses if present once mcm has been updated in gardener
-	machineHostname := machine.Name
+// addressTypePriority when retrieving the SSH Address of a machine. 0 is the highest priority
+var addressTypePriority = map[corev1.NodeAddressType]int{
+	// internal names have priority, as we jump via a bastion host
+	corev1.NodeInternalIP:  0,
+	corev1.NodeInternalDNS: 1,
+	corev1.NodeExternalIP:  2,
+	corev1.NodeExternalDNS: 3,
+	// this should be returned by all providers, and is actually locally resolvable in many infrastructures
+	corev1.NodeHostName: 4,
+}
 
-	// Until machine-controller-manager-provider-local reports the correct hostname/IP in Machine.status.addresses, we
-	// prefix the machine name with "machine-" because we know that this is the hostname of local machines.
-	// TODO(timebertt): drop this shortcut once https://github.com/gardener/gardener/pull/12489 has been merged.
-	if b.Shoot.GetInfo().Spec.Provider.Type == "local" {
-		machineHostname = "machine-" + machineHostname
+func (b *AutonomousBotanist) sshAddressForMachine(machine *machinev1alpha1.Machine) (string, error) {
+	if len(machine.Status.Addresses) == 0 {
+		return "", fmt.Errorf("no addresses found in status of machine %s", machine.Name)
 	}
 
-	return net.JoinHostPort(machineHostname, "22")
+	address := slices.MinFunc(machine.Status.Addresses, func(a, b corev1.NodeAddress) int {
+		return addressTypePriority[a.Type] - addressTypePriority[b.Type]
+	})
+
+	return net.JoinHostPort(address.Address, "22"), nil
 }
 
 var (
