@@ -53,8 +53,6 @@ spec:
     gardener:
       clusterIdentity: gardener-local
       gardenerAPIServer:
-        admissionPlugins:
-        - name: ShootVPAEnabledByDefault
         featureGates:
           CloudProfileCapabilities: true
           InPlaceNodeUpdates: true
