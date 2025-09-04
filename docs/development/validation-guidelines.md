@@ -167,13 +167,13 @@ Gardener offers several packages that contain validation utilities:
   - The [`cidrvalidation.CIDR`](https://pkg.go.dev/github.com/gardener/gardener/pkg/utils/validation/cidr#CIDR) interface contains several utility functions for working with CIDR ranges. An implementation of the interface can be instantiated using the [`cidrvalidation.NewCIDR`](https://pkg.go.dev/github.com/gardener/gardener/pkg/utils/validation/cidr#NewCIDR) function.
   - The package also contains validation utilities for checking if Shoot networks intersect with Seed networks or if Shoot networks intersect between each other.
 - [`github.com/gardener/gardener/pkg/utils/validation/kubernetes/core`](https://pkg.go.dev/github.com/gardener/gardener/pkg/utils/validation/kubernetes/core), aliased as `kubernetescorevalidation`
-  - The package contains copy of several utility functions from [k8s.io/kubernetes/apis/core/validation](https://pkg.go.dev/k8s.io/kubernetes/apis/core/validation). This is done to prevent importing the `k8s.io/kubernetes` dependency in Gardener.
+  - The package contains copy of several utility functions from [k8s.io/kubernetes/pkg/apis/core/validation](https://pkg.go.dev/k8s.io/kubernetes/pkg/apis/core/validation) and [k8s.io/kubernetes/pkg/apis/core/helper](https://pkg.go.dev/k8s.io/kubernetes/pkg/apis/core/helper). This is done to prevent importing the `k8s.io/kubernetes` dependency in Gardener.
 - [`github.com/gardener/gardener/pkg/utils/validation`](https://pkg.go.dev/github.com/gardener/gardener/pkg/utils/validation), aliased as `validationutils`
   - The package provides validation utilities for component configuration APIs.
 
 Frequently used validation functions:
 - [`kubernetescorevalidation.ValidateResourceQuantityValue`](https://pkg.go.dev/github.com/gardener/gardener/pkg/utils/validation/kubernetes/core#ValidateResourceQuantityValue)
-  - Use this function to validate fields of type `resource.Quantity`. See [example usage](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/apis/core/validation/shoot.go#L2066-L2068).
+  - Use this function to validate fields of type `resource.Quantity`. See [example usage](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/apis/core/validation/shoot.go#L2240-L2242).
   - Use this function to validate fields of type `corev1.ResourceList`. See [example usage](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/apis/core/validation/shoot.go#L1392-L1407).
 - [`kubernetescorevalidation.ValidateTolerations`](https://pkg.go.dev/github.com/gardener/gardener/pkg/utils/validation/kubernetes/core#ValidateTolerations)
   - Use this function to validate fields of type `[]corev1.Toleration`. See [example usage](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/apis/core/validation/seed.go#L156).
