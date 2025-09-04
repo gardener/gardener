@@ -79,14 +79,21 @@ var (
 		v1beta1constants.OperationRotateCredentialsStart,
 		v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateCredentialsComplete,
+		v1beta1constants.OperationRotateETCDEncryptionKey,
 		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 		v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
 		v1beta1constants.OperationRotateServiceAccountKeyStart,
 		v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	)
+	// TODO(AleksandarSavchev): Remove this variable and the associated validation after support for Kubernetes v1.33 is dropped.
+	forbiddenETCDEncryptionKeyShootOperationsWithK8s134 = sets.New(
+		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+		v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
+	)
 	forbiddenShootOperationsWhenEncryptionChangeIsRollingOut = sets.New(
 		v1beta1constants.OperationRotateCredentialsStart,
+		v1beta1constants.OperationRotateETCDEncryptionKey,
 		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 	)
 	availableShootPurposes = sets.New(
@@ -2760,6 +2767,7 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	var (
 		allErrs            = field.ErrorList{}
 		encryptedResources = sets.New[schema.GroupResource]()
+		k8sLess134, _      = versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, "< 1.34")
 	)
 
 	if operation == "" && maintenanceOperation == "" {
@@ -2778,6 +2786,9 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	if operation != "" {
+		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(operation) && !k8sLess134 {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", operation)))
+		}
 		if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(availableShootOperations)))
 		}
@@ -2792,6 +2803,9 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	if maintenanceOperation != "" {
+		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(maintenanceOperation) && !k8sLess134 {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", maintenanceOperation)))
+		}
 		if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, sets.List(availableShootMaintenanceOperations)))
 		}
@@ -2806,7 +2820,7 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 
 	switch maintenanceOperation {
 	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
-		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(operation) {
+		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(operation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
@@ -2817,7 +2831,7 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 
 	switch operation {
 	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
-		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(maintenanceOperation) {
+		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(maintenanceOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
@@ -2840,6 +2854,7 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 
 func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+	k8sLess134, _ := versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, "< 1.34")
 
 	switch operation {
 	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
@@ -2864,7 +2879,7 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
 		}
-		if helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
+		if k8sLess134 && helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}
 
@@ -2896,7 +2911,7 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
 		}
 
-	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
+	case v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if shoot was not yet created successfully or is not ready for reconciliation"))
 		}

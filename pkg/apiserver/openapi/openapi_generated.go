@@ -3691,6 +3691,13 @@ func schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref common.Reference
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"autoCompleteAfterPrepared": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after the preparation phase has finished. Such rotation can be triggered by the `rotate-etcd-encryption-key` annotation. This field is needed while we support two types of key rotations: two-operation and single operation rotation.\n\nDeprecated: This field will be removed in a future release. The field will be no longer needed with the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"phase"},
 			},

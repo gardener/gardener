@@ -124,6 +124,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("complete CA rotation", "rotate-ca-complete"),
 				Entry("start ServiceAccount key rotation", "rotate-serviceaccount-key-start"),
 				Entry("complete ServiceAccount key rotation", "rotate-serviceaccount-key-complete"),
+				Entry("start single operation ETCD encryption key rotation", "rotate-etcd-encryption-key"),
 				Entry("start ETCD encryption key rotation", "rotate-etcd-encryption-key-start"),
 				Entry("complete ETCD encryption key rotation", "rotate-etcd-encryption-key-complete"),
 				Entry("start Observability key rotation", "rotate-observability-credentials"),
@@ -785,6 +786,137 @@ var _ = Describe("Validation Tests", func() {
 						},
 					},
 				}),
+			)
+
+			It("should allow to complete credentials rotation when etcd rotation is not prepared and k8s version is >= 1.34", func() {
+				garden.Spec.VirtualCluster.Kubernetes.Version = "1.34.0"
+				metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-complete")
+				garden.Status = operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}
+
+				Expect(ValidateGarden(garden, extensions)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.virtualCluster.kubernetes.version"),
+				}))))
+			})
+
+			It("should forbid setting rotate-etcd-encryption-key-start annotation when k8s version is >= v1.34", func() {
+				garden.Spec.VirtualCluster.Kubernetes.Version = "1.34.0"
+				metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+				Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": Equal("for Kubernetes versions >= 1.34, operation 'rotate-etcd-encryption-key-start' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation"),
+				}))))
+			})
+
+			It("should forbid setting rotate-etcd-encryption-key-complete annotation when k8s version is >= v1.34", func() {
+				garden.Spec.VirtualCluster.Kubernetes.Version = "1.34.0"
+				metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-complete")
+				Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": Equal("for Kubernetes versions >= 1.34, operation 'rotate-etcd-encryption-key-complete' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation"),
+				}))))
+			})
+
+			DescribeTable("starting ETCD encryption key rotation with automatic completion",
+				func(allowed bool, status operatorv1alpha1.GardenStatus, kubeAPIEncryptionConfig, gardenerEncryptionConfig *gardencorev1beta1.EncryptionConfig, extraMatchers ...gomegatypes.GomegaMatcher) {
+					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key")
+
+					garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+						KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+							EncryptionConfig: kubeAPIEncryptionConfig,
+						},
+					}
+					garden.Spec.VirtualCluster.Gardener.APIServer = &operatorv1alpha1.GardenerAPIServerConfig{
+						EncryptionConfig: gardenerEncryptionConfig,
+					}
+
+					garden.Status = status
+
+					matcher := BeEmpty()
+					if !allowed {
+						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+						})))
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(And(matcher, SatisfyAll(extraMatchers...)))
+				},
+
+				Entry("rotation phase is prepare", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
+						},
+					},
+				}, nil, nil),
+				Entry("rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}, nil, nil),
+				Entry("rotation phase is complete", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
+						},
+					},
+				}, nil, nil),
+				Entry("rotation phase is completed", true, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+						},
+					},
+				}, nil, nil),
+				Entry("when spec encrypted resources and status encrypted resources are not equal", false,
+					operatorv1alpha1.GardenStatus{
+						EncryptedResources: []string{"configmaps", "projects.core.gardener.cloud"},
+					},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"deployments.apps"}},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"shoots.core.gardener.cloud"}},
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("cannot start ETCD encryption key rotation because a previous encryption configuration change is currently being rolled out"),
+					}))),
+				),
+				Entry("when spec encrypted resources and status encrypted resources are equal", true,
+					operatorv1alpha1.GardenStatus{
+						EncryptedResources: []string{"configmaps.", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
+					},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"daemonsets.apps", "configmaps"}},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"shoots.core.gardener.cloud", "projects.core.gardener.cloud"}},
+				),
 			)
 
 			DescribeTable("starting ETCD encryption key rotation",

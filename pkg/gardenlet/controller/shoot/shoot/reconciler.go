@@ -52,6 +52,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const taskID = "initializeOperation"
@@ -610,6 +611,10 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	}
 
 	var mustRemoveOperationAnnotation bool
+	k8sLess134, err := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.34")
+	if err != nil {
+		return fmt.Errorf("failed checking if Shoot k8s version is less than 1.34: %w", err)
+	}
 
 	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
 	case v1beta1constants.OperationRotateCredentialsStart:
@@ -620,7 +625,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 			startRotationSSHKeypair(shoot, &now)
 		}
 		startRotationObservability(shoot, &now)
-		startRotationETCDEncryptionKey(shoot, &now)
+		startRotationETCDEncryptionKey(shoot, !k8sLess134, &now)
 	case v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
 		mustRemoveOperationAnnotation = true
 		startRotationCAWithoutWorkersRollout(shoot, &now)
@@ -629,12 +634,14 @@ func (r *Reconciler) updateShootStatusOperationStart(
 			startRotationSSHKeypair(shoot, &now)
 		}
 		startRotationObservability(shoot, &now)
-		startRotationETCDEncryptionKey(shoot, &now)
+		startRotationETCDEncryptionKey(shoot, !k8sLess134, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(shoot, &now)
 		completeRotationServiceAccountKey(shoot, &now)
-		completeRotationETCDEncryptionKey(shoot, &now)
+		if k8sLess134 {
+			completeRotationETCDEncryptionKey(shoot, &now)
+		}
 
 	case v1beta1constants.OperationRotateCAStart:
 		mustRemoveOperationAnnotation = true
@@ -666,9 +673,12 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		mustRemoveOperationAnnotation = true
 		completeRotationServiceAccountKey(shoot, &now)
 
+	case v1beta1constants.OperationRotateETCDEncryptionKey:
+		mustRemoveOperationAnnotation = true
+		startRotationETCDEncryptionKey(shoot, true, &now)
 	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
 		mustRemoveOperationAnnotation = true
-		startRotationETCDEncryptionKey(shoot, &now)
+		startRotationETCDEncryptionKey(shoot, false, &now)
 	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationETCDEncryptionKey(shoot, &now)
@@ -696,6 +706,14 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	}
 
 	removeNonExistentPoolsFromPendingWorkersRollouts(shoot, v1beta1helper.HibernationIsEnabled(shoot))
+
+	// TODO(AleksandarSavchev): Remove the k8s version check in a future release after support for Kubernetes v1.33 is dropped.
+	// It is added to forcefully complete the etcd encryption key rotation, since the annotation to complete the rotation
+	// is forbidden for clusters with k8s >= v1.34.
+	if v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) == gardencorev1beta1.RotationPrepared &&
+		(v1beta1helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(shoot.Status.Credentials) || !k8sLess134) {
+		completeRotationETCDEncryptionKey(shoot, &now)
+	}
 
 	if err := r.GardenClient.Status().Update(ctx, shoot); err != nil {
 		return err
@@ -865,6 +883,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 			rotation.LastCompletionTime = &now
 			rotation.LastInitiationFinishedTime = nil
 			rotation.LastCompletionTriggeredTime = nil
+			rotation.AutoCompleteAfterPrepared = nil
 		})
 	}
 
@@ -1165,12 +1184,13 @@ func completeRotationServiceAccountKey(shoot *gardencorev1beta1.Shoot, now *meta
 	})
 }
 
-func startRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
+func startRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, autoCompleteAfterPrepared bool, now *metav1.Time) {
 	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing
 		rotation.LastInitiationTime = now
 		rotation.LastInitiationFinishedTime = nil
 		rotation.LastCompletionTriggeredTime = nil
+		rotation.AutoCompleteAfterPrepared = ptr.To(autoCompleteAfterPrepared)
 	})
 }
 

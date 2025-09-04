@@ -402,6 +402,15 @@ type ETCDEncryptionKeyRotation struct {
 	// triggered.
 	// +optional
 	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty" protobuf:"bytes,5,opt,name=lastCompletionTriggeredTime"`
+	// AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after the preparation phase has finished.
+	// Such rotation can be triggered by the `rotate-etcd-encryption-key` annotation.
+	// This field is needed while we support two types of key rotations: two-operation and single operation rotation.
+	//
+	// Deprecated: This field will be removed in a future release. The field will be no longer needed with
+	// the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.
+	// TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
+	// +optional
+	AutoCompleteAfterPrepared *bool `json:"autoCompleteAfterPrepared,omitempty" protobuf:"varint,6,opt,name=autoCompleteAfterPrepared"`
 }
 
 // CredentialsRotationPhase is a string alias.

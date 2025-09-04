@@ -207,26 +207,19 @@ The rotation happens in three stages:
 - In stage three, the old encryption is dropped from the bundle.
 
 Technically, the `Preparing` phase indicates the stages one and two.
-Once it is completed, the `Prepared` phase indicates readiness for stage three.
 The `Completing` phase indicates stage three, and the `Completed` phase states that the rotation process has finished.
 
 > You can check the `.status.credentials.rotation.etcdEncryptionKey` field in the `Shoot` to see when the rotation was last initiated, last completed, and in which phase it currently is.
 
-In order to start the rotation (stage one), you have to annotate the shoot with the `rotate-etcd-encryption-key-start` operation:
+In order to perform the rotation, you have to annotate the shoot with the `rotate-etcd-encryption-key` operation:
 
 ```bash
-kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-etcd-encryption-key-start
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-etcd-encryption-key
 ```
 
 This will trigger a `Shoot` reconciliation and performs the stages one and two.
 After it is completed, the `.status.credentials.rotation.etcdEncryptionKey.phase` is set to `Prepared`.
-Now you can complete the rotation by annotating the shoot with the `rotate-etcd-encryption-key-complete` operation:
-
-```bash
-kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-etcd-encryption-key-complete
-```
-
-This will trigger another `Shoot` reconciliation and performs stage three.
+This will automatically trigger another `Shoot` reconciliation and perform stage three.
 After it is completed, the `.status.credentials.rotation.etcdEncryptionKey.phase` is set to `Completed`.
 
 ### `ServiceAccount` Token Signing Key

@@ -562,6 +562,12 @@ var _ = Describe("Strategy", func() {
 					true,
 				),
 
+				Entry("rotate-etcd-encryption-key",
+					v1beta1constants.OperationRotateETCDEncryptionKey,
+					nil,
+					true,
+					true,
+				),
 				Entry("rotate-etcd-encryption-key-start",
 					v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 					nil,
@@ -712,6 +718,49 @@ var _ = Describe("Strategy", func() {
 
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
 			})
+		})
+	})
+
+	Context("StatusStrategy", func() {
+		BeforeEach(func() {
+			strategy = NewStatusStrategy()
+		})
+
+		Context("etcd encryption key rotation", func() {
+			DescribeTable("etcd encryption key rotation",
+				func(oldETCDEncryptionKeyRotation, newETCDEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, shouldIncreaseGeneration bool) {
+					oldShoot := &core.Shoot{
+						Spec: core.ShootSpec{},
+						Status: core.ShootStatus{
+							Credentials: &core.ShootCredentials{
+								Rotation: &core.ShootCredentialsRotation{
+									ETCDEncryptionKey: oldETCDEncryptionKeyRotation,
+								},
+							},
+						},
+					}
+
+					newShoot := oldShoot.DeepCopy()
+					newShoot.Status.Credentials.Rotation.ETCDEncryptionKey = newETCDEncryptionKeyRotation
+
+					strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+					expectedGeneration := oldShoot.Generation
+					if shouldIncreaseGeneration {
+						expectedGeneration++
+					}
+					Expect(newShoot.Generation).To(Equal(expectedGeneration))
+				},
+
+				Entry("rotation status is nil", nil, nil, false),
+				Entry("rotation phase is empty", nil, &core.ETCDEncryptionKeyRotation{}, false),
+				Entry("rotation phase is prepared", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: ptr.To(true)}, true),
+				Entry("rotation phase is prepared and is not single operation", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: ptr.To(false)}, false),
+				Entry("rotation phase has not been updated",
+					&core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: ptr.To(true)},
+					&core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: ptr.To(true)}, false),
+				Entry("rotation phase is not prepared", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting, AutoCompleteAfterPrepared: ptr.To(true)}, false),
+			)
 		})
 	})
 })
