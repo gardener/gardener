@@ -16,7 +16,7 @@ The issuer URL can be read from the [Gardener Info ConfigMap](../gardener/garden
 > one would have to create a new `CredentialsBinding` that references a `WorkloadIdentity` and set the `.spec.credentialsBindingName` field of the `Shoot`
 > to refer to the newly created `CredentialsBinding`.
 
-## JWT claims
+## JWT Claims
 
 The Gardener API server, as JWT issuer, sets the following standard claims as per [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519):
 
