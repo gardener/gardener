@@ -3,7 +3,7 @@ title: Shoot Workload Identity
 description: Configure access to infrastructure accounts via workload identity instead of static credentials
 ---
 
-## Shoot Workload Identity
+# Shoot Workload Identity
 
 [`WorkloadIdentity`](../../api-reference/security.md#workloadidentity) is a resource that allows workloads to be presented before external systems by giving them identities managed by Gardener.
 As `WorkloadIdentity`s do not directly contain credentials we gain the ability to create `Shoot`s without the need of preliminary exchange of credentials.
@@ -18,7 +18,7 @@ The issuer URL can be read from the [Gardener Info ConfigMap](../gardener/garden
 
 ## JWT claims
 
-Gardener API Server, as JWT issuer, set the following standard claims as per [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519):
+The Gardener API server, as JWT issuer, sets the following standard claims as per [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519):
 
 - **aud**: contains the audiences set in `WorkloadIdentity`'s `.spec.audiences` field.
 - **iss**: issuer of the JWT, see above how to find its value for your Garden installation.
@@ -28,10 +28,10 @@ Gardener API Server, as JWT issuer, set the following standard claims as per [RF
 - **nbf**: not before time, a timestamp in the format of number of seconds since unix epoch.
 - **jti**: JWT ID, a unique identifier for the JWT.
 
-Gardener API Server is using the private namespace `gardener.cloud` to set additional claims in the JWT.
+The Gardener API server is using the private namespace `gardener.cloud` to set additional claims in the JWT.
 Their purpose is to bear Gardener specific information about the context of usage of the JWT.
 The always set claim in this private namespace is `workloadIdentity` which contains the name, namespace and uid of the `WorkloadIdentity` resource used to issue the JWT.
-When Gardenlet is requesting the JWT, Gardener API Server takes care to enhance the token with additional claims.
+When Gardenlet is requesting the JWT, the Gardener API server takes care to enhance the token with additional claims.
 In the scenario where `WorkloadIdentity` is used as Shoot infrastructure credentials, such additional claims are:
 
 - **shoot**: contains the name, namespace and uid of the Shoot using the JWT.
@@ -70,7 +70,6 @@ Here is an example payload of workload identity JWT requested by Gardenlet:
         }
     }
 }
-
 ```
 
 ## Infrastructure Providers
