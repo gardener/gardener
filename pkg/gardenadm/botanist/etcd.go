@@ -57,6 +57,7 @@ func (b *AutonomousBotanist) DeployEtcdDruid(ctx context.Context) error {
 		b.SecretsManager,
 		v1beta1constants.SecretNameCACluster,
 		v1beta1constants.PriorityClassNameSeedSystem800,
+		false,
 	)
 	if err != nil {
 		return fmt.Errorf("failed creating etcd-druid deployer: %w", err)

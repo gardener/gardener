@@ -102,6 +102,14 @@ var _ = Describe("Etcd", func() {
 			Enabled: ptr.To(true),
 			Policy:  &compressionPolicy,
 		}
+		snapshotCompactionSpec = druidcorev1alpha1.SnapshotCompactionSpec{
+			Resources: &corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("600m"),
+					corev1.ResourceMemory: resource.MustParse("3Gi"),
+				},
+			},
+		}
 		backupLeaderElectionEtcdConnectionTimeout = &metav1.Duration{Duration: 10 * time.Second}
 		backupLeaderElectionReelectionPeriod      = &metav1.Duration{Duration: 11 * time.Second}
 
@@ -166,13 +174,6 @@ var _ = Describe("Etcd", func() {
 			}
 			if existingResourcesContainerBackupRestore != nil {
 				resourcesContainerBackupRestore = existingResourcesContainerBackupRestore
-			}
-
-			resourcesContainerCompactionJob := &corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("600m"),
-					corev1.ResourceMemory: resource.MustParse("3Gi"),
-				},
 			}
 
 			clientService := &corev1.Service{
@@ -279,7 +280,7 @@ var _ = Describe("Etcd", func() {
 						},
 						Port:                    ptr.To[int32](8080),
 						Resources:               resourcesContainerBackupRestore,
-						CompactionResources:     resourcesContainerCompactionJob,
+						SnapshotCompaction:      &snapshotCompactionSpec,
 						GarbageCollectionPolicy: &garbageCollectionPolicy,
 						GarbageCollectionPeriod: &garbageCollectionPeriod,
 						SnapshotCompression:     &compressionSpec,

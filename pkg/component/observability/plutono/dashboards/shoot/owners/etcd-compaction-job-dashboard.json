@@ -264,6 +264,132 @@
         "type": "stat"
       },
       {
+        "datasource": null,
+        "description": "Number of succeeded full snapshots initiated by compaction controller in the selected time range.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        },
+        "id": 23763572003,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {},
+          "textMode": "auto"
+        },
+        "pluginVersion": "7.5.22",
+        "targets": [
+          {
+            "exemplar": true,
+            "expr": "sum(floor(increase(etcddruid_compaction_full_snapshot_triggered_total{succeeded=\"true\"}[${__range}])))",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "timeFrom": null,
+        "timeShift": null,
+        "title": "Successful Full Snapshots",
+        "type": "stat"
+      },
+      {
+        "datasource": null,
+        "description": "Number of failed full snapshots initiated by compaction controller in the selected time range.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        },
+        "id": 23763572005,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {},
+          "textMode": "auto"
+        },
+        "pluginVersion": "7.5.22",
+        "targets": [
+          {
+            "exemplar": true,
+            "expr": "sum(floor(increase(etcddruid_compaction_full_snapshot_triggered_total{succeeded=\"false\"}[${__range}])))",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "timeFrom": null,
+        "timeShift": null,
+        "title": "Failed Full Snapshots",
+        "type": "stat"
+      },
+      {
         "aliasColors": {},
         "bars": false,
         "dashLength": 10,
@@ -280,7 +406,7 @@
           "h": 8,
           "w": 12,
           "x": 0,
-          "y": 8
+          "y": 24
         },
         "hiddenSeries": false,
         "id": 4,
@@ -378,7 +504,7 @@
           "h": 8,
           "w": 12,
           "x": 12,
-          "y": 8
+          "y": 24
         },
         "hiddenSeries": false,
         "id": 6,
@@ -494,7 +620,7 @@
           "h": 9,
           "w": 24,
           "x": 0,
-          "y": 16
+          "y": 32
         },
         "heatmap": {},
         "hideZeroBuckets": true,
@@ -555,7 +681,7 @@
           "h": 8,
           "w": 12,
           "x": 0,
-          "y": 25
+          "y": 41
         },
         "hiddenSeries": false,
         "id": 10,
@@ -651,7 +777,7 @@
           "h": 8,
           "w": 12,
           "x": 12,
-          "y": 25
+          "y": 41
         },
         "hiddenSeries": false,
         "id": 12,

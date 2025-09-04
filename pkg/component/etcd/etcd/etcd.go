@@ -212,6 +212,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Enabled: ptr.To(true),
 			Policy:  &compressionPolicy,
 		}
+		snapshotCompactionSpec = druidcorev1alpha1.SnapshotCompactionSpec{
+			Resources: e.computeCompactionJobContainerResources(),
+		}
 
 		annotations         map[string]string
 		metrics             = druidcorev1alpha1.Basic
@@ -220,7 +223,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		minAllowed             = e.computeMinAllowedForETCDContainer()
 		resourcesEtcd          = e.computeETCDContainerResources(minAllowed)
 		resourcesBackupRestore = e.computeBackupRestoreContainerResources()
-		resourcesCompactionJob = e.computeCompactionJobContainerResources()
 	)
 
 	if e.values.Class == ClassImportant {
@@ -377,7 +379,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			},
 			Port:                    ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortBackupRestore, etcdconstants.StaticPodPortEtcdEventsBackupRestore)),
 			Resources:               resourcesBackupRestore,
-			CompactionResources:     resourcesCompactionJob,
+			SnapshotCompaction:      &snapshotCompactionSpec,
 			GarbageCollectionPolicy: &garbageCollectionPolicy,
 			GarbageCollectionPeriod: &garbageCollectionPeriod,
 			SnapshotCompression:     &compressionSpec,
