@@ -5973,28 +5973,44 @@ var _ = Describe("Shoot Validation Tests", func() {
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
-					EncryptedResources: []string{"configmaps"},
+					Credentials: &core.ShootCredentials{
+						ETCDEncryption: core.ETCDEncryption{
+							Resources: []string{"configmaps"},
+						},
+					},
 				}),
 				Entry("when shoot spec encrypted resources and status encrypted resources are not equal", false,
 					[]string{"pods"}, core.ShootStatus{
 						LastOperation: &core.LastOperation{
 							Type: core.LastOperationTypeReconcile,
 						},
-						EncryptedResources: []string{"configmaps"},
+						Credentials: &core.ShootCredentials{
+							ETCDEncryption: core.ETCDEncryption{
+								Resources: []string{"configmaps"},
+							},
+						},
 					}),
 				Entry("when shoot spec encrypted resources and status encrypted resources are equal", true,
 					[]string{"configmaps"}, core.ShootStatus{
 						LastOperation: &core.LastOperation{
 							Type: core.LastOperationTypeReconcile,
 						},
-						EncryptedResources: []string{"configmaps"},
+						Credentials: &core.ShootCredentials{
+							ETCDEncryption: core.ETCDEncryption{
+								Resources: []string{"configmaps"},
+							},
+						},
 					}),
 				Entry("when shoot spec encrypted resources and status encrypted resources are equal", true,
 					[]string{"configmaps"}, core.ShootStatus{
 						LastOperation: &core.LastOperation{
 							Type: core.LastOperationTypeReconcile,
 						},
-						EncryptedResources: []string{"configmaps."},
+						Credentials: &core.ShootCredentials{
+							ETCDEncryption: core.ETCDEncryption{
+								Resources: []string{"configmaps."},
+							},
+						},
 					}),
 			)
 
