@@ -369,12 +369,15 @@ var _ = Describe("Project Validation Tests", func() {
 			Entry("invalid api group name", "apps/v1beta1", rbacv1.ServiceAccountKind, "foo", "default", field.ErrorTypeNotSupported, "apiGroup"),
 			Entry("invalid name", "", rbacv1.ServiceAccountKind, "foo-", "default", field.ErrorTypeInvalid, "name"),
 			Entry("no namespace", "", rbacv1.ServiceAccountKind, "foo", "", field.ErrorTypeRequired, "namespace"),
+			Entry("invalid namespace", "", rbacv1.ServiceAccountKind, "foo", "foo%bar", field.ErrorTypeInvalid, "namespace"),
 
 			// users
 			Entry("invalid api group name", "rbac.authorization.invalid", rbacv1.UserKind, "john.doe@example.com", "", field.ErrorTypeNotSupported, "apiGroup"),
+			Entry("namespace set", "rbac.authorization.k8s.io", rbacv1.UserKind, "john.doe@example.com", "garden", field.ErrorTypeForbidden, "namespace"),
 
 			// groups
 			Entry("invalid api group name", "rbac.authorization.invalid", rbacv1.GroupKind, "groupname", "", field.ErrorTypeNotSupported, "apiGroup"),
+			Entry("namespace set", "rbac.authorization.k8s.io", rbacv1.GroupKind, "groupname", "garden", field.ErrorTypeForbidden, "namespace"),
 		)
 
 		It("should forbid invalid tolerations", func() {

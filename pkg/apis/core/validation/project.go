@@ -154,11 +154,18 @@ func ValidateSubject(subject rbacv1.Subject, fldPath *field.Path) field.ErrorLis
 		}
 		if len(subject.Namespace) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), ""))
+		} else {
+			for _, msg := range apivalidation.ValidateNamespaceName(subject.Namespace, false) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), subject.Namespace, msg))
+			}
 		}
 
 	case rbacv1.UserKind, rbacv1.GroupKind:
 		if subject.APIGroup != rbacv1.GroupName {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("apiGroup"), subject.APIGroup, []string{rbacv1.GroupName}))
+		}
+		if len(subject.Namespace) > 0 {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("namespace"), "must not be set when kind is User or Group"))
 		}
 
 	default:
