@@ -216,9 +216,7 @@ status:
 kind: NetworkPolicy
 metadata:
   annotations:
-    gardener.cloud/description: Allows CoreDNS to lookup DNS records, talk to the
-      API Server. Also allows CoreDNS to be reachable via its service and its metrics
-      endpoint.
+    gardener.cloud/description: Allows CoreDNS to lookup DNS records, talk to the API Server. Also allows CoreDNS to be reachable via its service and its metrics endpoint.
   creationTimestamp: null
   name: gardener.cloud--allow-dns
   namespace: kube-system
