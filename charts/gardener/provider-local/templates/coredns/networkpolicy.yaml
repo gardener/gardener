@@ -1,14 +1,4 @@
 {{- if eq (include "coredns.enabled" .) "true" -}}
-# This NetworkPolicy allows ingress traffic from all IPs in the kind cluster pod network (10.1.0.0/16) to coredns.
-# The shoot machine pods use a dedicated calico IPPool with a CIDR outside the kind pod network
-# (see https://github.com/gardener/gardener/pull/9752).
-# With this, routing of traffic from machine pods doesn't work correctly in all cases. E.g., kube-proxy treats such
-# traffic as external and SNATs it, even though it actually originates from inside the cluster.
-# In combination with calico's IPIP tunneling, this breaks NetworkPolicies for cross-node traffic, because traffic
-# doesn't appear to come from a pod IP anymore but a node IP on the tunl0 interface (which is actually an IP within
-# the kind pod network).
-# I.e., this NetworkPolicy is a workaround to allow cross-node traffic from machine pods to the local coredns.
-# TODO(timebertt): remove this workaround once the shoot machine pods use pod IPs from the kind pod network
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -17,8 +7,17 @@ metadata:
 spec:
   ingress:
   - from:
+    # Allow traffic from the docker kind network's gateway IP. This is the source IP seen by NetworkPolicies
+    # when using the nodePort port-mapping on the kind control-node node (5353:30053) used by e2e tests and if the
+    # coredns pod runs on the control-plane node.
     - ipBlock:
-        cidr: 10.1.0.0/16 # kind pod network
+        cidr: 172.18.0.1/32
+    # If the coredns pod runs on another node than the control-plane node, incoming traffic on the nodePort gets SNATed
+    # by kube-proxy and is then sent over the tunl0 interface to the node where the coredns pod runs. In this case, the
+    # source IP seen by NetworkPolicies on the destination node is the node IP of the control-plane node (on the tunl0
+    # interface). This IP is allocated from the calico default IPPool (10.1.0.0/16).
+    - ipBlock:
+        cidr: 10.1.0.0/16
     ports:
     - port: 9053
       protocol: TCP
