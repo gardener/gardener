@@ -276,4 +276,13 @@ var _ = Describe("helper", func() {
 			Expect(GetAPIServerSNIDomains(domains, sni)).To(Equal([]string{"api.bar", "bar.foo.bar", "foo.foo.bar"}))
 		})
 	})
+
+	DescribeTable("#GetEncryptedResourcesInStatus",
+		func(status operatorv1alpha1.GardenStatus, expected []string) {
+			Expect(GetEncryptedResourcesInStatus(status)).To(Equal(expected))
+		},
+		Entry("no credentials field", operatorv1alpha1.GardenStatus{}, nil),
+		Entry("without resources", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}, nil),
+		Entry("with resources", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{ETCDEncryption: operatorv1alpha1.ETCDEncryption{Resources: []string{"configmaps", "shoots.core.gardener.cloud"}}}}, []string{"configmaps", "shoots.core.gardener.cloud"}),
+	)
 })
