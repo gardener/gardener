@@ -1779,6 +1779,34 @@ func (m *ETCDConfig) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ETCDConfig proto.InternalMessageInfo
 
+func (m *ETCDEncryption) Reset()      { *m = ETCDEncryption{} }
+func (*ETCDEncryption) ProtoMessage() {}
+func (*ETCDEncryption) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{63}
+}
+func (m *ETCDEncryption) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ETCDEncryption) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ETCDEncryption) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ETCDEncryption.Merge(m, src)
+}
+func (m *ETCDEncryption) XXX_Size() int {
+	return m.Size()
+}
+func (m *ETCDEncryption) XXX_DiscardUnknown() {
+	xxx_messageInfo_ETCDEncryption.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ETCDEncryption proto.InternalMessageInfo
+
 func (m *ETCDEncryptionKeyRotation) Reset()      { *m = ETCDEncryptionKeyRotation{} }
 func (*ETCDEncryptionKeyRotation) ProtoMessage() {}
 func (*ETCDEncryptionKeyRotation) Descriptor() ([]byte, []int) {
@@ -3014,7 +3042,7 @@ var xxx_messageInfo_MachineImageFlavor proto.InternalMessageInfo
 func (m *MachineImageVersion) Reset()      { *m = MachineImageVersion{} }
 func (*MachineImageVersion) ProtoMessage() {}
 func (*MachineImageVersion) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{106}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{107}
 }
 func (m *MachineImageVersion) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3042,7 +3070,7 @@ var xxx_messageInfo_MachineImageVersion proto.InternalMessageInfo
 func (m *MachineType) Reset()      { *m = MachineType{} }
 func (*MachineType) ProtoMessage() {}
 func (*MachineType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{107}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{108}
 }
 func (m *MachineType) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3070,7 +3098,7 @@ var xxx_messageInfo_MachineType proto.InternalMessageInfo
 func (m *MachineTypeStorage) Reset()      { *m = MachineTypeStorage{} }
 func (*MachineTypeStorage) ProtoMessage() {}
 func (*MachineTypeStorage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{108}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{109}
 }
 func (m *MachineTypeStorage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3098,7 +3126,7 @@ var xxx_messageInfo_MachineTypeStorage proto.InternalMessageInfo
 func (m *Maintenance) Reset()      { *m = Maintenance{} }
 func (*Maintenance) ProtoMessage() {}
 func (*Maintenance) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{109}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{110}
 }
 func (m *Maintenance) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3126,7 +3154,7 @@ var xxx_messageInfo_Maintenance proto.InternalMessageInfo
 func (m *MaintenanceAutoUpdate) Reset()      { *m = MaintenanceAutoUpdate{} }
 func (*MaintenanceAutoUpdate) ProtoMessage() {}
 func (*MaintenanceAutoUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{110}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{111}
 }
 func (m *MaintenanceAutoUpdate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3154,7 +3182,7 @@ var xxx_messageInfo_MaintenanceAutoUpdate proto.InternalMessageInfo
 func (m *MaintenanceTimeWindow) Reset()      { *m = MaintenanceTimeWindow{} }
 func (*MaintenanceTimeWindow) ProtoMessage() {}
 func (*MaintenanceTimeWindow) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{111}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{112}
 }
 func (m *MaintenanceTimeWindow) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5796,6 +5824,7 @@ func init() {
 	proto.RegisterType((*DualApprovalForDeletion)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.DualApprovalForDeletion")
 	proto.RegisterType((*ETCD)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ETCD")
 	proto.RegisterType((*ETCDConfig)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ETCDConfig")
+	proto.RegisterType((*ETCDEncryption)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ETCDEncryption")
 	proto.RegisterType((*ETCDEncryptionKeyRotation)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ETCDEncryptionKeyRotation")
 	proto.RegisterType((*EncryptionConfig)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.EncryptionConfig")
 	proto.RegisterType((*ExpirableVersion)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ExpirableVersion")
@@ -10108,6 +10137,38 @@ func (m *ETCDConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		}
 		i--
 		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ETCDEncryption) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ETCDEncryption) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ETCDEncryption) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Resources) > 0 {
+		for iNdEx := len(m.Resources) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Resources[iNdEx])
+			copy(dAtA[i:], m.Resources[iNdEx])
+			i = encodeVarintGenerated(dAtA, i, uint64(len(m.Resources[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
@@ -17139,6 +17200,16 @@ func (m *ShootCredentials) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	{
+		size, err := m.ETCDEncryption.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
 	if m.Rotation != nil {
 		{
 			size, err := m.Rotation.MarshalToSizedBuffer(dAtA[:i])
@@ -20429,6 +20500,21 @@ func (m *ETCDConfig) Size() (n int) {
 	return n
 }
 
+func (m *ETCDEncryption) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Resources) > 0 {
+		for _, s := range m.Resources {
+			l = len(s)
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	return n
+}
+
 func (m *ETCDEncryptionKeyRotation) Size() (n int) {
 	if m == nil {
 		return 0
@@ -23055,6 +23141,8 @@ func (m *ShootCredentials) Size() (n int) {
 		l = m.Rotation.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	l = m.ETCDEncryption.Size()
+	n += 1 + l + sovGenerated(uint64(l))
 	return n
 }
 
@@ -24651,6 +24739,16 @@ func (this *ETCDConfig) String() string {
 	}
 	s := strings.Join([]string{`&ETCDConfig{`,
 		`Autoscaling:` + strings.Replace(this.Autoscaling.String(), "ControlPlaneAutoscaling", "ControlPlaneAutoscaling", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ETCDEncryption) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ETCDEncryption{`,
+		`Resources:` + fmt.Sprintf("%v", this.Resources) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -26503,6 +26601,7 @@ func (this *ShootCredentials) String() string {
 	}
 	s := strings.Join([]string{`&ShootCredentials{`,
 		`Rotation:` + strings.Replace(this.Rotation.String(), "ShootCredentialsRotation", "ShootCredentialsRotation", 1) + `,`,
+		`ETCDEncryption:` + strings.Replace(strings.Replace(this.ETCDEncryption.String(), "ETCDEncryption", "ETCDEncryption", 1), `&`, ``, 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -36206,6 +36305,88 @@ func (m *ETCDConfig) Unmarshal(dAtA []byte) error {
 			if err := m.Autoscaling.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ETCDEncryption) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ETCDEncryption: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ETCDEncryption: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Resources", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Resources = append(m.Resources, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -57336,6 +57517,39 @@ func (m *ShootCredentials) Unmarshal(dAtA []byte) error {
 				m.Rotation = &ShootCredentialsRotation{}
 			}
 			if err := m.Rotation.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ETCDEncryption", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ETCDEncryption.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
