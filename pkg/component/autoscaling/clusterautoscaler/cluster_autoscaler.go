@@ -11,7 +11,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	yaml2 "gopkg.in/yaml.v2"
+	yaml2 "go.yaml.in/yaml/v2"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"

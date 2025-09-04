@@ -10,9 +10,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.yaml.in/yaml/v2"
 
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
-	"github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 // Returns the expected CustomResourceState config and also asserts that the actual value is the same.
