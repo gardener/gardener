@@ -678,3 +678,9 @@ func (s *Shoot) IsAutonomous() bool {
 func (s *Shoot) RunsControlPlane() bool {
 	return s.ControlPlaneNamespace == metav1.NamespaceSystem
 }
+
+// HasManagedInfrastructure returns true if the shoot's infrastructure (network, machines, etc.) is managed by Gardener.
+// I.e., it returns false for high-touch autonomous shoots, where the infrastructure is managed by the user.
+func (s *Shoot) HasManagedInfrastructure() bool {
+	return v1beta1helper.HasManagedInfrastructure(s.GetInfo())
+}

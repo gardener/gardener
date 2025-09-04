@@ -643,6 +643,12 @@ func IsShootAutonomous(workers []gardencorev1beta1.Worker) bool {
 	})
 }
 
+// HasManagedInfrastructure returns true if the shoot's infrastructure (network, machines, etc.) is managed by Gardener.
+// I.e., it returns false for high-touch autonomous shoots, where the infrastructure is managed by the user.
+func HasManagedInfrastructure(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Spec.CredentialsBindingName != nil || shoot.Spec.SecretBindingName != nil
+}
+
 // ControlPlaneWorkerPoolForShoot returns the worker pool running the control plane in case the shoot is autonomous.
 func ControlPlaneWorkerPoolForShoot(workers []gardencorev1beta1.Worker) *gardencorev1beta1.Worker {
 	idx := slices.IndexFunc(workers, func(worker gardencorev1beta1.Worker) bool {
