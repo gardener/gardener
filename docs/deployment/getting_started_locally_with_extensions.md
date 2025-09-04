@@ -28,6 +28,7 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
 
 As this setup is running on a real infrastructure, you have to provide credentials for DNS, the infrastructure, and the kubeconfig for the Kubernetes cluster you want to use as seed.
 
+> [!CAUTION]
 > There are `.gitignore` entries for all files and directories which include credentials. Nevertheless, please double check and make sure that credentials are not committed to the version control system.
 
 ### DNS
@@ -46,6 +47,7 @@ In case infrastructure credentials based on workload identities are used, `Workl
 - [`/example/provider-extensions/garden/project/with-workload-identity/credentials/credentialsbindings.yaml`](/example/provider-extensions/garden/project/with-workload-identity/credentials/credentialsbindings.yaml)
 
 If static credentials are used, the `Secret`s and the corresponding `CredentialsBinding`s that reference the `Secret`s should be maintained at:
+
 - [`/example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml`](/example/provider-extensions/garden/project/without-workload-identity/credentials/infrastructure-secrets.yaml)
 - [`/example/provider-extensions/garden/project/without-workload-identity/credentials/credentialsbindings.yaml`](/example/provider-extensions/garden/project/without-workload-identity/credentials/credentialsbindings.yaml)
 
@@ -116,6 +118,7 @@ External systems can be then configured to trust the workload identity issuer of
 ```bash
 DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up
 ```
+
 > [!IMPORTANT]
 > The Gardener Discovery Server is started with a token which is valid for 48 hours.
 > Rerun `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up` in order to renew the token.
@@ -124,6 +127,7 @@ DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up
 > A single Garden cluster needs only one Gardener Discovery Server.
 
 To setup workload identity with your provider please refer to the provider extension specific docs:
+
 - [provider-aws](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage/usage.md#aws-workload-identity-federation)
 - [provider-azure](https://github.com/gardener/gardener-extension-provider-azure/blob/master/docs/usage/usage.md#azure-workload-identity-federation)
 - [provider-gcp](https://github.com/gardener/gardener-extension-provider-gcp/blob/master/docs/usage/usage.md#gcp-workload-identity-federation)
@@ -150,10 +154,11 @@ make gardener-extensions-down SEED_NAME=<seed-name>
 ```
 
 If it is not the last seed, this command will only remove the seed, but leave the local Gardener cluster and the other seeds untouched.
-To remove all seeds and to cleanup the local Gardener cluster, you have to run the command for each seed.
+To remove all seeds and to clean up the local Gardener cluster, you have to run the command for each seed.
 
 > [!TIP]
 > If using development setup that supports workload identity pass `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true` when removing the seed that was used to host the [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server).
+>
 > ```bash
 > DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-down SEED_NAME=<seed-name>
 > ```
@@ -166,6 +171,7 @@ Otherwise, this could break the update of `gardener-node-agent`, because it migh
 This is no general issue of `gardener-node-agent`, but a limitation `provider-extensions` setup. Gardener does not support protected container images out of the box. The function was added for this scenario only.
 
 However, if you want to rotate the credentials for any reason, there are two options for it.
+
 - run `make gardener-extensions-up` (to ensure that your images are up-to-date)
 - `reconcile` all shoots on the seed where you want to rotate the registry password
 - run `kubectl delete secrets -n registry registry-password` on your seed cluster
@@ -173,6 +179,7 @@ However, if you want to rotate the credentials for any reason, there are two opt
 - `reconcile` the shoots again
 
 or
+
 - `reconcile` all shoots on the seed where you want to rotate the registry password
 - run `kubectl delete secrets -n registry registry-password` on your seed cluster
 - run `./example/provider-extensions/registry-seed/deploy-registry.sh <path to seed kubeconfig> <seed registry hostname>`
