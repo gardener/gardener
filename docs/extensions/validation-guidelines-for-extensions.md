@@ -24,7 +24,7 @@ Usually, the validation consists of checking if the required data keys are prese
 However, it is challenging to validate `UPDATE` operations on referenced resources.
 Extension admission components have the following implementation options to cover validation for `UPDATE`:
 - Check if a `Secret` or `ConfigMap` is in-use as a referenced resource by a Shoot from the corresponding extension type. This usually increases the memory usage of the component due to client caches for `Secret`s/`ConfigMap`s.
-- Enforce the referenced resource to be immutable. In this way, the referenced resource cannot be updated. Hence, there is no need to validate update. However, this approach has worst end-user experience. Every-time end-users have to update the referenced resource, they have to create a new one and update the reference in the corresponding Shoots.
+- Enforce the referenced resource to be immutable. In this way, the referenced resource cannot be updated. Hence, there is no need to validate update. However, this approach leads to poor end-user experience. Every time end-users have to update the referenced resource, they have to create a new one and update the reference in the corresponding Shoots.
 
 With https://github.com/gardener/gardener/issues/12582, we want to adapt Gardener to maintain extension-specific label on referenced resources. With this, extension admission components will be able to define an `objectSelector` and filter only the `Secret`s/`ConfigMap`s which are in-use by Shoots using the corresponding extension type.
 

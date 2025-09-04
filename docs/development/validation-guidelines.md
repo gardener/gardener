@@ -14,19 +14,19 @@ Validation is a critical part of maintaining the reliability, security, and over
 - **System Stability**
   - Invalid configurations passed unchecked into the system can result in unpredictable behavior or runtime errors. Early validation helps maintain system stability and predictability.
 - **Clear and Immediate Feedback**
-  - By catching errors in the admission phase of a request, the API users get fast, actionable feedback. The API users don't have to wait an internal system operation to fail after minutes to receive a feedback that the provided input is invalid.
+  - By catching errors in the admission phase of a request, the API users get fast, actionable feedback. The API users don't have to wait for an internal system operation to fail after several minutes to receive feedback that the provided input is invalid.
 
 ## Validation in Gardener
 
-Kubernetes allows defining custom resources using extension API server and CustomResourceDefinitions.
-Gardener is using both of the approaches.
+Kubernetes allows defining custom resources using [extension API server](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/) and [CustomResourceDefinitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
+Gardener is using both approaches.
 The sections below [Validation for API resources](#validation-for-api-resources) and [Validation for CustomResourceDefinitions](#validation-for-customresourcedefinitions) describe how validation is handled for these two approaches.
 
-### Validation for API resources
+### Validation for API Resources
 
 [Gardener API server](../concepts/apiserver.md) is an extension API server.
-An extension API server allows validation of a resource to be performed in the storage layer or in admission plugin.
-The sections below [Validation in the Storage Layer](#validation-in-the-storage-layer) and [Validation in API Server Admission Plugin](#validation-in-api-server-admission-plugin) describe how validation is handled for these two approaches.
+An extension API server allows validation of a resource to be performed in the storage layer or in admission plugins.
+The sections below [Validation in the Storage Layer](#validation-in-the-storage-layer) and [Validation in API Server Admission Plugins](#validation-in-api-server-admission-plugins) describe how validation is handled for these two approaches.
 
 #### Validation in the Storage Layer
 
@@ -57,7 +57,7 @@ For reference, check out the validation packages:
 - The `Validate` function of the strategy implementation **must** perform validation of an API resource. The `ValidateUpdate` function **must** perform validation specific for update operation (e.g. validate field is immutable) and **must** ensure the new object is valid (usually implemented by reusing the logic that `Validate` already uses).
   - Example: [`shoot.shootStrategy#Validate`](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/apiserver/registry/core/shoot/strategy.go#L174) invokes [`validation.ValidateShoot`](https://pkg.go.dev/github.com/gardener/gardener/pkg/apis/core/validation#ValidateShoot). [`shoot.shootStrategy#ValidateUpdate`](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/apiserver/registry/core/shoot/strategy.go#L195) invokes [`validation.ValidateShootUpdate`](https://pkg.go.dev/github.com/gardener/gardener/pkg/apis/core/validation#ValidateShootUpdate) which invokes [`validation.ValidateShoot`](https://pkg.go.dev/github.com/gardener/gardener/pkg/apis/core/validation#ValidateShoot) with the new object.
 
-#### Validation in API Server Admission Plugin
+#### Validation in API Server Admission Plugins
 
 An admission plugin (or admission controller) is a piece of code that intercepts requests to the API server prior to persistence of the resource, but after the request is authenticated and authorized. Check out [Admission Control in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) to get an overview of the admission plugins in Kubernetes.
 
@@ -83,7 +83,7 @@ For reference, check out Gardener API server admission plugins that accepts conf
 #### Writing Validation Code in API Server Admission Plugins
 
 - Write the validation code for a field in an API server admission plugin if the validation logic requires checking the presence of another resource or its specification. Otherwise, write the validation code in the storage layer.
-  - Example: Shoot's `.spec.region` field cannot be validated only in the storage layer. The validation logic for this field checks if the Shoot's CloudProfile supports the region in question. This is an example of validation logic that requires checking the specification of a referenced resource. This validation must be performed in admission plugin. It is  performed in the [`ShootValidator` admission plugin](../concepts/apiserver-admission-plugins.md#shootvalidator) ([Shoot `.spec.region` validation](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/plugin/pkg/shoot/validator/admission.go#L1617-L1637)).
+  - Example: Shoot's `.spec.region` field cannot be validated only in the storage layer. The validation logic for this field checks if the Shoot's CloudProfile supports the region in question. See the ([Shoot `.spec.region` validation](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/plugin/pkg/shoot/validator/admission.go#L1617-L1637)) in the [`ShootValidator` admission plugin](../concepts/apiserver-admission-plugins.md#shootvalidator). This is an example of validation logic that requires cross checking against another resource's specification. Hence, validation must be performed in an admission plugin.
 - An admission plugin should embed the [`*admission.Handler`](https://pkg.go.dev/k8s.io/apiserver/pkg/admission#Handler) type. `admission.Handler` is a base type for admission plugins. When initializing the admission plugin, create a new handler with [`admission.Handler`](https://pkg.go.dev/k8s.io/apiserver/pkg/admission#NewHandler) and specify the operations the admission plugins supports. Example: [`SeedValidator` initialization](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/plugin/pkg/seed/validator/admission.go#L51-L56).
 - An admission plugin should filter out resources and subresources it is not interested in. Example: [`SeedValidator` checks for resource and subresource](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/plugin/pkg/seed/validator/admission.go#L117-L125)
 - An admission plugin should use listers for fetching resources.
@@ -116,7 +116,7 @@ The validation functions are defined in the [`github.com/gardener/gardener/pkg/a
 
 ### Validation of Component Configurations
 
-Most Gardener components have a component configuration that follows similar principles to the Gardener API.
+Most Gardener components have a component configuration that follows similar validation principles to those of the Gardener API.
 Although the component configuration APIs are internal ones, they are also subject to validation.
 For reference, check out the validation packages:
 - for the `gardener-controller-manager` component configuration - [`github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1/validation`](https://pkg.go.dev/github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1/validation)
@@ -187,6 +187,7 @@ Frequently used validation functions:
 ## Field-level Validation Errors
 
 The [`k8s.io/apimachinery/pkg/util/validation/field`](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/validation/field) package contains the predefined field-level errors.
+These are commonly used by the validation logic to return detailed error information about specific fields in API resources.
 Frequently used ones are:
 - `field.Duplicate`
   - It indicates "duplicate value". This is used to report collisions of values that must be unique (e.g. names or IDs).
@@ -213,7 +214,7 @@ Frequently used ones are:
   - A good practice for a webhook is to filter only for the resources it needs to validate by using an [`objectSelector`](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector).
   - Ensure end-users cannot bypass a validation by a webhook by removing resource label(s) which are used in the webhook's `objectSelector`.
   - Example: The [`ExtensionLabels` admission plugin](https://pkg.go.dev/github.com/gardener/gardener/plugin/pkg/global/extensionlabels#Register) maintains the `provider.extensions.gardener.cloud/<type>=true` label on CloudProfile, Seed, Shoot and other resources. The admission components of provider extensions use this label to filter for resources with the corresponding provider type (see [example usage](https://github.com/gardener/gardener-extension-provider-aws/blob/dd7dc94f049d7c8cf59f8211446f9015441d788c/pkg/admission/validator/webhook.go#L49-L51)). The `ExtensionLabels` admission plugin ensure the labels on `CREATE` and `UPDATE` requests. End-user cannot remove the `provider.extensions.gardener.cloud/<type>=true` label to bypass the provider extension admission webhook.
-- Use field-level validation errors according to their semantics.
+- Use [field-level validation errors](#field-level-validation-errors) according to their semantics.
   - Use `field.Required` for empty or null value; use `field.Invalid` for invalid value; use `field.Duplicate` for a duplicate value, etc. See [Field-level Validation Errors](#field-level-validation-errors).
 - When introducing a new field, consider if it should be immutable or not.
   - Consider if updates to the field value should be allowed and are supported by the underlying controller. If not, consider making the field immutable. Add a doc string to the field to denote the immutability constraint.
@@ -221,4 +222,5 @@ Frequently used ones are:
   - When working with existing field, aim to add validation which is obvious and unlikely to break a working functionality.
   - If breaking change is inevitable and it is likely to break a working functionality:
     - In case the functionality is _relevant to end-users_ , consider imposing the breaking change only with the upcoming minor Kubernetes version. This way, end-users are forced to actively adapt their manifests when performing Kubernetes upgrades.
+    - Consider using "ratcheting" validation to incrementally tighten validation. See [Ratcheting validation](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api_changes.md#ratcheting-validation).
     - Consider using a feature gate to roll out the breaking change. The feature gate gives control when to impose the breaking change. In case of issues, it is possible to revert back to the old behavior by disabling the feature gate.
