@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/andybalholm/brotli"
+	"go.yaml.in/yaml/v4"
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -25,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	forkedyaml "github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 // Registry stores objects and their serialized form. It allows to compute a map of all registered objects that can be
@@ -103,22 +103,21 @@ func (r *Registry) Add(objs ...client.Object) error {
 			return err
 		}
 
-		// We use a copy of the upstream package as a workaround
-		// to incosistent/unstable ordering in yaml.v2 when encoding maps
-		// Can be removed once k8s.io/apimachinery/pkg/runtime/serializer/json migrates to yaml.v3
-		// or the issue is resolved upstream in yaml.v2
-		// Please see https://github.com/go-yaml/yaml/pull/736
 		if r.isYAMLSerializer {
 			var anyObj any
-			if err := forkedyaml.Unmarshal(serializationYAML, &anyObj); err != nil {
+			if err := yaml.Unmarshal(serializationYAML, &anyObj); err != nil {
 				return err
 			}
 
-			serBytes, err := forkedyaml.Marshal(anyObj)
-			if err != nil {
+			buf := bytes.Buffer{}
+			encoder := yaml.NewEncoder(&buf)
+			encoder.SetIndent(2)
+			encoder.CompactSeqIndent()
+
+			if err := encoder.Encode(anyObj); err != nil {
 				return err
 			}
-			serializationYAML = serBytes
+			serializationYAML = buf.Bytes()
 		}
 
 		r.nameToObject[filename] = &object{
