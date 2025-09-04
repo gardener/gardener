@@ -275,6 +275,25 @@
         '/github\\.com/fluent/.+/',
       ],
     },
+    // Add `distroless-` prefix to tag when updating `envoyproxy`.
+    {
+      matchDatasources: [
+        'github-releases'
+      ],
+      matchPackageNames: [
+        'github.com/envoyproxy/envoy'
+      ],
+      matchFileNames: [
+        'imagevector/containers.yaml'
+      ],
+      postUpgradeTasks: {
+        commands: [
+          'go install github.com/mikefarah/yq/v4@latest',
+          'bash -c "yq -i \'(.images[] | select(.sourceRepository == \\"{{{depName}}}\\") | key) as \\$imagePos | .images[\\$imagePos].tag = \\"distroless-{{{currentValue}}}\\"\' imagevector/containers.yaml"',
+        ],
+        executionMode: 'update',
+      },
+    },
     {
       // Ask for manual approval to create PRs for minor and major updates of container images which most likely
       // require manual adaptations of the code.
