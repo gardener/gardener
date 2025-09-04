@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
       - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.25'
       - name: run-tests
@@ -216,7 +216,7 @@ jobs:
     runs-on: ${{ matrix.args.runner }}
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.25'
       - name: build-garden-adm
