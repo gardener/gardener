@@ -281,7 +281,7 @@
         'github-releases'
       ],
       matchPackageNames: [
-        'github.com/envoyproxy/envoy'
+        'envoyproxy/envoy'
       ],
       matchFileNames: [
         'imagevector/containers.yaml'
