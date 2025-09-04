@@ -794,8 +794,7 @@ metadata:
 kind: NetworkPolicy
 metadata:
   annotations:
-    gardener.cloud/description: Allows all egress and ingress traffic for the nginx-ingress
-      controller.
+    gardener.cloud/description: Allows all egress and ingress traffic for the nginx-ingress controller.
   creationTimestamp: null
   labels:
     origin: gardener
