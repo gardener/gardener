@@ -286,8 +286,10 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	if shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil {
 		shoot.ResourcesToEncrypt = sharedcomponent.StringifyGroupResources(sharedcomponent.GetResourcesForEncryptionFromConfig(shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.EncryptionConfig))
 	}
-	if len(shoot.GetInfo().Status.EncryptedResources) > 0 {
-		shoot.EncryptedResources = sharedcomponent.NormalizeResources(shoot.GetInfo().Status.EncryptedResources)
+
+	shootStatus := shoot.GetInfo().Status
+	if shootStatus.Credentials != nil && len(shootStatus.Credentials.ETCDEncryption.Resources) != 0 {
+		shoot.EncryptedResources = sharedcomponent.NormalizeResources(shootStatus.Credentials.ETCDEncryption.Resources)
 	}
 
 	if b.seed != nil {
