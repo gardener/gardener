@@ -252,6 +252,48 @@ var _ = Describe("Strategy", func() {
 			})
 		})
 
+		DescribeTable("#migrate encryptedResources",
+			func(status core.ShootStatus, expected core.ShootStatus) {
+				oldShoot.Status = status
+				newShoot.Status = status
+
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+				Expect(newShoot.Status).To(Equal(expected))
+			},
+			Entry("no encrypted resources", core.ShootStatus{}, core.ShootStatus{}),
+			Entry("with encrypted resources",
+				core.ShootStatus{
+					EncryptedResources: []string{"configmaps", "shoots.core.gardener.cloud"},
+				},
+				core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						ETCDEncryption: core.ETCDEncryption{
+							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
+						},
+					},
+					EncryptedResources: []string{"configmaps", "shoots.core.gardener.cloud"},
+				},
+			),
+			Entry("should not overwrite", core.ShootStatus{
+				Credentials: &core.ShootCredentials{
+					ETCDEncryption: core.ETCDEncryption{
+						Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
+					},
+				},
+				EncryptedResources: []string{"configmaps"},
+			},
+				core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						ETCDEncryption: core.ETCDEncryption{
+							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
+						},
+					},
+					EncryptedResources: []string{"configmaps"},
+				},
+			),
+		)
+
 		Context("seedName change", func() {
 			BeforeEach(func() {
 				oldShoot = &core.Shoot{
