@@ -1264,7 +1264,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Description is a human-readable description of what the project is used for.</p>
+<p>Description is a human-readable description of what the project is used for.
+Only letters, digits and certain punctuation characters are allowed for this field.</p>
 </td>
 </tr>
 <tr>
@@ -1295,7 +1296,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Purpose is a human-readable explanation of the project&rsquo;s purpose.</p>
+<p>Purpose is a human-readable explanation of the project&rsquo;s purpose.
+Only letters, digits and certain punctuation characters are allowed for this field.</p>
 </td>
 </tr>
 <tr>
@@ -10090,7 +10092,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Description is a human-readable description of what the project is used for.</p>
+<p>Description is a human-readable description of what the project is used for.
+Only letters, digits and certain punctuation characters are allowed for this field.</p>
 </td>
 </tr>
 <tr>
@@ -10121,7 +10124,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Purpose is a human-readable explanation of the project&rsquo;s purpose.</p>
+<p>Purpose is a human-readable explanation of the project&rsquo;s purpose.
+Only letters, digits and certain punctuation characters are allowed for this field.</p>
 </td>
 </tr>
 <tr>

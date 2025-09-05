@@ -7083,7 +7083,7 @@ func schema_pkg_apis_core_v1beta1_ProjectSpec(ref common.ReferenceCallback) comm
 					},
 					"description": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Description is a human-readable description of what the project is used for.",
+							Description: "Description is a human-readable description of what the project is used for. Only letters, digits and certain punctuation characters are allowed for this field.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -7096,7 +7096,7 @@ func schema_pkg_apis_core_v1beta1_ProjectSpec(ref common.ReferenceCallback) comm
 					},
 					"purpose": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Purpose is a human-readable explanation of the project's purpose.",
+							Description: "Purpose is a human-readable explanation of the project's purpose. Only letters, digits and certain punctuation characters are allowed for this field.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
