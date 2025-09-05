@@ -124,6 +124,9 @@ func SetObjectDefaults_Seed(in *Seed) {
 	SetDefaults_SeedNetworks(&in.Spec.Networks)
 	if in.Spec.Settings != nil {
 		SetDefaults_SeedSettings(in.Spec.Settings)
+		if in.Spec.Settings.LoadBalancerServices != nil {
+			SetDefaults_SeedSettingLoadBalancerServices(in.Spec.Settings.LoadBalancerServices)
+		}
 		if in.Spec.Settings.DependencyWatchdog != nil {
 			SetDefaults_SeedSettingDependencyWatchdog(in.Spec.Settings.DependencyWatchdog)
 		}

@@ -32,6 +32,7 @@ var _ = Describe("Seed defaulting", func() {
 
 			SetObjectDefaults_Seed(obj)
 
+			Expect(obj.Spec.Settings.LoadBalancerServices).NotTo(BeNil())
 			Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
 			Expect(obj.Spec.Settings.ExcessCapacityReservation).To(PointTo(Equal(excessCapacityReservation)))
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
@@ -88,6 +89,32 @@ var _ = Describe("Seed defaulting", func() {
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeFalse())
 			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeTrue())
+		})
+
+		DescribeTable("should default zonalIngress to enabled",
+			func(settings *SeedSettings) {
+				obj.Spec.Settings = settings
+				SetObjectDefaults_Seed(obj)
+
+				Expect(obj.Spec.Settings.LoadBalancerServices.ZonalIngress).NotTo(BeNil())
+				Expect(obj.Spec.Settings.LoadBalancerServices.ZonalIngress.Enabled).To(PointTo(BeTrue()))
+			},
+			Entry("when LoadBalancerServices is nil", &SeedSettings{LoadBalancerServices: nil}),
+			Entry("when ZonalIngress is nil", &SeedSettings{LoadBalancerServices: &SeedSettingLoadBalancerServices{ZonalIngress: nil}}),
+		)
+
+		It("should not overwrite an already set value for zonalIngress.Enabled field", func() {
+			obj.Spec.Settings = &SeedSettings{
+				LoadBalancerServices: &SeedSettingLoadBalancerServices{
+					ZonalIngress: &SeedSettingLoadBalancerServicesZonalIngress{
+						Enabled: ptr.To(false), // user sets to false
+					},
+				},
+			}
+
+			SetObjectDefaults_Seed(obj)
+
+			Expect(obj.Spec.Settings.LoadBalancerServices.ZonalIngress.Enabled).To(PointTo(BeFalse()))
 		})
 	})
 

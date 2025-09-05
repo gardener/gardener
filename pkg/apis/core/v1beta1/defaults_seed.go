@@ -32,6 +32,10 @@ func SetDefaults_SeedSettings(obj *SeedSettings) {
 		obj.Scheduling = &SeedSettingScheduling{Visible: true}
 	}
 
+	if obj.LoadBalancerServices == nil {
+		obj.LoadBalancerServices = &SeedSettingLoadBalancerServices{}
+	}
+
 	if obj.VerticalPodAutoscaler == nil {
 		obj.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
 	}
@@ -60,6 +64,13 @@ func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdo
 
 	if obj.Prober == nil {
 		obj.Prober = &SeedSettingDependencyWatchdogProber{Enabled: true}
+	}
+}
+
+// SetDefaults_SeedSettingLoadBalancerServices sets defaults for SeedSettingLoadBalancerServices objects.
+func SetDefaults_SeedSettingLoadBalancerServices(obj *SeedSettingLoadBalancerServices) {
+	if obj.ZonalIngress == nil {
+		obj.ZonalIngress = &SeedSettingLoadBalancerServicesZonalIngress{Enabled: ptr.To(true)}
 	}
 }
 

@@ -264,6 +264,9 @@ type SeedSettingLoadBalancerServices struct {
 	// ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
 	// Defaults to nil, which is equivalent to not allowing ProxyProtocol.
 	ProxyProtocol *LoadBalancerServicesProxyProtocol
+	// ZonalIngress controls whether ingress gateways are deployed per availability zone.
+	// Defaults to true.
+	ZonalIngress *SeedSettingLoadBalancerServicesZonalIngress
 }
 
 // SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
@@ -290,6 +293,14 @@ type LoadBalancerServicesProxyProtocol struct {
 	// The option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure).
 	// Defaults to false.
 	Allowed bool
+}
+
+// SeedSettingLoadBalancerServicesZonalIngress controls the deployment of ingress gateways per availability zone.
+type SeedSettingLoadBalancerServicesZonalIngress struct {
+	// Enabled controls whether seed ingress gateways are deployed in each availability zone.
+	// Defaults to true, which provisions an ingress gateway load balancer for each availability zone.
+	// When disabled, only a single ingress gateway is deployed.
+	Enabled *bool
 }
 
 // SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
