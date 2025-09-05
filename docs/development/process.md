@@ -205,7 +205,7 @@ In order to properly follow-up with such TODOs and to prevent them from piling u
 ### Deprecations and Backwards-Compatibility
 
 In case you have to remove functionality _relevant to end-users_ (e.g., a field or default value in the `Shoot` API), please **connect it with a Kubernetes minor version upgrade**.
-This way, end-users are forced to actively adapt their manifests when they perform their Kubernetes upgrades.
+This way, end-users are forced to actively adapt their manifests when performing Kubernetes upgrades.
 For example, the `.spec.kubernetes.enableStaticTokenKubeconfig` field in the `Shoot` API is no longer allowed to be set for Kubernetes versions `>= 1.27`.
 
 In case you have to remove or change functionality _which cannot be directly connected with a Kubernetes version upgrade_, please consider introducing a feature gate.
