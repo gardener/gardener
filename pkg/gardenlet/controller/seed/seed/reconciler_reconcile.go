@@ -408,7 +408,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 		// When the seed is the garden cluster then the following components are reconciled by the gardener-operator.
 		_ = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes vertical pod autoscaler",
+			Name:         "Reconciling Kubernetes vertical pod autoscaler",
 			Fn:           c.verticalPodAutoscaler.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seedIsGarden,
