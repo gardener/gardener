@@ -40,10 +40,11 @@ type ExtraConfig struct {
 
 // Config contains Gardener API server configuration.
 type Config struct {
-	GenericConfig       *genericapiserver.RecommendedConfig
-	ExtraConfig         ExtraConfig
-	KubeInformerFactory kubeinformers.SharedInformerFactory
-	CoreInformerFactory gardencoreinformers.SharedInformerFactory
+	GenericConfig         *genericapiserver.RecommendedConfig
+	ExtraConfig           ExtraConfig
+	KubeInformerFactory   kubeinformers.SharedInformerFactory
+	CoreInformerFactory   gardencoreinformers.SharedInformerFactory
+	SubjectAccessReviewer clientauthorizationv1.SubjectAccessReviewInterface
 }
 
 // GardenerServer contains state for a Gardener API server.
@@ -55,8 +56,9 @@ type completedConfig struct {
 	GenericConfig genericapiserver.CompletedConfig
 	ExtraConfig   *ExtraConfig
 
-	kubeInformerFactory kubeinformers.SharedInformerFactory
-	coreInformerFactory gardencoreinformers.SharedInformerFactory
+	kubeInformerFactory   kubeinformers.SharedInformerFactory
+	coreInformerFactory   gardencoreinformers.SharedInformerFactory
+	subjectAccessReviewer clientauthorizationv1.SubjectAccessReviewInterface
 }
 
 // CompletedConfig contains completed Gardener API server configuration.
@@ -71,13 +73,14 @@ func (cfg *Config) Complete() CompletedConfig {
 		&cfg.ExtraConfig,
 		cfg.KubeInformerFactory,
 		cfg.CoreInformerFactory,
+		cfg.SubjectAccessReviewer,
 	}
 
 	return CompletedConfig{&c}
 }
 
 // New returns a new instance of GardenerServer from the given config.
-func (c completedConfig) New(subjectAccessReviewer clientauthorizationv1.SubjectAccessReviewInterface) (*GardenerServer, error) {
+func (c completedConfig) New() (*GardenerServer, error) {
 	genericServer, err := c.GenericConfig.New("gardener-apiserver", genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return nil, err
@@ -104,7 +107,7 @@ func (c completedConfig) New(subjectAccessReviewer clientauthorizationv1.Subject
 			CredentialsRotationInterval:   c.ExtraConfig.CredentialsRotationInterval,
 			KubeInformerFactory:           c.kubeInformerFactory,
 			CoreInformerFactory:           c.coreInformerFactory,
-			SubjectAccessReviewer:         subjectAccessReviewer,
+			SubjectAccessReviewer:         c.subjectAccessReviewer,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
