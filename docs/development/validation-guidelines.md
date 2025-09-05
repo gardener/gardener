@@ -152,6 +152,15 @@ Frequently used validation functions for creation:
   - Use this function to validate fields of type `metav1.LabelSelector`. See [example usage](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/pkg/apis/core/validation/shoot.go#L272-L274).
 - [`validation.IsDNS1123Subdomain`](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/validation#IsDNS1123Subdomain)
   - Validates that the value is a DNS subdomain. See [DNS Subdomain Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names).
+- [`validation.IsValidIP`](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/validation#IsValidIP)
+  - Use this function to validate an IP address in canonical form.
+  - A canonical form IP address standardizes how an IP address is written, ensuring consistent and unique representation.
+  - A canonical form IPv4 address is in dotted-decimal notation with no leading zeros.
+    - The IPv4 address `192.168.001.001` is non-canonical because it has leading zeros. The canonical form is `192.168.1.1`.
+  - A canonical form IPv6 address uses the shortest possible representation.
+    - The IPv6 address `2001:db8:f00:0:0:0:0:1` is non-canonical because it can be shortened by compressing the sequence of zero blocks. The canonical form is `2001:db8:f00::1`.
+  - Use IP addresses in canonical form to ensure consistency, correctness and security. 
+  - Use [`validation.IsValidIPForLegacyField`](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/validation#IsValidIP) or [`net.ParseIP`](https://pkg.go.dev/net#ParseIP) to validate an IP address in non-canonical form.
 
 Frequently used validation functions for update:
 - [`apivalidation.ValidateObjectMetaUpdate`](https://pkg.go.dev/k8s.io/apimachinery/pkg/api/validation#ValidateObjectMetaUpdate)
