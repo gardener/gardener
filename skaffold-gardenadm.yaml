@@ -146,9 +146,9 @@ build:
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns
             - pkg/component/networking/nodelocaldns/constants
+            - pkg/component/networking/nodelocaldns/resources/cleanup.sh
             - pkg/component/networking/vpn/envoy
             - pkg/component/networking/vpn/envoy/templates/envoy.yaml.tpl
-            - pkg/component/networking/nodelocaldns/resources/cleanup.sh
             - pkg/component/networking/vpn/seedserver
             - pkg/component/networking/vpn/shoot
             - pkg/component/nodemanagement/dependencywatchdog
@@ -350,7 +350,6 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - pkg/utils/workloadidentity
-            - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -475,7 +474,6 @@ build:
             - pkg/utils/validation
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
-            - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -592,7 +590,6 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - pkg/webhook/authorizer
-            - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -820,7 +817,6 @@ build:
             - pkg/utils/timewindow
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
-            - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
