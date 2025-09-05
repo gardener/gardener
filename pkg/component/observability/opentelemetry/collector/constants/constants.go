@@ -16,8 +16,8 @@ const (
 	// ServiceAccountName is the name of the ServiceAccount used by the OpenTelemetry Collector.
 	ServiceAccountName = OpenTelemetryCollectorResourceName
 	// PushEndpoint is the endpoint where the OpenTelemetry Collector receives logs from log shippers.
-	PushEndpoint = "/loki/api/v1/push"
-	// PushPort is the port that the Loki receiver listens on in the OpenTelemetry Collector deployment.
+	PushEndpoint = "/opentelemetry.proto.collector.logs.v1.LogsService/Export"
+	// PushPort is the port that the OTLP receiver listens on in the OpenTelemetry Collector deployment.
 	PushPort = 4317
 	// KubeRBACProxyPort is the port that the KubeRBACProxy listens on in the OpenTelemetry Collector deployment.
 	KubeRBACProxyPort = 8080
