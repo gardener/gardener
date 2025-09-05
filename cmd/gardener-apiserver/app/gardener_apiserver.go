@@ -188,6 +188,8 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 		return nil, err
 	}
 
+	apiConfig.SubjectAccessReviewer = kubeClient.AuthorizationV1().SubjectAccessReviews()
+
 	protobufLoopbackConfig := *gardenerAPIServerConfig.LoopbackClientConfig
 	if protobufLoopbackConfig.ContentType == "" {
 		protobufLoopbackConfig.ContentType = runtime.ContentTypeProtobuf
@@ -260,9 +262,9 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 	}
 
 	if initializers, err := o.Recommended.ExtraAdmissionInitializers(gardenerAPIServerConfig); err != nil {
-		return apiConfig, err
+		return nil, err
 	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerKubeClient, gardenerDynamicClient, features.DefaultFeatureGate, initializers...); err != nil {
-		return apiConfig, err
+		return nil, err
 	}
 
 	return apiConfig, nil
@@ -302,7 +304,7 @@ func (o *Options) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	server, err := config.Complete().New(kubeClient.AuthorizationV1().SubjectAccessReviews())
+	server, err := config.Complete().New()
 	if err != nil {
 		return err
 	}
