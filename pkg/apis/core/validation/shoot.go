@@ -471,7 +471,6 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorker.ControlPlane.Backup, oldWorker.ControlPlane.Backup, idxPath.Child("controlPlane", "backup"))...)
 			}
 		}
-		// If oldWorker.ControlPlane doesn't have backup configured, we allow to add it; but not the vice versa.
 	}
 
 	if helper.IsShootAutonomous(oldProvider.Workers) != helper.IsShootAutonomous(newProvider.Workers) {
@@ -2073,8 +2072,8 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 				allErrs = append(allErrs, field.Required(fldPath.Child("controlPlane", "backup", "provider"), "must provide a backup cloud provider name"))
 			}
 
-			if shootProviderType != backup.Provider && (backup.Region == nil || len(*backup.Region) == 0) {
-				allErrs = append(allErrs, field.Required(fldPath.Child("controlPlane", "backup", "region"), "region must be specified for if backup provider is different from seed provider used in `spec.provider.type`"))
+			if shootProviderType != backup.Provider && ptr.Deref(backup.Region, "") == "" {
+				allErrs = append(allErrs, field.Required(fldPath.Child("controlPlane", "backup", "region"), "region must be specified for if backup provider is different from shoot provider used in `spec.provider.type`"))
 			}
 
 			if backup.CredentialsRef == nil {

@@ -886,7 +886,7 @@ var _ = Describe("customverbauthorizer", func() {
 						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
 					})
 
-					It("should forbid creating an autonomous shot", func() {
+					It("should forbid creating an autonomous shoot", func() {
 						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{ControlPlane: &core.WorkerControlPlane{}})
 
 						attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)

@@ -1781,7 +1781,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
 							"Type":   Equal(field.ErrorTypeRequired),
 							"Field":  Equal("spec.provider.workers[0].controlPlane.backup.region"),
-							"Detail": Equal("region must be specified for if backup provider is different from seed provider used in `spec.provider.type`"),
+							"Detail": Equal("region must be specified for if backup provider is different from shoot provider used in `spec.provider.type`"),
 						}))
 					})
 				})

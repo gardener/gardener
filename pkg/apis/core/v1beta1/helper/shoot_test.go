@@ -1461,8 +1461,13 @@ var _ = Describe("Helper", func() {
 	})
 
 	Describe("#ControlPlaneWorkerPoolForShoot", func() {
-		It("should return nil because shoot is not autonomous", func() {
+		It("should return nil because shoot has no workers", func() {
 			shoot := &gardencorev1beta1.Shoot{}
+			Expect(ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers)).To(BeNil())
+		})
+
+		It("should return nil because shoot has no worker marked for control plane", func() {
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{{}}}}}
 			Expect(ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers)).To(BeNil())
 		})
 

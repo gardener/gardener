@@ -645,10 +645,6 @@ func IsShootAutonomous(workers []gardencorev1beta1.Worker) bool {
 
 // ControlPlaneWorkerPoolForShoot returns the worker pool running the control plane in case the shoot is autonomous.
 func ControlPlaneWorkerPoolForShoot(workers []gardencorev1beta1.Worker) *gardencorev1beta1.Worker {
-	if !IsShootAutonomous(workers) {
-		return nil
-	}
-
 	idx := slices.IndexFunc(workers, func(worker gardencorev1beta1.Worker) bool {
 		return worker.ControlPlane != nil
 	})

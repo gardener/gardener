@@ -9,10 +9,6 @@ metadata:
 rules:
 - apiGroups:
   - core.gardener.cloud
-  - seedmanagement.gardener.cloud
-  - dashboard.gardener.cloud
-  - settings.gardener.cloud
-  - operations.gardener.cloud
   resources:
   - '*'
   verbs:
@@ -29,6 +25,23 @@ rules:
   - modify-spec-kubernetes
   - modify-spec-machineimages
   - modify-spec-providerconfig
+  - mark-autonomous
+- apiGroups:
+  - seedmanagement.gardener.cloud
+  - dashboard.gardener.cloud
+  - settings.gardener.cloud
+  - operations.gardener.cloud
+  resources:
+  - '*'
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
 - apiGroups:
   - security.gardener.cloud
   resources:
