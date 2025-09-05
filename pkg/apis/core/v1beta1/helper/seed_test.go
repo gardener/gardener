@@ -201,6 +201,51 @@ var _ = Describe("Helper", func() {
 		Entry("topology-aware routing disabled", &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}, false),
 	)
 
+	DescribeTable("#SeedSettingZonalIngressEnabled",
+		func(settings *gardencorev1beta1.SeedSettings, expectation bool) {
+			Expect(SeedSettingZonalIngressEnabled(settings)).To(Equal(expectation))
+		},
+
+		Entry("nil settings", nil, true),
+		Entry("seed with nil LoadBalancerServices settings", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("seed with nil ZonalIngress settings",
+			&gardencorev1beta1.SeedSettings{
+				LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{},
+			},
+			true,
+		),
+		Entry("seed with nil ZonalIngress Enabled setting",
+			&gardencorev1beta1.SeedSettings{
+				LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
+					ZonalIngress: &gardencorev1beta1.SeedSettingLoadBalancerServicesZonalIngress{
+						Enabled: nil,
+					},
+				},
+			},
+			true,
+		),
+		Entry("seed with ZonalIngress enabled",
+			&gardencorev1beta1.SeedSettings{
+				LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
+					ZonalIngress: &gardencorev1beta1.SeedSettingLoadBalancerServicesZonalIngress{
+						Enabled: ptr.To(true),
+					},
+				},
+			},
+			true,
+		),
+		Entry("seed with ZonalIngress disabled",
+			&gardencorev1beta1.SeedSettings{
+				LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
+					ZonalIngress: &gardencorev1beta1.SeedSettingLoadBalancerServicesZonalIngress{
+						Enabled: ptr.To(false),
+					},
+				},
+			},
+			false,
+		),
+	)
+
 	DescribeTable("#SeedBackupCredentialsRefEqual",
 		func(oldBackup, newBackup *gardencorev1beta1.Backup, matcher gomegatypes.GomegaMatcher) {
 			Expect(SeedBackupCredentialsRefEqual(oldBackup, newBackup)).To(matcher)
