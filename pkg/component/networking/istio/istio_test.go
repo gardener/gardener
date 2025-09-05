@@ -383,7 +383,8 @@ var _ = Describe("istiod", func() {
 				istioIngressEnvoyFilter(),
 			}
 
-			if "" == "TODO(istvanballok): remove this block once the issue: 'Istio metrics leak for deleted shoots' #12699 is resolved" {
+			// TODO(istvanballok): remove this block once the issue: 'Istio metrics leak for deleted shoots' #12699 is resolved
+			if false {
 				expectedIstioManifests = append(expectedIstioManifests,
 					istioIngressServiceMonitor(),
 					istioIngressTelemetry(),
