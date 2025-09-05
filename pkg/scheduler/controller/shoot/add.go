@@ -85,7 +85,7 @@ func (r *Reconciler) ShootSpecChangedPredicate() predicate.Predicate {
 func (r *Reconciler) ShootIsNotAutonomous() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok {
-			return !helper.IsShootAutonomous(shoot)
+			return !helper.IsShootAutonomous(shoot.Spec.Provider.Workers)
 		}
 		return false
 	})

@@ -23,6 +23,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -50,6 +51,10 @@ const (
 	// CustomVerbNamespacedCloudProfileRaiseLimits is a constant for the custom verb that allows raising the
 	// `.spec.limits` limits in `NamespacedCloudProfile` resources above values defined in the parent `CloudProfile`.
 	CustomVerbNamespacedCloudProfileRaiseLimits = "raise-spec-limits"
+
+	// CustomVerbShootMarkAutonomous is a constant for the custom verb that allows setting the
+	// `.spec.provider.workers[].controlPlane` field in the `Shoot` spec which marks it as 'autonomous shoot cluster'.
+	CustomVerbShootMarkAutonomous = "mark-autonomous"
 )
 
 // Register registers a plugin.
@@ -131,10 +136,12 @@ func (c *CustomVerbAuthorizer) Validate(ctx context.Context, a admission.Attribu
 	}
 
 	switch a.GetKind().GroupKind() {
-	case core.Kind("Project"):
-		return c.admitProjects(ctx, a)
 	case core.Kind("NamespacedCloudProfile"):
 		return c.admitNamespacedCloudProfiles(ctx, a)
+	case core.Kind("Project"):
+		return c.admitProjects(ctx, a)
+	case core.Kind("Shoot"):
+		return c.admitShoots(ctx, a)
 	}
 
 	return nil
@@ -225,6 +232,32 @@ func (c *CustomVerbAuthorizer) admitNamespacedCloudProfiles(ctx context.Context,
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (c *CustomVerbAuthorizer) admitShoots(ctx context.Context, a admission.Attributes) error {
+	var (
+		oldObj = &core.Shoot{}
+		obj    *core.Shoot
+		ok     bool
+	)
+
+	obj, ok = a.GetObject().(*core.Shoot)
+	if !ok {
+		return apierrors.NewBadRequest("could not convert resource into Shoot object")
+	}
+
+	if a.GetOperation() == admission.Update {
+		oldObj, ok = a.GetOldObject().(*core.Shoot)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert old resource into Shoot object")
+		}
+	}
+
+	if mustCheckShootAutonomy(oldObj, obj) {
+		return c.authorize(ctx, a, CustomVerbShootMarkAutonomous, "modify .spec.provider.workers[].controlPlane")
 	}
 
 	return nil
@@ -364,4 +397,8 @@ func mustCheckLimits(oldLimits, limits *core.Limits, parentCloudProfile *v1beta1
 	return !apiequality.Semantic.DeepEqual(oldLimits, limits) &&
 		parentCloudProfile.Spec.Limits != nil &&
 		ptr.Deref(limits.MaxNodesTotal, 0) > ptr.Deref(parentCloudProfile.Spec.Limits.MaxNodesTotal, 0)
+}
+
+func mustCheckShootAutonomy(oldShoot, shoot *core.Shoot) bool {
+	return !apiequality.Semantic.DeepEqual(helper.ControlPlaneWorkerPoolForShoot(oldShoot.Spec.Provider.Workers), helper.ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers))
 }

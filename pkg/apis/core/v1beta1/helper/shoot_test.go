@@ -1433,7 +1433,7 @@ var _ = Describe("Helper", func() {
 			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
 				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}},
 			}}}}
-			Expect(IsShootAutonomous(shoot)).To(BeTrue())
+			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeTrue())
 		})
 
 		It("should return true (multiple worker pools, one with control plane configuration)", func() {
@@ -1442,12 +1442,12 @@ var _ = Describe("Helper", func() {
 				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}},
 				{},
 			}}}}
-			Expect(IsShootAutonomous(shoot)).To(BeTrue())
+			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeTrue())
 		})
 
 		It("should return false (no worker pools)", func() {
 			shoot := &gardencorev1beta1.Shoot{}
-			Expect(IsShootAutonomous(shoot)).To(BeFalse())
+			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeFalse())
 		})
 
 		It("should return false (worker pools, but none with control plane configuration)", func() {
@@ -1456,14 +1456,19 @@ var _ = Describe("Helper", func() {
 				{},
 				{},
 			}}}}
-			Expect(IsShootAutonomous(shoot)).To(BeFalse())
+			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeFalse())
 		})
 	})
 
 	Describe("#ControlPlaneWorkerPoolForShoot", func() {
-		It("should return nil because shoot is not autonomous", func() {
+		It("should return nil because shoot has no workers", func() {
 			shoot := &gardencorev1beta1.Shoot{}
-			Expect(ControlPlaneWorkerPoolForShoot(shoot)).To(BeNil())
+			Expect(ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers)).To(BeNil())
+		})
+
+		It("should return nil because shoot has no worker marked for control plane", func() {
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{{}}}}}
+			Expect(ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers)).To(BeNil())
 		})
 
 		It("should return the worker pool", func() {
@@ -1472,7 +1477,7 @@ var _ = Describe("Helper", func() {
 				Name:         "cp",
 			}
 			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{worker}}}}
-			Expect(ControlPlaneWorkerPoolForShoot(shoot)).To(PointTo(Equal(worker)))
+			Expect(ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers)).To(PointTo(Equal(worker)))
 		})
 	})
 
