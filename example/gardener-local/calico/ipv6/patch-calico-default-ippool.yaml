@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: calico-node
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+      - name: calico-node
+        env:
+        # NB: this is not the full kind pod network (fd00:10:1::/48).
+        # This /56 subnet is used for automatic pod IP assignment (calico default IPPool), as the seed/runtime pod CIDR.
+        # Also see the comment for CALICO_IPV4POOL_CIDR in ../ipv4/patch-calico-default-ippool.yaml.
+        - name: CALICO_IPV6POOL_CIDR
+          value: "fd00:10:1::/56"

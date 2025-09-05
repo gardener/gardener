@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: calico-node
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+      - name: calico-node
+        env:
+        # NB: this is not the full kind pod network (10.0.0.0/15).
+        # This /16 subnet is used for automatic pod IP assignment (calico default IPPool), as the seed/runtime pod CIDR.
+        # This allows us to create dedicated IPPools for shoot machine pods, that are also subnets of the kind pod
+        # network but don't overlap with the seed pod CIDR.
+        # If we used another IPPool CIDR that is outside the kind pod network for shoot machine pods, then routing of
+        # traffic from machine pods would not work correctly in all cases. E.g., kube-proxy would treat such traffic as
+        # external and SNAT it, even though actually originates from inside the cluster. In combination with calico's
+        # IPIP tunneling, this can break NetworkPolicies for cross-node traffic, because traffic doesn't appear to come
+        # from the machine pod IPs anymore.
+        - name: CALICO_IPV4POOL_CIDR
+          value: "10.1.0.0/16"

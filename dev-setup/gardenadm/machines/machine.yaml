@@ -14,6 +14,8 @@ spec:
     metadata:
       labels:
         app: machine
+      annotations:
+        cni.projectcalico.org/ipv4pools: '["gardenadm-high-touch"]'
     spec:
       containers:
       - name: node

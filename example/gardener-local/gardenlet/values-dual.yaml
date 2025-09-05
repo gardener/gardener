@@ -6,7 +6,7 @@ config:
         - IPv6
         - IPv4
         nodes: fd00:10::/64
-        # Those CIDRs must match those specified in the kind Cluster configuration.
+        # Subnet for automatic pod IP assignment (calico default IPPool) in the kind cluster.
         pods: fd00:10:1::/56
         services: fd00:10:2::/112
         shootDefaults:
@@ -15,4 +15,3 @@ config:
           - IPv4
           pods: fd00:10:3::/56
           services: fd00:10:4::/112
-

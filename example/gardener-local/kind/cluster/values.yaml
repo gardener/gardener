@@ -31,7 +31,7 @@ registry:
 
 networking:
   ipFamily: ipv4
-  podSubnet: 10.1.0.0/16
+  podSubnet: 10.0.0.0/15
   serviceSubnet: 10.2.0.0/16
 
 #workers:

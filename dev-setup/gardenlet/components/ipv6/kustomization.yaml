@@ -17,6 +17,7 @@ patches:
         value: fd00:10::/64
       - op: replace
         path: /spec/config/seedConfig/spec/networks/pods
+        # Subnet for automatic pod IP assignment (calico default IPPool) in the kind cluster.
         value: fd00:10:1::/56
       - op: replace
         path: /spec/config/seedConfig/spec/networks/services
