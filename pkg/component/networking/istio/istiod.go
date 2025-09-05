@@ -265,6 +265,10 @@ func (i *istiod) Deploy(ctx context.Context) error {
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	for _, istioIngressGateway := range i.values.IngressGateway {
+		// TODO(istvanballok): remove this block once the issue: 'Istio metrics leak for deleted shoots' #12699 is resolved
+		if true {
+			continue
+		}
 		if err := registry.Add(&monitoringv1.ServiceMonitor{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("istio-ingressgateway", istioIngressGateway.Namespace, prometheusName),
 			Spec: monitoringv1.ServiceMonitorSpec{
