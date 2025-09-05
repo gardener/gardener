@@ -217,7 +217,7 @@ func (r *Reconciler) reconcile(
 			Fn:   c.nginxIngressController.Deploy,
 		})
 		deployVPA = g.Add(flow.Task{
-			Name: "Deploying Kubernetes vertical pod autoscaler",
+			Name: "Reconciling Kubernetes vertical pod autoscaler",
 			Fn:   c.verticalPodAutoscaler.Deploy,
 		})
 		deployEtcdDruid = g.Add(flow.Task{

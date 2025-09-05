@@ -91,8 +91,6 @@ type Values struct {
 	ClusterType component.ClusterType
 	// IsGardenCluster specifies if the VPA is being deployed in a cluster registered as a Garden.
 	IsGardenCluster bool
-	// Enabled specifies if VPA is enabled.
-	Enabled bool
 	// SecretNameServerCA is the name of the server CA secret.
 	SecretNameServerCA string
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
@@ -128,15 +126,12 @@ func (v *vpa) Deploy(ctx context.Context) error {
 	}
 	v.serverSecretName = serverSecret.Name
 
-	var allResources component.ResourceConfigs
-	if v.values.Enabled {
-		allResources = component.MergeResourceConfigs(
-			v.admissionControllerResourceConfigs(),
-			v.recommenderResourceConfigs(),
-			v.updaterResourceConfigs(),
-			v.generalResourceConfigs(),
-		)
-	}
+	allResources := component.MergeResourceConfigs(
+		v.admissionControllerResourceConfigs(),
+		v.recommenderResourceConfigs(),
+		v.updaterResourceConfigs(),
+		v.generalResourceConfigs(),
+	)
 
 	var registry *managedresources.Registry
 	if v.values.ClusterType == component.ClusterTypeSeed {

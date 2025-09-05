@@ -514,7 +514,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilGardenerResourceManagerReady),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes vertical pod autoscaler",
+			Name:         "Reconciling Kubernetes vertical pod autoscaler",
 			Fn:           flow.TaskFn(botanist.DeployVerticalPodAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilGardenerResourceManagerReady),
