@@ -423,7 +423,7 @@ func SyncEncryptedResourcesStatus(shoot *core.Shoot) {
 func removeOperation(operations []string, operationsToRemove ...string) []string {
 	res := slices.Clone(operations)
 	for _, op := range operationsToRemove {
-		res = slices.DeleteFunc(operations, func(operation string) bool {
+		res = slices.DeleteFunc(res, func(operation string) bool {
 			return op == operation
 		})
 	}
