@@ -19,7 +19,6 @@ missing_license_header_files="$(addlicense \
   -ignore "**/*.yaml" \
   -ignore "**/Dockerfile" \
   -ignore "pkg/**/*.sh" \
-  -ignore "third_party/gopkg.in/yaml.v2/**" \
   .)" || true
 
 if [[ "$missing_license_header_files" ]]; then
