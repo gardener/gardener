@@ -465,7 +465,6 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 		true,
 		featureGates,
 	)
-
 	if err != nil {
 		return nil, err
 	}

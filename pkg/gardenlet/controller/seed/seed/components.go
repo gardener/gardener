@@ -752,7 +752,6 @@ func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSe
 		isGardenCluster,
 		featureGates,
 	)
-
 	if err != nil {
 		return nil, err
 	}
