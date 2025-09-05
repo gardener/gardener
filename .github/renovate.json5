@@ -289,7 +289,7 @@
       postUpgradeTasks: {
         commands: [
           'go install github.com/mikefarah/yq/v4@latest',
-          'bash -c "yq -i \'(.images[] | select(.sourceRepository == \\"{{{depName}}}\\") | key) as \\$imagePos | .images[\\$imagePos].tag = \\"distroless-{{{currentValue}}}\\"\' imagevector/containers.yaml"',
+          'bash -c "yq -i \'(.images[] | select(.sourceRepository == \\"github.com/envoyproxy/envoy\\") | key) as \\$imagePos | .images[\\$imagePos].tag = \\"distroless-{{{newValue}}}\\"\' imagevector/containers.yaml"',
         ],
         executionMode: 'update',
       },
