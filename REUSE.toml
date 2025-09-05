@@ -23,18 +23,6 @@ SPDX-FileCopyrightText = "The Kubernetes Authors"
 SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
-path = "third_party/gopkg.in/yaml.v2/**"
-precedence = "aggregate"
-SPDX-FileCopyrightText = "2011-2019 Canonical Ltd"
-SPDX-License-Identifier = "Apache-2.0"
-
-[[annotations]]
-path = ["third_party/gopkg.in/yaml.v2/apic.go", "third_party/gopkg.in/yaml.v2/emitterc.go", "third_party/gopkg.in/yaml.v2/parserc.go", "third_party/gopkg.in/yaml.v2/readerc.go", "third_party/gopkg.in/yaml.v2/scannerc.go", "third_party/gopkg.in/yaml.v2/writerc.go", "third_party/gopkg.in/yaml.v2/yamlh.go", "third_party/gopkg.in/yaml.v2/yamlprivateh.go"]
-precedence = "aggregate"
-SPDX-FileCopyrightText = "2006-2010 Kirill Simonov"
-SPDX-License-Identifier = "MIT"
-
-[[annotations]]
 path = ["pkg/utils/ssh/prefixed_writer.go"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2013-2014 Onsi Fakhouri"
