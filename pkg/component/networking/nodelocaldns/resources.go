@@ -58,6 +58,7 @@ func (n *nodeLocalDNS) computeResourcesData() (*corev1.ServiceAccount, *corev1.C
     }
     reload
     loop
+    import custom/*.override
     bind ` + n.bindIP() + `
     forward . ` + strings.Join(n.values.ClusterDNS, " ") + ` {
             ` + n.forceTcpToClusterDNS() + `
@@ -92,12 +93,14 @@ ip6.arpa:53 {
     cache 30
     reload
     loop
+    import custom/*.override
     bind ` + n.bindIP() + `
     forward . ` + n.upstreamDNSAddress() + ` {
             ` + n.forceTcpToUpstreamDNS() + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
+    import custom/*.server
 `,
 			},
 		}
@@ -282,6 +285,11 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 										MountPath: "/etc/kube-dns",
 										Name:      "kube-dns-config",
 									},
+									{
+										Name:      volumeMountNameCustomConfig,
+										MountPath: volumeMountPathCustomConfig,
+										ReadOnly:  true,
+									},
 								},
 							},
 						},
@@ -319,6 +327,18 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 												Path: "Corefile.base",
 											},
 										},
+									},
+								},
+							},
+							{
+								Name: volumeMountNameCustomConfig,
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: customConfigMapName,
+										},
+										DefaultMode: ptr.To[int32](420),
+										Optional:    ptr.To(true),
 									},
 								},
 							},
