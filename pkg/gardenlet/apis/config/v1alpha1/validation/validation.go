@@ -25,7 +25,7 @@ import (
 )
 
 // ValidateGardenletConfiguration validates a GardenletConfiguration object.
-func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfiguration, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.GardenClientConnection != nil {
@@ -75,19 +75,14 @@ func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfig
 		}
 	}
 
-	seedConfigPath := fldPath.Child("seedConfig")
-	if !inTemplate && cfg.SeedConfig == nil {
-		allErrs = append(allErrs, field.Invalid(seedConfigPath, cfg, "seed config must be set"))
-	}
-
 	if cfg.SeedConfig != nil {
 		seedTemplate, err := gardencorehelper.ConvertSeedTemplate(&cfg.SeedConfig.SeedTemplate)
 		if err != nil {
-			allErrs = append(allErrs, field.Invalid(seedConfigPath, seedTemplate, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("seedConfig"), seedTemplate, fmt.Sprintf("could not convert gardenlet config: %v", err)))
 			return allErrs
 		}
 
-		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplate(seedTemplate, seedConfigPath)...)
+		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplate(seedTemplate, fldPath.Child("seedConfig"))...)
 	}
 
 	resourcesPath := fldPath.Child("resources")

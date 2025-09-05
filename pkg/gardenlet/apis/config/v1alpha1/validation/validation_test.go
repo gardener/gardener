@@ -110,7 +110,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 	Describe("#ValidateGardenletConfiguration", func() {
 		It("should allow valid configurations", func() {
-			errorList := ValidateGardenletConfiguration(cfg, nil, false)
+			errorList := ValidateGardenletConfiguration(cfg, nil)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -127,13 +127,13 @@ var _ = Describe("GardenletConfiguration", func() {
 
 			commonTests := func() {
 				It("should allow default client connection configuration", func() {
-					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+					Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 				})
 
 				It("should return errors because some values are invalid", func() {
 					clientConnection.Burst = -1
 
-					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+					Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal(fldPath.Child("burst").String()),
@@ -152,7 +152,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 				Context("kubeconfig validity", func() {
 					It("should allow when config is not set", func() {
-						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+						Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 					})
 
 					It("should allow valid configurations", func() {
@@ -164,7 +164,7 @@ var _ = Describe("GardenletConfiguration", func() {
 							},
 						}
 
-						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+						Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 					})
 
 					It("should forbid validity less than 10m", func() {
@@ -174,7 +174,7 @@ var _ = Describe("GardenletConfiguration", func() {
 							},
 						}
 
-						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("gardenClientConnection.kubeconfigValidity.validity"),
 							"Detail": ContainSubstring("must be at least 10m"),
@@ -188,7 +188,7 @@ var _ = Describe("GardenletConfiguration", func() {
 							},
 						}
 
-						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
 							"Detail": ContainSubstring("must be at least 1"),
@@ -202,7 +202,7 @@ var _ = Describe("GardenletConfiguration", func() {
 							},
 						}
 
-						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMax"),
 							"Detail": ContainSubstring("must be at most 100"),
@@ -217,7 +217,7 @@ var _ = Describe("GardenletConfiguration", func() {
 							},
 						}
 
-						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
 							"Detail": ContainSubstring("minimum percentage must be less than maximum percentage"),
@@ -232,7 +232,7 @@ var _ = Describe("GardenletConfiguration", func() {
 							},
 						}
 
-						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
 							"Detail": ContainSubstring("minimum percentage must be less than maximum percentage"),
@@ -268,23 +268,23 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should allow not enabling leader election", func() {
 				cfg.LeaderElection.LeaderElect = nil
 
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
 
 			It("should allow disabling leader election", func() {
 				cfg.LeaderElection.LeaderElect = ptr.To(false)
 
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
 
 			It("should allow default leader election configuration with required fields", func() {
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
 
 			It("should reject leader election config with missing required fields", func() {
 				cfg.LeaderElection.ResourceNamespace = ""
 
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("leaderElection.resourceNamespace"),
@@ -302,7 +302,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				cfg.Controllers.Shoot.SyncPeriod = &metav1.Duration{Duration: -1}
 				cfg.Controllers.Shoot.RetryDuration = &metav1.Duration{Duration: -1}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -327,7 +327,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid too low values for the DNS TTL", func() {
 				cfg.Controllers.Shoot.DNSEntryTTLSeconds = ptr.To(int64(-1))
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -338,7 +338,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid too high values for the DNS TTL", func() {
 				cfg.Controllers.Shoot.DNSEntryTTLSeconds = ptr.To[int64](601)
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -357,7 +357,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				cfg.Controllers.ShootCare.ManagedResourceProgressingThreshold = &metav1.Duration{Duration: -1}
 				cfg.Controllers.ShootCare.ConditionThresholds = []gardenletconfigv1alpha1.ConditionThreshold{{Duration: metav1.Duration{Duration: -1}}}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -393,7 +393,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				cfg.Controllers.ManagedSeed.WaitSyncPeriod = &metav1.Duration{Duration: -1}
 				cfg.Controllers.ManagedSeed.SyncJitterPeriod = &metav1.Duration{Duration: -1}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -420,7 +420,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid specifying purposes when not specifying hours", func() {
 				cfg.Controllers.BackupEntry.DeletionGracePeriodHours = nil
 
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("controllers.backupEntry.deletionGracePeriodShootPurposes"),
@@ -437,13 +437,13 @@ var _ = Describe("GardenletConfiguration", func() {
 					gardencorev1beta1.ShootPurposeProduction,
 				}
 
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
 
 			It("should forbid invalid purposes", func() {
 				cfg.Controllers.BackupEntry.DeletionGracePeriodShootPurposes = []gardencorev1beta1.ShootPurpose{"does-not-exist"}
 
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),
 						"Field": Equal("controllers.backupEntry.deletionGracePeriodShootPurposes[0]"),
@@ -457,7 +457,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				invalidConcurrentSyncs := -1
 				cfg.Controllers.Bastion.ConcurrentSyncs = &invalidConcurrentSyncs
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -476,7 +476,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should return errors because concurrent syncs are < 0", func() {
 				cfg.Controllers.NetworkPolicy.ConcurrentSyncs = ptr.To(-1)
 
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("controllers.networkPolicy.concurrentSyncs"),
@@ -490,7 +490,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
 				)
 
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("controllers.networkPolicy.additionalNamespaceSelectors[1].matchLabels"),
@@ -500,15 +500,9 @@ var _ = Describe("GardenletConfiguration", func() {
 		})
 
 		Context("seed config", func() {
-			It("should require a seedConfig", func() {
+			It("should not require a seedConfig", func() {
 				cfg.SeedConfig = nil
-
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("seedConfig"),
-				}))))
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
 		})
 
@@ -516,7 +510,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid invalid fields in seed template", func() {
 				cfg.SeedConfig.Spec.Networks.Nodes = ptr.To("")
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -538,7 +532,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					},
 				}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -553,7 +547,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					},
 				}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -570,14 +564,14 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should pass as sni config contains a valid external service ip", func() {
 				cfg.SNI.Ingress.ServiceExternalIP = ptr.To("1.1.1.1")
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid as sni config contains an empty external service ip", func() {
 				cfg.SNI.Ingress.ServiceExternalIP = ptr.To("")
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("sni.ingress.serviceExternalIP"),
@@ -587,7 +581,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid as sni config contains an invalid external service ip", func() {
 				cfg.SNI.Ingress.ServiceExternalIP = ptr.To("a.b.c.d")
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("sni.ingress.serviceExternalIP"),
@@ -609,14 +603,14 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should pass valid exposureClassHandler", func() {
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should fail as exposureClassHandler name is no DNS1123 label with zero length", func() {
 				cfg.ExposureClassHandlers[0].Name = ""
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -627,7 +621,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should fail as exposureClassHandler name is no DNS1123 label", func() {
 				cfg.ExposureClassHandlers[0].Name = "TE:ST"
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -639,7 +633,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				It("should allow to use an external service ip as loadbalancer ip is valid", func() {
 					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = ptr.To("1.1.1.1")
 
-					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+					errorList := ValidateGardenletConfiguration(cfg, nil)
 
 					Expect(errorList).To(BeEmpty())
 				})
@@ -647,7 +641,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				It("should allow to use an external service ip", func() {
 					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = ptr.To("1.1.1.1")
 
-					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+					errorList := ValidateGardenletConfiguration(cfg, nil)
 
 					Expect(errorList).To(BeEmpty())
 				})
@@ -655,7 +649,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				It("should forbid to use an empty external service ip", func() {
 					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = ptr.To("")
 
-					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+					errorList := ValidateGardenletConfiguration(cfg, nil)
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("exposureClassHandlers[0].sni.ingress.serviceExternalIP"),
@@ -665,7 +659,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				It("should forbid to use an invalid external service ip", func() {
 					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = ptr.To("a.b.c.d")
 
-					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+					errorList := ValidateGardenletConfiguration(cfg, nil)
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("exposureClassHandlers[0].sni.ingress.serviceExternalIP"),
@@ -678,7 +672,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should pass with unset toleration options", func() {
 				cfg.NodeToleration = nil
 
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
 
 			It("should pass with unset toleration seconds", func() {
@@ -687,7 +681,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					DefaultUnreachableTolerationSeconds: nil,
 				}
 
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
 
 			It("should pass with valid toleration options", func() {
@@ -696,7 +690,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					DefaultUnreachableTolerationSeconds: ptr.To[int64](120),
 				}
 
-				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
 
 			It("should fail with invalid toleration options", func() {
@@ -705,7 +699,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					DefaultUnreachableTolerationSeconds: ptr.To(int64(-2)),
 				}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{

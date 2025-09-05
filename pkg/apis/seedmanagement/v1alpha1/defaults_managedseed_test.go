@@ -56,7 +56,6 @@ var _ = Describe("Defaults", func() {
 							gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 						},
 					},
-					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{},
 				}}))
 			Expect(obj.Spec.Gardenlet.Bootstrap).To(PointTo(Equal(BootstrapToken)))
 			Expect(obj.Spec.Gardenlet.MergeWithParent).To(PointTo(Equal(true)))

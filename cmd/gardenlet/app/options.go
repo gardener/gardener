@@ -66,7 +66,7 @@ func (o *options) Complete() error {
 }
 
 func (o *options) Validate() error {
-	if errs := gardenletvalidation.ValidateGardenletConfiguration(o.config, nil, false); len(errs) > 0 {
+	if errs := gardenletvalidation.ValidateGardenletConfiguration(o.config, nil); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
 
@@ -74,7 +74,7 @@ func (o *options) Validate() error {
 	// ManagedSeed and Gardenlet resources in the seedmanagement API group. Here, the .metadata.name field is not
 	// required and might indeed be empty, since it will be defaulted to the name of the resource during gardenlet
 	// deployment.
-	if o.config.SeedConfig.Name == "" {
+	if o.config.SeedConfig == nil || o.config.SeedConfig.Name == "" {
 		return fmt.Errorf("seedConfig.metadata.name must be set in the gardenlet configuration")
 	}
 

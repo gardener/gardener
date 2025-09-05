@@ -50,7 +50,7 @@ func ValidateGardenletSpec(spec *seedmanagement.GardenletSpec, fldPath *field.Pa
 	allErrs = append(allErrs, validation.ValidateOCIRepository(&spec.Deployment.Helm.OCIRepository, fldPath.Child("deployment", "helm", "ociRepository"))...)
 
 	if spec.Config != nil {
-		allErrs = append(allErrs, validateGardenletConfig(spec.Config, seedmanagement.BootstrapToken, false, fldPath.Child("config"), false)...)
+		allErrs = append(allErrs, validateGardenletConfig(spec.Config, seedmanagement.BootstrapToken, false, fldPath.Child("config"))...)
 	}
 
 	return allErrs

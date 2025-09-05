@@ -435,6 +435,9 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
+		if seedTemplate == nil {
+			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("seed template is nil for ManagedSeed %q", managedSeed.Name))
+		}
 
 		if seedTemplate.Spec.Backup != nil &&
 			seedTemplate.Spec.Backup.CredentialsRef.APIVersion == "v1" &&

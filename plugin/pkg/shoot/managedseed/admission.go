@@ -162,6 +162,9 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("cannot extract the seed template: %w", err))
 	}
+	if seedTemplate == nil {
+		return apierrors.NewInternalError(fmt.Errorf("seed template is unset in gardenlet config"))
+	}
 
 	allErrs = append(allErrs, v.validateZoneRemovalFromShoot(field.NewPath("spec", "providers", "workers"), oldShoot, shoot, seedTemplate)...)
 
