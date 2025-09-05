@@ -305,6 +305,10 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		}
 	}
 
+	if spec.SchedulerName != nil {
+		allErrs = append(allErrs, validateDNS1123Label(*spec.SchedulerName, fldPath.Child("schedulerName"))...)
+	}
+
 	return allErrs
 }
 
@@ -1345,6 +1349,15 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, versio
 	if autoScaler.EvictAfterOOMThreshold != nil {
 		allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.EvictAfterOOMThreshold, fldPath.Child("evictAfterOOMThreshold"))...)
 	}
+	if autoScaler.EvictionRateBurst != nil && *autoScaler.EvictionRateBurst < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("evictionRateBurst"), *autoScaler.EvictionRateBurst, "must be non-negative"))
+	}
+	if fraction := autoScaler.EvictionTolerance; fraction != nil {
+		allErrs = append(allErrs, validateFraction(*fraction, fldPath.Child("evictionTolerance"))...)
+	}
+	if fraction := autoScaler.RecommendationMarginFraction; fraction != nil {
+		allErrs = append(allErrs, validateFraction(*fraction, fldPath.Child("recommendationMarginFraction"))...)
+	}
 	if autoScaler.UpdaterInterval != nil {
 		allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.UpdaterInterval, fldPath.Child("updaterInterval"))...)
 	}
@@ -1404,6 +1417,15 @@ func ValidateVerticalPodAutoscalerMaxAllowed(maxAllowed corev1.ResourceList, fld
 		}
 
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
+	}
+
+	return allErrs
+}
+
+func validateFraction(fraction float64, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if fraction < 0.0 || fraction >= 1.0 {
+		allErrs = append(allErrs, field.Invalid(fldPath, fraction, "fraction value must be in the range [0, 1)"))
 	}
 
 	return allErrs
@@ -1763,6 +1785,15 @@ func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, fldPath
 			}
 		}
 
+		if kubeMaxPDVols := ks.KubeMaxPDVols; kubeMaxPDVols != nil {
+			num, err := strconv.Atoi(*kubeMaxPDVols)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeMaxPDVols"), *kubeMaxPDVols, fmt.Sprintf("conversion error: %v", err)))
+			} else if num < 1 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeMaxPDVols"), *kubeMaxPDVols, "must be positive"))
+			}
+		}
+
 		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(ks.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
 
@@ -1848,6 +1879,8 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 
 	if len(provider.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must specify a provider type"))
+	} else {
+		allErrs = append(allErrs, validateDNS1123Label(provider.Type, fldPath.Child("type"))...)
 	}
 
 	if workerless {

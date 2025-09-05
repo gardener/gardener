@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/validation/path"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 
@@ -222,6 +223,14 @@ func ValidateTolerations(tolerations []core.Toleration, fldPath *field.Path) fie
 
 		if len(toleration.Key) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("key"), "cannot be empty"))
+		} else {
+			allErrs = append(allErrs, metav1validation.ValidateLabelName(toleration.Key, idxPath.Child("key"))...)
+		}
+
+		if toleration.Value != nil {
+			for _, msg := range validation.IsValidLabelValue(*toleration.Value) {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("value"), *toleration.Value, msg))
+			}
 		}
 
 		id := utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value)

@@ -20,7 +20,7 @@ import (
 
 var _ = Describe("ControllerRegistration controller test", func() {
 	var (
-		shootProviderType           = "shootProvider"
+		shootProviderType           = "shoot-provider"
 		shoot                       *gardencorev1beta1.Shoot
 		shootControllerRegistration *gardencorev1beta1.ControllerRegistration
 	)

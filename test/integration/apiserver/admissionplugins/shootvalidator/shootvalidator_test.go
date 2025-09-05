@@ -38,7 +38,7 @@ var _ = Describe("ShootValidator tests", func() {
 				SecretBindingName: ptr.To(testSecretBinding.Name),
 				Region:            "region",
 				Provider: gardencorev1beta1.Provider{
-					Type: "providerType",
+					Type: "provider-type",
 					Workers: []gardencorev1beta1.Worker{
 						{
 							Name:    "cpu-worker",
