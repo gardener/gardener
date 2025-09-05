@@ -302,17 +302,17 @@ func (h *HealthChecker) CheckControlPlane(
 		return nil, err
 	}
 
-	if exitCondition := h.checkRequiredDeployments(condition, requiredControlPlaneDeployments, deploymentList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := h.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-
 	if exitCondition := h.checkRequiredEtcds(condition, requiredControlPlaneEtcds, etcdList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
 	if exitCondition := h.checkEtcds(condition, etcdList.Items); exitCondition != nil {
+		return exitCondition, nil
+	}
+
+	if exitCondition := h.checkRequiredDeployments(condition, requiredControlPlaneDeployments, deploymentList.Items); exitCondition != nil {
+		return exitCondition, nil
+	}
+	if exitCondition := h.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
 
