@@ -178,24 +178,102 @@ var _ = Describe("Project Validation Tests", func() {
 			),
 		)
 
-		It("should forbid Project specification with empty or invalid key for description", func() {
-			project.Spec.Description = ptr.To("")
+		DescribeTable("Project spec.description",
+			func(description *string, matcher gomegatypes.GomegaMatcher) {
+				project.Spec.Description = description
 
-			errorList := ValidateProject(project)
+				errorList := ValidateProject(project)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
+				Expect(errorList).To(matcher)
+			},
+			Entry("should allow no description",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should allow valid description",
+				ptr.To(`This is a project description, 庭師.`),
+				BeEmpty(),
+			),
+			Entry("should forbid Project with empty description",
+				ptr.To(""),
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.description"),
+				}))),
+			),
+			Entry("should forbid Project description with special characters",
+				ptr.To("<foo>"),
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.description"),
+				}))),
+			),
+		)
+
+		It("should allow already accepted invalid project description", func() {
+			project.Spec.Description = ptr.To("<foo>")
+			newProject := prepareProjectForUpdate(project)
+
+			Expect(ValidateProjectUpdate(newProject, project)).To(BeEmpty())
+		})
+
+		It("should forbid Project description with special characters when updated", func() {
+			project.Spec.Description = ptr.To("foo")
+			newProject := prepareProjectForUpdate(project)
+			newProject.Spec.Description = ptr.To("<foo>")
+
+			Expect(ValidateProjectUpdate(newProject, project)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.description"),
 			}))))
 		})
 
-		It("should forbid Project specification with empty or invalid key for purpose", func() {
-			project.Spec.Purpose = ptr.To("")
+		DescribeTable("Project spec.purpose",
+			func(purpose *string, matcher gomegatypes.GomegaMatcher) {
+				project.Spec.Purpose = purpose
 
-			errorList := ValidateProject(project)
+				errorList := ValidateProject(project)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
+				Expect(errorList).To(matcher)
+			},
+			Entry("should allow no purpose",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should allow valid purpose",
+				ptr.To(`This is a project purpose, 庭師.`),
+				BeEmpty(),
+			),
+			Entry("should forbid Project with empty purpose",
+				ptr.To(""),
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.purpose"),
+				}))),
+			),
+			Entry("should forbid Project purpose with special characters",
+				ptr.To("<foo>"),
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.purpose"),
+				}))),
+			),
+		)
+
+		It("should allow already accepted invalid project purpose", func() {
+			project.Spec.Purpose = ptr.To("<foo>")
+			newProject := prepareProjectForUpdate(project)
+
+			Expect(ValidateProjectUpdate(newProject, project)).To(BeEmpty())
+		})
+
+		It("should forbid Project purpose with special characters when updated", func() {
+			project.Spec.Purpose = ptr.To("foo")
+			newProject := prepareProjectForUpdate(project)
+			newProject.Spec.Purpose = ptr.To("<foo>")
+
+			Expect(ValidateProjectUpdate(newProject, project)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.purpose"),
 			}))))
 		})
