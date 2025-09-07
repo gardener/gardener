@@ -146,7 +146,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
@@ -161,7 +161,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
@@ -178,7 +178,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: delay}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: delay}))
 		})
 
 		It("should issue a new token since the renew timestamp is in the past", func() {
@@ -193,7 +193,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
@@ -223,7 +223,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 		})
 
 		Context("error", func() {
