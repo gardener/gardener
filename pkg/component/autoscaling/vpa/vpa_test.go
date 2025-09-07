@@ -194,7 +194,6 @@ var _ = Describe("VPA", func() {
 			vpa = New(c, namespace, sm, Values{
 				ClusterType:              clusterType,
 				IsGardenCluster:          isGardenCluster,
-				Enabled:                  true,
 				SecretNameServerCA:       secretNameCA,
 				RuntimeKubernetesVersion: runtimeKubernetesVersion,
 				AdmissionController:      valuesAdmissionController,
@@ -1801,7 +1800,6 @@ var _ = Describe("VPA", func() {
 
 				vpa = New(c, namespace, sm, Values{
 					ClusterType:              component.ClusterTypeSeed,
-					Enabled:                  true,
 					SecretNameServerCA:       secretNameCA,
 					RuntimeKubernetesVersion: runtimeKubernetesVersion,
 					AdmissionController:      valuesAdmissionController,
@@ -2254,7 +2252,6 @@ var _ = Describe("VPA", func() {
 					It("should successfully deploy with expected vpa-webhook service annotation, label and spec field", func() {
 						vpa = New(c, namespace, sm, Values{
 							ClusterType:              component.ClusterTypeShoot,
-							Enabled:                  true,
 							SecretNameServerCA:       secretNameCA,
 							RuntimeKubernetesVersion: runtimeKubernetesVersion,
 							AdmissionController:      valuesAdmissionController,
@@ -2278,7 +2275,6 @@ var _ = Describe("VPA", func() {
 					It("should successfully deploy with expected vpa-webhook service annotation, label and spec field", func() {
 						vpa = New(c, namespace, sm, Values{
 							ClusterType:              component.ClusterTypeShoot,
-							Enabled:                  true,
 							SecretNameServerCA:       secretNameCA,
 							RuntimeKubernetesVersion: runtimeKubernetesVersion,
 							AdmissionController:      valuesAdmissionController,
@@ -2303,7 +2299,6 @@ var _ = Describe("VPA", func() {
 					It("should successfully deploy with expected vpa-webhook service annotation, label and spec field", func() {
 						vpa = New(c, namespace, sm, Values{
 							ClusterType:              component.ClusterTypeShoot,
-							Enabled:                  true,
 							SecretNameServerCA:       secretNameCA,
 							RuntimeKubernetesVersion: runtimeKubernetesVersion,
 							AdmissionController:      valuesAdmissionController,
