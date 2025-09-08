@@ -8324,6 +8324,40 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Expect(errList).To(BeEmpty())
 			})
+
+			It("should not accept invalid containerLogMaxSize", func() {
+				maxSize := resource.MustParse("-1Mi")
+				kubeletConfig := core.KubeletConfig{
+					ContainerLogMaxSize: &maxSize,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				Expect(errList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("containerLogMaxSize").String()),
+					})),
+				))
+			})
+
+			It("should accept valid containerLogMaxSize", func() {
+				maxSize := resource.MustParse("100Mi")
+				kubeletConfig := core.KubeletConfig{
+					ContainerLogMaxSize: &maxSize,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should accept empty containerLogMaxSize and containerLogMaxFiles", func() {
+				kubeletConfig := core.KubeletConfig{
+					ContainerLogMaxSize:  nil,
+					ContainerLogMaxFiles: nil,
+				}
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				Expect(errList).To(BeEmpty())
+			})
 		})
 
 		Describe("maxParallelImagePulls", func() {
