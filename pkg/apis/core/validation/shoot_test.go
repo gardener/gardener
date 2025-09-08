@@ -8313,7 +8313,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 
-			It("should accept valid containerLogMaxFiles and containerLogMaxSize", func() {
+			It("should accept valid containerLogMaxFiles", func() {
 				maxSize := resource.MustParse("100Mi")
 				kubeletConfig := core.KubeletConfig{
 					ContainerLogMaxFiles: ptr.To[int32](5),
