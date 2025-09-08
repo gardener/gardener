@@ -9,14 +9,7 @@
 {{- if .Values.gardener.seed.deployed -}}
 {{- range $i, $listenAddress := (required ".Values.gardener.seed.istio.listenAddresses is required" .Values.gardener.seed.istio.listenAddresses) }}
 - containerPort: {{ add 30443 $i }}
-{{- if $.Values.gardener.controlPlane.deployed }}
   hostPort: 443
-{{- else }}
-  # TODO (plkokanov): when using skaffold to deploy, 172.18.255.2 is not used as listenAddress (unlike the local
-  #  deployment) because secondary IPs cannot be easily added to inside the `prow` containers. Additionally, there is no
-  #  way currently to swap the dns record of the shoot's `kube-apiserver` once it is migrated to this seed.
-  hostPort: 9443
-{{- end }}
   listenAddress: {{ $listenAddress }}
 - containerPort: {{ add 32132 $i }}
   hostPort: 8132
