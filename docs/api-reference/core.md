@@ -8366,7 +8366,7 @@ VersionClassification
 <td>
 <code>startTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
