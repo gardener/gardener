@@ -178,7 +178,8 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	}
 
 	if c.CpuManagerPolicy == nil {
-		c.CpuManagerPolicy = ptr.To(kubeletconfigv1beta1.NoneTopologyManagerPolicy)
+		// Ref: https://github.com/kubernetes/kubernetes/blob/cede96336a809a67546ca08df0748e4253ec270d/pkg/kubelet/cm/cpumanager/policy_none.go#L34
+		c.CpuManagerPolicy = ptr.To("none")
 	}
 
 	if c.EvictionHard == nil {

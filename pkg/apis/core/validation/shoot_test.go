@@ -7790,6 +7790,25 @@ var _ = Describe("Shoot Validation Tests", func() {
 		invalidPercentValueHigh := "110%"
 		invalidValue := "5X"
 
+		DescribeTable("CPUManagerPolicy",
+			func(cpuManagerPolicy *string, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					CPUManagerPolicy: cpuManagerPolicy,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", field.NewPath("kubelet"))
+				Expect(errList).To(matcher)
+			},
+			Entry("should allow empty cpuManagerPolicy", nil, BeEmpty()),
+			Entry("should allow cpuManagerPolicy to be 'none'", ptr.To("none"), BeEmpty()),
+			Entry("should allow cpuManagerPolicy to be 'static'", ptr.To("static"), BeEmpty()),
+			Entry("should not allow cpuManagerPolicy to be 'foo'", ptr.To("foo"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeNotSupported),
+				"Field":  Equal("kubelet.cpuManagerPolicy"),
+				"Detail": Equal("supported values: \"none\", \"static\""),
+			})))),
+		)
+
 		DescribeTable("StreamingConnectionIdleTimeout",
 			func(streamingConnectionIdleTimeout *metav1.Duration, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
