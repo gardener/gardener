@@ -308,6 +308,11 @@ const (
 // VersionClassification is the logical state of a version.
 type VersionClassification string
 
+// IsActive returns whether the version can be used.
+func (v VersionClassification) IsActive() bool {
+	return v != ClassificationExpired && v != ClassificationUnavailable
+}
+
 var order = map[VersionClassification]int{
 	ClassificationUnavailable: 0,
 	ClassificationPreview:     1,
