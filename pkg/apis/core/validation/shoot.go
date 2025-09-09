@@ -2121,6 +2121,14 @@ const PodPIDsLimitMinimum int64 = 100
 func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	if kubeletConfig.CPUManagerPolicy != nil {
+		// Ref: https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/#configuration
+		supportedCPUManagerPolicies := sets.New("none", "static")
+		if !supportedCPUManagerPolicies.Has(*kubeletConfig.CPUManagerPolicy) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("cpuManagerPolicy"), *kubeletConfig.CPUManagerPolicy, sets.List(supportedCPUManagerPolicies)))
+		}
+	}
+
 	if kubeletConfig.MaxPods != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*kubeletConfig.MaxPods), fldPath.Child("maxPods"))...)
 	}
@@ -2183,6 +2191,9 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 		if *v < 2 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("containerLogMaxFiles"), *v, "value must be >= 2."))
 		}
+	}
+	if v := kubeletConfig.ContainerLogMaxSize; v != nil {
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("containerLogMaxSize", *v, fldPath.Child("containerLogMaxSize"))...)
 	}
 	if v := kubeletConfig.StreamingConnectionIdleTimeout; v != nil {
 		if v.Duration < time.Second*30 || time.Hour*4 < v.Duration {

@@ -7790,6 +7790,25 @@ var _ = Describe("Shoot Validation Tests", func() {
 		invalidPercentValueHigh := "110%"
 		invalidValue := "5X"
 
+		DescribeTable("CPUManagerPolicy",
+			func(cpuManagerPolicy *string, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					CPUManagerPolicy: cpuManagerPolicy,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", field.NewPath("kubelet"))
+				Expect(errList).To(matcher)
+			},
+			Entry("should allow empty cpuManagerPolicy", nil, BeEmpty()),
+			Entry("should allow cpuManagerPolicy to be 'none'", ptr.To("none"), BeEmpty()),
+			Entry("should allow cpuManagerPolicy to be 'static'", ptr.To("static"), BeEmpty()),
+			Entry("should not allow cpuManagerPolicy to be 'foo'", ptr.To("foo"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeNotSupported),
+				"Field":  Equal("kubelet.cpuManagerPolicy"),
+				"Detail": Equal("supported values: \"none\", \"static\""),
+			})))),
+		)
+
 		DescribeTable("StreamingConnectionIdleTimeout",
 			func(streamingConnectionIdleTimeout *metav1.Duration, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
@@ -8294,7 +8313,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 
-			It("should accept valid containerLogMaxFiles and containerLogMaxSize", func() {
+			It("should accept valid containerLogMaxFiles", func() {
 				maxSize := resource.MustParse("100Mi")
 				kubeletConfig := core.KubeletConfig{
 					ContainerLogMaxFiles: ptr.To[int32](5),
@@ -8303,6 +8322,40 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should not accept invalid containerLogMaxSize", func() {
+				maxSize := resource.MustParse("-1Mi")
+				kubeletConfig := core.KubeletConfig{
+					ContainerLogMaxSize: &maxSize,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				Expect(errList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("containerLogMaxSize").String()),
+					})),
+				))
+			})
+
+			It("should accept valid containerLogMaxSize", func() {
+				maxSize := resource.MustParse("100Mi")
+				kubeletConfig := core.KubeletConfig{
+					ContainerLogMaxSize: &maxSize,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should accept empty containerLogMaxSize and containerLogMaxFiles", func() {
+				kubeletConfig := core.KubeletConfig{
+					ContainerLogMaxSize:  nil,
+					ContainerLogMaxFiles: nil,
+				}
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 				Expect(errList).To(BeEmpty())
 			})
 		})
