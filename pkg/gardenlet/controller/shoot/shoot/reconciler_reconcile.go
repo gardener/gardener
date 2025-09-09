@@ -496,7 +496,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 						if shoot.Status.Credentials == nil {
 							shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{}
 						}
-						shoot.Status.Credentials.ETCDEncryption.Resources = encryptedResources
+						shoot.Status.Credentials.EncryptionAtRest.Resources = encryptedResources
 						return nil
 					}); err != nil {
 						return err

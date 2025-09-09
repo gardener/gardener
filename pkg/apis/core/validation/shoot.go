@@ -194,7 +194,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		hibernationEnabled = ptr.Deref(newShoot.Spec.Hibernation.Enabled, false)
 	}
 	if newShoot.Status.Credentials != nil {
-		for _, er := range newShoot.Status.Credentials.ETCDEncryption.Resources {
+		for _, er := range newShoot.Status.Credentials.EncryptionAtRest.Resources {
 			encryptedResources.Insert(schema.ParseGroupResource(er))
 		}
 	}
@@ -1522,7 +1522,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 	}
 
 	if old.Status.Credentials != nil {
-		for _, er := range old.Status.Credentials.ETCDEncryption.Resources {
+		for _, er := range old.Status.Credentials.EncryptionAtRest.Resources {
 			encryptedResourcesInStatus.Insert(schema.ParseGroupResource(er))
 		}
 	}
@@ -1540,7 +1540,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 		}
 
 		if !encryptedResourcesInOldSpec.Equal(encryptedResourcesInStatus) {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "shoot cannot be hibernated when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.credentials.etcdEncryption.resources are not equal"))
+			allErrs = append(allErrs, field.Forbidden(fldPath, "shoot cannot be hibernated when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.credentials.encryptionAtRest.resources are not equal"))
 		}
 	}
 
@@ -2924,7 +2924,7 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	if shoot.Status.Credentials != nil {
-		for _, er := range shoot.Status.Credentials.ETCDEncryption.Resources {
+		for _, er := range shoot.Status.Credentials.EncryptionAtRest.Resources {
 			encryptedResources.Insert(schema.ParseGroupResource(er))
 		}
 	}

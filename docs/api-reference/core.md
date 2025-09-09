@@ -5425,39 +5425,6 @@ ControlPlaneAutoscaling
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.ETCDEncryption">ETCDEncryption
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ShootCredentials">ShootCredentials</a>)
-</p>
-<p>
-<p>ETCDEncryption contains information about the ETCD encryption.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources is the list of resources in the Shoot which are currently encrypted.
-Secrets are encrypted by default and are not part of the list.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md</a> for more details.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.ETCDEncryptionKeyRotation">ETCDEncryptionKeyRotation
 </h3>
 <p>
@@ -5562,6 +5529,39 @@ This field is needed while we support two types of key rotations: two-operation 
 <p>Deprecated: This field will be removed in a future release. The field will be no longer needed with
 the removal <code>rotate-etcd-encryption-key-start</code> &amp; <code>rotate-etcd-encryption-key-complete</code> annotations.
 TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.EncryptionAtRest">EncryptionAtRest
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentials">ShootCredentials</a>)
+</p>
+<p>
+<p>EncryptionAtRest contains information about Shoot data encryption at rest.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources is the list of resources in the Shoot which are currently encrypted.
+Secrets are encrypted by default and are not part of the list.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md</a> for more details.</p>
 </td>
 </tr>
 </tbody>
@@ -12788,15 +12788,15 @@ ShootCredentialsRotation
 </tr>
 <tr>
 <td>
-<code>etcdEncryption</code></br>
+<code>encryptionAtRest</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ETCDEncryption">
-ETCDEncryption
+<a href="#core.gardener.cloud/v1beta1.EncryptionAtRest">
+EncryptionAtRest
 </a>
 </em>
 </td>
 <td>
-<p>ETCDEncryption contains information about the ETCD encryption.</p>
+<p>EncryptionAtRest contains information about Shoot data encryption at rest.</p>
 </td>
 </tr>
 </tbody>
@@ -13764,7 +13764,7 @@ LastMaintenance
 Secrets are encrypted by default and are not part of the list.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md</a> for more details.</p>
 <p>Deprecated: This field is deprecated and will be removed in a future release.
-This field will be removed in favor of <code>shootStatus.credentials.etcdEncryption.resources</code>.</p>
+This field will be removed in favor of <code>shootStatus.credentials.encryptionAtRest.resources</code>.</p>
 </td>
 </tr>
 <tr>

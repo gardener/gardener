@@ -363,15 +363,15 @@ CredentialsRotation
 </tr>
 <tr>
 <td>
-<code>etcdEncryption</code></br>
+<code>encryptionAtRest</code></br>
 <em>
-<a href="#operator.gardener.cloud/v1alpha1.ETCDEncryption">
-ETCDEncryption
+<a href="#operator.gardener.cloud/v1alpha1.EncryptionAtRest">
+EncryptionAtRest
 </a>
 </em>
 </td>
 <td>
-<p>ETCDEncryption contains information about the ETCD encryption.</p>
+<p>EncryptionAtRest contains information about garden data encryption at rest.</p>
 </td>
 </tr>
 </tbody>
@@ -1061,39 +1061,6 @@ ETCDEvents
 </tr>
 </tbody>
 </table>
-<h3 id="operator.gardener.cloud/v1alpha1.ETCDEncryption">ETCDEncryption
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.Credentials">Credentials</a>)
-</p>
-<p>
-<p>ETCDEncryption contains information about the ETCD encryption.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
-Resources which are encrypted by default will not appear here.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config">https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config</a> for more details.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="operator.gardener.cloud/v1alpha1.ETCDEvents">ETCDEvents
 </h3>
 <p>
@@ -1194,6 +1161,39 @@ Storage
 <td>
 <em>(Optional)</em>
 <p>Storage contains storage configuration.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.EncryptionAtRest">EncryptionAtRest
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Credentials">Credentials</a>)
+</p>
+<p>
+<p>EncryptionAtRest contains information about virtual garden data encryption at rest.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
+Resources which are encrypted by default will not appear here.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config">https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config</a> for more details.</p>
 </td>
 </tr>
 </tbody>
@@ -1839,7 +1839,7 @@ Credentials
 Resources which are encrypted by default will not appear here.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config">https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config</a> for more details.</p>
 <p>Deprecated: This field is deprecated and will be removed in a future release.
-This field will be removed in favor of <code>gardenStatus.credentials.etcdEncryption.resources</code>.</p>
+This field will be removed in favor of <code>gardenStatus.credentials.encryptionAtRest.resources</code>.</p>
 </td>
 </tr>
 </tbody>

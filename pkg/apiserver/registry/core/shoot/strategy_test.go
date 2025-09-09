@@ -268,7 +268,7 @@ var _ = Describe("Strategy", func() {
 				},
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
-						ETCDEncryption: core.ETCDEncryption{
+						EncryptionAtRest: core.EncryptionAtRest{
 							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
 						},
 					},
@@ -277,7 +277,7 @@ var _ = Describe("Strategy", func() {
 			),
 			Entry("should not overwrite", core.ShootStatus{
 				Credentials: &core.ShootCredentials{
-					ETCDEncryption: core.ETCDEncryption{
+					EncryptionAtRest: core.EncryptionAtRest{
 						Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
 					},
 				},
@@ -285,7 +285,7 @@ var _ = Describe("Strategy", func() {
 			},
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
-						ETCDEncryption: core.ETCDEncryption{
+						EncryptionAtRest: core.EncryptionAtRest{
 							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
 						},
 					},

@@ -81,14 +81,14 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		newShoot.Spec.CredentialsBindingName = nil
 	}
 
-	// Migrate encryptedResources status from `.status.encryptedResources` to `status.credentials.etcdEncryption.resources`.
+	// Migrate encryptedResources status from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
 	// TODO(AleksandarSavchev): Remove this block with the removal of the `.status.encryptedResources` field.
 	if len(newShoot.Status.EncryptedResources) > 0 {
 		if newShoot.Status.Credentials == nil {
 			newShoot.Status.Credentials = &core.ShootCredentials{}
 		}
-		if len(newShoot.Status.Credentials.ETCDEncryption.Resources) == 0 {
-			newShoot.Status.Credentials.ETCDEncryption.Resources = newShoot.Status.EncryptedResources
+		if len(newShoot.Status.Credentials.EncryptionAtRest.Resources) == 0 {
+			newShoot.Status.Credentials.EncryptionAtRest.Resources = newShoot.Status.EncryptedResources
 		}
 	}
 }

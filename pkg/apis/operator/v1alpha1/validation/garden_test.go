@@ -303,7 +303,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are not equal", false,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							ETCDEncryption: operatorv1alpha1.ETCDEncryption{
+							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps", "projects.core.gardener.cloud"},
 							},
 						},
@@ -319,7 +319,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are equal", true,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							ETCDEncryption: operatorv1alpha1.ETCDEncryption{
+							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
 							},
 						},
@@ -906,7 +906,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are not equal", false,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							ETCDEncryption: operatorv1alpha1.ETCDEncryption{
+							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps", "projects.core.gardener.cloud"},
 							},
 						},
@@ -922,7 +922,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are equal", true,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							ETCDEncryption: operatorv1alpha1.ETCDEncryption{
+							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps.", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
 							},
 						},
@@ -997,7 +997,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are not equal", false,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							ETCDEncryption: operatorv1alpha1.ETCDEncryption{
+							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps", "projects.core.gardener.cloud"},
 							},
 						},
@@ -1013,7 +1013,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are equal", true,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							ETCDEncryption: operatorv1alpha1.ETCDEncryption{
+							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps.", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
 							},
 						},
@@ -2973,7 +2973,7 @@ var _ = Describe("Validation Tests", func() {
 								},
 							},
 						}
-						newGarden.Status.Credentials.ETCDEncryption.Resources = append(oldResources, oldGardenerResources...)
+						newGarden.Status.Credentials.EncryptionAtRest.Resources = append(oldResources, oldGardenerResources...)
 
 						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
 						newGarden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud"}
@@ -3011,7 +3011,7 @@ var _ = Describe("Validation Tests", func() {
 								},
 							},
 						}
-						newGarden.Status.Credentials.ETCDEncryption.Resources = append(oldResources, oldGardenerResources...)
+						newGarden.Status.Credentials.EncryptionAtRest.Resources = append(oldResources, oldGardenerResources...)
 
 						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "resource.custom.io"}
 						newGarden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud", "bastions.operations.gardener.cloud"}
@@ -3038,7 +3038,7 @@ var _ = Describe("Validation Tests", func() {
 								},
 							},
 						}
-						newGarden.Status.Credentials.ETCDEncryption.Resources = append(oldResources, oldGardenerResources...)
+						newGarden.Status.Credentials.EncryptionAtRest.Resources = append(oldResources, oldGardenerResources...)
 
 						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
 						newGarden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud"}

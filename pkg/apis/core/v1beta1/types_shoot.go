@@ -216,7 +216,7 @@ type ShootStatus struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	//
 	// Deprecated: This field is deprecated and will be removed in a future release.
-	// This field will be removed in favor of `shootStatus.credentials.etcdEncryption.resources`.
+	// This field will be removed in favor of `shootStatus.credentials.encryptionAtRest.resources`.
 	// +optional
 	EncryptedResources []string `json:"encryptedResources,omitempty" protobuf:"bytes,18,rep,name=encryptedResources"`
 	// Networking contains information about cluster networking such as CIDRs.
@@ -283,8 +283,8 @@ type ShootCredentials struct {
 	// Rotation contains information about the credential rotations.
 	// +optional
 	Rotation *ShootCredentialsRotation `json:"rotation,omitempty" protobuf:"bytes,1,opt,name=rotation"`
-	// ETCDEncryption contains information about the ETCD encryption.
-	ETCDEncryption ETCDEncryption `json:"etcdEncryption" protobuf:"bytes,2,opt,name=etcdEncryption"`
+	// EncryptionAtRest contains information about Shoot data encryption at rest.
+	EncryptionAtRest EncryptionAtRest `json:"encryptionAtRest" protobuf:"bytes,2,opt,name=encryptionAtRest"`
 }
 
 // ShootCredentialsRotation contains information about the rotation of credentials.
@@ -310,8 +310,8 @@ type ShootCredentialsRotation struct {
 	ETCDEncryptionKey *ETCDEncryptionKeyRotation `json:"etcdEncryptionKey,omitempty" protobuf:"bytes,6,opt,name=etcdEncryptionKey"`
 }
 
-// ETCDEncryption contains information about the ETCD encryption.
-type ETCDEncryption struct {
+// EncryptionAtRest contains information about Shoot data encryption at rest.
+type EncryptionAtRest struct {
 	// Resources is the list of resources in the Shoot which are currently encrypted.
 	// Secrets are encrypted by default and are not part of the list.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.

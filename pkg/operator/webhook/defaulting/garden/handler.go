@@ -44,14 +44,14 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 		garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager.KubeControllerManagerConfig = &gardencorev1beta1.KubeControllerManagerConfig{}
 	}
 
-	// Defaulting used for migration from `.status.encryptedResources` to `status.credentials.etcdEncryption.resources`.
+	// Defaulting used for migration from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
 	// TODO(AleksandarSavchev): Remove this block with the removal of the `.status.encryptedResources` field.
 	if len(garden.Status.EncryptedResources) > 0 {
 		if garden.Status.Credentials == nil {
 			garden.Status.Credentials = &operatorv1alpha1.Credentials{}
 		}
-		if len(garden.Status.Credentials.ETCDEncryption.Resources) == 0 {
-			garden.Status.Credentials.ETCDEncryption.Resources = garden.Status.EncryptedResources
+		if len(garden.Status.Credentials.EncryptionAtRest.Resources) == 0 {
+			garden.Status.Credentials.EncryptionAtRest.Resources = garden.Status.EncryptedResources
 		}
 	}
 

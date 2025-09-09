@@ -283,6 +283,6 @@ var _ = Describe("helper", func() {
 		},
 		Entry("no credentials field", operatorv1alpha1.GardenStatus{}, nil),
 		Entry("without resources", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}, nil),
-		Entry("with resources", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{ETCDEncryption: operatorv1alpha1.ETCDEncryption{Resources: []string{"configmaps", "shoots.core.gardener.cloud"}}}}, []string{"configmaps", "shoots.core.gardener.cloud"}),
+		Entry("with resources", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{Resources: []string{"configmaps", "shoots.core.gardener.cloud"}}}}, []string{"configmaps", "shoots.core.gardener.cloud"}),
 	)
 })

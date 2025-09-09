@@ -2016,9 +2016,9 @@ spec:
                 description: Credentials contains information about the virtual garden
                   cluster credentials.
                 properties:
-                  etcdEncryption:
-                    description: ETCDEncryption contains information about the ETCD
-                      encryption.
+                  encryptionAtRest:
+                    description: EncryptionAtRest contains information about garden
+                      data encryption at rest.
                     properties:
                       resources:
                         description: |-
@@ -2242,7 +2242,7 @@ spec:
                         type: object
                     type: object
                 required:
-                - etcdEncryption
+                - encryptionAtRest
                 type: object
               encryptedResources:
                 description: |-
@@ -2251,7 +2251,7 @@ spec:
                   See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
 
                   Deprecated: This field is deprecated and will be removed in a future release.
-                  This field will be removed in favor of `gardenStatus.credentials.etcdEncryption.resources`.
+                  This field will be removed in favor of `gardenStatus.credentials.encryptionAtRest.resources`.
                 items:
                   type: string
                 type: array

@@ -166,7 +166,7 @@ type ShootStatus struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	//
 	// Deprecated: This field is deprecated and will be removed in a future release.
-	// This field will be removed in favor of `shootStatus.credentials.etcdEncryption.resources`.
+	// This field will be removed in favor of `shootStatus.credentials.encryptionAtRest.resources`.
 	EncryptedResources []string
 	// Networking contains information about cluster networking such as CIDRs.
 	Networking *NetworkingStatus
@@ -220,8 +220,8 @@ type PendingWorkerUpdates struct {
 type ShootCredentials struct {
 	// Rotation contains information about the credential rotations.
 	Rotation *ShootCredentialsRotation
-	// ETCDEncryption contains information about the ETCD encryption.
-	ETCDEncryption ETCDEncryption
+	// EncryptionAtRest contains information about Shoot data encryption at rest.
+	EncryptionAtRest EncryptionAtRest
 }
 
 // ShootCredentialsRotation contains information about the rotation of credentials.
@@ -238,8 +238,8 @@ type ShootCredentialsRotation struct {
 	ETCDEncryptionKey *ETCDEncryptionKeyRotation
 }
 
-// ETCDEncryption contains information about the ETCD encryption.
-type ETCDEncryption struct {
+// EncryptionAtRest contains information about Shoot data encryption at rest.
+type EncryptionAtRest struct {
 	// Resources is the list of resources in the Shoot which are currently encrypted.
 	// Secrets are encrypted by default and are not part of the list.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.

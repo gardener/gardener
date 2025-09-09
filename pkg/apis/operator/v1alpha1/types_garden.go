@@ -766,7 +766,7 @@ type GardenStatus struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
 	//
 	// Deprecated: This field is deprecated and will be removed in a future release.
-	// This field will be removed in favor of `gardenStatus.credentials.etcdEncryption.resources`.
+	// This field will be removed in favor of `gardenStatus.credentials.encryptionAtRest.resources`.
 	// +optional
 	EncryptedResources []string `json:"encryptedResources,omitempty"`
 }
@@ -776,8 +776,8 @@ type Credentials struct {
 	// Rotation contains information about the credential rotations.
 	// +optional
 	Rotation *CredentialsRotation `json:"rotation,omitempty"`
-	// ETCDEncryption contains information about the ETCD encryption.
-	ETCDEncryption ETCDEncryption `json:"etcdEncryption"`
+	// EncryptionAtRest contains information about garden data encryption at rest.
+	EncryptionAtRest EncryptionAtRest `json:"encryptionAtRest"`
 }
 
 // CredentialsRotation contains information about the rotation of credentials.
@@ -799,8 +799,8 @@ type CredentialsRotation struct {
 	WorkloadIdentityKey *WorkloadIdentityKeyRotation `json:"workloadIdentityKey,omitempty"`
 }
 
-// ETCDEncryption contains information about the ETCD encryption.
-type ETCDEncryption struct {
+// EncryptionAtRest contains information about virtual garden data encryption at rest.
+type EncryptionAtRest struct {
 	// Resources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
 	// Resources which are encrypted by default will not appear here.
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
