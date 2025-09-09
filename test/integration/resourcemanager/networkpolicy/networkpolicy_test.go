@@ -74,8 +74,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				if should {
 					asyncAssertion(1, assertedFunc).Should(ContainElements(expectation))
 				} else {
-					// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
-					asyncAssertion(1, assertedFunc).ShouldNot(ContainElements(expectation))
+					asyncAssertion(1, assertedFunc).ShouldNot(ContainAnyOf(expectation...))
 				}
 			}
 		}
@@ -100,8 +99,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				if should {
 					asyncAssertion(1, assertedFunc).Should(ContainElements(expectation))
 				} else {
-					// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
-					asyncAssertion(1, assertedFunc).ShouldNot(ContainElements(expectation))
+					asyncAssertion(1, assertedFunc).ShouldNot(ContainAnyOf(expectation...))
 				}
 
 				// egress rules
@@ -118,8 +116,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				if should {
 					asyncAssertion(1, assertedFunc).Should(ContainElements(expectation))
 				} else {
-					// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
-					asyncAssertion(1, assertedFunc).ShouldNot(ContainElements(expectation))
+					asyncAssertion(1, assertedFunc).ShouldNot(ContainAnyOf(expectation...))
 				}
 			}
 		}
@@ -148,8 +145,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				if should {
 					asyncAssertion(1, assertedFunc).Should(ContainElements(expectation))
 				} else {
-					// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
-					asyncAssertion(1, assertedFunc).ShouldNot(ContainElements(expectation))
+					asyncAssertion(1, assertedFunc).ShouldNot(ContainAnyOf(expectation...))
 				}
 			}
 		}
@@ -170,8 +166,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				if should {
 					asyncAssertion(1, assertedFunc).Should(ContainElements(expectation))
 				} else {
-					// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
-					asyncAssertion(1, assertedFunc).ShouldNot(ContainElements(expectation))
+					asyncAssertion(1, assertedFunc).ShouldNot(ContainAnyOf(expectation...))
 				}
 			}
 		}
@@ -348,8 +343,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
 				return test.ObjectNames(networkPolicyList)
 			}).Should(And(
-				// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
-				Not(ContainElements(
+				Not(ContainAnyOf(
 					"ingress-to-"+service.Name+port1Suffix,
 					"egress-to-"+service.Name+port1Suffix,
 				)),
@@ -582,8 +576,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(otherNamespace.Name))).To(Succeed())
 				return test.ObjectNames(networkPolicyList)
 			}).Should(And(
-				// TODO(tobschli): Change this to the `ShouldNot(ContainAnyOf())` matcher, once https://github.com/gardener/gardener/pull/12317 is merged.
-				Not(ContainElements(
+				Not(ContainAnyOf(
 					"egress-to-"+service.Namespace+"-"+service.Name+port1Suffix,
 				)),
 				ContainElements(
