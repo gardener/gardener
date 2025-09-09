@@ -35,7 +35,7 @@ type MachineImage struct {
 	// Image is the image for the machine image.
 	//
 	// Deprecated: This field is deprecated and will be removed in a future release.
-	// Please use the `CapabilitySets[].Image` field instead to specify the machine image.
+	// Please use the `Flavors[].Image` field instead to specify the machine image.
 	Image string `json:"image"`
 	// Capabilities of the machine image.
 	Capabilities gardencorev1beta1.Capabilities

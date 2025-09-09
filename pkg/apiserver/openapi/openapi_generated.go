@@ -5821,7 +5821,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 					},
 					"flavors": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Flavors is an array of capability sets. Each entry represents a combination of capabilities that is provided by the machine image version.",
+							Description: "Flavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by the machine image version.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

@@ -476,17 +476,17 @@ var _ = Describe("CloudProfile Helper", func() {
 
 	DescribeTable("#ExtractArchitecturesFromImageFlavors",
 		func(architecturesInSet1, architecturesInSet2, expectedResult []string) {
-			var capabilitySets []core.MachineImageFlavor
+			var imageFlavors []core.MachineImageFlavor
 
-			capabilitySets = append(capabilitySets, core.MachineImageFlavor{
+			imageFlavors = append(imageFlavors, core.MachineImageFlavor{
 				Capabilities: core.Capabilities{"architecture": architecturesInSet1},
 			})
 
-			capabilitySets = append(capabilitySets, core.MachineImageFlavor{
+			imageFlavors = append(imageFlavors, core.MachineImageFlavor{
 				Capabilities: core.Capabilities{"architecture": architecturesInSet2},
 			})
 
-			Expect(ExtractArchitecturesFromImageFlavors(capabilitySets)).To(ConsistOf(expectedResult))
+			Expect(ExtractArchitecturesFromImageFlavors(imageFlavors)).To(ConsistOf(expectedResult))
 		},
 		Entry("Should return no values", nil, nil, []string{}),
 		Entry("Should return architecture in sets (sets partially filled)", []string{"amd64", "arm64"}, []string{"ia-64"}, []string{"amd64", "arm64", "ia-64"}),
@@ -552,15 +552,15 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 	})
 
-	Describe("#GetCapabilitySetsWithAppliedDefaults", func() {
-		It("should apply defaults when capability sets are empty", func() {
-			var capabilitySets []core.MachineImageFlavor
+	Describe("#GetImageFlavorWithAppliedDefaults", func() {
+		It("should apply defaults when flavors are empty", func() {
+			var imageFlavors []core.MachineImageFlavor
 			capabilityDefinitions := []core.CapabilityDefinition{
 				{Name: "capability1", Values: []string{"value1", "value2"}},
 				{Name: "architecture", Values: []string{"amd64"}},
 			}
 
-			result := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilityDefinitions)
+			result := GetImageFlavorWithAppliedDefaults(imageFlavors, capabilityDefinitions)
 
 			Expect(result).To(HaveLen(1))
 			Expect(result[0].Capabilities).To(Equal(core.Capabilities{
@@ -570,7 +570,7 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 
 		It("should retain existing values and apply defaults for missing capabilities in sets", func() {
-			capabilitySets := []core.MachineImageFlavor{
+			imageFlavors := []core.MachineImageFlavor{
 				{Capabilities: core.Capabilities{"capability1": []string{"value1"}}},
 				{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 			}
@@ -579,7 +579,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				{Name: "architecture", Values: []string{"amd64", "arm64"}},
 			}
 
-			result := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilityDefinitions)
+			result := GetImageFlavorWithAppliedDefaults(imageFlavors, capabilityDefinitions)
 
 			Expect(result).To(HaveLen(2))
 			Expect(result[0].Capabilities).To(Equal(core.Capabilities{

@@ -102,7 +102,7 @@ var _ = Describe("Helper Functions", func() {
 
 		})
 
-		It("should find image when capabilities are matching exactly one capabilitySet", func() {
+		It("should find image when capabilities are matching exactly one image flavor", func() {
 			machineCapabilities["cap1"] = []string{"value2"}
 
 			image, err := FindImageFromCloudProfile(cloudProfileConfig, imageName, imageVersion, machineCapabilities, capabilityDefinitions)
@@ -111,21 +111,21 @@ var _ = Describe("Helper Functions", func() {
 			Expect(image.Image).To(Equal(imageVersion + suffixTwo))
 		})
 
-		It("should return error when no capability set matches; this indicates a bug in the cloudProfile validation of the provider extension", func() {
-			// Add cap1 with value3 which doesn't exist in any capability set
+		It("should return error when no image flavor matches; this indicates a bug in the cloudProfile validation of the provider extension", func() {
+			// Add cap1 with value3 which doesn't exist in any flavor
 			machineCapabilities["cap1"] = []string{"value3"}
 
 			image, err := FindImageFromCloudProfile(cloudProfileConfig, imageName, imageVersion, machineCapabilities, capabilityDefinitions)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal(fmt.Sprintf("could not find image %q, version %q that supports %v: could not determine best capabilitySet no compatible capability set found", imageName, imageVersion, machineCapabilities)))
+			Expect(err.Error()).To(Equal(fmt.Sprintf("could not find image %q, version %q that supports %v: could not determine best flavor no compatible flavor found", imageName, imageVersion, machineCapabilities)))
 			Expect(image).To(BeNil())
 		})
 
-		Context("Multiple capability sets are viable matches", func() {
-			// When multiple capability sets match the requirements for the machineType, selection follows a priority-based approach:
+		Context("Multiple flavors are viable matches", func() {
+			// When multiple flavors match the requirements for the machineType, selection follows a priority-based approach:
 			//
-			// 1. Capability sets are evaluated based on their supported capabilities
+			// 1. Flavors are evaluated based on their supported capabilities
 			// 2. Capabilities are ordered by priority in the definitions list (highest priority first)
 			// 3. Within each capability, values are ordered by preference (most preferred first)
 			// 4. Selection is determined by the first capability value difference found
@@ -165,7 +165,7 @@ var _ = Describe("Helper Functions", func() {
 			})
 
 			It("should select image based on capability value priority within one capability", func() {
-				// Set up two capability sets with different value orders for cap2
+				// Set up two capabilities with different value orders for cap2
 				cloudProfileConfig.MachineImages[0].Versions[1].Flavors = []local.MachineImageFlavor{
 					{
 						Image: latestImageVersion + suffixOne,
@@ -191,8 +191,8 @@ var _ = Describe("Helper Functions", func() {
 		})
 
 		Context("when handling edge cases", func() {
-			It("should handle multiple capability sets with identical capabilities", func() {
-				// Both capability sets have identical capabilities - this should be considered an error
+			It("should error on multiple version flavors with identical capabilities", func() {
+				// Both flavors have identical capabilities - this should be considered an error
 				cloudProfileConfig.MachineImages[0].Versions[1].Flavors = []local.MachineImageFlavor{
 					{
 						Image: latestImageVersion + suffixOne,
@@ -211,7 +211,7 @@ var _ = Describe("Helper Functions", func() {
 				_, err := FindImageFromCloudProfile(cloudProfileConfig, imageName, latestImageVersion, machineCapabilities, capabilityDefinitions)
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("found multiple capability sets with identical capabilities"))
+				Expect(err.Error()).To(ContainSubstring("found multiple version flavors with identical capabilities"))
 			})
 
 			It("should return error for non-existent image name", func() {

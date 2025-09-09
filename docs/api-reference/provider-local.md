@@ -160,7 +160,7 @@ string
 <td>
 <p>Image is the image for the machine image.</p>
 <p>Deprecated: This field is deprecated and will be removed in a future release.
-Please use the <code>CapabilitySets[].Image</code> field instead to specify the machine image.</p>
+Please use the <code>Flavors[].Image</code> field instead to specify the machine image.</p>
 </td>
 </tr>
 <tr>

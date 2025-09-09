@@ -26,18 +26,18 @@ func FindImageFromCloudProfile(
 	}
 	machineImages := cloudProfileConfig.MachineImages
 
-	capabilitySet, err := findCapabilitySetFromMachineImages(machineImages, name, version, machineCapabilities, capabilitiesDefinitions)
+	imageFlavor, err := findMachineImageFlavor(machineImages, name, version, machineCapabilities, capabilitiesDefinitions)
 	if err != nil {
 		return nil, fmt.Errorf("could not find image %q, version %q that supports %v: %w", name, version, machineCapabilities, err)
 	}
 
-	if capabilitySet != nil {
-		return capabilitySet, nil
+	if imageFlavor != nil {
+		return imageFlavor, nil
 	}
 	return nil, fmt.Errorf("could not find image %q, version %q that supports %v", name, version, machineCapabilities)
 }
 
-func findCapabilitySetFromMachineImages(
+func findMachineImageFlavor(
 	machineImages []local.MachineImages,
 	imageName, imageVersion string,
 	machineCapabilities v1beta1.Capabilities,
@@ -53,7 +53,7 @@ func findCapabilitySetFromMachineImages(
 				continue
 			}
 
-			// If no capabilitiesDefinitions are specified, return the (legacy) image field as no capabilitySets are used.
+			// If no capabilitiesDefinitions are specified, return the (legacy) image field as no flavors are used.
 			if len(capabilitiesDefinitions) == 0 {
 				return &local.MachineImageFlavor{
 					Image:        version.Image,
@@ -61,17 +61,12 @@ func findCapabilitySetFromMachineImages(
 				}, nil
 			}
 
-			capabilitySetPointers := make([]*local.MachineImageFlavor, len(version.Flavors))
-			for i := range version.Flavors {
-				capabilitySetPointers[i] = &version.Flavors[i]
-			}
-
-			bestMatch, err := worker.FindBestCapabilitySet(capabilitySetPointers, machineCapabilities, capabilitiesDefinitions)
+			bestMatch, err := worker.FindBestImageFlavor(version.Flavors, machineCapabilities, capabilitiesDefinitions)
 			if err != nil {
-				return nil, fmt.Errorf("could not determine best capabilitySet %w", err)
+				return nil, fmt.Errorf("could not determine best flavor %w", err)
 			}
 
-			return bestMatch, nil
+			return &bestMatch, nil
 		}
 	}
 	return nil, nil

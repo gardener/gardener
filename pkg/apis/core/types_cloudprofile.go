@@ -124,7 +124,7 @@ type MachineImageVersion struct {
 	KubeletVersionConstraint *string
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	InPlaceUpdates *InPlaceUpdates
-	// Flavors is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+	// Flavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
 	// the machine image version.
 	Flavors []MachineImageFlavor
 }

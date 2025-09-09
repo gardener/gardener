@@ -123,12 +123,12 @@ func bastionImage(cluster *extensionscontroller.Cluster) (string, error) {
 
 	machineTypeFromCloudProfile := v1beta1helper.FindMachineTypeByName(cluster.CloudProfile.Spec.MachineTypes, machineSpec.MachineTypeName)
 
-	capabilitySet, err := helper.FindImageFromCloudProfile(cloudProfileConfig, machineSpec.ImageBaseName, machineSpec.ImageVersion, machineTypeFromCloudProfile.Capabilities, cluster.CloudProfile.Spec.Capabilities)
+	image, err := helper.FindImageFromCloudProfile(cloudProfileConfig, machineSpec.ImageBaseName, machineSpec.ImageVersion, machineTypeFromCloudProfile.Capabilities, cluster.CloudProfile.Spec.Capabilities)
 	if err != nil {
 		return "", fmt.Errorf("failed to find machine image in CloudProfileConfig: %w", err)
 	}
 
-	return capabilitySet.Image, nil
+	return image.Image, nil
 }
 
 func objectMetaForBastion(bastion *extensionsv1alpha1.Bastion) metav1.ObjectMeta {

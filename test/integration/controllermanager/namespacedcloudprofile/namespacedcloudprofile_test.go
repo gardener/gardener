@@ -32,7 +32,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 		mergedCloudProfileSpec *gardencorev1beta1.CloudProfileSpec
 
 		expirationDateFuture metav1.Time
-		capabilitySets       []gardencorev1beta1.MachineImageFlavor
+		imageFlavors         []gardencorev1beta1.MachineImageFlavor
 	)
 
 	BeforeEach(func() {
@@ -45,7 +45,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 					Values: []string{v1beta1constants.ArchitectureAMD64},
 				},
 			}
-			capabilitySets = []gardencorev1beta1.MachineImageFlavor{
+			imageFlavors = []gardencorev1beta1.MachineImageFlavor{
 				{Capabilities: gardencorev1beta1.Capabilities{v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64}}},
 			}
 		}
@@ -71,7 +71,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 						Versions: []gardencorev1beta1.MachineImageVersion{
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6"},
-								Flavors:          capabilitySets,
+								Flavors:          imageFlavors,
 							},
 						},
 					},
@@ -103,13 +103,13 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 						Name: "some-image",
 						Versions: []gardencorev1beta1.MachineImageVersion{
 							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6", ExpirationDate: &expirationDateFuture}},
-							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}, Flavors: capabilitySets},
+							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}, Flavors: imageFlavors},
 						},
 					},
 					{
 						Name: "custom-image",
 						Versions: []gardencorev1beta1.MachineImageVersion{
-							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}, Flavors: capabilitySets},
+							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}, Flavors: imageFlavors},
 						},
 						UpdateStrategy: &updateStrategy,
 					},
@@ -145,12 +145,12 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"},
 							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
 							Architectures:    []string{"amd64"},
-							Flavors:          capabilitySets,
+							Flavors:          imageFlavors,
 						},
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6", ExpirationDate: &expirationDateFuture},
 							CRI:              []gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}, Architectures: []string{"amd64"},
-							Flavors: capabilitySets,
+							Flavors: imageFlavors,
 						},
 					},
 					UpdateStrategy: &updateStrategy,
@@ -162,7 +162,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"},
 							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
 							Architectures:    []string{"amd64"},
-							Flavors:          capabilitySets},
+							Flavors:          imageFlavors},
 					},
 					UpdateStrategy: &updateStrategy,
 				},
@@ -559,7 +559,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6"},
 							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
 							Architectures:    []string{"amd64"},
-							Flavors:          capabilitySets,
+							Flavors:          imageFlavors,
 						},
 					},
 					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),

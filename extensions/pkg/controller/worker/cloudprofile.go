@@ -17,48 +17,48 @@ type HasCapabilities interface {
 	GetCapabilities() v1beta1.Capabilities
 }
 
-// FindBestCapabilitySet finds the most appropriate capability set from the provided capability sets
-// based on the requested machine capabilities and the definitions of capabilities.
-func FindBestCapabilitySet[T HasCapabilities](
-	capabilitySets []T,
+// FindBestImageFlavor finds the most appropriate image version flavor
+// based on the requested machine capabilities and the capabilities definition.
+func FindBestImageFlavor[T HasCapabilities](
+	providerImageFlavors []T,
 	machineCapabilities v1beta1.Capabilities,
 	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
 ) (T, error) {
 	var zeroValue T
-	compatibleCapabilitySets := filterCompatibleCapabilitySets(capabilitySets, machineCapabilities, capabilitiesDefinitions)
+	compatibleFlavors := filterCompatibleImageFlavors(providerImageFlavors, machineCapabilities, capabilitiesDefinitions)
 
-	if len(compatibleCapabilitySets) == 0 {
-		return zeroValue, fmt.Errorf("no compatible capability set found")
+	if len(compatibleFlavors) == 0 {
+		return zeroValue, fmt.Errorf("no compatible flavor found")
 	}
 
-	bestMatch, err := selectBestCapabilitySet(compatibleCapabilitySets, capabilitiesDefinitions)
+	bestFlavor, err := selectBestImageFlavor(compatibleFlavors, capabilitiesDefinitions)
 	if err != nil {
 		return zeroValue, err
 	}
-	return bestMatch, nil
+	return bestFlavor, nil
 }
 
-// filterCompatibleCapabilitySets returns all capability sets that are compatible with the given machine capabilities.
-func filterCompatibleCapabilitySets[T HasCapabilities](
-	capabilitySets []T, machineCapabilities v1beta1.Capabilities, capabilitiesDefinitions []v1beta1.CapabilityDefinition,
+// filterCompatibleImageFlavors returns all image flavors that are compatible with the given machine capabilities.
+func filterCompatibleImageFlavors[T HasCapabilities](
+	imageFlavors []T, machineCapabilities v1beta1.Capabilities, capabilitiesDefinitions []v1beta1.CapabilityDefinition,
 ) []T {
-	var compatibleSets []T
-	for _, capabilitySet := range capabilitySets {
-		if v1beta1helper.AreCapabilitiesCompatible(capabilitySet.GetCapabilities(), machineCapabilities, capabilitiesDefinitions) {
-			compatibleSets = append(compatibleSets, capabilitySet)
+	var compatibleFlavors []T
+	for _, imageFlavor := range imageFlavors {
+		if v1beta1helper.AreCapabilitiesCompatible(imageFlavor.GetCapabilities(), machineCapabilities, capabilitiesDefinitions) {
+			compatibleFlavors = append(compatibleFlavors, imageFlavor)
 		}
 	}
-	return compatibleSets
+	return compatibleFlavors
 }
 
-// selectBestCapabilitySet selects the most appropriate capability set based on the priority
-// of capabilities and their values as defined in capabilitiesDefinitions.
+// selectBestImageFlavor selects the most appropriate image flavor based on the priority
+// of its capabilities and their values as defined in capabilitiesDefinitions.
 //
 // Selection follows a priority-based approach:
 // 1. Capabilities are ordered by priority in the definitions list (highest priority first)
 // 2. Within each capability, values are ordered by preference (most preferred first)
 // 3. Selection is determined by the first capability value difference found
-func selectBestCapabilitySet[T HasCapabilities](
+func selectBestImageFlavor[T HasCapabilities](
 	compatibleSets []T,
 	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
 ) (T, error) {
@@ -83,7 +83,7 @@ func selectBestCapabilitySet[T HasCapabilities](
 		capabilitiesWithProviderTypes[i].capabilities = v1beta1helper.GetCapabilitiesWithAppliedDefaults(capabilitiesWithProviderTypes[i].providerEntry.GetCapabilities(), capabilitiesDefinitions)
 	}
 
-	// Evaluate capability sets based on capability definitions priority
+	// Evaluate flavor capabilities based on capability definitions priority
 	remainingSets := capabilitiesWithProviderTypes
 
 	// For each capability (in priority order)
@@ -113,7 +113,7 @@ func selectBestCapabilitySet[T HasCapabilities](
 
 	// If we couldn't determine a single best match, this indicates a problem with the cloud profile
 	if len(remainingSets) != 1 {
-		return zeroValue, fmt.Errorf("found multiple capability sets with identical capabilities; this indicates an invalid cloudprofile was admitted. Please open a bug report at https://github.com/gardener/gardener/issues")
+		return zeroValue, fmt.Errorf("found multiple version flavors with identical capabilities; this indicates an invalid cloudprofile was admitted. Please open a bug report at https://github.com/gardener/gardener/issues")
 	}
 
 	return remainingSets[0].providerEntry, nil
