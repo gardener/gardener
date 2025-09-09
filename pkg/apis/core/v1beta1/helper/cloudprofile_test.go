@@ -1474,7 +1474,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				}
 
 				for _, architecture := range valuesInCapabilitySets {
-					imageVersion.CapabilitySets = append(imageVersion.CapabilitySets, gardencorev1beta1.CapabilitySet{
+					imageVersion.Flavors = append(imageVersion.Flavors, gardencorev1beta1.MachineImageFlavor{
 						Capabilities: gardencorev1beta1.Capabilities{"architecture": gardencorev1beta1.CapabilityValues{architecture}},
 					})
 				}
@@ -1493,7 +1493,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				}
 
 				for _, architecture := range supportedArchitectures {
-					imageVersion.CapabilitySets = append(imageVersion.CapabilitySets, gardencorev1beta1.CapabilitySet{
+					imageVersion.Flavors = append(imageVersion.Flavors, gardencorev1beta1.MachineImageFlavor{
 						Capabilities: gardencorev1beta1.Capabilities{"architecture": gardencorev1beta1.CapabilityValues{architecture}},
 					})
 				}
@@ -1541,7 +1541,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		Describe("#GetCapabilitySetsWithAppliedDefaults", func() {
 			It("should apply defaults when capability sets are empty", func() {
-				var capabilitySets []gardencorev1beta1.CapabilitySet
+				var capabilitySets []gardencorev1beta1.MachineImageFlavor
 				capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
 					{Name: "capability1", Values: []string{"value1", "value2"}},
 					{Name: "architecture", Values: []string{"amd64"}},
@@ -1557,7 +1557,7 @@ var _ = Describe("CloudProfile Helper", func() {
 			})
 
 			It("should retain existing values and apply defaults for missing capabilities in sets", func() {
-				capabilitySets := []gardencorev1beta1.CapabilitySet{
+				capabilitySets := []gardencorev1beta1.MachineImageFlavor{
 					{Capabilities: gardencorev1beta1.Capabilities{"capability1": []string{"value1"}}},
 					{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{"arm64"}}},
 				}
@@ -1642,7 +1642,7 @@ var _ = Describe("CloudProfile Helper", func() {
 					"capability1": []string{"value1"},
 					"capability2": []string{"value3"},
 				}
-				capabilitySets := []gardencorev1beta1.CapabilitySet{
+				capabilitySets := []gardencorev1beta1.MachineImageFlavor{
 					{Capabilities: gardencorev1beta1.Capabilities{
 						"capability1": []string{"value2"},
 						"capability2": []string{"value3", "value4"},
@@ -1661,7 +1661,7 @@ var _ = Describe("CloudProfile Helper", func() {
 					"capability1": []string{"value1"},
 					"capability2": []string{"value5"},
 				}
-				capabilitySets := []gardencorev1beta1.CapabilitySet{
+				capabilitySets := []gardencorev1beta1.MachineImageFlavor{
 					{Capabilities: gardencorev1beta1.Capabilities{
 						"capability2": []string{"value3", "value4"},
 					}},
@@ -1678,7 +1678,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				capabilities := gardencorev1beta1.Capabilities{
 					"capability1": []string{"value1"},
 				}
-				capabilitySets := []gardencorev1beta1.CapabilitySet{}
+				capabilitySets := []gardencorev1beta1.MachineImageFlavor{}
 
 				result := AreCapabilitiesSupportedByCapabilitySets(capabilities, capabilitySets, capabilityDefinitions)
 				Expect(result).To(BeTrue())
@@ -1686,7 +1686,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 			It("should return true when Capabilities are not defined and defaults are used", func() {
 				capabilities := gardencorev1beta1.Capabilities{}
-				capabilitySets := []gardencorev1beta1.CapabilitySet{
+				capabilitySets := []gardencorev1beta1.MachineImageFlavor{
 					{Capabilities: gardencorev1beta1.Capabilities{
 						"capability1": []string{"value1"},
 						"capability2": []string{"value3"},

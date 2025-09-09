@@ -310,7 +310,7 @@ func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages
 	for imageIdx, image := range newMachineImages {
 		for versionIdx, version := range newMachineImages[imageIdx].Versions {
 			oldMachineImageVersion, oldVersionExists := oldMachineImagesMap.GetImageVersion(image.Name, version.Version)
-			capabilityArchitectures := gardencorehelper.ExtractArchitecturesFromCapabilitySets(version.CapabilitySets)
+			capabilityArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(version.Flavors)
 
 			// Skip any architecture field syncing if
 			// - architecture field has been modified and changed to any value other than empty.
@@ -323,10 +323,10 @@ func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages
 			}
 
 			// Sync architecture field to capabilities if filled on initial migration.
-			if isInitialMigration && len(version.Architectures) > 0 && len(version.CapabilitySets) == 0 {
+			if isInitialMigration && len(version.Architectures) > 0 && len(version.Flavors) == 0 {
 				for _, architecture := range version.Architectures {
-					newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets = append(newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets,
-						core.CapabilitySet{
+					newMachineImages[imageIdx].Versions[versionIdx].Flavors = append(newMachineImages[imageIdx].Versions[versionIdx].Flavors,
+						core.MachineImageFlavor{
 							Capabilities: core.Capabilities{
 								v1beta1constants.ArchitectureName: []string{architecture},
 							},

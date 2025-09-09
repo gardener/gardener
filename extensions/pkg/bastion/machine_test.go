@@ -71,7 +71,7 @@ var _ = Describe("Bastion VM Details", func() {
 								Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
 							},
 							Architectures: []string{desired.Architecture, v1beta1constants.ArchitectureARM64},
-							CapabilitySets: []gardencorev1beta1.CapabilitySet{
+							Flavors: []gardencorev1beta1.MachineImageFlavor{
 								{Capabilities: gardencorev1beta1.Capabilities{v1beta1constants.ArchitectureName: []string{desired.Architecture}}},
 								{Capabilities: gardencorev1beta1.Capabilities{v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64}}},
 							},
@@ -91,8 +91,8 @@ var _ = Describe("Bastion VM Details", func() {
 				Version:        version,
 				Classification: ptr.To(classification),
 			},
-			Architectures:  archs,
-			CapabilitySets: []gardencorev1beta1.CapabilitySet{{Capabilities: capabilities}},
+			Architectures: archs,
+			Flavors:       []gardencorev1beta1.MachineImageFlavor{{Capabilities: capabilities}},
 		}
 
 		// append new machine image
@@ -215,7 +215,7 @@ var _ = Describe("Bastion VM Details", func() {
 
 		It("fail if no image with matching machineType architecture can be found", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{"x86"}
-			cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets[0].Capabilities[v1beta1constants.ArchitectureName][0] = "x86"
+			cloudProfile.Spec.MachineImages[0].Versions[0].Flavors[0].Capabilities[v1beta1constants.ArchitectureName][0] = "x86"
 			_, err := GetMachineSpecFromCloudProfile(cloudProfile)
 			Expect(err).To(HaveOccurred())
 		})

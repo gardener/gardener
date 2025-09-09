@@ -320,7 +320,7 @@ func validateNamespacedCloudProfileExtendedMachineImages(machineVersion gardenco
 	if len(machineVersion.Architectures) > 0 {
 		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("architectures"), "must not provide an architecture to an extended machine image in NamespacedCloudProfile"))
 	}
-	if len(machineVersion.CapabilitySets) > 0 {
+	if len(machineVersion.Flavors) > 0 {
 		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilitySets"), "must not provide capabilities to an extended machine image in NamespacedCloudProfile"))
 	}
 	if len(ptr.Deref(machineVersion.KubeletVersionConstraint, "")) > 0 {

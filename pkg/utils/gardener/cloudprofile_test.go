@@ -679,7 +679,7 @@ var _ = Describe("CloudProfile", func() {
 				})
 
 				It("It should correctly handle split-up machine image version capability architectures", func() {
-					cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+					cloudProfileSpecNew.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 						{Capabilities: core.Capabilities{"architecture": []string{"custom"}}},
 						{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
 						{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
@@ -697,8 +697,8 @@ var _ = Describe("CloudProfile", func() {
 					gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
 
 					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64", "arm64"}))
-					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
-					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets[1].Capabilities["architecture"]).To(BeEquivalentTo([]string{"arm64"}))
+					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Flavors[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
+					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Flavors[1].Capabilities["architecture"]).To(BeEquivalentTo([]string{"arm64"}))
 					Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
 					Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
 				})

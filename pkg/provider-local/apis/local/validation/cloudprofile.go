@@ -106,7 +106,7 @@ func validateWithCapabilities(version api.MachineImageVersion, capabilitiesDefin
 	}
 
 	// Validate each capability set
-	for k, capabilitySet := range version.CapabilitySets {
+	for k, capabilitySet := range version.Flavors {
 		kdxPath := jdxPath.Child("capabilitySets").Index(k)
 		if len(capabilitySet.Image) == 0 {
 			allErrs = append(allErrs, field.Required(kdxPath.Child("image"), "must provide an image"))
@@ -127,7 +127,7 @@ func validateWithoutCapabilities(version api.MachineImageVersion, jdxPath *field
 	}
 
 	// When not using capabilities, capabilitySets must NOT be used
-	if len(version.CapabilitySets) > 0 {
+	if len(version.Flavors) > 0 {
 		allErrs = append(allErrs, field.Forbidden(jdxPath.Child("capabilitySets"),
 			"must not be set as CloudProfile does not define capabilities. Use the image field directly."))
 	}
@@ -184,26 +184,26 @@ func validateMachineImageVersionMapping(machineImage core.MachineImage, provider
 		}
 
 		// Validate capability sets mapping
-		allErrs = append(allErrs, validateCapabilitySetMapping(machineImage.Name, version, imageVersion, capabilitiesDefinitions, machineImageVersionPath)...)
+		allErrs = append(allErrs, validateImageFlavorMapping(machineImage.Name, version, imageVersion, capabilitiesDefinitions, machineImageVersionPath)...)
 	}
 
 	return allErrs
 }
 
-// validateCapabilitySetMapping validates that each capability set in a version has a corresponding mapping
-func validateCapabilitySetMapping(imageName string, version core.MachineImageVersion, imageVersion api.MachineImageVersion, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition, machineImageVersionPath *field.Path) field.ErrorList {
+// validateImageFlavorMapping validates that each capability set in a version has a corresponding mapping
+func validateImageFlavorMapping(imageName string, version core.MachineImageVersion, imageVersion api.MachineImageVersion, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition, machineImageVersionPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	var v1beta1Version gardencorev1beta1.MachineImageVersion
 	if err := coreapi.Scheme.Convert(&version, &v1beta1Version, nil); err != nil {
 		return append(allErrs, field.InternalError(machineImageVersionPath, err))
 	}
-	coreDefaultedCapabilitySets := v1beta1helper.GetCapabilitySetsWithAppliedDefaults(v1beta1Version.CapabilitySets, capabilitiesDefinitions)
+	coreDefaultedCapabilitySets := v1beta1helper.GetCapabilitySetsWithAppliedDefaults(v1beta1Version.Flavors, capabilitiesDefinitions)
 
 	for idxCapability, coreDefaultedCapabilitySet := range coreDefaultedCapabilitySets {
 		isFound := false
-		// search for the corresponding imageVersion.CapabilitySet
-		for _, providerCapabilitySet := range imageVersion.CapabilitySets {
+		// search for the corresponding imageVersion.MachineImageFlavor
+		for _, providerCapabilitySet := range imageVersion.Flavors {
 			providerDefaultedCapabilities := v1beta1helper.GetCapabilitiesWithAppliedDefaults(providerCapabilitySet.Capabilities, capabilitiesDefinitions)
 			if v1beta1helper.AreCapabilitiesEqual(coreDefaultedCapabilitySet.Capabilities, providerDefaultedCapabilities) {
 				isFound = true

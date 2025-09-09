@@ -195,7 +195,7 @@ var _ = Describe("Strategy", func() {
 			Expect(newCloudProfile.Spec.MachineTypes[0].Capabilities["architecture"]).To(ConsistOf("amd64"))
 
 			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))
-			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets).To(ConsistOf(core.CapabilitySet{
+			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].Flavors).To(ConsistOf(core.MachineImageFlavor{
 				Capabilities: core.Capabilities{"architecture": []string{"amd64"}},
 			}))
 		})
@@ -209,7 +209,7 @@ var _ = Describe("Strategy", func() {
 						{Name: "architecture", Values: []string{"amd64"}},
 					},
 					MachineImages: []core.MachineImage{{Versions: []core.MachineImageVersion{
-						{CapabilitySets: []core.CapabilitySet{{Capabilities: core.Capabilities{
+						{Flavors: []core.MachineImageFlavor{{Capabilities: core.Capabilities{
 							"architecture": []string{"amd64"}}}}},
 					}}},
 					MachineTypes: []core.MachineType{{Capabilities: core.Capabilities{

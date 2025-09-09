@@ -61,7 +61,7 @@ var _ = Describe("Helper Functions", func() {
 						Versions: []local.MachineImageVersion{
 							{
 								Version: imageVersion,
-								CapabilitySets: []local.CapabilitySet{
+								Flavors: []local.MachineImageFlavor{
 									{
 										Image: imageVersion + suffixOne,
 										Capabilities: v1beta1.Capabilities{
@@ -80,7 +80,7 @@ var _ = Describe("Helper Functions", func() {
 							},
 							{
 								Version: latestImageVersion,
-								CapabilitySets: []local.CapabilitySet{
+								Flavors: []local.MachineImageFlavor{
 									{
 										Image: latestImageVersion + suffixOne,
 										Capabilities: v1beta1.Capabilities{
@@ -139,7 +139,7 @@ var _ = Describe("Helper Functions", func() {
 			// +------------+-----------+-----------+-----------+-----------+
 
 			It("should find image based on capability order", func() {
-				cloudProfileConfig.MachineImages[0].Versions[1].CapabilitySets = []local.CapabilitySet{
+				cloudProfileConfig.MachineImages[0].Versions[1].Flavors = []local.MachineImageFlavor{
 					{
 						Image: latestImageVersion + suffixOne,
 						Capabilities: v1beta1.Capabilities{
@@ -166,7 +166,7 @@ var _ = Describe("Helper Functions", func() {
 
 			It("should select image based on capability value priority within one capability", func() {
 				// Set up two capability sets with different value orders for cap2
-				cloudProfileConfig.MachineImages[0].Versions[1].CapabilitySets = []local.CapabilitySet{
+				cloudProfileConfig.MachineImages[0].Versions[1].Flavors = []local.MachineImageFlavor{
 					{
 						Image: latestImageVersion + suffixOne,
 						Capabilities: v1beta1.Capabilities{
@@ -193,7 +193,7 @@ var _ = Describe("Helper Functions", func() {
 		Context("when handling edge cases", func() {
 			It("should handle multiple capability sets with identical capabilities", func() {
 				// Both capability sets have identical capabilities - this should be considered an error
-				cloudProfileConfig.MachineImages[0].Versions[1].CapabilitySets = []local.CapabilitySet{
+				cloudProfileConfig.MachineImages[0].Versions[1].Flavors = []local.MachineImageFlavor{
 					{
 						Image: latestImageVersion + suffixOne,
 						Capabilities: v1beta1.Capabilities{

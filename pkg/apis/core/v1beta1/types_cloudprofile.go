@@ -153,10 +153,10 @@ type MachineImageVersion struct {
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	// +optional
 	InPlaceUpdates *InPlaceUpdates `json:"inPlaceUpdates,omitempty" protobuf:"bytes,5,opt,name=inPlaceUpdates"`
-	// CapabilitySets is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+	// Flavors is an array of capability sets. Each entry represents a combination of capabilities that is provided by
 	// the machine image version.
 	// +optional
-	CapabilitySets []CapabilitySet `json:"capabilitySets,omitempty" protobuf:"bytes,6,rep,name=capabilitySets"`
+	Flavors []MachineImageFlavor `json:"flavors,omitempty" protobuf:"bytes,6,rep,name=flavors"`
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -394,18 +394,18 @@ func (t Capabilities) String() string {
 	return fmt.Sprintf("%v", map[string]CapabilityValues(t))
 }
 
-// CapabilitySet is a wrapper for Capabilities.
+// MachineImageFlavor is a wrapper for Capabilities.
 // This is a workaround as the Protobuf generator can't handle a slice of maps.
-type CapabilitySet struct {
+type MachineImageFlavor struct {
 	Capabilities `json:"-" protobuf:"bytes,1,rep,name=capabilities,casttype=Capabilities"`
 }
 
-// UnmarshalJSON unmarshals the given data to a CapabilitySet.
-func (c *CapabilitySet) UnmarshalJSON(data []byte) error {
+// UnmarshalJSON unmarshals the given data to a MachineImageFlavor.
+func (c *MachineImageFlavor) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &c.Capabilities)
 }
 
-// MarshalJSON marshals the CapabilitySet object to JSON.
-func (c *CapabilitySet) MarshalJSON() ([]byte, error) {
+// MarshalJSON marshals the MachineImageFlavor object to JSON.
+func (c *MachineImageFlavor) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.Capabilities)
 }

@@ -124,9 +124,9 @@ type MachineImageVersion struct {
 	KubeletVersionConstraint *string
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	InPlaceUpdates *InPlaceUpdates
-	// CapabilitySets is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+	// Flavors is an array of capability sets. Each entry represents a combination of capabilities that is provided by
 	// the machine image version.
-	CapabilitySets []CapabilitySet
+	Flavors []MachineImageFlavor
 }
 
 // SupportsArchitecture checks if the machine image version supports a given architecture.
@@ -134,7 +134,7 @@ func (m *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, ar
 	if len(capabilities) == 0 {
 		return slices.Contains(m.Architectures, architecture)
 	}
-	for _, capability := range m.CapabilitySets {
+	for _, capability := range m.Flavors {
 		if slices.Contains(capability.Capabilities[constants.ArchitectureName], architecture) {
 			return true
 		}
@@ -327,8 +327,8 @@ type CapabilityValues []string
 // Capabilities of a machine type or machine image.
 type Capabilities map[string]CapabilityValues
 
-// CapabilitySet is a wrapper for Capabilities.
+// MachineImageFlavor is a wrapper for Capabilities.
 // This is a workaround as the Protobuf generator can't handle a slice of maps.
-type CapabilitySet struct {
+type MachineImageFlavor struct {
 	Capabilities
 }
