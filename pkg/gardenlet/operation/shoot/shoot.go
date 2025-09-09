@@ -288,8 +288,8 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 
 	shootStatus := shoot.GetInfo().Status
-	if shootStatus.Credentials != nil && len(shootStatus.Credentials.ETCDEncryption.Resources) != 0 {
-		shoot.EncryptedResources = sharedcomponent.NormalizeResources(shootStatus.Credentials.ETCDEncryption.Resources)
+	if shootStatus.Credentials != nil && len(shootStatus.Credentials.EncryptionAtRest.Resources) != 0 {
+		shoot.EncryptedResources = sharedcomponent.NormalizeResources(shootStatus.Credentials.EncryptionAtRest.Resources)
 	}
 
 	if b.seed != nil {

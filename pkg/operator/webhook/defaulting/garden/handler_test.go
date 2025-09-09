@@ -140,7 +140,7 @@ var _ = Describe("Handler", func() {
 				},
 				operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
-						ETCDEncryption: operatorv1alpha1.ETCDEncryption{
+						EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
 							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
 						},
 					},
@@ -149,7 +149,7 @@ var _ = Describe("Handler", func() {
 			),
 			Entry("should not overwrite", operatorv1alpha1.GardenStatus{
 				Credentials: &operatorv1alpha1.Credentials{
-					ETCDEncryption: operatorv1alpha1.ETCDEncryption{
+					EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
 						Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
 					},
 				},
@@ -157,7 +157,7 @@ var _ = Describe("Handler", func() {
 			},
 				operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
-						ETCDEncryption: operatorv1alpha1.ETCDEncryption{
+						EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
 							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
 						},
 					},
