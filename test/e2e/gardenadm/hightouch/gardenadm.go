@@ -58,7 +58,8 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			cancelPortForward context.CancelFunc
 			shootClientSet    kubernetes.Interface
 
-			configDirectory = "/gardenadm/resources"
+			configDirectory             = "/gardenadm/resources"
+			gardenClusterKubeconfigPath = "/tmp/virtual-garden-kubeconfig"
 		)
 
 		BeforeAll(func() {
@@ -221,6 +222,37 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 				}))
 			}).Should(Succeed())
 		}, SpecTimeout(2*time.Minute))
+
+		It("should copy the garden cluster kubeconfig to the machine pod", func(ctx SpecContext) {
+			// In the test setup via Skaffold, we build the 'gardenadm' binary and copy it to the machine pods. Hence,
+			// the binary is not available on the host without further ado. For simplicity, we copy the garden cluster
+			// kubeconfig from the host into the machine pod here. This enables us to execute
+			// 'gardenadm token create --print-connect-command' from the machine pod.
+			By("Copy local garden cluster kubeconfig to file in machine pod")
+			gardenClusterKubeconfig, err := os.ReadFile(filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "virtual-garden", "kubeconfig"))
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(ctx, func() error {
+				_, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("echo '%s' > %s", string(gardenClusterKubeconfig), gardenClusterKubeconfigPath))
+				return err
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		It("should generate a bootstrap token and connect the autonomous shoot to Gardener", func(ctx SpecContext) {
+			stdOut, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=garden --shoot-name=root", gardenClusterKubeconfigPath))
+			Expect(err).NotTo(HaveOccurred())
+			connectCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
+
+			stdOut, _, err = execute(ctx, 0, append(connectCommand, "--log-level=debug")...)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(ctx, stdOut).Should(gbytes.Say("Your autonomous shoot cluster has successfully been connected to Gardener!"))
+		}, SpecTimeout(time.Minute))
+
+		// TODO(rfranzke): Implement this a 'gardenadm connect' progresses.
+		// It("should see the joined shoot in the Gardener API", func(ctx SpecContext) {
+		// 	Eventually(ctx, func(g Gomega) {}).Should(Succeed())
+		// }, SpecTimeout(2*time.Minute))
 	})
 })
 

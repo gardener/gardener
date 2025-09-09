@@ -55,8 +55,14 @@ case "$COMMAND" in
     ;;
 
   down)
-    skaffold delete \
-      -n "gardenadm-$SCENARIO"
+    if [[ "$SCENARIO" != "connect" ]]; then
+      skaffold delete \
+        -n "gardenadm-$SCENARIO"
+    else
+      make garden-down operator-down \
+        -f "$(dirname "$0")/../Makefile" \
+        KUBECONFIG="$KUBECONFIG"
+    fi
     ;;
 
   *)

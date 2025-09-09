@@ -25,8 +25,10 @@ trap "
 
 make gardenadm-up SCENARIO=high-touch
 make gardenadm-up SCENARIO=medium-touch
+make gardenadm-up SCENARIO=connect
 
 make test-e2e-local-gardenadm
 
+make gardenadm-down SCENARIO=connect
 make gardenadm-down SCENARIO=medium-touch
 make gardenadm-down SCENARIO=high-touch
