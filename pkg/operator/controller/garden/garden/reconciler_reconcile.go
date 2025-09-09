@@ -535,7 +535,7 @@ func (r *Reconciler) reconcile(
 					if garden.Status.Credentials == nil {
 						garden.Status.Credentials = &operatorv1alpha1.Credentials{}
 					}
-					garden.Status.Credentials.ETCDEncryption.Resources = shared.StringifyGroupResources(encryptedResources)
+					garden.Status.Credentials.EncryptionAtRest.Resources = shared.StringifyGroupResources(encryptedResources)
 					if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
 						return fmt.Errorf("error patching Garden status after snapshotting ETCD: %w", err)
 					}
