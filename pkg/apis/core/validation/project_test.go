@@ -186,7 +186,7 @@ var _ = Describe("Project Validation Tests", func() {
 
 				Expect(errorList).To(matcher)
 			},
-			Entry("should allow no description",
+			Entry("should allow unset description",
 				nil,
 				BeEmpty(),
 			),
@@ -236,7 +236,7 @@ var _ = Describe("Project Validation Tests", func() {
 
 				Expect(errorList).To(matcher)
 			},
-			Entry("should allow no purpose",
+			Entry("should allow unset purpose",
 				nil,
 				BeEmpty(),
 			),
