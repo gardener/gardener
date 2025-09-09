@@ -82,8 +82,10 @@ func AddToManager(
 	}
 
 	if err := (&resourcesize.Handler{
-		Logger: mgr.GetLogger().WithName("webhook").WithName(resourcesize.HandlerName),
-		Config: cfg.Server.ResourceAdmissionConfiguration,
+		Logger:     mgr.GetLogger().WithName("webhook").WithName(resourcesize.HandlerName),
+		Config:     cfg.Server.ResourceAdmissionConfiguration,
+		Client:     mgr.GetClient(),
+		RESTMapper: mgr.GetRESTMapper(),
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", resourcesize.HandlerName, err)
 	}
