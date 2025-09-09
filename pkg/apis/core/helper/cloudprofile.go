@@ -258,11 +258,11 @@ func HasCapability(capabilities []core.CapabilityDefinition, capabilityName stri
 	return false
 }
 
-// ExtractArchitecturesFromImageFlavors extracts all architectures from a list of CapabilitySets.
-func ExtractArchitecturesFromImageFlavors(capabilities []core.MachineImageFlavor) []string {
+// ExtractArchitecturesFromImageFlavors extracts all architectures from a list of MachineImageFlavor.
+func ExtractArchitecturesFromImageFlavors(imageFlavors []core.MachineImageFlavor) []string {
 	architectures := sets.New[string]()
-	for _, capabilitySet := range capabilities {
-		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureName] {
+	for _, imageFlavor := range imageFlavors {
+		for _, architectureValue := range imageFlavor.Capabilities[constants.ArchitectureName] {
 			architectures.Insert(architectureValue)
 		}
 	}
@@ -294,17 +294,17 @@ func GetCapabilitiesWithAppliedDefaults(capabilities core.Capabilities, capabili
 	return result
 }
 
-// GetCapabilitySetsWithAppliedDefaults returns new capability sets with applied defaults from the capability definitions.
-func GetCapabilitySetsWithAppliedDefaults(capabilitySets []core.MachineImageFlavor, capabilitiesDefinitions []core.CapabilityDefinition) []core.MachineImageFlavor {
-	if len(capabilitySets) == 0 {
-		// If no capability sets are defined, assume all capabilities are supported.
+// GetImageFlavorWithAppliedDefaults returns MachineImageFlavors sets with applied defaults from the capability definitions.
+func GetImageFlavorWithAppliedDefaults(imageFlavors []core.MachineImageFlavor, capabilitiesDefinitions []core.CapabilityDefinition) []core.MachineImageFlavor {
+	if len(imageFlavors) == 0 {
+		// If no flavors are defined, assume all capabilities are supported.
 		return []core.MachineImageFlavor{{Capabilities: GetCapabilitiesWithAppliedDefaults(core.Capabilities{}, capabilitiesDefinitions)}}
 	}
 
-	result := make([]core.MachineImageFlavor, len(capabilitySets))
-	for i, capabilitySet := range capabilitySets {
+	result := make([]core.MachineImageFlavor, len(imageFlavors))
+	for i, imageFlavor := range imageFlavors {
 		result[i] = core.MachineImageFlavor{
-			Capabilities: GetCapabilitiesWithAppliedDefaults(capabilitySet.Capabilities, capabilitiesDefinitions),
+			Capabilities: GetCapabilitiesWithAppliedDefaults(imageFlavor.Capabilities, capabilitiesDefinitions),
 		}
 	}
 	return result

@@ -67,7 +67,7 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, capabilities, fldPath.Child("machineImages"))...)
 	allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, capabilities, fldPath.Child("machineTypes"))...)
-	allErrs = append(allErrs, validateCapabilities(spec.Capabilities, fldPath.Child("capabilities"))...)
+	allErrs = append(allErrs, validateCapabilityDefinitions(spec.Capabilities, fldPath.Child("capabilities"))...)
 	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
 	allErrs = append(allErrs, validateCloudProfileRegions(spec.Regions, fldPath.Child("regions"))...)
 	allErrs = append(allErrs, validateCloudProfileBastion(spec, fldPath.Child("bastion"))...)
@@ -192,7 +192,7 @@ func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, capabi
 					allErrs = append(allErrs, field.Required(versionsPath.Child("architectures"), "must provide at least one architecture"))
 				}
 				if len(machineVersion.Flavors) > 0 {
-					allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilitySets"), "must not provide capabilities without global definition"))
+					allErrs = append(allErrs, field.Forbidden(versionsPath.Child("flavors"), "must not provide capabilities without global definition"))
 				}
 			}
 		}
@@ -421,10 +421,10 @@ func HasDecreasedMaxNodesTotal(newMaxNodesTotal, oldMaxNodesTotal *int32) bool {
 	return newMaxNodesTotal != nil && oldMaxNodesTotal != nil && *newMaxNodesTotal < *oldMaxNodesTotal
 }
 
-func validateCapabilities(capabilities []core.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
+func validateCapabilityDefinitions(capabilityDefinitions []core.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(capabilities) == 0 {
+	if len(capabilityDefinitions) == 0 {
 		return allErrs
 	}
 
@@ -432,11 +432,11 @@ func validateCapabilities(capabilities []core.CapabilityDefinition, fldPath *fie
 		allErrs = append(allErrs, field.Forbidden(fldPath, "capabilities are not allowed with disabled CloudProfileCapabilities feature gate"))
 	}
 
-	capabilityMap := make(core.Capabilities, len(capabilities))
-	for idx, capability := range capabilities {
-		capabilitySetFieldPath := fldPath.Index(idx)
+	capabilityMap := make(core.Capabilities, len(capabilityDefinitions))
+	for idx, capability := range capabilityDefinitions {
+		capabilityDefinitionFieldPath := fldPath.Index(idx)
 		if _, exists := capabilityMap[capability.Name]; exists {
-			allErrs = append(allErrs, field.Duplicate(capabilitySetFieldPath.Child("name"), capability.Name))
+			allErrs = append(allErrs, field.Duplicate(capabilityDefinitionFieldPath.Child("name"), capability.Name))
 		}
 		capabilityMap[capability.Name] = capability.Values
 	}

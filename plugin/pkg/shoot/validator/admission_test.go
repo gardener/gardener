@@ -5608,17 +5608,17 @@ var _ = Describe("validator", func() {
 									Version: nonExpiredVersion,
 								},
 								Flavors: []gardencorev1beta1.MachineImageFlavor{
-									// Not supported capability set 1
+									// Not supported version flavor 1
 									{Capabilities: gardencorev1beta1.Capabilities{
 										v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 										"someCapability":                  []string{"value1"},
 									}},
-									// Not supported capability set 2
+									// Not supported version flavor 2
 									{Capabilities: gardencorev1beta1.Capabilities{
 										v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
 										"someCapability":                  []string{"value2"},
 									}},
-									// Supported capability set
+									// Supported version flavor
 									{Capabilities: gardencorev1beta1.Capabilities{
 										v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 										"someCapability":                  []string{"value2"},

@@ -102,16 +102,16 @@ func validateWithCapabilities(version api.MachineImageVersion, capabilitiesDefin
 	// When using capabilities, image must not be set directly
 	if len(version.Image) > 0 {
 		allErrs = append(allErrs, field.Forbidden(jdxPath.Child("image"),
-			"must not be set as CloudProfile defines capabilities. Use capabilitySets[].Image instead."))
+			"must not be set as CloudProfile defines capabilities. Use flavors[].image instead."))
 	}
 
-	// Validate each capability set
-	for k, capabilitySet := range version.Flavors {
-		kdxPath := jdxPath.Child("capabilitySets").Index(k)
-		if len(capabilitySet.Image) == 0 {
+	// Validate each flavor's image and capabilities
+	for k, imageFlavor := range version.Flavors {
+		kdxPath := jdxPath.Child("flavors").Index(k)
+		if len(imageFlavor.Image) == 0 {
 			allErrs = append(allErrs, field.Required(kdxPath.Child("image"), "must provide an image"))
 		}
-		allErrs = append(allErrs, v1beta1helper.ValidateCapabilities(capabilitySet.Capabilities, capabilitiesDefinitions, kdxPath.Child("capabilities"))...)
+		allErrs = append(allErrs, v1beta1helper.ValidateCapabilities(imageFlavor.Capabilities, capabilitiesDefinitions, kdxPath.Child("capabilities"))...)
 	}
 
 	return allErrs
@@ -126,9 +126,9 @@ func validateWithoutCapabilities(version api.MachineImageVersion, jdxPath *field
 		allErrs = append(allErrs, field.Required(jdxPath.Child("image"), "must provide an image"))
 	}
 
-	// When not using capabilities, capabilitySets must NOT be used
+	// When not using capabilities, flavors must NOT be used
 	if len(version.Flavors) > 0 {
-		allErrs = append(allErrs, field.Forbidden(jdxPath.Child("capabilitySets"),
+		allErrs = append(allErrs, field.Forbidden(jdxPath.Child("flavors"),
 			"must not be set as CloudProfile does not define capabilities. Use the image field directly."))
 	}
 
@@ -183,14 +183,14 @@ func validateMachineImageVersionMapping(machineImage core.MachineImage, provider
 			continue // Skip further validation if version doesn't exist
 		}
 
-		// Validate capability sets mapping
+		// Validate image version flavor mapping
 		allErrs = append(allErrs, validateImageFlavorMapping(machineImage.Name, version, imageVersion, capabilitiesDefinitions, machineImageVersionPath)...)
 	}
 
 	return allErrs
 }
 
-// validateImageFlavorMapping validates that each capability set in a version has a corresponding mapping
+// validateImageFlavorMapping validates that each flavor in a version has a corresponding mapping
 func validateImageFlavorMapping(imageName string, version core.MachineImageVersion, imageVersion api.MachineImageVersion, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition, machineImageVersionPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -198,22 +198,22 @@ func validateImageFlavorMapping(imageName string, version core.MachineImageVersi
 	if err := coreapi.Scheme.Convert(&version, &v1beta1Version, nil); err != nil {
 		return append(allErrs, field.InternalError(machineImageVersionPath, err))
 	}
-	coreDefaultedCapabilitySets := v1beta1helper.GetCapabilitySetsWithAppliedDefaults(v1beta1Version.Flavors, capabilitiesDefinitions)
+	coreDefaultedImageFlavors := v1beta1helper.GetImageFlavorsWithAppliedDefaults(v1beta1Version.Flavors, capabilitiesDefinitions)
 
-	for idxCapability, coreDefaultedCapabilitySet := range coreDefaultedCapabilitySets {
+	for idxCapability, coreDefaultedFlavor := range coreDefaultedImageFlavors {
 		isFound := false
 		// search for the corresponding imageVersion.MachineImageFlavor
-		for _, providerCapabilitySet := range imageVersion.Flavors {
-			providerDefaultedCapabilities := v1beta1helper.GetCapabilitiesWithAppliedDefaults(providerCapabilitySet.Capabilities, capabilitiesDefinitions)
-			if v1beta1helper.AreCapabilitiesEqual(coreDefaultedCapabilitySet.Capabilities, providerDefaultedCapabilities) {
+		for _, providerFlavor := range imageVersion.Flavors {
+			providerDefaultedCapabilities := v1beta1helper.GetCapabilitiesWithAppliedDefaults(providerFlavor.Capabilities, capabilitiesDefinitions)
+			if v1beta1helper.AreCapabilitiesEqual(coreDefaultedFlavor.Capabilities, providerDefaultedCapabilities) {
 				isFound = true
 				break
 			}
 		}
 		if !isFound {
-			allErrs = append(allErrs, field.Required(machineImageVersionPath.Child("capabilitySets").Index(idxCapability),
-				fmt.Sprintf("missing providerConfig mapping for machine image version %s@%s and capabilitySet %v",
-					imageName, version.Version, coreDefaultedCapabilitySet.Capabilities)))
+			allErrs = append(allErrs, field.Required(machineImageVersionPath.Child("flavors").Index(idxCapability),
+				fmt.Sprintf("missing providerConfig mapping for machine image version %s@%s and flavor %v",
+					imageName, version.Version, coreDefaultedFlavor.Capabilities)))
 		}
 	}
 

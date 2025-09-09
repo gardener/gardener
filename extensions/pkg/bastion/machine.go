@@ -146,7 +146,7 @@ func getImageName(bastion *gardencorev1beta1.Bastion, images []gardencorev1beta1
 			if !slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version, capabilityDefinitions), bastionArchitecture) {
 				continue
 			}
-			if !v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineCapabilities, version.Flavors, capabilityDefinitions) {
+			if !v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineCapabilities, version.Flavors, capabilityDefinitions) {
 				continue
 			}
 			return image.Name, nil
@@ -189,7 +189,7 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 		if !slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version, capabilityDefinitions), machineArch) {
 			continue
 		}
-		if !v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineCapabilities, version.Flavors, capabilityDefinitions) {
+		if !v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineCapabilities, version.Flavors, capabilityDefinitions) {
 			continue
 		}
 		v, err := semver.NewVersion(version.Version)

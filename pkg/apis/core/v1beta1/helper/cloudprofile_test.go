@@ -1468,12 +1468,12 @@ var _ = Describe("CloudProfile Helper", func() {
 		)
 
 		DescribeTable("#GetArchitecturesFromImageVersion",
-			func(valuesInCapabilitySets, valuesInArchitecturesField, expectedResult []string) {
+			func(architecturesFromFlavors, valuesInArchitecturesField, expectedResult []string) {
 				imageVersion := gardencorev1beta1.MachineImageVersion{
 					Architectures: valuesInArchitecturesField,
 				}
 
-				for _, architecture := range valuesInCapabilitySets {
+				for _, architecture := range architecturesFromFlavors {
 					imageVersion.Flavors = append(imageVersion.Flavors, gardencorev1beta1.MachineImageFlavor{
 						Capabilities: gardencorev1beta1.Capabilities{"architecture": gardencorev1beta1.CapabilityValues{architecture}},
 					})
@@ -1539,15 +1539,15 @@ var _ = Describe("CloudProfile Helper", func() {
 			})
 		})
 
-		Describe("#GetCapabilitySetsWithAppliedDefaults", func() {
-			It("should apply defaults when capability sets are empty", func() {
-				var capabilitySets []gardencorev1beta1.MachineImageFlavor
+		Describe("#GetImageFlavorsWithAppliedDefaults", func() {
+			It("should apply defaults when flavors are empty", func() {
+				var imageFlavors []gardencorev1beta1.MachineImageFlavor
 				capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
 					{Name: "capability1", Values: []string{"value1", "value2"}},
 					{Name: "architecture", Values: []string{"amd64"}},
 				}
 
-				result := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilityDefinitions)
+				result := GetImageFlavorsWithAppliedDefaults(imageFlavors, capabilityDefinitions)
 
 				Expect(result).To(HaveLen(1))
 				Expect(result[0].Capabilities).To(Equal(gardencorev1beta1.Capabilities{
@@ -1557,7 +1557,7 @@ var _ = Describe("CloudProfile Helper", func() {
 			})
 
 			It("should retain existing values and apply defaults for missing capabilities in sets", func() {
-				capabilitySets := []gardencorev1beta1.MachineImageFlavor{
+				imageFlavors := []gardencorev1beta1.MachineImageFlavor{
 					{Capabilities: gardencorev1beta1.Capabilities{"capability1": []string{"value1"}}},
 					{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{"arm64"}}},
 				}
@@ -1566,7 +1566,7 @@ var _ = Describe("CloudProfile Helper", func() {
 					{Name: "architecture", Values: []string{"amd64", "arm64"}},
 				}
 
-				result := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilityDefinitions)
+				result := GetImageFlavorsWithAppliedDefaults(imageFlavors, capabilityDefinitions)
 
 				Expect(result).To(HaveLen(2))
 				Expect(result[0].Capabilities).To(Equal(gardencorev1beta1.Capabilities{
@@ -1631,18 +1631,18 @@ var _ = Describe("CloudProfile Helper", func() {
 			})
 		})
 
-		Describe("#AreCapabilitiesSupportedByCapabilitySets", func() {
+		Describe("#AreCapabilitiesSupportedByImageFlavors", func() {
 			capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
 				{Name: "capability1", Values: []string{"value1", "value2"}},
 				{Name: "capability2", Values: []string{"value3", "value4"}},
 			}
 
-			It("should return true when capabilities are supported by a capability set", func() {
+			It("should return true when capabilities are supported by a image flavor", func() {
 				capabilities := gardencorev1beta1.Capabilities{
 					"capability1": []string{"value1"},
 					"capability2": []string{"value3"},
 				}
-				capabilitySets := []gardencorev1beta1.MachineImageFlavor{
+				imageFlavors := []gardencorev1beta1.MachineImageFlavor{
 					{Capabilities: gardencorev1beta1.Capabilities{
 						"capability1": []string{"value2"},
 						"capability2": []string{"value3", "value4"},
@@ -1652,16 +1652,16 @@ var _ = Describe("CloudProfile Helper", func() {
 					}},
 				}
 
-				result := AreCapabilitiesSupportedByCapabilitySets(capabilities, capabilitySets, capabilityDefinitions)
+				result := AreCapabilitiesSupportedByImageFlavors(capabilities, imageFlavors, capabilityDefinitions)
 				Expect(result).To(BeTrue())
 			})
 
-			It("should return false when capabilities are not supported by any capability set", func() {
+			It("should return false when capabilities are not supported by any image flavor", func() {
 				capabilities := gardencorev1beta1.Capabilities{
 					"capability1": []string{"value1"},
 					"capability2": []string{"value5"},
 				}
-				capabilitySets := []gardencorev1beta1.MachineImageFlavor{
+				imageFlavors := []gardencorev1beta1.MachineImageFlavor{
 					{Capabilities: gardencorev1beta1.Capabilities{
 						"capability2": []string{"value3", "value4"},
 					}},
@@ -1670,29 +1670,29 @@ var _ = Describe("CloudProfile Helper", func() {
 						"capability2": []string{"value3", "value6"},
 					}},
 				}
-				result := AreCapabilitiesSupportedByCapabilitySets(capabilities, capabilitySets, capabilityDefinitions)
+				result := AreCapabilitiesSupportedByImageFlavors(capabilities, imageFlavors, capabilityDefinitions)
 				Expect(result).To(BeFalse())
 			})
 
-			It("should return true when CapabilitySets are not defined and defaults are used", func() {
+			It("should return true when image flavors are not defined and defaults are used", func() {
 				capabilities := gardencorev1beta1.Capabilities{
 					"capability1": []string{"value1"},
 				}
-				capabilitySets := []gardencorev1beta1.MachineImageFlavor{}
+				var imageFlavors []gardencorev1beta1.MachineImageFlavor
 
-				result := AreCapabilitiesSupportedByCapabilitySets(capabilities, capabilitySets, capabilityDefinitions)
+				result := AreCapabilitiesSupportedByImageFlavors(capabilities, imageFlavors, capabilityDefinitions)
 				Expect(result).To(BeTrue())
 			})
 
 			It("should return true when Capabilities are not defined and defaults are used", func() {
 				capabilities := gardencorev1beta1.Capabilities{}
-				capabilitySets := []gardencorev1beta1.MachineImageFlavor{
+				imageFlavors := []gardencorev1beta1.MachineImageFlavor{
 					{Capabilities: gardencorev1beta1.Capabilities{
 						"capability1": []string{"value1"},
 						"capability2": []string{"value3"},
 					}},
 				}
-				result := AreCapabilitiesSupportedByCapabilitySets(capabilities, capabilitySets, capabilityDefinitions)
+				result := AreCapabilitiesSupportedByImageFlavors(capabilities, imageFlavors, capabilityDefinitions)
 				Expect(result).To(BeTrue())
 			})
 		})

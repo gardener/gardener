@@ -153,7 +153,7 @@ type MachineImageVersion struct {
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	// +optional
 	InPlaceUpdates *InPlaceUpdates `json:"inPlaceUpdates,omitempty" protobuf:"bytes,5,opt,name=inPlaceUpdates"`
-	// Flavors is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+	// Flavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
 	// the machine image version.
 	// +optional
 	Flavors []MachineImageFlavor `json:"flavors,omitempty" protobuf:"bytes,6,rep,name=flavors"`

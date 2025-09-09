@@ -207,7 +207,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					Expect(patch.Data(o)).To(And(
 						ContainSubstring(`"capabilities":[{"name":"architecture","values":["amd64","arm64"]}]`), // global capabilities
 						ContainSubstring(`"versions":[{"architectures":["arm64"]`),                              // original value
-						ContainSubstring(`"capabilitySets":[{"architecture":["arm64"]}]`),                       // synced value
+						ContainSubstring(`"flavors":[{"architecture":["arm64"]}]`),                              // synced value
 					))
 					return nil
 				}),

@@ -8622,7 +8622,7 @@ InPlaceUpdates
 </td>
 <td>
 <em>(Optional)</em>
-<p>Flavors is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+<p>Flavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
 the machine image version.</p>
 </td>
 </tr>

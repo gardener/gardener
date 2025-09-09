@@ -165,11 +165,11 @@ Multiple workarounds are currently in place:
 As images with pre-release tag will not be regarded during maintenance operations, the user has to disable Operating System maintenance for the shoot.
 
 2. In the cloud profile only one OS image version can be in state `classification: supported`.
-When another capability set for that version like Azures `generation` must to be supported, the `classification` key is omitted by Gardener Operators.
+When another flavor of that version like Azures `generation` must be supported, the `classification` key is omitted by Gardener Operators.
 This will display the version as supported in the Gardener Dashboard.
 This is not the intended use of the classification key.
 
-3. Currently extension providers define their own capabilities that are processed after shoot admission, like `acceleratedNetworking` in the [gardener-extension-provider-azure](https://github.com/gardener/gardener-extension-provider-azure/blob/28c977612898ed40e9d179052633fee0b9600d3e/pkg/apis/azure/types_cloudprofile.go#L78).
+3. Currently, extension providers define their own capabilities that are processed after shoot admission, like `acceleratedNetworking` in the [gardener-extension-provider-azure](https://github.com/gardener/gardener-extension-provider-azure/blob/28c977612898ed40e9d179052633fee0b9600d3e/pkg/apis/azure/types_cloudprofile.go#L78).
 This can lead to a situation where the machine supports accelerated networking but the machine image does not.
 In this case it does not result in an error but in performance loss.
 
@@ -245,9 +245,9 @@ In addition to the `spec.capabilities`, spec.machineTypes` is extended with a `c
 type Capabilities map[string][]string
 ```
 
-The image versions in `spec.machineImages.versions` will be extended with `capabilitySets` - an array of capabilities maps, one entry for each image reference of an image version in the cloud provider.
+The image versions in `spec.machineImages.versions` will be extended with `flavors` - an array of capabilities maps, one entry for each image reference of an image version in the cloud provider.
 
-The architecture is also added to the capabilitySets. This is required as the architecture is a capability itself. 
+The architecture is also added to the image version flavors. This is required as the architecture is a capability itself. 
 
 > [!NOTE]
 > To avoid duplication and remove the possibility of inconsistencies the existing `architecture` field in `machineImages.versions` and `machineTypes` will be marked as deprecated. `architecture` will become the only mandatory capability and will take precedence over the deprecated field if both are present.
@@ -257,7 +257,7 @@ The architecture is also added to the capabilitySets. This is required as the ar
 spec:
   capabilities: # <-- Full list of possible capabilities used as default
     - name: architecture
-      values: [amd64, arm64]
+      values: [amd64]
     - name: hypervisorType
       values: [gen2, gen1]
     - name: network
@@ -267,23 +267,21 @@ spec:
     - name: gardenlinux
       updateStrategy: minor
       versions:
-        # - architectures: [arm64, amd64] # not required anymore
+        # - architectures: [amd64] # not required anymore
         #   version: 1592.2.0-gen2
 
-        - architectures: [amd64, arm64] # <-- marked as deprecated
-          capabilitySets:
-            - architecture: [arm64] # <-- architecture must be added to the capabilities to ensure compatibility
+        - architectures: [amd64] # <-- marked as deprecated
+          flavors:
+            - architecture: [amd64] # <-- architecture must be added to the capabilities to ensure compatibility
               hypervisorType: ["gen2"]
               network: ["accelerated", "standard"] # <-- not required as its the default
-            - architecture: [amd64]
-              hypervisorType: ["gen2"]
             - architecture: [amd64]
               hypervisorType: ["gen1"]
           classification: supported
           version: 1592.2.0
 
         - classification: supported
-          version: 1592.1.0 # <-- if no capabilitySets are defined the default capabilities are assigned as only combination
+          version: 1592.1.0 # <-- if no flavors are defined the default capabilities are assigned as only combination
 
   machineTypes:
     - architecture: amd64 # <-- marked as deprecated
@@ -336,7 +334,7 @@ The selection of the actual image reference is still done by the provider extens
             version: 1592.2.0
 ```
 
-All capability combination provided in the `spec.machineImages.versions.capabilitySets` must have an matching entry in the `spec.providerConfig.machineImages.versions.capabilities` to ensure that the provider extension can select the correct image reference.
+All capability combination provided in the `spec.machineImages.versions.flavors` must have a matching entry in the `spec.providerConfig.machineImages.versions` to ensure that the provider extension can select the correct image reference.
 Each provider extension must validate its part of the cloud profile to ensure that the capability combinations are correctly defined.
 
 ## Matching Algorithm
@@ -480,7 +478,7 @@ Don't introduce new capabilities and continue to use the existing metadata to de
 
 ### 2: Aggregated Capabilities
 
-Instead of defining each capability set of an image version in `spec.machineImages.versions` the capabilities are aggregated into one union set.
+Instead of defining each flavor of an image version in `spec.machineImages.versions` the capabilities are aggregated into one union set.
 This set is then compared to the capabilities of the machine type.
 
 ```yaml

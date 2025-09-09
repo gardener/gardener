@@ -218,7 +218,7 @@ var _ = Describe("Admission", func() {
 						attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.machineImages[0].versions[0].capabilitySets"),
+							"Field":  Equal("spec.machineImages[0].versions[0].flavors"),
 							"Detail": ContainSubstring("must not provide capabilities to an extended machine image in NamespacedCloudProfile"),
 						}))))
 					})
@@ -514,7 +514,7 @@ var _ = Describe("Admission", func() {
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("expiration date for version \"1.0.0\" must be set")))
 			})
 
-			It("should fail for creating a NamespacedCloudProfile that overrides an existing MachineImage version and specifies classification/cri/arch/capabilitySets/kubeletVersionConstraint/inPlaceUpdates", func() {
+			It("should fail for creating a NamespacedCloudProfile that overrides an existing MachineImage version and specifies classification/cri/arch/flavors/kubeletVersionConstraint/inPlaceUpdates", func() {
 				parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 					{Name: "test-image", Versions: []gardencorev1beta1.MachineImageVersion{
 						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}},
@@ -553,7 +553,7 @@ var _ = Describe("Admission", func() {
 					"Detail": ContainSubstring("must not provide an architecture to an extended machine image in NamespacedCloudProfile"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.machineImages[0].versions[0].capabilitySets"),
+					"Field":  Equal("spec.machineImages[0].versions[0].flavors"),
 					"Detail": ContainSubstring("must not provide capabilities to an extended machine image in NamespacedCloudProfile"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
