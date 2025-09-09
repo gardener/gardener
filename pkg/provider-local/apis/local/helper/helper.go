@@ -20,7 +20,7 @@ func FindImageFromCloudProfile(
 	name, version string,
 	machineCapabilities v1beta1.Capabilities,
 	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
-) (*local.CapabilitySet, error) {
+) (*local.MachineImageFlavor, error) {
 	if cloudProfileConfig == nil {
 		return nil, fmt.Errorf("cloud profile config is nil")
 	}
@@ -42,7 +42,7 @@ func findCapabilitySetFromMachineImages(
 	imageName, imageVersion string,
 	machineCapabilities v1beta1.Capabilities,
 	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
-) (*local.CapabilitySet, error) {
+) (*local.MachineImageFlavor, error) {
 	for _, machineImage := range machineImages {
 		if machineImage.Name != imageName {
 			continue
@@ -55,15 +55,15 @@ func findCapabilitySetFromMachineImages(
 
 			// If no capabilitiesDefinitions are specified, return the (legacy) image field as no capabilitySets are used.
 			if len(capabilitiesDefinitions) == 0 {
-				return &local.CapabilitySet{
+				return &local.MachineImageFlavor{
 					Image:        version.Image,
 					Capabilities: v1beta1.Capabilities{},
 				}, nil
 			}
 
-			capabilitySetPointers := make([]*local.CapabilitySet, len(version.CapabilitySets))
-			for i := range version.CapabilitySets {
-				capabilitySetPointers[i] = &version.CapabilitySets[i]
+			capabilitySetPointers := make([]*local.MachineImageFlavor, len(version.Flavors))
+			for i := range version.Flavors {
+				capabilitySetPointers[i] = &version.Flavors[i]
 			}
 
 			bestMatch, err := worker.FindBestCapabilitySet(capabilitySetPointers, machineCapabilities, capabilitiesDefinitions)

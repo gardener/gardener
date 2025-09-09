@@ -44,7 +44,7 @@ func filterForCapabilities(machineImageFromCloudProfile *gardencorev1beta1.Machi
 	}
 
 	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
-		if v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineCapabilities, cloudProfileVersion.CapabilitySets, capabilitiesDefinitions) {
+		if v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineCapabilities, cloudProfileVersion.Flavors, capabilitiesDefinitions) {
 			filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
 		}
 	}

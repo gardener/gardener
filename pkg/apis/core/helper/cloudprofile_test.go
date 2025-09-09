@@ -474,19 +474,19 @@ var _ = Describe("CloudProfile Helper", func() {
 		Entry("Should return true - many capabilities", []string{"foo", "bar"}, "foo", true),
 	)
 
-	DescribeTable("#ExtractArchitecturesFromCapabilitySets",
+	DescribeTable("#ExtractArchitecturesFromImageFlavors",
 		func(architecturesInSet1, architecturesInSet2, expectedResult []string) {
-			var capabilitySets []core.CapabilitySet
+			var capabilitySets []core.MachineImageFlavor
 
-			capabilitySets = append(capabilitySets, core.CapabilitySet{
+			capabilitySets = append(capabilitySets, core.MachineImageFlavor{
 				Capabilities: core.Capabilities{"architecture": architecturesInSet1},
 			})
 
-			capabilitySets = append(capabilitySets, core.CapabilitySet{
+			capabilitySets = append(capabilitySets, core.MachineImageFlavor{
 				Capabilities: core.Capabilities{"architecture": architecturesInSet2},
 			})
 
-			Expect(ExtractArchitecturesFromCapabilitySets(capabilitySets)).To(ConsistOf(expectedResult))
+			Expect(ExtractArchitecturesFromImageFlavors(capabilitySets)).To(ConsistOf(expectedResult))
 		},
 		Entry("Should return no values", nil, nil, []string{}),
 		Entry("Should return architecture in sets (sets partially filled)", []string{"amd64", "arm64"}, []string{"ia-64"}, []string{"amd64", "arm64", "ia-64"}),
@@ -554,7 +554,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 	Describe("#GetCapabilitySetsWithAppliedDefaults", func() {
 		It("should apply defaults when capability sets are empty", func() {
-			var capabilitySets []core.CapabilitySet
+			var capabilitySets []core.MachineImageFlavor
 			capabilityDefinitions := []core.CapabilityDefinition{
 				{Name: "capability1", Values: []string{"value1", "value2"}},
 				{Name: "architecture", Values: []string{"amd64"}},
@@ -570,7 +570,7 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 
 		It("should retain existing values and apply defaults for missing capabilities in sets", func() {
-			capabilitySets := []core.CapabilitySet{
+			capabilitySets := []core.MachineImageFlavor{
 				{Capabilities: core.Capabilities{"capability1": []string{"value1"}}},
 				{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 			}

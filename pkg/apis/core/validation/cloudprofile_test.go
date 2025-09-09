@@ -1349,7 +1349,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 				It("should fail to validate with no architecture capability defined in a machine image capability set", func() {
 					cloudProfile.Spec.MachineTypes[0].Architecture = ptr.To("arm64")
-					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+					cloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 						{Capabilities: core.Capabilities{"anotherCapability": []string{"value1"}}},
 					}
 
@@ -1377,7 +1377,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 
 				It("should successfully validate with only capabilities set", func() {
-					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+					cloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 						{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 						{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
 					}
@@ -1389,7 +1389,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 
 				It("should fail to validate with multiple architectures set in one machine image capability set", func() {
-					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+					cloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 						{Capabilities: core.Capabilities{"architecture": []string{"arm64", "amd64"}}},
 					}
 					cloudProfile.Spec.MachineTypes[0].Capabilities = core.Capabilities{
@@ -1422,7 +1422,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 
 				It("should fail to validate with unknown architecture capabilities set", func() {
-					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+					cloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 						{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
 						{Capabilities: core.Capabilities{"architecture": []string{"other"}}},
 					}
@@ -1498,7 +1498,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 
 				It("should fail to validate if the global capability definition has duplicate entries", func() {
-					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+					cloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 						{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 					}
 					cloudProfile.Spec.MachineTypes[0].Capabilities = core.Capabilities{
@@ -1550,7 +1550,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 				Describe("should validate that the architectures do not conflict", func() {
 					It("should succeed if both architectures and capabilities set the same values", func() {
-						cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+						cloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 							{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 						}
 						cloudProfile.Spec.MachineTypes[0].Capabilities = core.Capabilities{
@@ -1564,7 +1564,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					})
 
 					It("should succeed if both architectures and split-up capabilities set the same values", func() {
-						cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+						cloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 							{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
 							{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 						}
@@ -1579,7 +1579,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					})
 
 					It("should fail if the values in architectures and capabilities conflict", func() {
-						cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+						cloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 							{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 						}
 						cloudProfile.Spec.MachineTypes[0].Capabilities = core.Capabilities{
@@ -1643,7 +1643,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 
 				It("should fail to validate with only capabilities set", func() {
-					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+					cloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 						{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 					}
 					cloudProfile.Spec.MachineTypes[0].Capabilities = core.Capabilities{
@@ -1900,7 +1900,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						{Name: "foo", Values: []string{"bar", "baz"}},
 					}
 
-					cloudProfileNew.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+					cloudProfileNew.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 						{Capabilities: core.Capabilities{
 							"architecture": []string{"arm64"},
 							"foo":          []string{"bar", "foobar"},
@@ -1976,7 +1976,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						})
 
 						It("should successfully to validate with only capabilities set", func() {
-							cloudProfileNew.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+							cloudProfileNew.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 								{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 							}
 							cloudProfileNew.Spec.MachineTypes[0].Capabilities = core.Capabilities{
@@ -2008,7 +2008,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						})
 
 						It("should fail to validate with unknown architecture capabilities set", func() {
-							cloudProfileNew.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+							cloudProfileNew.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 								{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
 								{Capabilities: core.Capabilities{"architecture": []string{"other"}}},
 							}
@@ -2042,7 +2042,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 								cloudProfileOld.Spec.MachineImages = cloudProfileNew.Spec.MachineImages
 								cloudProfileOld.Spec.MachineTypes = cloudProfileNew.Spec.MachineTypes
 
-								cloudProfileNew.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+								cloudProfileNew.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 									{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 								}
 								cloudProfileNew.Spec.MachineTypes[0].Capabilities = core.Capabilities{
@@ -2059,7 +2059,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 								cloudProfileOld.Spec.MachineImages = cloudProfileNew.Spec.MachineImages
 								cloudProfileOld.Spec.MachineTypes = cloudProfileNew.Spec.MachineTypes
 
-								cloudProfileNew.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+								cloudProfileNew.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 									{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 								}
 								cloudProfileNew.Spec.MachineTypes[0].Capabilities = core.Capabilities{
@@ -2088,7 +2088,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 								cloudProfileOld.Spec.MachineImages = cloudProfileNew.Spec.MachineImages
 								cloudProfileOld.Spec.MachineTypes = cloudProfileNew.Spec.MachineTypes
 
-								cloudProfileNew.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+								cloudProfileNew.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 									{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 									{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
 								}
@@ -2136,7 +2136,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 
 				It("should fail to validate with only capabilities set", func() {
-					cloudProfileNew.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+					cloudProfileNew.Spec.MachineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 						{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 					}
 					cloudProfileNew.Spec.MachineTypes[0].Capabilities = core.Capabilities{

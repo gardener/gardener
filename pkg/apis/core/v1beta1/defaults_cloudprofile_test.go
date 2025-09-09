@@ -45,7 +45,7 @@ var _ = Describe("CloudProfile defaulting", func() {
 				CRI{Name: "containerd"},
 			))
 			Expect(machineImageVersion.Architectures).To(ConsistOf("amd64"))
-			Expect(machineImageVersion.CapabilitySets).To(BeNil())
+			Expect(machineImageVersion.Flavors).To(BeNil())
 		})
 	})
 
@@ -77,7 +77,7 @@ var _ = Describe("CloudProfile defaulting", func() {
 				Expect(obj.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))
 				Expect(obj.Spec.MachineTypes[0].Architecture).To(PointTo(Equal("amd64")))
 
-				Expect(obj.Spec.MachineImages[0].Versions[0].CapabilitySets).To(BeEmpty())
+				Expect(obj.Spec.MachineImages[0].Versions[0].Flavors).To(BeEmpty())
 				Expect(obj.Spec.MachineTypes[0].Capabilities).To(BeNil())
 			})
 		})
@@ -92,7 +92,7 @@ var _ = Describe("CloudProfile defaulting", func() {
 				Expect(obj.Spec.MachineImages[0].Versions[0].Architectures).To(BeEmpty())
 				Expect(obj.Spec.MachineTypes[0].Architecture).To(BeNil())
 
-				Expect(obj.Spec.MachineImages[0].Versions[0].CapabilitySets).To(BeEmpty())
+				Expect(obj.Spec.MachineImages[0].Versions[0].Flavors).To(BeEmpty())
 				Expect(obj.Spec.MachineTypes[0].Capabilities).To(BeNil())
 			})
 		})

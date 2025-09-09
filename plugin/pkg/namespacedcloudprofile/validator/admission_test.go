@@ -144,7 +144,7 @@ var _ = Describe("Admission", func() {
 
 					It("should reject a machineImage with Capabilities or CapabilityValues not in the parent CloudProfile", func() {
 						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
-						namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []gardencore.CapabilitySet{
+						namespacedCloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []gardencore.MachineImageFlavor{
 							{Capabilities: gardencore.Capabilities{
 								// Unsupported CapabilityValue
 								"capability2": []string{"value3"},
@@ -211,7 +211,7 @@ var _ = Describe("Admission", func() {
 					It("should NOT allow to add a machineImage with Capabilities", func() {
 						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
-						namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []gardencore.CapabilitySet{
+						namespacedCloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []gardencore.MachineImageFlavor{
 							{Capabilities: gardencore.Capabilities{"architecture": []string{"arm64"}}},
 						}
 
@@ -530,7 +530,7 @@ var _ = Describe("Admission", func() {
 							ExpirableVersion:         gardencore.ExpirableVersion{Version: "1.1.0", ExpirationDate: expiredExpirationDate, Classification: ptr.To(gardencore.ClassificationSupported)},
 							CRI:                      []gardencore.CRI{{Name: "containerd"}},
 							Architectures:            []string{"amd64"},
-							CapabilitySets:           []gardencore.CapabilitySet{{Capabilities: gardencore.Capabilities{"architecture": []string{"amd64"}}}},
+							Flavors:                  []gardencore.MachineImageFlavor{{Capabilities: gardencore.Capabilities{"architecture": []string{"amd64"}}}},
 							KubeletVersionConstraint: ptr.To(">=1.29.0"),
 							InPlaceUpdates:           &gardencore.InPlaceUpdates{Supported: true},
 						},

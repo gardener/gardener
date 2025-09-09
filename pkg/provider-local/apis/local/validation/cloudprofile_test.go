@@ -35,7 +35,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					Versions: []api.MachineImageVersion{
 						{
 							Version: "18.04",
-							CapabilitySets: []api.CapabilitySet{
+							Flavors: []api.MachineImageFlavor{
 								{
 									Image: imageString,
 									Capabilities: v1beta1.Capabilities{
@@ -63,7 +63,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 						ExpirableVersion: core.ExpirableVersion{
 							Version: "18.04",
 						},
-						CapabilitySets: []core.CapabilitySet{{
+						Flavors: []core.MachineImageFlavor{{
 							Capabilities: core.Capabilities{
 								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 							},
@@ -137,9 +137,9 @@ var _ = Describe("CloudProfileConfig validation", func() {
 		Context("with no capabilities defined", func() {
 			BeforeEach(func() {
 				// set capability sets to empty to simulate no capabilities defined
-				cloudProfileConfig.MachineImages[0].Versions[0].CapabilitySets = []api.CapabilitySet{}
+				cloudProfileConfig.MachineImages[0].Versions[0].Flavors = []api.MachineImageFlavor{}
 				cloudProfileConfig.MachineImages[0].Versions[0].Image = "ubuntu-18.04-amd64"
-				machineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{}
+				machineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{}
 				capabilitiesDefinitions = []v1beta1.CapabilityDefinition{}
 			})
 
@@ -185,7 +185,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should fail if capability sets contain invalid capability", func() {
-				cloudProfileConfig.MachineImages[0].Versions[0].CapabilitySets[0].Capabilities["invalid"] = []string{"value"}
+				cloudProfileConfig.MachineImages[0].Versions[0].Flavors[0].Capabilities["invalid"] = []string{"value"}
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
@@ -195,7 +195,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 
 			It("should fail when machine image version doesn't exist in provider config with capabilities", func() {
 				machineImages[0].Versions[0].Version = "20.04"
-				machineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+				machineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
 					{
 						Capabilities: core.Capabilities{
 							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
@@ -212,7 +212,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should fail when capability set has empty image", func() {
-				cloudProfileConfig.MachineImages[0].Versions[0].CapabilitySets[0].Image = ""
+				cloudProfileConfig.MachineImages[0].Versions[0].Flavors[0].Image = ""
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -221,7 +221,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should fail when capability values are not from defined set", func() {
-				cloudProfileConfig.MachineImages[0].Versions[0].CapabilitySets[0].Capabilities["cap1"] = []string{"invalid-value"}
+				cloudProfileConfig.MachineImages[0].Versions[0].Flavors[0].Capabilities["cap1"] = []string{"invalid-value"}
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeNotSupported),
@@ -233,7 +233,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			It("should fail when machine image version exists in core but not in provider config", func() {
 				machineImages[0].Versions = append(machineImages[0].Versions, core.MachineImageVersion{
 					ExpirableVersion: core.ExpirableVersion{Version: "20.04"},
-					CapabilitySets: []core.CapabilitySet{{
+					Flavors: []core.MachineImageFlavor{{
 						Capabilities: core.Capabilities{
 							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 						},
@@ -249,8 +249,8 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should fail when core capability set has no matching provider capability set", func() {
-				machineImages[0].Versions[0].CapabilitySets = append(machineImages[0].Versions[0].CapabilitySets,
-					core.CapabilitySet{
+				machineImages[0].Versions[0].Flavors = append(machineImages[0].Versions[0].Flavors,
+					core.MachineImageFlavor{
 						Capabilities: core.Capabilities{
 							"cap1": []string{"value1"},
 						},

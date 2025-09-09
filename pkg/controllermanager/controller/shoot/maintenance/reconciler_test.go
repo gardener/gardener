@@ -925,7 +925,7 @@ var _ = Describe("Shoot Maintenance", func() {
 							Version: shootCurrentImageVersion,
 						},
 						CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
-						CapabilitySets: []gardencorev1beta1.CapabilitySet{
+						Flavors: []gardencorev1beta1.MachineImageFlavor{
 							{Capabilities: gardencorev1beta1.Capabilities{
 								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 							}},
@@ -939,7 +939,7 @@ var _ = Describe("Shoot Maintenance", func() {
 							Version: latestVersionWithSupportedCapabilities,
 						},
 						CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
-						CapabilitySets: []gardencorev1beta1.CapabilitySet{
+						Flavors: []gardencorev1beta1.MachineImageFlavor{
 							{Capabilities: gardencorev1beta1.Capabilities{
 								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 								"someCapability":                  []string{"value1", "value2"},
@@ -956,7 +956,7 @@ var _ = Describe("Shoot Maintenance", func() {
 							ExpirationDate: &expirationDateInTheFuture,
 						},
 						CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
-						CapabilitySets: []gardencorev1beta1.CapabilitySet{
+						Flavors: []gardencorev1beta1.MachineImageFlavor{
 							{Capabilities: gardencorev1beta1.Capabilities{
 								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
 								"someCapability":                  []string{"value2"},

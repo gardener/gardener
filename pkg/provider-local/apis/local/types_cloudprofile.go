@@ -36,19 +36,19 @@ type MachineImageVersion struct {
 	Version string
 	// Image is the image for the machine image.
 	Image string
-	// CapabilitySets contains provider-specific image identifiers of this version with their capabilities.
-	CapabilitySets []CapabilitySet
+	// Flavors contains provider-specific image identifiers of this version with their capabilities.
+	Flavors []MachineImageFlavor
 }
 
-// CapabilitySet is a provider-specific image identifier with its supported capabilities.
-type CapabilitySet struct {
+// MachineImageFlavor is a provider-specific image identifier with its supported capabilities.
+type MachineImageFlavor struct {
 	// Image is the image for the machine image.
 	Image string
 	// Capabilities that are supported by the identifier in this set.
 	Capabilities gardencorev1beta1.Capabilities
 }
 
-// GetCapabilities returns the Capabilities of a CapabilitySet
-func (cs CapabilitySet) GetCapabilities() gardencorev1beta1.Capabilities {
+// GetCapabilities returns the Capabilities of a MachineImageFlavor
+func (cs MachineImageFlavor) GetCapabilities() gardencorev1beta1.Capabilities {
 	return cs.Capabilities
 }

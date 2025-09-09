@@ -55,7 +55,7 @@ var _ = Describe("Helper Functions", func() {
 					},
 					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 					Architectures: []string{"amd64"},
-					CapabilitySets: []gardencorev1beta1.CapabilitySet{{
+					Flavors: []gardencorev1beta1.MachineImageFlavor{{
 						Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
 					}},
 					KubeletVersionConstraint: ptr.To("< 1.27"),
@@ -67,7 +67,7 @@ var _ = Describe("Helper Functions", func() {
 					},
 					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 					Architectures: []string{"amd64"},
-					CapabilitySets: []gardencorev1beta1.CapabilitySet{{
+					Flavors: []gardencorev1beta1.MachineImageFlavor{{
 						Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
 					}},
 					KubeletVersionConstraint: ptr.To(">= 1.30.0"),

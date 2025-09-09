@@ -1128,7 +1128,7 @@ func (c *validationContext) validateMachineCapabilities(path *field.Path, worker
 	machineImageVersion, _ := v1beta1helper.FindMachineImageVersion(c.cloudProfileSpec.MachineImages, worker.Machine.Image.Name, worker.Machine.Image.Version)
 	machineType := v1beta1helper.FindMachineTypeByName(c.cloudProfileSpec.MachineTypes, worker.Machine.Type)
 
-	if !v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineType.Capabilities, machineImageVersion.CapabilitySets, c.cloudProfileSpec.Capabilities) {
+	if !v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineType.Capabilities, machineImageVersion.Flavors, c.cloudProfileSpec.Capabilities) {
 		return field.Invalid(path.Child("machine", "image", "version"), worker.Machine.Image.Version, fmt.Sprintf("machine capabilities %v of machine type %q are not supported by machine image %v:%v", machineType.Capabilities, worker.Machine.Type, worker.Machine.Image.Name, worker.Machine.Image.Version))
 	}
 
@@ -1792,7 +1792,7 @@ func getDefaultMachineImage(
 					break
 				}
 				// skip capabilities check if machineType was not found in the cloud profile
-				if machineType != nil && v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineType.Capabilities, version.CapabilitySets, capabilitiesDefinition) {
+				if machineType != nil && v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineType.Capabilities, version.Flavors, capabilitiesDefinition) {
 					defaultImage = &machineImage
 					break
 				}
@@ -1837,7 +1837,7 @@ func getDefaultMachineImage(
 		}
 
 		// skip capabilities check if machineType was not found in the cloud profile
-		if machineType != nil && !v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineType.Capabilities, version.CapabilitySets, capabilitiesDefinition) {
+		if machineType != nil && !v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineType.Capabilities, version.Flavors, capabilitiesDefinition) {
 			continue
 		}
 

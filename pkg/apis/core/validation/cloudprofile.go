@@ -191,7 +191,7 @@ func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, capabi
 				if len(machineVersion.Architectures) == 0 {
 					allErrs = append(allErrs, field.Required(versionsPath.Child("architectures"), "must provide at least one architecture"))
 				}
-				if len(machineVersion.CapabilitySets) > 0 {
+				if len(machineVersion.Flavors) > 0 {
 					allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilitySets"), "must not provide capabilities without global definition"))
 				}
 			}

@@ -258,8 +258,8 @@ func HasCapability(capabilities []core.CapabilityDefinition, capabilityName stri
 	return false
 }
 
-// ExtractArchitecturesFromCapabilitySets extracts all architectures from a list of CapabilitySets.
-func ExtractArchitecturesFromCapabilitySets(capabilities []core.CapabilitySet) []string {
+// ExtractArchitecturesFromImageFlavors extracts all architectures from a list of CapabilitySets.
+func ExtractArchitecturesFromImageFlavors(capabilities []core.MachineImageFlavor) []string {
 	architectures := sets.New[string]()
 	for _, capabilitySet := range capabilities {
 		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureName] {
@@ -295,15 +295,15 @@ func GetCapabilitiesWithAppliedDefaults(capabilities core.Capabilities, capabili
 }
 
 // GetCapabilitySetsWithAppliedDefaults returns new capability sets with applied defaults from the capability definitions.
-func GetCapabilitySetsWithAppliedDefaults(capabilitySets []core.CapabilitySet, capabilitiesDefinitions []core.CapabilityDefinition) []core.CapabilitySet {
+func GetCapabilitySetsWithAppliedDefaults(capabilitySets []core.MachineImageFlavor, capabilitiesDefinitions []core.CapabilityDefinition) []core.MachineImageFlavor {
 	if len(capabilitySets) == 0 {
 		// If no capability sets are defined, assume all capabilities are supported.
-		return []core.CapabilitySet{{Capabilities: GetCapabilitiesWithAppliedDefaults(core.Capabilities{}, capabilitiesDefinitions)}}
+		return []core.MachineImageFlavor{{Capabilities: GetCapabilitiesWithAppliedDefaults(core.Capabilities{}, capabilitiesDefinitions)}}
 	}
 
-	result := make([]core.CapabilitySet, len(capabilitySets))
+	result := make([]core.MachineImageFlavor, len(capabilitySets))
 	for i, capabilitySet := range capabilitySets {
-		result[i] = core.CapabilitySet{
+		result[i] = core.MachineImageFlavor{
 			Capabilities: GetCapabilitiesWithAppliedDefaults(capabilitySet.Capabilities, capabilitiesDefinitions),
 		}
 	}

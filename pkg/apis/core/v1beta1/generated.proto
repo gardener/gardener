@@ -374,12 +374,6 @@ message CapabilityDefinition {
   optional CapabilityValues values = 2;
 }
 
-// CapabilitySet is a wrapper for Capabilities.
-// This is a workaround as the Protobuf generator can't handle a slice of maps.
-message CapabilitySet {
-  map<string, CapabilityValues> capabilities = 1;
-}
-
 // CapabilityValues contains capability values.
 // This is a workaround as the Protobuf generator can't handle a map with slice values.
 // +protobuf.nullable=true
@@ -1928,6 +1922,12 @@ message MachineImage {
   optional string updateStrategy = 3;
 }
 
+// MachineImageFlavor is a wrapper for Capabilities.
+// This is a workaround as the Protobuf generator can't handle a slice of maps.
+message MachineImageFlavor {
+  map<string, CapabilityValues> capabilities = 1;
+}
+
 // MachineImageVersion is an expirable version with list of supported container runtimes and interfaces
 message MachineImageVersion {
   optional ExpirableVersion expirableVersion = 1;
@@ -1952,10 +1952,10 @@ message MachineImageVersion {
   // +optional
   optional InPlaceUpdates inPlaceUpdates = 5;
 
-  // CapabilitySets is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+  // Flavors is an array of capability sets. Each entry represents a combination of capabilities that is provided by
   // the machine image version.
   // +optional
-  repeated CapabilitySet capabilitySets = 6;
+  repeated MachineImageFlavor flavors = 6;
 }
 
 // MachineType contains certain properties of a machine type.

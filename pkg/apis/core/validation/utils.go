@@ -350,8 +350,8 @@ func validateMachineImageVersionCapabilities(machineImageVersion core.MachineIma
 
 	if len(capabilities) > 0 {
 		supportedCapabilityKeys := slices.Collect(maps.Keys(capabilities))
-		capabilitiesPath := fldPath.Child("capabilitySets")
-		for i, capabilitySet := range machineImageVersion.CapabilitySets {
+		capabilitiesPath := fldPath.Child("flavors")
+		for i, capabilitySet := range machineImageVersion.Flavors {
 			capabilitySetFldPath := capabilitiesPath.Index(i)
 			for capabilityKey, capability := range capabilitySet.Capabilities {
 				supportedValues, keyExists := capabilities[capabilityKey]
@@ -379,7 +379,7 @@ func validateMachineImageVersionArchitecture(machineImageVersion core.MachineIma
 	// assert that the architecture values defined do not conflict
 	if len(capabilities) > 0 {
 		supportedArchitectures = capabilities[v1beta1constants.ArchitectureName]
-		for capabilitySetIdx, capabilitySet := range machineImageVersion.CapabilitySets {
+		for capabilitySetIdx, capabilitySet := range machineImageVersion.Flavors {
 			architectureCapabilityValues := capabilitySet.Capabilities[v1beta1constants.ArchitectureName]
 			architectureFieldPath := fldPath.Child("capabilitySets").Index(capabilitySetIdx).Child("architecture")
 			if len(architectureCapabilityValues) == 0 {
@@ -389,7 +389,7 @@ func validateMachineImageVersionArchitecture(machineImageVersion core.MachineIma
 			}
 		}
 
-		allCapabilityArchitectures := sets.New(gardencorehelper.ExtractArchitecturesFromCapabilitySets(machineImageVersion.CapabilitySets)...)
+		allCapabilityArchitectures := sets.New(gardencorehelper.ExtractArchitecturesFromImageFlavors(machineImageVersion.Flavors)...)
 		if len(machineImageVersion.Architectures) > 0 && !allCapabilityArchitectures.HasAll(machineImageVersion.Architectures...) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("architectures"), machineImageVersion.Architectures, fmt.Sprintf("architecture field values set (%s) conflict with the capability architectures (%s)", strings.Join(machineImageVersion.Architectures, ","), strings.Join(allCapabilityArchitectures.UnsortedList(), ","))))
 		}
