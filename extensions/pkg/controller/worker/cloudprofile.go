@@ -15,7 +15,6 @@ import (
 // HasCapabilities defines an interface for types that contain Capabilities
 type HasCapabilities interface {
 	GetCapabilities() v1beta1.Capabilities
-	SetCapabilities(v1beta1.Capabilities)
 }
 
 // FindBestCapabilitySet finds the most appropriate capability set from the provided capability sets
@@ -68,30 +67,34 @@ func selectBestCapabilitySet[T HasCapabilities](
 		return compatibleSets[0], nil
 	}
 
-	// Apply capability defaults for better comparison
-	normalizedSets := make([]T, len(compatibleSets))
-	copy(normalizedSets, compatibleSets)
+	type capabilitiesWithProviderType struct {
+		providerEntry T
+		capabilities  v1beta1.Capabilities
+	}
 
-	// Normalize capability sets by applying defaults
-	for i := range normalizedSets {
-		normalizedSets[i].SetCapabilities(v1beta1helper.GetCapabilitiesWithAppliedDefaults(
-			normalizedSets[i].GetCapabilities(),
-			capabilitiesDefinitions,
-		))
+	var capabilitiesWithProviderTypes []capabilitiesWithProviderType
+	for _, set := range compatibleSets {
+		capabilitiesWithProviderTypes = append(capabilitiesWithProviderTypes, capabilitiesWithProviderType{
+			providerEntry: set,
+		})
+	}
+	// Normalize capabilities copy by applying defaults
+	for i := range capabilitiesWithProviderTypes {
+		capabilitiesWithProviderTypes[i].capabilities = v1beta1helper.GetCapabilitiesWithAppliedDefaults(capabilitiesWithProviderTypes[i].providerEntry.GetCapabilities(), capabilitiesDefinitions)
 	}
 
 	// Evaluate capability sets based on capability definitions priority
-	remainingSets := normalizedSets
+	remainingSets := capabilitiesWithProviderTypes
 
 	// For each capability (in priority order)
 	for _, capabilityDef := range capabilitiesDefinitions {
 		// For each preferred value (in preference order)
 		for _, capabilityValue := range capabilityDef.Values {
-			var setsWithPreferredValue []T
+			var setsWithPreferredValue []capabilitiesWithProviderType
 
 			// Find sets that support this capability value
 			for _, set := range remainingSets {
-				if slices.Contains(set.GetCapabilities()[capabilityDef.Name], capabilityValue) {
+				if slices.Contains(set.capabilities[capabilityDef.Name], capabilityValue) {
 					setsWithPreferredValue = append(setsWithPreferredValue, set)
 				}
 			}
@@ -102,7 +105,7 @@ func selectBestCapabilitySet[T HasCapabilities](
 
 				// If only one set remains, we've found our match
 				if len(remainingSets) == 1 {
-					return remainingSets[0], nil
+					return remainingSets[0].providerEntry, nil
 				}
 			}
 		}
@@ -113,5 +116,5 @@ func selectBestCapabilitySet[T HasCapabilities](
 		return zeroValue, fmt.Errorf("found multiple capability sets with identical capabilities; this indicates an invalid cloudprofile was admitted. Please open a bug report at https://github.com/gardener/gardener/issues")
 	}
 
-	return remainingSets[0], nil
+	return remainingSets[0].providerEntry, nil
 }
