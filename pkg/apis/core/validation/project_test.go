@@ -163,30 +163,117 @@ var _ = Describe("Project Validation Tests", func() {
 					"Detail":   Equal("must start with garden-"),
 				}))),
 			),
+			Entry("should forbid Project with an invalid namespace name",
+				"garden-foo%bar",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.namespace"),
+					"BadValue": Equal("garden-foo%bar"),
+					"Detail":   Equal(`a lowercase RFC 1123 label must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?')`),
+				}))),
+			),
 			Entry("should allow Project with namespace garden",
 				"garden",
 				BeEmpty(),
 			),
 		)
 
-		It("should forbid Project specification with empty or invalid key for description", func() {
-			project.Spec.Description = ptr.To("")
+		DescribeTable("Project spec.description",
+			func(description *string, matcher gomegatypes.GomegaMatcher) {
+				project.Spec.Description = description
 
-			errorList := ValidateProject(project)
+				errorList := ValidateProject(project)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
+				Expect(errorList).To(matcher)
+			},
+			Entry("should allow unset description",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should allow valid description",
+				ptr.To(`This is a project description, 庭師.`),
+				BeEmpty(),
+			),
+			Entry("should forbid Project with empty description",
+				ptr.To(""),
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.description"),
+				}))),
+			),
+			Entry("should forbid Project description with special characters",
+				ptr.To("<foo>"),
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.description"),
+				}))),
+			),
+		)
+
+		It("should allow already accepted invalid project description", func() {
+			project.Spec.Description = ptr.To("<foo>")
+			newProject := prepareProjectForUpdate(project)
+
+			Expect(ValidateProjectUpdate(newProject, project)).To(BeEmpty())
+		})
+
+		It("should forbid Project description with special characters when updated", func() {
+			project.Spec.Description = ptr.To("foo")
+			newProject := prepareProjectForUpdate(project)
+			newProject.Spec.Description = ptr.To("<foo>")
+
+			Expect(ValidateProjectUpdate(newProject, project)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.description"),
 			}))))
 		})
 
-		It("should forbid Project specification with empty or invalid key for purpose", func() {
-			project.Spec.Purpose = ptr.To("")
+		DescribeTable("Project spec.purpose",
+			func(purpose *string, matcher gomegatypes.GomegaMatcher) {
+				project.Spec.Purpose = purpose
 
-			errorList := ValidateProject(project)
+				errorList := ValidateProject(project)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
+				Expect(errorList).To(matcher)
+			},
+			Entry("should allow unset purpose",
+				nil,
+				BeEmpty(),
+			),
+			Entry("should allow valid purpose",
+				ptr.To(`This is a project purpose, 庭師.`),
+				BeEmpty(),
+			),
+			Entry("should forbid Project with empty purpose",
+				ptr.To(""),
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.purpose"),
+				}))),
+			),
+			Entry("should forbid Project purpose with special characters",
+				ptr.To("<foo>"),
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.purpose"),
+				}))),
+			),
+		)
+
+		It("should allow already accepted invalid project purpose", func() {
+			project.Spec.Purpose = ptr.To("<foo>")
+			newProject := prepareProjectForUpdate(project)
+
+			Expect(ValidateProjectUpdate(newProject, project)).To(BeEmpty())
+		})
+
+		It("should forbid Project purpose with special characters when updated", func() {
+			project.Spec.Purpose = ptr.To("foo")
+			newProject := prepareProjectForUpdate(project)
+			newProject.Spec.Purpose = ptr.To("<foo>")
+
+			Expect(ValidateProjectUpdate(newProject, project)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.purpose"),
 			}))))
 		})
@@ -360,12 +447,15 @@ var _ = Describe("Project Validation Tests", func() {
 			Entry("invalid api group name", "apps/v1beta1", rbacv1.ServiceAccountKind, "foo", "default", field.ErrorTypeNotSupported, "apiGroup"),
 			Entry("invalid name", "", rbacv1.ServiceAccountKind, "foo-", "default", field.ErrorTypeInvalid, "name"),
 			Entry("no namespace", "", rbacv1.ServiceAccountKind, "foo", "", field.ErrorTypeRequired, "namespace"),
+			Entry("invalid namespace", "", rbacv1.ServiceAccountKind, "foo", "foo%bar", field.ErrorTypeInvalid, "namespace"),
 
 			// users
 			Entry("invalid api group name", "rbac.authorization.invalid", rbacv1.UserKind, "john.doe@example.com", "", field.ErrorTypeNotSupported, "apiGroup"),
+			Entry("namespace set", "rbac.authorization.k8s.io", rbacv1.UserKind, "john.doe@example.com", "garden", field.ErrorTypeForbidden, "namespace"),
 
 			// groups
 			Entry("invalid api group name", "rbac.authorization.invalid", rbacv1.GroupKind, "groupname", "", field.ErrorTypeNotSupported, "apiGroup"),
+			Entry("namespace set", "rbac.authorization.k8s.io", rbacv1.GroupKind, "groupname", "garden", field.ErrorTypeForbidden, "namespace"),
 		)
 
 		It("should forbid invalid tolerations", func() {

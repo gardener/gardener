@@ -2407,6 +2407,7 @@ message ProjectSpec {
   optional .k8s.io.api.rbac.v1.Subject createdBy = 1;
 
   // Description is a human-readable description of what the project is used for.
+  // Only letters, digits and certain punctuation characters are allowed for this field.
   // +optional
   optional string description = 2;
 
@@ -2420,6 +2421,7 @@ message ProjectSpec {
   optional .k8s.io.api.rbac.v1.Subject owner = 3;
 
   // Purpose is a human-readable explanation of the project's purpose.
+  // Only letters, digits and certain punctuation characters are allowed for this field.
   // +optional
   optional string purpose = 4;
 

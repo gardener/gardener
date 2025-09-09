@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/api/validation/path"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -21,10 +22,26 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 )
+
+type projectValidationOptions struct {
+	allowInvalidDescription bool
+	allowInvalidPurpose     bool
+}
 
 // ValidateProject validates a Project object.
 func ValidateProject(project *core.Project) field.ErrorList {
+	opts := projectValidationOptions{
+		allowInvalidDescription: false,
+		allowInvalidPurpose:     false,
+	}
+
+	return ValidateProjectWithOpts(project, opts)
+}
+
+// ValidateProjectWithOpts validates a Project object with the given options.
+func ValidateProjectWithOpts(project *core.Project, opts projectValidationOptions) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&project.ObjectMeta, false, ValidateName, field.NewPath("metadata"))...)
@@ -33,7 +50,7 @@ func ValidateProject(project *core.Project) field.ErrorList {
 		allErrs = append(allErrs, field.TooLong(field.NewPath("metadata", "name"), project.Name, maxProjectNameLength))
 	}
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(project.Name, field.NewPath("metadata", "name"))...)
-	allErrs = append(allErrs, ValidateProjectSpec(&project.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateProjectSpec(&project.Spec, opts, field.NewPath("spec"))...)
 
 	return allErrs
 }
@@ -41,9 +58,14 @@ func ValidateProject(project *core.Project) field.ErrorList {
 // ValidateProjectUpdate validates a Project object before an update.
 func ValidateProjectUpdate(newProject, oldProject *core.Project) field.ErrorList {
 	allErrs := field.ErrorList{}
+	opts := projectValidationOptions{
+		// Backwards compatibility - Allow invalid project description and purpose if they have not changed.
+		allowInvalidDescription: apiequality.Semantic.DeepEqual(oldProject.Spec.Description, newProject.Spec.Description),
+		allowInvalidPurpose:     apiequality.Semantic.DeepEqual(oldProject.Spec.Purpose, newProject.Spec.Purpose),
+	}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newProject.ObjectMeta, &oldProject.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateProject(newProject)...)
+	allErrs = append(allErrs, ValidateProjectWithOpts(newProject, opts)...)
 
 	if oldProject.Spec.CreatedBy != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProject.Spec.CreatedBy, oldProject.Spec.CreatedBy, field.NewPath("spec", "createdBy"))...)
@@ -59,18 +81,22 @@ func ValidateProjectUpdate(newProject, oldProject *core.Project) field.ErrorList
 }
 
 // ValidateProjectSpec validates the specification of a Project object.
-func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) field.ErrorList {
+func ValidateProjectSpec(projectSpec *core.ProjectSpec, opts projectValidationOptions, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if projectSpec.Namespace != nil {
+	if namespace := projectSpec.Namespace; namespace != nil {
 		reservedNamespaceNames := []string{core.GardenerSeedLeaseNamespace, core.GardenerShootIssuerNamespace, core.GardenerSystemPublicNamespace}
-		if slices.Contains(reservedNamespaceNames, *projectSpec.Namespace) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), *projectSpec.Namespace, fmt.Sprintf("Project namespaces [%s] are reserved by Gardener", strings.Join(reservedNamespaceNames, ", "))))
+		if slices.Contains(reservedNamespaceNames, *namespace) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), *namespace, fmt.Sprintf("Project namespaces [%s] are reserved by Gardener", strings.Join(reservedNamespaceNames, ", "))))
 			return allErrs
 		}
 
-		if *projectSpec.Namespace != v1beta1constants.GardenNamespace && !strings.HasPrefix(*projectSpec.Namespace, gardenerutils.ProjectNamespacePrefix) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), *projectSpec.Namespace, fmt.Sprintf("must start with %s", gardenerutils.ProjectNamespacePrefix)))
+		if *namespace != v1beta1constants.GardenNamespace && !strings.HasPrefix(*namespace, gardenerutils.ProjectNamespacePrefix) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), *namespace, fmt.Sprintf("must start with %s", gardenerutils.ProjectNamespacePrefix)))
+		}
+
+		for _, msg := range apivalidation.ValidateNamespaceName(*namespace, false) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), *namespace, msg))
 		}
 	}
 
@@ -112,11 +138,12 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 	if owner := projectSpec.Owner; owner != nil {
 		allErrs = append(allErrs, ValidateSubject(*owner, fldPath.Child("owner"))...)
 	}
-	if description := projectSpec.Description; description != nil && len(*description) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("description"), "must provide a description when key is present"))
+	if projectSpec.Description != nil {
+		allErrs = append(allErrs, ValidateProjectDescription(*projectSpec.Description, opts.allowInvalidDescription, fldPath.Child("description"))...)
 	}
-	if purpose := projectSpec.Purpose; purpose != nil && len(*purpose) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("purpose"), "must provide a purpose when key is present"))
+
+	if projectSpec.Purpose != nil {
+		allErrs = append(allErrs, ValidateProjectPurpose(*projectSpec.Purpose, opts.allowInvalidPurpose, fldPath.Child("purpose"))...)
 	}
 
 	if projectSpec.Tolerations != nil {
@@ -126,6 +153,36 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 	}
 
 	allErrs = append(allErrs, validateDualApprovalForDeletion(projectSpec.DualApprovalForDeletion, fldPath.Child("dualApprovalForDeletion"))...)
+
+	return allErrs
+}
+
+// ValidateProjectDescription validates the description of a Project object.
+func ValidateProjectDescription(description string, allowInvalidDescription bool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if description == "" {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide a description when key is present"))
+	}
+
+	if !allowInvalidDescription {
+		allErrs = append(allErrs, validationutils.ValidateFreeFormText(description, fldPath)...)
+	}
+
+	return allErrs
+}
+
+// ValidateProjectPurpose validates the purpose of a Project object.
+func ValidateProjectPurpose(description string, allowInvalidPurpose bool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if description == "" {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide a purpose when key is present"))
+	}
+
+	if !allowInvalidPurpose {
+		allErrs = append(allErrs, validationutils.ValidateFreeFormText(description, fldPath)...)
+	}
 
 	return allErrs
 }
@@ -150,11 +207,18 @@ func ValidateSubject(subject rbacv1.Subject, fldPath *field.Path) field.ErrorLis
 		}
 		if len(subject.Namespace) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), ""))
+		} else {
+			for _, msg := range apivalidation.ValidateNamespaceName(subject.Namespace, false) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), subject.Namespace, msg))
+			}
 		}
 
 	case rbacv1.UserKind, rbacv1.GroupKind:
 		if subject.APIGroup != rbacv1.GroupName {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("apiGroup"), subject.APIGroup, []string{rbacv1.GroupName}))
+		}
+		if len(subject.Namespace) > 0 {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("namespace"), "must not be set when kind is User or Group"))
 		}
 
 	default:

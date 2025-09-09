@@ -48,6 +48,7 @@ type ProjectSpec struct {
 	// +optional
 	CreatedBy *rbacv1.Subject `json:"createdBy,omitempty" protobuf:"bytes,1,opt,name=createdBy"`
 	// Description is a human-readable description of what the project is used for.
+	// Only letters, digits and certain punctuation characters are allowed for this field.
 	// +optional
 	Description *string `json:"description,omitempty" protobuf:"bytes,2,opt,name=description"`
 	// Owner is a subject representing a user name, an email address, or any other identifier of a user owning
@@ -59,6 +60,7 @@ type ProjectSpec struct {
 	// TODO: Remove this field in favor of the `owner` role in `v1`.
 	Owner *rbacv1.Subject `json:"owner,omitempty" protobuf:"bytes,3,opt,name=owner"`
 	// Purpose is a human-readable explanation of the project's purpose.
+	// Only letters, digits and certain punctuation characters are allowed for this field.
 	// +optional
 	Purpose *string `json:"purpose,omitempty" protobuf:"bytes,4,opt,name=purpose"`
 	// Members is a list of subjects representing a user name, an email address, or any other identifier of a user,
