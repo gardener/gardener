@@ -1210,12 +1210,6 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				},
 			},
 			FailurePolicy: &failurePolicyFail,
-			NamespaceSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{Key: "gardener.cloud/role", Operator: metav1.LabelSelectorOpIn, Values: []string{"project"}},
-					{Key: "app", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"gardener"}},
-				},
-			},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
 				URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-resource-size"),
 				CABundle: caBundle,

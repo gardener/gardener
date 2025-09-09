@@ -277,12 +277,6 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			TimeoutSeconds:          ptr.To[int32](10),
 			Rules:                   buildWebhookConfigRulesForResourceSize(a.values.ResourceAdmissionConfiguration),
 			FailurePolicy:           &failurePolicyFail,
-			NamespaceSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{Key: v1beta1constants.GardenRole, Operator: metav1.LabelSelectorOpIn, Values: []string{v1beta1constants.GardenRoleProject}},
-					{Key: v1beta1constants.LabelApp, Operator: metav1.LabelSelectorOpNotIn, Values: []string{v1beta1constants.LabelGardener}},
-				},
-			},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
 				URL:      buildClientConfigURL("/webhooks/validate-resource-size", a.namespace),
 				CABundle: caBundle,
