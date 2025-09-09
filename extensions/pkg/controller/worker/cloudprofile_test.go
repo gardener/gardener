@@ -17,19 +17,15 @@ type ProviderCapabilitySet struct {
 	Capabilities v1beta1.Capabilities
 }
 
-func (t *ProviderCapabilitySet) GetCapabilities() v1beta1.Capabilities {
+func (t ProviderCapabilitySet) GetCapabilities() v1beta1.Capabilities {
 	return t.Capabilities
-}
-
-func (t *ProviderCapabilitySet) SetCapabilities(caps v1beta1.Capabilities) {
-	t.Capabilities = caps
 }
 
 var _ = Describe("Worker CloudProfile helper", func() {
 	Describe("#FindBestCapabilitySet", func() {
 		var (
 			capabilityDefinitions []v1beta1.CapabilityDefinition
-			capabilitySets        []*ProviderCapabilitySet
+			capabilitySets        []ProviderCapabilitySet
 		)
 
 		BeforeEach(func() {
@@ -44,7 +40,7 @@ var _ = Describe("Worker CloudProfile helper", func() {
 				},
 			}
 
-			capabilitySets = []*ProviderCapabilitySet{
+			capabilitySets = []ProviderCapabilitySet{
 				{
 					Name: "amd64-set",
 					Capabilities: v1beta1.Capabilities{

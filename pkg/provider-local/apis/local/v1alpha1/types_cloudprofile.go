@@ -50,11 +50,6 @@ type CapabilitySet struct {
 }
 
 // GetCapabilities returns the Capabilities of a CapabilitySet
-func (cs *CapabilitySet) GetCapabilities() gardencorev1beta1.Capabilities {
+func (cs CapabilitySet) GetCapabilities() gardencorev1beta1.Capabilities {
 	return cs.Capabilities
-}
-
-// SetCapabilities sets the Capabilities on a CapabilitySet
-func (cs *CapabilitySet) SetCapabilities(capabilities gardencorev1beta1.Capabilities) {
-	cs.Capabilities = capabilities
 }
