@@ -56,13 +56,13 @@ var _ = Describe("conversion", func() {
 					APIGroups:   operatorConfig.Limits[0].APIGroups,
 					APIVersions: operatorConfig.Limits[0].APIVersions,
 					Resources:   operatorConfig.Limits[0].Resources,
-					Size:        operatorConfig.Limits[0].Size,
+					Size:        &operatorConfig.Limits[0].Size,
 				},
 				admissioncontrollerconfigv1alpha1.ResourceLimit{
 					APIGroups:   operatorConfig.Limits[1].APIGroups,
 					APIVersions: operatorConfig.Limits[1].APIVersions,
 					Resources:   operatorConfig.Limits[1].Resources,
-					Size:        operatorConfig.Limits[1].Size,
+					Size:        &operatorConfig.Limits[1].Size,
 				},
 			))
 		})

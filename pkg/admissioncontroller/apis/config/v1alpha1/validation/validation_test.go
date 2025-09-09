@@ -111,7 +111,7 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 									APIGroups:   apiGroups,
 									APIVersions: versions,
 									Resources:   resources,
-									Size:        s,
+									Size:        &s,
 								},
 							},
 						},

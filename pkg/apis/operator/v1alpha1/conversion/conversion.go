@@ -31,7 +31,7 @@ func ConvertToAdmissionControllerResourceAdmissionConfiguration(config *operator
 			APIGroups:   limit.APIGroups,
 			APIVersions: limit.APIVersions,
 			Resources:   limit.Resources,
-			Size:        limit.Size,
+			Size:        &limit.Size,
 		})
 	}
 
