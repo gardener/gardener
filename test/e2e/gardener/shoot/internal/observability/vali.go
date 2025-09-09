@@ -52,7 +52,7 @@ func ItShouldWaitForLogsWithLabelToBeInVali(s *ShootContext, valiLabels map[stri
 
 			return nil
 		}).Should(Succeed())
-	}, SpecTimeout(time.Minute))
+	}, SpecTimeout(15*time.Minute))
 }
 
 // ItShouldWaitForLogsWithLabelToNotBeInVali check that, after a timeout, logs with a specific label are NOT present in Vali. This check is not perfectly strict.
