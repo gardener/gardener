@@ -111,7 +111,7 @@ spec:
                 type: string
               followCNAME:
                 description: FollowCNAME if true delegated domain for DNS01 challenge
-                  is used if CNAME record for DNS01 challange domain `_acme-challenge.<domain>`
+                  is used if CNAME record for DNS01 challenge domain `_acme-challenge.<domain>`
                   is set.
                 type: boolean
               ipAddresses:
@@ -251,6 +251,14 @@ spec:
               renew:
                 description: Renew triggers a renewal if set to true
                 type: boolean
+              renewBefore:
+                description: |-
+                  RenewBefore specifies the time before the certificate's expiration date when the certificate should be renewed.
+                  Note that the actual expiration of the issued certificate is used for the calculation.
+                  If not set, the default renewal window is used.
+                  Must be at least 5 minutes and not greater than issued certificate's duration minus 5 minutes.
+                  Value must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration.
+                type: string
               secretLabels:
                 additionalProperties:
                   type: string
@@ -409,6 +417,10 @@ spec:
                   spec.
                 format: int64
                 type: integer
+              renewalDate:
+                description: RenewalDate shows the planned renewal date. If not set,
+                  no renewal has been planned yet.
+                type: string
               state:
                 description: State is the certificate state.
                 type: string
