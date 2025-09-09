@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	"github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 	. "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
@@ -138,7 +137,7 @@ var _ = Describe("Validation", func() {
 	DescribeTable(
 		"#ValidateResourceQuantityValue",
 		func(res string, value resource.Quantity, errMatcher types.GomegaMatcher) {
-			Expect(core.ValidateResourceQuantityValue(res, value, field.NewPath("resourceQuantity"))).To(errMatcher)
+			Expect(ValidateResourceQuantityValue(res, value, field.NewPath("resourceQuantity"))).To(errMatcher)
 		},
 
 		Entry("valid quantity", "cpu", resource.MustParse("100m"), BeEmpty()),
