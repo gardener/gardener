@@ -270,7 +270,7 @@ test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
 kind-multi-node2-up kind-multi-node2-down: export KUBECONFIG = $(GARDENER_LOCAL_MULTI_NODE2_KUBECONFIG)
-kind-single-node-up kind-single-node-down kind-multi-node-up kind-multi-node-down kind-multi-zone-up kind-multi-zone-down operator%up operator-dev operator-debug operator%down operator-seed-dev test-e2e-local-operator ci-e2e-kind-operator ci-e2e-kind-operator-seed garden-up garden-down gardenadm-up gardenadm-down test-e2e-local-gardenadm ci-e2e-kind-gardenadm: export KUBECONFIG = $(GARDENER_LOCAL_MULTI_ZONE_KUBECONFIG)
+kind-single-node-up kind-single-node-down kind-multi-node-up kind-multi-node-down kind-multi-zone-up kind-multi-zone-down operator%up operator-dev operator-debug operator%down operator-seed-dev test-e2e-local-operator ci-e2e-kind-operator ci-e2e-kind-operator-seed garden-up garden-down gardenadm-up gardenadm-down test-e2e-local-gardenadm% ci-e2e-kind-gardenadm: export KUBECONFIG = $(GARDENER_LOCAL_MULTI_ZONE_KUBECONFIG)
 garden-up garden-down operator-seed-% test-e2e-local-operator-seed test-e2e-local-ha-% ci-e2e-kind-ha-% ci-e2e-kind-ha-%-upgrade test-e2e-local-migration-ha-multi-node seed-%: export VIRTUAL_GARDEN_KUBECONFIG = $(REPO_ROOT)/dev-setup/kubeconfigs/virtual-garden/kubeconfig
 test-e2e-local-operator-seed test-e2e-local-ha-% test-e2e-local-migration-ha-multi-node ci-e2e-kind-ha-% ci-e2e-kind-ha-%-upgrade: export KUBECONFIG = $(VIRTUAL_GARDEN_KUBECONFIG)
 # CLUSTER_NAME
@@ -451,8 +451,10 @@ test-e2e-local-operator: $(GINKGO)
 	./hack/test-e2e-local.sh operator --procs=1 --label-filter="default" ./test/e2e/operator/...
 test-e2e-local-operator-seed: $(GINKGO)
 	USE_PROVIDER_LOCAL_COREDNS_SERVER=true ./hack/test-e2e-local.sh operator-seed --procs=$(PARALLEL_E2E_TESTS) --label-filter="default && ManagedSeed" ./test/e2e/gardener/...
-test-e2e-local-gardenadm: $(GINKGO)
-	./hack/test-e2e-local.sh gardenadm --procs=1 ./test/e2e/gardenadm/...
+test-e2e-local-gardenadm-medium-touch: $(GINKGO)
+	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="medium-touch" ./test/e2e/gardenadm/...
+test-e2e-local-gardenadm-high-touch: $(GINKGO)
+	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="high-touch" ./test/e2e/gardenadm/...
 
 test-non-ha-pre-upgrade: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="pre-upgrade && !high-availability" ./test/e2e/gardener/...
