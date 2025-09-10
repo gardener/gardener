@@ -357,6 +357,10 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					fmt.Sprintf("--upstream=http://127.0.0.1:%d/", collectorconstants.PushPort),
 					"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
 					"--logtostderr=true",
+					// The OTLP exporter uses gRPC, which operates over HTTP/2. To support HTTP/2 over cleartext (h2c),
+					// we must explicitly enable h2c in kube-rbac-proxy. By default, kube-rbac-proxy enforces HTTP/2 over TLS
+					// as per the HTTP/2 specification. However, since kube-rbac-proxy forwards to Vali over an unencrypted channel,
+					// h2c support must be enforced.
 					"--upstream-force-h2c",
 					"--v=6",
 				},
