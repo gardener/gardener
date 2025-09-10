@@ -77,8 +77,12 @@ func ReconcileWebhooksForAllNamespaces(
 	fns := make([]flow.TaskFn, 0, len(namespaceList.Items)+1)
 
 	for _, namespace := range namespaceList.Items {
-		namespaceName := namespace.Name
+		if namespace.DeletionTimestamp != nil || namespace.Status.Phase == corev1.NamespaceTerminating {
+			// Skip terminating namespace since updates will anyway be rejected.
+			continue
+		}
 
+		namespaceName := namespace.Name
 		fns = append(fns, func(ctx context.Context) error {
 			managedResource := &metav1.PartialObjectMetadata{}
 			managedResource.SetGroupVersionKind(resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResource"))
