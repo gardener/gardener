@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -245,7 +246,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	)
 
 	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, k8sVersion, fldPath)...)
-	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
+	allErrs = append(allErrs, validateProvider(meta.Namespace, spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
@@ -303,6 +304,10 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		for _, err := range validation.IsDNS1123Subdomain(*spec.ExposureClassName) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("exposureClassName"), *spec.ExposureClassName, fmt.Sprintf("exposureClassName is not a valid DNS subdomain: %q", err)))
 		}
+	}
+
+	if helper.IsShootAutonomous(spec.Provider.Workers) && spec.SeedName != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), *spec.SeedName, "cannot set seedName for autonomous shoots"))
 	}
 
 	return allErrs
@@ -456,6 +461,24 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 			if !apiequality.Semantic.DeepEqual(oldWorker.Volume, newWorker.Volume) {
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("volume"), newWorker.Volume, "volume cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
 			}
+		}
+
+		if oldWorker.ControlPlane != nil && oldWorker.ControlPlane.Backup != nil {
+			if newWorker.ControlPlane != nil && newWorker.ControlPlane.Backup != nil {
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorker.ControlPlane.Backup.Provider, oldWorker.ControlPlane.Backup.Provider, idxPath.Child("controlPlane").Child("backup", "provider"))...)
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorker.ControlPlane.Backup.Region, oldWorker.ControlPlane.Backup.Region, idxPath.Child("controlPlane").Child("backup", "region"))...)
+			} else {
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorker.ControlPlane.Backup, oldWorker.ControlPlane.Backup, idxPath.Child("controlPlane", "backup"))...)
+			}
+		}
+	}
+
+	if helper.IsShootAutonomous(oldProvider.Workers) != helper.IsShootAutonomous(newProvider.Workers) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("workers"), "cannot switch a Shoot between autonomous and non-autonomous mode"))
+	} else if helper.IsShootAutonomous(newProvider.Workers) {
+		oldControlPlaneWorkerPool, newControlPlaneWorkerPool := helper.ControlPlaneWorkerPoolForShoot(oldProvider.Workers), helper.ControlPlaneWorkerPoolForShoot(newProvider.Workers)
+		if oldControlPlaneWorkerPool.Name != newControlPlaneWorkerPool.Name {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("workers"), "cannot change control plane worker pool"))
 		}
 	}
 
@@ -1840,7 +1863,7 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 	return allErrs
 }
 
-func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networking *core.Networking, workerless bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func validateProvider(shootNamespace string, provider core.Provider, kubernetes core.Kubernetes, networking *core.Networking, workerless bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 		maxPod  int32
@@ -1866,7 +1889,7 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 		}
 
 		for i, worker := range provider.Workers {
-			allErrs = append(allErrs, ValidateWorker(worker, kubernetes, fldPath.Child("workers").Index(i), inTemplate)...)
+			allErrs = append(allErrs, ValidateWorker(worker, kubernetes, shootNamespace, provider.Type, fldPath.Child("workers").Index(i), inTemplate)...)
 
 			if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
 				maxPod = *worker.Kubernetes.Kubelet.MaxPods
@@ -1900,7 +1923,7 @@ const (
 var volumeSizeRegex = regexp.MustCompile(`^(\d)+Gi$`)
 
 // ValidateWorker validates the worker object.
-func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespace, shootProviderType string, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	kubernetesVersion := kubernetes.Version
 	allErrs := field.ErrorList{}
 
@@ -2037,6 +2060,36 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 	}
 	if worker.Priority != nil && *worker.Priority < -1 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("priority"), *worker.Priority, "can not be less than -1"))
+	}
+
+	if worker.ControlPlane != nil {
+		if worker.Minimum != worker.Maximum || worker.Minimum != 1 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("minimum"), worker.Minimum, "autonomous shoots only support minimum=maximum=1 for the control plane worker pool (might change in the future)"))
+		}
+
+		if backup := worker.ControlPlane.Backup; backup != nil {
+			if len(backup.Provider) == 0 {
+				allErrs = append(allErrs, field.Required(fldPath.Child("controlPlane", "backup", "provider"), "must provide a backup cloud provider name"))
+			}
+
+			if shootProviderType != backup.Provider && ptr.Deref(backup.Region, "") == "" {
+				allErrs = append(allErrs, field.Required(fldPath.Child("controlPlane", "backup", "region"), "region must be specified for if backup provider is different from shoot provider used in `spec.provider.type`"))
+			}
+
+			if backup.CredentialsRef == nil {
+				allErrs = append(allErrs, field.Required(fldPath.Child("controlPlane", "backup", "credentialsRef"), "must be set to refer a Secret or WorkloadIdentity"))
+			} else {
+				allErrs = append(allErrs, ValidateCredentialsRef(*backup.CredentialsRef, fldPath.Child("controlPlane", "backup", "credentialsRef"))...)
+				if backup.CredentialsRef.Namespace != shootNamespace {
+					allErrs = append(allErrs, field.Forbidden(fldPath.Child("controlPlane", "backup", "credentialsRef", "namespace"), "must reference credentials in the same namespace as the Shoot"))
+				}
+
+				// TODO(vpnachev): Allow WorkloadIdentities once the support in the controllers and components is fully implemented.
+				if backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && backup.CredentialsRef.Kind == "WorkloadIdentity" {
+					allErrs = append(allErrs, field.Forbidden(fldPath.Child("controlPlane", "backup", "credentialsRef"), "support for WorkloadIdentity as backup credentials is not yet implemented"))
+				}
+			}
+		}
 	}
 
 	return allErrs
@@ -2404,8 +2457,9 @@ func validateTaintEffect(effect *corev1.TaintEffect, allowEmpty bool, fldPath *f
 // ValidateWorkers validates worker objects.
 func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList {
 	var (
-		allErrs     = field.ErrorList{}
-		workerNames = sets.New[string]()
+		allErrs               = field.ErrorList{}
+		workerNames           = sets.New[string]()
+		foundControlPlanePool bool
 	)
 
 	for i, worker := range workers {
@@ -2415,7 +2469,10 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 		workerNames.Insert(worker.Name)
 
 		if worker.ControlPlane != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("controlPlane"), "setting controlPlane is not allowed in worker configuration currently"))
+			if foundControlPlanePool {
+				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("controlPlane"), worker.ControlPlane, "cannot have more than one worker pool marked for control plane components"))
+			}
+			foundControlPlanePool = true
 		}
 	}
 
