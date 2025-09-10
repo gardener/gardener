@@ -8,6 +8,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	authorizationv1 "k8s.io/api/authorization/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	userpkg "k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 
@@ -59,7 +62,21 @@ var _ = Describe("Attributes", func() {
 			Version:     version,
 			Resource:    resource,
 			Subresource: subresource,
-			Name:        name,
+			FieldSelector: &authorizationv1.FieldSelectorAttributes{
+				Requirements: []metav1.FieldSelectorRequirement{{
+					Key:      "foo.bar",
+					Operator: metav1.FieldSelectorOpIn,
+					Values:   []string{"baz"},
+				}},
+			},
+			LabelSelector: &authorizationv1.LabelSelectorAttributes{
+				Requirements: []metav1.LabelSelectorRequirement{{
+					Key:      "baz.foo",
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"bar"},
+				}},
+			},
+			Name: name,
 		}
 		nonResourceAttributes = authorizationv1.NonResourceAttributes{
 			Verb: verb,
@@ -72,16 +89,24 @@ var _ = Describe("Attributes", func() {
 			Extra:  userExtra,
 		}
 
+		fieldSelector, err := fields.ParseSelector("foo.bar=baz")
+		Expect(err).NotTo(HaveOccurred())
+		labelSelector, err := labels.Parse("baz.foo notin (bar)")
+		Expect(err).NotTo(HaveOccurred())
+		labelSelectorRequirements, _ := labelSelector.Requirements()
+
 		expectedResourceAttributesRecord = authorizer.AttributesRecord{
-			User:            user,
-			Verb:            verb,
-			Namespace:       namespace,
-			APIGroup:        group,
-			APIVersion:      version,
-			Resource:        resource,
-			Subresource:     subresource,
-			Name:            name,
-			ResourceRequest: true,
+			User:                      user,
+			Verb:                      verb,
+			Namespace:                 namespace,
+			APIGroup:                  group,
+			APIVersion:                version,
+			Resource:                  resource,
+			Subresource:               subresource,
+			Name:                      name,
+			ResourceRequest:           true,
+			FieldSelectorRequirements: fieldSelector.Requirements(),
+			LabelSelectorRequirements: labelSelectorRequirements,
 		}
 		expectedNonResourceAttributesRecord = authorizer.AttributesRecord{
 			User:            user,
