@@ -255,7 +255,7 @@ dns:
 
 Additionally, the `BackupBucket` and credentials to access it are configured alongside. The easiest way to get started is by using and customizing the example linked below.
 
-To further simplify both installation and operations, it is recommended to deploy the certificate service extension to the runtime cluster as well. Follow this [example](https://github.com/gardener/gardener-extension-shoot-cert-service/blob/master/example/extension-shoot-cert-service.yaml) to add a default issuer to the runtime cluster and request the extension to be deployed to where needed. Next, expand the `Garden` resource's [configuration](https://github.com/gardener/gardener-extension-shoot-cert-service/blob/master/docs/operations/deployment.md#providing-trusted-tls-certificate-for-garden-runtime-cluster) to use the extension:
+To further simplify both installation and operations, it is recommended to deploy the certificate service extension to the runtime cluster as well. Follow this [example](https://github.com/gardener/gardener-extension-shoot-cert-service/blob/master/example/extension.yaml) to add a default issuer to the runtime cluster and request the extension to be deployed to where needed. Next, expand the `Garden` resource's [configuration](https://github.com/gardener/gardener-extension-shoot-cert-service/blob/master/docs/operations/deployment.md#providing-trusted-tls-certificate-for-garden-runtime-cluster) to use the extension:
 
 ```yaml
 spec:

@@ -135,7 +135,6 @@ While WSL1, plain docker for Windows and various Linux distributions and local K
 
 * [WSL2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-index)
 * [Docker Desktop WSL2 Engine](https://docs.docker.com/docker-for-windows/wsl/)
-* [Ubuntu 18.04 LTS on WSL2](https://ubuntu.com/blog/ubuntu-on-wsl-2-is-generally-available)
 * Nodeless local garden (see below)
 
 The Gardener repository and all the above-mentioned tools (git, golang, kubectl, ...) should be installed in your WSL2 distro, according to the distribution-specific Linux installation instructions.
