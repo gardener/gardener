@@ -143,7 +143,7 @@ func removePrometheusFolderCleanedupAnnotation(ctx context.Context, log logr.Log
 	return flow.Parallel(tasks...)(ctx)
 }
 
-// TODO(@vpnachev): Remove this after v1.127.0 has been released
+// TODO(vpnachev): Remove this after v1.128.0 has been released.
 func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log logr.Logger, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
@@ -181,6 +181,10 @@ func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log lo
 
 			objects, err := managedresources.GetObjects(ctx, seedClient, managedResource.Namespace, managedResource.Name)
 			if err != nil {
+				if apierrors.IsNotFound(err) {
+					log.Info("Managed resource secret not found, skipping migration", "managedResource", key)
+					return nil
+				}
 				return fmt.Errorf("failed to get objects for ManagedResource %q: %w", key, err)
 			}
 
