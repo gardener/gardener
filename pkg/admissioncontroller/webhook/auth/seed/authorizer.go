@@ -33,19 +33,22 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/graph"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
+	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
 
 // NewAuthorizer returns a new authorizer for requests from gardenlets. It never has an opinion on the request.
-func NewAuthorizer(logger logr.Logger, graph graph.Interface) *authorizer {
+func NewAuthorizer(logger logr.Logger, graph graph.Interface, authorizeWithSelectors authorizerwebhook.WithSelectorsChecker) *authorizer {
 	return &authorizer{
-		logger: logger,
-		graph:  graph,
+		logger:                 logger,
+		graph:                  graph,
+		authorizeWithSelectors: authorizeWithSelectors,
 	}
 }
 
 type authorizer struct {
-	logger logr.Logger
-	graph  graph.Interface
+	logger                 logr.Logger
+	graph                  graph.Interface
+	authorizeWithSelectors authorizerwebhook.WithSelectorsChecker
 }
 
 var _ = auth.Authorizer(&authorizer{})
@@ -400,7 +403,6 @@ func (a *authorizer) authorize(
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	// TODO(rfranzke, see subsequent commit): Backwards-compatibility: If Kubernetes < 1.32 then skip this
 	if (attrs.GetVerb() == "list" || attrs.GetVerb() == "watch") &&
 		// A resource name is also set when a specific object is read with `.metadata.name` field selector (e.g., in the
 		// single object cache), even for the list verb.
@@ -409,9 +411,16 @@ func (a *authorizer) authorize(
 		// to list/watch the resource with the seed name as field selector. This is a valid scenario and needs to be
 		// handled by the below check function.
 		(attrs.GetName() == "" || slices.Contains(req.listWatchSeedSelector.fieldNames, metav1.ObjectNameField)) {
-		if ok, reason := a.checkListWatchRequests(log, attrs, seedName, req.listWatchSeedSelector); !ok {
-			return auth.DecisionNoOpinion, reason, nil
-		} else {
+		if canAuthorizeWithSelectors, err := a.authorizeWithSelectors.IsPossible(); err != nil {
+			return auth.DecisionNoOpinion, "", fmt.Errorf("failed checking if authorization with selectors is possible: %w", err)
+		} else if canAuthorizeWithSelectors {
+			if ok, reason := a.checkListWatchRequests(log, attrs, seedName, req.listWatchSeedSelector); !ok {
+				return auth.DecisionNoOpinion, reason, nil
+			} else {
+				return auth.DecisionAllow, "", nil
+			}
+		} else if len(req.listWatchSeedSelector.labelKeys) > 0 || len(req.listWatchSeedSelector.fieldNames) > 0 {
+			// TODO(rfranzke): Remove this else-if branch once the lowest supported Kubernetes version is 1.34.
 			return auth.DecisionAllow, "", nil
 		}
 	}

@@ -5,6 +5,7 @@
 package admissioncontroller
 
 import (
+	authorizationv1 "k8s.io/api/authorization/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1beta1 "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -52,10 +53,8 @@ func (a *gardenerAdmissionController) clusterRole() *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{operationsv1alpha1.GroupName},
-				Resources: []string{
-					"bastions",
-				},
-				Verbs: []string{"get", "list", "watch"},
+				Resources: []string{"bastions"},
+				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
 				APIGroups: []string{corev1.GroupName},
@@ -69,24 +68,23 @@ func (a *gardenerAdmissionController) clusterRole() *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{coordinationv1beta1.GroupName},
-				Resources: []string{
-					"leases",
-				},
-				Verbs: []string{"get", "list", "watch"},
+				Resources: []string{"leases"},
+				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
 				APIGroups: []string{certificatesv1.GroupName},
-				Resources: []string{
-					"certificatesigningrequests",
-				},
-				Verbs: []string{"get", "list", "watch"},
+				Resources: []string{"certificatesigningrequests"},
+				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
 				APIGroups: []string{securityv1alpha1.GroupName},
-				Resources: []string{
-					"credentialsbindings",
-				},
-				Verbs: []string{"get", "list", "watch"},
+				Resources: []string{"credentialsbindings"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{authorizationv1.GroupName},
+				Resources: []string{"subjectaccessreviews"},
+				Verbs:     []string{"create"},
 			},
 		},
 	}

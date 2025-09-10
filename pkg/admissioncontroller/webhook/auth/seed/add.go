@@ -6,10 +6,13 @@ package seed
 
 import (
 	"context"
+	"fmt"
 
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/graph"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
@@ -29,7 +32,12 @@ func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableD
 			return err
 		}
 
-		authorizer := NewAuthorizer(w.Logger, g)
+		clientSet, err := kubernetes.NewWithConfig(kubernetes.WithRESTConfig(mgr.GetConfig()))
+		if err != nil {
+			return fmt.Errorf("failed setting up Kubernetes client: %w", err)
+		}
+
+		authorizer := NewAuthorizer(w.Logger, g, authorizerwebhook.NewWithSelectorsChecker(ctx, w.Logger, clientSet, clock.RealClock{}))
 		w.Handler = &authorizerwebhook.Handler{Logger: w.Logger, Authorizer: authorizer}
 
 		if ptr.Deref(enableDebugHandlers, false) {

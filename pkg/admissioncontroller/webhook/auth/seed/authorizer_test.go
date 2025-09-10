@@ -57,7 +57,7 @@ var _ = Describe("Seed", func() {
 
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		graph = mockgraph.NewMockInterface(ctrl)
-		authorizer = NewAuthorizer(log, graph)
+		authorizer = NewAuthorizer(log, graph, nil)
 
 		seedName = "seed"
 		gardenletUser = &user.DefaultInfo{
