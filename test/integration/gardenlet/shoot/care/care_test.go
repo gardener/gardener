@@ -5,6 +5,7 @@
 package care_test
 
 import (
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -24,12 +25,16 @@ import (
 
 var _ = Describe("Shoot Care controller tests", func() {
 	var (
-		seedNamespace        *corev1.Namespace
-		secret               *corev1.Secret
-		internalDomainSecret *corev1.Secret
-		secretBinding        *gardencorev1beta1.SecretBinding
-		shoot                *gardencorev1beta1.Shoot
-		cluster              *extensionsv1alpha1.Cluster
+		seedNamespace             *corev1.Namespace
+		secret                    *corev1.Secret
+		internalDomainSecret      *corev1.Secret
+		secretBinding             *gardencorev1beta1.SecretBinding
+		shoot                     *gardencorev1beta1.Shoot
+		cluster                   *extensionsv1alpha1.Cluster
+		requiredControlPlaneETCDs = []string{
+			v1beta1constants.ETCDMain,
+			v1beta1constants.ETCDEvents,
+		}
 	)
 
 	BeforeEach(func() {
@@ -267,6 +272,15 @@ var _ = Describe("Shoot Care controller tests", func() {
 		})
 
 		Context("when all control plane deployments for the Shoot are missing", func() {
+			JustBeforeEach(func() {
+				By("Create ETCDs")
+				createETCDs(requiredControlPlaneETCDs)
+				By("Update ETCD status to healthy")
+				for _, name := range requiredControlPlaneETCDs {
+					updateETCDStatusToHealthy(name)
+				}
+			})
+
 			Context("Shoot with workers", func() {
 				It("should set conditions", func() {
 					By("Expect conditions to be set")
@@ -310,6 +324,12 @@ var _ = Describe("Shoot Care controller tests", func() {
 
 		Context("when some control plane deployments for the Shoot are present", func() {
 			JustBeforeEach(func() {
+				By("Create ETCDs")
+				createETCDs(requiredControlPlaneETCDs)
+				By("Update ETCD status to healthy")
+				for _, name := range requiredControlPlaneETCDs {
+					updateETCDStatusToHealthy(name)
+				}
 				createDeployment([]string{"gardener-resource-manager", "kube-controller-manager"})
 			})
 
@@ -644,4 +664,61 @@ func getRole(name string) string {
 		return v1beta1constants.GardenRoleMonitoring
 	}
 	return ""
+}
+
+func createETCDs(names []string) {
+	for _, name := range names {
+		etcd := &druidcorev1alpha1.Etcd{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: testNamespace.Name,
+				Labels: map[string]string{
+					testID:                      testRunID,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+				},
+			},
+			Spec: druidcorev1alpha1.EtcdSpec{
+				Labels:   map[string]string{"foo": "bar"},
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
+			},
+		}
+
+		By("Create ETCD " + name)
+		ExpectWithOffset(1, testClient.Create(ctx, etcd)).To(Succeed(), "for etcd "+name)
+		log.Info("Created ETCD for test", "etcd", client.ObjectKeyFromObject(etcd))
+
+		By("Ensure manager has observed etcd " + name)
+		EventuallyWithOffset(1, func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(etcd), etcd)
+		}).Should(Succeed())
+
+		DeferCleanup(func() {
+			By("Delete ETCD " + name)
+			ExpectWithOffset(1, testClient.Delete(ctx, etcd)).To(Succeed(), "for etcd "+name)
+
+			By("Ensure ETCD " + name + " is gone")
+			EventuallyWithOffset(1, func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(etcd), etcd)
+			}).Should(BeNotFoundError(), "for etcd "+name)
+
+			By("Ensure manager has observed etcd deletion " + name)
+			EventuallyWithOffset(1, func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(etcd), etcd)
+			}).Should(BeNotFoundError())
+		})
+	}
+}
+
+func updateETCDStatusToHealthy(name string) {
+	By("Update status to healthy for ETCD " + name)
+	etcd := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: testNamespace.Name}}
+	ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(etcd), etcd)).To(Succeed())
+
+	etcd.Status.ObservedGeneration = &etcd.Generation
+	etcd.Status.Conditions = []druidcorev1alpha1.Condition{
+		{Type: druidcorev1alpha1.ConditionTypeBackupReady, Status: druidcorev1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+		{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+	}
+	etcd.Status.Ready = ptr.To(true)
+	ExpectWithOffset(1, testClient.Status().Update(ctx, etcd)).To(Succeed())
 }

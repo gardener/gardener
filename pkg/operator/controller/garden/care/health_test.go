@@ -342,6 +342,10 @@ var _ = Describe("Garden health", func() {
 
 			Context("when there are issues with deployments for virtual garden", func() {
 				It("should set VirtualComponentsHealthy conditions to false when the deployments are missing", func() {
+					for _, name := range virtualGardenETCDs {
+						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
+					}
+
 					updatedConditions := NewHealth(
 						garden,
 						runtimeClient,
@@ -358,6 +362,9 @@ var _ = Describe("Garden health", func() {
 				})
 
 				It("should set VirtualComponentsHealthy conditions to false when the deployments are existing but unhealthy", func() {
+					for _, name := range virtualGardenETCDs {
+						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
+					}
 					for _, name := range virtualGardenDeployments {
 						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, false))).To(Succeed())
 					}

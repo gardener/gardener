@@ -231,8 +231,8 @@ var _ = Describe("Garden Care controller tests", func() {
 			}).Should(ContainCondition(
 				OfType(operatorv1alpha1.VirtualComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
-				WithReason("DeploymentMissing"),
-				WithMessageSubstrings("Missing required deployments"),
+				WithReason("EtcdMissing"),
+				WithMessageSubstrings("Missing required etcds: [virtual-garden-etcd-events virtual-garden-etcd-main]"),
 			))
 		})
 	})
@@ -244,6 +244,11 @@ var _ = Describe("Garden Care controller tests", func() {
 		})
 
 		It("should set condition to False because status of all deployments are outdated", func() {
+			createETCDs(requiredControlPlaneETCDs)
+			for _, name := range requiredControlPlaneETCDs {
+				updateETCDStatusToHealthy(name)
+			}
+
 			By("Expect VirtualComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
@@ -257,6 +262,11 @@ var _ = Describe("Garden Care controller tests", func() {
 		})
 
 		It("should set condition to False because status of some deployments are outdated", func() {
+			createETCDs(requiredControlPlaneETCDs)
+			for _, name := range requiredControlPlaneETCDs {
+				updateETCDStatusToHealthy(name)
+			}
+
 			for _, name := range requiredControlPlaneDeployments[1:] {
 				updateDeploymentStatusToHealthy(name)
 			}
