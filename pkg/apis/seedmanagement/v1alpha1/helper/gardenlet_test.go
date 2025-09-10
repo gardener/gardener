@@ -58,13 +58,13 @@ var _ = Describe("Helper", func() {
 				Expect(err).To(MatchError("could not decode gardenlet configuration: couldn't get version/kind; json parse error: unexpected end of JSON input"))
 			})
 
-			It("should return an error because seedTemplate is not specified", func() {
+			It("should not return an error because seedTemplate is not specified", func() {
 				managedSeed.Spec.Gardenlet.Config = runtime.RawExtension{Raw: encode(config)}
 
 				seedTemplate, gardenletConfig, err := ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, &managedSeed.Spec.Gardenlet.Config)
 				Expect(seedTemplate).To(BeNil())
-				Expect(gardenletConfig).To(BeNil())
-				Expect(err).To(HaveOccurred())
+				Expect(gardenletConfig).To(Equal(config))
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should return the template from `.spec.gardenlet.seedConfig.seedTemplate", func() {
@@ -79,11 +79,16 @@ var _ = Describe("Helper", func() {
 		})
 
 		Context("w/o gardenlet config", func() {
-			It("should return an error if seed template cannot be determined", func() {
+			It("should not return an error if seed template cannot be determined", func() {
 				seedTemplate, gardenletConfig, err := ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, &managedSeed.Spec.Gardenlet.Config)
 				Expect(seedTemplate).To(BeNil())
-				Expect(gardenletConfig).To(BeNil())
-				Expect(err).To(HaveOccurred())
+				Expect(gardenletConfig).To(Equal(&gardenletconfigv1alpha1.GardenletConfiguration{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "GardenletConfiguration",
+					},
+				}))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

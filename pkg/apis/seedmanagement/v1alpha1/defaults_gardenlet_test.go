@@ -46,7 +46,6 @@ var _ = Describe("Defaults", func() {
 							gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 						},
 					},
-					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{},
 				}}))
 		})
 
