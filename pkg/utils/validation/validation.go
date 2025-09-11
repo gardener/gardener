@@ -37,7 +37,7 @@ func equal(new, old []string) bool {
 	return true
 }
 
-const allowedSpecialCharacters = ".,:-_"
+const allowedSpecialCharacters = ".,:-_/\\"
 
 // ValidateFreeFormText checks that the given text contains only letters, digits, spaces, or punctuation characters.
 // It uses the unicode package to determine character types, allowing a wide range of characters from various languages.
