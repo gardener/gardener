@@ -67,15 +67,17 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 		RegistryBurst:       ptr.To[int32](20),
 	}
 	shoot.Spec.Networking = &gardencorev1beta1.Networking{
-		Type:  ptr.To("calico"),
-		Nodes: ptr.To("10.10.0.0/16"),
+		Type: ptr.To("calico"),
+		// Must be within 10.0.0.0/16 (subnet of kind pod CIDR 10.0.0.0/15, but disjoint with seed pod CIDR 10.1.0.0/16).
+		Nodes: ptr.To("10.0.0.0/16"),
 	}
 	shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker("local", nil))
 	shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{Type: "local-ext-shoot-after-worker"})
 
 	if os.Getenv("IPFAMILY") == "ipv6" {
 		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
-		shoot.Spec.Networking.Nodes = ptr.To("fd00:10:a::/64")
+		// Must be within fd00:10:1:100::/56 (subnet of kind pod CIDR fd00:10:1::/48, but disjoint with seed pod CIDR fd00:10:1::/56).
+		shoot.Spec.Networking.Nodes = ptr.To("fd00:10:1:100::/56")
 		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"ipv6":{"sourceNATEnabled":true}}`)}
 	}
 

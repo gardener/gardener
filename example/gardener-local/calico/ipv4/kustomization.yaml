@@ -3,3 +3,6 @@ kind: Kustomization
 
 resources:
 - ../base
+
+patches:
+- path: patch-calico-default-ippool.yaml

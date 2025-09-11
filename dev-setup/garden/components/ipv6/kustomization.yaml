@@ -11,6 +11,7 @@ patches:
       - op: replace
         path: /spec/runtimeCluster/networking/pods
         value:
+        # Subnet for automatic pod IP assignment (calico default IPPool) in the kind cluster.
         - fd00:10:1::/56
       - op: replace
         path: /spec/runtimeCluster/networking/services
