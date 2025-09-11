@@ -63,6 +63,8 @@ Usually, regular project members are not bound to this custom verb, allowing the
 For `NamespacedCloudProfile`s, the modification of specific fields also require the user to be bound to an RBAC role with custom verbs.
 Please see [this document](../usage/project/namespaced-cloud-profiles.md#field-modification-restrictions) for more information.
 
+For `Shoot`s, the `mark-autonomous` verb is required to set the `spec.provider.workers[].controlPlane` field (which marks a `Shoot` as "autonomous shoot").
+
 ## `DeletionConfirmation`
 
 **Type**: Validating and Mutating. **Enabled by default**: Yes.

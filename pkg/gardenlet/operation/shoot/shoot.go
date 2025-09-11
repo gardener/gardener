@@ -669,7 +669,7 @@ func copyUniqueCIDRs(src []string, dst []net.IPNet, networkType string) ([]net.I
 
 // IsAutonomous returns true in case of an autonomous shoot cluster.
 func (s *Shoot) IsAutonomous() bool {
-	return v1beta1helper.IsShootAutonomous(s.GetInfo())
+	return v1beta1helper.IsShootAutonomous(s.GetInfo().Spec.Provider.Workers)
 }
 
 // RunsControlPlane returns true in case the Kubernetes control plane runs inside the cluster.
