@@ -308,12 +308,6 @@ metadata:
 data:
   Corefile: |
     cluster.local:53 {
-        errors
-        cache {
-                success 9984 30
-                denial 9984 5
-        }
-        reload
         loop
         bind ` + bindIP(values) + `
         forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
@@ -321,6 +315,13 @@ data:
         }
         prometheus :` + strconv.Itoa(prometheusPort) + `
         health ` + healthAddress(values) + `:` + strconv.Itoa(livenessProbePort) + `
+        import custom/*.override
+        errors
+        cache {
+                success 9984 30
+                denial 9984 5
+        }
+        reload
         }
     in-addr.arpa:53 {
         errors
@@ -345,16 +346,18 @@ data:
         prometheus :` + strconv.Itoa(prometheusPort) + `
         }
     .:53 {
-        errors
-        cache 30
-        reload
         loop
         bind ` + bindIP(values) + `
         forward . ` + strings.Join(upstreamDNSAddress, " ") + ` {
                 ` + forceTcpToUpstreamDNS + `
         }
         prometheus :` + strconv.Itoa(prometheusPort) + `
+        import custom/*.override
+        errors
+        cache 30
+        reload
         }
+        import custom/*.server
 immutable: true
 kind: ConfigMap
 metadata:
@@ -534,6 +537,11 @@ status:
 												MountPath: "/etc/kube-dns",
 												Name:      "kube-dns-config",
 											},
+											{
+												Name:      "custom-config-volume",
+												MountPath: "/etc/custom",
+												ReadOnly:  true,
+											},
 										},
 									},
 								},
@@ -571,6 +579,18 @@ status:
 														Path: "Corefile.base",
 													},
 												},
+											},
+										},
+									},
+									{
+										Name: "custom-config-volume",
+										VolumeSource: corev1.VolumeSource{
+											ConfigMap: &corev1.ConfigMapVolumeSource{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: "coredns-custom",
+												},
+												DefaultMode: ptr.To[int32](420),
+												Optional:    ptr.To(true),
 											},
 										},
 									},
@@ -662,12 +682,6 @@ status: {}
 				JustBeforeEach(func() {
 					configMapData := map[string]string{
 						"Corefile": `cluster.local:53 {
-    errors
-    cache {
-            success 9984 30
-            denial 9984 5
-    }
-    reload
     loop
     bind ` + bindIP(values) + `
     forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
@@ -675,6 +689,13 @@ status: {}
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     health ` + healthAddress(values) + `:` + strconv.Itoa(livenessProbePort) + `
+    import custom/*.override
+    errors
+    cache {
+            success 9984 30
+            denial 9984 5
+    }
+    reload
     }
 in-addr.arpa:53 {
     errors
@@ -699,16 +720,18 @@ ip6.arpa:53 {
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
 .:53 {
-    errors
-    cache 30
-    reload
     loop
     bind ` + bindIP(values) + `
     forward . ` + strings.Join(upstreamDNSAddress, " ") + ` {
             ` + forceTcpToUpstreamDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
+    import custom/*.override
+    errors
+    cache 30
+    reload
     }
+    import custom/*.server
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
@@ -934,12 +957,6 @@ ip6.arpa:53 {
 				JustBeforeEach(func() {
 					configMapData := map[string]string{
 						"Corefile": `cluster.local:53 {
-    errors
-    cache {
-            success 9984 30
-            denial 9984 5
-    }
-    reload
     loop
     bind ` + bindIP(values) + `
     forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
@@ -947,6 +964,13 @@ ip6.arpa:53 {
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     health ` + healthAddress(values) + `:` + strconv.Itoa(livenessProbePort) + `
+    import custom/*.override
+    errors
+    cache {
+            success 9984 30
+            denial 9984 5
+    }
+    reload
     }
 in-addr.arpa:53 {
     errors
@@ -971,16 +995,18 @@ ip6.arpa:53 {
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
 .:53 {
-    errors
-    cache 30
-    reload
     loop
     bind ` + bindIP(values) + `
     forward . ` + strings.Join(upstreamDNSAddress, " ") + ` {
             ` + forceTcpToUpstreamDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
+    import custom/*.override
+    errors
+    cache 30
+    reload
     }
+    import custom/*.server
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]

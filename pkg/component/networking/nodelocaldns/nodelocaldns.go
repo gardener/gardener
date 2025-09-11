@@ -74,10 +74,13 @@ const (
 
 	daemonSetPollInterval = 5 * time.Second
 
-	volumeMountNameCleanUp     = "cleanup-script"
-	volumeMountPathCleanUp     = "/scripts"
-	volumeMountNameXtablesLock = "xtables-lock"
-	volumeMountPathXtablesLock = "/run/xtables.lock"
+	volumeMountNameCleanUp      = "cleanup-script"
+	volumeMountPathCleanUp      = "/scripts"
+	volumeMountNameXtablesLock  = "xtables-lock"
+	volumeMountPathXtablesLock  = "/run/xtables.lock"
+	volumeMountPathCustomConfig = "/etc/custom"
+	volumeMountNameCustomConfig = "custom-config-volume"
+	customConfigMapName         = "coredns-custom"
 )
 
 var (

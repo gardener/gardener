@@ -51,12 +51,6 @@ func (n *nodeLocalDNS) computeResourcesData() (*corev1.ServiceAccount, *corev1.C
 			},
 			Data: map[string]string{
 				configDataKey: domain + `:53 {
-    errors
-    cache {
-            success 9984 30
-            denial 9984 5
-    }
-    reload
     loop
     bind ` + n.bindIP() + `
     forward . ` + strings.Join(n.values.ClusterDNS, " ") + ` {
@@ -64,6 +58,13 @@ func (n *nodeLocalDNS) computeResourcesData() (*corev1.ServiceAccount, *corev1.C
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     health ` + n.getHealthAddress() + `:` + strconv.Itoa(livenessProbePort) + `
+    import custom/*.override
+    errors
+    cache {
+            success 9984 30
+            denial 9984 5
+    }
+    reload
     }
 in-addr.arpa:53 {
     errors
@@ -88,16 +89,18 @@ ip6.arpa:53 {
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
 .:53 {
-    errors
-    cache 30
-    reload
     loop
     bind ` + n.bindIP() + `
     forward . ` + n.upstreamDNSAddress() + ` {
             ` + n.forceTcpToUpstreamDNS() + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
+    import custom/*.override
+    errors
+    cache 30
+    reload
     }
+    import custom/*.server
 `,
 			},
 		}
@@ -282,6 +285,11 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 										MountPath: "/etc/kube-dns",
 										Name:      "kube-dns-config",
 									},
+									{
+										Name:      volumeMountNameCustomConfig,
+										MountPath: volumeMountPathCustomConfig,
+										ReadOnly:  true,
+									},
 								},
 							},
 						},
@@ -319,6 +327,18 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 												Path: "Corefile.base",
 											},
 										},
+									},
+								},
+							},
+							{
+								Name: volumeMountNameCustomConfig,
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: customConfigMapName,
+										},
+										DefaultMode: ptr.To[int32](420),
+										Optional:    ptr.To(true),
 									},
 								},
 							},
