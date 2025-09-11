@@ -71,7 +71,7 @@ Feedback and contributions are always welcome!
 
 All channels for getting in touch or learning about our project are listed under the [community](https://gardener.cloud/docs/contribute/#community) section. We are cordially inviting interested parties to join our [bi-weekly meetings](https://gardener.cloud/community/).
 
-Please report bugs or suggestions about our Kubernetes clusters as such or the Gardener itself as [GitHub issues](https://github.com/gardener/gardener/issues) or reach out on [Slack](https://gardener-cloud.slack.com/) (join the workspace [here](https://gardener.cloud/community/community-bio/)).
+Please report bugs or suggestions about our Kubernetes clusters as such or the Gardener itself as [GitHub issues](https://github.com/gardener/gardener/issues) or reach out on [Slack](https://gardener-cloud.slack.com/) (join the workspace [here](https://gardener.cloud/community/)).
 
 ## Learn More!
 
