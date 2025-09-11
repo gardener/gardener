@@ -21,6 +21,7 @@ var _ = Describe("Validation", func() {
 		Entry("should allow letters", "abcXYZ", BeEmpty()),
 		Entry("should allow digits", "1234567890", BeEmpty()),
 		Entry("should allow spaces", " \t\n", BeEmpty()),
+		Entry("should allow slashes", "foo/bar\\baz", BeEmpty()),
 		Entry("should allow punctuation", ".,:-_", BeEmpty()),
 		Entry("should allow unicode letters", "こんにちはПриветمرحبا", BeEmpty()),
 		Entry("should allow unicode digits", "٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", BeEmpty()),
