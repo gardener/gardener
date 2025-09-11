@@ -380,9 +380,15 @@ var _ = Describe("istiod", func() {
 				istioIngressServiceInternal(),
 				istioIngressServiceAccount(),
 				istioIngressDeployment(minReplicas),
-				istioIngressServiceMonitor(),
-				istioIngressTelemetry(),
 				istioIngressEnvoyFilter(),
+			}
+
+			// TODO(istvanballok): remove this block once the issue: 'Istio metrics leak for deleted shoots' #12699 is resolved
+			if false {
+				expectedIstioManifests = append(expectedIstioManifests,
+					istioIngressServiceMonitor(),
+					istioIngressTelemetry(),
+				)
 			}
 
 			expectedIstioSystemManifests := []string{
