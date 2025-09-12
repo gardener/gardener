@@ -159,7 +159,7 @@ func Convert_local_MachineImageFlavor_To_v1alpha1_MachineImageFlavor(in *local.M
 func autoConvert_v1alpha1_MachineImageVersion_To_local_MachineImageVersion(in *MachineImageVersion, out *local.MachineImageVersion, s conversion.Scope) error {
 	out.Version = in.Version
 	out.Image = in.Image
-	out.Flavors = *(*[]local.MachineImageFlavor)(unsafe.Pointer(&in.Flavors))
+	out.CapabilityFlavors = *(*[]local.MachineImageFlavor)(unsafe.Pointer(&in.CapabilityFlavors))
 	return nil
 }
 
@@ -171,7 +171,7 @@ func Convert_v1alpha1_MachineImageVersion_To_local_MachineImageVersion(in *Machi
 func autoConvert_local_MachineImageVersion_To_v1alpha1_MachineImageVersion(in *local.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
 	out.Version = in.Version
 	out.Image = in.Image
-	out.Flavors = *(*[]MachineImageFlavor)(unsafe.Pointer(&in.Flavors))
+	out.CapabilityFlavors = *(*[]MachineImageFlavor)(unsafe.Pointer(&in.CapabilityFlavors))
 	return nil
 }
 

@@ -498,7 +498,7 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 </td>
 <td>
 <em>(Optional)</em>
-<p>Capabilities contains the definition of all possible capabilities in the CloudProfile.
+<p>MachineCapabilities contains the definition of all possible capabilities in the CloudProfile.
 Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 The order of values for a given capability is relevant. The most important value is listed first.
 During maintenance upgrades, the image that matches most capabilities will be selected.</p>
@@ -3805,7 +3805,7 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 </td>
 <td>
 <em>(Optional)</em>
-<p>Capabilities contains the definition of all possible capabilities in the CloudProfile.
+<p>MachineCapabilities contains the definition of all possible capabilities in the CloudProfile.
 Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 The order of values for a given capability is relevant. The most important value is listed first.
 During maintenance upgrades, the image that matches most capabilities will be selected.</p>
@@ -8613,7 +8613,7 @@ InPlaceUpdates
 </tr>
 <tr>
 <td>
-<code>flavors</code></br>
+<code>capabilityFlavors</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.MachineImageFlavor">
 []MachineImageFlavor
@@ -8622,7 +8622,7 @@ InPlaceUpdates
 </td>
 <td>
 <em>(Optional)</em>
-<p>Flavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
+<p>CapabilityFlavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
 the machine image version.</p>
 </td>
 </tr>

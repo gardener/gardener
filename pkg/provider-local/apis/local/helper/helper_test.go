@@ -15,8 +15,8 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/apis/local"
 )
 
-var _ = Describe("Helper Functions", func() {
-	Context("#FindImageFromCloudProfile", func() {
+var _ = Describe("Helper", func() {
+	Describe("#FindImageFromCloudProfile", func() {
 		var (
 			cloudProfileConfig    *local.CloudProfileConfig
 			imageName             string
@@ -36,12 +36,12 @@ var _ = Describe("Helper Functions", func() {
 			suffixTwo = "-capability-set-2"
 
 			machineCapabilities = v1beta1.Capabilities{
-				v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+				"architecture": []string{v1beta1constants.ArchitectureAMD64},
 			}
 
 			capabilityDefinitions = []v1beta1.CapabilityDefinition{
 				{
-					Name:   v1beta1constants.ArchitectureName,
+					Name:   "architecture",
 					Values: []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64},
 				},
 				{
@@ -61,36 +61,36 @@ var _ = Describe("Helper Functions", func() {
 						Versions: []local.MachineImageVersion{
 							{
 								Version: imageVersion,
-								Flavors: []local.MachineImageFlavor{
+								CapabilityFlavors: []local.MachineImageFlavor{
 									{
 										Image: imageVersion + suffixOne,
 										Capabilities: v1beta1.Capabilities{
-											v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
-											"cap1":                            []string{"value1"},
+											"architecture": []string{v1beta1constants.ArchitectureAMD64},
+											"cap1":         []string{"value1"},
 										},
 									},
 									{
 										Image: imageVersion + suffixTwo,
 										Capabilities: v1beta1.Capabilities{
-											v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
-											"cap1":                            []string{"value2"},
+											"architecture": []string{v1beta1constants.ArchitectureAMD64},
+											"cap1":         []string{"value2"},
 										},
 									},
 								},
 							},
 							{
 								Version: latestImageVersion,
-								Flavors: []local.MachineImageFlavor{
+								CapabilityFlavors: []local.MachineImageFlavor{
 									{
 										Image: latestImageVersion + suffixOne,
 										Capabilities: v1beta1.Capabilities{
-											v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
+											"architecture": []string{v1beta1constants.ArchitectureARM64},
 										},
 									},
 									{
 										Image: latestImageVersion + suffixTwo,
 										Capabilities: v1beta1.Capabilities{
-											v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+											"architecture": []string{v1beta1constants.ArchitectureAMD64},
 										},
 									},
 								},
@@ -122,8 +122,8 @@ var _ = Describe("Helper Functions", func() {
 			Expect(image).To(BeNil())
 		})
 
-		Context("Multiple flavors are viable matches", func() {
-			// When multiple flavors match the requirements for the machineType, selection follows a priority-based approach:
+		Context("Multiple capabilityFlavors are viable matches", func() {
+			// When multiple capabilityFlavors match the requirements for the machineType, selection follows a priority-based approach:
 			//
 			// 1. Flavors are evaluated based on their supported capabilities
 			// 2. Capabilities are ordered by priority in the definitions list (highest priority first)
@@ -139,21 +139,21 @@ var _ = Describe("Helper Functions", func() {
 			// +------------+-----------+-----------+-----------+-----------+
 
 			It("should find image based on capability order", func() {
-				cloudProfileConfig.MachineImages[0].Versions[1].Flavors = []local.MachineImageFlavor{
+				cloudProfileConfig.MachineImages[0].Versions[1].CapabilityFlavors = []local.MachineImageFlavor{
 					{
 						Image: latestImageVersion + suffixOne,
 						Capabilities: v1beta1.Capabilities{
-							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
-							"cap1":                            []string{"value2"}, // Lower priority
-							"cap2":                            []string{"valueA"},
+							"architecture": []string{v1beta1constants.ArchitectureAMD64},
+							"cap1":         []string{"value2"}, // Lower priority
+							"cap2":         []string{"valueA"},
 						},
 					},
 					{
 						Image: latestImageVersion + suffixTwo,
 						Capabilities: v1beta1.Capabilities{
-							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
-							"cap1":                            []string{"value1"}, // Higher priority (should be selected)
-							"cap2":                            []string{"valueB"}, // cap2 should not affect decision as cap1 already differentiates
+							"architecture": []string{v1beta1constants.ArchitectureAMD64},
+							"cap1":         []string{"value1"}, // Higher priority (should be selected)
+							"cap2":         []string{"valueB"}, // cap2 should not affect decision as cap1 already differentiates
 						},
 					},
 				}
@@ -166,19 +166,19 @@ var _ = Describe("Helper Functions", func() {
 
 			It("should select image based on capability value priority within one capability", func() {
 				// Set up two capabilities with different value orders for cap2
-				cloudProfileConfig.MachineImages[0].Versions[1].Flavors = []local.MachineImageFlavor{
+				cloudProfileConfig.MachineImages[0].Versions[1].CapabilityFlavors = []local.MachineImageFlavor{
 					{
 						Image: latestImageVersion + suffixOne,
 						Capabilities: v1beta1.Capabilities{
-							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
-							"cap2":                            []string{"valueA", "valueB"}, // valueB is higher priority
+							"architecture": []string{v1beta1constants.ArchitectureAMD64},
+							"cap2":         []string{"valueA", "valueB"}, // valueB is higher priority
 						},
 					},
 					{
 						Image: latestImageVersion + suffixTwo,
 						Capabilities: v1beta1.Capabilities{
-							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
-							"cap2":                            []string{"valueA", "valueC"}, // valueC is lower priority than valueB
+							"architecture": []string{v1beta1constants.ArchitectureAMD64},
+							"cap2":         []string{"valueA", "valueC"}, // valueC is lower priority than valueB
 						},
 					},
 				}
@@ -193,17 +193,17 @@ var _ = Describe("Helper Functions", func() {
 		Context("when handling edge cases", func() {
 			It("should error on multiple version flavors with identical capabilities", func() {
 				// Both flavors have identical capabilities - this should be considered an error
-				cloudProfileConfig.MachineImages[0].Versions[1].Flavors = []local.MachineImageFlavor{
+				cloudProfileConfig.MachineImages[0].Versions[1].CapabilityFlavors = []local.MachineImageFlavor{
 					{
 						Image: latestImageVersion + suffixOne,
 						Capabilities: v1beta1.Capabilities{
-							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+							"architecture": []string{v1beta1constants.ArchitectureAMD64},
 						},
 					},
 					{
 						Image: latestImageVersion + suffixTwo,
 						Capabilities: v1beta1.Capabilities{
-							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+							"architecture": []string{v1beta1constants.ArchitectureAMD64},
 						},
 					},
 				}
@@ -211,7 +211,7 @@ var _ = Describe("Helper Functions", func() {
 				_, err := FindImageFromCloudProfile(cloudProfileConfig, imageName, latestImageVersion, machineCapabilities, capabilityDefinitions)
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("found multiple version flavors with identical capabilities"))
+				Expect(err.Error()).To(ContainSubstring(" could not determine best flavor could not determine a unique capability flavor; this is usually attributed to an invalid CloudProfile"))
 			})
 
 			It("should return error for non-existent image name", func() {

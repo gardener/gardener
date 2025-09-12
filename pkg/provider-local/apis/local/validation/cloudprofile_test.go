@@ -35,17 +35,17 @@ var _ = Describe("CloudProfileConfig validation", func() {
 					Versions: []api.MachineImageVersion{
 						{
 							Version: "18.04",
-							Flavors: []api.MachineImageFlavor{
+							CapabilityFlavors: []api.MachineImageFlavor{
 								{
 									Image: imageString,
 									Capabilities: v1beta1.Capabilities{
-										v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+										"architecture": []string{v1beta1constants.ArchitectureAMD64},
 									},
 								},
 								{
 									Image: imageString,
 									Capabilities: v1beta1.Capabilities{
-										v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
+										"architecture": []string{v1beta1constants.ArchitectureARM64},
 									},
 								},
 							},
@@ -63,13 +63,13 @@ var _ = Describe("CloudProfileConfig validation", func() {
 						ExpirableVersion: core.ExpirableVersion{
 							Version: "18.04",
 						},
-						Flavors: []core.MachineImageFlavor{{
+						CapabilityFlavors: []core.MachineImageFlavor{{
 							Capabilities: core.Capabilities{
-								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+								"architecture": []string{v1beta1constants.ArchitectureAMD64},
 							},
 						}, {
 							Capabilities: core.Capabilities{
-								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
+								"architecture": []string{v1beta1constants.ArchitectureARM64},
 							},
 						}},
 					},
@@ -79,7 +79,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 
 		capabilitiesDefinitions = []v1beta1.CapabilityDefinition{
 			{
-				Name:   v1beta1constants.ArchitectureName,
+				Name:   "architecture",
 				Values: []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64},
 			},
 			{
@@ -136,10 +136,10 @@ var _ = Describe("CloudProfileConfig validation", func() {
 
 		Context("with no capabilities defined", func() {
 			BeforeEach(func() {
-				// set flavors to empty to simulate no capabilities defined
-				cloudProfileConfig.MachineImages[0].Versions[0].Flavors = []api.MachineImageFlavor{}
+				// set capabilityFlavors to empty to simulate no capabilities defined
+				cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors = []api.MachineImageFlavor{}
 				cloudProfileConfig.MachineImages[0].Versions[0].Image = "ubuntu-18.04-amd64"
-				machineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{}
+				machineImages[0].Versions[0].CapabilityFlavors = []core.MachineImageFlavor{}
 				capabilitiesDefinitions = []v1beta1.CapabilityDefinition{}
 			})
 
@@ -170,7 +170,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 		})
 
 		Context("with capabilities", func() {
-			It("should succeed with valid image version flavors", func() {
+			It("should succeed with valid image version capabilityFlavors", func() {
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(BeEmpty())
 			})
@@ -185,20 +185,20 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should fail if version flavor contain invalid capability", func() {
-				cloudProfileConfig.MachineImages[0].Versions[0].Flavors[0].Capabilities["invalid"] = []string{"value"}
+				cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["invalid"] = []string{"value"}
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("spec.machineImages[0].versions[0].flavors[0].capabilities"),
+					"Field": Equal("spec.machineImages[0].versions[0].capabilityFlavors[0].capabilities"),
 				}))))
 			})
 
 			It("should fail when machine image version doesn't exist in provider config with capabilities", func() {
 				machineImages[0].Versions[0].Version = "20.04"
-				machineImages[0].Versions[0].Flavors = []core.MachineImageFlavor{
+				machineImages[0].Versions[0].CapabilityFlavors = []core.MachineImageFlavor{
 					{
 						Capabilities: core.Capabilities{
-							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+							"architecture": []string{v1beta1constants.ArchitectureAMD64},
 						},
 					},
 				}
@@ -212,20 +212,20 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should fail when version flavor has empty image", func() {
-				cloudProfileConfig.MachineImages[0].Versions[0].Flavors[0].Image = ""
+				cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors[0].Image = ""
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.machineImages[0].versions[0].flavors[0].image"),
+					"Field": Equal("spec.machineImages[0].versions[0].capabilityFlavors[0].image"),
 				}))))
 			})
 
 			It("should fail when capability values are not from defined set", func() {
-				cloudProfileConfig.MachineImages[0].Versions[0].Flavors[0].Capabilities["cap1"] = []string{"invalid-value"}
+				cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["cap1"] = []string{"invalid-value"}
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeNotSupported),
-					"Field":  Equal("spec.machineImages[0].versions[0].flavors[0].capabilities.cap1[0]"),
+					"Field":  Equal("spec.machineImages[0].versions[0].capabilityFlavors[0].capabilities.cap1[0]"),
 					"Detail": ContainSubstring("supported values: \"value1\", \"value2\""),
 				}))))
 			})
@@ -233,9 +233,9 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			It("should fail when machine image version exists in core but not in provider config", func() {
 				machineImages[0].Versions = append(machineImages[0].Versions, core.MachineImageVersion{
 					ExpirableVersion: core.ExpirableVersion{Version: "20.04"},
-					Flavors: []core.MachineImageFlavor{{
+					CapabilityFlavors: []core.MachineImageFlavor{{
 						Capabilities: core.Capabilities{
-							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+							"architecture": []string{v1beta1constants.ArchitectureAMD64},
 						},
 					}},
 				})
@@ -249,7 +249,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should fail when core image flavor has no matching provider image flavor", func() {
-				machineImages[0].Versions[0].Flavors = append(machineImages[0].Versions[0].Flavors,
+				machineImages[0].Versions[0].CapabilityFlavors = append(machineImages[0].Versions[0].CapabilityFlavors,
 					core.MachineImageFlavor{
 						Capabilities: core.Capabilities{
 							"cap1": []string{"value1"},
@@ -259,7 +259,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilitiesDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
-					"Field":  Equal("spec.machineImages[0].versions[0].flavors[2]"),
+					"Field":  Equal("spec.machineImages[0].versions[0].capabilityFlavors[2]"),
 					"Detail": ContainSubstring("missing providerConfig mapping"),
 				}))))
 			})

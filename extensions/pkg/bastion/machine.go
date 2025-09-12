@@ -34,7 +34,7 @@ func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile) (vm
 	bastionSpec := profile.Spec.Bastion
 
 	if bastionSpec != nil && bastionSpec.MachineType != nil {
-		vm.MachineTypeName, vm.Architecture, vm.MachineTypeCapabilities, err = getMachine(bastionSpec, profile.Spec.MachineTypes, profile.Spec.Capabilities)
+		vm.MachineTypeName, vm.Architecture, vm.MachineTypeCapabilities, err = getMachine(bastionSpec, profile.Spec.MachineTypes, profile.Spec.MachineCapabilities)
 		if err != nil {
 			return MachineSpec{}, err
 		}
@@ -45,11 +45,11 @@ func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile) (vm
 		}
 	}
 
-	vm.ImageBaseName, err = getImageName(bastionSpec, profile.Spec.MachineImages, vm.Architecture, vm.MachineTypeCapabilities, profile.Spec.Capabilities)
+	vm.ImageBaseName, err = getImageName(bastionSpec, profile.Spec.MachineImages, vm.Architecture, vm.MachineTypeCapabilities, profile.Spec.MachineCapabilities)
 	if err != nil {
 		return MachineSpec{}, err
 	}
-	vm.ImageVersion, err = getImageVersion(bastionSpec, vm.ImageBaseName, vm.Architecture, vm.MachineTypeCapabilities, profile.Spec.MachineImages, profile.Spec.Capabilities)
+	vm.ImageVersion, err = getImageVersion(bastionSpec, vm.ImageBaseName, vm.Architecture, vm.MachineTypeCapabilities, profile.Spec.MachineImages, profile.Spec.MachineCapabilities)
 	return vm, err
 }
 
@@ -146,7 +146,7 @@ func getImageName(bastion *gardencorev1beta1.Bastion, images []gardencorev1beta1
 			if !slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version, capabilityDefinitions), bastionArchitecture) {
 				continue
 			}
-			if !v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineCapabilities, version.Flavors, capabilityDefinitions) {
+			if !v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineCapabilities, version.CapabilityFlavors, capabilityDefinitions) {
 				continue
 			}
 			return image.Name, nil
@@ -189,7 +189,7 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 		if !slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version, capabilityDefinitions), machineArch) {
 			continue
 		}
-		if !v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineCapabilities, version.Flavors, capabilityDefinitions) {
+		if !v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineCapabilities, version.CapabilityFlavors, capabilityDefinitions) {
 			continue
 		}
 		v, err := semver.NewVersion(version.Version)
@@ -211,12 +211,12 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 // findMostSuitableMachineType searches for the machine type that satisfies certain criteria
 // currently we try to find the machine with the lowest amount of cpus
 func findMostSuitableMachineType(profile *gardencorev1beta1.CloudProfile) (machineName string, machineArch string, capabilities gardencorev1beta1.Capabilities, err error) {
-	supportedArchitectures := getImageArchitectures(profile.Spec.Bastion, profile.Spec.MachineImages, profile.Spec.Capabilities)
+	supportedArchitectures := getImageArchitectures(profile.Spec.Bastion, profile.Spec.MachineImages, profile.Spec.MachineCapabilities)
 
 	var minCpu *int64
 
 	for _, machine := range profile.Spec.MachineTypes {
-		arch := machine.GetArchitecture(profile.Spec.Capabilities)
+		arch := machine.GetArchitecture(profile.Spec.MachineCapabilities)
 		if arch == "" {
 			continue
 		}

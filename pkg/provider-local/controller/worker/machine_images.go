@@ -45,7 +45,7 @@ func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, m
 		Version: version,
 	}
 
-	if image, err := helper.FindImageFromCloudProfile(w.cloudProfileConfig, name, version, machineCapabilities, w.cluster.CloudProfile.Spec.Capabilities); err == nil {
+	if image, err := helper.FindImageFromCloudProfile(w.cloudProfileConfig, name, version, machineCapabilities, w.cluster.CloudProfile.Spec.MachineCapabilities); err == nil {
 		selectedMachineImage.Image = image.Image
 		selectedMachineImage.Capabilities = image.Capabilities
 		return selectedMachineImage, nil
@@ -60,14 +60,14 @@ func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, m
 
 		for _, machineImage := range workerStatus.MachineImages {
 			if machineImage.Name == name && machineImage.Version == version {
-				// If no capabilitiesDefinitions are specified, return the (legacy) image field as no image flavors are used.
-				if len(w.cluster.CloudProfile.Spec.Capabilities) == 0 {
+				// If no capabilitiesDefinitions are specified, return the (legacy) image field as no image capabilityFlavors are used.
+				if len(w.cluster.CloudProfile.Spec.MachineCapabilities) == 0 {
 					selectedMachineImage.Image = machineImage.Image
 					selectedMachineImage.Capabilities = gardencorev1beta1.Capabilities{}
 					return selectedMachineImage, nil
 				}
 
-				if machineImage.Name == name && machineImage.Version == version && v1beta1helper.AreCapabilitiesCompatible(machineImage.Capabilities, machineCapabilities, w.cluster.CloudProfile.Spec.Capabilities) {
+				if machineImage.Name == name && machineImage.Version == version && v1beta1helper.AreCapabilitiesCompatible(machineImage.Capabilities, machineCapabilities, w.cluster.CloudProfile.Spec.MachineCapabilities) {
 					return &machineImage, nil
 				}
 			}

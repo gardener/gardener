@@ -75,7 +75,7 @@ type CloudProfileSpec struct {
 	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that matches most capabilities will be selected.
-	Capabilities []CapabilityDefinition
+	MachineCapabilities []CapabilityDefinition
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -124,9 +124,9 @@ type MachineImageVersion struct {
 	KubeletVersionConstraint *string
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	InPlaceUpdates *InPlaceUpdates
-	// Flavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
+	// CapabilityFlavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
 	// the machine image version.
-	Flavors []MachineImageFlavor
+	CapabilityFlavors []MachineImageFlavor
 }
 
 // SupportsArchitecture checks if the machine image version supports a given architecture.
@@ -134,7 +134,7 @@ func (m *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, ar
 	if len(capabilities) == 0 {
 		return slices.Contains(m.Architectures, architecture)
 	}
-	for _, capability := range m.Flavors {
+	for _, capability := range m.CapabilityFlavors {
 		if slices.Contains(capability.Capabilities[constants.ArchitectureName], architecture) {
 			return true
 		}

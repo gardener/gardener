@@ -89,25 +89,25 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 		if isCapabilitiesCloudProfile {
 			capabilitiesDefinition = []gardencorev1beta1.CapabilityDefinition{
 				{
-					Name:   v1beta1constants.ArchitectureName,
+					Name:   "architecture",
 					Values: []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64},
 				},
 			}
 			capabilitiesAmd64 = gardencorev1beta1.Capabilities{
-				v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+				"architecture": []string{v1beta1constants.ArchitectureAMD64},
 			}
 			capabilitiesArm64 = gardencorev1beta1.Capabilities{
-				v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
+				"architecture": []string{v1beta1constants.ArchitectureARM64},
 			}
 			imageFlavorsArm = []gardencorev1beta1.MachineImageFlavor{
-				{Capabilities: gardencorev1beta1.Capabilities{v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64}}},
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
 			}
 			imageFlavorsAmd = []gardencorev1beta1.MachineImageFlavor{
-				{Capabilities: gardencorev1beta1.Capabilities{v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64}}},
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 			}
 			imageFlavors = []gardencorev1beta1.MachineImageFlavor{
-				{Capabilities: gardencorev1beta1.Capabilities{v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64}}},
-				{Capabilities: gardencorev1beta1.Capabilities{v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64}}},
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
 			}
 		}
 
@@ -116,7 +116,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				GenerateName: testID + "-",
 			},
 			Spec: gardencorev1beta1.CloudProfileSpec{
-				Capabilities: capabilitiesDefinition,
+				MachineCapabilities: capabilitiesDefinition,
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{
 						{
@@ -158,8 +158,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"arm64"},
-								Flavors:       imageFlavorsArm,
+								Architectures:     []string{"arm64"},
+								CapabilityFlavors: imageFlavorsArm,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -172,8 +172,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64"},
-								Flavors:       imageFlavorsAmd,
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavorsAmd,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -186,8 +186,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"arm64"},
-								Flavors:       imageFlavorsArm,
+								Architectures:     []string{"arm64"},
+								CapabilityFlavors: imageFlavorsArm,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -200,8 +200,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64"},
-								Flavors:       imageFlavorsAmd,
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavorsAmd,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -214,8 +214,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64", "arm64"},
-								Flavors:       imageFlavors,
+								Architectures:     []string{"amd64", "arm64"},
+								CapabilityFlavors: imageFlavors,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -228,8 +228,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"arm64"},
-								Flavors:       imageFlavorsArm,
+								Architectures:     []string{"arm64"},
+								CapabilityFlavors: imageFlavorsArm,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -242,8 +242,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64"},
-								Flavors:       imageFlavorsAmd,
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavorsAmd,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -257,8 +257,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"arm64"},
-								Flavors:       imageFlavorsArm,
+								Architectures:     []string{"arm64"},
+								CapabilityFlavors: imageFlavorsArm,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -272,8 +272,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64"},
-								Flavors:       imageFlavorsAmd,
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavorsAmd,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -285,8 +285,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64", "arm64"},
-								Flavors:       imageFlavors,
+								Architectures:     []string{"amd64", "arm64"},
+								CapabilityFlavors: imageFlavors,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -299,8 +299,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"arm64"},
-								Flavors:       imageFlavorsArm,
+								Architectures:     []string{"arm64"},
+								CapabilityFlavors: imageFlavorsArm,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -313,8 +313,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64"},
-								Flavors:       imageFlavorsAmd,
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavorsAmd,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -326,8 +326,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64", "arm64"},
-								Flavors:       imageFlavors,
+								Architectures:     []string{"amd64", "arm64"},
+								CapabilityFlavors: imageFlavors,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -339,8 +339,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64", "arm64"},
-								Flavors:       imageFlavors,
+								Architectures:     []string{"amd64", "arm64"},
+								CapabilityFlavors: imageFlavors,
 							},
 						},
 					},

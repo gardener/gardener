@@ -910,8 +910,8 @@ func (in *CloudProfileSpec) DeepCopyInto(out *CloudProfileSpec) {
 		*out = new(Limits)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Capabilities != nil {
-		in, out := &in.Capabilities, &out.Capabilities
+	if in.MachineCapabilities != nil {
+		in, out := &in.MachineCapabilities, &out.MachineCapabilities
 		*out = make([]CapabilityDefinition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
@@ -3314,8 +3314,8 @@ func (in *MachineImageVersion) DeepCopyInto(out *MachineImageVersion) {
 		*out = new(InPlaceUpdates)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Flavors != nil {
-		in, out := &in.Flavors, &out.Flavors
+	if in.CapabilityFlavors != nil {
+		in, out := &in.CapabilityFlavors, &out.CapabilityFlavors
 		*out = make([]MachineImageFlavor, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

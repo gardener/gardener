@@ -297,7 +297,7 @@ func GetCapabilitiesWithAppliedDefaults(capabilities core.Capabilities, capabili
 // GetImageFlavorWithAppliedDefaults returns MachineImageFlavors sets with applied defaults from the capability definitions.
 func GetImageFlavorWithAppliedDefaults(imageFlavors []core.MachineImageFlavor, capabilitiesDefinitions []core.CapabilityDefinition) []core.MachineImageFlavor {
 	if len(imageFlavors) == 0 {
-		// If no flavors are defined, assume all capabilities are supported.
+		// If no capabilityFlavors are defined, assume all capabilities are supported.
 		return []core.MachineImageFlavor{{Capabilities: GetCapabilitiesWithAppliedDefaults(core.Capabilities{}, capabilitiesDefinitions)}}
 	}
 

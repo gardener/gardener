@@ -1474,7 +1474,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				}
 
 				for _, architecture := range architecturesFromFlavors {
-					imageVersion.Flavors = append(imageVersion.Flavors, gardencorev1beta1.MachineImageFlavor{
+					imageVersion.CapabilityFlavors = append(imageVersion.CapabilityFlavors, gardencorev1beta1.MachineImageFlavor{
 						Capabilities: gardencorev1beta1.Capabilities{"architecture": gardencorev1beta1.CapabilityValues{architecture}},
 					})
 				}
@@ -1493,7 +1493,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				}
 
 				for _, architecture := range supportedArchitectures {
-					imageVersion.Flavors = append(imageVersion.Flavors, gardencorev1beta1.MachineImageFlavor{
+					imageVersion.CapabilityFlavors = append(imageVersion.CapabilityFlavors, gardencorev1beta1.MachineImageFlavor{
 						Capabilities: gardencorev1beta1.Capabilities{"architecture": gardencorev1beta1.CapabilityValues{architecture}},
 					})
 				}
@@ -1540,7 +1540,7 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 
 		Describe("#GetImageFlavorsWithAppliedDefaults", func() {
-			It("should apply defaults when flavors are empty", func() {
+			It("should apply defaults when capabilityFlavors are empty", func() {
 				var imageFlavors []gardencorev1beta1.MachineImageFlavor
 				capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
 					{Name: "capability1", Values: []string{"value1", "value2"}},
@@ -1674,7 +1674,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				Expect(result).To(BeFalse())
 			})
 
-			It("should return true when image flavors are not defined and defaults are used", func() {
+			It("should return true when image capabilityFlavors are not defined and defaults are used", func() {
 				capabilities := gardencorev1beta1.Capabilities{
 					"capability1": []string{"value1"},
 				}

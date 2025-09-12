@@ -119,7 +119,7 @@ var _ = Describe("Admission", func() {
 			Context("Capabilities in Parent CloudProfile", func() {
 
 				BeforeEach(func() {
-					parentCloudProfile.Spec.Capabilities = []gardencorev1beta1.CapabilityDefinition{
+					parentCloudProfile.Spec.MachineCapabilities = []gardencorev1beta1.CapabilityDefinition{
 						{Name: constants.ArchitectureName, Values: []string{"amd64", "arm64"}},
 						{Name: "capability2", Values: []string{"value1", "value2"}},
 					}
@@ -144,7 +144,7 @@ var _ = Describe("Admission", func() {
 
 					It("should reject a machineImage with Capabilities or CapabilityValues not in the parent CloudProfile", func() {
 						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
-						namespacedCloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []gardencore.MachineImageFlavor{
+						namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors = []gardencore.MachineImageFlavor{
 							{Capabilities: gardencore.Capabilities{
 								// Unsupported CapabilityValue
 								"capability2": []string{"value3"},
@@ -211,14 +211,14 @@ var _ = Describe("Admission", func() {
 					It("should NOT allow to add a machineImage with Capabilities", func() {
 						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
-						namespacedCloudProfile.Spec.MachineImages[0].Versions[0].Flavors = []gardencore.MachineImageFlavor{
+						namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors = []gardencore.MachineImageFlavor{
 							{Capabilities: gardencore.Capabilities{"architecture": []string{"arm64"}}},
 						}
 
 						attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.machineImages[0].versions[0].flavors"),
+							"Field":  Equal("spec.machineImages[0].versions[0].capabilityFlavors"),
 							"Detail": ContainSubstring("must not provide capabilities to an extended machine image in NamespacedCloudProfile"),
 						}))))
 					})
@@ -530,7 +530,7 @@ var _ = Describe("Admission", func() {
 							ExpirableVersion:         gardencore.ExpirableVersion{Version: "1.1.0", ExpirationDate: expiredExpirationDate, Classification: ptr.To(gardencore.ClassificationSupported)},
 							CRI:                      []gardencore.CRI{{Name: "containerd"}},
 							Architectures:            []string{"amd64"},
-							Flavors:                  []gardencore.MachineImageFlavor{{Capabilities: gardencore.Capabilities{"architecture": []string{"amd64"}}}},
+							CapabilityFlavors:        []gardencore.MachineImageFlavor{{Capabilities: gardencore.Capabilities{"architecture": []string{"amd64"}}}},
 							KubeletVersionConstraint: ptr.To(">=1.29.0"),
 							InPlaceUpdates:           &gardencore.InPlaceUpdates{Supported: true},
 						},
@@ -553,7 +553,7 @@ var _ = Describe("Admission", func() {
 					"Detail": ContainSubstring("must not provide an architecture to an extended machine image in NamespacedCloudProfile"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.machineImages[0].versions[0].flavors"),
+					"Field":  Equal("spec.machineImages[0].versions[0].capabilityFlavors"),
 					"Detail": ContainSubstring("must not provide capabilities to an extended machine image in NamespacedCloudProfile"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
