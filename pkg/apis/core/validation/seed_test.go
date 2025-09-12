@@ -422,22 +422,16 @@ var _ = Describe("Seed Validation Tests", func() {
 				))
 			})
 
-			It("should forbid credentialsRef to refer a WorkloadIdentity", func() {
+			It("should allow credentialsRef to refer a WorkloadIdentity", func() {
 				seed.Spec.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Namespace: "garden", Name: "backup"}
 
-				Expect(ValidateSeed(seed)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.backup.credentialsRef"),
-						"Detail": Equal("support for WorkloadIdentity as backup credentials is not yet fully implemented"),
-					})),
-				))
+				Expect(ValidateSeed(seed)).To(BeEmpty())
 			})
 
 			It("should allow credentialsRef to refer a Secret", func() {
 				seed.Spec.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "garden", Name: "backup"}
 
-				Expect(ValidateSeed(seed)).To((BeEmpty()))
+				Expect(ValidateSeed(seed)).To(BeEmpty())
 			})
 
 			It("should forbid invalid values objectReference fields", func() {

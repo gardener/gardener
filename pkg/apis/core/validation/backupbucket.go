@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
 // ValidateBackupBucket validates a BackupBucket object.
@@ -60,12 +59,6 @@ func validateCredentials(spec *core.BackupBucketSpec, fldPath *field.Path) field
 		allErrs = append(allErrs, field.Required(fldPath.Child("credentialsRef"), "must be set and refer a Secret or WorkloadIdentity"))
 	} else {
 		allErrs = append(allErrs, ValidateCredentialsRef(*spec.CredentialsRef, fldPath.Child("credentialsRef"))...)
-
-		// TODO(vpnachev): Allow WorkloadIdentities once the support in the controllers and components is fully implemented.
-		if spec.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
-			spec.CredentialsRef.Kind == "WorkloadIdentity" {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsRef"), "support for WorkloadIdentity as backup credentials is not yet fully implemented"))
-		}
 	}
 
 	return allErrs
