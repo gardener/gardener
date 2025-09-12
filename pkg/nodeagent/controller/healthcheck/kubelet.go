@@ -208,19 +208,13 @@ func (k *KubeletHealthChecker) ensureNodeInternalIP(ctx context.Context, node *c
 }
 
 // verifyNodeReady verifies the NodeReady condition of a node.
-// If the condition changes 5 times within 10 minutes from NotReady->Ready the node will be rebooted.
 func (k *KubeletHealthChecker) verifyNodeReady(log logr.Logger, node *corev1.Node) error {
 	if isNodeReady(node) && !k.NodeReady {
-		needsReboot := k.ToggleKubeletState()
+		createEvent := k.ToggleKubeletState()
 		log.Info("Kubelet became Ready", "readinessChanges", len(k.KubeletReadinessToggles), "timespan", toggleTimeSpan)
-		if needsReboot {
-			log.Info("Kubelet toggled between NotReady and Ready too often. Rebooting the node now")
-			k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Kubelet toggled between NotReady and Ready at least %d times in a %s time window. Rebooting the node now", maxToggles, toggleTimeSpan)
-			if err := k.dbus.Reboot(); err != nil {
-				k.RevertToggleKubeletState()
-				k.recorder.Event(node, corev1.EventTypeWarning, "kubelet", "Rebooting the node failed")
-				return fmt.Errorf("rebooting the node failed %w", err)
-			}
+		if createEvent {
+			// Do not reboot the node, but create an event instead.
+			k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Kubelet toggled between NotReady and Ready at least %d times in a %s time window. Rebooting the node might help", maxToggles, toggleTimeSpan)
 		}
 	}
 	k.NodeReady = isNodeReady(node)
