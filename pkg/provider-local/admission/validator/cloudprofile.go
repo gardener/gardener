@@ -36,21 +36,21 @@ type cloudProfileValidator struct {
 func (cp *cloudProfileValidator) Validate(_ context.Context, newObj, _ client.Object) error {
 	cloudProfile, ok := newObj.(*core.CloudProfile)
 	if !ok {
-		return fmt.Errorf("wrong object type %T", newObj)
+		return fmt.Errorf("expected *core.CloudProfile but got %T", newObj)
 	}
 
 	providerConfigPath := field.NewPath("spec").Child("providerConfig")
 	if cloudProfile.Spec.ProviderConfig == nil {
-		return field.Required(providerConfigPath, "providerConfig must be set for local cloud profiles")
+		return field.Required(providerConfigPath, "providerConfig must be set for cloud profiles of provider local")
 	}
 
 	cpConfig, err := admission.DecodeCloudProfileConfig(cp.decoder, cloudProfile.Spec.ProviderConfig)
 	if err != nil {
-		return fmt.Errorf("could not decode providerConfig of CloudProfile for '%s': %w", cloudProfile.Name, err)
+		return fmt.Errorf("could not decode providerConfig of CloudProfile %q: %w", cloudProfile.Name, err)
 	}
-	capabilitiesDefinition, err := helper.ConvertV1beta1CapabilitiesDefinitions(cloudProfile.Spec.Capabilities)
+	capabilitiesDefinition, err := helper.ConvertV1beta1CapabilitiesDefinitions(cloudProfile.Spec.MachineCapabilities)
 	if err != nil {
-		return field.InternalError(field.NewPath("spec").Child("capabilities"), err)
+		return field.InternalError(field.NewPath("spec").Child("machineCapabilities"), err)
 	}
 	return validation.ValidateCloudProfileConfig(cpConfig, cloudProfile.Spec.MachineImages, capabilitiesDefinition, providerConfigPath).ToAggregate()
 }

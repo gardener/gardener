@@ -43,7 +43,7 @@ var _ = Describe("Helper Functions", func() {
 			},
 		}
 		capabilityDefinitions = []gardencorev1beta1.CapabilityDefinition{
-			{Name: v1beta1constants.ArchitectureName, Values: []string{v1beta1constants.ArchitectureAMD64}},
+			{Name: "architecture", Values: []string{v1beta1constants.ArchitectureAMD64}},
 			{Name: "someCapability", Values: []string{"supported", "unsupported"}},
 		}
 		machineImage = &gardencorev1beta1.MachineImage{
@@ -55,7 +55,7 @@ var _ = Describe("Helper Functions", func() {
 					},
 					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 					Architectures: []string{"amd64"},
-					Flavors: []gardencorev1beta1.MachineImageFlavor{{
+					CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{
 						Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
 					}},
 					KubeletVersionConstraint: ptr.To("< 1.27"),
@@ -67,7 +67,7 @@ var _ = Describe("Helper Functions", func() {
 					},
 					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 					Architectures: []string{"amd64"},
-					Flavors: []gardencorev1beta1.MachineImageFlavor{{
+					CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{
 						Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
 					}},
 					KubeletVersionConstraint: ptr.To(">= 1.30.0"),

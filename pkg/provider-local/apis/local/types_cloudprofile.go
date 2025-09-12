@@ -36,8 +36,8 @@ type MachineImageVersion struct {
 	Version string
 	// Image is the image for the machine image.
 	Image string
-	// Flavors contains provider-specific image identifiers of this version with their capabilities.
-	Flavors []MachineImageFlavor
+	// CapabilityFlavors contains provider-specific image identifiers of this version with their capabilities.
+	CapabilityFlavors []MachineImageFlavor
 }
 
 // MachineImageFlavor is a provider-specific image identifier with its supported capabilities.

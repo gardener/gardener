@@ -37,8 +37,8 @@ type MachineImageVersion struct {
 	Version string `json:"version"`
 	// Image is the image for the machine image.
 	Image string `json:"image"`
-	// Flavors contains provider-specific image identifiers of this version with their capabilities.
-	Flavors []MachineImageFlavor `json:"flavors"`
+	// CapabilityFlavors contains provider-specific image identifiers of this version with their capabilities.
+	CapabilityFlavors []MachineImageFlavor `json:"capabilityFlavors"`
 }
 
 // MachineImageFlavor is a provider-specific image identifier with its supported capabilities.

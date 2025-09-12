@@ -553,7 +553,7 @@ var _ = Describe("CloudProfile Helper", func() {
 	})
 
 	Describe("#GetImageFlavorWithAppliedDefaults", func() {
-		It("should apply defaults when flavors are empty", func() {
+		It("should apply defaults when capabilityFlavors are empty", func() {
 			var imageFlavors []core.MachineImageFlavor
 			capabilityDefinitions := []core.CapabilityDefinition{
 				{Name: "capability1", Values: []string{"value1", "value2"}},

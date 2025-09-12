@@ -159,13 +159,11 @@ string
 </td>
 <td>
 <p>Image is the image for the machine image.</p>
-<p>Deprecated: This field is deprecated and will be removed in a future release.
-Please use the <code>Flavors[].Image</code> field instead to specify the machine image.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>Capabilities</code></br>
+<code>capabilities</code></br>
 <em>
 github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
 </em>
@@ -258,7 +256,7 @@ string
 </tr>
 <tr>
 <td>
-<code>flavors</code></br>
+<code>capabilityFlavors</code></br>
 <em>
 <a href="#local.provider.extensions.gardener.cloud/v1alpha1.MachineImageFlavor">
 []MachineImageFlavor
@@ -266,7 +264,7 @@ string
 </em>
 </td>
 <td>
-<p>Flavors contains provider-specific image identifiers of this version with their capabilities.</p>
+<p>CapabilityFlavors contains provider-specific image identifiers of this version with their capabilities.</p>
 </td>
 </tr>
 </tbody>

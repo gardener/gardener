@@ -31,7 +31,7 @@ var _ = DescribeTableSubtree("CloudProfile controller tests", func(isCapabilitie
 		if isCapabilitiesCloudProfile {
 			capabilitiesDefinition = []gardencorev1beta1.CapabilityDefinition{
 				{
-					Name:   v1beta1constants.ArchitectureName,
+					Name:   "architecture",
 					Values: []string{v1beta1constants.ArchitectureAMD64},
 				},
 			}
@@ -43,8 +43,8 @@ var _ = DescribeTableSubtree("CloudProfile controller tests", func(isCapabilitie
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.CloudProfileSpec{
-				Capabilities: capabilitiesDefinition,
-				Type:         "some-provider",
+				MachineCapabilities: capabilitiesDefinition,
+				Type:                "some-provider",
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.2.3"}},
 				},

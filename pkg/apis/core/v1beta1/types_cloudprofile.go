@@ -89,12 +89,12 @@ type CloudProfileSpec struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
 	// +optional
 	Limits *Limits `json:"limits,omitempty" protobuf:"bytes,11,opt,name=limits"`
-	// Capabilities contains the definition of all possible capabilities in the CloudProfile.
+	// MachineCapabilities contains the definition of all possible capabilities in the CloudProfile.
 	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that matches most capabilities will be selected.
 	// +optional
-	Capabilities []CapabilityDefinition `json:"capabilities,omitempty" protobuf:"bytes,12,rep,name=capabilities"`
+	MachineCapabilities []CapabilityDefinition `json:"capabilities,omitempty" protobuf:"bytes,12,rep,name=machineCapabilities"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -153,10 +153,10 @@ type MachineImageVersion struct {
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	// +optional
 	InPlaceUpdates *InPlaceUpdates `json:"inPlaceUpdates,omitempty" protobuf:"bytes,5,opt,name=inPlaceUpdates"`
-	// Flavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
+	// CapabilityFlavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
 	// the machine image version.
 	// +optional
-	Flavors []MachineImageFlavor `json:"flavors,omitempty" protobuf:"bytes,6,rep,name=flavors"`
+	CapabilityFlavors []MachineImageFlavor `json:"capabilityFlavors,omitempty" protobuf:"bytes,6,rep,name=capabilityFlavors"`
 }
 
 // ExpirableVersion contains a version and an expiration date.

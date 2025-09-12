@@ -82,7 +82,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		machineImages = appendMachineImage(machineImages, *image, w.cluster.CloudProfile.Spec.Capabilities)
+		machineImages = appendMachineImage(machineImages, *image, w.cluster.CloudProfile.Spec.MachineCapabilities)
 
 		userData, err := worker.FetchUserData(ctx, w.client, w.worker.Namespace, pool)
 		if err != nil {

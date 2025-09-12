@@ -53,7 +53,7 @@ func findMachineImageFlavor(
 				continue
 			}
 
-			// If no capabilitiesDefinitions are specified, return the (legacy) image field as no flavors are used.
+			// If no capabilitiesDefinitions are specified, return the (legacy) image field as no capabilityFlavors are used.
 			if len(capabilitiesDefinitions) == 0 {
 				return &local.MachineImageFlavor{
 					Image:        version.Image,
@@ -61,7 +61,7 @@ func findMachineImageFlavor(
 				}, nil
 			}
 
-			bestMatch, err := worker.FindBestImageFlavor(version.Flavors, machineCapabilities, capabilitiesDefinitions)
+			bestMatch, err := worker.FindBestImageFlavor(version.CapabilityFlavors, machineCapabilities, capabilitiesDefinitions)
 			if err != nil {
 				return nil, fmt.Errorf("could not determine best flavor %w", err)
 			}

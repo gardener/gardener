@@ -72,17 +72,17 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 
 	// select first machine type of CPU architecture amd64
 	for _, machine := range cloudProfile.Spec.MachineTypes {
-		if machine.GetArchitecture(cloudProfile.Spec.Capabilities) == v1beta1constants.ArchitectureAMD64 {
+		if machine.GetArchitecture(cloudProfile.Spec.MachineCapabilities) == v1beta1constants.ArchitectureAMD64 {
 			machineType = machine
 			break
 		}
 	}
 
-	if machineType.GetArchitecture(cloudProfile.Spec.Capabilities) != v1beta1constants.ArchitectureAMD64 {
+	if machineType.GetArchitecture(cloudProfile.Spec.MachineCapabilities) != v1beta1constants.ArchitectureAMD64 {
 		return fmt.Errorf("no MachineTypes of architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
 
-	machineImage := firstMachineImageWithAMDSupport(cloudProfile.Spec.MachineImages, cloudProfile.Spec.Capabilities)
+	machineImage := firstMachineImageWithAMDSupport(cloudProfile.Spec.MachineImages, cloudProfile.Spec.MachineCapabilities)
 
 	if machineImage == nil {
 		return fmt.Errorf("no MachineImage that supports architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)

@@ -2784,7 +2784,7 @@ func autoConvert_v1beta1_CloudProfileSpec_To_core_CloudProfileSpec(in *CloudProf
 	out.VolumeTypes = *(*[]core.VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Bastion = (*core.Bastion)(unsafe.Pointer(in.Bastion))
 	out.Limits = (*core.Limits)(unsafe.Pointer(in.Limits))
-	out.Capabilities = *(*[]core.CapabilityDefinition)(unsafe.Pointer(&in.Capabilities))
+	out.MachineCapabilities = *(*[]core.CapabilityDefinition)(unsafe.Pointer(&in.MachineCapabilities))
 	return nil
 }
 
@@ -2807,7 +2807,7 @@ func autoConvert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *core.Clou
 	out.VolumeTypes = *(*[]VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Bastion = (*Bastion)(unsafe.Pointer(in.Bastion))
 	out.Limits = (*Limits)(unsafe.Pointer(in.Limits))
-	out.Capabilities = *(*[]CapabilityDefinition)(unsafe.Pointer(&in.Capabilities))
+	out.MachineCapabilities = *(*[]CapabilityDefinition)(unsafe.Pointer(&in.MachineCapabilities))
 	return nil
 }
 
@@ -4831,7 +4831,7 @@ func autoConvert_v1beta1_MachineImageVersion_To_core_MachineImageVersion(in *Mac
 	out.Architectures = *(*[]string)(unsafe.Pointer(&in.Architectures))
 	out.KubeletVersionConstraint = (*string)(unsafe.Pointer(in.KubeletVersionConstraint))
 	out.InPlaceUpdates = (*core.InPlaceUpdates)(unsafe.Pointer(in.InPlaceUpdates))
-	out.Flavors = *(*[]core.MachineImageFlavor)(unsafe.Pointer(&in.Flavors))
+	out.CapabilityFlavors = *(*[]core.MachineImageFlavor)(unsafe.Pointer(&in.CapabilityFlavors))
 	return nil
 }
 
@@ -4848,7 +4848,7 @@ func autoConvert_core_MachineImageVersion_To_v1beta1_MachineImageVersion(in *cor
 	out.Architectures = *(*[]string)(unsafe.Pointer(&in.Architectures))
 	out.KubeletVersionConstraint = (*string)(unsafe.Pointer(in.KubeletVersionConstraint))
 	out.InPlaceUpdates = (*InPlaceUpdates)(unsafe.Pointer(in.InPlaceUpdates))
-	out.Flavors = *(*[]MachineImageFlavor)(unsafe.Pointer(&in.Flavors))
+	out.CapabilityFlavors = *(*[]MachineImageFlavor)(unsafe.Pointer(&in.CapabilityFlavors))
 	return nil
 }
 

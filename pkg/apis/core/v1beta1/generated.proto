@@ -469,12 +469,12 @@ message CloudProfileSpec {
   // +optional
   optional Limits limits = 11;
 
-  // Capabilities contains the definition of all possible capabilities in the CloudProfile.
+  // MachineCapabilities contains the definition of all possible capabilities in the CloudProfile.
   // Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
   // The order of values for a given capability is relevant. The most important value is listed first.
   // During maintenance upgrades, the image that matches most capabilities will be selected.
   // +optional
-  repeated CapabilityDefinition capabilities = 12;
+  repeated CapabilityDefinition machineCapabilities = 12;
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -1952,10 +1952,10 @@ message MachineImageVersion {
   // +optional
   optional InPlaceUpdates inPlaceUpdates = 5;
 
-  // Flavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
+  // CapabilityFlavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
   // the machine image version.
   // +optional
-  repeated MachineImageFlavor flavors = 6;
+  repeated MachineImageFlavor capabilityFlavors = 6;
 }
 
 // MachineType contains certain properties of a machine type.

@@ -289,12 +289,12 @@ func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
 
 // SyncArchitectureCapabilityFields syncs the architecture capabilities and the architecture fields.
 func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec, oldCloudProfileSpec core.CloudProfileSpec) {
-	hasCapabilities := len(newCloudProfileSpec.Capabilities) > 0
-	if !hasCapabilities || !gardencorehelper.HasCapability(newCloudProfileSpec.Capabilities, v1beta1constants.ArchitectureName) {
+	hasCapabilities := len(newCloudProfileSpec.MachineCapabilities) > 0
+	if !hasCapabilities || !gardencorehelper.HasCapability(newCloudProfileSpec.MachineCapabilities, v1beta1constants.ArchitectureName) {
 		return
 	}
 
-	isInitialMigration := hasCapabilities && len(oldCloudProfileSpec.Capabilities) == 0
+	isInitialMigration := hasCapabilities && len(oldCloudProfileSpec.MachineCapabilities) == 0
 
 	// During the initial migration to capabilities, synchronize the architecture fields with the capability definitions.
 	// After the migration, only sync architectures from the capability definitions back to the architecture fields.
@@ -310,7 +310,7 @@ func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages
 	for imageIdx, image := range newMachineImages {
 		for versionIdx, version := range newMachineImages[imageIdx].Versions {
 			oldMachineImageVersion, oldVersionExists := oldMachineImagesMap.GetImageVersion(image.Name, version.Version)
-			capabilityArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(version.Flavors)
+			capabilityArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(version.CapabilityFlavors)
 
 			// Skip any architecture field syncing if
 			// - architecture field has been modified and changed to any value other than empty.
@@ -323,9 +323,9 @@ func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages
 			}
 
 			// Sync architecture field to capabilities if filled on initial migration.
-			if isInitialMigration && len(version.Architectures) > 0 && len(version.Flavors) == 0 {
+			if isInitialMigration && len(version.Architectures) > 0 && len(version.CapabilityFlavors) == 0 {
 				for _, architecture := range version.Architectures {
-					newMachineImages[imageIdx].Versions[versionIdx].Flavors = append(newMachineImages[imageIdx].Versions[versionIdx].Flavors,
+					newMachineImages[imageIdx].Versions[versionIdx].CapabilityFlavors = append(newMachineImages[imageIdx].Versions[versionIdx].CapabilityFlavors,
 						core.MachineImageFlavor{
 							Capabilities: core.Capabilities{
 								v1beta1constants.ArchitectureName: []string{architecture},

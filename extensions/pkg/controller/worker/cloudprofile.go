@@ -12,21 +12,21 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
-// HasCapabilities defines an interface for types that contain Capabilities
-type HasCapabilities interface {
+// CapabilitiesAccessor defines an interface for retrieving Capabilities.
+type CapabilitiesAccessor interface {
 	GetCapabilities() v1beta1.Capabilities
 }
 
-// FindBestImageFlavor finds the most appropriate image version flavor
-// based on the requested machine capabilities and the capabilities definition.
-func FindBestImageFlavor[T HasCapabilities](
+// FindBestImageFlavor finds the most appropriate image version flavor based on the requested machine capabilities.
+// The provided capability definitions are used for applying defaults.
+func FindBestImageFlavor[T CapabilitiesAccessor](
 	providerImageFlavors []T,
 	machineCapabilities v1beta1.Capabilities,
 	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
 ) (T, error) {
 	var zeroValue T
-	compatibleFlavors := filterCompatibleImageFlavors(providerImageFlavors, machineCapabilities, capabilitiesDefinitions)
 
+	compatibleFlavors := filterCompatibleImageFlavors(providerImageFlavors, machineCapabilities, capabilitiesDefinitions)
 	if len(compatibleFlavors) == 0 {
 		return zeroValue, fmt.Errorf("no compatible flavor found")
 	}
@@ -38,9 +38,11 @@ func FindBestImageFlavor[T HasCapabilities](
 	return bestFlavor, nil
 }
 
-// filterCompatibleImageFlavors returns all image flavors that are compatible with the given machine capabilities.
-func filterCompatibleImageFlavors[T HasCapabilities](
-	imageFlavors []T, machineCapabilities v1beta1.Capabilities, capabilitiesDefinitions []v1beta1.CapabilityDefinition,
+// filterCompatibleImageFlavors returns all image capabilityFlavors that are compatible with the given machine capabilities.
+func filterCompatibleImageFlavors[T CapabilitiesAccessor](
+	imageFlavors []T,
+	machineCapabilities v1beta1.Capabilities,
+	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
 ) []T {
 	var compatibleFlavors []T
 	for _, imageFlavor := range imageFlavors {
@@ -58,7 +60,7 @@ func filterCompatibleImageFlavors[T HasCapabilities](
 // 1. Capabilities are ordered by priority in the definitions list (highest priority first)
 // 2. Within each capability, values are ordered by preference (most preferred first)
 // 3. Selection is determined by the first capability value difference found
-func selectBestImageFlavor[T HasCapabilities](
+func selectBestImageFlavor[T CapabilitiesAccessor](
 	compatibleSets []T,
 	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
 ) (T, error) {
@@ -72,15 +74,13 @@ func selectBestImageFlavor[T HasCapabilities](
 		capabilities  v1beta1.Capabilities
 	}
 
-	var capabilitiesWithProviderTypes []capabilitiesWithProviderType
+	capabilitiesWithProviderTypes := make([]capabilitiesWithProviderType, 0, len(compatibleSets))
 	for _, set := range compatibleSets {
 		capabilitiesWithProviderTypes = append(capabilitiesWithProviderTypes, capabilitiesWithProviderType{
 			providerEntry: set,
+			// Normalize capabilities copy by applying defaults
+			capabilities: v1beta1helper.GetCapabilitiesWithAppliedDefaults(set.GetCapabilities(), capabilitiesDefinitions),
 		})
-	}
-	// Normalize capabilities copy by applying defaults
-	for i := range capabilitiesWithProviderTypes {
-		capabilitiesWithProviderTypes[i].capabilities = v1beta1helper.GetCapabilitiesWithAppliedDefaults(capabilitiesWithProviderTypes[i].providerEntry.GetCapabilities(), capabilitiesDefinitions)
 	}
 
 	// Evaluate flavor capabilities based on capability definitions priority
@@ -113,7 +113,7 @@ func selectBestImageFlavor[T HasCapabilities](
 
 	// If we couldn't determine a single best match, this indicates a problem with the cloud profile
 	if len(remainingSets) != 1 {
-		return zeroValue, fmt.Errorf("found multiple version flavors with identical capabilities; this indicates an invalid cloudprofile was admitted. Please open a bug report at https://github.com/gardener/gardener/issues")
+		return zeroValue, fmt.Errorf("could not determine a unique capability flavor; this is usually attributed to an invalid CloudProfile")
 	}
 
 	return remainingSets[0].providerEntry, nil

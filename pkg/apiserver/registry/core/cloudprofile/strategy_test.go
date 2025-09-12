@@ -185,7 +185,7 @@ var _ = Describe("Strategy", func() {
 				},
 			}
 			newCloudProfile := oldCloudProfile.DeepCopy()
-			newCloudProfile.Spec.Capabilities = []core.CapabilityDefinition{
+			newCloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
 				{Name: "architecture", Values: []string{"amd64"}},
 			}
 
@@ -195,7 +195,7 @@ var _ = Describe("Strategy", func() {
 			Expect(newCloudProfile.Spec.MachineTypes[0].Capabilities["architecture"]).To(ConsistOf("amd64"))
 
 			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))
-			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].Flavors).To(ConsistOf(core.MachineImageFlavor{
+			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors).To(ConsistOf(core.MachineImageFlavor{
 				Capabilities: core.Capabilities{"architecture": []string{"amd64"}},
 			}))
 		})
@@ -205,11 +205,11 @@ var _ = Describe("Strategy", func() {
 		It("should sync architecture capabilities to empty architecture fields", func() {
 			cloudProfile := &core.CloudProfile{
 				Spec: core.CloudProfileSpec{
-					Capabilities: []core.CapabilityDefinition{
+					MachineCapabilities: []core.CapabilityDefinition{
 						{Name: "architecture", Values: []string{"amd64"}},
 					},
 					MachineImages: []core.MachineImage{{Versions: []core.MachineImageVersion{
-						{Flavors: []core.MachineImageFlavor{{Capabilities: core.Capabilities{
+						{CapabilityFlavors: []core.MachineImageFlavor{{Capabilities: core.Capabilities{
 							"architecture": []string{"amd64"}}}}},
 					}}},
 					MachineTypes: []core.MachineType{{Capabilities: core.Capabilities{

@@ -553,9 +553,9 @@ func extractArchitecturesFromImageFlavor(imageFlavors []gardencorev1beta1.Machin
 }
 
 // GetArchitecturesFromImageVersion returns the list of supported architectures for the machine image version.
-// It first tries to retrieve the architectures from the flavors capabilities and falls back to the architectures field if none are found.
+// It first tries to retrieve the architectures from the capability flavors and falls back to the architectures field if none are found.
 func GetArchitecturesFromImageVersion(imageVersion gardencorev1beta1.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []string {
-	if architectures := extractArchitecturesFromImageFlavor(imageVersion.Flavors, capabilityDefinitions); len(architectures) > 0 {
+	if architectures := extractArchitecturesFromImageFlavor(imageVersion.CapabilityFlavors, capabilityDefinitions); len(architectures) > 0 {
 		return architectures
 	}
 	return imageVersion.Architectures
@@ -584,7 +584,7 @@ func GetCapabilitiesWithAppliedDefaults(capabilities gardencorev1beta1.Capabilit
 // GetImageFlavorsWithAppliedDefaults returns new MachineImageFlavors with applied defaults from the capability definitions.
 func GetImageFlavorsWithAppliedDefaults(imageFlavors []gardencorev1beta1.MachineImageFlavor, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) []gardencorev1beta1.MachineImageFlavor {
 	if len(imageFlavors) == 0 {
-		// If no flavors are defined, assume all capabilities are supported.
+		// If no capabilityFlavors are defined, assume all capabilities are supported.
 		return []gardencorev1beta1.MachineImageFlavor{{Capabilities: GetCapabilitiesWithAppliedDefaults(gardencorev1beta1.Capabilities{}, capabilitiesDefinitions)}}
 	}
 
@@ -628,12 +628,14 @@ func intersectSlices(slice1, slice2 []string) []string {
 	return elementSet1.Intersection(elementSet2).UnsortedList()
 }
 
-// AreCapabilitiesSupportedByImageFlavors checks if the given capabilities are supported by at least one of the provided image flavors.
+// AreCapabilitiesSupportedByImageFlavors checks if the given capabilities are supported by at least one of the provided image capabilityFlavors.
 func AreCapabilitiesSupportedByImageFlavors(
-	capabilities gardencorev1beta1.Capabilities, imageFlavors []gardencorev1beta1.MachineImageFlavor, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition,
+	capabilities gardencorev1beta1.Capabilities,
+	imageFlavors []gardencorev1beta1.MachineImageFlavor,
+	capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition,
 ) bool {
 	if len(imageFlavors) == 0 {
-		// if no flavors are defined, assume all capabilities are supported
+		// if no capabilityFlavors are defined, assume all capabilities are supported
 		// this can only occur in cloud profiles with one supported architecture
 		return true
 	}
