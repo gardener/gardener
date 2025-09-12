@@ -165,7 +165,8 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 
 		// Check that the target cloud profile still supports the currently used machine types, machine images and volume types.
 		// No need to check for Kubernetes versions, as the NamespacedCloudProfile could have only extended a version so with the next maintenance the Shoot will be updated to a supported version.
-		_, removedMachineImageVersions, _, _ := gardencorehelper.GetMachineImageDiff(oldCloudProfileSpecCore.MachineImages, newCloudProfileSpecCore.MachineImages)
+		diff := gardencorehelper.GetMachineImageDiff(oldCloudProfileSpecCore.MachineImages, newCloudProfileSpecCore.MachineImages)
+		removedMachineImageVersions := diff.RemovedVersions
 		machineTypes := utils.CreateMapFromSlice(newCloudProfileSpec.MachineTypes, func(mt gardencorev1beta1.MachineType) string { return mt.Name })
 		volumeTypes := utils.CreateMapFromSlice(newCloudProfileSpec.VolumeTypes, func(vt gardencorev1beta1.VolumeType) string { return vt.Name })
 
