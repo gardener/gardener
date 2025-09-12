@@ -103,13 +103,13 @@ var _ = Describe("GardenerAdmissionController", func() {
 							APIGroups:   []string{""},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"secrets", "configmaps"},
-							Size:        resource.MustParse("1Mi"),
+							Size:        ptr.To(resource.MustParse("1Mi")),
 						},
 						{
 							APIGroups:   []string{"core.gardener.cloud"},
 							APIVersions: []string{"v1beta1"},
 							Resources:   []string{"shoots"},
-							Size:        resource.MustParse("100Ki"),
+							Size:        ptr.To(resource.MustParse("100Ki")),
 						},
 					},
 					UnrestrictedSubjects: []rbacv1.Subject{{
@@ -1210,12 +1210,6 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				},
 			},
 			FailurePolicy: &failurePolicyFail,
-			NamespaceSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{Key: "gardener.cloud/role", Operator: metav1.LabelSelectorOpIn, Values: []string{"project"}},
-					{Key: "app", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"gardener"}},
-				},
-			},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
 				URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-resource-size"),
 				CABundle: caBundle,
