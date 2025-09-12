@@ -210,9 +210,9 @@ func (k *KubeletHealthChecker) ensureNodeInternalIP(ctx context.Context, node *c
 // verifyNodeReady verifies the NodeReady condition of a node.
 func (k *KubeletHealthChecker) verifyNodeReady(log logr.Logger, node *corev1.Node) error {
 	if isNodeReady(node) && !k.NodeReady {
-		needsReboot := k.ToggleKubeletState()
+		createEvent := k.ToggleKubeletState()
 		log.Info("Kubelet became Ready", "readinessChanges", len(k.KubeletReadinessToggles), "timespan", toggleTimeSpan)
-		if needsReboot {
+		if createEvent {
 			// Do not reboot the node, but create an event instead.
 			k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Kubelet toggled between NotReady and Ready at least %d times in a %s time window. Rebooting the node might help", maxToggles, toggleTimeSpan)
 		}
