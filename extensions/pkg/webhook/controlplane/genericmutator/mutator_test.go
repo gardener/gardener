@@ -260,6 +260,21 @@ var _ = Describe("Mutator", func() {
 					ensurer.EXPECT().EnsureVPNSeedServerDeployment(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
+			Entry(
+				"EnsureVPNSeedServerStatefulSet with a vpn-seed-server statefulset",
+				func() {
+					newObj = &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.StatefulSetNameVPNSeedServer}}
+					ensurer.EXPECT().EnsureVPNSeedServerStatefulSet(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
+				},
+			),
+			Entry(
+				"EnsureVPNSeedServerStatefulSet with a vpn-seed-server statefulset and existing statefulset",
+				func() {
+					newObj = &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.StatefulSetNameVPNSeedServer}}
+					oldObj = newObj.DeepCopyObject().(client.Object)
+					ensurer.EXPECT().EnsureVPNSeedServerStatefulSet(context.Background(), gomock.Any(), newObj, oldObj).Return(nil)
+				},
+			),
 		)
 
 		DescribeTable("EnsureETCD", func(newObj, oldObj *druidcorev1alpha1.Etcd) {

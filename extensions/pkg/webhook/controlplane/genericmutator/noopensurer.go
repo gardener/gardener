@@ -63,6 +63,11 @@ func (e *NoopEnsurer) EnsureVPNSeedServerDeployment(_ context.Context, _ extensi
 	return nil
 }
 
+// EnsureVPNSeedServerStatefulSet ensures that the vpn-seed-server statefulset conforms to the provider requirements.
+func (e *NoopEnsurer) EnsureVPNSeedServerStatefulSet(_ context.Context, _ extensionscontextwebhook.GardenContext, _, _ *appsv1.StatefulSet) error {
+	return nil
+}
+
 // EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
 func (e *NoopEnsurer) EnsureKubeletServiceUnitOptions(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, new, _ []*unit.UnitOption) ([]*unit.UnitOption, error) {
 	return new, nil

@@ -287,6 +287,20 @@ func (mr *MockEnsurerMockRecorder) EnsureVPNSeedServerDeployment(ctx, gctx, new,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureVPNSeedServerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureVPNSeedServerDeployment), ctx, gctx, new, old)
 }
 
+// EnsureVPNSeedServerStatefulSet mocks base method.
+func (m *MockEnsurer) EnsureVPNSeedServerStatefulSet(ctx context.Context, gctx context0.GardenContext, new, old *v1.StatefulSet) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureVPNSeedServerStatefulSet", ctx, gctx, new, old)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureVPNSeedServerStatefulSet indicates an expected call of EnsureVPNSeedServerStatefulSet.
+func (mr *MockEnsurerMockRecorder) EnsureVPNSeedServerStatefulSet(ctx, gctx, new, old any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureVPNSeedServerStatefulSet", reflect.TypeOf((*MockEnsurer)(nil).EnsureVPNSeedServerStatefulSet), ctx, gctx, new, old)
+}
+
 // ShouldProvisionKubeletCloudProviderConfig mocks base method.
 func (m *MockEnsurer) ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx context0.GardenContext, kubeletVersion *semver.Version) bool {
 	m.ctrl.T.Helper()
