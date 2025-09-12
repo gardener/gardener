@@ -14,6 +14,7 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
+	clientauthorizationv1 "k8s.io/client-go/kubernetes/typed/authorization/v1"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -44,6 +45,7 @@ func NewStorage(
 	adminKubeconfigMaxExpiration time.Duration,
 	viewerKubeconfigMaxExpiration time.Duration,
 	credentialsRotationInterval time.Duration,
+	subjectAccessReviewer clientauthorizationv1.SubjectAccessReviewInterface,
 ) ShootStorage {
 	shootRest, shootStatusRest, bindingREST := NewREST(optsGetter, credentialsRotationInterval)
 
@@ -51,8 +53,8 @@ func NewStorage(
 		Shoot:            shootRest,
 		Status:           shootStatusRest,
 		Binding:          bindingREST,
-		AdminKubeconfig:  NewAdminKubeconfigREST(shootRest, secretLister, internalSecretLister, configMapLister, adminKubeconfigMaxExpiration),
-		ViewerKubeconfig: NewViewerKubeconfigREST(shootRest, secretLister, internalSecretLister, configMapLister, viewerKubeconfigMaxExpiration),
+		AdminKubeconfig:  NewAdminKubeconfigREST(shootRest, secretLister, internalSecretLister, configMapLister, adminKubeconfigMaxExpiration, subjectAccessReviewer),
+		ViewerKubeconfig: NewViewerKubeconfigREST(shootRest, secretLister, internalSecretLister, configMapLister, viewerKubeconfigMaxExpiration, subjectAccessReviewer),
 	}
 }
 
