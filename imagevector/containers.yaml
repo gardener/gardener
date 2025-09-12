@@ -798,6 +798,8 @@ images:
     sourceRepository: github.com/envoyproxy/envoy
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/envoyproxy/envoy
     tag: "distroless-v1.35.0"
+    resourceId:
+      version: "v1.35.0-distroless" # keep in sync with tag; must be semver-compliant
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
