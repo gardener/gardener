@@ -109,6 +109,26 @@ It ensures that the finalizers of these resources are not removed by users, as l
 For `CredentialsBinding`s and `SecretBinding`s this means, that the `gardener` finalizer can only be removed if the binding is not referenced by any `Shoot`.
 In case of `Shoot`s, the `gardener` finalizer can only be removed if the last operation of the `Shoot` indicates a successful deletion. 
 
+## `MutatingAdmissionPolicy`
+
+**Type**: Mutating. **Enabled by default**: No.
+
+[This admission controller is managed by Kubernetes.](https://kubernetes.io/docs/reference/access-authn-authz/mutating-admission-policy)
+
+Mutating admission policies offer a declarative, in-process alternative to mutating admission webhooks.
+They use the Common Expression Language (CEL) to declare mutations to resources. Mutations can be defined either with an apply configuration that is merged using the server side apply merge strategy, or a JSON patch.
+Mutating admission policies are highly configurable, enabling policy authors to define policies that can be parameterized and scoped to resources as needed by cluster administrators.
+
+## `MutatingAdmissionWebhook`
+
+**Type**: Mutating. **Enabled by default**: Yes.
+
+[This admission controller is managed by Kubernetes.](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#mutatingadmissionwebhook)
+
+This admission controller calls any mutating webhooks which match the request. Matching webhooks are called in serial; each one may modify the object if it desires.
+If a webhook called by this has side effects (for example, decrementing quota) it must have a reconciliation system, as it is not guaranteed that subsequent webhooks or validating admission controllers will permit the request to finish.
+If you disable the MutatingAdmissionWebhook, you must also disable the `MutatingWebhookConfiguration` object in the `admissionregistration.k8s.io/v1` group/version via the `--runtime-config` flag, both are on by default.
+
 ## `ProjectMutator`
 
 **Type**: Mutating. **Enabled by default**: Yes.
@@ -124,6 +144,8 @@ During subsequent updates, it ensures that the project owner is included in the 
 ## `ResourceQuota`
 
 **Type**: Validating. **Enabled by default**: Yes.
+
+[This admission controller is managed by Kubernetes.](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#resourcequota)
 
 This admission controller enables [object count ResourceQuotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/#object-count-quota) for Gardener resources, e.g. `Shoots`, `SecretBindings`, `Projects`, etc.
 > :warning: In addition to this admission plugin, the [ResourceQuota controller](https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/admission_control_resource_quota.md#resource-quota-controller) must be enabled for the Kube-Controller-Manager of your Garden cluster.
@@ -263,3 +285,23 @@ Already existing `Shoot`s will not be affected by this admission plugin.
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `NamespacedCloudProfile`s.
 It primarily validates if the referenced parent `CloudProfile` exists in the system. In addition, the admission controller ensures that the `NamespacedCloudProfile` only configures new machine types, and does not overwrite those from the parent `CloudProfile`.
+
+## `ValidatingAdmissionPolicy`
+
+**Type**: Validating. **Enabled by default**: No.
+
+[This admission controller is managed by Kubernetes.](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionpolicy)
+
+This admission controller implements the CEL validation for incoming matched requests.
+It is enabled when both feature gate `validatingadmissionpolicy` and `admissionregistration.k8s.io/v1alpha1` group/version are enabled.
+If any of the ValidatingAdmissionPolicy fails, the request fails.
+
+## `ValidatingAdmissionWebhook`
+
+**Type**: Validating. **Enabled by default**: Yes.
+
+[This admission controller is managed by Kubernetes.](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionwebhook)
+
+This admission controller calls any validating webhooks which match the request. Matching webhooks are called in parallel; if any of them rejects the request, the request fails. This admission controller only runs in the validation phase; the webhooks it calls may not mutate the object, as opposed to the webhooks called by the `MutatingAdmissionWebhook` admission controller.
+If a webhook called by this has side effects (for example, decrementing quota) it must have a reconciliation system, as it is not guaranteed that subsequent webhooks or other validating admission controllers will permit the request to finish.
+If you disable the ValidatingAdmissionWebhook, you must also disable the `ValidatingWebhookConfiguration` object in the `admissionregistration.k8s.io/v1` group/version via the `--runtime-config` flag.
