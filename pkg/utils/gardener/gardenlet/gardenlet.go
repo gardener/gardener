@@ -7,9 +7,11 @@ package gardenlet
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -58,4 +60,10 @@ func SetDefaultGardenClusterAddress(log logr.Logger, gardenletConfigRaw runtime.
 	}
 
 	return *newGardenletConfigRaw, nil
+}
+
+// IsResponsibleForAutonomousShoot checks if the current process is responsible for managing autonomous shoots. This is
+// determined by checking if the environment variable "NAMESPACE" is set to the kube-system namespace.
+func IsResponsibleForAutonomousShoot() bool {
+	return os.Getenv("NAMESPACE") == metav1.NamespaceSystem
 }

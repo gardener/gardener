@@ -289,11 +289,21 @@ resources:
   capacity:
     shoots: {{ required ".Values.config.resources.capacity.shoots is required" .Values.config.resources.capacity.shoots }}
 leaderElection:
-  leaderElect: {{ required ".Values.config.leaderElection.leaderElect is required" .Values.config.leaderElection.leaderElect }}
-  leaseDuration: {{ required ".Values.config.leaderElection.leaseDuration is required" .Values.config.leaderElection.leaseDuration }}
-  renewDeadline: {{ required ".Values.config.leaderElection.renewDeadline is required" .Values.config.leaderElection.renewDeadline }}
-  retryPeriod: {{ required ".Values.config.leaderElection.retryPeriod is required" .Values.config.leaderElection.retryPeriod }}
-  resourceLock: {{ required ".Values.config.leaderElection.resourceLock is required" .Values.config.leaderElection.resourceLock }}
+  {{- if .Values.config.leaderElection.leaderElect }}
+  leaderElect: {{ .Values.config.leaderElection.leaderElect }}
+  {{- end }}
+  {{- if .Values.config.leaderElection.leaseDuration }}
+  leaseDuration: {{ .Values.config.leaderElection.leaseDuration }}
+  {{- end }}
+  {{- if .Values.config.leaderElection.renewDeadline }}
+  renewDeadline: {{ .Values.config.leaderElection.renewDeadline }}
+  {{- end }}
+  {{- if .Values.config.leaderElection.retryPeriod }}
+  retryPeriod: {{ .Values.config.leaderElection.retryPeriod }}
+  {{- end }}
+  {{- if .Values.config.leaderElection.resourceLock }}
+  resourceLock: {{ .Values.config.leaderElection.resourceLock }}
+  {{- end }}
   {{- if .Values.config.leaderElection.resourceName }}
   resourceName: {{ .Values.config.leaderElection.resourceName }}
   {{- end }}
@@ -357,4 +367,3 @@ nodeToleration:
 {{- define "gardenlet.config.name" -}}
 gardenlet-configmap-{{ include "gardenlet.config.data" . | sha256sum | trunc 8 }}
 {{- end -}}
-
