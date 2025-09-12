@@ -279,9 +279,9 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
-	DescribeTable("#InternalDNSProviderCredentialsRefEqual",
+	DescribeTable("#DNSProviderCredentialsRefEqual",
 		func(oldDNSProvider, newDNSProvider *gardencorev1beta1.SeedDNSProviderConfig, equal bool) {
-			Expect(InternalDNSProviderCredentialsRefEqual(oldDNSProvider, newDNSProvider)).To(Equal(equal))
+			Expect(DNSProviderCredentialsRefEqual(oldDNSProvider, newDNSProvider)).To(Equal(equal))
 		},
 
 		Entry("both nil", nil, nil, true),
@@ -302,6 +302,56 @@ var _ = Describe("Helper", func() {
 			&gardencorev1beta1.SeedDNSProviderConfig{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
 			&gardencorev1beta1.SeedDNSProviderConfig{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
 			true,
+		),
+	)
+
+	DescribeTable("#DNSProvidersCredentialsRefEqual",
+		func(oldDNSProviders, newDNSProviders []gardencorev1beta1.SeedDNSProviderConfig, equal bool) {
+			Expect(DNSProvidersCredentialsRefEqual(oldDNSProviders, newDNSProviders)).To(Equal(equal))
+		},
+
+		Entry("both nil", nil, nil, true),
+		Entry("both empty", []gardencorev1beta1.SeedDNSProviderConfig{}, []gardencorev1beta1.SeedDNSProviderConfig{}, true),
+		Entry("different lengths",
+			[]gardencorev1beta1.SeedDNSProviderConfig{
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+			},
+			[]gardencorev1beta1.SeedDNSProviderConfig{
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "baz", Namespace: "qux"}},
+			},
+			false,
+		),
+		Entry("same length, different credentials refs",
+			[]gardencorev1beta1.SeedDNSProviderConfig{
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+			},
+			[]gardencorev1beta1.SeedDNSProviderConfig{
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "foo"}},
+			},
+			false,
+		),
+		Entry("same length, equal credentials refs",
+			[]gardencorev1beta1.SeedDNSProviderConfig{
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "baz", Namespace: "qux"}},
+			},
+			[]gardencorev1beta1.SeedDNSProviderConfig{
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "baz", Namespace: "qux"}},
+			},
+			true,
+		),
+		Entry("multiple elements, one different credentials ref",
+			[]gardencorev1beta1.SeedDNSProviderConfig{
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "baz", Namespace: "qux"}},
+			},
+			[]gardencorev1beta1.SeedDNSProviderConfig{
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+				{CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "different", Namespace: "qux"}},
+			},
+			false,
 		),
 	)
 })
