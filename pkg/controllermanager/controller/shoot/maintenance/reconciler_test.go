@@ -892,8 +892,8 @@ var _ = Describe("Shoot Maintenance", func() {
 			latestVersionWithSupportedCapabilities := "1.4.2"
 
 			BeforeEach(func() {
-				cloudProfile.Spec.Capabilities = []gardencorev1beta1.CapabilityDefinition{
-					{Name: v1beta1constants.ArchitectureName, Values: []string{v1beta1constants.ArchitectureARM64, v1beta1constants.ArchitectureAMD64}},
+				cloudProfile.Spec.MachineCapabilities = []gardencorev1beta1.CapabilityDefinition{
+					{Name: "architecture", Values: []string{v1beta1constants.ArchitectureARM64, v1beta1constants.ArchitectureAMD64}},
 					{Name: "someCapability", Values: []string{"value1", "value2", "value3"}},
 					{Name: "someOtherCapability", Values: []string{"value1", "value2"}},
 				}
@@ -901,21 +901,21 @@ var _ = Describe("Shoot Maintenance", func() {
 					{
 						Name: "someMachineType",
 						Capabilities: gardencorev1beta1.Capabilities{
-							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
-							"someCapability":                  []string{"value1"},
+							"architecture":   []string{v1beta1constants.ArchitectureAMD64},
+							"someCapability": []string{"value1"},
 						},
 					},
 					{
 						Name: "someOtherMachineType",
 						Capabilities: gardencorev1beta1.Capabilities{
-							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
-							"someCapability":                  []string{"value2"},
+							"architecture":   []string{v1beta1constants.ArchitectureAMD64},
+							"someCapability": []string{"value2"},
 						},
 					}, {
 						Name: "anotherMachineType",
 						Capabilities: gardencorev1beta1.Capabilities{
-							v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
-							"someCapability":                  []string{"value3"},
+							"architecture":   []string{v1beta1constants.ArchitectureAMD64},
+							"someCapability": []string{"value3"},
 						},
 					},
 				}
@@ -925,12 +925,12 @@ var _ = Describe("Shoot Maintenance", func() {
 							Version: shootCurrentImageVersion,
 						},
 						CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
-						CapabilitySets: []gardencorev1beta1.CapabilitySet{
+						CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 							{Capabilities: gardencorev1beta1.Capabilities{
-								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
+								"architecture": []string{v1beta1constants.ArchitectureAMD64},
 							}},
 							{Capabilities: gardencorev1beta1.Capabilities{
-								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
+								"architecture": []string{v1beta1constants.ArchitectureARM64},
 							}},
 						},
 					},
@@ -939,14 +939,14 @@ var _ = Describe("Shoot Maintenance", func() {
 							Version: latestVersionWithSupportedCapabilities,
 						},
 						CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
-						CapabilitySets: []gardencorev1beta1.CapabilitySet{
+						CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 							{Capabilities: gardencorev1beta1.Capabilities{
-								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
-								"someCapability":                  []string{"value1", "value2"},
+								"architecture":   []string{v1beta1constants.ArchitectureAMD64},
+								"someCapability": []string{"value1", "value2"},
 							}},
 							{Capabilities: gardencorev1beta1.Capabilities{
-								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
-								"someCapability":                  []string{"value1", "value2"},
+								"architecture":   []string{v1beta1constants.ArchitectureARM64},
+								"someCapability": []string{"value1", "value2"},
 							}},
 						},
 					},
@@ -956,14 +956,14 @@ var _ = Describe("Shoot Maintenance", func() {
 							ExpirationDate: &expirationDateInTheFuture,
 						},
 						CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
-						CapabilitySets: []gardencorev1beta1.CapabilitySet{
+						CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 							{Capabilities: gardencorev1beta1.Capabilities{
-								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureAMD64},
-								"someCapability":                  []string{"value2"},
+								"architecture":   []string{v1beta1constants.ArchitectureAMD64},
+								"someCapability": []string{"value2"},
 							}},
 							{Capabilities: gardencorev1beta1.Capabilities{
-								v1beta1constants.ArchitectureName: []string{v1beta1constants.ArchitectureARM64},
-								"someCapability":                  []string{"value2"},
+								"architecture":   []string{v1beta1constants.ArchitectureARM64},
+								"someCapability": []string{"value2"},
 							}},
 						},
 					},

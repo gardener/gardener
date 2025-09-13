@@ -6,6 +6,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // +genclient
@@ -32,4 +34,6 @@ type MachineImage struct {
 	Version string `json:"version"`
 	// Image is the image for the machine image.
 	Image string `json:"image"`
+	// Capabilities of the machine image.
+	Capabilities gardencorev1beta1.Capabilities `json:"capabilities,omitempty"`
 }

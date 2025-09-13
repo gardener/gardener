@@ -24,6 +24,7 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/bastion"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
@@ -120,12 +121,14 @@ func bastionImage(cluster *extensionscontroller.Cluster) (string, error) {
 		return "", fmt.Errorf("failed to extract CloudProfileConfig from cluster: %w", err)
 	}
 
-	image, err := helper.FindImageFromCloudProfile(cloudProfileConfig, machineSpec.ImageBaseName, machineSpec.ImageVersion)
+	machineTypeFromCloudProfile := v1beta1helper.FindMachineTypeByName(cluster.CloudProfile.Spec.MachineTypes, machineSpec.MachineTypeName)
+
+	image, err := helper.FindImageFromCloudProfile(cloudProfileConfig, machineSpec.ImageBaseName, machineSpec.ImageVersion, machineTypeFromCloudProfile.Capabilities, cluster.CloudProfile.Spec.MachineCapabilities)
 	if err != nil {
 		return "", fmt.Errorf("failed to find machine image in CloudProfileConfig: %w", err)
 	}
 
-	return image, nil
+	return image.Image, nil
 }
 
 func objectMetaForBastion(bastion *extensionsv1alpha1.Bastion) metav1.ObjectMeta {

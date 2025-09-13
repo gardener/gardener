@@ -161,6 +161,58 @@ string
 <p>Image is the image for the machine image.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>capabilities</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
+</em>
+</td>
+<td>
+<p>Capabilities of the machine image.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="local.provider.extensions.gardener.cloud/v1alpha1.MachineImageFlavor">MachineImageFlavor
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#local.provider.extensions.gardener.cloud/v1alpha1.MachineImageVersion">MachineImageVersion</a>)
+</p>
+<p>
+<p>MachineImageFlavor is a provider-specific image identifier with its supported capabilities.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>image</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Image is the image for the machine image.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>capabilities</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.Capabilities
+</em>
+</td>
+<td>
+<p>Capabilities that are supported by the identifier in this set.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="local.provider.extensions.gardener.cloud/v1alpha1.MachineImageVersion">MachineImageVersion
@@ -200,6 +252,19 @@ string
 </td>
 <td>
 <p>Image is the image for the machine image.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>capabilityFlavors</code></br>
+<em>
+<a href="#local.provider.extensions.gardener.cloud/v1alpha1.MachineImageFlavor">
+[]MachineImageFlavor
+</a>
+</em>
+</td>
+<td>
+<p>CapabilityFlavors contains provider-specific image identifiers of this version with their capabilities.</p>
 </td>
 </tr>
 </tbody>
