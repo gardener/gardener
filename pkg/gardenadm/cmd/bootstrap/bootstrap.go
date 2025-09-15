@@ -215,6 +215,11 @@ func run(ctx context.Context, opts *Options) error {
 			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.WorkerResource],
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
+		listControlPlaneMachines = g.Add(flow.Task{
+			Name:         "Listing control plane machines",
+			Fn:           b.ListControlPlaneMachines,
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
+		})
 
 		// Delete machine-controller-manager to prevent it from interfering with Machine objects that will be migrated to
 		// the autonomous shoot.
@@ -266,7 +271,7 @@ func run(ctx context.Context, opts *Options) error {
 				connMachine0, err = b.ConnectToMachine(ctx, 0)
 				return err
 			}).RetryUntilTimeout(5*time.Second, 5*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, deployBastion),
+			Dependencies: flow.NewTaskIDs(listControlPlaneMachines, deployBastion),
 		})
 		copyManifests = g.Add(flow.Task{
 			Name: "Copying manifests to the first control plane machine",
