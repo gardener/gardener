@@ -8,11 +8,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -424,4 +426,42 @@ func NewV1beta1ImagesContext(parentImages []gardencorev1beta1.MachineImage) *Ima
 			return utils.CreateMapFromSlice(mi.Versions, func(v gardencorev1beta1.MachineImageVersion) string { return v.Version })
 		},
 	)
+}
+
+// ValidateCapabilities validates the capabilities of a machine type or machine image against the capabilitiesDefinition located in a cloud profile at spec.machineCapabilities.
+// It checks if the capabilities are supported by the cloud profile and if the architecture is defined correctly.
+// It returns a list of field errors if any validation fails.
+func ValidateCapabilities(capabilities gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// create map from capabilitiesDefinitions
+	capabilitiesDefinition := make(map[string][]string)
+	for _, capabilityDefinition := range capabilitiesDefinitions {
+		capabilitiesDefinition[capabilityDefinition.Name] = capabilityDefinition.Values
+	}
+	supportedCapabilityKeys := slices.Collect(maps.Keys(capabilitiesDefinition))
+
+	// Check if all capabilities are supported by the cloud profile
+	for capabilityKey, capability := range capabilities {
+		supportedValues, keyExists := capabilitiesDefinition[capabilityKey]
+		if !keyExists {
+			allErrs = append(allErrs, field.NotSupported(fldPath, capabilityKey, supportedCapabilityKeys))
+			continue
+		}
+		for i, value := range capability {
+			if !slices.Contains(supportedValues, value) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child(capabilityKey).Index(i), value, supportedValues))
+			}
+		}
+	}
+
+	// Check additional requirements for architecture
+	// - must be defined when multiple architectures are supported by the cloud profile
+	supportedArchitectures := capabilitiesDefinition[v1beta1constants.ArchitectureName]
+	architectures := capabilities[v1beta1constants.ArchitectureName]
+	if len(supportedArchitectures) > 1 && len(architectures) != 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child(v1beta1constants.ArchitectureName), architectures, "must define exactly one architecture when multiple architectures are supported by the cloud profile"))
+	}
+
+	return allErrs
 }

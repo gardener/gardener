@@ -111,7 +111,7 @@ func validateWithCapabilities(version api.MachineImageVersion, capabilitiesDefin
 		if len(imageFlavor.Image) == 0 {
 			allErrs = append(allErrs, field.Required(kdxPath.Child("image"), "must provide an image"))
 		}
-		allErrs = append(allErrs, v1beta1helper.ValidateCapabilities(imageFlavor.Capabilities, capabilitiesDefinitions, kdxPath.Child("capabilities"))...)
+		allErrs = append(allErrs, gardenerutils.ValidateCapabilities(imageFlavor.Capabilities, capabilitiesDefinitions, kdxPath.Child("capabilities"))...)
 	}
 
 	return allErrs
