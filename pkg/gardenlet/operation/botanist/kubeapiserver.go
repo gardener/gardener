@@ -116,13 +116,16 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 	var (
 		ipAddresses = []net.IP{}
 		dnsNames    = []string{
-			v1beta1helper.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 			b.Shoot.GetInfo().Status.TechnicalID,
 		}
 	)
 
 	if b.Shoot.Networks != nil {
 		ipAddresses = append(ipAddresses, b.Shoot.Networks.APIServer...)
+	}
+
+	if b.Shoot.InternalClusterDomain != nil {
+		dnsNames = append(dnsNames, v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain))
 	}
 
 	if b.Shoot.ExternalClusterDomain != nil {

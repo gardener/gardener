@@ -70,7 +70,8 @@ var _ = Describe("ResourceManager", func() {
 			botanist.Seed = &seedpkg.Seed{}
 			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
 			botanist.Shoot = &shootpkg.Shoot{
-				KubernetesVersion: semver.MustParse("1.32.1"),
+				KubernetesVersion:     semver.MustParse("1.32.1"),
+				ExternalClusterDomain: ptr.To("foo.local.gardener.cloud"),
 			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})

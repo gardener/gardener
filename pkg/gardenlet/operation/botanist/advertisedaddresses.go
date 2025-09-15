@@ -33,7 +33,7 @@ func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedA
 		return addresses, nil
 	}
 
-	if b.Shoot.ExternalClusterDomain != nil && len(*b.Shoot.ExternalClusterDomain) > 0 {
+	if b.Shoot.ExternalClusterDomain != nil {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
 			Name: v1beta1constants.AdvertisedAddressExternal,
 			URL:  "https://" + v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
@@ -47,10 +47,10 @@ func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedA
 		})
 	}
 
-	if len(b.Shoot.InternalClusterDomain) > 0 {
+	if b.Shoot.InternalClusterDomain != nil {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
 			Name: v1beta1constants.AdvertisedAddressInternal,
-			URL:  "https://" + v1beta1helper.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			URL:  "https://" + v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain),
 		})
 	}
 
@@ -68,7 +68,7 @@ func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedA
 			shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer != nil
 	}
 
-	if len(b.Shoot.InternalClusterDomain) > 0 ||
+	if b.Shoot.InternalClusterDomain != nil ||
 		hasCustomIssuer(b.Shoot.GetInfo()) ||
 		v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo()) {
 		externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(true)

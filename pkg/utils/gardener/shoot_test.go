@@ -966,7 +966,7 @@ var _ = Describe("Shoot", func() {
 
 	DescribeTable("#ConstructInternalClusterDomain",
 		func(shootName, shootProject, internalDomain, expected string) {
-			Expect(ConstructInternalClusterDomain(shootName, shootProject, &Domain{Domain: internalDomain})).To(Equal(expected))
+			Expect(ConstructInternalClusterDomain(shootName, shootProject, &Domain{Domain: internalDomain})).To(HaveValue(Equal(expected)))
 		},
 
 		Entry("with internal domain key", "foo", "bar", "internal.example.com", "foo.bar.internal.example.com"),

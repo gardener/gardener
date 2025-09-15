@@ -187,7 +187,7 @@ var _ = Describe("dns", func() {
 		It("sets internal and external DNSRecords", func() {
 			b.Shoot.GetInfo().Status.ClusterIdentity = ptr.To("shoot-cluster-identity")
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("foo")}
-			b.Shoot.InternalClusterDomain = "bar"
+			b.Shoot.InternalClusterDomain = ptr.To("bar")
 			b.Shoot.ExternalClusterDomain = ptr.To("baz")
 			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
 			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}

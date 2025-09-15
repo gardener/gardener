@@ -49,6 +49,7 @@ var _ = Describe("VPNShoot", func() {
 					Services: []net.IPNet{{IP: []byte("10.0.0.0"), Mask: []byte("24")}},
 					Nodes:    []net.IPNet{{IP: []byte("10.181.0.0"), Mask: []byte("16")}},
 				},
+				ExternalClusterDomain: ptr.To("foo.local.gardener.cloud"),
 			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{

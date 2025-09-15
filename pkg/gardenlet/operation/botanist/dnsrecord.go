@@ -67,7 +67,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 			values.Zone = &b.Garden.InternalDomain.Zone
 		}
 		values.SecretData = b.Garden.InternalDomain.SecretData
-		values.DNSName = v1beta1helper.GetAPIServerDomain(b.Shoot.InternalClusterDomain)
+		values.DNSName = v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain)
 	}
 
 	return extensionsdnsrecord.New(

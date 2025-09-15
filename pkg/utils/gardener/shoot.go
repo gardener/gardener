@@ -587,14 +587,14 @@ func IsIncompleteDNSConfigError(err error) bool {
 // already contains "internal", the result is constructed as "<shootName>.<shootProject>.<internalDomain>."
 // In case it does not, the word "internal" will be appended, resulting in
 // "<shootName>.<shootProject>.internal.<internalDomain>".
-func ConstructInternalClusterDomain(shootName, shootProject string, internalDomain *Domain) string {
+func ConstructInternalClusterDomain(shootName, shootProject string, internalDomain *Domain) *string {
 	if internalDomain == nil {
-		return ""
+		return nil
 	}
 	if strings.Contains(internalDomain.Domain, InternalDomainKey) {
-		return fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain.Domain)
+		return ptr.To(fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain.Domain))
 	}
-	return fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, InternalDomainKey, internalDomain.Domain)
+	return ptr.To(fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, InternalDomainKey, internalDomain.Domain))
 }
 
 // ConstructExternalClusterDomain constructs the external Shoot cluster domain, i.e. the domain which will be put
