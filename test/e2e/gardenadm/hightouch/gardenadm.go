@@ -249,7 +249,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your autonomous shoot cluster has successfully been connected to Gardener!"))
 		}, SpecTimeout(time.Minute))
 
-		// TODO(rfranzke): Implement this a 'gardenadm connect' progresses.
+		// TODO(rfranzke): Implement this as 'gardenadm connect' progresses.
 		// It("should see the joined shoot in the Gardener API", func(ctx SpecContext) {
 		// 	Eventually(ctx, func(g Gomega) {}).Should(Succeed())
 		// }, SpecTimeout(2*time.Minute))

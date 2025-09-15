@@ -72,7 +72,7 @@ var _ = Describe("Options", func() {
 				options.Token.Combined = "abcdef.abcdef1234567890"
 			})
 
-			It("should an error whenno worker pool name is provided", func() {
+			It("should an error when no worker pool name is provided", func() {
 				options.Validity = time.Hour
 				Expect(options.Validate()).To(MatchError(ContainSubstring("must specify a worker pool name when using --print-join-command")))
 			})
@@ -100,7 +100,7 @@ var _ = Describe("Options", func() {
 			options.Shoot.Namespace = "bar"
 			options.Description = "custom description"
 			options.Token.Combined = "abcdef.abcdef1234567890"
-			Expect(options.Validate()).To(MatchError(ContainSubstring("cannot specify a custom description when creating a bootstrap token for the `gardenadm connect` command")))
+			Expect(options.Validate()).To(MatchError(ContainSubstring("cannot specify a custom description when creating a bootstrap token for the 'gardenadm connect' command")))
 		})
 	})
 
@@ -125,14 +125,14 @@ var _ = Describe("Options", func() {
 			options.Shoot.Namespace = "bar"
 
 			Expect(options.Complete()).To(Succeed())
-			Expect(options.Description).To(Equal("Used for connecting the autonomous Shoot bar/foo to Gardener via `gardenadm connect`"))
+			Expect(options.Description).To(Equal("Used for connecting the autonomous Shoot bar/foo to Gardener via 'gardenadm connect'"))
 		})
 
 		It("should default the description for 'gardenadm join' when no shoot info is provided", func() {
 			options.Token.Combined = "foo.bar"
 
 			Expect(options.Complete()).To(Succeed())
-			Expect(options.Description).To(Equal("Used for joining nodes to an autonomous shoot cluster via `gardenadm join`"))
+			Expect(options.Description).To(Equal("Used for joining nodes to an autonomous shoot cluster via 'gardenadm join'"))
 		})
 	})
 })

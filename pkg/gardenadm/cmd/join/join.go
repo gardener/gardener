@@ -101,8 +101,8 @@ func run(ctx context.Context, opts *Options) error {
 Your node has successfully been instructed to join the cluster as a worker!
 
 The bootstrap token will be deleted automatically by kube-controller-manager
-after it has expired. If you want to delete it right awy, run the following
-on any control plane node:
+after it has expired. If you want to delete it right away, run the following
+command on any control plane node:
 
   gardenadm token delete %s
 

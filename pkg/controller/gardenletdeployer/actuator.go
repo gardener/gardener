@@ -67,15 +67,15 @@ type Actuator struct {
 	GetTargetClientFunc     func(ctx context.Context) (kubernetes.Interface, error)
 	CheckIfVPAAlreadyExists func(ctx context.Context) (bool, error)
 	// GetInfrastructureSecret will return the infrastructure secret or nil if other kind of credentials are used instead.
-	GetInfrastructureSecret func(ctx context.Context) (*corev1.Secret, error) // TODO(dimityrmirchev): Deprecate and eventually remove this function.
-	GetTargetDomain         func() string
-	ApplyGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
-	DeleteGardenletChart    func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
-	Clock                   clock.Clock
-	ValuesHelper            ValuesHelper
-	Recorder                record.EventRecorder
-	GardenNamespaceTarget   string
-	BootstrapToken          string
+	GetInfrastructureSecret  func(ctx context.Context) (*corev1.Secret, error) // TODO(dimityrmirchev): Deprecate and eventually remove this function.
+	GetTargetDomain          func() string
+	ApplyGardenletChart      func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
+	DeleteGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
+	Clock                    clock.Clock
+	ValuesHelper             ValuesHelper
+	Recorder                 record.EventRecorder
+	GardenletNamespaceTarget string
+	BootstrapToken           string
 }
 
 // Reconcile deploys or updates gardenlets.
@@ -286,7 +286,7 @@ func (a *Actuator) Delete(
 func (a *Actuator) ensureGardenNamespace(ctx context.Context, targetClient client.Client) error {
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: a.GardenNamespaceTarget,
+			Name: a.GardenletNamespaceTarget,
 		},
 	}
 	if err := targetClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), gardenNamespace); err != nil {
@@ -301,7 +301,7 @@ func (a *Actuator) ensureGardenNamespace(ctx context.Context, targetClient clien
 func (a *Actuator) deleteGardenNamespace(ctx context.Context, targetClient kubernetes.Interface) error {
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: a.GardenNamespaceTarget,
+			Name: a.GardenletNamespaceTarget,
 		},
 	}
 	return client.IgnoreNotFound(targetClient.Client().Delete(ctx, gardenNamespace))
@@ -309,7 +309,7 @@ func (a *Actuator) deleteGardenNamespace(ctx context.Context, targetClient kuber
 
 func (a *Actuator) getGardenNamespace(ctx context.Context, targetClient kubernetes.Interface) (*corev1.Namespace, error) {
 	ns := &corev1.Namespace{}
-	if err := targetClient.Client().Get(ctx, client.ObjectKey{Name: a.GardenNamespaceTarget}, ns); err != nil {
+	if err := targetClient.Client().Get(ctx, client.ObjectKey{Name: a.GardenletNamespaceTarget}, ns); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -416,7 +416,7 @@ func (a *Actuator) deleteGardenlet(
 
 func (a *Actuator) getGardenletDeployment(ctx context.Context, targetClient kubernetes.Interface) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{}
-	if err := targetClient.Client().Get(ctx, client.ObjectKey{Namespace: a.GardenNamespaceTarget, Name: v1beta1constants.DeploymentNameGardenlet}, deployment); err != nil {
+	if err := targetClient.Client().Get(ctx, client.ObjectKey{Namespace: a.GardenletNamespaceTarget, Name: v1beta1constants.DeploymentNameGardenlet}, deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -621,7 +621,7 @@ func (a *Actuator) prepareGardenletChartValues(
 		a.BootstrapToken,
 		ensureGardenletEnvironment(deployment, a.GetTargetDomain()),
 		componentConfig,
-		a.GardenNamespaceTarget,
+		a.GardenletNamespaceTarget,
 	)
 }
 
@@ -640,7 +640,7 @@ func PrepareGardenletChartValues(
 	bootstrapToken string,
 	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
 	gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration,
-	gardenNamespaceTargetCluster string,
+	gardenletNamespaceTargetCluster string,
 ) (
 	map[string]any,
 	error,
@@ -671,7 +671,7 @@ func PrepareGardenletChartValues(
 			seed,
 			bootstrap,
 			bootstrapToken,
-			gardenNamespaceTargetCluster,
+			gardenletNamespaceTargetCluster,
 		)
 		if err != nil {
 			return nil, err
@@ -705,7 +705,7 @@ func PrepareGardenletChartValues(
 	if gardenletConfig.LeaderElection == nil {
 		gardenletConfig.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
 	}
-	gardenletConfig.LeaderElection.ResourceNamespace = gardenNamespaceTargetCluster
+	gardenletConfig.LeaderElection.ResourceNamespace = gardenletNamespaceTargetCluster
 
 	// Get gardenlet chart values
 	return vp.GetGardenletChartValues(
@@ -761,7 +761,7 @@ func prepareGardenClientConnectionWithBootstrap(
 	seed *gardencorev1beta1.Seed,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	bootstrapToken string,
-	gardenNamespaceTargetCluster string,
+	gardenletNamespaceTargetCluster string,
 ) (
 	string,
 	error,
@@ -770,7 +770,7 @@ func prepareGardenClientConnectionWithBootstrap(
 	if gcc.KubeconfigSecret == nil {
 		gcc.KubeconfigSecret = &corev1.SecretReference{
 			Name:      GardenletDefaultKubeconfigSecretName,
-			Namespace: gardenNamespaceTargetCluster,
+			Namespace: gardenletNamespaceTargetCluster,
 		}
 	}
 
@@ -806,7 +806,7 @@ func prepareGardenClientConnectionWithBootstrap(
 	if gcc.BootstrapKubeconfig == nil {
 		gcc.BootstrapKubeconfig = &corev1.SecretReference{
 			Name:      GardenletDefaultKubeconfigBootstrapSecretName,
-			Namespace: gardenNamespaceTargetCluster,
+			Namespace: gardenletNamespaceTargetCluster,
 		}
 	}
 

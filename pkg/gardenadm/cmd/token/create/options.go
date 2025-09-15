@@ -99,7 +99,7 @@ func (o *Options) Validate() error {
 	}
 
 	if len(o.Shoot.Namespace) > 0 && len(o.Shoot.Name) > 0 && len(o.Description) > 0 {
-		return fmt.Errorf("cannot specify a custom description when creating a bootstrap token for the `gardenadm connect` command")
+		return fmt.Errorf("cannot specify a custom description when creating a bootstrap token for the 'gardenadm connect' command")
 	}
 
 	return nil
@@ -114,20 +114,20 @@ func (o *Options) Complete() error {
 	o.Token.ID, o.Token.Secret = split[0], split[1]
 
 	if o.Shoot.Namespace != "" && o.Shoot.Name != "" {
-		o.Description = fmt.Sprintf("%s%s to Gardener via `gardenadm connect`", bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix, o.Shoot.String())
+		o.Description = fmt.Sprintf("%s%s to Gardener via 'gardenadm connect'", bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix, o.Shoot.String())
 	} else if len(o.Description) == 0 {
-		o.Description = "Used for joining nodes to an autonomous shoot cluster via `gardenadm join`"
+		o.Description = "Used for joining nodes to an autonomous shoot cluster via 'gardenadm join'"
 	}
 
 	return nil
 }
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
-	fs.StringVarP(&o.Description, "description", "d", "", "Description for the bootstrap token used for `gardenadm join`")
+	fs.StringVarP(&o.Description, "description", "d", "", "Description for the bootstrap token used for 'gardenadm join'")
 	fs.DurationVarP(&o.Validity, "validity", "", time.Hour, "Validity duration of the bootstrap token. Minimum is 10m, maximum is 24h.")
-	fs.BoolVarP(&o.PrintJoinCommand, "print-join-command", "j", false, "Instead of only printing the token, print the full machine-readable `gardenadm join` command that can be copied and ran on a machine that should join the cluster")
-	fs.BoolVarP(&o.PrintConnectCommand, "print-connect-command", "c", false, "Instead of only printing the token, print the full machine-readable `gardenadm connect` command that can be ran on a machine of a cluster that should be connected to Gardener")
+	fs.BoolVarP(&o.PrintJoinCommand, "print-join-command", "j", false, "Instead of only printing the token, print the full machine-readable 'gardenadm join' command that can be copied and ran on a machine that should join the cluster")
+	fs.BoolVarP(&o.PrintConnectCommand, "print-connect-command", "c", false, "Instead of only printing the token, print the full machine-readable 'gardenadm connect' command that can be ran on a machine of a cluster that should be connected to Gardener")
 	fs.StringVarP(&o.WorkerPoolName, "worker-pool-name", "w", "worker", "Name of the worker pool to use for the join command.")
-	fs.StringVarP(&o.Shoot.Namespace, "shoot-namespace", "", "", "Namespace of the Shoot which should be connected to Gardener via `gardenadm connect` with this bootstrap token")
-	fs.StringVarP(&o.Shoot.Name, "shoot-name", "", "", "Name of the Shoot which should be connected to Gardener via `gardenadm connect` with this bootstrap token")
+	fs.StringVarP(&o.Shoot.Namespace, "shoot-namespace", "", "", "Namespace of the Shoot which should be connected to Gardener via 'gardenadm connect' with this bootstrap token")
+	fs.StringVarP(&o.Shoot.Name, "shoot-name", "", "", "Name of the Shoot which should be connected to Gardener via 'gardenadm connect' with this bootstrap token")
 }

@@ -132,10 +132,10 @@ var _ = Describe("Interface", func() {
 			DeleteGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error {
 				return targetChartApplier.DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, namespace, "gardenlet", kubernetes.Values(values))
 			},
-			Clock:                 clock.RealClock{},
-			ValuesHelper:          vh,
-			Recorder:              recorder,
-			GardenNamespaceTarget: namespace,
+			Clock:                    clock.RealClock{},
+			ValuesHelper:             vh,
+			Recorder:                 recorder,
+			GardenletNamespaceTarget: namespace,
 		}
 
 		ctx = context.TODO()

@@ -124,8 +124,8 @@ modifications to the Shoot specification should now be performed via the Gardene
 API, rather than by directly editing resources in the cluster.
 
 The bootstrap token will be deleted automatically by kube-controller-manager
-after it has expired. If you want to delete it right awy, run the following
-on any control plane node:
+after it has expired. If you want to delete it right away, run the following
+command on any control plane node:
 
   gardenadm token delete %s
 
@@ -160,15 +160,15 @@ func newGardenletDeployer(b *botanist.AutonomousBotanist, gardenClientSet kubern
 
 			archive, err := oci.NewHelmRegistry(b.GardenClient).Pull(ctx, &gardencorev1.OCIRepository{Ref: ptr.To(gardenletChartImage.String())})
 			if err != nil {
-				return fmt.Errorf("failed pulling Helm chart from OCI repository: %w", err)
+				return fmt.Errorf("failed pulling Helm chart %s from OCI repository: %w", gardenletChartImage.String(), err)
 			}
 
 			return targetChartApplier.ApplyFromArchive(ctx, archive, b.Shoot.ControlPlaneNamespace, "gardenlet", kubernetes.Values(values))
 		},
-		Clock:                 clock.RealClock{},
-		ValuesHelper:          gardenletdeployer.NewValuesHelper(nil),
-		Recorder:              &record.FakeRecorder{},
-		GardenNamespaceTarget: b.Shoot.ControlPlaneNamespace,
-		BootstrapToken:        gardenClientSet.RESTConfig().BearerToken,
+		Clock:                    clock.RealClock{},
+		ValuesHelper:             gardenletdeployer.NewValuesHelper(nil),
+		Recorder:                 &record.FakeRecorder{},
+		GardenletNamespaceTarget: b.Shoot.ControlPlaneNamespace,
+		BootstrapToken:           gardenClientSet.RESTConfig().BearerToken,
 	}
 }
