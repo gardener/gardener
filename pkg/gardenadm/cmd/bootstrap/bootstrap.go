@@ -229,6 +229,13 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
 
+		deployDNSRecord = g.Add(flow.Task{
+			Name:         "Deploying DNSRecord pointing to the first control plane machine",
+			Fn:           b.DeployBootstrapDNSRecord,
+			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.DNSRecordResource],
+			Dependencies: flow.NewTaskIDs(listControlPlaneMachines),
+		})
+
 		// In contrast to the usual Shoot migrate flow, we don't delete the extension objects after executing the migrate
 		// operation. The extension controllers are supposed to skip any reconcile operation if the last operation is of
 		// type "Migrate". Also, this makes it easier to allow re-running `gardenadm bootstrap` in case of failures
@@ -238,8 +245,9 @@ func run(ctx context.Context, opts *Options) error {
 			Fn: flow.Parallel(
 				component.MigrateAndWait(b.Shoot.Components.Extensions.Infrastructure),
 				component.MigrateAndWait(b.Shoot.Components.Extensions.Worker),
+				component.MigrateAndWait(b.Shoot.Components.Extensions.ExternalDNSRecord),
 			),
-			Dependencies: flow.NewTaskIDs(deleteMachineControllerManager),
+			Dependencies: flow.NewTaskIDs(deleteMachineControllerManager, deployDNSRecord),
 		})
 
 		// In contrast to a usual Shoot control plane migration, there is no garden cluster where the ShootState is stored.
@@ -281,6 +289,7 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(connectToMachine0, compileShootState),
 		})
 
+		_ = deployDNSRecord
 		_ = copyManifests
 
 		// In contrast to the usual Shoot migrate flow, we don't delete the shoot control plane namespace at the end.
@@ -332,6 +341,7 @@ func getMigratedExtensionKinds(ctx context.Context, c client.Reader, namespace s
 	relevantExtensionKinds := map[string]client.ObjectList{
 		extensionsv1alpha1.InfrastructureResource: &extensionsv1alpha1.InfrastructureList{},
 		extensionsv1alpha1.WorkerResource:         &extensionsv1alpha1.WorkerList{},
+		extensionsv1alpha1.DNSRecordResource:      &extensionsv1alpha1.DNSRecordList{},
 	}
 
 	out := make(map[string]bool, len(relevantExtensionKinds))
