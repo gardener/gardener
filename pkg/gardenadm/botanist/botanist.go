@@ -299,8 +299,7 @@ func newShootObject(
 		NewBuilder().
 		WithProjectName(resources.Project.Name).
 		WithCloudProfileObject(resources.CloudProfile).
-		WithShootObject(resources.Shoot).
-		WithInternalDomain(&gardenerutils.Domain{Domain: "gardenadm.local"})
+		WithShootObject(resources.Shoot)
 
 	if resources.Shoot.Spec.SecretBindingName != nil || resources.Shoot.Spec.CredentialsBindingName != nil {
 		b = b.WithShootCredentialsFrom(gardenClient)
