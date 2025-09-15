@@ -7,6 +7,7 @@ package helper
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -308,4 +309,26 @@ func GetImageFlavorWithAppliedDefaults(imageFlavors []core.MachineImageFlavor, c
 		}
 	}
 	return result
+}
+
+// AreCapabilitiesEqual checks if two capabilities are semantically equal.
+func AreCapabilitiesEqual(a, b core.Capabilities) bool {
+	// Check if both are subsets of each other.
+	return areCapabilitiesSubsetOf(a, b) && areCapabilitiesSubsetOf(b, a)
+}
+
+// areCapabilitiesSubsetOf verifies if all keys and values in `source` exist in `target`.
+func areCapabilitiesSubsetOf(source, target core.Capabilities) bool {
+	for key, valuesSource := range source {
+		valuesTarget, exists := target[key]
+		if !exists {
+			return false
+		}
+		for _, value := range valuesSource {
+			if !slices.Contains(valuesTarget, value) {
+				return false
+			}
+		}
+	}
+	return true
 }

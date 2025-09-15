@@ -592,4 +592,42 @@ var _ = Describe("CloudProfile Helper", func() {
 			}))
 		})
 	})
+	Describe("#AreCapabilitiesEqual", func() {
+
+		It("should return true for equal capabilities", func() {
+			a := core.Capabilities{
+				"key1": {"value1"},
+				"key2": {"valueA", "valueB"},
+			}
+			b := core.Capabilities{
+				"key1": {"value1"},
+				"key2": {"valueA", "valueB"},
+			}
+
+			result := AreCapabilitiesEqual(a, b)
+			Expect(result).To(BeTrue())
+		})
+
+		It("should return false for capabilities with different keys", func() {
+			a := core.Capabilities{"key1": {"value1"}}
+			b := core.Capabilities{"key2": {"value1"}}
+
+			result := AreCapabilitiesEqual(a, b)
+			Expect(result).To(BeFalse())
+		})
+
+		It("should return false for capabilities with different values", func() {
+			a := core.Capabilities{
+				"key1": {"value1"},
+				"key2": {"valueA", "valueB"},
+			}
+			b := core.Capabilities{
+				"key1": {"value2"},
+				"key2": {"valueA", "valueB"},
+			}
+
+			result := AreCapabilitiesEqual(a, b)
+			Expect(result).To(BeFalse())
+		})
+	})
 })

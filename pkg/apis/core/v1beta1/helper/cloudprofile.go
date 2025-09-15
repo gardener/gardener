@@ -670,13 +670,8 @@ func AreCapabilitiesCompatible(capabilities1, capabilities2 gardencorev1beta1.Ca
 // ConvertV1beta1CapabilitiesDefinitions converts core.CapabilityDefinition objects to v1beta1.CapabilityDefinition objects.
 func ConvertV1beta1CapabilitiesDefinitions(capabilitiesDefinitions []core.CapabilityDefinition) ([]gardencorev1beta1.CapabilityDefinition, error) {
 	var v1beta1CapabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition
-	for _, capabilityDefinition := range capabilitiesDefinitions {
-		var v1beta1CapabilityDefinition gardencorev1beta1.CapabilityDefinition
-		err := api.Scheme.Convert(&capabilityDefinition, &v1beta1CapabilityDefinition, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert capability definition: %w", err)
-		}
-		v1beta1CapabilitiesDefinitions = append(v1beta1CapabilitiesDefinitions, v1beta1CapabilityDefinition)
+	if err := api.Scheme.Convert(&capabilitiesDefinitions, &v1beta1CapabilitiesDefinitions, nil); err != nil {
+		return nil, fmt.Errorf("failed to convert capability definitions: %w", err)
 	}
 	return v1beta1CapabilitiesDefinitions, nil
 }
