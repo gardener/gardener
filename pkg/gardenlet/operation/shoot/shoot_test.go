@@ -219,7 +219,7 @@ var _ = Describe("shoot", func() {
 				unmanaged := "unmanaged"
 				internalDomain := "foo"
 				s := &Shoot{
-					InternalClusterDomain: internalDomain,
+					InternalClusterDomain: ptr.To(internalDomain),
 				}
 				s.SetInfo(&gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
@@ -237,7 +237,7 @@ var _ = Describe("shoot", func() {
 			It("should return the internal domain as requested (shoot's external domain is not unmanaged)", func() {
 				internalDomain := "foo"
 				s := &Shoot{
-					InternalClusterDomain: internalDomain,
+					InternalClusterDomain: ptr.To(internalDomain),
 				}
 				s.SetInfo(&gardencorev1beta1.Shoot{})
 
@@ -247,7 +247,7 @@ var _ = Describe("shoot", func() {
 			It("should return the internal domain when shoot's external domain is not set (even if not requested)", func() {
 				internalDomain := "foo"
 				s := &Shoot{
-					InternalClusterDomain: internalDomain,
+					InternalClusterDomain: ptr.To(internalDomain),
 				}
 				s.SetInfo(&gardencorev1beta1.Shoot{})
 

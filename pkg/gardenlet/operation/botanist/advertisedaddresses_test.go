@@ -50,7 +50,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 		})
 
 		It("returns internal and service-account-issuer addresses", func() {
-			botanist.Shoot.InternalClusterDomain = "baz.foo"
+			botanist.Shoot.InternalClusterDomain = ptr.To("baz.foo")
 
 			addresses, err := botanist.ToAdvertisedAddresses()
 			Expect(err).ToNot(HaveOccurred())
@@ -82,7 +82,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 
 		It("returns external, internal, service-account-issuer addresses in correct order", func() {
 			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
-			botanist.Shoot.InternalClusterDomain = "baz.foo"
+			botanist.Shoot.InternalClusterDomain = ptr.To("baz.foo")
 			botanist.APIServerAddress = "bar.foo"
 
 			addresses, err := botanist.ToAdvertisedAddresses()
@@ -105,7 +105,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 
 		It("returns external, internal addresses with addition to custom service-account-issuer address", func() {
 			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
-			botanist.Shoot.InternalClusterDomain = "baz.foo"
+			botanist.Shoot.InternalClusterDomain = ptr.To("baz.foo")
 			botanist.Shoot.GetInfo().Spec.Kubernetes = gardencorev1beta1.Kubernetes{
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 					ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
@@ -135,7 +135,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 
 		It("returns external, internal addresses with addition to managed service-account-issuer address", func() {
 			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
-			botanist.Shoot.InternalClusterDomain = "baz.foo"
+			botanist.Shoot.InternalClusterDomain = ptr.To("baz.foo")
 			botanist.Shoot.ServiceAccountIssuerHostname = ptr.To("managed.foo.bar")
 			botanist.Garden = &garden.Garden{
 				Project: &gardencorev1beta1.Project{
@@ -175,7 +175,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 
 		It("should return error because shoot wants managed issuer, but issuer hostname is not configured", func() {
 			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
-			botanist.Shoot.InternalClusterDomain = "baz.foo"
+			botanist.Shoot.InternalClusterDomain = ptr.To("baz.foo")
 
 			botanist.Garden = &garden.Garden{
 				Project: &gardencorev1beta1.Project{
