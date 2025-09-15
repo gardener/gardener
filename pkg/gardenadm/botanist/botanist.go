@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
@@ -57,6 +58,8 @@ type AutonomousBotanist struct {
 
 	// Bastion is only set for `gardenadm bootstrap`.
 	Bastion *bastion.Bastion
+	// ControlPlaneMachines is set by ListControlPlaneMachines during `gardenadm bootstrap`.
+	ControlPlaneMachines []machinev1alpha1.Machine
 
 	operatingSystemConfigSecret       *corev1.Secret
 	gardenerResourceManagerServiceIPs []string
