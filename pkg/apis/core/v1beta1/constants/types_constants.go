@@ -132,7 +132,7 @@ const (
 	DeploymentNameVPNSeedServer = "vpn-seed-server"
 	// StatefulSetNameVPNSeedServer is a constant for the name of a Kubernetes statefulset object that contains
 	// the vpn-seed-server pods.
-	StatefulSetNameVPNSeedServer = "vpn-seed-server"
+	StatefulSetNameVPNSeedServer = DeploymentNameVPNSeedServer
 
 	// DeploymentNameKubeScheduler is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-scheduler pod.
