@@ -182,7 +182,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client())
 	if err != nil {
 		return
 	}
