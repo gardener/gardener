@@ -27,7 +27,7 @@ func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Cont
 		return fmt.Errorf("failed creating VPA CRD deployer: %w", err)
 	}
 
-	prometheusCRDDeployer, err := prometheusoperator.NewCRDs(b.SeedClientSet.Client(), b.SeedClientSet.Applier())
+	prometheusCRDDeployer, err := prometheusoperator.NewCRDs(b.SeedClientSet.Client())
 	if err != nil {
 		return fmt.Errorf("failed creating Prometheus CRD deployer: %w", err)
 	}

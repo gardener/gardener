@@ -623,7 +623,7 @@ var _ = Describe("Seed controller tests", func() {
 					Expect(err).NotTo(HaveOccurred())
 					fluentCRD, err := fluentoperator.NewCRDs(testClient)
 					Expect(err).NotTo(HaveOccurred())
-					prometheusCRD, err := prometheusoperator.NewCRDs(testClient, applier)
+					prometheusCRD, err := prometheusoperator.NewCRDs(testClient)
 					Expect(err).NotTo(HaveOccurred())
 					persesCRD, err := persesoperator.NewCRDs(testClient)
 					Expect(err).NotTo(HaveOccurred())
