@@ -18,7 +18,7 @@ The issuer URL can be read from the [Gardener Info ConfigMap](../gardener/garden
 
 ## JWT Claims
 
-The Gardener API server, as JWT issuer, sets the following standard claims as per [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519):
+The Gardener API server, as JWT issuer, sets the following standard claims as per [RFC-7519](https://datatracker.ietf.org/doc/html/rfc7519):
 
 - **aud**: contains the audiences set in `WorkloadIdentity`'s `.spec.audiences` field.
 - **iss**: issuer of the JWT, see above how to find its value for your Garden installation.
