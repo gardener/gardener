@@ -32,7 +32,7 @@ func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Cont
 		return fmt.Errorf("failed creating Prometheus CRD deployer: %w", err)
 	}
 
-	fluentCRDDeployer, err := fluentoperator.NewCRDs(b.SeedClientSet.Client(), b.SeedClientSet.Applier())
+	fluentCRDDeployer, err := fluentoperator.NewCRDs(b.SeedClientSet.Client())
 	if err != nil {
 		return fmt.Errorf("failed creating fluent CRD deployer: %w", err)
 	}
