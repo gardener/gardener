@@ -215,9 +215,17 @@ func filterForInPlaceUpdateConstraint(machineImageFromCloudProfile *gardencorev1
 	}
 
 	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
-		if workerImageVersion != nil && cloudProfileVersion.InPlaceUpdates != nil && cloudProfileVersion.InPlaceUpdates.Supported && cloudProfileVersion.InPlaceUpdates.MinVersionForUpdate != nil {
-			if validVersion, _ := versionutils.CompareVersions(*cloudProfileVersion.InPlaceUpdates.MinVersionForUpdate, "<=", *workerImageVersion); validVersion {
+		if workerImageVersion != nil && cloudProfileVersion.InPlaceUpdates != nil && cloudProfileVersion.InPlaceUpdates.Supported {
+			// add the current version also in the list of possible versions
+			if *workerImageVersion == cloudProfileVersion.Version {
 				filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+				continue
+			}
+
+			if cloudProfileVersion.InPlaceUpdates.MinVersionForUpdate != nil {
+				if validVersion, _ := versionutils.CompareVersions(*cloudProfileVersion.InPlaceUpdates.MinVersionForUpdate, "<=", *workerImageVersion); validVersion {
+					filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+				}
 			}
 		}
 	}
