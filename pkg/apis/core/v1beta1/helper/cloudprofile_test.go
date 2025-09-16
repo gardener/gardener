@@ -5,6 +5,7 @@
 package helper_test
 
 import (
+	"github.com/gardener/gardener/pkg/apis/core"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -1732,6 +1733,31 @@ var _ = Describe("CloudProfile Helper", func() {
 				result := AreCapabilitiesEqual(a, b)
 				Expect(result).To(BeFalse())
 			})
+		})
+	})
+
+	Describe("#ConvertV1beta1CapabilitiesDefinitions", func() {
+		It("should convert core.CapabilityDefinition to v1beta1.CapabilityDefinition", func() {
+			coreDefs := []core.CapabilityDefinition{{
+				Name:   "arch",
+				Values: []string{"amd64", "arm64"},
+			}, {
+				Name:   "cap1",
+				Values: []string{"value1", "value2"},
+			}}
+			v1beta1Defs, err := ConvertV1beta1CapabilitiesDefinitions(coreDefs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(v1beta1Defs).To(HaveLen(2))
+			Expect(v1beta1Defs[0].Name).To(Equal("arch"))
+			Expect(v1beta1Defs[0].Values).To(ConsistOf("amd64", "arm64"))
+			Expect(v1beta1Defs[1].Name).To(Equal("cap1"))
+			Expect(v1beta1Defs[1].Values).To(ConsistOf("value1", "value2"))
+		})
+
+		It("should return an empty slice when input is empty", func() {
+			v1beta1Defs, err := ConvertV1beta1CapabilitiesDefinitions([]core.CapabilityDefinition{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(v1beta1Defs).To(BeEmpty())
 		})
 	})
 })

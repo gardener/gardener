@@ -122,7 +122,7 @@ var _ = Describe("Helper", func() {
 			Expect(image).To(BeNil())
 		})
 
-		Context("Multiple capabilityFlavors are viable matches", func() {
+		When("Multiple capabilityFlavors match", func() {
 			// When multiple capabilityFlavors match the requirements for the machineType, selection follows a priority-based approach:
 			//
 			// 1. Flavors are evaluated based on their supported capabilities
@@ -190,7 +190,7 @@ var _ = Describe("Helper", func() {
 			})
 		})
 
-		Context("when handling edge cases", func() {
+		When("handling edge cases", func() {
 			It("should error on multiple version flavors with identical capabilities", func() {
 				// Both flavors have identical capabilities - this should be considered an error
 				cloudProfileConfig.MachineImages[0].Versions[1].CapabilityFlavors = []local.MachineImageFlavor{

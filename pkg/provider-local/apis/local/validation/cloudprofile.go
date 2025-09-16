@@ -19,18 +19,18 @@ import (
 )
 
 // ValidateCloudProfileConfig validates a CloudProfileConfig object.
-func ValidateCloudProfileConfig(cpConfig *api.CloudProfileConfig, machineImages []core.MachineImage, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileConfig(cpConfig *api.CloudProfileConfig, machineImages []core.MachineImage, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	machineImagesPath := fldPath.Child("machineImages")
 
 	// Validate machine images section
-	allErrs = append(allErrs, validateMachineImages(cpConfig.MachineImages, capabilitiesDefinitions, machineImagesPath)...)
+	allErrs = append(allErrs, validateMachineImages(cpConfig.MachineImages, capabilityDefinitions, machineImagesPath)...)
 	if len(allErrs) > 0 {
 		return allErrs
 	}
 
 	// Validate machine image mappings
-	allErrs = append(allErrs, validateMachineImageMapping(machineImages, cpConfig.MachineImages, capabilitiesDefinitions, machineImagesPath)...)
+	allErrs = append(allErrs, validateMachineImageMapping(machineImages, cpConfig.MachineImages, capabilityDefinitions, machineImagesPath)...)
 
 	return allErrs
 }

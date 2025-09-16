@@ -592,6 +592,7 @@ var _ = Describe("CloudProfile Helper", func() {
 			}))
 		})
 	})
+
 	Describe("#AreCapabilitiesEqual", func() {
 
 		It("should return true for equal capabilities", func() {
