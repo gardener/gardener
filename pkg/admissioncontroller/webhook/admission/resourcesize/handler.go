@@ -136,6 +136,7 @@ func (h *Handler) handleCountLimit(req admission.Request, log logr.Logger, reque
 	if req.Namespace != "" {
 		// We only want to restrict non-namespaced resources
 		// namespaced resources can be restricted by ResourceQuotas
+		log.Info("Skipping count check for namespaced resource", "resource", requestedResource.String())
 		return nil
 	}
 
