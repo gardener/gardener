@@ -79,7 +79,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		c, err := client.New(restConfig, client.Options{})
 		Expect(err).NotTo(HaveOccurred())
 
-		extensionCRDDeployer, err := extensionscrds.NewCRD(c, applier, true, true)
+		extensionCRDDeployer, err := extensionscrds.NewCRD(c, true, true)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(extensionCRDDeployer.Deploy(ctx)).To(Succeed())
 
