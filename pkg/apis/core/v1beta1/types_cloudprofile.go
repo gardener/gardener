@@ -94,7 +94,7 @@ type CloudProfileSpec struct {
 	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that matches most capabilities will be selected.
 	// +optional
-	MachineCapabilities []CapabilityDefinition `json:"capabilities,omitempty" protobuf:"bytes,12,rep,name=machineCapabilities"`
+	MachineCapabilities []CapabilityDefinition `json:"machineCapabilities,omitempty" protobuf:"bytes,12,rep,name=machineCapabilities"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile

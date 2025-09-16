@@ -489,7 +489,7 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 </tr>
 <tr>
 <td>
-<code>capabilities</code></br>
+<code>machineCapabilities</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.CapabilityDefinition">
 []CapabilityDefinition
@@ -3796,7 +3796,7 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 </tr>
 <tr>
 <td>
-<code>capabilities</code></br>
+<code>machineCapabilities</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.CapabilityDefinition">
 []CapabilityDefinition

@@ -64,7 +64,6 @@ func selectBestImageFlavor[T CapabilitiesAccessor](
 	compatibleSets []T,
 	capabilityDefinitions []v1beta1.CapabilityDefinition,
 ) (T, error) {
-	var zeroValue T
 	if len(compatibleSets) == 1 {
 		return compatibleSets[0], nil
 	}
@@ -113,6 +112,7 @@ func selectBestImageFlavor[T CapabilitiesAccessor](
 
 	// If we couldn't determine a single best match, this indicates a problem with the cloud profile
 	if len(remainingSets) != 1 {
+		var zeroValue T
 		return zeroValue, fmt.Errorf("could not determine a unique capability flavor; this is usually attributed to an invalid CloudProfile")
 	}
 

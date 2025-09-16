@@ -281,8 +281,7 @@ spec:
           version: 1592.2.0
 
         - classification: supported
-          version: 1592.1.0 # <-- if no           capabilityFlavors:
-  are defined the default capabilities are assigned as only combination
+          version: 1592.1.0 # <-- if no capabilityFlavors are defined the default capabilities are assigned as only combination
 
   machineTypes:
     - architecture: amd64 # <-- marked as deprecated

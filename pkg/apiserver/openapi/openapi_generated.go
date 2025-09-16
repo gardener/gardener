@@ -2315,7 +2315,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits"),
 						},
 					},
-					"capabilities": {
+					"machineCapabilities": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineCapabilities contains the definition of all possible capabilities in the CloudProfile. Only capabilities and values defined here can be used to describe MachineImages and MachineTypes. The order of values for a given capability is relevant. The most important value is listed first. During maintenance upgrades, the image that matches most capabilities will be selected.",
 							Type:        []string{"array"},

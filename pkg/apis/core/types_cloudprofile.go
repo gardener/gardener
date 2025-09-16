@@ -71,7 +71,7 @@ type CloudProfileSpec struct {
 	// Limits configures operational limits for Shoot clusters using this CloudProfile.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
 	Limits *Limits
-	// Capabilities contains the definition of all possible capabilities in the CloudProfile.
+	// MachineCapabilities contains the definition of all possible capabilities in the CloudProfile.
 	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that matches most capabilities will be selected.
