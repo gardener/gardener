@@ -619,7 +619,7 @@ var _ = Describe("Seed controller tests", func() {
 					)
 					istioCRDs, err := istio.NewCRD(testClient)
 					Expect(err).NotTo(HaveOccurred())
-					vpaCRD, err := vpa.NewCRD(testClient, applier, nil)
+					vpaCRD, err := vpa.NewCRD(testClient, nil)
 					Expect(err).NotTo(HaveOccurred())
 					fluentCRD, err := fluentoperator.NewCRDs(testClient, applier)
 					Expect(err).NotTo(HaveOccurred())
@@ -628,7 +628,7 @@ var _ = Describe("Seed controller tests", func() {
 					persesCRD, err := persesoperator.NewCRDs(testClient, applier)
 					Expect(err).NotTo(HaveOccurred())
 					// General CRDs are not deployed when seedIsGarden is true, as they are managed by the gardener-operator.
-					extensionCRD, err := extensionscrds.NewCRD(testClient, applier, true, false)
+					extensionCRD, err := extensionscrds.NewCRD(testClient, true, false)
 					Expect(err).NotTo(HaveOccurred())
 					openTelemetryCRD, err := oteloperator.NewCRDs(testClient, applier)
 					Expect(err).NotTo(HaveOccurred())

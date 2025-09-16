@@ -155,7 +155,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vpaCRD, err = vpa.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), nil)
+	c.vpaCRD, err = vpa.NewCRD(r.SeedClientSet.Client(), nil)
 	if err != nil {
 		return
 	}
