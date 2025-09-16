@@ -95,7 +95,7 @@ func (h *health) checkEmergencyStopShootReconciliations(condition gardencorev1be
 	return ptr.To(v1beta1helper.UpdatedConditionWithClock(
 		h.clock,
 		condition,
-		gardencorev1beta1.ConditionFalse,
+		gardencorev1beta1.ConditionTrue,
 		string(gardencorev1beta1.SeedEmergencyStopShootReconciliations),
 		"Reconciliations of Shoots managed by this Seed cluster are currently disabled by annotation.",
 	))
