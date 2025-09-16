@@ -143,7 +143,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.extensionCRD, err = extensioncrds.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), !seedIsGarden, true)
+	c.extensionCRD, err = extensioncrds.NewCRD(r.SeedClientSet.Client(), !seedIsGarden, true)
 	if err != nil {
 		return
 	}

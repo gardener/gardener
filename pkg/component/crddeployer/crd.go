@@ -7,6 +7,7 @@ package crddeployer
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"golang.org/x/exp/maps"
@@ -24,13 +25,14 @@ import (
 
 // crdDeployer is a DeployWaiter that can deploy CRDs and wait for them to be ready.
 type crdDeployer struct {
-	client            client.Client
-	crdNameToCRD      map[string]*apiextensionsv1.CustomResourceDefinition
-	deletionProtected bool
+	client                             client.Client
+	crdNameToCRD                       map[string]*apiextensionsv1.CustomResourceDefinition
+	deletionProtected                  bool
+	deletionProtectedLabelExcludedCRDs []string
 }
 
 // New returns a new instance of DeployWaiter for CRDs.
-func New(client client.Client, manifests []string, deletionProtected bool) (component.DeployWaiter, error) {
+func New(client client.Client, manifests []string, deletionProtected bool, deletionProtectedLabelExcludedCRDs ...string) (component.DeployWaiter, error) {
 	// Split manifests into individual object manifests, in case multiple CRDs are provided in a single string.
 	var splitManifests []string
 	for _, manifest := range manifests {
@@ -43,9 +45,10 @@ func New(client client.Client, manifests []string, deletionProtected bool) (comp
 	}
 
 	return &crdDeployer{
-		client:            client,
-		crdNameToCRD:      crdNameToCRD,
-		deletionProtected: deletionProtected,
+		client:                             client,
+		crdNameToCRD:                       crdNameToCRD,
+		deletionProtected:                  deletionProtected,
+		deletionProtectedLabelExcludedCRDs: deletionProtectedLabelExcludedCRDs,
 	}, nil
 }
 
@@ -62,7 +65,7 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 			}
 
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, crd, func() error {
-				if c.deletionProtected {
+				if c.deletionProtected && !slices.Contains(c.deletionProtectedLabelExcludedCRDs, crd.Name) {
 					metav1.SetMetaDataLabel(&crd.ObjectMeta, gardenerutils.DeletionProtected, "true")
 				}
 

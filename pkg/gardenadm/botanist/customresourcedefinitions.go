@@ -37,7 +37,7 @@ func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Cont
 		return fmt.Errorf("failed creating fluent CRD deployer: %w", err)
 	}
 
-	extensionCRDDeployer, err := extensioncrds.NewCRD(b.SeedClientSet.Client(), b.SeedClientSet.Applier(), true, true)
+	extensionCRDDeployer, err := extensioncrds.NewCRD(b.SeedClientSet.Client(), true, true)
 	if err != nil {
 		return fmt.Errorf("failed creating extension CRD deployer: %w", err)
 	}
