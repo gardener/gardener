@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -143,25 +144,19 @@ func (h *Handler) handleCountLimit(req admission.Request, log logr.Logger, reque
 		return nil
 	}
 
-	currentCount, err := h.countExistingResources(req, requestedResource)
-	if err != nil {
-		log.Error(err, "Failed to count existing resources")
-		return err
-	}
-
-	if currentCount >= *count {
+	if h.existingResourcesExceedLimit(req, requestedResource, ptr.Deref(count, 0)) {
 		if h.Config.OperationMode == nil || *h.Config.OperationMode == admissioncontrollerconfigv1alpha1.AdmissionModeBlock {
-			log.Info("Maximum resource count exceeded, rejected request", "currentCount", currentCount, "limit", *count)
+			log.Info("Maximum resource count exceeded, rejected request", "limit", *count)
 			metrics.RejectedResources.WithLabelValues(
 				fmt.Sprint(req.Operation),
 				req.Kind.Kind,
 				req.Namespace,
 				metricReasonCountExceeded,
 			).Inc()
-			return apierrors.NewForbidden(schema.GroupResource{Group: req.Resource.Group, Resource: req.Resource.Resource}, req.Name, fmt.Errorf("maximum resource count exceeded! Current count: %d, max allowed: %d", currentCount, *count))
+			return apierrors.NewForbidden(schema.GroupResource{Group: req.Resource.Group, Resource: req.Resource.Resource}, req.Name, fmt.Errorf("maximum resource count exceeded! max allowed: %d", ptr.Deref(count, 0)))
 		}
 
-		log.Info("Maximum resource count exceeded, request would be denied in blocking mode", "currentCount", currentCount, "limit", *count)
+		log.Info("Maximum resource count exceeded, request would be denied in blocking mode", "limit", ptr.Deref(count, 0))
 	}
 
 	return nil
@@ -246,15 +241,17 @@ func (h *Handler) getKindFromGVR(gvr *metav1.GroupVersionResource) (string, erro
 	return gvk.Kind, nil
 }
 
-func (h *Handler) countExistingResources(_ admission.Request, gvr *metav1.GroupVersionResource) (int64, error) {
+func (h *Handler) existingResourcesExceedLimit(_ admission.Request, gvr *metav1.GroupVersionResource, limit int64) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	// Get the proper Kind for this resource
 	kind, err := h.getKindFromGVR(gvr)
 	if err != nil {
+		// If we can't get the Kind form the GVR, allow the request to proceed
+		// This prevents the admission controller from blocking requests when there are API issues
 		h.Logger.Error(err, "Failed to determine kind from GVR", "gvr", gvr)
-		return 0, nil
+		return false
 	}
 
 	list := &metav1.PartialObjectMetadataList{}
@@ -265,12 +262,12 @@ func (h *Handler) countExistingResources(_ admission.Request, gvr *metav1.GroupV
 	})
 
 	// List all resources of this type cluster-wide (since we only count non-namespaced resources)
-	if err := h.Client.List(ctx, list); err != nil {
+	if err := h.Client.List(ctx, list, client.Limit(limit+1)); err != nil {
 		// If we can't list the resources, allow the request to proceed
 		// This prevents the admission controller from blocking requests when there are API issues
 		h.Logger.Error(err, "Failed to list resources for counting", "gvr", gvr, "kind", kind)
-		return 0, nil
+		return false
 	}
 
-	return int64(len(list.Items)), nil
+	return int64(len(list.Items)) >= limit
 }
