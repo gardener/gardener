@@ -170,7 +170,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vpaCRD, err = vpa.NewCRD(r.RuntimeClientSet.Client(), applier, nil)
+	c.vpaCRD, err = vpa.NewCRD(r.RuntimeClientSet.Client(), nil)
 	if err != nil {
 		return
 	}
@@ -190,7 +190,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.extensionCRD, err = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), applier, true, false)
+	c.extensionCRD, err = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), true, false)
 	if err != nil {
 		return
 	}

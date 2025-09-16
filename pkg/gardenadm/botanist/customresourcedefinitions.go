@@ -22,7 +22,7 @@ import (
 
 // ReconcileCustomResourceDefinitions reconciles the custom resource definitions.
 func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Context) error {
-	vpaCRDDeployer, err := vpa.NewCRD(b.SeedClientSet.Client(), b.SeedClientSet.Applier(), nil)
+	vpaCRDDeployer, err := vpa.NewCRD(b.SeedClientSet.Client(), nil)
 	if err != nil {
 		return fmt.Errorf("failed creating VPA CRD deployer: %w", err)
 	}
