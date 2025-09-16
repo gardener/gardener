@@ -42,7 +42,7 @@ func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Cont
 		return fmt.Errorf("failed creating extension CRD deployer: %w", err)
 	}
 
-	etcdCRDDeployer, err := etcd.NewCRD(b.SeedClientSet.Client(), b.SeedClientSet.Applier(), b.Shoot.KubernetesVersion)
+	etcdCRDDeployer, err := etcd.NewCRD(b.SeedClientSet.Client(), b.Shoot.KubernetesVersion)
 	if err != nil {
 		return fmt.Errorf("failed creating etcd CRD deployer: %w", err)
 	}
