@@ -178,7 +178,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.fluentCRD, err = fluentoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	c.fluentCRD, err = fluentoperator.NewCRDs(r.RuntimeClientSet.Client())
 	if err != nil {
 		return
 	}
