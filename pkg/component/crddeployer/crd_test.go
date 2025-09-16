@@ -12,14 +12,11 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/crddeployer"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -31,7 +28,6 @@ import (
 var _ = Describe("CRD", func() {
 	var (
 		ctx        context.Context
-		applier    kubernetes.Applier
 		testClient client.Client
 
 		readyCRD = &apiextensionsv1.CustomResourceDefinition{
@@ -105,12 +101,13 @@ status:
       status: "True"`
 
 		testClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
-		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
-		applier = kubernetes.NewApplier(testClient, mapper)
-		crdDeployer, err = New(testClient, applier, []string{crd1, crd2}, false)
+		crdDeployer, err = New(testClient, []string{crd1, crd2}, false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(crdDeployer).ToNot(BeNil())
+
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, readyCRD)).To(Or(Succeed(), matchers.BeNotFoundError()))
+		})
 	})
 
 	Describe("#Deploy", func() {
@@ -124,7 +121,7 @@ status:
 		})
 
 		It("should update an existing CRD", func() {
-			crdDeployer, err := New(testClient, applier, []string{crd3}, false)
+			crdDeployer, err := New(testClient, []string{crd3}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).ToNot(BeNil())
 
@@ -150,7 +147,7 @@ spec:
     storage: true
 `
 
-			crdDeployer, err = New(testClient, applier, []string{crd3Updated}, false)
+			crdDeployer, err = New(testClient, []string{crd3Updated}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).ToNot(BeNil())
 
@@ -191,7 +188,7 @@ spec:
 		})
 
 		It("should not destroy CRDs when CRDDeployer has confirmDeletion set to false", func() {
-			crdDeployer, err := New(mockClient, applier, []string{confirmationCRD}, false)
+			crdDeployer, err := New(mockClient, []string{confirmationCRD}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).NotTo(BeNil())
 
@@ -201,7 +198,7 @@ spec:
 		})
 
 		It("should destroy CRDs when CRDDeployer has confirmDeletion set to true", func() {
-			crdDeployer, err := New(mockClient, applier, []string{confirmationCRD}, true)
+			crdDeployer, err := New(mockClient, []string{confirmationCRD}, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).NotTo(BeNil())
 
@@ -222,7 +219,7 @@ spec:
 	Describe("#Wait", func() {
 		It("should return true because the CRD is ready", func() {
 			// Use a CRDDeployer that deploys a CRD that already has the ready status
-			crdDeployer, err := New(testClient, applier, []string{crd1Ready}, false)
+			crdDeployer, err := New(testClient, []string{crd1Ready}, false)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
