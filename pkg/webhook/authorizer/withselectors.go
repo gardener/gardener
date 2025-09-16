@@ -52,19 +52,19 @@ type withSelectorsChecker struct {
 }
 
 func (w *withSelectorsChecker) IsPossible() (bool, error) {
-	if w.nextCheckTime != nil && !w.clock.Now().UTC().Before(w.nextCheckTime.UTC()) {
+	if w.nextCheckTime != nil && w.clock.Now().UTC().After(w.nextCheckTime.UTC()) {
 		enabled, mustCheckAgain, err := w.isAuthorizeWithSelectorsFeatureEnabled()
 		if err != nil {
 			return false, fmt.Errorf("failed checking whether 'AuthorizeWithSelectors' feature is enabled: %w", err)
 		}
 
 		w.isPossible = enabled
-		if !mustCheckAgain {
-			w.nextCheckTime = nil
-			w.log.Info("No need not check again")
-		} else {
+		if mustCheckAgain {
 			w.nextCheckTime = ptr.To(w.clock.Now().UTC().Add(10 * time.Minute))
 			w.log.Info("Must check again, caching result", "nextCheckTime", w.nextCheckTime.String())
+		} else {
+			w.nextCheckTime = nil
+			w.log.Info("No need not check again")
 		}
 	}
 
