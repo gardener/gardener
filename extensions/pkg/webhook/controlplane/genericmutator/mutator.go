@@ -58,6 +58,9 @@ type Ensurer interface {
 	// EnsureVPNSeedServerDeployment ensures that the vpn-seed-server deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
 	EnsureVPNSeedServerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
+	// EnsureVPNSeedServerStatefulSet ensures that the vpn-seed-server deployment conforms to the provider requirements.
+	// "old" might be "nil" and must always be checked.
+	EnsureVPNSeedServerStatefulSet(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.StatefulSet) error
 	// EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
 	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, new, old []*unit.UnitOption) ([]*unit.UnitOption, error)
 	// EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
@@ -154,6 +157,21 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
 			return m.ensurer.EnsureVPNSeedServerDeployment(ctx, gctx, x, oldDep)
 		}
+	case *appsv1.StatefulSet:
+		var oldSet *appsv1.StatefulSet
+		if old != nil {
+			var ok bool
+			oldSet, ok = old.(*appsv1.StatefulSet)
+			if !ok {
+				return errors.New("could not cast old object to appsv1.StatefulSet")
+			}
+		}
+		switch x.Name {
+		case v1beta1constants.StatefulSetNameVPNSeedServer:
+			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
+			return m.ensurer.EnsureVPNSeedServerStatefulSet(ctx, gctx, x, oldSet)
+		}
+
 	case *vpaautoscalingv1.VerticalPodAutoscaler:
 		var oldVPA *vpaautoscalingv1.VerticalPodAutoscaler
 		if old != nil {
