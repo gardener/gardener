@@ -171,7 +171,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.persesCRD, err = persesoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.persesCRD, err = persesoperator.NewCRDs(r.SeedClientSet.Client())
 	if err != nil {
 		return
 	}

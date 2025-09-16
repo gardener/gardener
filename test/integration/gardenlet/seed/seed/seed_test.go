@@ -625,7 +625,7 @@ var _ = Describe("Seed controller tests", func() {
 					Expect(err).NotTo(HaveOccurred())
 					prometheusCRD, err := prometheusoperator.NewCRDs(testClient, applier)
 					Expect(err).NotTo(HaveOccurred())
-					persesCRD, err := persesoperator.NewCRDs(testClient, applier)
+					persesCRD, err := persesoperator.NewCRDs(testClient)
 					Expect(err).NotTo(HaveOccurred())
 					// General CRDs are not deployed when seedIsGarden is true, as they are managed by the gardener-operator.
 					extensionCRD, err := extensionscrds.NewCRD(testClient, true, false)
