@@ -230,14 +230,16 @@ jobs:
 
           if [ ${os} == 'windows' ]; then
             exe_suffix='.exe'
+            archive_suffix='.zip'
           else
             exe_suffix=''
+            archive_suffix='.tar.gz'
           fi
 
           mkdir -p /tmp/blobs.d
           prefix=/tmp/blobs.d/gardenadm
           platform_suffix="-${os}-${arch}"
-          outpath="${prefix}${platform_suffix}${exe_suffix}"
+          outpath="${prefix}${platform_suffix}${exe_suffix}${archive_suffix}"
           archive="${prefix}${platform_suffix}.archive"
 
           GOOS=${os} \
