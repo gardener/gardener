@@ -49,6 +49,8 @@ var _ = Describe("CRD", func() {
 		crd1            string
 		crd1Name        string
 		crd2            string
+		crd3            string
+		crd3Name        string
 		confirmationCRD string
 		crd1Ready       string
 
@@ -74,6 +76,22 @@ metadata:
 kind: CustomResourceDefinition
 metadata:
     name: yourresources.mygroup.example.com`
+
+		crd3Name = "foo.gardener.cloud"
+		crd3 = `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ` + crd3Name + `
+spec:
+  group: gardener.cloud
+  names:
+    kind: foo
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+`
 
 		crd1Ready = `apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -103,6 +121,45 @@ status:
 
 			Expect(testClient.Get(ctx, client.ObjectKey{Name: readyCRD.Name}, actualCRD)).To(Succeed())
 			Expect(actualCRD.Name).To(Equal(readyCRD.Name))
+		})
+
+		It("should update an existing CRD", func() {
+			crdDeployer, err := New(testClient, applier, []string{crd3}, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(crdDeployer).ToNot(BeNil())
+
+			actualCRD := &apiextensionsv1.CustomResourceDefinition{}
+
+			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+
+			Expect(testClient.Get(ctx, client.ObjectKey{Name: crd3Name}, actualCRD)).To(Succeed())
+			Expect(actualCRD.Name).To(Equal(crd3Name))
+
+			crd3Updated := `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ` + crd3Name + `
+spec:
+  group: gardener.cloud
+  names:
+    kind: foo
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+`
+
+			crdDeployer, err = New(testClient, applier, []string{crd3Updated}, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(crdDeployer).ToNot(BeNil())
+
+			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+
+			Expect(testClient.Get(ctx, client.ObjectKey{Name: crd3Name}, actualCRD)).To(Succeed())
+			Expect(actualCRD.Name).To(Equal(crd3Name))
+			Expect(actualCRD.Spec.Versions).To(HaveLen(1))
+			Expect(actualCRD.Spec.Versions[0].Name).To(Equal("v1beta1"))
 		})
 	})
 
