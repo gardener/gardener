@@ -205,9 +205,9 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
 					Expect(patch.Data(o)).To(And(
-						ContainSubstring(`"capabilities":[{"name":"architecture","values":["amd64","arm64"]}]`), // global capabilities
-						ContainSubstring(`"versions":[{"architectures":["arm64"]`),                              // original value
-						ContainSubstring(`"capabilityFlavors":[{"architecture":["arm64"]}]`),                    // synced value
+						ContainSubstring(`"machineCapabilities":[{"name":"architecture","values":["amd64","arm64"]}]`), // global capabilities
+						ContainSubstring(`"versions":[{"architectures":["arm64"]`),                                     // original value
+						ContainSubstring(`"capabilityFlavors":[{"architecture":["arm64"]}]`),                           // synced value
 					))
 					return nil
 				}),
