@@ -10,19 +10,16 @@ import (
 	"github.com/Masterminds/semver/v3"
 	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/crddeployer"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // NewCRD can be used to deploy the CRD definitions for all CRDs defined by etcd-druid.
-func NewCRD(client client.Client, applier kubernetes.Applier, k8sVersion *semver.Version) (component.DeployWaiter, error) {
+func NewCRD(client client.Client, k8sVersion *semver.Version) (component.DeployWaiter, error) {
 	crdGetter, err := NewCRDGetter(k8sVersion)
 	if err != nil {
 		return nil, err
@@ -31,7 +28,7 @@ func NewCRD(client client.Client, applier kubernetes.Applier, k8sVersion *semver
 	if err != nil {
 		return nil, err
 	}
-	return crddeployer.New(client, applier, crds, true)
+	return crddeployer.New(client, crds, true)
 }
 
 // CRDGetter provides methods to get CRDs defined in etcd-druid.
@@ -100,7 +97,6 @@ func getEtcdCRDs(k8sVersion *semver.Version) (map[string]*apiextensionsv1.Custom
 		if err != nil {
 			return nil, fmt.Errorf("failed decode etcd-druid CRD: %s: %w", crdName, err)
 		}
-		metav1.SetMetaDataLabel(&crdObj.ObjectMeta, gardenerutils.DeletionProtected, "true")
 		crdResources[crdName] = crdObj
 	}
 	return crdResources, nil
