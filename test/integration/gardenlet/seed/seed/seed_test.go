@@ -630,7 +630,7 @@ var _ = Describe("Seed controller tests", func() {
 					// General CRDs are not deployed when seedIsGarden is true, as they are managed by the gardener-operator.
 					extensionCRD, err := extensionscrds.NewCRD(testClient, true, false)
 					Expect(err).NotTo(HaveOccurred())
-					openTelemetryCRD, err := oteloperator.NewCRDs(testClient, applier)
+					openTelemetryCRD, err := oteloperator.NewCRDs(testClient)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())

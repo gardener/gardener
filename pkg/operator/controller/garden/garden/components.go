@@ -186,7 +186,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.openTelemetryCRD, err = oteloperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	c.openTelemetryCRD, err = oteloperator.NewCRDs(r.RuntimeClientSet.Client())
 	if err != nil {
 		return
 	}
