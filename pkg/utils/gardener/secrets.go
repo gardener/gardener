@@ -11,6 +11,7 @@ import (
 	"io"
 	"slices"
 
+	"go.yaml.in/yaml/v4"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -24,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-	forkedyaml "github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 var (
@@ -135,12 +135,11 @@ func mutateObjects(secretData map[string][]byte, mutate func(obj *unstructured.U
 
 			// serialize unstructured back to secret data (with stable key ordering)
 			// Note: we have to do this for all objects, not only for mutated ones, as there could be multiple objects in one file
-			objBytes, err := forkedyaml.Marshal(obj.Object)
-			if err != nil {
-				return err
-			}
+			encoder := yaml.NewEncoder(buffer)
+			encoder.SetIndent(2)
+			encoder.CompactSeqIndent()
 
-			if _, err := buffer.Write(objBytes); err != nil {
+			if err := encoder.Encode(obj.Object); err != nil {
 				return err
 			}
 		}

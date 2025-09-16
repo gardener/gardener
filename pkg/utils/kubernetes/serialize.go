@@ -5,15 +5,15 @@
 package kubernetes
 
 import (
+	"bytes"
 	"fmt"
 
+	"go.yaml.in/yaml/v4"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	forkedyaml "github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 // Serialize serializes and encodes the passed object.
@@ -36,14 +36,18 @@ func Serialize(obj client.Object, scheme *runtime.Scheme) (string, error) {
 	// Keep this in sync with pkg/utils/managedresources/registry.go
 	// See https://github.com/gardener/gardener/pull/8312
 	var anyObj any
-	if err := forkedyaml.Unmarshal(serializationYAML, &anyObj); err != nil {
+	if err := yaml.Unmarshal(serializationYAML, &anyObj); err != nil {
 		return "", fmt.Errorf("failed unmarshalling the object: %w", err)
 	}
 
-	serBytes, err := forkedyaml.Marshal(anyObj)
-	if err != nil {
+	buf := bytes.Buffer{}
+	encoder := yaml.NewEncoder(&buf)
+	encoder.SetIndent(2)
+	encoder.CompactSeqIndent()
+
+	if err := encoder.Encode(anyObj); err != nil {
 		return "", fmt.Errorf("failed marshalling the object to YAML: %w", err)
 	}
 
-	return string(serBytes), nil
+	return string(serializationYAML), nil
 }
