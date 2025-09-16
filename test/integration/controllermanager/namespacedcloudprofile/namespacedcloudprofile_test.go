@@ -37,9 +37,9 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 
 	BeforeEach(func() {
 		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
-		var capabilitiesDefinition []gardencorev1beta1.CapabilityDefinition
+		var capabilityDefinitions []gardencorev1beta1.CapabilityDefinition
 		if isCapabilitiesCloudProfile {
-			capabilitiesDefinition = []gardencorev1beta1.CapabilityDefinition{
+			capabilityDefinitions = []gardencorev1beta1.CapabilityDefinition{
 				{
 					Name:   "architecture",
 					Values: []string{v1beta1constants.ArchitectureAMD64},
@@ -60,7 +60,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 				GenerateName: testID + "-",
 			},
 			Spec: gardencorev1beta1.CloudProfileSpec{
-				MachineCapabilities: capabilitiesDefinition,
+				MachineCapabilities: capabilityDefinitions,
 				Type:                "some-type",
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.3.0"}, {Version: "1.2.3"}},
@@ -127,7 +127,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 		architecture := "amd64"
 
 		mergedCloudProfileSpec = &gardencorev1beta1.CloudProfileSpec{
-			MachineCapabilities: capabilitiesDefinition,
+			MachineCapabilities: capabilityDefinitions,
 			Kubernetes: gardencorev1beta1.KubernetesSettings{
 				Versions: []gardencorev1beta1.ExpirableVersion{
 					{Version: "1.3.0"},

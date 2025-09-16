@@ -1736,7 +1736,7 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 	})
 
-	Describe("#ConvertV1beta1CapabilitiesDefinitions", func() {
+	Describe("#ConvertV1beta1CapabilityDefinitions", func() {
 		It("should convert core.CapabilityDefinition to v1beta1.CapabilityDefinition", func() {
 			coreDefs := []core.CapabilityDefinition{{
 				Name:   "arch",
@@ -1745,7 +1745,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				Name:   "cap1",
 				Values: []string{"value1", "value2"},
 			}}
-			v1beta1Defs, err := ConvertV1beta1CapabilitiesDefinitions(coreDefs)
+			v1beta1Defs, err := ConvertV1beta1CapabilityDefinitions(coreDefs)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(v1beta1Defs).To(HaveLen(2))
 			Expect(v1beta1Defs[0].Name).To(Equal("arch"))
@@ -1755,7 +1755,7 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 
 		It("should return an empty slice when input is empty", func() {
-			v1beta1Defs, err := ConvertV1beta1CapabilitiesDefinitions([]core.CapabilityDefinition{})
+			v1beta1Defs, err := ConvertV1beta1CapabilityDefinitions([]core.CapabilityDefinition{})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(v1beta1Defs).To(BeEmpty())
 		})

@@ -60,7 +60,7 @@ func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, m
 
 		for _, machineImage := range workerStatus.MachineImages {
 			if machineImage.Name == name && machineImage.Version == version {
-				// If no capabilitiesDefinitions are specified, return the (legacy) image field as no image capabilityFlavors are used.
+				// If no capabilityDefinitions are specified, return the (legacy) image field as no image capabilityFlavors are used.
 				if len(w.cluster.CloudProfile.Spec.MachineCapabilities) == 0 {
 					selectedMachineImage.Image = machineImage.Image
 					selectedMachineImage.Capabilities = gardencorev1beta1.Capabilities{}
@@ -77,9 +77,9 @@ func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, m
 	return nil, worker.ErrorMachineImageNotFound(name, version)
 }
 
-func appendMachineImage(machineImages []api.MachineImage, machineImage api.MachineImage, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) []api.MachineImage {
+func appendMachineImage(machineImages []api.MachineImage, machineImage api.MachineImage, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []api.MachineImage {
 	// support for cloudprofile machine images without capabilities
-	if len(capabilitiesDefinitions) == 0 {
+	if len(capabilityDefinitions) == 0 {
 		for _, image := range machineImages {
 			if image.Name == machineImage.Name && image.Version == machineImage.Version {
 				// If the image already exists without capabilities, we can just return the existing list.
@@ -93,10 +93,10 @@ func appendMachineImage(machineImages []api.MachineImage, machineImage api.Machi
 		})
 	}
 
-	defaultedCapabilities := v1beta1helper.GetCapabilitiesWithAppliedDefaults(machineImage.Capabilities, capabilitiesDefinitions)
+	defaultedCapabilities := v1beta1helper.GetCapabilitiesWithAppliedDefaults(machineImage.Capabilities, capabilityDefinitions)
 
 	for _, existingMachineImage := range machineImages {
-		existingDefaultedCapabilities := v1beta1helper.GetCapabilitiesWithAppliedDefaults(existingMachineImage.Capabilities, capabilitiesDefinitions)
+		existingDefaultedCapabilities := v1beta1helper.GetCapabilitiesWithAppliedDefaults(existingMachineImage.Capabilities, capabilityDefinitions)
 		if existingMachineImage.Name == machineImage.Name &&
 			existingMachineImage.Version == machineImage.Version &&
 			v1beta1helper.AreCapabilitiesEqual(defaultedCapabilities, existingDefaultedCapabilities) {

@@ -22,16 +22,16 @@ type CapabilitiesAccessor interface {
 func FindBestImageFlavor[T CapabilitiesAccessor](
 	providerImageFlavors []T,
 	machineCapabilities v1beta1.Capabilities,
-	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
+	capabilityDefinitions []v1beta1.CapabilityDefinition,
 ) (T, error) {
 	var zeroValue T
 
-	compatibleFlavors := filterCompatibleImageFlavors(providerImageFlavors, machineCapabilities, capabilitiesDefinitions)
+	compatibleFlavors := filterCompatibleImageFlavors(providerImageFlavors, machineCapabilities, capabilityDefinitions)
 	if len(compatibleFlavors) == 0 {
 		return zeroValue, fmt.Errorf("no compatible flavor found")
 	}
 
-	bestFlavor, err := selectBestImageFlavor(compatibleFlavors, capabilitiesDefinitions)
+	bestFlavor, err := selectBestImageFlavor(compatibleFlavors, capabilityDefinitions)
 	if err != nil {
 		return zeroValue, err
 	}
@@ -42,11 +42,11 @@ func FindBestImageFlavor[T CapabilitiesAccessor](
 func filterCompatibleImageFlavors[T CapabilitiesAccessor](
 	imageFlavors []T,
 	machineCapabilities v1beta1.Capabilities,
-	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
+	capabilityDefinitions []v1beta1.CapabilityDefinition,
 ) []T {
 	var compatibleFlavors []T
 	for _, imageFlavor := range imageFlavors {
-		if v1beta1helper.AreCapabilitiesCompatible(imageFlavor.GetCapabilities(), machineCapabilities, capabilitiesDefinitions) {
+		if v1beta1helper.AreCapabilitiesCompatible(imageFlavor.GetCapabilities(), machineCapabilities, capabilityDefinitions) {
 			compatibleFlavors = append(compatibleFlavors, imageFlavor)
 		}
 	}
@@ -54,7 +54,7 @@ func filterCompatibleImageFlavors[T CapabilitiesAccessor](
 }
 
 // selectBestImageFlavor selects the most appropriate image flavor based on the priority
-// of its capabilities and their values as defined in capabilitiesDefinitions.
+// of its capabilities and their values as defined in capabilityDefinitions.
 //
 // Selection follows a priority-based approach:
 // 1. Capabilities are ordered by priority in the definitions list (highest priority first)
@@ -62,7 +62,7 @@ func filterCompatibleImageFlavors[T CapabilitiesAccessor](
 // 3. Selection is determined by the first capability value difference found
 func selectBestImageFlavor[T CapabilitiesAccessor](
 	compatibleSets []T,
-	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
+	capabilityDefinitions []v1beta1.CapabilityDefinition,
 ) (T, error) {
 	var zeroValue T
 	if len(compatibleSets) == 1 {
@@ -79,7 +79,7 @@ func selectBestImageFlavor[T CapabilitiesAccessor](
 		capabilitiesWithProviderTypes = append(capabilitiesWithProviderTypes, capabilitiesWithProviderType{
 			providerEntry: set,
 			// Normalize capabilities copy by applying defaults
-			capabilities: v1beta1helper.GetCapabilitiesWithAppliedDefaults(set.GetCapabilities(), capabilitiesDefinitions),
+			capabilities: v1beta1helper.GetCapabilitiesWithAppliedDefaults(set.GetCapabilities(), capabilityDefinitions),
 		})
 	}
 
@@ -87,7 +87,7 @@ func selectBestImageFlavor[T CapabilitiesAccessor](
 	remainingSets := capabilitiesWithProviderTypes
 
 	// For each capability (in priority order)
-	for _, capabilityDef := range capabilitiesDefinitions {
+	for _, capabilityDef := range capabilityDefinitions {
 		// For each preferred value (in preference order)
 		for _, capabilityValue := range capabilityDef.Values {
 			var setsWithPreferredValue []capabilitiesWithProviderType

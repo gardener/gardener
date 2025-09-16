@@ -428,22 +428,22 @@ func NewV1beta1ImagesContext(parentImages []gardencorev1beta1.MachineImage) *Ima
 	)
 }
 
-// ValidateCapabilities validates the capabilities of a machine type or machine image against the capabilitiesDefinition located in a cloud profile at spec.machineCapabilities.
+// ValidateCapabilities validates the capabilities of a machine type or machine image against the CapabilityDefinition located in a cloud profile at spec.machineCapabilities.
 // It checks if the capabilities are supported by the cloud profile and if the architecture is defined correctly.
 // It returns a list of field errors if any validation fails.
-func ValidateCapabilities(capabilities gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
+func ValidateCapabilities(capabilities gardencorev1beta1.Capabilities, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// create map from capabilitiesDefinitions
-	capabilitiesDefinition := make(map[string][]string)
-	for _, capabilityDefinition := range capabilitiesDefinitions {
-		capabilitiesDefinition[capabilityDefinition.Name] = capabilityDefinition.Values
+	// create map from capabilityDefinitions
+	capabilityDefinitionsMap := make(map[string][]string)
+	for _, capabilityDefinition := range capabilityDefinitions {
+		capabilityDefinitionsMap[capabilityDefinition.Name] = capabilityDefinition.Values
 	}
-	supportedCapabilityKeys := slices.Collect(maps.Keys(capabilitiesDefinition))
+	supportedCapabilityKeys := slices.Collect(maps.Keys(capabilityDefinitionsMap))
 
 	// Check if all capabilities are supported by the cloud profile
 	for capabilityKey, capability := range capabilities {
-		supportedValues, keyExists := capabilitiesDefinition[capabilityKey]
+		supportedValues, keyExists := capabilityDefinitionsMap[capabilityKey]
 		if !keyExists {
 			allErrs = append(allErrs, field.NotSupported(fldPath, capabilityKey, supportedCapabilityKeys))
 			continue
@@ -457,7 +457,7 @@ func ValidateCapabilities(capabilities gardencorev1beta1.Capabilities, capabilit
 
 	// Check additional requirements for architecture
 	// - must be defined when multiple architectures are supported by the cloud profile
-	supportedArchitectures := capabilitiesDefinition[v1beta1constants.ArchitectureName]
+	supportedArchitectures := capabilityDefinitionsMap[v1beta1constants.ArchitectureName]
 	architectures := capabilities[v1beta1constants.ArchitectureName]
 	if len(supportedArchitectures) > 1 && len(architectures) != 1 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child(v1beta1constants.ArchitectureName), architectures, "must define exactly one architecture when multiple architectures are supported by the cloud profile"))

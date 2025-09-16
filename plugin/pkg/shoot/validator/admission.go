@@ -1756,7 +1756,7 @@ func getDefaultMachineImage(
 	image *core.ShootMachineImage,
 	arch *string,
 	machineType *gardencorev1beta1.MachineType,
-	capabilitiesDefinition []gardencorev1beta1.CapabilityDefinition,
+	capabilityDefinitions []gardencorev1beta1.CapabilityDefinition,
 	isUpdateStrategyInPlace bool,
 	fldPath *field.Path,
 ) (*core.ShootMachineImage, *field.Error) {
@@ -1787,12 +1787,12 @@ func getDefaultMachineImage(
 		for _, mi := range machineImages {
 			machineImage := mi
 			for _, version := range machineImage.Versions {
-				if v1beta1helper.ArchitectureSupportedByImageVersion(version, *arch, capabilitiesDefinition) {
+				if v1beta1helper.ArchitectureSupportedByImageVersion(version, *arch, capabilityDefinitions) {
 					defaultImage = &machineImage
 					break
 				}
 				// skip capabilities check if machineType was not found in the cloud profile
-				if machineType != nil && v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineType.Capabilities, version.CapabilityFlavors, capabilitiesDefinition) {
+				if machineType != nil && v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineType.Capabilities, version.CapabilityFlavors, capabilityDefinitions) {
 					defaultImage = &machineImage
 					break
 				}
@@ -1832,12 +1832,12 @@ func getDefaultMachineImage(
 	var validVersions []core.MachineImageVersion
 
 	for _, version := range defaultImage.Versions {
-		if !v1beta1helper.ArchitectureSupportedByImageVersion(version, *arch, capabilitiesDefinition) {
+		if !v1beta1helper.ArchitectureSupportedByImageVersion(version, *arch, capabilityDefinitions) {
 			continue
 		}
 
 		// skip capabilities check if machineType was not found in the cloud profile
-		if machineType != nil && !v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineType.Capabilities, version.CapabilityFlavors, capabilitiesDefinition) {
+		if machineType != nil && !v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineType.Capabilities, version.CapabilityFlavors, capabilityDefinitions) {
 			continue
 		}
 

@@ -19,14 +19,14 @@ func FindImageFromCloudProfile(
 	cloudProfileConfig *local.CloudProfileConfig,
 	name, version string,
 	machineCapabilities v1beta1.Capabilities,
-	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
+	capabilityDefinitions []v1beta1.CapabilityDefinition,
 ) (*local.MachineImageFlavor, error) {
 	if cloudProfileConfig == nil {
 		return nil, fmt.Errorf("cloud profile config is nil")
 	}
 	machineImages := cloudProfileConfig.MachineImages
 
-	imageFlavor, err := findMachineImageFlavor(machineImages, name, version, machineCapabilities, capabilitiesDefinitions)
+	imageFlavor, err := findMachineImageFlavor(machineImages, name, version, machineCapabilities, capabilityDefinitions)
 	if err != nil {
 		return nil, fmt.Errorf("could not find image %q, version %q that supports %v: %w", name, version, machineCapabilities, err)
 	}
@@ -41,7 +41,7 @@ func findMachineImageFlavor(
 	machineImages []local.MachineImages,
 	imageName, imageVersion string,
 	machineCapabilities v1beta1.Capabilities,
-	capabilitiesDefinitions []v1beta1.CapabilityDefinition,
+	capabilityDefinitions []v1beta1.CapabilityDefinition,
 ) (*local.MachineImageFlavor, error) {
 	for _, machineImage := range machineImages {
 		if machineImage.Name != imageName {
@@ -53,15 +53,15 @@ func findMachineImageFlavor(
 				continue
 			}
 
-			// If no capabilitiesDefinitions are specified, return the (legacy) image field as no capabilityFlavors are used.
-			if len(capabilitiesDefinitions) == 0 {
+			// If no capabilityDefinitions are specified, return the (legacy) image field as no capabilityFlavors are used.
+			if len(capabilityDefinitions) == 0 {
 				return &local.MachineImageFlavor{
 					Image:        version.Image,
 					Capabilities: v1beta1.Capabilities{},
 				}, nil
 			}
 
-			bestMatch, err := worker.FindBestImageFlavor(version.CapabilityFlavors, machineCapabilities, capabilitiesDefinitions)
+			bestMatch, err := worker.FindBestImageFlavor(version.CapabilityFlavors, machineCapabilities, capabilityDefinitions)
 			if err != nil {
 				return nil, fmt.Errorf("could not determine best flavor %w", err)
 			}

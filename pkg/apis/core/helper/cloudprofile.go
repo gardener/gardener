@@ -283,9 +283,9 @@ func CapabilityDefinitionsToCapabilities(capabilityDefinitions []core.Capability
 }
 
 // GetCapabilitiesWithAppliedDefaults returns new capabilities with applied defaults from the capability definitions.
-func GetCapabilitiesWithAppliedDefaults(capabilities core.Capabilities, capabilitiesDefinitions []core.CapabilityDefinition) core.Capabilities {
-	result := make(core.Capabilities, len(capabilitiesDefinitions))
-	for _, capabilityDefinition := range capabilitiesDefinitions {
+func GetCapabilitiesWithAppliedDefaults(capabilities core.Capabilities, capabilityDefinitions []core.CapabilityDefinition) core.Capabilities {
+	result := make(core.Capabilities, len(capabilityDefinitions))
+	for _, capabilityDefinition := range capabilityDefinitions {
 		if values, ok := capabilities[capabilityDefinition.Name]; ok {
 			result[capabilityDefinition.Name] = values
 		} else {
@@ -296,16 +296,16 @@ func GetCapabilitiesWithAppliedDefaults(capabilities core.Capabilities, capabili
 }
 
 // GetImageFlavorWithAppliedDefaults returns MachineImageFlavors sets with applied defaults from the capability definitions.
-func GetImageFlavorWithAppliedDefaults(imageFlavors []core.MachineImageFlavor, capabilitiesDefinitions []core.CapabilityDefinition) []core.MachineImageFlavor {
+func GetImageFlavorWithAppliedDefaults(imageFlavors []core.MachineImageFlavor, capabilityDefinitions []core.CapabilityDefinition) []core.MachineImageFlavor {
 	if len(imageFlavors) == 0 {
 		// If no capabilityFlavors are defined, assume all capabilities are supported.
-		return []core.MachineImageFlavor{{Capabilities: GetCapabilitiesWithAppliedDefaults(core.Capabilities{}, capabilitiesDefinitions)}}
+		return []core.MachineImageFlavor{{Capabilities: GetCapabilitiesWithAppliedDefaults(core.Capabilities{}, capabilityDefinitions)}}
 	}
 
 	result := make([]core.MachineImageFlavor, len(imageFlavors))
 	for i, imageFlavor := range imageFlavors {
 		result[i] = core.MachineImageFlavor{
-			Capabilities: GetCapabilitiesWithAppliedDefaults(imageFlavor.Capabilities, capabilitiesDefinitions),
+			Capabilities: GetCapabilitiesWithAppliedDefaults(imageFlavor.Capabilities, capabilityDefinitions),
 		}
 	}
 	return result

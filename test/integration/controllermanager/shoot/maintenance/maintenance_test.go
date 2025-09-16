@@ -83,11 +83,11 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 		fakeClock.SetTime(time.Now().Round(time.Second))
 
-		var capabilitiesDefinition []gardencorev1beta1.CapabilityDefinition
+		var capabilityDefinitions []gardencorev1beta1.CapabilityDefinition
 		var imageFlavors, imageFlavorsArm, imageFlavorsAmd []gardencorev1beta1.MachineImageFlavor
 		var capabilitiesAmd64, capabilitiesArm64 gardencorev1beta1.Capabilities
 		if isCapabilitiesCloudProfile {
-			capabilitiesDefinition = []gardencorev1beta1.CapabilityDefinition{
+			capabilityDefinitions = []gardencorev1beta1.CapabilityDefinition{
 				{
 					Name:   "architecture",
 					Values: []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64},
@@ -116,7 +116,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				GenerateName: testID + "-",
 			},
 			Spec: gardencorev1beta1.CloudProfileSpec{
-				MachineCapabilities: capabilitiesDefinition,
+				MachineCapabilities: capabilityDefinitions,
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{
 						{
