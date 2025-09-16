@@ -42,6 +42,7 @@ rules:
   - core.gardener.cloud
   resources:
   - seeds
+  - projects
   - cloudprofiles
   - namespacedcloudprofiles
   verbs:

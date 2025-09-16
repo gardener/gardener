@@ -798,6 +798,7 @@ build:
             - cmd/utils/initrun
             - pkg/api
             - pkg/api/extensions
+            - pkg/api/indexer
             - pkg/apis/authentication
             - pkg/apis/authentication/install
             - pkg/apis/authentication/v1alpha1
