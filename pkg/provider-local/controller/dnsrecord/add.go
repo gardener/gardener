@@ -31,10 +31,12 @@ type AddOptions struct {
 }
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
-// The opts.Reconciler is being set with a newly instantiated actuator.
+// The opts.Reconciler is being set with a newly instantiated Actuator.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
 	return dnsrecord.Add(mgr, dnsrecord.AddArgs{
-		Actuator:          NewActuator(mgr),
+		Actuator: &Actuator{
+			Client: mgr.GetClient(),
+		},
 		ControllerOptions: opts.Controller,
 		Predicates:        dnsrecord.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:              local.Type,

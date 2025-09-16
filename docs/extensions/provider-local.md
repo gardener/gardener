@@ -74,14 +74,27 @@ Additionally, it creates a few (currently unused) dummy secrets (CA, server and 
 
 #### `DNSRecord`
 
-The controller adapts the cluster internal DNS configuration by extending the `coredns` configuration for every observed `DNSRecord`. It will add two corresponding entries in the custom DNS configuration per shoot cluster:
+The controller adapts the cluster internal DNS configuration by extending the custom CoreDNS configuration for every observed `DNSRecord`.
+It adds two corresponding entries in the custom DNS configuration per shoot cluster containing a `rewrite` rule:
 
-```text
+```yaml
 data:
   api.local.local.external.local.gardener.cloud.override: |
     rewrite stop name regex api.local.local.external.local.gardener.cloud istio-ingressgateway.istio-ingress.svc.cluster.local answer auto
   api.local.local.internal.local.gardener.cloud.override: |
     rewrite stop name regex api.local.local.internal.local.gardener.cloud istio-ingressgateway.istio-ingress.svc.cluster.local answer auto
+```
+
+For autonomous shoots, the controller configures the CoreDNS `template` plugin instead of using a `rewrite` rule for each `DNSRecord`:
+
+```yaml
+data:
+  api.root.garden.external.local.gardener.cloud.override: |
+    template IN A local.gardener.cloud {
+      match "^api\.root\.garden\.external\.local\.gardener\.cloud\.$"
+      answer "{{ .Name }} 120 IN A 10.0.130.192"
+      fallthrough
+    }
 ```
 
 #### `Infrastructure`
