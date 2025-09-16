@@ -40,7 +40,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
@@ -152,7 +151,6 @@ func (r *Reconciler) instantiateComponents(
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
-	applier kubernetes.Applier,
 	wildcardCertSecret *corev1.Secret,
 	enableSeedAuthorizer bool,
 	extensionList *operatorv1alpha1.ExtensionList,
