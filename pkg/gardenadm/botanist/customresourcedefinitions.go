@@ -59,7 +59,7 @@ func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Cont
 	// See https://github.com/gardener/gardener/pull/12152#discussion_r2101790385
 	// TODO(timebertt): distinguish between scenarios in `gardenadm init`
 	if !b.Shoot.RunsControlPlane() {
-		deployers["Machine"], err = machinecontrollermanager.NewCRD(b.SeedClientSet.Client(), b.SeedClientSet.Applier())
+		deployers["Machine"], err = machinecontrollermanager.NewCRD(b.SeedClientSet.Client())
 		if err != nil {
 			return fmt.Errorf("failed creating machine CRD deployer: %w", err)
 		}
