@@ -151,7 +151,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.istioCRD, err = istio.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.istioCRD, err = istio.NewCRD(r.SeedClientSet.Client())
 	if err != nil {
 		return
 	}
