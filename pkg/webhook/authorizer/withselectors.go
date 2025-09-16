@@ -23,6 +23,7 @@ import (
 
 // WithSelectorsChecker checks whether the 'AuthorizeWithSelectors' feature is enabled in the kube-apiserver.
 // TODO(rfranzke): Remove this interface once the lowest supported Kubernetes version is 1.34.
+// Deprecated: This interface will be removed once the lowest supported Kubernetes version is 1.34.
 type WithSelectorsChecker interface {
 	// IsPossible returns true if the 'AuthorizeWithSelectors' feature is enabled in the kube-apiserver.
 	IsPossible() (bool, error)

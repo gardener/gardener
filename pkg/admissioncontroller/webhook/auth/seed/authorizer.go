@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 
@@ -359,15 +360,24 @@ func (a *authorizer) authorizeRead(log logr.Logger, seedName string, fromType gr
 }
 
 type authzRequest struct {
-	allowedVerbs          []string
-	alwaysAllowedVerbs    []string
-	allowedSubresources   []string
+	allowedVerbs          sets.Set[string]
+	alwaysAllowedVerbs    sets.Set[string]
+	allowedSubresources   sets.Set[string]
 	listWatchSeedSelector seedSelector
 }
 
+func newAuthzRequest() *authzRequest {
+	return &authzRequest{
+		allowedVerbs:          sets.Set[string]{},
+		alwaysAllowedVerbs:    sets.Set[string]{},
+		allowedSubresources:   sets.Set[string]{},
+		listWatchSeedSelector: seedSelector{fieldNames: sets.Set[string]{}, labelKeys: sets.Set[string]{}},
+	}
+}
+
 type seedSelector struct {
-	fieldNames []string
-	labelKeys  []string
+	fieldNames sets.Set[string]
+	labelKeys  sets.Set[string]
 }
 
 type configFunc func(req *authzRequest)
@@ -383,23 +393,23 @@ func (a *authorizer) authorize(
 	string,
 	error,
 ) {
-	req := &authzRequest{}
+	req := newAuthzRequest()
 	for _, f := range fns {
 		f(req)
 	}
 
-	if ok, reason := a.checkSubresource(log, attrs, req.allowedSubresources...); !ok {
+	if ok, reason := a.checkSubresource(log, attrs, sets.List(req.allowedSubresources)...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
 	// When a new object is created then it doesn't yet exist in the graph, so usually such requests are always allowed
 	// as the 'create case' is typically handled in the SeedRestriction admission handler. Similarly, resources for
 	// which the gardenlet has a controller need to be listed/watched, so those verbs would also be allowed here.
-	if slices.Contains(req.alwaysAllowedVerbs, attrs.GetVerb()) {
+	if req.alwaysAllowedVerbs.Has(attrs.GetVerb()) {
 		return auth.DecisionAllow, "", nil
 	}
 
-	if ok, reason := a.checkVerb(log, attrs, append(req.alwaysAllowedVerbs, req.allowedVerbs...)...); !ok {
+	if ok, reason := a.checkVerb(log, attrs, sets.List(req.alwaysAllowedVerbs.Union(req.allowedVerbs))...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
@@ -410,11 +420,12 @@ func (a *authorizer) authorize(
 		// the request specifies `.metadata.name` as field name for a seed selector. This means that the client wants
 		// to list/watch the resource with the seed name as field selector. This is a valid scenario and needs to be
 		// handled by the below check function.
-		(attrs.GetName() == "" || slices.Contains(req.listWatchSeedSelector.fieldNames, metav1.ObjectNameField)) {
+		(attrs.GetName() == "" || req.listWatchSeedSelector.fieldNames.Has(metav1.ObjectNameField)) {
 		if canAuthorizeWithSelectors, err := a.authorizeWithSelectors.IsPossible(); err != nil {
 			return auth.DecisionNoOpinion, "", fmt.Errorf("failed checking if authorization with selectors is possible: %w", err)
 		} else if canAuthorizeWithSelectors {
-			if ok, reason := a.checkListWatchRequests(log, attrs, seedName, req.listWatchSeedSelector); !ok {
+			if ok, reason := a.checkListWatchRequests(attrs, seedName, req.listWatchSeedSelector); !ok {
+				log.Info("Denying list/watch request because field/label selectors don't select seed name", "fieldNames", req.listWatchSeedSelector.fieldNames, "labelKeys", req.listWatchSeedSelector.labelKeys)
 				return auth.DecisionNoOpinion, reason, nil
 			} else {
 				return auth.DecisionAllow, "", nil
@@ -430,19 +441,19 @@ func (a *authorizer) authorize(
 
 func withAllowedVerbs(verbs ...string) configFunc {
 	return func(req *authzRequest) {
-		req.allowedVerbs = verbs
+		req.allowedVerbs.Insert(verbs...)
 	}
 }
 
 func withAlwaysAllowedVerbs(verbs ...string) configFunc {
 	return func(req *authzRequest) {
-		req.alwaysAllowedVerbs = verbs
+		req.alwaysAllowedVerbs.Insert(verbs...)
 	}
 }
 
 func withAllowedSubresources(resources ...string) configFunc {
 	return func(req *authzRequest) {
-		req.allowedSubresources = resources
+		req.allowedSubresources.Insert(resources...)
 	}
 }
 
@@ -451,7 +462,7 @@ func withAllowedSubresources(resources ...string) configFunc {
 //nolint:unused
 func withSeedFieldSelectorFields(fieldNames ...string) configFunc {
 	return func(req *authzRequest) {
-		req.listWatchSeedSelector.fieldNames = append(req.listWatchSeedSelector.fieldNames, fieldNames...)
+		req.listWatchSeedSelector.fieldNames.Insert(fieldNames...)
 	}
 }
 
@@ -460,7 +471,7 @@ func withSeedFieldSelectorFields(fieldNames ...string) configFunc {
 //nolint:unused
 func withSeedLabelSelectorKeys(labelKeys ...string) configFunc {
 	return func(req *authzRequest) {
-		req.listWatchSeedSelector.labelKeys = append(req.listWatchSeedSelector.labelKeys, labelKeys...)
+		req.listWatchSeedSelector.labelKeys.Insert(labelKeys...)
 	}
 }
 
@@ -509,7 +520,7 @@ func (a *authorizer) checkSubresource(log logr.Logger, attrs auth.Attributes, al
 	return true, ""
 }
 
-func (a *authorizer) checkListWatchRequests(log logr.Logger, attrs auth.Attributes, seedName string, seedSelector seedSelector) (bool, string) {
+func (a *authorizer) checkListWatchRequests(attrs auth.Attributes, seedName string, seedSelector seedSelector) (bool, string) {
 	// The authorization request originates from the kube-apiserver. It has already parsed the field/label selector
 	// and converted it to {fields,labels}.Requirements. Hence, it is safe to ignore the error here. Furthermore, we
 	// require at least one selector. When the parsing failed, the list of selectors would be empty, resulting in
@@ -520,19 +531,18 @@ func (a *authorizer) checkListWatchRequests(log logr.Logger, attrs auth.Attribut
 	for _, req := range fieldSelectorRequirements {
 		if (req.Operator == selection.Equals || req.Operator == selection.DoubleEquals || req.Operator == selection.In) &&
 			req.Value == seedName &&
-			slices.Contains(seedSelector.fieldNames, req.Field) {
+			seedSelector.fieldNames.Has(req.Field) {
 			return true, "field selector provided and matches seed name"
 		}
 	}
 
 	for _, req := range labelSelectorRequirements {
-		if slices.ContainsFunc(seedSelector.labelKeys, func(key string) bool {
-			return req.Matches(labels.Set{key: "true"})
-		}) {
-			return true, "label selector provided and matches seed name"
+		for key := range seedSelector.labelKeys {
+			if req.Matches(labels.Set{key: "true"}) {
+				return true, "label selector provided and matches seed name"
+			}
 		}
 	}
 
-	log.Info("Denying authorization because field/label selectors don't select seed name", "fieldNames", seedSelector.fieldNames, "labelKeys", seedSelector.labelKeys)
 	return false, "must specify field or label selector for seed name " + seedName
 }
