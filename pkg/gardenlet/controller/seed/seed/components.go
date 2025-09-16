@@ -139,7 +139,7 @@ func (r *Reconciler) instantiateComponents(
 	err error,
 ) {
 	// crds
-	c.machineCRD, err = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.machineCRD, err = machinecontrollermanager.NewCRD(r.SeedClientSet.Client())
 	if err != nil {
 		return
 	}
