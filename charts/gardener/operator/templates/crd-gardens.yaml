@@ -2001,6 +2001,19 @@ spec:
                 description: Credentials contains information about the virtual garden
                   cluster credentials.
                 properties:
+                  encryptionAtRest:
+                    description: EncryptionAtRest contains information about garden
+                      data encryption at rest.
+                    properties:
+                      resources:
+                        description: |-
+                          Resources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
+                          Resources which are encrypted by default will not appear here.
+                          See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
+                        items:
+                          type: string
+                        type: array
+                    type: object
                   rotation:
                     description: Rotation contains information about the credential
                       rotations.
@@ -2213,12 +2226,17 @@ spec:
                         - phase
                         type: object
                     type: object
+                required:
+                - encryptionAtRest
                 type: object
               encryptedResources:
                 description: |-
                   EncryptedResources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
                   Resources which are encrypted by default will not appear here.
                   See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
+
+                  Deprecated: This field is deprecated and will be removed in a future release.
+                  This field will be removed in favor of `gardenStatus.credentials.encryptionAtRest.resources`.
                 items:
                   type: string
                 type: array
