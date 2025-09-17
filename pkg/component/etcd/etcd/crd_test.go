@@ -99,8 +99,7 @@ var _ = Describe("CRD", func() {
 		)
 
 		Describe("Get all CRDs", func() {
-			allCRDs, err := crdGetter.GetAllCRDs()
-			Expect(err).NotTo(HaveOccurred())
+			allCRDs := crdGetter.GetAllCRDs()
 			Expect(allCRDs).To(HaveLen(2))
 			Expect(allCRDs).To(HaveKey("etcds.druid.gardener.cloud"))
 			Expect(allCRDs).To(HaveKey("etcdcopybackupstasks.druid.gardener.cloud"))
