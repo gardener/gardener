@@ -141,6 +141,14 @@ func ValidateIPFamiliesUpdate(newIPFamilies, oldIPFamilies []extensionsv1alpha1.
 		return allErrs
 	}
 
+	if len(oldIPFamilies) == 2 &&
+		oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 &&
+		oldIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv6 &&
+		len(newIPFamilies) == 1 &&
+		newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 {
+		return allErrs
+	}
+
 	if !apiequality.Semantic.DeepEqual(newIPFamilies, oldIPFamilies) {
 		allErrs = append(allErrs, field.Forbidden(fldPath,
 			fmt.Sprintf("unsupported IP family update: oldIPFamilies=%v, newIPFamilies=%v", oldIPFamilies, newIPFamilies)))

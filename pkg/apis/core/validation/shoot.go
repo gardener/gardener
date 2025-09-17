@@ -833,11 +833,20 @@ func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fld
 func validateIPFamiliesUpdate(newIPFamilies, oldIPFamilies []core.IPFamily, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	// Allow migration from IPv4 to dual-stack
 	if len(oldIPFamilies) == 1 &&
 		oldIPFamilies[0] == core.IPFamilyIPv4 &&
 		len(newIPFamilies) == 2 &&
 		newIPFamilies[0] == core.IPFamilyIPv4 &&
 		newIPFamilies[1] == core.IPFamilyIPv6 {
+		return allErrs
+	}
+
+	// Allow migration from dual-stack to IPv4
+	if len(oldIPFamilies) == 2 &&
+		oldIPFamilies[0] == core.IPFamilyIPv4 &&
+		oldIPFamilies[1] == core.IPFamilyIPv6 &&
+		len(newIPFamilies) == 1 && newIPFamilies[0] == core.IPFamilyIPv4 {
 		return allErrs
 	}
 

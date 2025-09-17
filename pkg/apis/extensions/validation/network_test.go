@@ -314,10 +314,10 @@ var _ = Describe("Network validation tests", func() {
 			))
 		})
 
-		It("should not allow removing an address family", func() {
+		It("should not allow to update from [IPv4 IPv6] to [IPv6]", func() {
 			network.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4, extensionsv1alpha1.IPFamilyIPv6}
 			newNetwork := prepareNetworkForUpdate(network)
-			newNetwork.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4}
+			newNetwork.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6}
 
 			errorList := ValidateNetworkUpdate(newNetwork, network)
 
@@ -326,7 +326,27 @@ var _ = Describe("Network validation tests", func() {
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.ipFamilies"),
 				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.podCIDR"),
+					"Detail": Equal("must be a valid IPv6 address"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.serviceCIDR"),
+					"Detail": Equal("must be a valid IPv6 address"),
+				})),
 			))
+		})
+
+		It("should allow to update from [IPv4 IPv6] to [IPv4]", func() {
+			network.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4, extensionsv1alpha1.IPFamilyIPv6}
+			newNetwork := prepareNetworkForUpdate(network)
+			newNetwork.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4}
+
+			errorList := ValidateNetworkUpdate(newNetwork, network)
+
+			Expect(errorList).To(BeEmpty())
 		})
 	})
 

@@ -4589,17 +4589,25 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": Equal("unsupported IP family update: oldIPFamilies=[IPv4], newIPFamilies=[IPv6 IPv4]"),
 				}))))
 			})
-			It("should forbid changing ipfamilies from dual-stack to single-stack", func() {
+			It("should forbid changing ipfamilies from dual-stack [IPv4 IPv6] to single-stack [IPv6]", func() {
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+				errorList := ValidateShootUpdate(newShoot, shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.networking.ipFamilies"),
+					"Detail": Equal("unsupported IP family update: oldIPFamilies=[IPv4 IPv6], newIPFamilies=[IPv6]"),
+				}))))
+			})
+			It("should allow changing ipfamilies from dual-stack [IPv4 IPv6] to single-stack [IPv4]", func() {
 				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
 				errorList := ValidateShootUpdate(newShoot, shoot)
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.networking.ipFamilies"),
-					"Detail": Equal("unsupported IP family update: oldIPFamilies=[IPv4 IPv6], newIPFamilies=[IPv4]"),
-				}))))
+				Expect(errorList).To(BeEmpty())
 			})
 		})
 
