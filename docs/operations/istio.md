@@ -35,3 +35,9 @@ The goal is achieved by using multiple istio ingress gateways. The default istio
 Please note that operators may need to perform additional tuning to prevent cross-zonal traffic completely. The [loadbalancer settings in the seed specification](./seed_settings.md#load-balancer-services) offer various options, e.g., by setting the external traffic policy to `local` or using infrastructure specific loadbalancer annotations.
 
 Furthermore, note that this approach is also taken in case [`ExposureClass`es](../usage/networking/exposureclasses.md) are used. For each exposure class, additional zonal istio ingress gateways may be deployed to cover for single-zone shoot control planes using the exposure class.
+
+### Disabling Zonal Ingress
+
+The deployment of zonal istio ingress gateways can be disabled in the seed specification. When disabled, only the default istio ingress gateway is deployed and all traffic (single-zone and multi-zone) is routed through this single gateway.
+
+For more details on how to disable zonal istio ingress gateways, see the [seed settings documentation](./seed_settings.md#zonal-ingress).
