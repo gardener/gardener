@@ -70,5 +70,5 @@ func NewCRD(client client.Client, includeGeneralCRDs, includeShootCRDs bool) (co
 		crds = append(crds, shootCRDs...)
 	}
 
-	return crddeployer.New(client, crds, true, "clusters.extensions.gardener.cloud")
+	return crddeployer.New(client, crds, true)
 }
