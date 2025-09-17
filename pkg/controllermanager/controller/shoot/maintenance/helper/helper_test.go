@@ -117,7 +117,7 @@ var _ = Describe("Helper Functions", func() {
 				},
 				CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 				Architectures: []string{"amd64"},
-				CapabilitySets: []gardencorev1beta1.CapabilitySet{{
+				CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{
 					Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
 				}},
 				InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
@@ -131,7 +131,7 @@ var _ = Describe("Helper Functions", func() {
 					},
 					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 					Architectures: []string{"amd64"},
-					CapabilitySets: []gardencorev1beta1.CapabilitySet{{
+					CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{
 						Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
 					}},
 					InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{Supported: true},
