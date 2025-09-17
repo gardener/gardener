@@ -1158,7 +1158,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 	)
 }
 
-func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, enableSeedRestriction bool) (component.DeployWaiter, error) {
+func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, enableAuthorizerRestrictions bool) (component.DeployWaiter, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerAdmissionController)
 	if err != nil {
 		return nil, err
@@ -1166,11 +1166,11 @@ func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Gar
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	values := gardeneradmissioncontroller.Values{
-		Image:                       image.String(),
-		LogLevel:                    logger.InfoLevel,
-		RuntimeVersion:              r.RuntimeVersion,
-		SeedRestrictionEnabled:      enableSeedRestriction,
-		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+		Image:                         image.String(),
+		LogLevel:                      logger.InfoLevel,
+		RuntimeVersion:                r.RuntimeVersion,
+		AuthorizerRestrictionsEnabled: enableAuthorizerRestrictions,
+		TopologyAwareRoutingEnabled:   helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.AdmissionController; config != nil {
