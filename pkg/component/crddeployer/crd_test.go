@@ -32,7 +32,8 @@ var _ = Describe("CRD", func() {
 
 		readyCRD = &apiextensionsv1.CustomResourceDefinition{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "myresources.mygroup.example.com",
+				Name:            "myresources.mygroup.example.com",
+				ResourceVersion: "",
 			},
 			Status: apiextensionsv1.CustomResourceDefinitionStatus{
 				Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
@@ -187,7 +188,7 @@ spec:
 			ctrl.Finish()
 		})
 
-		It("should not destroy CRDs when CRDDeployer has confirmDeletion set to false", func() {
+		It("should destroy CRDs when CRDDeployer has confirmDeletion set to false", func() {
 			crdDeployer, err := New(mockClient, []string{confirmationCRD}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).NotTo(BeNil())
@@ -218,11 +219,12 @@ spec:
 
 	Describe("#Wait", func() {
 		It("should return true because the CRD is ready", func() {
-			// Use a CRDDeployer that deploys a CRD that already has the ready status
 			crdDeployer, err := New(testClient, []string{crd1Ready}, false)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+			// Create a CRD that already has the ready status
+			readyCRD.ResourceVersion = ""
+			Expect(testClient.Create(ctx, readyCRD)).To(Succeed())
 
 			Expect(crdDeployer.Wait(ctx)).To(Succeed())
 		})
