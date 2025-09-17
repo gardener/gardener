@@ -48,15 +48,24 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 	}
 
 	var (
+		websocketAllowedOrigins []string
+	)
+
+	for _, host := range g.ingressHosts() {
+		websocketAllowedOrigins = append(websocketAllowedOrigins, "https://"+host)
+	}
+
+	var (
 		cfg = &config.Config{
-			Port:               portServer,
-			LogFormat:          "text",
-			LogLevel:           g.values.LogLevel,
-			APIServerURL:       "https://" + g.values.APIServerURL,
-			APIServerCAData:    g.values.APIServerCABundle,
-			MaxRequestBodySize: "500kb",
-			ReadinessProbe:     config.ReadinessProbe{PeriodSeconds: readinessProbePeriodSeconds},
-			UnreachableSeeds:   config.UnreachableSeeds{MatchLabels: map[string]string{v1beta1constants.LabelSeedNetwork: v1beta1constants.LabelSeedNetworkPrivate}},
+			Port:                    portServer,
+			LogFormat:               "text",
+			LogLevel:                g.values.LogLevel,
+			APIServerURL:            "https://" + g.values.APIServerURL,
+			APIServerCAData:         g.values.APIServerCABundle,
+			MaxRequestBodySize:      "500kb",
+			ReadinessProbe:          config.ReadinessProbe{PeriodSeconds: readinessProbePeriodSeconds},
+			UnreachableSeeds:        config.UnreachableSeeds{MatchLabels: map[string]string{v1beta1constants.LabelSeedNetwork: v1beta1constants.LabelSeedNetworkPrivate}},
+			WebsocketAllowedOrigins: websocketAllowedOrigins,
 		}
 		loginCfg = &config.LoginConfig{}
 	)

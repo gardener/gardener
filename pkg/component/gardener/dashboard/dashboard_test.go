@@ -207,7 +207,13 @@ readinessProbe:
 unreachableSeeds:
   matchLabels:
     seed.gardener.cloud/network: private
-`
+websocketAllowedOrigins:`
+
+			for _, domain := range ingressDomains {
+				configRaw += `
+  - https://dashboard.` + domain
+			}
+			configRaw += "\n"
 
 			if terminal != nil {
 				configRaw += `contentSecurityPolicy:
