@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    high-availability-config.resources.gardener.cloud/zones: a,b,c
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: istio-ingress
+    high-availability-config.resources.gardener.cloud/consider: "true"
+    istio-injection: disabled
+    istio-operator-managed: Reconcile
+    pod-security.kubernetes.io/enforce: baseline
+  name: test-ingress
+spec: {}
+status: {}
