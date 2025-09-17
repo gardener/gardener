@@ -171,7 +171,7 @@ var _ = Describe("graph", func() {
 		}
 
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
-		graph = New(log, fakeClient)
+		graph = New(log, fakeClient, false)
 		Expect(graph.Setup(ctx, fakeInformers)).To(Succeed())
 
 		seed1 = &gardencorev1beta1.Seed{
