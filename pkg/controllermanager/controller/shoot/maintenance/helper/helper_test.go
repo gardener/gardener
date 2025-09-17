@@ -104,6 +104,42 @@ var _ = Describe("Helper Functions", func() {
 			Expect(filteredMachineImages.Versions).ShouldNot(BeEmpty())
 		})
 
+		It("should filter machine images which supports worker configuration and include current version also for inplace updates", func() {
+			machineImage.Versions[0].KubeletVersionConstraint = nil
+			machineImage.Versions[0].InPlaceUpdates = &gardencorev1beta1.InPlaceUpdates{Supported: true}
+			machineImage.Versions[1].KubeletVersionConstraint = nil
+			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
+
+			Expect(filteredMachineImages.Versions).Should(ContainElements(gardencorev1beta1.MachineImageVersion{
+				ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+					Version:        "1.1.0",
+					ExpirationDate: &expirationDateInTheFuture,
+				},
+				CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+				Architectures: []string{"amd64"},
+				CapabilitySets: []gardencorev1beta1.CapabilitySet{{
+					Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
+				}},
+				InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
+					Supported:           true,
+					MinVersionForUpdate: ptr.To("1.0.0"),
+				},
+			},
+				gardencorev1beta1.MachineImageVersion{
+					ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+						Version: "1.0.0",
+					},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
+					Architectures: []string{"amd64"},
+					CapabilitySets: []gardencorev1beta1.CapabilitySet{{
+						Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
+					}},
+					InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{Supported: true},
+				},
+			))
+			Expect(filteredMachineImages.Versions).Should(HaveLen(2))
+		})
+
 		It("should return an empty machine image if no versions found with matching architecture", func() {
 			worker.Machine.Architecture = ptr.To("arm64")
 			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
