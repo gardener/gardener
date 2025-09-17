@@ -25,7 +25,7 @@ const (
 // AddToManager adds Handler to the given manager.
 func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableDebugHandlers *bool) error {
 	if w.Handler == nil {
-		g := graph.New(mgr.GetLogger().WithName("shoot-authorizer-graph"), mgr.GetClient())
+		g := graph.New(mgr.GetLogger().WithName("shoot-authorizer-graph"), mgr.GetClient(), true)
 		if err := g.Setup(ctx, mgr.GetCache()); err != nil {
 			return err
 		}
