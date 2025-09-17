@@ -300,6 +300,7 @@ type SeedSettingLoadBalancerServicesZonalIngress struct {
 	// Enabled controls whether seed ingress gateways are deployed in each availability zone.
 	// Defaults to true, which provisions an ingress gateway load balancer for each availability zone.
 	// When disabled, only a single ingress gateway is deployed.
+	// See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zonal-ingress.
 	Enabled *bool
 }
 
