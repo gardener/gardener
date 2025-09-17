@@ -477,6 +477,7 @@ func (r *resourceManager) ensureCustomResourceDefinition(ctx context.Context) er
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, crd, func() error {
 		crd.Annotations = utils.MergeStringMaps(crd.Annotations, desiredCRD.Annotations)
 		crd.Labels = utils.MergeStringMaps(crd.Labels, desiredCRD.Labels)
+		metav1.SetMetaDataLabel(&crd.ObjectMeta, gardenerutils.DeletionProtected, "true")
 		crd.Spec = desiredCRD.Spec
 		return nil
 	})
