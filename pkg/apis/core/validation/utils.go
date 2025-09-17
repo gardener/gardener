@@ -246,7 +246,7 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilities core.
 				allErrs = append(allErrs, field.NotSupported(versionsPath.Child("classification"), *machineVersion.Classification, sets.List(supportedVersionClassifications)))
 			}
 
-			allErrs = append(allErrs, validateMachineImageVersionCapabilities(machineVersion, capabilities, versionsPath)...)
+			allErrs = append(allErrs, validateMachineImageVersionFlavors(machineVersion, capabilities, versionsPath)...)
 
 			if machineVersion.KubeletVersionConstraint != nil {
 				if _, err := semver.NewConstraint(*machineVersion.KubeletVersionConstraint); err != nil {
@@ -343,25 +343,25 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 	return allErrs
 }
 
-func validateMachineImageVersionCapabilities(machineImageVersion core.MachineImageVersion, capabilities core.Capabilities, fldPath *field.Path) field.ErrorList {
+func validateMachineImageVersionFlavors(machineImageVersion core.MachineImageVersion, capabilities core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineImageVersion, capabilities, fldPath)...)
 
 	if len(capabilities) > 0 {
 		supportedCapabilityKeys := slices.Collect(maps.Keys(capabilities))
-		capabilitiesPath := fldPath.Child("capabilitySets")
-		for i, capabilitySet := range machineImageVersion.CapabilitySets {
-			capabilitySetFldPath := capabilitiesPath.Index(i)
-			for capabilityKey, capability := range capabilitySet.Capabilities {
+		capabilitiesPath := fldPath.Child("capabilityFlavors")
+		for i, imageFlavor := range machineImageVersion.CapabilityFlavors {
+			flavorFldPath := capabilitiesPath.Index(i)
+			for capabilityKey, capability := range imageFlavor.Capabilities {
 				supportedValues, keyExists := capabilities[capabilityKey]
 				if !keyExists {
-					allErrs = append(allErrs, field.NotSupported(capabilitySetFldPath, capabilityKey, supportedCapabilityKeys))
+					allErrs = append(allErrs, field.NotSupported(flavorFldPath, capabilityKey, supportedCapabilityKeys))
 					continue
 				}
 				for valueIndex, value := range capability {
 					if !slices.Contains(supportedValues, value) {
-						allErrs = append(allErrs, field.NotSupported(capabilitySetFldPath.Child(capabilityKey).Index(valueIndex), value, supportedValues))
+						allErrs = append(allErrs, field.NotSupported(flavorFldPath.Child(capabilityKey).Index(valueIndex), value, supportedValues))
 					}
 				}
 			}
@@ -379,17 +379,17 @@ func validateMachineImageVersionArchitecture(machineImageVersion core.MachineIma
 	// assert that the architecture values defined do not conflict
 	if len(capabilities) > 0 {
 		supportedArchitectures = capabilities[v1beta1constants.ArchitectureName]
-		for capabilitySetIdx, capabilitySet := range machineImageVersion.CapabilitySets {
-			architectureCapabilityValues := capabilitySet.Capabilities[v1beta1constants.ArchitectureName]
-			architectureFieldPath := fldPath.Child("capabilitySets").Index(capabilitySetIdx).Child("architecture")
+		for flavorIdx, flavor := range machineImageVersion.CapabilityFlavors {
+			architectureCapabilityValues := flavor.Capabilities[v1beta1constants.ArchitectureName]
+			architectureFieldPath := fldPath.Child("capabilityFlavors").Index(flavorIdx).Child("architecture")
 			if len(architectureCapabilityValues) == 0 {
 				allErrs = append(allErrs, field.Required(architectureFieldPath, "must provide at least one architecture"))
 			} else if len(architectureCapabilityValues) > 1 {
-				allErrs = append(allErrs, field.Invalid(architectureFieldPath, architectureCapabilityValues, "must not define more than one architecture within one capability set"))
+				allErrs = append(allErrs, field.Invalid(architectureFieldPath, architectureCapabilityValues, "must not define more than one architecture within an image flavor"))
 			}
 		}
 
-		allCapabilityArchitectures := sets.New(gardencorehelper.ExtractArchitecturesFromCapabilitySets(machineImageVersion.CapabilitySets)...)
+		allCapabilityArchitectures := sets.New(gardencorehelper.ExtractArchitecturesFromImageFlavors(machineImageVersion.CapabilityFlavors)...)
 		if len(machineImageVersion.Architectures) > 0 && !allCapabilityArchitectures.HasAll(machineImageVersion.Architectures...) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("architectures"), machineImageVersion.Architectures, fmt.Sprintf("architecture field values set (%s) conflict with the capability architectures (%s)", strings.Join(machineImageVersion.Architectures, ","), strings.Join(allCapabilityArchitectures.UnsortedList(), ","))))
 		}
@@ -443,7 +443,7 @@ func validateMachineTypeArchitecture(machineType core.MachineType, capabilities 
 		}
 		// assert that the architecture values defined do not conflict
 		if len(architectureCapabilityValues) == 1 && arch != "" && arch != architectureCapabilityValues[0] {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("capabilities.architecture[0]"), architectureCapabilityValues[0], fmt.Sprintf("machine type architecture (%s) conflicts with the capability architecture (%s)", arch, architectureCapabilityValues[0])))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("architecture"), architectureCapabilityValues[0], fmt.Sprintf("machine type architecture (%s) conflicts with the capability architecture (%s)", arch, architectureCapabilityValues[0])))
 		}
 	}
 

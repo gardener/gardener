@@ -59,7 +59,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation":                                 schema_pkg_apis_core_v1beta1_CARotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI":                                        schema_pkg_apis_core_v1beta1_CRI(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityDefinition":                       schema_pkg_apis_core_v1beta1_CapabilityDefinition(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilitySet":                              schema_pkg_apis_core_v1beta1_CapabilitySet(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfile":                               schema_pkg_apis_core_v1beta1_CloudProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileList":                           schema_pkg_apis_core_v1beta1_CloudProfileList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference":                      schema_pkg_apis_core_v1beta1_CloudProfileReference(ref),
@@ -136,6 +135,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine":                                    schema_pkg_apis_core_v1beta1_Machine(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings":           schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage":                               schema_pkg_apis_core_v1beta1_MachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageFlavor":                         schema_pkg_apis_core_v1beta1_MachineImageFlavor(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion":                        schema_pkg_apis_core_v1beta1_MachineImageVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType":                                schema_pkg_apis_core_v1beta1_MachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage":                         schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref),
@@ -2058,17 +2058,6 @@ func schema_pkg_apis_core_v1beta1_CapabilityDefinition(ref common.ReferenceCallb
 	}
 }
 
-func schema_pkg_apis_core_v1beta1_CapabilitySet(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CapabilitySet is a wrapper for Capabilities. This is a workaround as the Protobuf generator can't handle a slice of maps.",
-				Type:        []string{"object"},
-			},
-		},
-	}
-}
-
 func schema_pkg_apis_core_v1beta1_CloudProfile(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2326,9 +2315,9 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits"),
 						},
 					},
-					"capabilities": {
+					"machineCapabilities": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Capabilities contains the definition of all possible capabilities in the CloudProfile. Only capabilities and values defined here can be used to describe MachineImages and MachineTypes. The order of values for a given capability is relevant. The most important value is listed first. During maintenance upgrades, the image that matches most capabilities will be selected.",
+							Description: "MachineCapabilities contains the definition of all possible capabilities in the CloudProfile. Only capabilities and values defined here can be used to describe MachineImages and MachineTypes. The order of values for a given capability is relevant. The most important value is listed first. During maintenance upgrades, the image that matches most capabilities will be selected.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -5749,6 +5738,17 @@ func schema_pkg_apis_core_v1beta1_MachineImage(ref common.ReferenceCallback) com
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_MachineImageFlavor(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineImageFlavor is a wrapper for Capabilities. This is a workaround as the Protobuf generator can't handle a slice of maps.",
+				Type:        []string{"object"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -5819,14 +5819,14 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates"),
 						},
 					},
-					"capabilitySets": {
+					"capabilityFlavors": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CapabilitySets is an array of capability sets. Each entry represents a combination of capabilities that is provided by the machine image version.",
+							Description: "CapabilityFlavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by the machine image version.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilitySet"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageFlavor"),
 									},
 								},
 							},
@@ -5837,7 +5837,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilitySet", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageFlavor", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

@@ -32,8 +32,8 @@ func FilterMachineImageVersions(
 	return filteredMachineImageVersions
 }
 
-func filterForCapabilities(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, machineCapabilities gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) *gardencorev1beta1.MachineImage {
-	if len(capabilitiesDefinitions) == 0 {
+func filterForCapabilities(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, machineCapabilities gardencorev1beta1.Capabilities, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) *gardencorev1beta1.MachineImage {
+	if len(capabilityDefinitions) == 0 {
 		return machineImageFromCloudProfile
 	}
 
@@ -44,7 +44,7 @@ func filterForCapabilities(machineImageFromCloudProfile *gardencorev1beta1.Machi
 	}
 
 	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
-		if v1beta1helper.AreCapabilitiesSupportedByCapabilitySets(machineCapabilities, cloudProfileVersion.CapabilitySets, capabilitiesDefinitions) {
+		if v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineCapabilities, cloudProfileVersion.CapabilityFlavors, capabilityDefinitions) {
 			filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
 		}
 	}

@@ -61,7 +61,7 @@ func ValidateNamespacedCloudProfileSpecUpdate(newProfile, oldProfile *core.Names
 func ValidateNamespacedCloudProfileStatus(spec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs      = field.ErrorList{}
-		capabilities = helper.CapabilityDefinitionsToCapabilities(spec.Capabilities)
+		capabilities = helper.CapabilityDefinitionsToCapabilities(spec.MachineCapabilities)
 	)
 
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)

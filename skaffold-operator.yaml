@@ -1277,12 +1277,14 @@ build:
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
+            - pkg/provider-local/admission
             - pkg/provider-local/admission/cmd
             - pkg/provider-local/admission/mutator
             - pkg/provider-local/admission/validator
             - pkg/provider-local/apis/local
             - pkg/provider-local/apis/local/install
             - pkg/provider-local/apis/local/v1alpha1
+            - pkg/provider-local/apis/local/validation
             - pkg/provider-local/local
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils

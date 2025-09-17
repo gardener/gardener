@@ -474,19 +474,19 @@ var _ = Describe("CloudProfile Helper", func() {
 		Entry("Should return true - many capabilities", []string{"foo", "bar"}, "foo", true),
 	)
 
-	DescribeTable("#ExtractArchitecturesFromCapabilitySets",
+	DescribeTable("#ExtractArchitecturesFromImageFlavors",
 		func(architecturesInSet1, architecturesInSet2, expectedResult []string) {
-			var capabilitySets []core.CapabilitySet
+			var imageFlavors []core.MachineImageFlavor
 
-			capabilitySets = append(capabilitySets, core.CapabilitySet{
+			imageFlavors = append(imageFlavors, core.MachineImageFlavor{
 				Capabilities: core.Capabilities{"architecture": architecturesInSet1},
 			})
 
-			capabilitySets = append(capabilitySets, core.CapabilitySet{
+			imageFlavors = append(imageFlavors, core.MachineImageFlavor{
 				Capabilities: core.Capabilities{"architecture": architecturesInSet2},
 			})
 
-			Expect(ExtractArchitecturesFromCapabilitySets(capabilitySets)).To(ConsistOf(expectedResult))
+			Expect(ExtractArchitecturesFromImageFlavors(imageFlavors)).To(ConsistOf(expectedResult))
 		},
 		Entry("Should return no values", nil, nil, []string{}),
 		Entry("Should return architecture in sets (sets partially filled)", []string{"amd64", "arm64"}, []string{"ia-64"}, []string{"amd64", "arm64", "ia-64"}),
@@ -552,15 +552,15 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 	})
 
-	Describe("#GetCapabilitySetsWithAppliedDefaults", func() {
-		It("should apply defaults when capability sets are empty", func() {
-			var capabilitySets []core.CapabilitySet
+	Describe("#GetImageFlavorWithAppliedDefaults", func() {
+		It("should apply defaults when capabilityFlavors are empty", func() {
+			var imageFlavors []core.MachineImageFlavor
 			capabilityDefinitions := []core.CapabilityDefinition{
 				{Name: "capability1", Values: []string{"value1", "value2"}},
 				{Name: "architecture", Values: []string{"amd64"}},
 			}
 
-			result := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilityDefinitions)
+			result := GetImageFlavorWithAppliedDefaults(imageFlavors, capabilityDefinitions)
 
 			Expect(result).To(HaveLen(1))
 			Expect(result[0].Capabilities).To(Equal(core.Capabilities{
@@ -570,7 +570,7 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 
 		It("should retain existing values and apply defaults for missing capabilities in sets", func() {
-			capabilitySets := []core.CapabilitySet{
+			imageFlavors := []core.MachineImageFlavor{
 				{Capabilities: core.Capabilities{"capability1": []string{"value1"}}},
 				{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 			}
@@ -579,7 +579,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				{Name: "architecture", Values: []string{"amd64", "arm64"}},
 			}
 
-			result := GetCapabilitySetsWithAppliedDefaults(capabilitySets, capabilityDefinitions)
+			result := GetImageFlavorWithAppliedDefaults(imageFlavors, capabilityDefinitions)
 
 			Expect(result).To(HaveLen(2))
 			Expect(result[0].Capabilities).To(Equal(core.Capabilities{
@@ -590,6 +590,45 @@ var _ = Describe("CloudProfile Helper", func() {
 				"capability1":  []string{"value1", "value2"},
 				"architecture": []string{"arm64"},
 			}))
+		})
+	})
+
+	Describe("#AreCapabilitiesEqual", func() {
+
+		It("should return true for equal capabilities", func() {
+			a := core.Capabilities{
+				"key1": {"value1"},
+				"key2": {"valueA", "valueB"},
+			}
+			b := core.Capabilities{
+				"key1": {"value1"},
+				"key2": {"valueA", "valueB"},
+			}
+
+			result := AreCapabilitiesEqual(a, b)
+			Expect(result).To(BeTrue())
+		})
+
+		It("should return false for capabilities with different keys", func() {
+			a := core.Capabilities{"key1": {"value1"}}
+			b := core.Capabilities{"key2": {"value1"}}
+
+			result := AreCapabilitiesEqual(a, b)
+			Expect(result).To(BeFalse())
+		})
+
+		It("should return false for capabilities with different values", func() {
+			a := core.Capabilities{
+				"key1": {"value1"},
+				"key2": {"valueA", "valueB"},
+			}
+			b := core.Capabilities{
+				"key1": {"value2"},
+				"key2": {"valueA", "valueB"},
+			}
+
+			result := AreCapabilitiesEqual(a, b)
+			Expect(result).To(BeFalse())
 		})
 	})
 })

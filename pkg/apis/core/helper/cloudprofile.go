@@ -7,6 +7,7 @@ package helper
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -258,11 +259,11 @@ func HasCapability(capabilities []core.CapabilityDefinition, capabilityName stri
 	return false
 }
 
-// ExtractArchitecturesFromCapabilitySets extracts all architectures from a list of CapabilitySets.
-func ExtractArchitecturesFromCapabilitySets(capabilities []core.CapabilitySet) []string {
+// ExtractArchitecturesFromImageFlavors extracts all architectures from a list of MachineImageFlavor.
+func ExtractArchitecturesFromImageFlavors(imageFlavors []core.MachineImageFlavor) []string {
 	architectures := sets.New[string]()
-	for _, capabilitySet := range capabilities {
-		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureName] {
+	for _, imageFlavor := range imageFlavors {
+		for _, architectureValue := range imageFlavor.Capabilities[constants.ArchitectureName] {
 			architectures.Insert(architectureValue)
 		}
 	}
@@ -282,9 +283,9 @@ func CapabilityDefinitionsToCapabilities(capabilityDefinitions []core.Capability
 }
 
 // GetCapabilitiesWithAppliedDefaults returns new capabilities with applied defaults from the capability definitions.
-func GetCapabilitiesWithAppliedDefaults(capabilities core.Capabilities, capabilitiesDefinitions []core.CapabilityDefinition) core.Capabilities {
-	result := make(core.Capabilities, len(capabilitiesDefinitions))
-	for _, capabilityDefinition := range capabilitiesDefinitions {
+func GetCapabilitiesWithAppliedDefaults(capabilities core.Capabilities, capabilityDefinitions []core.CapabilityDefinition) core.Capabilities {
+	result := make(core.Capabilities, len(capabilityDefinitions))
+	for _, capabilityDefinition := range capabilityDefinitions {
 		if values, ok := capabilities[capabilityDefinition.Name]; ok {
 			result[capabilityDefinition.Name] = values
 		} else {
@@ -294,18 +295,40 @@ func GetCapabilitiesWithAppliedDefaults(capabilities core.Capabilities, capabili
 	return result
 }
 
-// GetCapabilitySetsWithAppliedDefaults returns new capability sets with applied defaults from the capability definitions.
-func GetCapabilitySetsWithAppliedDefaults(capabilitySets []core.CapabilitySet, capabilitiesDefinitions []core.CapabilityDefinition) []core.CapabilitySet {
-	if len(capabilitySets) == 0 {
-		// If no capability sets are defined, assume all capabilities are supported.
-		return []core.CapabilitySet{{Capabilities: GetCapabilitiesWithAppliedDefaults(core.Capabilities{}, capabilitiesDefinitions)}}
+// GetImageFlavorWithAppliedDefaults returns MachineImageFlavors sets with applied defaults from the capability definitions.
+func GetImageFlavorWithAppliedDefaults(imageFlavors []core.MachineImageFlavor, capabilityDefinitions []core.CapabilityDefinition) []core.MachineImageFlavor {
+	if len(imageFlavors) == 0 {
+		// If no capabilityFlavors are defined, assume all capabilities are supported.
+		return []core.MachineImageFlavor{{Capabilities: GetCapabilitiesWithAppliedDefaults(core.Capabilities{}, capabilityDefinitions)}}
 	}
 
-	result := make([]core.CapabilitySet, len(capabilitySets))
-	for i, capabilitySet := range capabilitySets {
-		result[i] = core.CapabilitySet{
-			Capabilities: GetCapabilitiesWithAppliedDefaults(capabilitySet.Capabilities, capabilitiesDefinitions),
+	result := make([]core.MachineImageFlavor, len(imageFlavors))
+	for i, imageFlavor := range imageFlavors {
+		result[i] = core.MachineImageFlavor{
+			Capabilities: GetCapabilitiesWithAppliedDefaults(imageFlavor.Capabilities, capabilityDefinitions),
 		}
 	}
 	return result
+}
+
+// AreCapabilitiesEqual checks if two capabilities are semantically equal.
+func AreCapabilitiesEqual(a, b core.Capabilities) bool {
+	// Check if both are subsets of each other.
+	return areCapabilitiesSubsetOf(a, b) && areCapabilitiesSubsetOf(b, a)
+}
+
+// areCapabilitiesSubsetOf verifies if all keys and values in `source` exist in `target`.
+func areCapabilitiesSubsetOf(source, target core.Capabilities) bool {
+	for key, valuesSource := range source {
+		valuesTarget, exists := target[key]
+		if !exists {
+			return false
+		}
+		for _, value := range valuesSource {
+			if !slices.Contains(valuesTarget, value) {
+				return false
+			}
+		}
+	}
+	return true
 }

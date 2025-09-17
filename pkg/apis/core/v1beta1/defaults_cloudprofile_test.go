@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 var _ = Describe("CloudProfile defaulting", func() {
@@ -45,7 +44,7 @@ var _ = Describe("CloudProfile defaulting", func() {
 				CRI{Name: "containerd"},
 			))
 			Expect(machineImageVersion.Architectures).To(ConsistOf("amd64"))
-			Expect(machineImageVersion.CapabilitySets).To(BeNil())
+			Expect(machineImageVersion.CapabilityFlavors).To(BeNil())
 		})
 	})
 
@@ -77,22 +76,22 @@ var _ = Describe("CloudProfile defaulting", func() {
 				Expect(obj.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))
 				Expect(obj.Spec.MachineTypes[0].Architecture).To(PointTo(Equal("amd64")))
 
-				Expect(obj.Spec.MachineImages[0].Versions[0].CapabilitySets).To(BeEmpty())
+				Expect(obj.Spec.MachineImages[0].Versions[0].CapabilityFlavors).To(BeEmpty())
 				Expect(obj.Spec.MachineTypes[0].Capabilities).To(BeNil())
 			})
 		})
 
 		Context("With Capabilities", func() {
 			It("should not default the architecture for MachineImageVersion and MachineType", func() {
-				obj.Spec.Capabilities = []CapabilityDefinition{
-					{Name: v1beta1constants.ArchitectureName, Values: []string{"arm64"}},
+				obj.Spec.MachineCapabilities = []CapabilityDefinition{
+					{Name: "architecture", Values: []string{"arm64"}},
 				}
 				SetObjectDefaults_CloudProfile(obj)
 
 				Expect(obj.Spec.MachineImages[0].Versions[0].Architectures).To(BeEmpty())
 				Expect(obj.Spec.MachineTypes[0].Architecture).To(BeNil())
 
-				Expect(obj.Spec.MachineImages[0].Versions[0].CapabilitySets).To(BeEmpty())
+				Expect(obj.Spec.MachineImages[0].Versions[0].CapabilityFlavors).To(BeEmpty())
 				Expect(obj.Spec.MachineTypes[0].Capabilities).To(BeNil())
 			})
 		})

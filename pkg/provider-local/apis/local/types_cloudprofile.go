@@ -6,6 +6,8 @@ package local
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -34,4 +36,19 @@ type MachineImageVersion struct {
 	Version string
 	// Image is the image for the machine image.
 	Image string
+	// CapabilityFlavors contains provider-specific image identifiers of this version with their capabilities.
+	CapabilityFlavors []MachineImageFlavor
+}
+
+// MachineImageFlavor is a provider-specific image identifier with its supported capabilities.
+type MachineImageFlavor struct {
+	// Image is the image for the machine image.
+	Image string
+	// Capabilities that are supported by the identifier in this set.
+	Capabilities gardencorev1beta1.Capabilities
+}
+
+// GetCapabilities returns the Capabilities of a MachineImageFlavor
+func (cs MachineImageFlavor) GetCapabilities() gardencorev1beta1.Capabilities {
+	return cs.Capabilities
 }

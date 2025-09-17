@@ -6,6 +6,8 @@ package local
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -30,4 +32,6 @@ type MachineImage struct {
 	Version string
 	// Image is the image for the machine image.
 	Image string
+	// Capabilities of the machine image.
+	Capabilities gardencorev1beta1.Capabilities
 }

@@ -18,10 +18,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("NamespacedCloudProfile controller tests", func() {
+var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isCapabilitiesCloudProfile bool) {
 	var (
 		parentCloudProfile     *gardencorev1beta1.CloudProfile
 		namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
@@ -29,9 +32,24 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		mergedCloudProfileSpec *gardencorev1beta1.CloudProfileSpec
 
 		expirationDateFuture metav1.Time
+		imageFlavors         []gardencorev1beta1.MachineImageFlavor
 	)
 
 	BeforeEach(func() {
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
+		var capabilityDefinitions []gardencorev1beta1.CapabilityDefinition
+		if isCapabilitiesCloudProfile {
+			capabilityDefinitions = []gardencorev1beta1.CapabilityDefinition{
+				{
+					Name:   "architecture",
+					Values: []string{v1beta1constants.ArchitectureAMD64},
+				},
+			}
+			imageFlavors = []gardencorev1beta1.MachineImageFlavor{
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
+			}
+		}
+
 		dateNow, _ := time.Parse(time.DateOnly, time.Now().Format(time.DateOnly))
 		expirationDateFuture = metav1.Time{Time: dateNow.Local().Add(48 * time.Hour)}
 
@@ -42,7 +60,8 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				GenerateName: testID + "-",
 			},
 			Spec: gardencorev1beta1.CloudProfileSpec{
-				Type: "some-type",
+				MachineCapabilities: capabilityDefinitions,
+				Type:                "some-type",
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.3.0"}, {Version: "1.2.3"}},
 				},
@@ -50,7 +69,10 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 					{
 						Name: "some-image",
 						Versions: []gardencorev1beta1.MachineImageVersion{
-							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6"}},
+							{
+								ExpirableVersion:  gardencorev1beta1.ExpirableVersion{Version: "4.5.6"},
+								CapabilityFlavors: imageFlavors,
+							},
 						},
 					},
 				},
@@ -81,13 +103,13 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 						Name: "some-image",
 						Versions: []gardencorev1beta1.MachineImageVersion{
 							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6", ExpirationDate: &expirationDateFuture}},
-							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}},
+							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}, CapabilityFlavors: imageFlavors},
 						},
 					},
 					{
 						Name: "custom-image",
 						Versions: []gardencorev1beta1.MachineImageVersion{
-							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}},
+							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}, CapabilityFlavors: imageFlavors},
 						},
 						UpdateStrategy: &updateStrategy,
 					},
@@ -105,6 +127,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		architecture := "amd64"
 
 		mergedCloudProfileSpec = &gardencorev1beta1.CloudProfileSpec{
+			MachineCapabilities: capabilityDefinitions,
 			Kubernetes: gardencorev1beta1.KubernetesSettings{
 				Versions: []gardencorev1beta1.ExpirableVersion{
 					{Version: "1.3.0"},
@@ -119,21 +142,15 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 					Name: "some-image",
 					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"},
-							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
-							Architectures:    []string{"amd64"},
+							ExpirableVersion:  gardencorev1beta1.ExpirableVersion{Version: "7.8.9"},
+							CRI:               []gardencorev1beta1.CRI{{Name: "containerd"}},
+							Architectures:     []string{"amd64"},
+							CapabilityFlavors: imageFlavors,
 						},
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6", ExpirationDate: &expirationDateFuture},
-							CRI: []gardencorev1beta1.CRI{
-								{
-									Name:              "containerd",
-									ContainerRuntimes: nil,
-								},
-							},
-							Architectures: []string{
-								"amd64",
-							},
+							CRI:              []gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}, Architectures: []string{"amd64"},
+							CapabilityFlavors: imageFlavors,
 						},
 					},
 					UpdateStrategy: &updateStrategy,
@@ -142,9 +159,10 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 					Name: "custom-image",
 					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"},
-							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
-							Architectures:    []string{"amd64"}},
+							ExpirableVersion:  gardencorev1beta1.ExpirableVersion{Version: "1.1.2"},
+							CRI:               []gardencorev1beta1.CRI{{Name: "containerd"}},
+							Architectures:     []string{"amd64"},
+							CapabilityFlavors: imageFlavors},
 					},
 					UpdateStrategy: &updateStrategy,
 				},
@@ -537,7 +555,12 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				{
 					Name: "some-image",
 					Versions: []gardencorev1beta1.MachineImageVersion{
-						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}},
+						{
+							ExpirableVersion:  gardencorev1beta1.ExpirableVersion{Version: "4.5.6"},
+							CRI:               []gardencorev1beta1.CRI{{Name: "containerd"}},
+							Architectures:     []string{"amd64"},
+							CapabilityFlavors: imageFlavors,
+						},
 					},
 					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
 				},
@@ -579,7 +602,10 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			))
 		})
 	})
-})
+},
+	Entry("with capabilities in CloudProfile", true),
+	Entry("without capabilities in CloudProfile", false),
+)
 
 func waitForNamespacedCloudProfileToBeReconciled(ctx context.Context, namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) {
 	GinkgoHelper()

@@ -131,6 +131,104 @@ var _ = Describe("CloudProfile", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
+		Describe("Capabilities", func() {
+			Describe("#ValidateCapabilities", func() {
+				fieldPath := field.NewPath("spec", "machineImages[0]", "capabilities")
+				It("should return no errors for valid capabilities", func() {
+					capabilities := gardencorev1beta1.Capabilities{
+						"architecture": {"amd64"},
+						"feature":      {"enabled"},
+					}
+					capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
+						{Name: "architecture", Values: []string{"amd64", "arm64"}},
+						{Name: "feature", Values: []string{"enabled", "disabled"}},
+					}
+
+					allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilityDefinitions, fieldPath)
+					Expect(allErrs).To(BeEmpty())
+				})
+
+				It("should return an error for unsupported capability keys", func() {
+					capabilities := gardencorev1beta1.Capabilities{
+						"unsupportedKey": {"value"},
+					}
+					capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
+						{Name: "architecture", Values: []string{"amd64"}},
+						{Name: "supportedKey", Values: []string{"value"}},
+					}
+
+					allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilityDefinitions, fieldPath)
+
+					Expect(allErrs).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeNotSupported),
+						"Field":    Equal(fieldPath.String()),
+						"BadValue": Equal("unsupportedKey"),
+						"Detail":   ContainSubstring("supported values:"),
+					}))))
+				})
+
+				It("should return an error for unsupported capability values", func() {
+					capabilities := gardencorev1beta1.Capabilities{
+						"architecture": {"unsupportedValue"},
+					}
+					capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
+						{Name: "architecture", Values: []string{"amd64", "arm64"}},
+					}
+
+					allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilityDefinitions, field.NewPath("spec", "capabilities"))
+					Expect(allErrs).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeNotSupported),
+						"Field":    Equal("spec.capabilities.architecture[0]"),
+						"BadValue": Equal("unsupportedValue"),
+						"Detail":   ContainSubstring("supported values:"),
+					}))))
+				})
+
+				Context("architecture validation", func() {
+
+					It("should return an error when multiple architectures are supported but none is defined", func() {
+						capabilities := gardencorev1beta1.Capabilities{}
+						capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
+							{Name: "architecture", Values: []string{"amd64", "arm64"}},
+						}
+
+						allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilityDefinitions, field.NewPath("spec", "capabilities"))
+						Expect(allErrs).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.capabilities.architecture"),
+							"BadValue": BeNil(),
+							"Detail":   ContainSubstring("must define exactly one architecture"),
+						}))))
+					})
+
+					It("should return an error when multiple architectures are supported but more than one is defined", func() {
+						capabilities := gardencorev1beta1.Capabilities{
+							"architecture": {"amd64", "arm64"},
+						}
+						capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
+							{Name: "architecture", Values: []string{"amd64", "arm64"}},
+						}
+
+						allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilityDefinitions, field.NewPath("spec", "capabilities"))
+						Expect(allErrs).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.capabilities.architecture"),
+							"Detail": ContainSubstring("must define exactly one architecture"),
+						}))))
+					})
+
+					It("should return no errors when only one architecture is supported and none is defined", func() {
+						capabilities := gardencorev1beta1.Capabilities{}
+						capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
+							{Name: "architecture", Values: []string{"amd64"}},
+						}
+
+						allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilityDefinitions, field.NewPath("spec", "capabilities"))
+						Expect(allErrs).To(BeEmpty())
+					})
+				})
+			})
+		})
 	})
 
 	Describe("core", func() {
@@ -662,7 +760,7 @@ var _ = Describe("CloudProfile", func() {
 
 			Describe("Initial migration", func() {
 				BeforeEach(func() {
-					cloudProfileSpecNew.Capabilities = []core.CapabilityDefinition{
+					cloudProfileSpecNew.MachineCapabilities = []core.CapabilityDefinition{
 						{Name: "architecture", Values: []string{"arm64", "amd64", "custom"}},
 					}
 				})
@@ -679,7 +777,7 @@ var _ = Describe("CloudProfile", func() {
 				})
 
 				It("It should correctly handle split-up machine image version capability architectures", func() {
-					cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+					cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors = []core.MachineImageFlavor{
 						{Capabilities: core.Capabilities{"architecture": []string{"custom"}}},
 						{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
 						{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
@@ -697,8 +795,8 @@ var _ = Describe("CloudProfile", func() {
 					gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
 
 					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64", "arm64"}))
-					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
-					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets[1].Capabilities["architecture"]).To(BeEquivalentTo([]string{"arm64"}))
+					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
+					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors[1].Capabilities["architecture"]).To(BeEquivalentTo([]string{"arm64"}))
 					Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
 					Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
 				})
@@ -902,145 +1000,6 @@ var _ = Describe("CloudProfile", func() {
 				v, exists = imagesContext.GetImageVersion("image-99", "99.0.0")
 				Expect(exists).To(BeFalse())
 				Expect(v).To(Equal(gardencorev1beta1.MachineImageVersion{}))
-			})
-		})
-	})
-
-	Describe("Capabilities", func() {
-		Describe("#ValidateCapabilities", func() {
-			fieldPath := field.NewPath("spec", "machineImages[0]", "capabilities")
-			It("should return no errors for valid capabilities", func() {
-				capabilities := core.Capabilities{
-					"architecture": {"amd64"},
-					"feature":      {"enabled"},
-				}
-				capabilitiesDefinition := []core.CapabilityDefinition{
-					{Name: "architecture", Values: []string{"amd64", "arm64"}},
-					{Name: "feature", Values: []string{"enabled", "disabled"}},
-				}
-
-				allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilitiesDefinition, fieldPath)
-				Expect(allErrs).To(BeEmpty())
-			})
-
-			It("should return an error for unsupported capability keys", func() {
-				capabilities := core.Capabilities{
-					"unsupportedKey": {"value"},
-				}
-				capabilitiesDefinition := []core.CapabilityDefinition{
-					{Name: "architecture", Values: []string{"amd64"}},
-					{Name: "supportedKey", Values: []string{"value"}},
-				}
-
-				allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilitiesDefinition, fieldPath)
-
-				Expect(allErrs).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeNotSupported),
-					"Field":    Equal(fieldPath.String()),
-					"BadValue": Equal("unsupportedKey"),
-					"Detail":   ContainSubstring("supported values:"),
-				}))))
-			})
-
-			It("should return an error for unsupported capability values", func() {
-				capabilities := core.Capabilities{
-					"architecture": {"unsupportedValue"},
-				}
-				capabilitiesDefinition := []core.CapabilityDefinition{
-					{Name: "architecture", Values: []string{"amd64", "arm64"}},
-				}
-
-				allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilitiesDefinition, field.NewPath("spec", "capabilities"))
-				Expect(allErrs).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeNotSupported),
-					"Field":    Equal("spec.capabilities.architecture[0]"),
-					"BadValue": Equal("unsupportedValue"),
-					"Detail":   ContainSubstring("supported values:"),
-				}))))
-			})
-
-			Context("architecture validation", func() {
-
-				It("should return an error when multiple architectures are supported but none is defined", func() {
-					capabilities := core.Capabilities{}
-					capabilitiesDefinition := []core.CapabilityDefinition{
-						{Name: "architecture", Values: []string{"amd64", "arm64"}},
-					}
-
-					allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilitiesDefinition, field.NewPath("spec", "capabilities"))
-					Expect(allErrs).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":     Equal(field.ErrorTypeInvalid),
-						"Field":    Equal("spec.capabilities.architecture"),
-						"BadValue": BeNil(),
-						"Detail":   ContainSubstring("must define exactly one architecture"),
-					}))))
-				})
-
-				It("should return an error when multiple architectures are supported but more than one is defined", func() {
-					capabilities := core.Capabilities{
-						"architecture": {"amd64", "arm64"},
-					}
-					capabilitiesDefinition := []core.CapabilityDefinition{
-						{Name: "architecture", Values: []string{"amd64", "arm64"}},
-					}
-
-					allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilitiesDefinition, field.NewPath("spec", "capabilities"))
-					Expect(allErrs).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.capabilities.architecture"),
-						"Detail": ContainSubstring("must define exactly one architecture"),
-					}))))
-				})
-
-				It("should return no errors when only one architecture is supported and none is defined", func() {
-					capabilities := core.Capabilities{}
-					capabilitiesDefinition := []core.CapabilityDefinition{
-						{Name: "architecture", Values: []string{"amd64"}},
-					}
-
-					allErrs := gardenerutils.ValidateCapabilities(capabilities, capabilitiesDefinition, field.NewPath("spec", "capabilities"))
-					Expect(allErrs).To(BeEmpty())
-				})
-			})
-
-		})
-
-		Describe("#AreCapabilitiesEqual", func() {
-
-			It("should return true for equal capabilities", func() {
-				a := core.Capabilities{
-					"key1": {"value1"},
-					"key2": {"valueA", "valueB"},
-				}
-				b := core.Capabilities{
-					"key1": {"value1"},
-					"key2": {"valueA", "valueB"},
-				}
-
-				result := gardenerutils.AreCapabilitiesEqual(a, b)
-				Expect(result).To(BeTrue())
-			})
-
-			It("should return false for capabilities with different keys", func() {
-				a := core.Capabilities{"key1": {"value1"}}
-				b := core.Capabilities{"key2": {"value1"}}
-
-				result := gardenerutils.AreCapabilitiesEqual(a, b)
-				Expect(result).To(BeFalse())
-			})
-
-			It("should return false for capabilities with different values", func() {
-				a := core.Capabilities{
-					"key1": {"value1"},
-					"key2": {"valueA", "valueB"},
-				}
-				b := core.Capabilities{
-					"key1": {"value2"},
-					"key2": {"valueA", "valueB"},
-				}
-
-				result := gardenerutils.AreCapabilitiesEqual(a, b)
-				Expect(result).To(BeFalse())
 			})
 		})
 	})

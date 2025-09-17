@@ -21,12 +21,16 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
-var _ = Describe("Shoot Maintenance controller tests", func() {
+var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabilitiesCloudProfile bool) {
 	var (
+		architectureArm64 = v1beta1constants.ArchitectureARM64
+
 		cloudProfile *gardencorev1beta1.CloudProfile
 		shoot        *gardencorev1beta1.Shoot
 		shoot129     *gardencorev1beta1.Shoot
@@ -71,6 +75,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
 		testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "0.0.1", Classification: &deprecatedClassification}
 		testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "0.0.5", Classification: &deprecatedClassification}
 		testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "0.1.1", Classification: &deprecatedClassification}
@@ -78,11 +83,40 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 		fakeClock.SetTime(time.Now().Round(time.Second))
 
+		var capabilityDefinitions []gardencorev1beta1.CapabilityDefinition
+		var imageFlavors, imageFlavorsArm, imageFlavorsAmd []gardencorev1beta1.MachineImageFlavor
+		var capabilitiesAmd64, capabilitiesArm64 gardencorev1beta1.Capabilities
+		if isCapabilitiesCloudProfile {
+			capabilityDefinitions = []gardencorev1beta1.CapabilityDefinition{
+				{
+					Name:   "architecture",
+					Values: []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64},
+				},
+			}
+			capabilitiesAmd64 = gardencorev1beta1.Capabilities{
+				"architecture": []string{v1beta1constants.ArchitectureAMD64},
+			}
+			capabilitiesArm64 = gardencorev1beta1.Capabilities{
+				"architecture": []string{v1beta1constants.ArchitectureARM64},
+			}
+			imageFlavorsArm = []gardencorev1beta1.MachineImageFlavor{
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
+			}
+			imageFlavorsAmd = []gardencorev1beta1.MachineImageFlavor{
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
+			}
+			imageFlavors = []gardencorev1beta1.MachineImageFlavor{
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
+			}
+		}
+
 		cloudProfile = &gardencorev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
 			},
 			Spec: gardencorev1beta1.CloudProfileSpec{
+				MachineCapabilities: capabilityDefinitions,
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{
 						{
@@ -124,7 +158,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"arm64"},
+								Architectures:     []string{"arm64"},
+								CapabilityFlavors: imageFlavorsArm,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -137,7 +172,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64"},
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavorsAmd,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -150,7 +186,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"arm64"},
+								Architectures:     []string{"arm64"},
+								CapabilityFlavors: imageFlavorsArm,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -163,7 +200,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64"},
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavorsAmd,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -176,7 +214,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64", "arm64"},
+								Architectures:     []string{"amd64", "arm64"},
+								CapabilityFlavors: imageFlavors,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -189,7 +228,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"arm64"},
+								Architectures:     []string{"arm64"},
+								CapabilityFlavors: imageFlavorsArm,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -202,7 +242,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64"},
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavorsAmd,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -216,7 +257,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"arm64"},
+								Architectures:     []string{"arm64"},
+								CapabilityFlavors: imageFlavorsArm,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -230,7 +272,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64"},
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavorsAmd,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -242,7 +285,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64", "arm64"},
+								Architectures:     []string{"amd64", "arm64"},
+								CapabilityFlavors: imageFlavors,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -255,7 +299,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"arm64"},
+								Architectures:     []string{"arm64"},
+								CapabilityFlavors: imageFlavorsArm,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -268,7 +313,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64"},
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavorsAmd,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -280,7 +326,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64", "arm64"},
+								Architectures:     []string{"amd64", "arm64"},
+								CapabilityFlavors: imageFlavors,
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -292,14 +339,21 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
-								Architectures: []string{"amd64", "arm64"},
+								Architectures:     []string{"amd64", "arm64"},
+								CapabilityFlavors: imageFlavors,
 							},
 						},
 					},
 				},
 				MachineTypes: []gardencorev1beta1.MachineType{
 					{
-						Name: "large",
+						Name:         "large",
+						Capabilities: capabilitiesAmd64,
+					},
+					{
+						Name:         "large-arm",
+						Architecture: &architectureArm64,
+						Capabilities: capabilitiesArm64,
 					},
 				},
 				Regions: []gardencorev1beta1.Region{
@@ -344,7 +398,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 							Maximum: 2,
 							Machine: gardencorev1beta1.Machine{
 								Image:        &testMachineImage,
-								Type:         "large",
+								Type:         "large-arm",
 								Architecture: ptr.To("arm64"),
 							},
 						},
@@ -2098,4 +2152,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			})
 		})
 	})
-})
+},
+	Entry("with capabilities in CloudProfile", true),
+	Entry("without capabilities in CloudProfile", false),
+)

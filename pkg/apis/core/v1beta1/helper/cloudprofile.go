@@ -15,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -531,8 +533,8 @@ func FilterDeprecatedVersion() func(expirableVersion gardencorev1beta1.Expirable
 	}
 }
 
-func extractArchitecturesFromCapabilitySets(capabilitySets []gardencorev1beta1.CapabilitySet, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []string {
-	if len(capabilitySets) == 0 {
+func extractArchitecturesFromImageFlavor(imageFlavors []gardencorev1beta1.MachineImageFlavor, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []string {
+	if len(imageFlavors) == 0 {
 		for _, capabilityDefinition := range capabilityDefinitions {
 			if capabilityDefinition.Name == constants.ArchitectureName {
 				return capabilityDefinition.Values
@@ -541,8 +543,8 @@ func extractArchitecturesFromCapabilitySets(capabilitySets []gardencorev1beta1.C
 	}
 
 	architectures := sets.New[string]()
-	for _, capabilitySet := range capabilitySets {
-		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureName] {
+	for _, imageFlavor := range imageFlavors {
+		for _, architectureValue := range imageFlavor.Capabilities[constants.ArchitectureName] {
 			architectures.Insert(architectureValue)
 		}
 	}
@@ -550,9 +552,9 @@ func extractArchitecturesFromCapabilitySets(capabilitySets []gardencorev1beta1.C
 }
 
 // GetArchitecturesFromImageVersion returns the list of supported architectures for the machine image version.
-// It first tries to retrieve the architectures from the capability sets and falls back to the architectures field if none are found.
+// It first tries to retrieve the architectures from the capability flavors and falls back to the architectures field if none are found.
 func GetArchitecturesFromImageVersion(imageVersion gardencorev1beta1.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []string {
-	if architectures := extractArchitecturesFromCapabilitySets(imageVersion.CapabilitySets, capabilityDefinitions); len(architectures) > 0 {
+	if architectures := extractArchitecturesFromImageFlavor(imageVersion.CapabilityFlavors, capabilityDefinitions); len(architectures) > 0 {
 		return architectures
 	}
 	return imageVersion.Architectures
@@ -566,9 +568,9 @@ func ArchitectureSupportedByImageVersion(version gardencorev1beta1.MachineImageV
 }
 
 // GetCapabilitiesWithAppliedDefaults returns new capabilities with applied defaults from the capability definitions.
-func GetCapabilitiesWithAppliedDefaults(capabilities gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) gardencorev1beta1.Capabilities {
-	result := make(gardencorev1beta1.Capabilities, len(capabilitiesDefinitions))
-	for _, capabilityDefinition := range capabilitiesDefinitions {
+func GetCapabilitiesWithAppliedDefaults(capabilities gardencorev1beta1.Capabilities, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) gardencorev1beta1.Capabilities {
+	result := make(gardencorev1beta1.Capabilities, len(capabilityDefinitions))
+	for _, capabilityDefinition := range capabilityDefinitions {
 		if values, ok := capabilities[capabilityDefinition.Name]; ok {
 			result[capabilityDefinition.Name] = values
 		} else {
@@ -578,17 +580,17 @@ func GetCapabilitiesWithAppliedDefaults(capabilities gardencorev1beta1.Capabilit
 	return result
 }
 
-// GetCapabilitySetsWithAppliedDefaults returns new capability sets with applied defaults from the capability definitions.
-func GetCapabilitySetsWithAppliedDefaults(capabilitySets []gardencorev1beta1.CapabilitySet, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) []gardencorev1beta1.CapabilitySet {
-	if len(capabilitySets) == 0 {
-		// If no capability sets are defined, assume all capabilities are supported.
-		return []gardencorev1beta1.CapabilitySet{{Capabilities: GetCapabilitiesWithAppliedDefaults(gardencorev1beta1.Capabilities{}, capabilitiesDefinitions)}}
+// GetImageFlavorsWithAppliedDefaults returns new MachineImageFlavors with applied defaults from the capability definitions.
+func GetImageFlavorsWithAppliedDefaults(imageFlavors []gardencorev1beta1.MachineImageFlavor, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []gardencorev1beta1.MachineImageFlavor {
+	if len(imageFlavors) == 0 {
+		// If no capabilityFlavors are defined, assume all capabilities are supported.
+		return []gardencorev1beta1.MachineImageFlavor{{Capabilities: GetCapabilitiesWithAppliedDefaults(gardencorev1beta1.Capabilities{}, capabilityDefinitions)}}
 	}
 
-	result := make([]gardencorev1beta1.CapabilitySet, len(capabilitySets))
-	for i, capabilitySet := range capabilitySets {
-		result[i] = gardencorev1beta1.CapabilitySet{
-			Capabilities: GetCapabilitiesWithAppliedDefaults(capabilitySet.Capabilities, capabilitiesDefinitions),
+	result := make([]gardencorev1beta1.MachineImageFlavor, len(imageFlavors))
+	for i, imageFlavor := range imageFlavors {
+		result[i] = gardencorev1beta1.MachineImageFlavor{
+			Capabilities: GetCapabilitiesWithAppliedDefaults(imageFlavor.Capabilities, capabilityDefinitions),
 		}
 	}
 	return result
@@ -607,36 +609,37 @@ func GetCapabilitiesIntersection(capabilitiesList ...gardencorev1beta1.Capabilit
 	// Initialize intersection with the first capabilities object
 	maps.Copy(intersection, capabilitiesList[0])
 
+	intersect := func(slice1, slice2 []string) []string {
+		elementSet1 := sets.New(slice1...)
+		elementSet2 := sets.New(slice2...)
+
+		return elementSet1.Intersection(elementSet2).UnsortedList()
+	}
+
 	// Iterate through the remaining capabilities objects and refine the intersection
 	for _, capabilities := range capabilitiesList[1:] {
 		for key, values := range intersection {
-			intersection[key] = intersectSlices(values, capabilities[key])
+			intersection[key] = intersect(values, capabilities[key])
 		}
 	}
 
 	return intersection
 }
 
-// intersectSlices returns the intersection of two slices.
-func intersectSlices(slice1, slice2 []string) []string {
-	elementSet1 := sets.New(slice1...)
-	elementSet2 := sets.New(slice2...)
-
-	return elementSet1.Intersection(elementSet2).UnsortedList()
-}
-
-// AreCapabilitiesSupportedByCapabilitySets checks if the given capabilities are supported by at least one of the provided capability sets.
-func AreCapabilitiesSupportedByCapabilitySets(
-	capabilities gardencorev1beta1.Capabilities, capabilitySets []gardencorev1beta1.CapabilitySet, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition,
+// AreCapabilitiesSupportedByImageFlavors checks if the given capabilities are supported by at least one of the provided image capabilityFlavors.
+func AreCapabilitiesSupportedByImageFlavors(
+	capabilities gardencorev1beta1.Capabilities,
+	imageFlavors []gardencorev1beta1.MachineImageFlavor,
+	capabilityDefinitions []gardencorev1beta1.CapabilityDefinition,
 ) bool {
-	if len(capabilitySets) == 0 {
-		// if no capability sets are defined, assume all capabilities are supported
+	if len(imageFlavors) == 0 {
+		// if no capabilityFlavors are defined, assume all capabilities are supported
 		// this can only occur in cloud profiles with one supported architecture
 		return true
 	}
 
-	for _, capabilitySet := range capabilitySets {
-		if AreCapabilitiesCompatible(capabilitySet.Capabilities, capabilities, capabilitiesDefinitions) {
+	for _, imageFlavor := range imageFlavors {
+		if AreCapabilitiesCompatible(imageFlavor.Capabilities, capabilities, capabilityDefinitions) {
 			return true
 		}
 	}
@@ -645,9 +648,9 @@ func AreCapabilitiesSupportedByCapabilitySets(
 
 // AreCapabilitiesCompatible checks if two sets of capabilities are compatible.
 // It applies defaults from the capability definitions to both sets before checking compatibility.
-func AreCapabilitiesCompatible(capabilities1, capabilities2 gardencorev1beta1.Capabilities, capabilitiesDefinitions []gardencorev1beta1.CapabilityDefinition) bool {
-	defaultedCapabilities1 := GetCapabilitiesWithAppliedDefaults(capabilities1, capabilitiesDefinitions)
-	defaultedCapabilities2 := GetCapabilitiesWithAppliedDefaults(capabilities2, capabilitiesDefinitions)
+func AreCapabilitiesCompatible(capabilities1, capabilities2 gardencorev1beta1.Capabilities, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) bool {
+	defaultedCapabilities1 := GetCapabilitiesWithAppliedDefaults(capabilities1, capabilityDefinitions)
+	defaultedCapabilities2 := GetCapabilitiesWithAppliedDefaults(capabilities2, capabilityDefinitions)
 
 	isSupported := true
 	commonCapabilities := GetCapabilitiesIntersection(defaultedCapabilities1, defaultedCapabilities2)
@@ -658,6 +661,40 @@ func AreCapabilitiesCompatible(capabilities1, capabilities2 gardencorev1beta1.Ca
 			break
 		}
 	}
-
 	return isSupported
+}
+
+// ConvertV1beta1CapabilityDefinitions converts core.CapabilityDefinition objects to v1beta1.CapabilityDefinition objects.
+func ConvertV1beta1CapabilityDefinitions(capabilityDefinitions []core.CapabilityDefinition) ([]gardencorev1beta1.CapabilityDefinition, error) {
+	var v1beta1CapabilityDefinitions []gardencorev1beta1.CapabilityDefinition
+	for _, capabilityDefinition := range capabilityDefinitions {
+		var v1beta1CapabilityDefinition gardencorev1beta1.CapabilityDefinition
+		err := api.Scheme.Convert(&capabilityDefinition, &v1beta1CapabilityDefinition, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert capability definition: %w", err)
+		}
+		v1beta1CapabilityDefinitions = append(v1beta1CapabilityDefinitions, v1beta1CapabilityDefinition)
+	}
+	return v1beta1CapabilityDefinitions, nil
+}
+
+// AreCapabilitiesEqual checks if two capabilities are semantically equal.
+func AreCapabilitiesEqual(a, b gardencorev1beta1.Capabilities) bool {
+	return areCapabilitiesSubsetOf(a, b) && areCapabilitiesSubsetOf(b, a)
+}
+
+// areCapabilitiesSubsetOf verifies if all keys and values in `source` exist in `target`.
+func areCapabilitiesSubsetOf(source, target gardencorev1beta1.Capabilities) bool {
+	for key, valuesSource := range source {
+		valuesTarget, exists := target[key]
+		if !exists {
+			return false
+		}
+		for _, value := range valuesSource {
+			if !slices.Contains(valuesTarget, value) {
+				return false
+			}
+		}
+	}
+	return true
 }

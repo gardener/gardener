@@ -22,6 +22,7 @@ import (
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
@@ -75,16 +76,13 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		machineTypeFromCloudProfile := v1beta1helper.FindMachineTypeByName(w.cluster.CloudProfile.Spec.MachineTypes, pool.MachineType)
 
-		image, err := w.findMachineImage(pool.MachineImage.Name, pool.MachineImage.Version)
+		image, err := w.selectMachineImageForWorkerPool(pool.MachineImage.Name, pool.MachineImage.Version, machineTypeFromCloudProfile.Capabilities)
 		if err != nil {
 			return err
 		}
-		machineImages = appendMachineImage(machineImages, api.MachineImage{
-			Name:    pool.MachineImage.Name,
-			Version: pool.MachineImage.Version,
-			Image:   image,
-		})
+		machineImages = appendMachineImage(machineImages, *image, w.cluster.CloudProfile.Spec.MachineCapabilities)
 
 		userData, err := worker.FetchUserData(ctx, w.client, w.worker.Namespace, pool)
 		if err != nil {
@@ -111,7 +109,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		})
 
 		providerConfig := map[string]interface{}{
-			"image": image,
+			"image": image.Image,
 		}
 
 		for _, ipFamily := range w.cluster.Shoot.Spec.Networking.IPFamilies {

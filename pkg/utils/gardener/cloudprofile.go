@@ -289,12 +289,12 @@ func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
 
 // SyncArchitectureCapabilityFields syncs the architecture capabilities and the architecture fields.
 func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec, oldCloudProfileSpec core.CloudProfileSpec) {
-	hasCapabilities := len(newCloudProfileSpec.Capabilities) > 0
-	if !hasCapabilities || !gardencorehelper.HasCapability(newCloudProfileSpec.Capabilities, v1beta1constants.ArchitectureName) {
+	hasCapabilities := len(newCloudProfileSpec.MachineCapabilities) > 0
+	if !hasCapabilities || !gardencorehelper.HasCapability(newCloudProfileSpec.MachineCapabilities, v1beta1constants.ArchitectureName) {
 		return
 	}
 
-	isInitialMigration := hasCapabilities && len(oldCloudProfileSpec.Capabilities) == 0
+	isInitialMigration := hasCapabilities && len(oldCloudProfileSpec.MachineCapabilities) == 0
 
 	// During the initial migration to capabilities, synchronize the architecture fields with the capability definitions.
 	// After the migration, only sync architectures from the capability definitions back to the architecture fields.
@@ -310,7 +310,7 @@ func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages
 	for imageIdx, image := range newMachineImages {
 		for versionIdx, version := range newMachineImages[imageIdx].Versions {
 			oldMachineImageVersion, oldVersionExists := oldMachineImagesMap.GetImageVersion(image.Name, version.Version)
-			capabilityArchitectures := gardencorehelper.ExtractArchitecturesFromCapabilitySets(version.CapabilitySets)
+			capabilityArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(version.CapabilityFlavors)
 
 			// Skip any architecture field syncing if
 			// - architecture field has been modified and changed to any value other than empty.
@@ -323,10 +323,10 @@ func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages
 			}
 
 			// Sync architecture field to capabilities if filled on initial migration.
-			if isInitialMigration && len(version.Architectures) > 0 && len(version.CapabilitySets) == 0 {
+			if isInitialMigration && len(version.Architectures) > 0 && len(version.CapabilityFlavors) == 0 {
 				for _, architecture := range version.Architectures {
-					newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets = append(newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets,
-						core.CapabilitySet{
+					newMachineImages[imageIdx].Versions[versionIdx].CapabilityFlavors = append(newMachineImages[imageIdx].Versions[versionIdx].CapabilityFlavors,
+						core.MachineImageFlavor{
 							Capabilities: core.Capabilities{
 								v1beta1constants.ArchitectureName: []string{architecture},
 							},
@@ -428,23 +428,22 @@ func NewV1beta1ImagesContext(parentImages []gardencorev1beta1.MachineImage) *Ima
 	)
 }
 
-// ValidateCapabilities validates the capabilities of a machine type or machine image against the capabilitiesDefinition
-// located in a cloud profile at spec.capabilities.
+// ValidateCapabilities validates the capabilities of a machine type or machine image against the CapabilityDefinition located in a cloud profile at spec.machineCapabilities.
 // It checks if the capabilities are supported by the cloud profile and if the architecture is defined correctly.
 // It returns a list of field errors if any validation fails.
-func ValidateCapabilities(capabilities core.Capabilities, capabilitiesDefinitions []core.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
+func ValidateCapabilities(capabilities gardencorev1beta1.Capabilities, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// create map from capabilitiesDefinitions
-	capabilitiesDefinition := make(map[string][]string)
-	for _, capabilityDefinition := range capabilitiesDefinitions {
-		capabilitiesDefinition[capabilityDefinition.Name] = capabilityDefinition.Values
+	// create map from capabilityDefinitions
+	capabilityDefinitionsMap := make(map[string][]string)
+	for _, capabilityDefinition := range capabilityDefinitions {
+		capabilityDefinitionsMap[capabilityDefinition.Name] = capabilityDefinition.Values
 	}
-	supportedCapabilityKeys := slices.Collect(maps.Keys(capabilitiesDefinition))
+	supportedCapabilityKeys := slices.Collect(maps.Keys(capabilityDefinitionsMap))
 
 	// Check if all capabilities are supported by the cloud profile
 	for capabilityKey, capability := range capabilities {
-		supportedValues, keyExists := capabilitiesDefinition[capabilityKey]
+		supportedValues, keyExists := capabilityDefinitionsMap[capabilityKey]
 		if !keyExists {
 			allErrs = append(allErrs, field.NotSupported(fldPath, capabilityKey, supportedCapabilityKeys))
 			continue
@@ -457,34 +456,12 @@ func ValidateCapabilities(capabilities core.Capabilities, capabilitiesDefinition
 	}
 
 	// Check additional requirements for architecture
-	// must be defined when multiple architectures are supported by the cloud profile
-	supportedArchitectures := capabilitiesDefinition[v1beta1constants.ArchitectureName]
+	// - must be defined when multiple architectures are supported by the cloud profile
+	supportedArchitectures := capabilityDefinitionsMap[v1beta1constants.ArchitectureName]
 	architectures := capabilities[v1beta1constants.ArchitectureName]
 	if len(supportedArchitectures) > 1 && len(architectures) != 1 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child(v1beta1constants.ArchitectureName), architectures, "must define exactly one architecture when multiple architectures are supported by the cloud profile"))
 	}
 
 	return allErrs
-}
-
-// AreCapabilitiesEqual checks if two capabilities are semantically equal.
-func AreCapabilitiesEqual(a, b core.Capabilities) bool {
-	// Check if both are subsets of each other.
-	return areCapabilitiesSubsetOf(a, b) && areCapabilitiesSubsetOf(b, a)
-}
-
-// areCapabilitiesSubsetOf verifies if all keys and values in `source` exist in `target`.
-func areCapabilitiesSubsetOf(source, target core.Capabilities) bool {
-	for key, valuesSource := range source {
-		valuesTarget, exists := target[key]
-		if !exists {
-			return false
-		}
-		for _, value := range valuesSource {
-			if !slices.Contains(valuesTarget, value) {
-				return false
-			}
-		}
-	}
-	return true
 }

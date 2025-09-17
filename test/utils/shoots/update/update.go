@@ -268,7 +268,7 @@ func getNextConsecutiveMachineImageVersion(cloudProfile *gardencorev1beta1.Cloud
 		return "", err
 	}
 
-	filteredMachineImageVersionsFromCloudProfile := helper.FilterMachineImageVersions(&machineImageFromCloudProfile, worker, kubeletVersion, machineTypeFromCloudProfile, cloudProfile.Spec.Capabilities)
+	filteredMachineImageVersionsFromCloudProfile := helper.FilterMachineImageVersions(&machineImageFromCloudProfile, worker, kubeletVersion, machineTypeFromCloudProfile, cloudProfile.Spec.MachineCapabilities)
 
 	// Always pass true for the value isExpired, because we want to get the next consecutive version regardless of whether the current version is expired or not.
 	newMachineImageVersion, err := helper.DetermineMachineImageVersion(worker.Machine.Image, filteredMachineImageVersionsFromCloudProfile, true)

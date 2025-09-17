@@ -489,7 +489,7 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 </tr>
 <tr>
 <td>
-<code>capabilities</code></br>
+<code>machineCapabilities</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.CapabilityDefinition">
 []CapabilityDefinition
@@ -498,7 +498,7 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 </td>
 <td>
 <em>(Optional)</em>
-<p>Capabilities contains the definition of all possible capabilities in the CloudProfile.
+<p>MachineCapabilities contains the definition of all possible capabilities in the CloudProfile.
 Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 The order of values for a given capability is relevant. The most important value is listed first.
 During maintenance upgrades, the image that matches most capabilities will be selected.</p>
@@ -3526,7 +3526,7 @@ CRIName
 (<code>map[string]github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CapabilitySet">CapabilitySet</a>, 
+<a href="#core.gardener.cloud/v1beta1.MachineImageFlavor">MachineImageFlavor</a>, 
 <a href="#core.gardener.cloud/v1beta1.MachineType">MachineType</a>)
 </p>
 <p>
@@ -3565,38 +3565,6 @@ string
 <em>
 <a href="#core.gardener.cloud/v1beta1.CapabilityValues">
 CapabilityValues
-</a>
-</em>
-</td>
-<td>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.CapabilitySet">CapabilitySet
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
-</p>
-<p>
-<p>CapabilitySet is a wrapper for Capabilities.
-This is a workaround as the Protobuf generator can&rsquo;t handle a slice of maps.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>-</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.Capabilities">
-Capabilities
 </a>
 </em>
 </td>
@@ -3828,7 +3796,7 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 </tr>
 <tr>
 <td>
-<code>capabilities</code></br>
+<code>machineCapabilities</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.CapabilityDefinition">
 []CapabilityDefinition
@@ -3837,7 +3805,7 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 </td>
 <td>
 <em>(Optional)</em>
-<p>Capabilities contains the definition of all possible capabilities in the CloudProfile.
+<p>MachineCapabilities contains the definition of all possible capabilities in the CloudProfile.
 Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 The order of values for a given capability is relevant. The most important value is listed first.
 During maintenance upgrades, the image that matches most capabilities will be selected.</p>
@@ -8514,6 +8482,38 @@ MachineImageUpdateStrategy
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.MachineImageFlavor">MachineImageFlavor
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
+</p>
+<p>
+<p>MachineImageFlavor is a wrapper for Capabilities.
+This is a workaround as the Protobuf generator can&rsquo;t handle a slice of maps.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>-</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Capabilities">
+Capabilities
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.MachineImageUpdateStrategy">MachineImageUpdateStrategy
 (<code>string</code> alias)</p></h3>
 <p>
@@ -8613,16 +8613,16 @@ InPlaceUpdates
 </tr>
 <tr>
 <td>
-<code>capabilitySets</code></br>
+<code>capabilityFlavors</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.CapabilitySet">
-[]CapabilitySet
+<a href="#core.gardener.cloud/v1beta1.MachineImageFlavor">
+[]MachineImageFlavor
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>CapabilitySets is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+<p>CapabilityFlavors is an array of MachineImageFlavor. Each entry represents a combination of capabilities that is provided by
 the machine image version.</p>
 </td>
 </tr>

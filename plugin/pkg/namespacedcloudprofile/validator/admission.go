@@ -300,7 +300,7 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 			}
 
 			// There is no entry for this image in the parent CloudProfile yet.
-			capabilities := gardencorehelper.CapabilityDefinitionsToCapabilities(parentCloudProfileSpecCore.Capabilities)
+			capabilities := gardencorehelper.CapabilityDefinitionsToCapabilities(parentCloudProfileSpecCore.MachineCapabilities)
 			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, capabilities, imageIndexPath, false)...)
 			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, capabilities, imageIndexPath)...)
 		}
@@ -320,8 +320,8 @@ func validateNamespacedCloudProfileExtendedMachineImages(machineVersion gardenco
 	if len(machineVersion.Architectures) > 0 {
 		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("architectures"), "must not provide an architecture to an extended machine image in NamespacedCloudProfile"))
 	}
-	if len(machineVersion.CapabilitySets) > 0 {
-		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilitySets"), "must not provide capabilities to an extended machine image in NamespacedCloudProfile"))
+	if len(machineVersion.CapabilityFlavors) > 0 {
+		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilityFlavors"), "must not provide capabilities to an extended machine image in NamespacedCloudProfile"))
 	}
 	if len(ptr.Deref(machineVersion.KubeletVersionConstraint, "")) > 0 {
 		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("kubeletVersionConstraint"), "must not provide a kubelet version constraint to an extended machine image in NamespacedCloudProfile"))
