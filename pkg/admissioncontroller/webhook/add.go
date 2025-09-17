@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/seedrestriction"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/shootkubeconfigsecretref"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/shootrestriction"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/updaterestriction"
 	seedauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
 	shootauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/shoot"
@@ -107,6 +108,14 @@ func AddToManager(
 		ClientSet: clientSet,
 	}).AddToManager(ctx, mgr, cfg.Server.EnableDebugHandlers); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", shootauthorizer.HandlerName, err)
+	}
+
+	if err := (&shootrestriction.Handler{
+		Logger:  mgr.GetLogger().WithName("webhook").WithName(shootrestriction.HandlerName),
+		Client:  mgr.GetClient(),
+		Decoder: admission.NewDecoder(mgr.GetScheme()),
+	}).AddToManager(ctx, mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", shootrestriction.HandlerName, err)
 	}
 
 	if err := (&shootkubeconfigsecretref.Handler{
