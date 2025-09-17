@@ -38,6 +38,22 @@ var _ = Describe("DualStackMigration", func() {
 			},
 			Clock: mockClock,
 		}}
+
+		// Initialize the shoot with proper IP families for dual-stack tests
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-shoot",
+				Namespace: "test-namespace",
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				Networking: &gardencorev1beta1.Networking{
+					IPFamilies: []gardencorev1beta1.IPFamily{
+						gardencorev1beta1.IPFamilyIPv4,
+						gardencorev1beta1.IPFamilyIPv6,
+					},
+				},
+			},
+		})
 	})
 
 	Describe("#DetermineUpdateFunction", func() {
@@ -53,6 +69,14 @@ var _ = Describe("DualStackMigration", func() {
 					Name:        "test-shoot",
 					Namespace:   "test-namespace",
 					Annotations: map[string]string{},
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{
+							gardencorev1beta1.IPFamilyIPv4,
+							gardencorev1beta1.IPFamilyIPv6,
+						},
+					},
 				},
 				Status: gardencorev1beta1.ShootStatus{
 					Constraints: []gardencorev1beta1.Condition{
@@ -80,6 +104,14 @@ var _ = Describe("DualStackMigration", func() {
 			}
 
 			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{
+							gardencorev1beta1.IPFamilyIPv4,
+							gardencorev1beta1.IPFamilyIPv6,
+						},
+					},
+				},
 				Status: gardencorev1beta1.ShootStatus{
 					Constraints: []gardencorev1beta1.Condition{},
 				},
@@ -93,7 +125,7 @@ var _ = Describe("DualStackMigration", func() {
 			Expect(condition).NotTo(BeNil())
 			Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue))
 			Expect(condition.Reason).To(Equal("NodesMigrated"))
-			Expect(condition.Message).To(Equal("All nodes were migrated to dual-stack networking."))
+			Expect(condition.Message).To(Equal("All node pod CIDRs migrated to target network stack.")) // Updated message
 		})
 
 		It("Updates the constraint to ConditionFalse when not all nodes are dual-stack", func() {
@@ -105,6 +137,14 @@ var _ = Describe("DualStackMigration", func() {
 			}
 
 			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{
+							gardencorev1beta1.IPFamilyIPv4,
+							gardencorev1beta1.IPFamilyIPv6,
+						},
+					},
+				},
 				Status: gardencorev1beta1.ShootStatus{
 					Constraints: []gardencorev1beta1.Condition{},
 				},
@@ -118,7 +158,7 @@ var _ = Describe("DualStackMigration", func() {
 			Expect(condition).NotTo(BeNil())
 			Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionProgressing))
 			Expect(condition.Reason).To(Equal("NodesNotMigrated"))
-			Expect(condition.Message).To(Equal("The shoot is migrating to dual-stack networking."))
+			Expect(condition.Message).To(Equal("Migrating node pod CIDRs to match target network stack.")) // Updated message
 		})
 		It("Updates the constraint to ConditionProgressing if coredns pods not are migrated", func() {
 

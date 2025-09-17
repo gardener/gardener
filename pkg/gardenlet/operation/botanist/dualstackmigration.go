@@ -17,40 +17,72 @@ import (
 	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
 )
 
-// DetermineUpdateFunction determines the update function for the shoot's status based on dual-stack migration readiness.
-func (b *Botanist) DetermineUpdateFunction(networkReadyForDualStackMigration bool, nodeList *corev1.NodeList) func(*gardencorev1beta1.Shoot) error {
-	if networkReadyForDualStackMigration {
-		return func(shoot *gardencorev1beta1.Shoot) error {
-			shoot.Status.Constraints = v1beta1helper.RemoveConditions(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
-			constraint := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady)
-			if constraint == nil {
-				constraint := v1beta1helper.GetOrInitConditionWithClock(b.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady)
-				constraint = v1beta1helper.UpdatedConditionWithClock(b.Clock, constraint, gardencorev1beta1.ConditionProgressing, "DNSServiceMigration", "The shoot is migrating the kube-dns service.")
-				shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, constraint)
-			}
-			return nil
+func nodesMigrated(nodeList *corev1.NodeList, ipFamiliesLen int) bool {
+	if nodeList == nil || len(nodeList.Items) == 0 {
+		return false
+	}
+	for _, node := range nodeList.Items {
+		if len(node.Spec.PodCIDRs) != ipFamiliesLen {
+			return false
 		}
 	}
+	return true
+}
 
-	allNodesDualStack := true
-	conditionStatus := gardencorev1beta1.ConditionProgressing
-	conditionReason := "NodesNotMigrated"
-	conditionMessage := "The shoot is migrating to dual-stack networking."
-	for _, node := range nodeList.Items {
-		allNodesDualStack = allNodesDualStack && len(node.Spec.PodCIDRs) == 2
+// DetermineUpdateFunction determines the update function for the shoot's status based on dual-stack migration readiness.
+func (b *Botanist) DetermineUpdateFunction(networkReadyForDualStackMigration bool, nodeList *corev1.NodeList) func(*gardencorev1beta1.Shoot) error {
+	shootIPFamilies := b.Shoot.GetInfo().Spec.Networking.IPFamilies
+	isSingleStack := len(shootIPFamilies) == 1
+	allNodesMigrated := nodesMigrated(nodeList, len(shootIPFamilies))
+
+	if networkReadyForDualStackMigration {
+		return b.createConstraintRemovalFunction(isSingleStack, allNodesMigrated)
 	}
-	if allNodesDualStack {
-		conditionStatus = gardencorev1beta1.ConditionTrue
-		conditionReason = "NodesMigrated"
-		conditionMessage = "All nodes were migrated to dual-stack networking."
+	return b.createNodeMigrationFunction(isSingleStack, allNodesMigrated)
+}
+
+func (b *Botanist) createConstraintRemovalFunction(isSingleStack, allNodesMigrated bool) func(*gardencorev1beta1.Shoot) error {
+	return func(shoot *gardencorev1beta1.Shoot) error {
+		if isSingleStack && !allNodesMigrated {
+			return nil // Don't remove constraint yet
+		}
+
+		shoot.Status.Constraints = v1beta1helper.RemoveConditions(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+
+		if !isSingleStack && !b.hasDNSMigrationConstraint(shoot) {
+			b.addDNSMigrationConstraint(shoot)
+		}
+		return nil
+	}
+}
+
+func (b *Botanist) createNodeMigrationFunction(isSingleStack, allNodesMigrated bool) func(*gardencorev1beta1.Shoot) error {
+	status := gardencorev1beta1.ConditionProgressing
+	reason := "NodesNotMigrated"
+	message := "Migrating node pod CIDRs to match target network stack."
+
+	if allNodesMigrated || isSingleStack {
+		status = gardencorev1beta1.ConditionTrue
+		reason = "NodesMigrated"
+		message = "All node pod CIDRs migrated to target network stack."
 	}
 
 	return func(shoot *gardencorev1beta1.Shoot) error {
 		constraint := v1beta1helper.GetOrInitConditionWithClock(b.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
-		constraint = v1beta1helper.UpdatedConditionWithClock(b.Clock, constraint, conditionStatus, conditionReason, conditionMessage)
+		constraint = v1beta1helper.UpdatedConditionWithClock(b.Clock, constraint, status, reason, message)
 		shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, constraint)
 		return nil
 	}
+}
+
+func (b *Botanist) hasDNSMigrationConstraint(shoot *gardencorev1beta1.Shoot) bool {
+	return v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady) != nil
+}
+
+func (b *Botanist) addDNSMigrationConstraint(shoot *gardencorev1beta1.Shoot) {
+	constraint := v1beta1helper.GetOrInitConditionWithClock(b.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootDNSServiceMigrationReady)
+	constraint = v1beta1helper.UpdatedConditionWithClock(b.Clock, constraint, gardencorev1beta1.ConditionProgressing, "DNSServiceMigration", "The shoot is migrating the kube-dns service.")
+	shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, constraint)
 }
 
 // DetermineUpdateFunctionDNS determines the update function for the shoot's status based on DNS service and pod readiness.
@@ -92,7 +124,7 @@ func (b *Botanist) CheckDNSServiceMigration(ctx context.Context) error {
 		return err
 	}
 
-	svcReady := len(service.Spec.ClusterIPs) == 2
+	svcReady := len(service.Spec.ClusterIPs) == len(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 
 	podList := &corev1.PodList{}
 	if err := b.ShootClientSet.Client().List(ctx, podList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{corednsconstants.LabelKey: corednsconstants.LabelValue}); err != nil {
@@ -105,12 +137,12 @@ func (b *Botanist) CheckDNSServiceMigration(ctx context.Context) error {
 	podsReady := len(podList.Items) != 0
 
 	for _, pod := range podList.Items {
-		podsReady = podsReady && len(pod.Status.PodIPs) == 2
+		podsReady = podsReady && len(pod.Status.PodIPs) == len(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 	}
 
 	updateFunction := b.DetermineUpdateFunctionDNS(svcReady, podsReady)
 	if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, updateFunction); err != nil {
-		return fmt.Errorf("failed to update shoot info status during dual-stack migration: %w", err)
+		return fmt.Errorf("failed to update shoot info status during network stack migration: %w", err)
 	}
 	return nil
 }
@@ -138,13 +170,13 @@ func (b *Botanist) CheckPodCIDRsInNodes(ctx context.Context) error {
 
 	nodeList := &corev1.NodeList{}
 	if err := b.ShootClientSet.Client().List(ctx, nodeList); err != nil {
-		return fmt.Errorf("failed to list nodes during dual-stack migration: %w", err)
+		return fmt.Errorf("failed to list nodes during network stack migration: %w", err)
 	}
 
-	networkReadyForDualStackMigration := len(network.Status.IPFamilies) == 2
+	networkReadyForDualStackMigration := len(network.Status.IPFamilies) == len(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 	updateFunction := b.DetermineUpdateFunction(networkReadyForDualStackMigration, nodeList)
 	if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, updateFunction); err != nil {
-		return fmt.Errorf("failed to update shoot info status during dual-stack migration: %w", err)
+		return fmt.Errorf("failed to update shoot info status during network stack migration: %w", err)
 	}
 
 	return nil
@@ -154,17 +186,25 @@ func (b *Botanist) CheckPodCIDRsInNodes(ctx context.Context) error {
 func (b *Botanist) UpdateDualStackMigrationConditionIfNeeded(ctx context.Context) error {
 	shoot := b.Shoot.GetInfo()
 
-	constraint := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
-	if constraint == nil && len(shoot.Spec.Networking.IPFamilies) == 2 && shoot.Status.Networking != nil && len(shoot.Status.Networking.Nodes) == 1 {
-		if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
-			constraint := v1beta1helper.GetOrInitConditionWithClock(b.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
-			constraint = v1beta1helper.UpdatedConditionWithClock(b.Clock, constraint, gardencorev1beta1.ConditionProgressing, "DualStackMigration", "The shoot is migrating to dual-stack networking.")
-			shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, constraint)
-			return nil
-		}); err != nil {
-			return fmt.Errorf("failed updating %s constraint in shoot status: %w", gardencorev1beta1.ShootDualStackNodesMigrationReady, err)
+	nodeList := &corev1.NodeList{}
+	if b.ShootClientSet != nil {
+		if err := b.ShootClientSet.Client().List(ctx, nodeList); err != nil {
+			return fmt.Errorf("failed to list nodes during network stack migration: %w", err)
 		}
 	}
 
+	network, err := b.Shoot.Components.Extensions.Network.Get(ctx)
+	if err != nil {
+		return nil
+	}
+	networkReadyForDualStackMigration := len(network.Status.IPFamilies) == len(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
+	updateFunction := b.DetermineUpdateFunction(networkReadyForDualStackMigration, nodeList)
+
+	constraint := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+	if constraint == nil {
+		if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, updateFunction); err != nil {
+			return fmt.Errorf("failed updating %s constraint in shoot status: %w", gardencorev1beta1.ShootDualStackNodesMigrationReady, err)
+		}
+	}
 	return nil
 }
