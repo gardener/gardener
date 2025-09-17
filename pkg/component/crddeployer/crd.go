@@ -17,7 +17,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -65,12 +64,12 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 			}
 
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, crd, func() error {
+				crd.Labels = desiredCRD.Labels
+				crd.Annotations = desiredCRD.Annotations
 				if c.deletionProtected && !slices.Contains(c.deletionProtectedLabelExcludedCRDs, crd.Name) {
 					metav1.SetMetaDataLabel(&crd.ObjectMeta, gardenerutils.DeletionProtected, "true")
 				}
 
-				crd.Labels = utils.MergeStringMaps(crd.Labels, desiredCRD.Labels)
-				crd.Annotations = utils.MergeStringMaps(crd.Annotations, desiredCRD.Annotations)
 				crd.Spec = desiredCRD.Spec
 				return nil
 			})
