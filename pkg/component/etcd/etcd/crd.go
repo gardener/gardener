@@ -64,11 +64,11 @@ func NewCRDGetter(k8sVersion *semver.Version) (CRDGetter, error) {
 }
 
 func (c *crdGetterImpl) GetAllCRDs() (map[string]*apiextensionsv1.CustomResourceDefinition, error) {
-	var crdResources = make(map[string]*apiextensionsv1.CustomResourceDefinition)
+	var crdResources = make(map[string]*apiextensionsv1.CustomResourceDefinition, len(c.crdResources))
 	for crdName, crdYAML := range c.crdResources {
 		crdObj, err := kubernetesutils.DecodeCRD(crdYAML)
 		if err != nil {
-			return nil, fmt.Errorf("failed decode etcd-druid CRD: %s: %w", crdName, err)
+			return nil, fmt.Errorf("failed to decode etcd-druid CRD: %s: %w", crdName, err)
 		}
 		crdResources[crdName] = crdObj
 	}

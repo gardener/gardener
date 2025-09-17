@@ -27,6 +27,7 @@ fi
 
 output_dir="$(pwd)"
 output_dir_temp="$(mktemp -d)"
+add_deletion_protection_label=false
 add_keep_object_annotation=false
 crd_options=""
 declare -A custom_packages=()
@@ -146,6 +147,14 @@ generate_group () {
     crd_out="$output_dir/$file_name_prefix$(basename $crd)"
     mv "$crd" "$crd_out"
     relevant_files+=("$(basename "$crd_out")")
+
+    if $add_deletion_protection_label; then
+      if grep -q "clusters.extensions.gardener.cloud"  "$crd_out"; then
+        :
+      else
+        sed -i '4 a\  labels:\n\    gardener.cloud/deletion-protected: "true"' "$crd_out"
+      fi
+    fi
 
     if $add_keep_object_annotation; then
       sed -i '/^  annotations:.*/a\    resources.gardener.cloud/keep-object: "true"' "$crd_out"
