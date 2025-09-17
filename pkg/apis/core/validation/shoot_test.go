@@ -2357,6 +2357,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
+					Entry("valid (\"\"/secrets=0)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							APIGroup:  ptr.To(""),
+							Resource:  "secrets",
+							CacheSize: 0,
+						}},
+					}, BeEmpty()),
 					Entry("valid (core/secrets=>0)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "secrets",
@@ -2379,7 +2386,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
 					)),
-					Entry("invalid (core/resource name with casing", &core.WatchCacheSizes{
+					Entry("invalid (core/resource name with casing)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "Secrets",
 							CacheSize: 42,
@@ -2387,7 +2394,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].resource"), "Secrets", "must be lower case"),
 					)),
-					Entry("invalid (core/resource name with illegal character", &core.WatchCacheSizes{
+					Entry("invalid (core/resource name with illegal character)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "secrets#",
 							CacheSize: 42,
@@ -2428,7 +2435,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
 					)),
-					Entry("invalid (Apps/deployments name with casing", &core.WatchCacheSizes{
+					Entry("invalid (apps/deployments name with casing)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("Apps"),
 							Resource:  "deployments",
@@ -2437,7 +2444,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].apiGroup"), "Apps", "must be lower case"),
 					)),
-					Entry("invalid (core/resource name with illegal character", &core.WatchCacheSizes{
+					Entry("invalid (core/resource name with illegal character)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps#"),
 							Resource:  "deployments",
