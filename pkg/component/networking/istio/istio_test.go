@@ -266,6 +266,11 @@ var _ = Describe("istiod", func() {
 			data, _ := os.ReadFile("./test_charts/ingress_metrics_virtualservice.yaml")
 			return string(data)
 		}
+
+		istioIngressNamespace = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_namespace.yaml")
+			return string(data)
+		}
 	)
 
 	BeforeEach(func() {
@@ -355,23 +360,6 @@ var _ = Describe("istiod", func() {
 			))
 		})
 
-		It("deploys istio-ingress namespace", func() {
-			actualNS := &corev1.Namespace{}
-
-			Expect(c.Get(ctx, client.ObjectKey{Name: deployNSIngress}, actualNS)).ToNot(HaveOccurred())
-
-			Expect(actualNS.Labels).To(And(
-				HaveKeyWithValue("istio-operator-managed", "Reconcile"),
-				HaveKeyWithValue("istio-injection", "disabled"),
-				HaveKeyWithValue("pod-security.kubernetes.io/enforce", "baseline"),
-				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
-				HaveKeyWithValue("gardener.cloud/role", "istio-ingress"),
-			))
-			Expect(actualNS.Annotations).To(And(
-				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
-			))
-		})
-
 		checkSuccessfulDeployment := func(minReplicas, maxReplicas *int) {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstio), managedResourceIstio)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
@@ -398,6 +386,7 @@ var _ = Describe("istiod", func() {
 			Expect(managedResourceIstioSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			expectedIstioManifests := []string{
+				istioIngressNamespace(),
 				istioIngressAutoscaler(minReplicas, maxReplicas),
 				istioIngressRole(),
 				istioIngressRoleBinding(),
