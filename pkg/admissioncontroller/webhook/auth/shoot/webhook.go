@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seed
+package shoot
 
 import (
 	"net/http"
@@ -12,7 +12,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
-// Webhook represents the webhook of Seed Authorizer.
+// Webhook represents the webhook of Shoot Authorizer.
 type Webhook struct {
 	Logger    logr.Logger
 	ClientSet kubernetes.Interface
