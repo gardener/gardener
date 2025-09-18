@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,19 +31,25 @@ import (
 var _ = Describe("Extensions", func() {
 	Describe("#ComputeExtensions", func() {
 		var (
-			shoot                   *gardencorev1beta1.Shoot
-			controllerRegistration1 *gardencorev1beta1.ControllerRegistration
-			controllerRegistration2 *gardencorev1beta1.ControllerRegistration
-			controllerRegistration3 *gardencorev1beta1.ControllerRegistration
-			controllerRegistration4 *gardencorev1beta1.ControllerRegistration
-			controllerRegistration5 *gardencorev1beta1.ControllerRegistration
-			controllerDeployment1   *gardencorev1.ControllerDeployment
-			controllerDeployment2   *gardencorev1.ControllerDeployment
-			controllerDeployment3   *gardencorev1.ControllerDeployment
-			controllerDeployment4   *gardencorev1.ControllerDeployment
+			shoot *gardencorev1beta1.Shoot
+
+			controllerRegistrationControlPlane *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationInfraWorker  *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationNetwork      *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationOSC          *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationDNS          *gardencorev1beta1.ControllerRegistration
+			controllerRegistrationUnused       *gardencorev1beta1.ControllerRegistration
+
+			controllerDeploymentControlPlane *gardencorev1.ControllerDeployment
+			controllerDeploymentInfraWorker  *gardencorev1.ControllerDeployment
+			controllerDeploymentNetwork      *gardencorev1.ControllerDeployment
+			controllerDeploymentOSC          *gardencorev1.ControllerDeployment
+			controllerDeploymentDNS          *gardencorev1.ControllerDeployment
 
 			controllerRegistrations []*gardencorev1beta1.ControllerRegistration
 			controllerDeployments   []*gardencorev1.ControllerDeployment
+
+			resources gardenadm.Resources
 		)
 
 		BeforeEach(func() {
@@ -62,16 +67,30 @@ var _ = Describe("Extensions", func() {
 						}},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: ptr.To("ext3"),
+						Type: ptr.To("ext-network"),
+					},
+					DNS: &gardencorev1beta1.DNS{
+						Domain: ptr.To("foo.gardener.cloud"),
+						Providers: []gardencorev1beta1.DNSProvider{
+							{
+								Type:       ptr.To("clouddns"),
+								Primary:    ptr.To(true),
+								SecretName: ptr.To("dns-credentials"),
+							},
+							{
+								Type:       ptr.To("unused"),
+								SecretName: ptr.To("dns-credentials-unused"),
+							},
+						},
 					},
 				},
 			}
-			controllerRegistration1 = &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{Name: "ext1-controlplane"},
+			controllerRegistrationControlPlane = &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{Name: "ext-controlplane"},
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
 						DeploymentRefs: []gardencorev1beta1.DeploymentRef{
-							{Name: "ext1-controlplane"},
+							{Name: "ext-controlplane"},
 						},
 					},
 					Resources: []gardencorev1beta1.ControllerResource{
@@ -79,12 +98,12 @@ var _ = Describe("Extensions", func() {
 					},
 				},
 			}
-			controllerRegistration2 = &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{Name: "ext1-infra-worker"},
+			controllerRegistrationInfraWorker = &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{Name: "ext-infra-worker"},
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
 						DeploymentRefs: []gardencorev1beta1.DeploymentRef{
-							{Name: "ext1-infra-worker"},
+							{Name: "ext-infra-worker"},
 						},
 					},
 					Resources: []gardencorev1beta1.ControllerResource{
@@ -93,23 +112,20 @@ var _ = Describe("Extensions", func() {
 					},
 				},
 			}
-			controllerRegistration3 = &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{Name: "ext3"},
+			controllerRegistrationNetwork = &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{Name: "ext-network"},
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
 						DeploymentRefs: []gardencorev1beta1.DeploymentRef{
-							{Name: "ext3"},
+							{Name: "ext-network"},
 						},
 					},
 					Resources: []gardencorev1beta1.ControllerResource{
-						{Kind: "Network", Type: "ext3"},
+						{Kind: "Network", Type: "ext-network"},
 					},
 				},
 			}
-			controllerRegistration4 = &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{Name: "ext2"},
-			}
-			controllerRegistration5 = &gardencorev1beta1.ControllerRegistration{
+			controllerRegistrationOSC = &gardencorev1beta1.ControllerRegistration{
 				ObjectMeta: metav1.ObjectMeta{Name: "ext-osc"},
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
@@ -122,144 +138,161 @@ var _ = Describe("Extensions", func() {
 					},
 				},
 			}
-
-			controllerDeployment1 = &gardencorev1.ControllerDeployment{
-				ObjectMeta:             metav1.ObjectMeta{Name: "ext1-controlplane"},
-				InjectGardenKubeconfig: ptr.To(true),
+			controllerRegistrationDNS = &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{Name: "dns-clouddns"},
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
+						DeploymentRefs: []gardencorev1beta1.DeploymentRef{
+							{Name: "dns-clouddns"},
+						},
+					},
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: "DNSRecord", Type: "clouddns"},
+					},
+				},
 			}
-			controllerDeployment2 = &gardencorev1.ControllerDeployment{
-				ObjectMeta:             metav1.ObjectMeta{Name: "ext1-infra-worker"},
-				InjectGardenKubeconfig: ptr.To(true),
-			}
-			controllerDeployment3 = &gardencorev1.ControllerDeployment{
-				ObjectMeta:             metav1.ObjectMeta{Name: "ext3"},
-				InjectGardenKubeconfig: ptr.To(false),
-			}
-			controllerDeployment4 = &gardencorev1.ControllerDeployment{
-				ObjectMeta:             metav1.ObjectMeta{Name: "ext-osc"},
-				InjectGardenKubeconfig: ptr.To(false),
+			controllerRegistrationUnused = &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{Name: "ext-unused"},
 			}
 
-			controllerRegistrations = []*gardencorev1beta1.ControllerRegistration{controllerRegistration1, controllerRegistration2, controllerRegistration3, controllerRegistration4, controllerRegistration5}
-			controllerDeployments = []*gardencorev1.ControllerDeployment{controllerDeployment1, controllerDeployment2, controllerDeployment3, controllerDeployment4}
-		})
+			controllerDeploymentControlPlane = &gardencorev1.ControllerDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "ext-controlplane"},
+			}
+			controllerDeploymentInfraWorker = &gardencorev1.ControllerDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "ext-infra-worker"},
+			}
+			controllerDeploymentNetwork = &gardencorev1.ControllerDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "ext-network"},
+			}
+			controllerDeploymentOSC = &gardencorev1.ControllerDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "ext-osc"},
+			}
+			controllerDeploymentDNS = &gardencorev1.ControllerDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "dns-clouddns"},
+			}
 
-		It("should return an error because deployment is not set", func() {
-			controllerRegistration1.Spec.Deployment = nil
+			controllerRegistrations = []*gardencorev1beta1.ControllerRegistration{
+				controllerRegistrationControlPlane,
+				controllerRegistrationInfraWorker,
+				controllerRegistrationNetwork,
+				controllerRegistrationOSC,
+				controllerRegistrationDNS,
+				controllerRegistrationUnused,
+			}
+			controllerDeployments = []*gardencorev1.ControllerDeployment{
+				controllerDeploymentControlPlane,
+				controllerDeploymentInfraWorker,
+				controllerDeploymentNetwork,
+				controllerDeploymentOSC,
+				controllerDeploymentDNS,
+			}
 
-			extensions, err := ComputeExtensions(gardenadm.Resources{
+			resources = gardenadm.Resources{
 				Shoot:                   shoot,
 				ControllerRegistrations: controllerRegistrations,
 				ControllerDeployments:   controllerDeployments,
-			}, true)
+			}
+		})
+
+		It("should return an error because deployment is not set", func() {
+			controllerRegistrationControlPlane.Spec.Deployment = nil
+
+			extensions, err := ComputeExtensions(resources, true, true)
 			Expect(err).To(MatchError(ContainSubstring("has invalid deployment refs in its spec")))
 			Expect(extensions).To(BeNil())
 		})
 
 		It("should return an error because more than one deployment ref is set", func() {
-			controllerRegistration1.Spec.Deployment.DeploymentRefs = append(controllerRegistration1.Spec.Deployment.DeploymentRefs, gardencorev1beta1.DeploymentRef{})
+			controllerRegistrationControlPlane.Spec.Deployment.DeploymentRefs = append(controllerRegistrationControlPlane.Spec.Deployment.DeploymentRefs, gardencorev1beta1.DeploymentRef{})
 
-			extensions, err := ComputeExtensions(gardenadm.Resources{
-				Shoot:                   shoot,
-				ControllerRegistrations: controllerRegistrations,
-				ControllerDeployments:   controllerDeployments,
-			}, true)
+			extensions, err := ComputeExtensions(resources, true, true)
 			Expect(err).To(MatchError(ContainSubstring("has invalid deployment refs in its spec")))
 			Expect(extensions).To(BeNil())
 		})
 
 		It("should return an error because matching ControllerDeployment is not found", func() {
-			extensions, err := ComputeExtensions(gardenadm.Resources{
-				Shoot:                   shoot,
-				ControllerRegistrations: controllerRegistrations,
-			}, true)
+			resources.ControllerDeployments = nil
+
+			extensions, err := ComputeExtensions(resources, true, true)
 			Expect(err).To(MatchError(ContainSubstring("was not found")))
 			Expect(extensions).To(BeNil())
 		})
 
-		When("running the control plane", func() {
-			It("should return all extensions referenced by shoot (except Infrastructure and Worker)", func() {
-				extensions, err := ComputeExtensions(gardenadm.Resources{
-					Shoot:                   shoot,
-					ControllerRegistrations: controllerRegistrations,
-					ControllerDeployments:   controllerDeployments,
-				}, true)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(extensions).To(Equal([]Extension{
-					{
-						ControllerRegistration: controllerRegistration1,
-						ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment1),
-						ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
-							ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration1.Name},
-							Spec: gardencorev1beta1.ControllerInstallationSpec{
-								RegistrationRef: corev1.ObjectReference{Name: controllerRegistration1.Name},
-								DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment1.Name},
-								SeedRef:         corev1.ObjectReference{Name: shoot.Name},
-							},
-						},
-					},
-					{
-						ControllerRegistration: controllerRegistration3,
-						ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment3),
-						ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
-							ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration3.Name},
-							Spec: gardencorev1beta1.ControllerInstallationSpec{
-								RegistrationRef: corev1.ObjectReference{Name: controllerRegistration3.Name},
-								DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment3.Name},
-								SeedRef:         corev1.ObjectReference{Name: shoot.Name},
-							},
-						},
-					},
-					{
-						ControllerRegistration: controllerRegistration5,
-						ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment4),
-						ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
-							ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration5.Name},
-							Spec: gardencorev1beta1.ControllerInstallationSpec{
-								RegistrationRef: corev1.ObjectReference{Name: controllerRegistration5.Name},
-								DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment4.Name},
-								SeedRef:         corev1.ObjectReference{Name: shoot.Name},
-							},
-						},
-					},
-				}))
+		It("should correctly construct the ControllerInstallation", func() {
+			Expect(ComputeExtensions(resources, true, false)).To(ContainElement(
+				HaveField("ControllerInstallation", And(
+					HaveField("ObjectMeta.Name", controllerRegistrationControlPlane.Name),
+					HaveField("Spec.RegistrationRef.Name", controllerRegistrationControlPlane.Name),
+					HaveField("Spec.DeploymentRef.Name", controllerDeploymentControlPlane.Name),
+					HaveField("Spec.SeedRef.Name", shoot.Name),
+				)),
+			))
+		})
+
+		When("running the control plane (gardenadm init)", func() {
+			When("infrastructure is managed outside of Gardener (high-touch)", func() {
+				It("should return all extensions referenced by shoot (except Infrastructure, Worker, and DNSRecord)", func() {
+					Expect(ComputeExtensions(resources, true, false)).To(ConsistOf(
+						And(
+							HaveField("ControllerRegistration.Name", controllerRegistrationControlPlane.Name),
+							HaveField("ControllerDeployment.Name", controllerDeploymentControlPlane.Name),
+						),
+						And(
+							HaveField("ControllerRegistration.Name", controllerRegistrationOSC.Name),
+							HaveField("ControllerDeployment.Name", controllerDeploymentOSC.Name),
+						),
+						And(
+							HaveField("ControllerRegistration.Name", controllerRegistrationNetwork.Name),
+							HaveField("ControllerDeployment.Name", controllerDeploymentNetwork.Name),
+						),
+					))
+				})
+			})
+
+			When("infrastructure is managed by Gardener (medium-touch)", func() {
+				It("should return all extensions referenced by shoot", func() {
+					Expect(ComputeExtensions(resources, true, true)).To(ConsistOf(
+						And(
+							HaveField("ControllerRegistration.Name", controllerRegistrationControlPlane.Name),
+							HaveField("ControllerDeployment.Name", controllerDeploymentControlPlane.Name),
+						),
+						And(
+							HaveField("ControllerRegistration.Name", controllerRegistrationOSC.Name),
+							HaveField("ControllerDeployment.Name", controllerDeploymentOSC.Name),
+						),
+						And(
+							HaveField("ControllerRegistration.Name", controllerRegistrationNetwork.Name),
+							HaveField("ControllerDeployment.Name", controllerDeploymentNetwork.Name),
+						),
+						And(
+							HaveField("ControllerRegistration.Name", controllerRegistrationInfraWorker.Name),
+							HaveField("ControllerDeployment.Name", controllerDeploymentInfraWorker.Name),
+						),
+						And(
+							HaveField("ControllerRegistration.Name", controllerRegistrationDNS.Name),
+							HaveField("ControllerDeployment.Name", controllerDeploymentDNS.Name),
+						),
+					))
+				})
 			})
 		})
 
-		When("not running the control plane", func() {
-			It("should return the Infrastructure, Worker, and OSC extensions", func() {
-				extensions, err := ComputeExtensions(gardenadm.Resources{
-					Shoot:                   shoot,
-					ControllerRegistrations: controllerRegistrations,
-					ControllerDeployments:   controllerDeployments,
-				}, false)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(extensions).To(Equal([]Extension{
-					{
-						ControllerRegistration: controllerRegistration2,
-						ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment2),
-						ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
-							ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration2.Name},
-							Spec: gardencorev1beta1.ControllerInstallationSpec{
-								RegistrationRef: corev1.ObjectReference{Name: controllerRegistration2.Name},
-								DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment2.Name},
-								SeedRef:         corev1.ObjectReference{Name: shoot.Name},
-							},
-						},
-					},
-					{
-						ControllerRegistration: controllerRegistration5,
-						ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment4),
-						ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
-							ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration5.Name},
-							Spec: gardencorev1beta1.ControllerInstallationSpec{
-								RegistrationRef: corev1.ObjectReference{Name: controllerRegistration5.Name},
-								DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment4.Name},
-								SeedRef:         corev1.ObjectReference{Name: shoot.Name},
-							},
-						},
-					},
-				}))
+		When("not running the control plane (gardenadm bootstrap)", func() {
+			It("should return the Infrastructure, Worker, OSC, and DNSRecord extensions", func() {
+				Expect(ComputeExtensions(resources, false, true)).To(ConsistOf(
+					And(
+						HaveField("ControllerRegistration.Name", controllerRegistrationInfraWorker.Name),
+						HaveField("ControllerDeployment.Name", controllerDeploymentInfraWorker.Name),
+					),
+					And(
+						HaveField("ControllerRegistration.Name", controllerRegistrationOSC.Name),
+						HaveField("ControllerDeployment.Name", controllerDeploymentOSC.Name),
+					),
+					And(
+						HaveField("ControllerRegistration.Name", controllerRegistrationDNS.Name),
+						HaveField("ControllerDeployment.Name", controllerDeploymentDNS.Name),
+					),
+				))
 			})
 		})
 	})
@@ -348,10 +381,4 @@ func makeManagedResourceHealthy(ctx context.Context, fakeClient client.Client, m
 		},
 	}
 	return fakeClient.Status().Patch(ctx, mr, patch)
-}
-
-func controllerDeploymentWithoutInjectGardenKubeconfig(in *gardencorev1.ControllerDeployment) *gardencorev1.ControllerDeployment {
-	out := in.DeepCopy()
-	out.InjectGardenKubeconfig = nil
-	return out
 }
