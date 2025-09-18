@@ -5,7 +5,7 @@ metadata:
   labels:
     app: gardener
     role: gardenlet
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" | trunc 32 }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 roleRef:
@@ -15,4 +15,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "{{ required ".Values.serviceAccountName is required" .Values.serviceAccountName }}"
-  namespace: garden
+  namespace: {{ .Release.Namespace }}

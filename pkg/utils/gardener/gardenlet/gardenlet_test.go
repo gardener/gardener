@@ -6,6 +6,7 @@ package gardenlet_test
 
 import (
 	"context"
+	"os"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -117,6 +118,19 @@ var _ = Describe("Gardenlet", func() {
 				Expect(newGardenletConfig.GardenClientConnection).NotTo(BeNil())
 				Expect(newGardenletConfig.GardenClientConnection.GardenClusterAddress).To(Equal(ptr.To("existing-address")))
 			})
+		})
+	})
+
+	Describe("#IsResponsibleForAutonomousShoot", func() {
+		It("should return true because the NAMESPACE environment variable is set to 'kube-system'", func() {
+			Expect(os.Setenv("NAMESPACE", "kube-system")).To(Succeed())
+			DeferCleanup(func() { Expect(os.Setenv("NAMESPACE", "")).To(Succeed()) })
+
+			Expect(IsResponsibleForAutonomousShoot()).To(BeTrue())
+		})
+
+		It("should return false because the NAMESPACE environment variable is not set to 'kube-system'", func() {
+			Expect(IsResponsibleForAutonomousShoot()).To(BeFalse())
 		})
 	})
 })

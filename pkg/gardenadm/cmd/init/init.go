@@ -7,6 +7,8 @@ package init
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -58,6 +60,14 @@ func run(ctx context.Context, opts *Options) error {
 	b, err := bootstrapControlPlane(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("failed bootstrapping control plane: %w", err)
+	}
+
+	dir := filepath.Dir(cmd.ConfigDirLocation)
+	if err := b.FS.MkdirAll(dir, os.ModeDir); err != nil {
+		return fmt.Errorf("failed creating config directory location dir %s: %w", dir, err)
+	}
+	if err := b.FS.WriteFile(cmd.ConfigDirLocation, []byte(opts.ConfigDir), 0640); err != nil {
+		return fmt.Errorf("failed writing config directory location file %s: %w", cmd.ConfigDirLocation, err)
 	}
 
 	podNetworkAvailable, err := b.IsPodNetworkAvailable(ctx)
@@ -325,14 +335,18 @@ cluster.
 
 	fmt.Fprintf(opts.Out, `
 Note that the mentioned kubeconfig file will be disabled once you deploy the
-gardenlet and connect this cluster to an existing Gardener installation by
-running on any node:
+gardenlet and connect this cluster to an existing Gardener installation. Run
+this while targeting the garden cluster to which you want to connect this
+autonomous shoot cluster:
 
-  gardenadm connect <TODO>
+  gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s
+
+Copy the output and run it on a control plane node in order to deploy the
+gardenlet for connectivity to Gardener.
 
 Please use the shoots/adminkubeconfig subresource to retrieve a kubeconfig,
 see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
-`)
+`, b.Shoot.GetInfo().Namespace, b.Shoot.GetInfo().Name)
 
 	return nil
 }

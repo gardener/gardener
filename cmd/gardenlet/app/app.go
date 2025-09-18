@@ -107,8 +107,8 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 		cfg.SeedClientConnection.Kubeconfig = kubeconfig
 	}
 
-	log.Info("Getting rest config for seed")
-	seedRESTConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.SeedClientConnection.ClientConnectionConfiguration, nil)
+	log.Info("Getting rest config for runtime cluster")
+	runtimeRESTConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.SeedClientConnection.ClientConnectionConfiguration, nil)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 	}
 
 	log.Info("Setting up manager")
-	mgr, err := manager.New(seedRESTConfig, manager.Options{
+	mgr, err := manager.New(runtimeRESTConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  kubernetes.SeedScheme,
 		GracefulShutdownTimeout: ptr.To(5 * time.Second),
@@ -168,11 +168,16 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 	if err := mgr.AddHealthzCheck("periodic-health", gardenerhealthz.CheckerFunc(healthManager)); err != nil {
 		return err
 	}
-	if err := mgr.AddHealthzCheck("seed-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+	if err := mgr.AddHealthzCheck("runtime-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
 		return err
 	}
-	if err := mgr.AddReadyzCheck("seed-informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
+	if err := mgr.AddReadyzCheck("runtime-informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
+	}
+
+	if gardenlet.IsResponsibleForAutonomousShoot() {
+		log.Info("Running in autonomous shoot, starting manager without controllers")
+		return mgr.Start(ctx)
 	}
 
 	log.Info("Adding runnables to manager for bootstrapping")

@@ -97,3 +97,7 @@ func TokenID(meta metav1.ObjectMeta) string {
 
 	return utils.ComputeSHA256Hex([]byte(value))[:IDLength]
 }
+
+// AutonomousShootBootstrapTokenSecretDescriptionPrefix is the prefix used in the description of a bootstrap token
+// secret for autonomous shoots. It indicates that the token is used for connecting the autonomous Shoot to Gardener.
+const AutonomousShootBootstrapTokenSecretDescriptionPrefix = "Used for connecting the autonomous Shoot "

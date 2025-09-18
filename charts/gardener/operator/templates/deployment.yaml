@@ -21,7 +21,7 @@ role: operator
 
 {{- define "operator.deployment.labels" -}}
 {{- include "operator.deployment.matchLabels" . }}
-chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" | trunc 32 }}"
 release: "{{ .Release.Name }}"
 heritage: "{{ .Release.Service }}"
 {{- end -}}

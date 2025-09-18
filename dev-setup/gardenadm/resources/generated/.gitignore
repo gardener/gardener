@@ -1,3 +1,4 @@
 .skaffold-image
 .imagevector-overwrite.yaml
+.imagevector-overwrite-charts.yaml
 manifests.yaml

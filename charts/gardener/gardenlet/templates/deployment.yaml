@@ -21,7 +21,7 @@ role: gardenlet
 
 {{- define "gardenlet.deployment.labels" -}}
 {{- include "gardenlet.deployment.matchLabels" . }}
-chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" | trunc 32 }}"
 release: "{{ .Release.Name }}"
 heritage: "{{ .Release.Service }}"
 {{- end -}}
@@ -89,8 +89,11 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         args:
         - --config=/etc/gardenlet/config/config.yaml
-        {{- if or .Values.env .Values.imageVectorOverwrite .Values.componentImageVectorOverwrites }}
         env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         {{- if .Values.imageVectorOverwrite }}
         - name: IMAGEVECTOR_OVERWRITE
           value: /imagevector_overwrite/images_overwrite.yaml
@@ -103,7 +106,6 @@ spec:
         {{- if not (empty $value) }}
         - name: {{ index $value "name" | quote }}
           value: {{ index $value "value" | quote }}
-        {{- end }}
         {{- end }}
         {{- end }}
         {{- if .Values.config.server.healthProbes.enable }}

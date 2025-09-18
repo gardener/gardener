@@ -42,7 +42,7 @@ func PrepareBinary() {
 func NewCommand(args ...string) *exec.Cmd { // #nosec G204 -- Used for e2e tests only.
 	cmd := exec.Command(binaryPath, append([]string{"--log-level=debug"}, args...)...)
 	cmd.Env = append(cmd.Env,
-		clientcmd.RecommendedConfigPathEnvVar+"=../../../example/gardener-local/kind/local/kubeconfig",
+		clientcmd.RecommendedConfigPathEnvVar+"=../../../example/gardener-local/kind/multi-zone/kubeconfig",
 		imagevector.OverrideEnv+"=../../../dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml",
 	)
 	return cmd

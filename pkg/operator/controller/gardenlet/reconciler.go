@@ -126,10 +126,10 @@ func (r *Reconciler) newActuator(gardenlet *seedmanagementv1alpha1.Gardenlet) ga
 
 			return targetChartApplier.ApplyFromArchive(ctx, archive, r.GardenNamespaceTarget, "gardenlet", kubernetes.Values(values))
 		},
-		Clock:                 r.Clock,
-		ValuesHelper:          gardenletdeployer.NewValuesHelper(nil),
-		Recorder:              r.Recorder,
-		GardenNamespaceTarget: r.GardenNamespaceTarget,
+		Clock:                    r.Clock,
+		ValuesHelper:             gardenletdeployer.NewValuesHelper(nil),
+		Recorder:                 r.Recorder,
+		GardenletNamespaceTarget: r.GardenNamespaceTarget,
 	}
 }
 

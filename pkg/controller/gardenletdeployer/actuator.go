@@ -20,6 +20,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -66,14 +67,15 @@ type Actuator struct {
 	GetTargetClientFunc     func(ctx context.Context) (kubernetes.Interface, error)
 	CheckIfVPAAlreadyExists func(ctx context.Context) (bool, error)
 	// GetInfrastructureSecret will return the infrastructure secret or nil if other kind of credentials are used instead.
-	GetInfrastructureSecret func(ctx context.Context) (*corev1.Secret, error) // TODO(dimityrmirchev): Deprecate and eventually remove this function.
-	GetTargetDomain         func() string
-	ApplyGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
-	DeleteGardenletChart    func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
-	Clock                   clock.Clock
-	ValuesHelper            ValuesHelper
-	Recorder                record.EventRecorder
-	GardenNamespaceTarget   string
+	GetInfrastructureSecret  func(ctx context.Context) (*corev1.Secret, error) // TODO(dimityrmirchev): Deprecate and eventually remove this function.
+	GetTargetDomain          func() string
+	ApplyGardenletChart      func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
+	DeleteGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
+	Clock                    clock.Clock
+	ValuesHelper             ValuesHelper
+	Recorder                 record.EventRecorder
+	GardenletNamespaceTarget string
+	BootstrapToken           string
 }
 
 // Reconcile deploys or updates gardenlets.
@@ -98,8 +100,8 @@ func (a *Actuator) Reconcile(
 	}
 
 	// Create or update garden namespace in the target cluster
-	log.Info("Ensuring garden namespace in target cluster")
-	a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+	log.Info("Ensuring gardenlet namespace in target cluster")
+	a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 	if err := a.ensureGardenNamespace(ctx, targetClient.Client()); err != nil {
 		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
 		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), fmt.Errorf("could not create or update garden namespace in target cluster: %w", err)
@@ -284,7 +286,7 @@ func (a *Actuator) Delete(
 func (a *Actuator) ensureGardenNamespace(ctx context.Context, targetClient client.Client) error {
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: a.GardenNamespaceTarget,
+			Name: a.GardenletNamespaceTarget,
 		},
 	}
 	if err := targetClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), gardenNamespace); err != nil {
@@ -299,7 +301,7 @@ func (a *Actuator) ensureGardenNamespace(ctx context.Context, targetClient clien
 func (a *Actuator) deleteGardenNamespace(ctx context.Context, targetClient kubernetes.Interface) error {
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: a.GardenNamespaceTarget,
+			Name: a.GardenletNamespaceTarget,
 		},
 	}
 	return client.IgnoreNotFound(targetClient.Client().Delete(ctx, gardenNamespace))
@@ -307,7 +309,7 @@ func (a *Actuator) deleteGardenNamespace(ctx context.Context, targetClient kuber
 
 func (a *Actuator) getGardenNamespace(ctx context.Context, targetClient kubernetes.Interface) (*corev1.Namespace, error) {
 	ns := &corev1.Namespace{}
-	if err := targetClient.Client().Get(ctx, client.ObjectKey{Name: a.GardenNamespaceTarget}, ns); err != nil {
+	if err := targetClient.Client().Get(ctx, client.ObjectKey{Name: a.GardenletNamespaceTarget}, ns); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -361,12 +363,12 @@ func (a *Actuator) deployGardenlet(
 		mergeWithParent,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed preparing gardenlet chart values: %w", err)
 	}
 
 	// Apply gardenlet chart
 	if err := a.ApplyGardenletChart(ctx, targetClient.ChartApplier(), values); err != nil {
-		return err
+		return fmt.Errorf("failed applying gardenlet chart: %w", err)
 	}
 
 	// remove renew-kubeconfig annotation, if it exists
@@ -414,7 +416,7 @@ func (a *Actuator) deleteGardenlet(
 
 func (a *Actuator) getGardenletDeployment(ctx context.Context, targetClient kubernetes.Interface) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{}
-	if err := targetClient.Client().Get(ctx, client.ObjectKey{Namespace: a.GardenNamespaceTarget, Name: v1beta1constants.DeploymentNameGardenlet}, deployment); err != nil {
+	if err := targetClient.Client().Get(ctx, client.ObjectKey{Namespace: a.GardenletNamespaceTarget, Name: v1beta1constants.DeploymentNameGardenlet}, deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -616,9 +618,10 @@ func (a *Actuator) prepareGardenletChartValues(
 		seed,
 		a.ValuesHelper,
 		bootstrap,
+		a.BootstrapToken,
 		ensureGardenletEnvironment(deployment, a.GetTargetDomain()),
 		componentConfig,
-		a.GardenNamespaceTarget,
+		a.GardenletNamespaceTarget,
 	)
 }
 
@@ -634,9 +637,10 @@ func PrepareGardenletChartValues(
 	seed *gardencorev1beta1.Seed,
 	vp ValuesHelper,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
+	bootstrapToken string,
 	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
 	gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration,
-	gardenNamespaceTargetCluster string,
+	gardenletNamespaceTargetCluster string,
 ) (
 	map[string]any,
 	error,
@@ -666,7 +670,8 @@ func PrepareGardenletChartValues(
 			gardenletConfig.GardenClientConnection,
 			seed,
 			bootstrap,
-			gardenNamespaceTargetCluster,
+			bootstrapToken,
+			gardenletNamespaceTargetCluster,
 		)
 		if err != nil {
 			return nil, err
@@ -695,6 +700,12 @@ func PrepareGardenletChartValues(
 			gardenletDeployment.PodLabels,
 		)
 	}
+
+	// gardenlet should manage Lease object in the namespace it is deployed to
+	if gardenletConfig.LeaderElection == nil {
+		gardenletConfig.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
+	}
+	gardenletConfig.LeaderElection.ResourceNamespace = gardenletNamespaceTargetCluster
 
 	// Get gardenlet chart values
 	return vp.GetGardenletChartValues(
@@ -749,7 +760,8 @@ func prepareGardenClientConnectionWithBootstrap(
 	gcc *gardenletconfigv1alpha1.GardenClientConnection,
 	seed *gardencorev1beta1.Seed,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
-	gardenNamespaceTargetCluster string,
+	bootstrapToken string,
+	gardenletNamespaceTargetCluster string,
 ) (
 	string,
 	error,
@@ -758,7 +770,7 @@ func prepareGardenClientConnectionWithBootstrap(
 	if gcc.KubeconfigSecret == nil {
 		gcc.KubeconfigSecret = &corev1.SecretReference{
 			Name:      GardenletDefaultKubeconfigSecretName,
-			Namespace: gardenNamespaceTargetCluster,
+			Namespace: gardenletNamespaceTargetCluster,
 		}
 	}
 
@@ -779,7 +791,7 @@ func prepareGardenClientConnectionWithBootstrap(
 	} else {
 		seedIsAlreadyBootstrapped, err := isAlreadyBootstrapped(ctx, targetClusterClient, gcc.KubeconfigSecret)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed checking if gardenlet is already bootstrapped: %w", err)
 		}
 
 		if seedIsAlreadyBootstrapped {
@@ -794,11 +806,11 @@ func prepareGardenClientConnectionWithBootstrap(
 	if gcc.BootstrapKubeconfig == nil {
 		gcc.BootstrapKubeconfig = &corev1.SecretReference{
 			Name:      GardenletDefaultKubeconfigBootstrapSecretName,
-			Namespace: gardenNamespaceTargetCluster,
+			Namespace: gardenletNamespaceTargetCluster,
 		}
 	}
 
-	return createBootstrapKubeconfig(ctx, gardenClient, gardenRESTConfig, obj, bootstrap, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
+	return createBootstrapKubeconfig(ctx, gardenClient, gardenRESTConfig, obj, bootstrap, bootstrapToken, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
 }
 
 // isAlreadyBootstrapped checks if the gardenlet already has a valid Garden cluster certificate through TLS bootstrapping
@@ -827,6 +839,7 @@ func createBootstrapKubeconfig(
 	gardenRESTConfig *rest.Config,
 	obj client.Object,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
+	bootstrapToken string,
 	address *string,
 	caCert []byte,
 ) (
@@ -854,26 +867,33 @@ func createBootstrapKubeconfig(
 		}
 
 	case seedmanagementv1alpha1.BootstrapToken:
-		var kind string
-		switch obj.(type) {
-		case *seedmanagementv1alpha1.ManagedSeed:
-			kind = gardenletbootstraputil.KindManagedSeed
-		case *seedmanagementv1alpha1.Gardenlet:
-			kind = gardenletbootstraputil.KindGardenlet
-		default:
-			return "", fmt.Errorf("unknown bootstrap kind for object of type %T", obj)
-		}
+		if len(bootstrapToken) != 0 {
+			bootstrapKubeconfig, err = gardenletbootstraputil.CreateGardenletKubeconfigWithToken(gardenClientRestConfig, bootstrapToken)
+			if err != nil {
+				return "", err
+			}
+		} else {
+			var kind string
+			switch obj.(type) {
+			case *seedmanagementv1alpha1.ManagedSeed:
+				kind = gardenletbootstraputil.KindManagedSeed
+			case *seedmanagementv1alpha1.Gardenlet:
+				kind = gardenletbootstraputil.KindGardenlet
+			default:
+				return "", fmt.Errorf("unknown bootstrap kind for object of type %T", obj)
+			}
 
-		var (
-			tokenID          = bootstraptoken.TokenID(metav1.ObjectMeta{Name: obj.GetName(), Namespace: obj.GetNamespace()})
-			tokenDescription = gardenletbootstraputil.Description(kind, obj.GetNamespace(), obj.GetName())
-			tokenValidity    = 24 * time.Hour
-		)
+			var (
+				tokenID          = bootstraptoken.TokenID(metav1.ObjectMeta{Name: obj.GetName(), Namespace: obj.GetNamespace()})
+				tokenDescription = gardenletbootstraputil.Description(kind, obj.GetNamespace(), obj.GetName())
+				tokenValidity    = 24 * time.Hour
+			)
 
-		// Create a kubeconfig containing a valid bootstrap token as client credentials
-		bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithBootstrapToken(ctx, gardenClient, gardenClientRestConfig, tokenID, tokenDescription, tokenValidity)
-		if err != nil {
-			return "", err
+			// Create a kubeconfig containing a valid bootstrap token as client credentials
+			bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithBootstrapToken(ctx, gardenClient, gardenClientRestConfig, tokenID, tokenDescription, tokenValidity)
+			if err != nil {
+				return "", err
+			}
 		}
 	}
 

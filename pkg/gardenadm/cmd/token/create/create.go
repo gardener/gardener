@@ -28,7 +28,7 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create [token]",
-		Short: "Create a bootstrap token on the cluster for joining a node",
+		Short: "Create a bootstrap token on the cluster for joining a node or connecting a Shoot to Gardener",
 		Long: `The [token] is the bootstrap token to be created on the cluster.
 This token is used for securely authenticating nodes or clients to the cluster.
 It must follow the format "[a-z0-9]{6}.[a-z0-9]{16}" to ensure compatibility with Kubernetes bootstrap token requirements.
@@ -37,10 +37,13 @@ If no [token] is provided, gardenadm will automatically generate a secure random
 		Example: `# Create a bootstrap token with a specific ID and secret
 gardenadm token create foo123.bar4567890baz123
 
-# Create a bootstrap token with a specific ID and secret and directly print the gardenadm join command
+# Create a bootstrap token with a specific ID and secret and directly print the 'gardenadm join' command for joining a node
 gardenadm token create foo123.bar4567890baz123 --print-join-command
 
-# Generate a random bootstrap token for joining a node
+# Create a bootstrap token with a specific ID and secret and directly print the 'gardenadm connect' command for connecting a Shoot to Gardener
+gardenadm token create foo123.bar4567890baz123 --print-connect-command --shoot-namespace=garden --shoot-name=root
+
+# Generate a random bootstrap token
 gardenadm token create`,
 
 		Args: cobra.MaximumNArgs(1),
@@ -84,16 +87,20 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed creating a bootstrap token secret: %w", err)
 	}
 
-	if !opts.PrintJoinCommand {
-		fmt.Fprintln(opts.Out, bootstraptoken.FromSecretData(secret.Data))
-		return nil
-	}
+	switch {
+	case opts.PrintJoinCommand:
+		output, err := printJoinCommand(ctx, opts, clientSet, secret)
+		if err != nil {
+			return fmt.Errorf("failed computing join command: %w", err)
+		}
+		fmt.Fprint(opts.Out, output)
 
-	output, err := printJoinCommand(ctx, opts, clientSet, secret)
-	if err != nil {
-		return fmt.Errorf("failed computing join command: %w", err)
+	case opts.PrintConnectCommand:
+		fmt.Fprint(opts.Out, printConnectCommand(clientSet, secret))
+
+	default:
+		fmt.Fprintln(opts.Out, bootstraptoken.FromSecretData(secret.Data))
 	}
-	fmt.Fprint(opts.Out, output)
 
 	return nil
 }
@@ -123,4 +130,13 @@ func printJoinCommand(ctx context.Context, opts *Options, clientSet kubernetes.I
 		gardenerNodeAgentSecret.Name,
 		clientSet.RESTConfig().Host,
 	), nil
+}
+
+func printConnectCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret) string {
+	return fmt.Sprintf(`gardenadm connect --bootstrap-token %s --ca-certificate "%s" %s
+`,
+		bootstraptoken.FromSecretData(bootstrapTokenSecret.Data),
+		utils.EncodeBase64(clientSet.RESTConfig().CAData),
+		clientSet.RESTConfig().Host,
+	)
 }

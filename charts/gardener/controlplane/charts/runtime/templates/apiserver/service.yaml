@@ -11,7 +11,7 @@ metadata:
   labels:
     app: gardener
     role: apiserver
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" | trunc 32 }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
     {{- if and .Values.global.apiserver.service.topologyAwareRouting.enabled (semverCompare "< 1.32-0" .Capabilities.KubeVersion.Version) }}

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -302,7 +303,12 @@ func NewClientSetFromFile(kubeconfigPath string, scheme *runtime.Scheme) (kubern
 
 // CreateClientSet creates a client set for the control plane.
 func (b *AutonomousBotanist) CreateClientSet(ctx context.Context) (kubernetes.Interface, error) {
-	clientSet, err := NewClientSetFromFile(PathKubeconfig, kubernetes.SeedScheme)
+	pathKubeconfig := PathKubeconfig
+	if path := os.Getenv("KUBECONFIG"); path != "" {
+		pathKubeconfig = path
+	}
+
+	clientSet, err := NewClientSetFromFile(pathKubeconfig, kubernetes.SeedScheme)
 	if err != nil {
 		b.Logger.Info("Waiting for kube-apiserver to start", "error", err.Error())
 		return nil, fmt.Errorf("failed creating client set: %w", err)

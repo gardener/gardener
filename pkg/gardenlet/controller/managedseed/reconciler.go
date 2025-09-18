@@ -162,10 +162,10 @@ func (r *Reconciler) newActuator(ctx context.Context, shoot *gardencorev1beta1.S
 		DeleteGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error {
 			return targetChartApplier.DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, r.GardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
 		},
-		Clock:                 r.Clock,
-		ValuesHelper:          gardenletdeployer.NewValuesHelper(&r.Config),
-		Recorder:              r.Recorder,
-		GardenNamespaceTarget: r.GardenNamespaceShoot,
+		Clock:                    r.Clock,
+		ValuesHelper:             gardenletdeployer.NewValuesHelper(&r.Config),
+		Recorder:                 r.Recorder,
+		GardenletNamespaceTarget: r.GardenNamespaceShoot,
 	}, nil
 }
 

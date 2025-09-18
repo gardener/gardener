@@ -132,10 +132,10 @@ var _ = Describe("Interface", func() {
 			DeleteGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error {
 				return targetChartApplier.DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, namespace, "gardenlet", kubernetes.Values(values))
 			},
-			Clock:                 clock.RealClock{},
-			ValuesHelper:          vh,
-			Recorder:              recorder,
-			GardenNamespaceTarget: namespace,
+			Clock:                    clock.RealClock{},
+			ValuesHelper:             vh,
+			Recorder:                 recorder,
+			GardenletNamespaceTarget: namespace,
 		}
 
 		ctx = context.TODO()
@@ -514,7 +514,7 @@ var _ = Describe("Interface", func() {
 				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
@@ -540,7 +540,7 @@ var _ = Describe("Interface", func() {
 
 				It("should return error when backup secret does not exist", func() {
 					expectCheckSeedSpec()
-					recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+					recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 					expectCreateGardenNamespace()
 					recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 
@@ -558,7 +558,7 @@ var _ = Describe("Interface", func() {
 
 					expectGetSeed(false)
 					expectCheckSeedSpec()
-					recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+					recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 					expectCreateGardenNamespace()
 					recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 
@@ -592,7 +592,7 @@ var _ = Describe("Interface", func() {
 
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
@@ -618,7 +618,7 @@ var _ = Describe("Interface", func() {
 				expectDeleteKubeconfigSecret()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
@@ -652,7 +652,7 @@ var _ = Describe("Interface", func() {
 				})
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
@@ -677,7 +677,7 @@ var _ = Describe("Interface", func() {
 
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
@@ -708,7 +708,7 @@ var _ = Describe("Interface", func() {
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap)", func() {
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
@@ -732,7 +732,7 @@ var _ = Describe("Interface", func() {
 
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
@@ -757,7 +757,7 @@ var _ = Describe("Interface", func() {
 				expectDeleteKubeconfigSecret()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
@@ -790,7 +790,7 @@ var _ = Describe("Interface", func() {
 				})
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
@@ -814,7 +814,7 @@ var _ = Describe("Interface", func() {
 
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
