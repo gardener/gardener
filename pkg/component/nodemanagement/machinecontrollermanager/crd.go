@@ -9,7 +9,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/crddeployer"
 )
@@ -26,12 +25,12 @@ var (
 )
 
 // NewCRD can be used to deploy the CRD definitions for the machine-controller-manager.
-func NewCRD(client client.Client, applier kubernetes.Applier) (component.DeployWaiter, error) {
+func NewCRD(client client.Client) (component.DeployWaiter, error) {
 	crdResources := []string{
 		machineClassCRD,
 		machineDeploymentCRD,
 		machineSetCRD,
 		machineCRD,
 	}
-	return crddeployer.New(client, applier, crdResources, true)
+	return crddeployer.New(client, crdResources, true)
 }
