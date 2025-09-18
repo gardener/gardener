@@ -507,6 +507,16 @@
       enabled: false,
     },
     {
+      // Ignore major updates of go.yaml.in/yaml/v2 (https://github.com/gardener/gardener/issues/12838).
+      matchPackageNames: [
+        'go.yaml.in/yaml/v2',
+      ],
+      matchUpdateTypes: [
+        'major',
+      ],
+      enabled: false,
+    },
+    {
       // Enable specific paths which have been disabled by the previous rule.
       matchFileNames: [
         'pkg/provider-local/node/*',
