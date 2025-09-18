@@ -379,6 +379,7 @@ type SeedSettingLoadBalancerServicesZonalIngress struct {
 	// Enabled controls whether seed ingress gateways are deployed in each availability zone.
 	// Defaults to true, which provisions an ingress gateway load balancer for each availability zone.
 	// When disabled, only a single ingress gateway is deployed.
+	// See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zonal-ingress.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty" protobuf:"bytes,1,opt,name=enabled"`
 }
@@ -434,7 +435,7 @@ type SeedSettingDependencyWatchdogProber struct {
 }
 
 // SeedSettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
-// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
+
 type SeedSettingTopologyAwareRouting struct {
 	// Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.
 	// These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.
