@@ -308,7 +308,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			Service: &admissionregistrationv1.ServiceReference{
 				Name:      druidServiceName,
 				Namespace: b.namespace,
-				Path:      ptr.To[string]("/webhooks/etcdcomponents"),
+				Path:      ptr.To("/webhooks/etcdcomponents"),
 				Port:      ptr.To[int32](webhookServerServicePort),
 			},
 			CABundle: caSecret.Data[secretsutils.DataKeyCertificateBundle],

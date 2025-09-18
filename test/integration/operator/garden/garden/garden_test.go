@@ -18,11 +18,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -162,10 +160,7 @@ var _ = Describe("Garden controller tests", func() {
 		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &extensionsv1alpha1.Extension{} }}).AddToManager(mgr)).To(Succeed())
 
 		// Etcd and Extension CRDs are not available from the start, so we need to deploy them manually at first, so the operation annotation controllers can start.
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
-		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
-		applier := kubernetes.NewApplier(testClient, mapper)
-		deployer, err := etcd.NewCRD(testClient, applier, semver.MustParse("1.30"))
+		deployer, err := etcd.NewCRD(testClient, semver.MustParse("1.30"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.OpWait(deployer).Deploy(ctx)).To(Succeed())
 

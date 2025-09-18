@@ -12,7 +12,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/crddeployer"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -37,20 +36,18 @@ func init() {
 type vpaCRD struct {
 	component.DeployWaiter
 
-	applier  kubernetes.Applier
 	registry *managedresources.Registry
 }
 
 // NewCRD can be used to deploy the CRD definitions for the Kubernetes Vertical Pod Autoscaler.
-func NewCRD(client client.Client, applier kubernetes.Applier, registry *managedresources.Registry) (component.DeployWaiter, error) {
-	crdDeployer, err := crddeployer.New(client, applier, slices.Sorted(maps.Values(crdResources)), false)
+func NewCRD(client client.Client, registry *managedresources.Registry) (component.DeployWaiter, error) {
+	crdDeployer, err := crddeployer.New(client, slices.Sorted(maps.Values(crdResources)), false)
 	if err != nil {
 		return nil, err
 	}
 
 	return &vpaCRD{
 		DeployWaiter: crdDeployer,
-		applier:      applier,
 		registry:     registry,
 	}, nil
 }

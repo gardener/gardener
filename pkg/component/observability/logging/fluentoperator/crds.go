@@ -9,7 +9,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/crddeployer"
 )
@@ -44,7 +43,7 @@ var (
 )
 
 // NewCRDs can be used to deploy Fluent Operator CRDs.
-func NewCRDs(client client.Client, applier kubernetes.Applier) (component.DeployWaiter, error) {
+func NewCRDs(client client.Client) (component.DeployWaiter, error) {
 	resources := []string{
 		fluentBitClusterFilterCRD,
 		fluentBitClusterFBConfigCRD,
@@ -60,5 +59,5 @@ func NewCRDs(client client.Client, applier kubernetes.Applier) (component.Deploy
 		fluentBitClusterMultilineParserCRD,
 		fluentBitMultilineParserCRD,
 	}
-	return crddeployer.New(client, applier, resources, false)
+	return crddeployer.New(client, resources, false)
 }
