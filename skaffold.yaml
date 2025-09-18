@@ -889,15 +889,6 @@ resourceSelector:
     - groupKind: CloudProfile.core.gardener.cloud
       image:
         - .*
-profiles:
-  - name: dual
-    activation:
-      - env: IPFAMILY=dual
-    manifests:
-      kustomize:
-        paths:
-          - example/provider-local/garden/skaffold-dual
-          - example/provider-local/seed-kind/skaffold
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
