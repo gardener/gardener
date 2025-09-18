@@ -12,14 +12,11 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/crddeployer"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -31,12 +28,12 @@ import (
 var _ = Describe("CRD", func() {
 	var (
 		ctx        context.Context
-		applier    kubernetes.Applier
 		testClient client.Client
 
 		readyCRD = &apiextensionsv1.CustomResourceDefinition{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "myresources.mygroup.example.com",
+				Name:            "myresources.mygroup.example.com",
+				ResourceVersion: "",
 			},
 			Status: apiextensionsv1.CustomResourceDefinitionStatus{
 				Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
@@ -49,6 +46,8 @@ var _ = Describe("CRD", func() {
 		crd1            string
 		crd1Name        string
 		crd2            string
+		crd3            string
+		crd3Name        string
 		confirmationCRD string
 		crd1Ready       string
 
@@ -75,6 +74,22 @@ kind: CustomResourceDefinition
 metadata:
     name: yourresources.mygroup.example.com`
 
+		crd3Name = "foo.gardener.cloud"
+		crd3 = `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ` + crd3Name + `
+spec:
+  group: gardener.cloud
+  names:
+    kind: foo
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+`
+
 		crd1Ready = `apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -87,12 +102,13 @@ status:
       status: "True"`
 
 		testClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
-		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
-		applier = kubernetes.NewApplier(testClient, mapper)
-		crdDeployer, err = New(testClient, applier, []string{crd1, crd2}, false)
+		crdDeployer, err = New(testClient, []string{crd1, crd2}, false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(crdDeployer).ToNot(BeNil())
+
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, readyCRD)).To(Or(Succeed(), matchers.BeNotFoundError()))
+		})
 	})
 
 	Describe("#Deploy", func() {
@@ -103,6 +119,45 @@ status:
 
 			Expect(testClient.Get(ctx, client.ObjectKey{Name: readyCRD.Name}, actualCRD)).To(Succeed())
 			Expect(actualCRD.Name).To(Equal(readyCRD.Name))
+		})
+
+		It("should update an existing CRD", func() {
+			crdDeployer, err := New(testClient, []string{crd3}, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(crdDeployer).ToNot(BeNil())
+
+			actualCRD := &apiextensionsv1.CustomResourceDefinition{}
+
+			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+
+			Expect(testClient.Get(ctx, client.ObjectKey{Name: crd3Name}, actualCRD)).To(Succeed())
+			Expect(actualCRD.Name).To(Equal(crd3Name))
+
+			crd3Updated := `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ` + crd3Name + `
+spec:
+  group: gardener.cloud
+  names:
+    kind: foo
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+`
+
+			crdDeployer, err = New(testClient, []string{crd3Updated}, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(crdDeployer).ToNot(BeNil())
+
+			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+
+			Expect(testClient.Get(ctx, client.ObjectKey{Name: crd3Name}, actualCRD)).To(Succeed())
+			Expect(actualCRD.Name).To(Equal(crd3Name))
+			Expect(actualCRD.Spec.Versions).To(HaveLen(1))
+			Expect(actualCRD.Spec.Versions[0].Name).To(Equal("v1beta1"))
 		})
 	})
 
@@ -133,8 +188,8 @@ status:
 			ctrl.Finish()
 		})
 
-		It("should not destroy CRDs when CRDDeployer has confirmDeletion set to false", func() {
-			crdDeployer, err := New(mockClient, applier, []string{confirmationCRD}, false)
+		It("should destroy CRDs when CRDDeployer has confirmDeletion set to false", func() {
+			crdDeployer, err := New(mockClient, []string{confirmationCRD}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).NotTo(BeNil())
 
@@ -144,7 +199,7 @@ status:
 		})
 
 		It("should destroy CRDs when CRDDeployer has confirmDeletion set to true", func() {
-			crdDeployer, err := New(mockClient, applier, []string{confirmationCRD}, true)
+			crdDeployer, err := New(mockClient, []string{confirmationCRD}, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).NotTo(BeNil())
 
@@ -164,11 +219,12 @@ status:
 
 	Describe("#Wait", func() {
 		It("should return true because the CRD is ready", func() {
-			// Use a CRDDeployer that deploys a CRD that already has the ready status
-			crdDeployer, err := New(testClient, applier, []string{crd1Ready}, false)
+			crdDeployer, err := New(testClient, []string{crd1Ready}, false)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+			// Create a CRD that already has the ready status
+			readyCRD.ResourceVersion = ""
+			Expect(testClient.Create(ctx, readyCRD)).To(Succeed())
 
 			Expect(crdDeployer.Wait(ctx)).To(Succeed())
 		})

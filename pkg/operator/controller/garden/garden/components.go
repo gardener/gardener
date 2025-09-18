@@ -40,7 +40,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
@@ -152,7 +151,6 @@ func (r *Reconciler) instantiateComponents(
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
-	applier kubernetes.Applier,
 	wildcardCertSecret *corev1.Secret,
 	enableSeedAuthorizer bool,
 	extensionList *operatorv1alpha1.ExtensionList,
@@ -166,35 +164,35 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// crds
-	c.etcdCRD, err = etcd.NewCRD(r.RuntimeClientSet.Client(), applier, r.RuntimeVersion)
+	c.etcdCRD, err = etcd.NewCRD(r.RuntimeClientSet.Client(), r.RuntimeVersion)
 	if err != nil {
 		return
 	}
-	c.vpaCRD, err = vpa.NewCRD(r.RuntimeClientSet.Client(), applier, nil)
+	c.vpaCRD, err = vpa.NewCRD(r.RuntimeClientSet.Client(), nil)
 	if err != nil {
 		return
 	}
-	c.istioCRD, err = istio.NewCRD(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Applier())
+	c.istioCRD, err = istio.NewCRD(r.RuntimeClientSet.Client())
 	if err != nil {
 		return
 	}
-	c.fluentCRD, err = fluentoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	c.fluentCRD, err = fluentoperator.NewCRDs(r.RuntimeClientSet.Client())
 	if err != nil {
 		return
 	}
-	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client())
 	if err != nil {
 		return
 	}
-	c.openTelemetryCRD, err = oteloperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	c.openTelemetryCRD, err = oteloperator.NewCRDs(r.RuntimeClientSet.Client())
 	if err != nil {
 		return
 	}
-	c.extensionCRD, err = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), applier, true, false)
+	c.extensionCRD, err = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), true, false)
 	if err != nil {
 		return
 	}
-	c.persesCRD, err = persesoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	c.persesCRD, err = persesoperator.NewCRDs(r.RuntimeClientSet.Client())
 	if err != nil {
 		return
 	}

@@ -150,7 +150,6 @@ func (r *Reconciler) reconcile(
 		garden,
 		secretsManager,
 		targetVersion,
-		kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()),
 		wildcardCert,
 		enableSeedAuthorizer,
 		extensionList,
