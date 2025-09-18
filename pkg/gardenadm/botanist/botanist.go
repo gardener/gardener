@@ -26,6 +26,7 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/bastion"
@@ -95,7 +96,7 @@ func NewAutonomousBotanistFromManifests(
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", dir, err)
 	}
 
-	extensions, err := ComputeExtensions(resources, runsControlPlane)
+	extensions, err := ComputeExtensions(resources, runsControlPlane, v1beta1helper.HasManagedInfrastructure(resources.Shoot))
 	if err != nil {
 		return nil, fmt.Errorf("failed computing extensions: %w", err)
 	}

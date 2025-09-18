@@ -215,7 +215,7 @@ func requiredExtensions(ctx context.Context, c client.Client, shoot *gardencorev
 		return nil, fmt.Errorf("failed adding ControllerDeployments: %w", err)
 	}
 
-	return botanist.ComputeExtensions(resources, runsControlPlane)
+	return botanist.ComputeExtensions(resources, true, runsControlPlane)
 }
 
 func getAndExportObject(ctx context.Context, c client.Client, fs afero.Afero, opts *Options, kind string, obj client.Object) error {
