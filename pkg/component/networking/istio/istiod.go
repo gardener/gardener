@@ -370,16 +370,6 @@ func (i *istiod) Destroy(ctx context.Context) error {
 		}
 	}
 
-	for _, istioIngressGateway := range i.values.IngressGateway {
-		if err := i.client.Delete(ctx, &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: istioIngressGateway.Namespace,
-			},
-		}); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
