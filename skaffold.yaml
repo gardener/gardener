@@ -609,14 +609,6 @@ profiles:
           - apply
           - -f
           - example/provider-extensions/garden/controlplane/domain-secrets.yaml
-  - name: dual
-    activation:
-      - env: IPFAMILY=dual
-    patches:
-      - op: add
-        path: /deploy/helm/releases/0/setValues
-        value:
-          global.admission.service.clusterIP: fd00:10:2::1000
   - name: debug
     activation:
       - command: debug
