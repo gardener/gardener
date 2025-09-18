@@ -17,13 +17,14 @@ type Config struct {
 	APIServerCAData    *string `yaml:"apiServerCaData,omitempty"`
 	MaxRequestBodySize string  `yaml:"maxRequestBodySize"`
 
-	ReadinessProbe        ReadinessProbe         `yaml:"readinessProbe"`
-	UnreachableSeeds      UnreachableSeeds       `yaml:"unreachableSeeds"`
-	ContentSecurityPolicy *ContentSecurityPolicy `yaml:"contentSecurityPolicy,omitempty"`
-	Terminal              *Terminal              `yaml:"terminal,omitempty"`
-	OIDC                  *OIDC                  `yaml:"oidc,omitempty"`
-	GitHub                *GitHub                `yaml:"gitHub,omitempty"`
-	Frontend              map[string]any         `yaml:"frontend,omitempty"`
+	ReadinessProbe          ReadinessProbe         `yaml:"readinessProbe"`
+	UnreachableSeeds        UnreachableSeeds       `yaml:"unreachableSeeds"`
+	WebsocketAllowedOrigins []string               `yaml:"websocketAllowedOrigins,omitempty"`
+	ContentSecurityPolicy   *ContentSecurityPolicy `yaml:"contentSecurityPolicy,omitempty"`
+	Terminal                *Terminal              `yaml:"terminal,omitempty"`
+	OIDC                    *OIDC                  `yaml:"oidc,omitempty"`
+	GitHub                  *GitHub                `yaml:"gitHub,omitempty"`
+	Frontend                map[string]any         `yaml:"frontend,omitempty"`
 }
 
 // ReadinessProbe is the readiness probe configuration.
