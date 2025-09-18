@@ -130,7 +130,7 @@ var _ = Describe("#Wait", func() {
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 		delete(expected.Annotations, v1beta1constants.GardenerOperation)
 		expected.Status.LastErrors = []druidcorev1alpha1.LastError{}
-		expected.Status.ObservedGeneration = ptr.To[int64](expected.Generation)
+		expected.Status.ObservedGeneration = ptr.To(expected.Generation)
 		expected.Status.Conditions = []druidcorev1alpha1.Condition{
 			{
 				Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,

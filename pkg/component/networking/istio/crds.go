@@ -9,7 +9,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/crddeployer"
 )
@@ -22,7 +21,6 @@ var (
 // NewCRD can be used to deploy istio CRDs.
 func NewCRD(
 	client client.Client,
-	applier kubernetes.Applier,
 ) (component.DeployWaiter, error) {
-	return crddeployer.New(client, applier, []string{crds}, false)
+	return crddeployer.New(client, []string{crds}, false)
 }

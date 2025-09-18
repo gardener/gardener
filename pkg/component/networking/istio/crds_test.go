@@ -43,7 +43,7 @@ var _ = Describe("#CRDs", func() {
 		applier := kubernetes.NewApplier(c, mapper)
 		Expect(applier).NotTo(BeNil(), "should return applier")
 
-		crd, err = NewCRD(c, applier)
+		crd, err = NewCRD(c)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
