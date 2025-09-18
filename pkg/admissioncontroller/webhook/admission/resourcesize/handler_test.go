@@ -22,15 +22,18 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 )
 
@@ -212,7 +215,26 @@ var _ = Describe("handler", func() {
 		logBuffer = gbytes.NewBuffer()
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer)), logzap.Level(zapcore.Level(0)))
 
-		handler = &Handler{Logger: log, Config: config()}
+		// Create a REST mapper that includes Gardener resources
+		restMapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{
+			corev1.SchemeGroupVersion,
+			gardencorev1beta1.SchemeGroupVersion,
+		})
+
+		// Add Seed resource mappings
+		restMapper.Add(schema.GroupVersionKind{
+			Group:   "core.gardener.cloud",
+			Version: "v1beta1",
+			Kind:    "Seed",
+		}, meta.RESTScopeRoot)
+
+		fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithRESTMapper(restMapper).Build()
+		handler = &Handler{
+			Logger:     log,
+			Config:     config(),
+			Client:     fakeClient,
+			RESTMapper: fakeClient.RESTMapper(),
+		}
 
 		testEncoder = &json.Serializer{}
 		request = admission.Request{}
