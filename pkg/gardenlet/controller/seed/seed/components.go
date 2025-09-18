@@ -138,39 +138,39 @@ func (r *Reconciler) instantiateComponents(
 	err error,
 ) {
 	// crds
-	c.machineCRD, err = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.machineCRD, err = machinecontrollermanager.NewCRD(r.SeedClientSet.Client())
 	if err != nil {
 		return
 	}
-	c.extensionCRD, err = extensioncrds.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), !seedIsGarden, true)
+	c.extensionCRD, err = extensioncrds.NewCRD(r.SeedClientSet.Client(), !seedIsGarden, true)
 	if err != nil {
 		return
 	}
-	c.etcdCRD, err = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), r.SeedVersion)
+	c.etcdCRD, err = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedVersion)
 	if err != nil {
 		return
 	}
-	c.istioCRD, err = istio.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.istioCRD, err = istio.NewCRD(r.SeedClientSet.Client())
 	if err != nil {
 		return
 	}
-	c.vpaCRD, err = vpa.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), nil)
+	c.vpaCRD, err = vpa.NewCRD(r.SeedClientSet.Client(), nil)
 	if err != nil {
 		return
 	}
-	c.fluentCRD, err = fluentoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.fluentCRD, err = fluentoperator.NewCRDs(r.SeedClientSet.Client())
 	if err != nil {
 		return
 	}
-	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.SeedClientSet.Client())
 	if err != nil {
 		return
 	}
-	c.openTelemetryCRD, err = oteloperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.openTelemetryCRD, err = oteloperator.NewCRDs(r.SeedClientSet.Client())
 	if err != nil {
 		return
 	}
-	c.persesCRD, err = persesoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.persesCRD, err = persesoperator.NewCRDs(r.SeedClientSet.Client())
 	if err != nil {
 		return
 	}

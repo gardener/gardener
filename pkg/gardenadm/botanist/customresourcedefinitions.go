@@ -22,27 +22,27 @@ import (
 
 // ReconcileCustomResourceDefinitions reconciles the custom resource definitions.
 func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Context) error {
-	vpaCRDDeployer, err := vpa.NewCRD(b.SeedClientSet.Client(), b.SeedClientSet.Applier(), nil)
+	vpaCRDDeployer, err := vpa.NewCRD(b.SeedClientSet.Client(), nil)
 	if err != nil {
 		return fmt.Errorf("failed creating VPA CRD deployer: %w", err)
 	}
 
-	prometheusCRDDeployer, err := prometheusoperator.NewCRDs(b.SeedClientSet.Client(), b.SeedClientSet.Applier())
+	prometheusCRDDeployer, err := prometheusoperator.NewCRDs(b.SeedClientSet.Client())
 	if err != nil {
 		return fmt.Errorf("failed creating Prometheus CRD deployer: %w", err)
 	}
 
-	fluentCRDDeployer, err := fluentoperator.NewCRDs(b.SeedClientSet.Client(), b.SeedClientSet.Applier())
+	fluentCRDDeployer, err := fluentoperator.NewCRDs(b.SeedClientSet.Client())
 	if err != nil {
 		return fmt.Errorf("failed creating fluent CRD deployer: %w", err)
 	}
 
-	extensionCRDDeployer, err := extensioncrds.NewCRD(b.SeedClientSet.Client(), b.SeedClientSet.Applier(), true, true)
+	extensionCRDDeployer, err := extensioncrds.NewCRD(b.SeedClientSet.Client(), true, true)
 	if err != nil {
 		return fmt.Errorf("failed creating extension CRD deployer: %w", err)
 	}
 
-	etcdCRDDeployer, err := etcd.NewCRD(b.SeedClientSet.Client(), b.SeedClientSet.Applier(), b.Shoot.KubernetesVersion)
+	etcdCRDDeployer, err := etcd.NewCRD(b.SeedClientSet.Client(), b.Shoot.KubernetesVersion)
 	if err != nil {
 		return fmt.Errorf("failed creating etcd CRD deployer: %w", err)
 	}
@@ -59,7 +59,7 @@ func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Cont
 	// See https://github.com/gardener/gardener/pull/12152#discussion_r2101790385
 	// TODO(timebertt): distinguish between scenarios in `gardenadm init`
 	if !b.Shoot.RunsControlPlane() {
-		deployers["Machine"], err = machinecontrollermanager.NewCRD(b.SeedClientSet.Client(), b.SeedClientSet.Applier())
+		deployers["Machine"], err = machinecontrollermanager.NewCRD(b.SeedClientSet.Client())
 		if err != nil {
 			return fmt.Errorf("failed creating machine CRD deployer: %w", err)
 		}
