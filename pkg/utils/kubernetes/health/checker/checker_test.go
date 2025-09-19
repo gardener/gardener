@@ -947,6 +947,87 @@ var _ = Describe("HealthChecker", func() {
 				result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
 				Expect(result).To(BeNil())
 			})
+
+			Context("multiple managed Prometheus", func() {
+				var prometheus2 *monitoringv1.Prometheus
+
+				BeforeEach(func() {
+					managedResources = []resourcesv1alpha1.ManagedResource{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-mr",
+								Namespace: namespace,
+							},
+							Status: resourcesv1alpha1.ManagedResourceStatus{
+								Resources: []resourcesv1alpha1.ObjectReference{
+									{
+										ObjectReference: corev1.ObjectReference{
+											Kind:      monitoringv1.PrometheusesKind,
+											Name:      "testprom",
+											Namespace: namespace,
+										},
+									},
+								},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-mr-2",
+								Namespace: namespace,
+							},
+							Status: resourcesv1alpha1.ManagedResourceStatus{
+								Resources: []resourcesv1alpha1.ObjectReference{
+									{
+										ObjectReference: corev1.ObjectReference{
+											Kind:      monitoringv1.PrometheusesKind,
+											Name:      "testprom2",
+											Namespace: namespace,
+										},
+									},
+								},
+							},
+						},
+					}
+
+					prometheus2 = &monitoringv1.Prometheus{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "testprom2",
+							Namespace: namespace,
+						},
+						Spec: monitoringv1.PrometheusSpec{
+							CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+								Replicas: ptr.To(int32(3)),
+							},
+						},
+					}
+
+					Expect(fakeClient.Create(ctx, prometheus2)).To(Succeed())
+				})
+
+				It("should check for all Prometheus instances in parallel", func() {
+					checkDuration := 100 * time.Millisecond
+					testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (bool, error) {
+						time.Sleep(checkDuration)
+						return healthy()
+					}
+
+					// Validate the test input contains more than one managed Prometheus with more than one replica
+					Expect(managedResources[0].Status.Resources[0].Name).To(Equal("testprom"))
+					Expect(managedResources[1].Status.Resources[0].Name).To(Equal("testprom2"))
+					Expect(*prometheus.Spec.Replicas).To(Equal(int32(3)))
+					Expect(*prometheus2.Spec.Replicas).To(Equal(int32(3)))
+
+					// The test should take a bit more than 6 times the check duration (2 managed Prometheuses * 3 replicas each)
+					minDuration := 6 * checkDuration
+					maxDuration := minDuration + 50*time.Millisecond
+
+					start := time.Now()
+					healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+					duration := time.Since(start)
+					Expect(duration).To(BeNumerically("<", maxDuration), fmt.Sprintf("Test was slower than expected: %d ms.", duration.Milliseconds()))
+					Expect(duration).To(BeNumerically(">", minDuration), fmt.Sprintf("Test was faster than expected: %d ms.", duration.Milliseconds()))
+				})
+			})
 		})
 	})
 })
