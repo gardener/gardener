@@ -173,7 +173,7 @@ When the seed is using `WorkloadIdentity` as backup credentials, the plugin ensu
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `Seed`s.
 It maintains the `name.seed.gardener.cloud/<name>` labels for it.
-More specifically, it adds that the `name.seed.gardener.cloud/<name>=true` label where `<name>` is
+More specifically, it adds the `name.seed.gardener.cloud/<name>=true` label where `<name>` is
 - the name of the `Seed` resource (a `Seed` named `foo` will get label `name.seed.gardener.cloud/foo=true`).
 - the name of the parent `Seed` resource in case it is a `ManagedSeed` (a `Seed` named `foo` that is created by a `ManagedSeed` which references a `Shoot` running a `Seed` called `bar` will get label `name.seed.gardener.cloud/bar=true`).
 
