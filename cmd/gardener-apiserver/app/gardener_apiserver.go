@@ -389,8 +389,8 @@ func (o *Options) ApplyTo(config *apiserver.Config, kubeClient kubernetes.Interf
 	gardenerAPIServerConfig.OpenAPIV3Config.Info.Title = "Gardener"
 	gardenerAPIServerConfig.OpenAPIV3Config.Info.Version = gardenerVersion.GitVersion
 
-	// For backward-compatibility, we also have to keep serving the /openapi/v2 endpoint since kubectl < 1.27 rely on
-	// this endpoint.
+	// For backward-compatibility, we also have to keep serving the /openapi/v2 endpoint since terraform-provider-kubernetes does not support OpenAPI v3 yet.
+	// For more details, see https://github.com/hashicorp/terraform-provider-kubernetes/issues/2769.
 	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
 	gardenerAPIServerConfig.OpenAPIConfig.Info.Title = gardenerAPIServerConfig.OpenAPIV3Config.Info.Title
 	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = gardenerAPIServerConfig.OpenAPIV3Config.Info.Version
