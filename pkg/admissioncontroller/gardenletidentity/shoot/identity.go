@@ -16,7 +16,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-// UserType is used for distinguishing between clients running on am autonomous shoot cluster when authenticating
+// UserType is used for distinguishing between clients running on an autonomous shoot cluster when authenticating
 // against the garden cluster.
 type UserType string
 
