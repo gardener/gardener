@@ -28,6 +28,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -569,14 +570,21 @@ func (h *HealthChecker) CheckManagedPrometheuses(
 
 // CheckPrometheus checks the health of the given Prometheus resource.
 func (h *HealthChecker) CheckPrometheus(ctx context.Context, condition gardencorev1beta1.Condition, prometheus *monitoringv1.Prometheus) *gardencorev1beta1.Condition {
-	replicas := int(ptr.Deref(prometheus.Spec.Replicas, 1))
+	var (
+		replicas   = int(ptr.Deref(prometheus.Spec.Replicas, 1))
+		tasks      = make([]flow.TaskFn, replicas)
+		conditions = make([]*gardencorev1beta1.Condition, replicas)
+	)
+
 	for r := range replicas {
-		if condition := h.checkPrometheusReplicaHealth(ctx, condition, prometheus, r); condition != nil {
-			return condition
+		tasks[r] = func(ctx context.Context) error {
+			conditions[r] = h.checkPrometheusReplicaHealth(ctx, condition, prometheus, r)
+			return nil
 		}
 	}
 
-	return nil
+	_ = flow.Parallel(tasks...)(ctx)
+	return firstNotNil(conditions)
 }
 
 func (h *HealthChecker) checkPrometheusReplicaHealth(ctx context.Context, condition gardencorev1beta1.Condition, prometheus *monitoringv1.Prometheus, replica int) *gardencorev1beta1.Condition {
@@ -596,5 +604,14 @@ func (h *HealthChecker) checkPrometheusReplicaHealth(ctx context.Context, condit
 		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckDown", msg))
 	}
 
+	return nil
+}
+
+func firstNotNil[T any](items []*T) *T {
+	for _, c := range items {
+		if c != nil {
+			return c
+		}
+	}
 	return nil
 }
