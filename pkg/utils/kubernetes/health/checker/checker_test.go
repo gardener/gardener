@@ -1017,8 +1017,8 @@ var _ = Describe("HealthChecker", func() {
 					Expect(*prometheus.Spec.Replicas).To(Equal(int32(3)))
 					Expect(*prometheus2.Spec.Replicas).To(Equal(int32(3)))
 
-					// The test should take a bit more than 6 times the check duration (2 managed Prometheuses * 3 replicas each)
-					minDuration := 6 * checkDuration
+					// The test should take a bit more than 6 times the check duration (2 managed Prometheuses)
+					minDuration := 2 * checkDuration
 					maxDuration := minDuration + 50*time.Millisecond
 
 					start := time.Now()
