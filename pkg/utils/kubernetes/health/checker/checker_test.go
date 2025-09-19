@@ -1017,15 +1017,13 @@ var _ = Describe("HealthChecker", func() {
 					Expect(*prometheus.Spec.Replicas).To(Equal(int32(3)))
 					Expect(*prometheus2.Spec.Replicas).To(Equal(int32(3)))
 
-					// The test should take a bit more than 6 times the check duration (2 managed Prometheuses)
-					minDuration := 2 * checkDuration
-					maxDuration := minDuration + 50*time.Millisecond
+					// The test should take a bit more than the check duration
+					maxDuration := checkDuration + 50*time.Millisecond
 
 					start := time.Now()
 					healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
 					duration := time.Since(start)
 					Expect(duration).To(BeNumerically("<", maxDuration), fmt.Sprintf("Test was slower than expected: %d ms.", duration.Milliseconds()))
-					Expect(duration).To(BeNumerically(">", minDuration), fmt.Sprintf("Test was faster than expected: %d ms.", duration.Milliseconds()))
 				})
 			})
 		})
