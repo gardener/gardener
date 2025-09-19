@@ -1025,6 +1025,43 @@ var _ = Describe("HealthChecker", func() {
 					duration := time.Since(start)
 					Expect(duration).To(BeNumerically("<", maxDuration), fmt.Sprintf("Test was slower than expected: %d ms.", duration.Milliseconds()))
 				})
+
+				It("should always return the same error regardless the order of managed Prometheus", func() {
+					testPrometheusHealthChecker = func(_ context.Context, endpoint string, port int) (bool, error) {
+						Expect(port).To(Equal(9090))
+						switch endpoint {
+						case "prometheus-testprom-0.prometheus-operated.shoot--foo--bar.svc.cluster.local":
+							return healthy()
+						case "prometheus-testprom-1.prometheus-operated.shoot--foo--bar.svc.cluster.local":
+							return healthy()
+						case "prometheus-testprom-2.prometheus-operated.shoot--foo--bar.svc.cluster.local":
+							return unhealthy()
+						case "prometheus-testprom2-0.prometheus-operated.shoot--foo--bar.svc.cluster.local":
+							return healthy()
+						case "prometheus-testprom2-1.prometheus-operated.shoot--foo--bar.svc.cluster.local":
+							return unhealthy()
+						case "prometheus-testprom2-2.prometheus-operated.shoot--foo--bar.svc.cluster.local":
+							return erroring()
+						default:
+							msg := "unexpected endpoint: " + endpoint
+							defer GinkgoRecover()
+							Fail(msg)
+							return false, errors.New(msg)
+						}
+					}
+
+					result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+					Expect(result).NotTo(BeNil())
+					Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
+					Expect(result.Reason).To(Equal("PrometheusHealthCheckDown"))
+					Expect(result.Message).To(Equal("There are health issues in Prometheus pod \"shoot--foo--bar/prometheus-testprom-2\". " +
+						"Access Prometheus UI and query for \"healthcheck:alert\" for more details."))
+
+					// Change the order of managed resources and expect the same result
+					managedResources = []resourcesv1alpha1.ManagedResource{managedResources[1], managedResources[0]}
+					result2 := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+					Expect(result2).To(Equal(result))
+				})
 			})
 		})
 	})

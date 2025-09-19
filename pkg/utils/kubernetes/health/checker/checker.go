@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -559,6 +561,14 @@ func (h *HealthChecker) CheckManagedPrometheuses(
 			}
 		}
 	}
+
+	// Guarantee failed conditions are returned in a stable order to avoid too many writes to condition statuses.
+	slices.SortFunc(prometheuses, func(i, j *monitoringv1.Prometheus) int {
+		if i.Namespace == j.Namespace {
+			return strings.Compare(i.Name, j.Name)
+		}
+		return strings.Compare(i.Namespace, j.Namespace)
+	})
 
 	conditions := make([]*gardencorev1beta1.Condition, len(prometheuses))
 	for i, prometheus := range prometheuses {
