@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
+	seedidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/seed"
 	admissionwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -56,7 +56,7 @@ var (
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
 )
 
-// Handler restricts requests made by gardenlets.
+// Handler restricts requests made by seed gardenlets.
 type Handler struct {
 	Logger  logr.Logger
 	Client  client.Reader
@@ -69,6 +69,8 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 	if !isSeed {
 		return admissionwebhook.Allowed("")
 	}
+
+	log := h.Logger.WithValues("seedName", seedName, "userType", userType)
 
 	requestResource := schema.GroupResource{Group: request.Resource.Group, Resource: request.Resource.Resource}
 	switch requestResource {
@@ -98,6 +100,13 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 		return h.admitServiceAccount(ctx, seedName, userType, request)
 	case shootStateResource:
 		return h.admitShootState(ctx, seedName, request)
+	default:
+		log.Info(
+			"Unhandled resource request",
+			"group", request.Kind.Group,
+			"version", request.Kind.Version,
+			"resource", request.Resource.Resource,
+		)
 	}
 
 	return admissionwebhook.Allowed("")
