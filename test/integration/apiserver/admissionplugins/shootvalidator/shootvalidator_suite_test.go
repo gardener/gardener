@@ -243,7 +243,7 @@ var _ = BeforeSuite(func() {
 			},
 			MachineTypes: []gardencorev1beta1.MachineType{{Name: "large"}},
 			Regions:      []gardencorev1beta1.Region{{Name: "region"}},
-			Type:         "providerType",
+			Type:         "provider-type",
 		},
 	}
 	Expect(testClient.Create(ctx, cloudProfile)).To(Succeed())
@@ -275,7 +275,7 @@ var _ = BeforeSuite(func() {
 			Namespace:    testNamespace.Name,
 		},
 		Provider: &gardencorev1beta1.SecretBindingProvider{
-			Type: "providerType",
+			Type: "provider-type",
 		},
 		SecretRef: corev1.SecretReference{
 			Name:      testSecret.Name,
@@ -298,7 +298,7 @@ var _ = BeforeSuite(func() {
 		Spec: gardencorev1beta1.SeedSpec{
 			Provider: gardencorev1beta1.SeedProvider{
 				Region: "region",
-				Type:   "providerType",
+				Type:   "provider-type",
 			},
 			Ingress: &gardencorev1beta1.Ingress{
 				Domain: "seed.example.com",
