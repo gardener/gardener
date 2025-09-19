@@ -536,8 +536,8 @@ var _ = Describe("Alertmanager", func() {
 				})
 
 				It("should successfully deploy all resources", func() {
-					alertManager.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-tcp-9094"] = "allowed"
-					alertManager.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-udp-9094"] = "allowed"
+					alertManager.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-tcp-mesh-tcp"] = "allowed"
+					alertManager.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-udp-mesh-udp"] = "allowed"
 					alertManager.Spec.Replicas = ptr.To[int32](2)
 
 					Expect(managedResource).To(consistOf(
