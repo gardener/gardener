@@ -219,7 +219,7 @@ var _ = Describe("shoot", func() {
 				unmanaged := "unmanaged"
 				internalDomain := "foo"
 				s := &Shoot{
-					InternalClusterDomain: internalDomain,
+					InternalClusterDomain: ptr.To(internalDomain),
 				}
 				s.SetInfo(&gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
@@ -237,7 +237,7 @@ var _ = Describe("shoot", func() {
 			It("should return the internal domain as requested (shoot's external domain is not unmanaged)", func() {
 				internalDomain := "foo"
 				s := &Shoot{
-					InternalClusterDomain: internalDomain,
+					InternalClusterDomain: ptr.To(internalDomain),
 				}
 				s.SetInfo(&gardencorev1beta1.Shoot{})
 
@@ -247,7 +247,7 @@ var _ = Describe("shoot", func() {
 			It("should return the internal domain when shoot's external domain is not set (even if not requested)", func() {
 				internalDomain := "foo"
 				s := &Shoot{
-					InternalClusterDomain: internalDomain,
+					InternalClusterDomain: ptr.To(internalDomain),
 				}
 				s.SetInfo(&gardencorev1beta1.Shoot{})
 
@@ -301,6 +301,23 @@ var _ = Describe("shoot", func() {
 
 			It("should return false", func() {
 				Expect((&Shoot{ControlPlaneNamespace: "shoot--foo--bar"}).RunsControlPlane()).To(BeFalse())
+			})
+		})
+
+		Describe("#HasManagedInfrastructure", func() {
+			It("should return false when both CredentialsBindingName and SecretBindingName are nil", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{CredentialsBindingName: nil, SecretBindingName: nil}})
+				Expect(shoot.HasManagedInfrastructure()).To(BeFalse())
+			})
+
+			It("should return true when CredentialsBindingName is set", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{CredentialsBindingName: ptr.To("binding")}})
+				Expect(shoot.HasManagedInfrastructure()).To(BeTrue())
+			})
+
+			It("should return true when SecretBindingName is set", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SecretBindingName: ptr.To("binding")}})
+				Expect(shoot.HasManagedInfrastructure()).To(BeTrue())
 			})
 		})
 	})

@@ -966,7 +966,7 @@ var _ = Describe("Shoot", func() {
 
 	DescribeTable("#ConstructInternalClusterDomain",
 		func(shootName, shootProject, internalDomain, expected string) {
-			Expect(ConstructInternalClusterDomain(shootName, shootProject, &Domain{Domain: internalDomain})).To(Equal(expected))
+			Expect(ConstructInternalClusterDomain(shootName, shootProject, &Domain{Domain: internalDomain})).To(HaveValue(Equal(expected)))
 		},
 
 		Entry("with internal domain key", "foo", "bar", "internal.example.com", "foo.bar.internal.example.com"),
@@ -1068,6 +1068,29 @@ var _ = Describe("Shoot", func() {
 				SecretData: dnsSecretData,
 			}))
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns the unmanaged external domain for autonomous shoots", func(ctx SpecContext) {
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					DNS: &gardencorev1beta1.DNS{
+						Domain: &domain,
+					},
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{{
+							ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+						}},
+					},
+				},
+			}
+
+			Expect(ConstructExternalDomain(ctx, fakeClient, shoot, nil, nil)).To(Equal(&Domain{
+				Domain:   domain,
+				Provider: "unmanaged",
+			}))
 		})
 
 		It("returns the default domain secret", func() {
