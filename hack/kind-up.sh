@@ -508,7 +508,7 @@ if [[ "$DEPLOY_REGISTRY" == "true" ]]; then
   fi
   kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
 fi
-kubectl apply -k "$(dirname "$0")/../example/gardener-local/calico/$IPFAMILY" --server-side
+kubectl apply -k "$(dirname "$0")/../dev-setup/kind/calico/overlays/$IPFAMILY" --server-side
 kubectl apply -k "$(dirname "$0")/../example/gardener-local/metrics-server"   --server-side
 
 setup_containerd_registry_mirrors $nodes
