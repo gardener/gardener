@@ -53,6 +53,11 @@ var _ = Describe("Handler", func() {
 			Expect(handler.Default(ctx, garden)).To(Succeed())
 			Expect(garden).To(Equal(&operatorv1alpha1.Garden{
 				Spec: operatorv1alpha1.GardenSpec{
+					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Networking: operatorv1alpha1.RuntimeNetworking{
+							IPFamilies: []gardencorev1beta1.IPFamily{"IPv4"},
+						},
+					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							KubeAPIServer: defaultKubeAPIServerConfig,
@@ -76,26 +81,13 @@ var _ = Describe("Handler", func() {
 					Requests: customRequests,
 				},
 			}
-
 			Expect(handler.Default(ctx, garden)).To(Succeed())
-
-			Expect(garden).To(Equal(&operatorv1alpha1.Garden{
-				Spec: operatorv1alpha1.GardenSpec{
-					VirtualCluster: operatorv1alpha1.VirtualCluster{
-						Kubernetes: operatorv1alpha1.Kubernetes{
-							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
-								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
-									Requests: customRequests,
-									EventTTL: &metav1.Duration{Duration: time.Hour},
-									Logging: &gardencorev1beta1.APIServerLogging{
-										Verbosity: ptr.To[int32](2),
-									},
-								},
-							},
-							KubeControllerManager: &operatorv1alpha1.KubeControllerManagerConfig{
-								KubeControllerManagerConfig: &gardencorev1beta1.KubeControllerManagerConfig{},
-							},
-						},
+			Expect(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer).To(Equal(&operatorv1alpha1.KubeAPIServerConfig{
+				KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+					Requests: customRequests,
+					EventTTL: &metav1.Duration{Duration: time.Hour},
+					Logging: &gardencorev1beta1.APIServerLogging{
+						Verbosity: ptr.To[int32](2),
 					},
 				},
 			}))
@@ -110,19 +102,14 @@ var _ = Describe("Handler", func() {
 			}
 
 			garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager = customKubeControllerManagerConfig
-
 			Expect(handler.Default(ctx, garden)).To(Succeed())
+			Expect(garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager).To(Equal(customKubeControllerManagerConfig))
+		})
 
-			Expect(garden).To(Equal(&operatorv1alpha1.Garden{
-				Spec: operatorv1alpha1.GardenSpec{
-					VirtualCluster: operatorv1alpha1.VirtualCluster{
-						Kubernetes: operatorv1alpha1.Kubernetes{
-							KubeAPIServer:         defaultKubeAPIServerConfig,
-							KubeControllerManager: customKubeControllerManagerConfig,
-						},
-					},
-				},
-			}))
+		It("should not overwrite configured fields in IPFamilies", func() {
+			garden.Spec.RuntimeCluster.Networking.IPFamilies = []gardencorev1beta1.IPFamily{"foo"}
+			Expect(handler.Default(ctx, garden)).To(Succeed())
+			Expect(garden.Spec.RuntimeCluster.Networking.IPFamilies).To(Equal([]gardencorev1beta1.IPFamily{"foo"}))
 		})
 	})
 })

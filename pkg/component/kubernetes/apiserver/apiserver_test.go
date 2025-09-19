@@ -3505,6 +3505,7 @@ kind: AuthorizationConfiguration
 						"--client-ca-file=/srv/kubernetes/ca-client/bundle.crt",
 						"--enable-aggregator-routing=true",
 						"--enable-bootstrap-token-auth=true",
+						"--bind-address=::",
 						"--http2-max-streams-per-connection=1000",
 						"--etcd-cafile=/srv/kubernetes/etcd/ca/bundle.crt",
 						"--etcd-certfile=/srv/kubernetes/etcd/client/tls.crt",
