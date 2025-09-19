@@ -314,7 +314,7 @@ var _ = Describe("Network validation tests", func() {
 			))
 		})
 
-		It("should not allow to update from [IPv4 IPv6] to [IPv6]", func() {
+		It("should not allow to update from [IPv4, IPv6] to [IPv6]", func() {
 			network.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4, extensionsv1alpha1.IPFamilyIPv6}
 			newNetwork := prepareNetworkForUpdate(network)
 			newNetwork.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6}
@@ -339,7 +339,7 @@ var _ = Describe("Network validation tests", func() {
 			))
 		})
 
-		It("should allow to update from [IPv4 IPv6] to [IPv4]", func() {
+		It("should allow to update from [IPv4, IPv6] to [IPv4]", func() {
 			network.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4, extensionsv1alpha1.IPFamilyIPv6}
 			newNetwork := prepareNetworkForUpdate(network)
 			newNetwork.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4}

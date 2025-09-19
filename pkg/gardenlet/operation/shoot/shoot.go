@@ -521,7 +521,10 @@ func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *gardenletconfigv1alpha1.Gar
 	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(c)
 }
 
-func sortByIPFamilies(ipfamilies []gardencorev1beta1.IPFamily, cidrs []net.IPNet) []net.IPNet {
+// SortByIPFamilies sorts a slice of CIDRs according to the specified IP family order.
+// For dual-stack configurations, CIDRs are ordered by the IP family preference.
+// For single-stack configurations, matching CIDRs are placed first, followed by non-matching CIDRs.
+func SortByIPFamilies(ipfamilies []gardencorev1beta1.IPFamily, cidrs []net.IPNet) []net.IPNet {
 	if len(ipfamilies) == 0 || len(cidrs) == 0 {
 		return cidrs
 	}
@@ -606,22 +609,22 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Pods, pods, "pod"); err != nil {
 			return nil, err
 		} else {
-			pods = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
+			pods = SortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
 		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Services, services, "service"); err != nil {
 			return nil, err
 		} else {
-			services = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
+			services = SortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
 		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Nodes, nodes, "node"); err != nil {
 			return nil, err
 		} else {
-			nodes = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
+			nodes = SortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
 		if result, err := copyUniqueCIDRs(shoot.Status.Networking.EgressCIDRs, egressCIDRs, "egressCIDRs"); err != nil {
 			return nil, err
 		} else {
-			egressCIDRs = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
+			egressCIDRs = SortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
 	}
 
@@ -630,8 +633,6 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 	if condition != nil &&
 		((condition.Status != gardencorev1beta1.ConditionTrue && len(shoot.Spec.Networking.IPFamilies) == 2) ||
 			(condition.Status == gardencorev1beta1.ConditionTrue && len(shoot.Spec.Networking.IPFamilies) == 1)) {
-
-		// if condition != nil && condition.Status != gardencorev1beta1.ConditionTrue {
 		nodes = getPrimaryCIDRs(nodes, shoot.Spec.Networking.IPFamilies)
 		services = getPrimaryCIDRs(services, shoot.Spec.Networking.IPFamilies)
 		pods = getPrimaryCIDRs(pods, shoot.Spec.Networking.IPFamilies)
