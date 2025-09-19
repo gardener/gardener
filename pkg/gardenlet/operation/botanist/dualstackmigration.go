@@ -198,9 +198,9 @@ func (b *Botanist) UpdateDualStackMigrationConditionIfNeeded(ctx context.Context
 	}
 
 	if constraint := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady); constraint == nil {
-		network, err := b.Shoot.Components.Extensions.Network.Get(ctx)
-		if err != nil {
-			return nil
+		network, _ := b.Shoot.Components.Extensions.Network.Get(ctx)
+		if network == nil {
+			return nil // Network not yet created, nothing to do
 		}
 		networkReadyForDualStackMigration := len(network.Status.IPFamilies) == len(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 		updateFunction := b.DetermineUpdateFunction(networkReadyForDualStackMigration, nodeList)
