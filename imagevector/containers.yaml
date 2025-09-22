@@ -801,7 +801,7 @@ images:
     resourceId:
       version-template:
         type: 'jq'
-        expr: '.tag | ltrimstr("distroless")' # must yield single, semver-compliant, str
+        expr: '.tag | ltrimstr("distroless-")' # must yield single, semver-compliant, str
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
