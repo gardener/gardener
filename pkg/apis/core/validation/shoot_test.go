@@ -2357,7 +2357,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
-					Entry("valid (\"\"/secrets=0)", &core.WatchCacheSizes{
+					Entry("valid (API group empty)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To(""),
 							Resource:  "secrets",
@@ -2378,7 +2378,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
-					Entry("invalid (core/resource empty)", &core.WatchCacheSizes{
+					Entry("invalid (resource empty)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "",
 							CacheSize: 42,
@@ -2386,7 +2386,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
 					)),
-					Entry("invalid (core/resource name with casing)", &core.WatchCacheSizes{
+					Entry("invalid (resource with casing)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "Secrets",
 							CacheSize: 42,
@@ -2435,7 +2435,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
 					)),
-					Entry("invalid (apps/deployments name with casing)", &core.WatchCacheSizes{
+					Entry("invalid (api group with casing)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("Apps"),
 							Resource:  "deployments",
