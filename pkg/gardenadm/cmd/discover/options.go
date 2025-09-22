@@ -24,7 +24,7 @@ type Options struct {
 	// ShootManifest is the path to the shoot manifest file.
 	ShootManifest string
 	// ManagedInfrastructure indicates whether Gardener will manage the shoot's infrastructure (network, domains,
-	// machines, etc.) Set this to true if using "gardenadm bootstrap" for bootstrapping the shoot cluster. Set this to
+	// machines, etc.) Set this to true if using 'gardenadm bootstrap' for bootstrapping the shoot cluster. Set this to
 	// false if managing the infrastructure outside of Gardener.
 	ManagedInfrastructure bool
 }
@@ -65,5 +65,5 @@ func (o *Options) Complete() error { return o.ManifestOptions.Complete() }
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	o.ManifestOptions.AddFlags(fs)
 	fs.StringVarP(&o.Kubeconfig, "kubeconfig", "k", "", "Path to the kubeconfig file pointing to the garden cluster")
-	fs.BoolVar(&o.ManagedInfrastructure, "managed-infrastructure", true, "Indicates whether Gardener will manage the shoot's infrastructure (network, domains, machines, etc.) Set this to true if using \"gardenadm bootstrap\" for bootstrapping the shoot cluster. Set this to false if managing the infrastructure outside of Gardener.")
+	fs.BoolVar(&o.ManagedInfrastructure, "managed-infrastructure", true, "Indicates whether Gardener will manage the shoot's infrastructure (network, domains, machines, etc.) Set this to true if using 'gardenadm bootstrap' for bootstrapping the shoot cluster. Set this to false if managing the infrastructure outside of Gardener.")
 }
