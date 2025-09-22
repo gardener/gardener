@@ -22,6 +22,9 @@ spec:
   - port: 443
     protocol: TCP
     targetPort: {{ .Values.webhookConfig.serverPort }}
-  {{- if and .Values.service.topologyAwareRouting.enabled (semverCompare ">= 1.31-0" .Capabilities.KubeVersion.Version) }}
+  {{- if and .Values.service.topologyAwareRouting.enabled (semverCompare ">= 1.31-0" .Capabilities.KubeVersion.Version) (semverCompare "< 1.34-0" .Capabilities.KubeVersion.Version) }}
   trafficDistribution: PreferClose
+  {{- end }}
+  {{- if and .Values.service.topologyAwareRouting.enabled (semverCompare ">= 1.34-0" .Capabilities.KubeVersion.Version) }}
+  trafficDistribution: PreferSameZone
   {{- end }}
