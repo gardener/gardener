@@ -810,10 +810,7 @@ var _ = Describe("Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateGarden(garden, extensions)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("spec.virtualCluster.kubernetes.version"),
-				}))))
+				Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 			})
 
 			It("should forbid setting rotate-etcd-encryption-key-start annotation when k8s version is >= v1.34", func() {

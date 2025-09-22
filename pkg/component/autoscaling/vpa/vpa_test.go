@@ -2244,6 +2244,29 @@ var _ = Describe("VPA", func() {
 					valuesAdmissionController.TopologyAwareRoutingEnabled = true
 				})
 
+				When("runtime Kubernetes version is >= 1.34", func() {
+					BeforeEach(func() {
+						runtimeKubernetesVersion = semver.MustParse("1.34.0")
+					})
+
+					It("should successfully deploy with expected vpa-webhook service annotation, label and spec field", func() {
+						vpa = New(c, namespace, sm, Values{
+							ClusterType:              component.ClusterTypeShoot,
+							SecretNameServerCA:       secretNameCA,
+							RuntimeKubernetesVersion: runtimeKubernetesVersion,
+							AdmissionController:      valuesAdmissionController,
+							Recommender:              valuesRecommender,
+							Updater:                  valuesUpdater,
+						})
+						Expect(vpa.Deploy(ctx)).To(Succeed())
+
+						actual := &corev1.Service{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, actual)).To(Succeed())
+
+						Expect(actual.Spec.TrafficDistribution).To(PointTo(Equal(corev1.ServiceTrafficDistributionPreferSameZone)))
+					})
+				})
+
 				When("runtime Kubernetes version is >= 1.32", func() {
 					BeforeEach(func() {
 						runtimeKubernetesVersion = semver.MustParse("1.32.1")

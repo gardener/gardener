@@ -725,6 +725,19 @@ server:
 					topologyAwareRouting = true
 				})
 
+				When("runtime Kubernetes version is >= 1.34", func() {
+					BeforeEach(func() {
+						runtimeVersion = semver.MustParse("1.34.0")
+					})
+
+					It("should successfully deploy all resources", func() {
+						service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
+
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+					})
+				})
+
 				When("runtime Kubernetes version is >= 1.32", func() {
 					BeforeEach(func() {
 						runtimeVersion = semver.MustParse("1.32.1")
