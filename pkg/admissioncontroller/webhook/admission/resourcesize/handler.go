@@ -145,7 +145,13 @@ func (h *Handler) handleCountLimit(req admission.Request, log logr.Logger, reque
 		return nil
 	}
 
-	if h.existingResourcesExceedLimit(req, requestedResource, ptr.Deref(count, 0)) {
+	exceedsLimit, err := h.existingResourcesExceedLimit(req, requestedResource, ptr.Deref(count, 0))
+	if err != nil {
+		log.Error(err, "Failed to determine if count exceeds limit", "resource", requestedResource.String())
+		return err
+	}
+
+	if exceedsLimit {
 		if h.Config.OperationMode == nil || *h.Config.OperationMode == admissioncontrollerconfigv1alpha1.AdmissionModeBlock {
 			log.Info("Maximum resource count exceeded, rejected request", "limit", *count)
 			metrics.RejectedResources.WithLabelValues(
@@ -242,7 +248,7 @@ func (h *Handler) getKindFromGVR(gvr *metav1.GroupVersionResource) (string, erro
 	return gvk.Kind, nil
 }
 
-func (h *Handler) existingResourcesExceedLimit(_ admission.Request, gvr *metav1.GroupVersionResource, limit int64) bool {
+func (h *Handler) existingResourcesExceedLimit(_ admission.Request, gvr *metav1.GroupVersionResource, limit int64) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -252,7 +258,7 @@ func (h *Handler) existingResourcesExceedLimit(_ admission.Request, gvr *metav1.
 		// If we can't get the Kind form the GVR, allow the request to proceed
 		// This prevents the admission controller from blocking requests when there are API issues
 		h.Logger.Error(err, "Failed to determine kind from GVR", "gvr", gvr)
-		return false
+		return false, err
 	}
 
 	list := &metav1.PartialObjectMetadataList{}
@@ -267,8 +273,8 @@ func (h *Handler) existingResourcesExceedLimit(_ admission.Request, gvr *metav1.
 		// If we can't list the resources, allow the request to proceed
 		// This prevents the admission controller from blocking requests when there are API issues
 		h.Logger.Error(err, "Failed to list resources for counting", "gvr", gvr, "kind", kind)
-		return false
+		return false, err
 	}
 
-	return int64(len(list.Items)) >= limit
+	return int64(len(list.Items)) >= limit, nil
 }
