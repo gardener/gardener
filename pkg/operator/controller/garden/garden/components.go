@@ -1413,6 +1413,12 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 				Replacement:  ptr.To("https://dashboard." + ingressDomain + "/namespace/garden/shoots/$1"),
 				TargetLabel:  "shoot_dashboard_url",
 			},
+			{
+				SourceLabels: []monitoringv1.LabelName{"project", "name"},
+				Regex:        "garden;soil.*",
+				Action:       "labeldrop",
+				TargetLabel:  "shoot_dashboard_url",
+			},
 		},
 		Ingress: &prometheus.IngressValues{
 			Host:                   "prometheus-garden." + ingressDomain,
