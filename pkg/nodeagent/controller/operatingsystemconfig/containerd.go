@@ -283,6 +283,9 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 		if len(host.CACerts) > 0 {
 			hostConfig["ca"] = host.CACerts
 		}
+		if host.OverridePath != nil {
+			hostConfig["overridePath"] = *host.OverridePath
+		}
 
 		values["hostConfigs"] = append(values["hostConfigs"].([]any), hostConfig)
 	}
