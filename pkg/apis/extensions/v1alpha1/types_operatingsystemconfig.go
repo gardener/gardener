@@ -334,9 +334,15 @@ type RegistryHost struct {
 	// capable of performing. Defaults to
 	//  - pull
 	//  - resolve
+	// +optional
 	Capabilities []RegistryCapability `json:"capabilities,omitempty"`
 	// CACerts are paths to public key certificates used for TLS.
+	// +optional
 	CACerts []string `json:"caCerts,omitempty"`
+	// OverridePath sets the 'override_path' field to allow defining the API endpoint in the URL.
+	// See https://github.com/containerd/containerd/blob/cef8ce2ecb572bc8026323c0c3dfad9953b952f6/docs/hosts.md?override_path#override_path-field for more information.
+	// +optional
+	OverridePath *bool `json:"overridePath,omitempty"`
 }
 
 // CRIName is a type alias for the CRI name string.

@@ -141,6 +141,11 @@ spec:
                                         action a client can perform against a registry.
                                       type: string
                                     type: array
+                                  overridePath:
+                                    description: |-
+                                      OverridePath sets the 'override_path' field to allow defining the API endpoint in the URL.
+                                      See https://github.com/containerd/containerd/blob/cef8ce2ecb572bc8026323c0c3dfad9953b952f6/docs/hosts.md?override_path#override_path-field for more information.
+                                    type: boolean
                                   url:
                                     description: URL is the endpoint address of the
                                       registry mirror.

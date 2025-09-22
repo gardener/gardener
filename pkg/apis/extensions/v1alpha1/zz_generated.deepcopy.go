@@ -1859,6 +1859,11 @@ func (in *RegistryHost) DeepCopyInto(out *RegistryHost) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.OverridePath != nil {
+		in, out := &in.OverridePath, &out.OverridePath
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

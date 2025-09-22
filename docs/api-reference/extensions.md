@@ -4502,6 +4502,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Capabilities determine what operations a host is
 capable of performing. Defaults to
 - pull
@@ -4516,7 +4517,21 @@ capable of performing. Defaults to
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>CACerts are paths to public key certificates used for TLS.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>overridePath</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OverridePath sets the &lsquo;override_path&rsquo; field to allow defining the API endpoint in the URL.
+See <a href="https://github.com/containerd/containerd/blob/cef8ce2ecb572bc8026323c0c3dfad9953b952f6/docs/hosts.md?override_path#override_path-field">https://github.com/containerd/containerd/blob/cef8ce2ecb572bc8026323c0c3dfad9953b952f6/docs/hosts.md?override_path#override_path-field</a> for more information.</p>
 </td>
 </tr>
 </tbody>
