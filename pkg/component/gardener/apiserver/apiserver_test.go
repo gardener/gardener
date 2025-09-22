@@ -1403,7 +1403,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 
 					AfterEach(func() {
-						delete(serviceRuntime.ObjectMeta.Labels, "endpoint-slice-hints.resources.gardener.cloud/consider")
+						delete(serviceRuntime.Labels, "endpoint-slice-hints.resources.gardener.cloud/consider")
 						serviceRuntime.Spec.TrafficDistribution = nil
 					})
 				})
@@ -1429,8 +1429,8 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 
 					AfterEach(func() {
-						delete(serviceRuntime.ObjectMeta.Annotations, "service.kubernetes.io/topology-mode")
-						delete(serviceRuntime.ObjectMeta.Labels, "endpoint-slice-hints.resources.gardener.cloud/consider")
+						delete(serviceRuntime.Annotations, "service.kubernetes.io/topology-mode")
+						delete(serviceRuntime.Labels, "endpoint-slice-hints.resources.gardener.cloud/consider")
 						serviceRuntime.Spec.TrafficDistribution = nil
 					})
 				})
