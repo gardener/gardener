@@ -46,7 +46,7 @@ spec:
       automountServiceAccountToken: false
       hostAliases:
         - hostnames:
-          - api.root.garden.external.local.gardener.cloud
+          - api.root.garden.local.gardener.cloud
           ip: 10.2.0.99
       securityContext:
         seccompProfile:

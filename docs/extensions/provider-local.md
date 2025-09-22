@@ -89,9 +89,9 @@ For autonomous shoots, the controller configures the CoreDNS `template` plugin i
 
 ```yaml
 data:
-  api.root.garden.external.local.gardener.cloud.override: |
+  api.root.garden.local.gardener.cloud.override: |
     template IN A local.gardener.cloud {
-      match "^api\.root\.garden\.external\.local\.gardener\.cloud\.$"
+      match "^api\.root\.garden\.local\.gardener\.cloud\.$"
       answer "{{ .Name }} 120 IN A 10.0.130.192"
       fallthrough
     }

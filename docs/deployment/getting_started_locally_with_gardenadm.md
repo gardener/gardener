@@ -98,7 +98,7 @@ machine-0   Ready    <none>   4m11s   v1.32.0
 You can also copy the kubeconfig to your local machine and use a port-forward to connect to the cluster's API server:
 
 ```shell
-$ kubectl -n gardenadm-high-touch exec -it machine-0 -- cat /etc/kubernetes/admin.conf | sed 's/api.root.garden.external.local.gardener.cloud/localhost:6443/' > /tmp/shoot--garden--root.conf
+$ kubectl -n gardenadm-high-touch exec -it machine-0 -- cat /etc/kubernetes/admin.conf | sed 's/api.root.garden.local.gardener.cloud/localhost:6443/' > /tmp/shoot--garden--root.conf
 $ kubectl -n gardenadm-high-touch port-forward pod/machine-0 6443:443
 
 # in a new terminal
