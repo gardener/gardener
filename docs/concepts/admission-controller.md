@@ -62,7 +62,7 @@ server:
     - apiGroups: ["core.gardener.cloud"]
       apiVersions: ["*"]
       resources: ["projects"]
-      count: 20
+      count: 200
     - apiGroups: [""]
       apiVersions: ["v1"]
       resources: ["secrets"]
