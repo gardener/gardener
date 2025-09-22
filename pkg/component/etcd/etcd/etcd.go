@@ -50,6 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Class is a string type alias for etcd classes.
@@ -259,6 +260,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	clientService := &corev1.Service{}
 	gardenerutils.ReconcileTopologyAwareRoutingSettings(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
+
+	// TODO(tobschli): Remove this once once etcd druid allows PreferSameZone.
+	if e.values.TopologyAwareRoutingEnabled && versionutils.ConstraintK8sGreaterEqual134.Check(e.values.RuntimeKubernetesVersion) {
+		clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+	}
 
 	ports := []networkingv1.NetworkPolicyPort{
 		{Port: ptr.To(intstr.FromInt32(etcdconstants.PortEtcdClient)), Protocol: ptr.To(corev1.ProtocolTCP)},
