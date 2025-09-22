@@ -191,6 +191,21 @@ var _ = Describe("#Service", func() {
 			values.TopologyAwareRoutingEnabled = true
 		})
 
+		When("runtime Kubernetes version is >= 1.34", func() {
+			BeforeEach(func() {
+				values.RuntimeKubernetesVersion = semver.MustParse("1.34.0")
+			})
+
+			It("should successfully deploy with expected kube-apiserver service annotation, label and spec field", func() {
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				actual := &corev1.Service{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, actual)).To(Succeed())
+
+				Expect(actual.Spec.TrafficDistribution).To(PointTo(Equal(corev1.ServiceTrafficDistributionPreferSameZone)))
+			})
+		})
+
 		When("runtime Kubernetes version is >= 1.32", func() {
 			BeforeEach(func() {
 				values.RuntimeKubernetesVersion = semver.MustParse("1.32.1")

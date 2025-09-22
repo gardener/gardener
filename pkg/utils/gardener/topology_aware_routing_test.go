@@ -17,6 +17,27 @@ import (
 
 var _ = Describe("TopologyAwareRouting", func() {
 	Describe("#ReconcileTopologyAwareRoutingSettings", func() {
+		When("K8s version >= 1.34", func() {
+			It("should set traffic distribution field when topology-aware routing is enabled", func() {
+				service := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"service.kubernetes.io/topology-aware-hints": "auto",
+							"service.kubernetes.io/topology-mode":        "auto",
+						},
+						Labels: map[string]string{"endpoint-slice-hints.resources.gardener.cloud/consider": "true"},
+					},
+				}
+
+				ReconcileTopologyAwareRoutingSettings(service, true, semver.MustParse("1.34.0"))
+
+				Expect(service.Annotations).NotTo(HaveKey("service.kubernetes.io/topology-mode"))
+				Expect(service.Annotations).NotTo(HaveKey("service.kubernetes.io/topology-aware-hints"))
+				Expect(service.Labels).NotTo(HaveKey("endpoint-slice-hints.resources.gardener.cloud/consider"))
+				Expect(service.Spec.TrafficDistribution).To(PointTo(Equal(corev1.ServiceTrafficDistributionPreferSameZone)))
+			})
+		})
+
 		When("K8s version >= 1.32", func() {
 			It("should set traffic distribution field when topology-aware routing is enabled", func() {
 				service := &corev1.Service{
