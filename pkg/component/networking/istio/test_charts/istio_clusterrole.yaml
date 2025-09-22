@@ -6,7 +6,7 @@ metadata:
     app: istiod
     istio: pilot
 rules:
-  # sidecar injection controller Do we need it?
+  # sidecar injection controller
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["mutatingwebhookconfigurations"]
     verbs: ["get", "list", "watch", "update", "patch"]
@@ -48,7 +48,7 @@ rules:
     resources: ["endpointslices"]
     verbs: ["get", "list", "watch"]
 
-  # ingress controller TODO: is this needed???
+  # ingress controller
   - apiGroups: ["networking.k8s.io"]
     resources: ["ingresses", "ingressclasses"]
     verbs: ["get", "list", "watch"]
@@ -74,9 +74,14 @@ rules:
     verbs: ["create"]
 
   # Use for Kubernetes Service APIs
-  - apiGroups: ["gateway.networking.k8s.io"]
+  - apiGroups: ["gateway.networking.k8s.io",  "gateway.networking.x-k8s.io"]
     resources: ["*"]
     verbs: ["get", "watch", "list"]
+  - apiGroups: ["gateway.networking.x-k8s.io"]
+    resources:
+    - xbackendtrafficpolicies/status
+    - xlistenersets/status
+    verbs: ["update", "patch"]
   - apiGroups: ["gateway.networking.k8s.io"]
     resources:
     - backendtlspolicies/status
@@ -92,6 +97,12 @@ rules:
   - apiGroups: ["gateway.networking.k8s.io"]
     resources: ["gatewayclasses"]
     verbs: ["create", "update", "patch", "delete"]
+  - apiGroups: ["inference.networking.x-k8s.io"]
+    resources: ["inferencepools"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["inference.networking.x-k8s.io"]
+    resources: ["inferencepools/status"]
+    verbs: ["update", "patch"]
 
   # Needed for multicluster secret reading, possibly ingress certs in the future
   - apiGroups: [""]
@@ -119,6 +130,12 @@ rules:
   - apiGroups: ["apps"]
     verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
     resources: [ "deployments" ]
+  - apiGroups: ["autoscaling"]
+    verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
+    resources: [ "horizontalpodautoscalers" ]
+  - apiGroups: ["policy"]
+    verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
+    resources: [ "poddisruptionbudgets" ]
   - apiGroups: [""]
     verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
     resources: [ "services" ]

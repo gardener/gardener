@@ -4,7 +4,7 @@ metadata:
   name: istio-ingressgateway
   namespace: test-ingress
   labels:
-    app.kubernetes.io/version: 1.25.1
+    app.kubernetes.io/version: 1.27.1
     app: istio-ingressgateway
     foo: bar
 spec:
@@ -79,8 +79,6 @@ spec:
             limits:
               memory: 4800Mi
           env:
-          - name: JWT_POLICY
-            value: third-party-jwt
           - name: PILOT_CERT_PROVIDER
             value: istiod
           - name: CA_ADDR

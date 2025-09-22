@@ -9,7 +9,7 @@ metadata:
     service.kubernetes.io/topology-mode: "auto"
     foo: bar
   labels:
-    app.kubernetes.io/version: 1.25.1
+    app.kubernetes.io/version: 1.27.1
     endpoint-slice-hints.resources.gardener.cloud/consider: "true"
     app: istio-ingressgateway
     foo: bar
