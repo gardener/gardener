@@ -685,12 +685,8 @@ func PrepareGardenletChartValues(
 		}
 	}
 
-	if _, ok := obj.(*gardencorev1beta1.Shoot); !ok {
-		// Ensure seed config is set if we are not deploying gardenlet into an autonomous shoot cluster
-		if gardenletConfig.SeedConfig == nil {
-			gardenletConfig.SeedConfig = &gardenletconfigv1alpha1.SeedConfig{}
-		}
-		// Set the seed name
+	// Ensure seed name is set if we are not deploying gardenlet into an autonomous shoot cluster
+	if gardenletConfig.SeedConfig != nil {
 		gardenletConfig.SeedConfig.Name = obj.GetName()
 	}
 
@@ -817,12 +813,13 @@ func prepareGardenClientConnectionWithBootstrap(
 			return "", err
 		}
 	} else {
-		seedIsAlreadyBootstrapped, err := isAlreadyBootstrapped(ctx, targetClusterClient, gcc.KubeconfigSecret)
+		certificateBasedKubeconfigExists, err := isAlreadyBootstrapped(ctx, targetClusterClient, gcc.KubeconfigSecret)
 		if err != nil {
 			return "", fmt.Errorf("failed checking if gardenlet is already bootstrapped: %w", err)
 		}
 
-		if seedIsAlreadyBootstrapped {
+		if certificateBasedKubeconfigExists {
+			gcc.BootstrapKubeconfig = nil
 			return "", nil
 		}
 	}
