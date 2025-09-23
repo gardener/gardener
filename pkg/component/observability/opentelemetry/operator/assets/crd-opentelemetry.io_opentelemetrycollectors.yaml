@@ -6673,6 +6673,13 @@ spec:
                       The default is 30s, which means that if a collector becomes not Ready, the target allocator will wait for 30 seconds before reassigning its targets. The assumption is that the state is temporary, and an expensive target reallocation should be avoided if possible.
                     format: duration
                     type: string
+                  collectorTargetReloadInterval:
+                    default: 30s
+                    description: |-
+                      CollectorTargetReloadInterval defines the interval at which the Prometheus receiver will reload targets from the target allocator.
+                      The default is 30s.
+                    format: duration
+                    type: string
                   enabled:
                     description: Enabled indicates whether to use a target allocation
                       mechanism for Prometheus targets or not.
