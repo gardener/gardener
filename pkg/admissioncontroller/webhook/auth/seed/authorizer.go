@@ -216,7 +216,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorize(requestLog, seedName, graph.VertexTypeShoot, attrs,
 				withAllowedVerbs("update", "patch"),
 				withAlwaysAllowedVerbs("get", "list", "watch"),
-				withAllowedSubresources("status"),
+				withAllowedSubresources("status", "finalizers"),
 			)
 		case shootStateResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeShootState, attrs,
