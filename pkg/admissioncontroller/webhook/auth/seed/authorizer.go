@@ -106,7 +106,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorize(requestLog, seedName, graph.VertexTypeBackupBucket, attrs,
 				withAllowedVerbs("update", "patch", "delete"),
 				withAlwaysAllowedVerbs("create", "get", "list", "watch"),
-				withAllowedSubresources("status"),
+				withAllowedSubresources("status", "finalizers"),
 			)
 		case backupEntryResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeBackupEntry, attrs,
