@@ -6,6 +6,7 @@ package shoot_test
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -408,7 +409,7 @@ var _ = Describe("Shoot", func() {
 				)
 
 				BeforeEach(func() {
-					name, namespace = "foo", "bar"
+					name, namespace = "foo", shootNamespace
 					attrs = &auth.AttributesRecord{
 						User:            gardenletUser,
 						Name:            name,
@@ -455,6 +456,15 @@ var _ = Describe("Shoot", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
 					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+				})
+
+				It("should have no opinion because namespace does not match", func() {
+					attrs.Namespace = "not-allowed"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring(fmt.Sprintf("only the following namespaces are allowed for this resource type: [%s]", shootNamespace)))
 				})
 
 				DescribeTable("should allow list/watch requests if field selector is provided",
