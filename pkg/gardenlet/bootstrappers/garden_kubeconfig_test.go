@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -218,7 +219,7 @@ var _ = Describe("GardenKubeconfig", func() {
 							&NewClientFromBytes, func(_ []byte, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 								return nil, nil
 							},
-							&RequestKubeconfigWithBootstrapClient, func(_ context.Context, _ logr.Logger, _ client.Client, _ kubernetes.Interface, _, _ client.ObjectKey, _ string, _ *metav1.Duration) ([]byte, string, error) {
+							&RequestKubeconfigWithBootstrapClient, func(_ context.Context, _ logr.Logger, _ client.Client, _ kubernetes.Interface, _, _ client.ObjectKey, _ *gardenletconfigv1alpha1.SeedConfig, _ *types.NamespacedName, _ *metav1.Duration) ([]byte, string, error) {
 								return requestedKubeconfig, csrName, nil
 							},
 						))

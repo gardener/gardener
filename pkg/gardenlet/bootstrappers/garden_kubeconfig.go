@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -27,6 +28,8 @@ type GardenKubeconfig struct {
 	Log logr.Logger
 	// Config is the gardenlet component configuration.
 	Config *gardenletconfigv1alpha1.GardenletConfiguration
+	// AutonomousShootMeta is the NamespacedName of the autonomous shoot the gardenlet is running in (if applicable).
+	AutonomousShootMeta *types.NamespacedName
 	// Result is a structure that will be filled with information about the requested kubeconfig. Must be initialized
 	// by the caller.
 	Result *KubeconfigBootstrapResult
@@ -143,6 +146,7 @@ func (g *GardenKubeconfig) getOrBootstrapKubeconfig(ctx context.Context) ([]byte
 		kubeconfigKey,
 		bootstrapKubeconfigKey,
 		g.Config.SeedConfig,
+		g.AutonomousShootMeta,
 		g.Config.GardenClientConnection.KubeconfigValidity.Validity,
 	)
 }

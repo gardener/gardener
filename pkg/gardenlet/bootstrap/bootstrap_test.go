@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
@@ -73,6 +74,7 @@ var _ = Describe("Bootstrap", func() {
 			gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection
 			kubeconfigKey          client.ObjectKey
 			bootstrapKubeconfigKey client.ObjectKey
+			autonomousShootMeta    *types.NamespacedName
 
 			approvedCSR = certificatesv1.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
@@ -192,7 +194,7 @@ var _ = Describe("Bootstrap", func() {
 					},
 				})
 
-				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, nil)
+				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, autonomousShootMeta, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeconfig).ToNot(BeEmpty())
@@ -213,7 +215,7 @@ var _ = Describe("Bootstrap", func() {
 					WithKubernetes(kubeClient).
 					Build()
 
-				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, nil)
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, autonomousShootMeta, nil)
 				Expect(err).To(MatchError(ContainSubstring("is denied")))
 			})
 
@@ -231,7 +233,7 @@ var _ = Describe("Bootstrap", func() {
 					WithKubernetes(kubeClient).
 					Build()
 
-				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, nil)
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, autonomousShootMeta, nil)
 				Expect(err).To(MatchError(ContainSubstring("failed")))
 			})
 		})
@@ -241,10 +243,7 @@ var _ = Describe("Bootstrap", func() {
 				Expect(os.Setenv("NAMESPACE", "kube-system")).To(Succeed())
 				DeferCleanup(func() { Expect(os.Setenv("NAMESPACE", "")).To(Succeed()) })
 
-				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "kube-system", Name: "shoot-info"}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					(&corev1.ConfigMap{Data: map[string]string{"shootNamespace": "test-namespace", "shootName": "test-name"}}).DeepCopyInto(obj.(*corev1.ConfigMap))
-					return nil
-				})
+				autonomousShootMeta = &types.NamespacedName{Namespace: "shoot-namespace", Name: "shoot-name"}
 			})
 
 			It("should not return an error", func() {
@@ -278,7 +277,7 @@ var _ = Describe("Bootstrap", func() {
 					},
 				})
 
-				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, nil)
+				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, autonomousShootMeta, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeconfig).ToNot(BeEmpty())
@@ -299,7 +298,7 @@ var _ = Describe("Bootstrap", func() {
 					WithKubernetes(kubeClient).
 					Build()
 
-				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, nil)
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, autonomousShootMeta, nil)
 				Expect(err).To(MatchError(ContainSubstring("is denied")))
 			})
 
@@ -317,7 +316,7 @@ var _ = Describe("Bootstrap", func() {
 					WithKubernetes(kubeClient).
 					Build()
 
-				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, nil)
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, autonomousShootMeta, nil)
 				Expect(err).To(MatchError(ContainSubstring("failed")))
 			})
 		})
