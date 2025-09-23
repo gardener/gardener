@@ -599,18 +599,13 @@ func (g *garden) createSelfUpgradeConfig(ctx context.Context, log logr.Logger, g
 		return fmt.Errorf("error decoding seedmanagement.gardener.cloud/v1alpha1.Gardenlet object from ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err)
 	}
 
-	if err := gardenClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed checking whether seedmanagement.gardener.cloud/v1alpha1.Gardenlet object with name %q exists: %w", gardenlet.Name, err)
-		}
-
-		log.Info("The seedmanagement.gardener.cloud/v1alpha1.Gardenlet object for self-upgrades does not exist in garden cluster yet, creating it")
-		if err := gardenClient.Create(ctx, gardenlet); err != nil {
+	if err := gardenClient.Create(ctx, gardenlet); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed creating seedmanagement.gardener.cloud/v1alpha1.Gardenlet object for self-upgrades: %w", err)
 		}
-		log.Info("Successfully created seedmanagement.gardener.cloud/v1alpha1.Gardenlet object for self-upgrades")
-	} else {
 		log.Info("The seedmanagement.gardener.cloud/v1alpha1.Gardenlet object for self-upgrades already exists, nothing to do")
+	} else {
+		log.Info("Successfully created seedmanagement.gardener.cloud/v1alpha1.Gardenlet object for self-upgrades")
 	}
 
 	return client.IgnoreNotFound(g.mgr.GetClient().Delete(ctx, configMap))
@@ -624,9 +619,7 @@ func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, garde
 
 	var taskFns []flow.TaskFn
 
-	for _, s := range shootList.Items {
-		shoot := s
-
+	for _, shoot := range shootList.Items {
 		if specSeedName, statusSeedName := gardenerutils.GetShootSeedNames(&shoot); gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) != g.config.SeedConfig.Name {
 			continue
 		}
