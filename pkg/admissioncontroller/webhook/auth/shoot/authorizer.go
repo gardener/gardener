@@ -95,6 +95,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
 				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedNamespaces(requestAuthorizer.ToNamespace),
 				authwebhook.WithFieldSelectors(metav1.ObjectNameField, gardenlet.ResourcePrefixAutonomousShoot+requestAuthorizer.ToName),
 			)
 

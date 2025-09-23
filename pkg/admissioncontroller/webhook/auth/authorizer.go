@@ -40,10 +40,21 @@ func CheckSubresource(log logr.Logger, attrs auth.Attributes, allowedSubresource
 	return true, ""
 }
 
+// CheckNamespace checks if namespace verbs in the attributes is allowed for the resource type.
+func CheckNamespace(log logr.Logger, attrs auth.Attributes, allowedNamespaces ...string) (bool, string) {
+	if len(allowedNamespaces) > 0 && !slices.Contains(allowedNamespaces, attrs.GetNamespace()) {
+		log.Info("Denying authorization because namespace is not allowed for this resource type", "allowedNamespaces", allowedNamespaces)
+		return false, fmt.Sprintf("only the following namespaces are allowed for this resource type: %+v", allowedNamespaces)
+	}
+
+	return true, ""
+}
+
 type authzRequest struct {
 	allowedVerbs        sets.Set[string]
 	alwaysAllowedVerbs  sets.Set[string]
 	allowedSubresources sets.Set[string]
+	allowedNamespaces   sets.Set[string]
 	listWatchSelector   selector
 }
 
@@ -52,6 +63,7 @@ func newAuthzRequest() *authzRequest {
 		allowedVerbs:        sets.Set[string]{},
 		alwaysAllowedVerbs:  sets.Set[string]{},
 		allowedSubresources: sets.Set[string]{},
+		allowedNamespaces:   sets.Set[string]{},
 		listWatchSelector:   selector{fields: make(map[string]string), labels: make(map[string]string)},
 	}
 }
@@ -81,6 +93,13 @@ func WithAlwaysAllowedVerbs(verbs ...string) configFunc {
 func WithAllowedSubresources(resources ...string) configFunc {
 	return func(req *authzRequest) {
 		req.allowedSubresources.Insert(resources...)
+	}
+}
+
+// WithAllowedNamespaces is a config function for setting the allowed namespaces.
+func WithAllowedNamespaces(namespaceNames ...string) configFunc {
+	return func(req *authzRequest) {
+		req.allowedNamespaces.Insert(namespaceNames...)
 	}
 }
 
@@ -149,6 +168,10 @@ func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attribut
 	req := newAuthzRequest()
 	for _, f := range fns {
 		f(req)
+	}
+
+	if ok, reason := CheckNamespace(log, attrs, sets.List(req.allowedNamespaces)...); !ok {
+		return auth.DecisionNoOpinion, reason, nil
 	}
 
 	if ok, reason := CheckSubresource(log, attrs, sets.List(req.allowedSubresources)...); !ok {
