@@ -46,6 +46,7 @@ func RequestKubeconfigWithBootstrapClient(
 	bootstrapClientSet kubernetes.Interface,
 	kubeconfigKey, bootstrapKubeconfigKey client.ObjectKey,
 	seedConfig *gardenletconfigv1alpha1.SeedConfig,
+	autonomousShootMeta *types.NamespacedName,
 	validityDuration *metav1.Duration,
 ) (
 	[]byte,
@@ -69,17 +70,12 @@ func RequestKubeconfigWithBootstrapClient(
 		}
 
 	case gardenlet.IsResponsibleForAutonomousShoot():
-		configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ConfigMapNameShootInfo, Namespace: metav1.NamespaceSystem}}
-		if err := runtimeClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
-			return nil, "", fmt.Errorf("failed reading ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err)
-		}
-		shootMeta := types.NamespacedName{Namespace: configMap.Data["shootNamespace"], Name: configMap.Data["shootName"]}
-		log = log.WithValues("shoot", shootMeta)
+		log = log.WithValues("shoot", autonomousShootMeta)
 
 		csrPrefix = ShootCSRPrefix
 		certificateSubject = &pkix.Name{
 			Organization: []string{v1beta1constants.ShootsGroup},
-			CommonName:   v1beta1constants.ShootUserNamePrefix + shootMeta.Namespace + ":" + shootMeta.Name,
+			CommonName:   v1beta1constants.ShootUserNamePrefix + autonomousShootMeta.Namespace + ":" + autonomousShootMeta.Name,
 		}
 
 	default:

@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -181,6 +182,16 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 		}
 	}
 
+	var autonomousShootMeta *types.NamespacedName
+	if gardenlet.IsResponsibleForAutonomousShoot() {
+		configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ConfigMapNameShootInfo, Namespace: metav1.NamespaceSystem}}
+		if err := mgr.GetAPIReader().Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+			return fmt.Errorf("failed reading ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err)
+		}
+		autonomousShootMeta = &types.NamespacedName{Namespace: configMap.Data["shootNamespace"], Name: configMap.Data["shootName"]}
+		log.Info("Fetched information about autonomous shoot", "shootMeta", autonomousShootMeta)
+	}
+
 	log.Info("Adding runnables to manager for bootstrapping")
 	var (
 		kubeconfigBootstrapResult = &bootstrappers.KubeconfigBootstrapResult{}
@@ -188,10 +199,11 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 			Manager: mgr,
 			BootstrapRunnables: []manager.Runnable{
 				&bootstrappers.GardenKubeconfig{
-					RuntimeClient: mgr.GetClient(),
-					Log:           mgr.GetLogger().WithName("bootstrap"),
-					Config:        cfg,
-					Result:        kubeconfigBootstrapResult,
+					RuntimeClient:       mgr.GetClient(),
+					Log:                 mgr.GetLogger().WithName("bootstrap"),
+					Config:              cfg,
+					AutonomousShootMeta: autonomousShootMeta,
+					Result:              kubeconfigBootstrapResult,
 				},
 			},
 			ActualRunnables: []manager.Runnable{
@@ -199,6 +211,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 					cancel:                    cancel,
 					mgr:                       mgr,
 					config:                    cfg,
+					autonomousShootMeta:       autonomousShootMeta,
 					healthManager:             healthManager,
 					kubeconfigBootstrapResult: kubeconfigBootstrapResult,
 				},
@@ -227,6 +240,7 @@ type garden struct {
 	cancel                    context.CancelFunc
 	mgr                       manager.Manager
 	config                    *gardenletconfigv1alpha1.GardenletConfiguration
+	autonomousShootMeta       *types.NamespacedName
 	healthManager             gardenerhealthz.Manager
 	kubeconfigBootstrapResult *bootstrappers.KubeconfigBootstrapResult
 }
@@ -343,6 +357,14 @@ func (g *garden) Start(ctx context.Context) error {
 			}
 		} else {
 			opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+				// gardenlet should watch only objects which are related to the shoot it is responsible for.
+				opts.ByObject = map[client.Object]cache.ByObject{
+					&seedmanagementv1alpha1.Gardenlet{}: {
+						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenlet.ResourcePrefixAutonomousShoot + g.autonomousShootMeta.Name}),
+						Namespaces: map[string]cache.Config{g.autonomousShootMeta.Namespace: {}},
+					},
+				}
+
 				return kubernetes.AggregatorCacheFunc(
 					kubernetes.NewRuntimeCache,
 					map[client.Object]cache.NewCacheFunc{
