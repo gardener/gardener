@@ -8421,7 +8421,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZonalIngress(re
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether seed ingress gateways are deployed in each availability zone. Defaults to true, which provisions an ingress gateway load balancer for each availability zone. When disabled, only a single ingress gateway is deployed.",
+							Description: "Enabled controls whether seed ingress gateways are deployed in each availability zone. Defaults to true, which provisions an ingress gateway load balancer for each availability zone. When disabled, only a single ingress gateway is deployed. See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zonal-ingress.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

@@ -11451,7 +11451,8 @@ bool
 <em>(Optional)</em>
 <p>Enabled controls whether seed ingress gateways are deployed in each availability zone.
 Defaults to true, which provisions an ingress gateway load balancer for each availability zone.
-When disabled, only a single ingress gateway is deployed.</p>
+When disabled, only a single ingress gateway is deployed.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zonal-ingress">https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zonal-ingress</a>.</p>
 </td>
 </tr>
 </tbody>
