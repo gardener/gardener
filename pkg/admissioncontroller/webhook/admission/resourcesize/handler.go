@@ -147,8 +147,7 @@ func (h *Handler) handleCountLimit(req admission.Request, log logr.Logger, reque
 
 	exceedsLimit, err := h.existingResourcesExceedLimit(req, requestedResource, ptr.Deref(count, 0))
 	if err != nil {
-		log.Error(err, "Failed to determine if count exceeds limit", "resource", requestedResource.String())
-		return err
+		return fmt.Errorf("failed to determine if count exceeds limit: %w", err)
 	}
 
 	if exceedsLimit {
@@ -255,10 +254,7 @@ func (h *Handler) existingResourcesExceedLimit(_ admission.Request, gvr *metav1.
 	// Get the proper Kind for this resource
 	kind, err := h.getKindFromGVR(gvr)
 	if err != nil {
-		// If we can't get the Kind form the GVR, allow the request to proceed
-		// This prevents the admission controller from blocking requests when there are API issues
-		h.Logger.Error(err, "Failed to determine kind from GVR", "gvr", gvr)
-		return false, err
+		return false, fmt.Errorf("failed to list resources for calculating object count: %w", err)
 	}
 
 	list := &metav1.PartialObjectMetadataList{}
@@ -270,10 +266,7 @@ func (h *Handler) existingResourcesExceedLimit(_ admission.Request, gvr *metav1.
 
 	// List all resources of this type cluster-wide (since we only count non-namespaced resources)
 	if err := h.Client.List(ctx, list, client.Limit(limit+1)); err != nil {
-		// If we can't list the resources, allow the request to proceed
-		// This prevents the admission controller from blocking requests when there are API issues
-		h.Logger.Error(err, "Failed to list resources for counting", "gvr", gvr, "kind", kind)
-		return false, err
+		return false, fmt.Errorf("failed to list resources for counting: %v", err)
 	}
 
 	return int64(len(list.Items)) >= limit, nil
