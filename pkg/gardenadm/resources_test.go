@@ -29,6 +29,7 @@ var _ = Describe("Resources", func() {
 			createCloudProfile(fsys, "cpfl")
 			createProject(fsys, "project")
 			createShoot(fsys, "shoot")
+			createShootState(fsys, "shoot")
 			createControllerRegistration(fsys, "ext1")
 			createControllerRegistration(fsys, "ext2")
 			createControllerDeployment(fsys, "ext1")
@@ -50,6 +51,7 @@ var _ = Describe("Resources", func() {
 			Expect(resources.CloudProfile.Name).To(Equal("cpfl"))
 			Expect(resources.Project.Name).To(Equal("project"))
 			Expect(resources.Shoot.Name).To(Equal("shoot"))
+			Expect(resources.ShootState.Name).To(Equal("shoot"))
 			Expect(resources.ControllerRegistrations).To(HaveLen(4))
 			Expect(resources.ControllerRegistrations[0].Name).To(Equal("ext1"))
 			Expect(resources.ControllerRegistrations[1].Name).To(Equal("ext2"))
@@ -138,6 +140,16 @@ var _ = Describe("Resources", func() {
 			})
 		})
 
+		Describe("ShootState", func() {
+			It("should return an error", func() {
+				createShootState(fsys, "obj1")
+				createShootState(fsys, "obj2")
+
+				_, err := gardenadm.ReadManifests(log, fsys)
+				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.ShootState resource")))
+			})
+		})
+
 		Describe("SecretBinding", func() {
 			It("should return an error", func() {
 				createSecretBinding(fsys, "secretBinding1")
@@ -211,6 +223,14 @@ metadata:
 func createShoot(fsys fstest.MapFS, name string) {
 	fsys["shoot-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
+metadata:
+  name: ` + name + `
+`)}
+}
+
+func createShootState(fsys fstest.MapFS, name string) {
+	fsys["shootstate-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1beta1
+kind: ShootState
 metadata:
   name: ` + name + `
 `)}
