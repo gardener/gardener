@@ -28,11 +28,17 @@ type Actuator struct {
 	Client client.Client
 }
 
+// shouldHandleDNSRecord returns true for DNSRecords that are implemented in provider-local by writing to the custom
+// coredns ConfigMap (e.g., DNSRecords for shoot API servers). Other DNSRecords (e.g., for the Garden) are implemented
+// outside this controller.
+func shouldHandleDNSRecord(dnsRecord *extensionsv1alpha1.DNSRecord) bool {
+	return strings.HasPrefix(dnsRecord.Spec.Name, "api.") && strings.HasSuffix(dnsRecord.Spec.Name, ".local.gardener.cloud") &&
+		ptr.Deref(dnsRecord.Spec.Class, "") != extensionsv1alpha1.ExtensionClassGarden
+}
+
 // Reconcile ensures that the DNS record is correctly represented in the CoreDNS config map.
 func (a *Actuator) Reconcile(ctx context.Context, _ logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
-	// Only handle dns records for kube-apiserver
-	if !strings.HasPrefix(dnsRecord.Spec.Name, "api.") || !strings.HasSuffix(dnsRecord.Spec.Name, ".local.gardener.cloud") ||
-		ptr.Deref(dnsRecord.Spec.Class, "") == extensionsv1alpha1.ExtensionClassGarden {
+	if !shouldHandleDNSRecord(dnsRecord) {
 		return nil
 	}
 
@@ -48,6 +54,10 @@ func (a *Actuator) Reconcile(ctx context.Context, _ logr.Logger, dnsRecord *exte
 
 // Delete removes the DNS record from the CoreDNS config map.
 func (a *Actuator) Delete(ctx context.Context, _ logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
+	if !shouldHandleDNSRecord(dnsRecord) {
+		return nil
+	}
+
 	return a.patchCoreDNSConfigMap(ctx, func(configMap *corev1.ConfigMap) {
 		delete(configMap.Data, keyForDNSRecord(dnsRecord))
 	})
