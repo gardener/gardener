@@ -1,0 +1,70 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: health
+spec:
+  groups:
+    - name: health.rules
+      rules:
+        # Scrape jobs are down
+        - record: health:meta:job:down
+          labels:
+            type: health:meta
+          expr: up == 0 == bool 0
+
+        # Scrape jobs are down for a period of time
+        - record: health:meta:job:failing
+          labels:
+            type: health:meta
+          expr: up + (sum_over_time(up[4m] offset 1m) or up * on () group_left() vector(0)) == 0 == bool 0
+
+        # No samples scraped
+        - record: health:meta:job:scrapes:empty
+          labels:
+            type: health:meta
+          expr: scrape_samples_scraped == 0 == bool 0
+
+        # API server request metrics are absent
+        - record: health:meta:apiserver_request:absent
+          expr: absent(apiserver_request_duration_seconds_bucket)
+          labels:
+            type: health:meta
+
+        # Federated control plane cAdvisor metrics are absent
+        - record: health:meta:federate:cadvisor:control_plane:absent
+          expr: absent(container_cpu_usage_seconds_total{pod="prometheus-shoot-0"})
+          labels:
+            type: health:meta
+
+        # Federated control plane kube-state-metrics metrics are absent
+        - record: health:meta:federate:kube_state_metrics:control_plane:absent
+          expr: absent(kube_pod_container_resource_requests{pod="prometheus-shoot-0"})
+          labels:
+            type: health:meta
+
+        # Federated metering metrics are absent
+        - record: health:meta:federate:metering:absent
+          expr: absent(metering:cpu_requests:sum_by_namespace)
+          labels:
+            type: health:meta
+
+        # Create reason label for failing health checks
+        - record: health:meta:failing
+          expr: |
+            label_replace({__name__!="health:meta:failing", type="health:meta"}, "reason", "$1", "__name__", "health:meta:(.*)")
+
+        # Report failing health checks but inhibit absent metrics when jobs are down
+        - record: health:failing
+          labels:
+            type: health
+          expr: |2
+              health:meta:failing{reason="job:failing"}
+            or
+              health:meta:failing and on () absent(health:meta:job:down)
+
+        # Flapping
+        - record: health:flapping
+          labels:
+            type: health
+          expr: |
+            count_over_time((count_over_time(health:meta:failing[2m:]) == 1)[10m:]) > 4 > bool 4
