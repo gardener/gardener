@@ -3847,6 +3847,7 @@ int32
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Priority (or weight) is the importance by which this machine deployment will be scaled by cluster autoscaling.</p>
 </td>
 </tr>
@@ -5055,6 +5056,7 @@ int32
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Priority (or weight) is the importance by which this worker pool will be scaled by cluster autoscaling.</p>
 </td>
 </tr>
