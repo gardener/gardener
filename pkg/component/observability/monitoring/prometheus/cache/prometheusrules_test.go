@@ -9,12 +9,17 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
+	"github.com/gardener/gardener/pkg/component/test"
 )
 
 var _ = ginkgo.Describe("PrometheusRules", func() {
 	ginkgo.Describe("#CentralPrometheusRules", func() {
 		ginkgo.It("should return the expected objects", func() {
 			Expect(CentralPrometheusRules()).To(HaveExactElements(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
+					"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("health")}),
+				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
 					"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("metering")}),
@@ -28,6 +33,8 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 					"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("recording-rules")}),
 				})),
 			))
+
+			test.PrometheusRule(health, "testdata/health.prometheusrule.test.yaml")
 		})
 	})
 })
