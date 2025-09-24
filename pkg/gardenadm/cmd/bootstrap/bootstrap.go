@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/publicip"
 )
 
@@ -288,8 +289,19 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(connectToMachine, compileShootState),
 		})
 
-		_ = deployDNSRecord
-		_ = copyManifests
+		bootstrapControlPlane = g.Add(flow.Task{
+			Name: "Bootstrapping control plane on the first control plane machine",
+			Fn: func(context.Context) error {
+				return b.SSHConnection().RunWithStreams(nil, opts.Out, opts.ErrOut,
+					fmt.Sprintf("%s=%q /opt/bin/gardenadm init -d %q --log-level=%s",
+						imagevector.OverrideEnv, botanist.ImageVectorOverrideFile, botanist.ManifestsDir, opts.LogLevel,
+					),
+				)
+			},
+			Dependencies: flow.NewTaskIDs(deployDNSRecord, copyManifests),
+		})
+
+		_ = bootstrapControlPlane
 
 		// In contrast to the usual Shoot migrate flow, we don't delete the shoot control plane namespace at the end.
 		// The bootstrap cluster is designed to be temporary and thrown away after successfully executing
