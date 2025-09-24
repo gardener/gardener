@@ -138,7 +138,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "prometheus",
+				Name: "prometheus-" + Label,
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				HonorLabels: ptr.To(false),
@@ -148,7 +148,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: ptr.To("prometheus-shoot"),
+						Replacement: ptr.To("prometheus-" + Label),
 						TargetLabel: "job",
 					},
 					{
@@ -160,32 +160,6 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						TargetLabel:  "pod",
 					},
 				},
-				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
-					"process_max_fds",
-					"process_open_fds",
-					"process_resident_memory_bytes",
-					"process_virtual_memory_bytes",
-					"prometheus_config_last_reload_successful",
-					"prometheus_engine_query_duration_seconds",
-					"prometheus_rule_group_duration_seconds",
-					"prometheus_rule_group_iterations_missed_total",
-					"prometheus_rule_group_iterations_total",
-					"prometheus_tsdb_blocks_loaded",
-					"prometheus_tsdb_compactions_failed_total",
-					"prometheus_tsdb_compactions_total",
-					"prometheus_tsdb_compactions_triggered_total",
-					"prometheus_tsdb_head_active_appenders",
-					"prometheus_tsdb_head_chunks",
-					"prometheus_tsdb_head_gc_duration_seconds",
-					"prometheus_tsdb_head_gc_duration_seconds_count",
-					"prometheus_tsdb_head_samples_appended_total",
-					"prometheus_tsdb_head_series",
-					"prometheus_tsdb_lowest_timestamp",
-					"prometheus_tsdb_reloads_failures_total",
-					"prometheus_tsdb_reloads_total",
-					"prometheus_tsdb_storage_blocks_bytes",
-					"prometheus_tsdb_wal_corruptions_total",
-				),
 			},
 		},
 	}
