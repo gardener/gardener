@@ -52,6 +52,7 @@ type Resources struct {
 	Project                 *gardencorev1beta1.Project
 	Seed                    *gardencorev1beta1.Seed
 	Shoot                   *gardencorev1beta1.Shoot
+	ShootState              *gardencorev1beta1.ShootState
 	ControllerRegistrations []*gardencorev1beta1.ControllerRegistration
 	ControllerDeployments   []*gardencorev1.ControllerDeployment
 	ConfigMaps              []*corev1.ConfigMap
@@ -108,6 +109,12 @@ func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
 					return fmt.Errorf("found more than one *gardencorev1beta1.Shoot resource, but only one is allowed")
 				}
 				resources.Shoot = typedObj
+
+			case *gardencorev1beta1.ShootState:
+				if resources.ShootState != nil {
+					return fmt.Errorf("found more than one *gardencorev1beta1.ShootState resource, but only one is allowed")
+				}
+				resources.ShootState = typedObj
 
 			case *gardencorev1beta1.ControllerRegistration:
 				resources.ControllerRegistrations = append(resources.ControllerRegistrations, typedObj)

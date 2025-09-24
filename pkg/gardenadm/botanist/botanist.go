@@ -133,11 +133,11 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed creating autonomous botanist: %w", err)
 	}
 
-	if err := initializeShootResource(resources.Shoot, autonomousBotanist.FS, resources.Project.Name, runsControlPlane); err != nil {
+	if err := initializeShootResource(resources, autonomousBotanist.FS, runsControlPlane); err != nil {
 		return nil, fmt.Errorf("failed initializing shoot resource: %w", err)
 	}
 
-	initializeSeedResource(resources.Seed, resources.Shoot.Name, runsControlPlane)
+	initializeSeedResource(resources, runsControlPlane)
 
 	gardenClient := newFakeGardenClient()
 	if err := initializeFakeGardenResources(ctx, gardenClient, resources, extensions); err != nil {
@@ -263,6 +263,9 @@ func initializeFakeGardenResources(
 	if resources.CredentialsBinding != nil {
 		objects = append(objects, resources.CredentialsBinding.DeepCopy())
 	}
+	if resources.ShootState != nil {
+		objects = append(objects, resources.ShootState.DeepCopy())
+	}
 
 	for _, obj := range objects {
 		if err := gardenClient.Create(ctx, obj); client.IgnoreAlreadyExists(err) != nil {
@@ -314,7 +317,7 @@ func newShootObject(
 		b = b.WithoutShootCredentials()
 	}
 
-	obj, err := b.Build(ctx, nil)
+	obj, err := b.Build(ctx, gardenClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed building shoot object: %w", err)
 	}
@@ -362,8 +365,9 @@ func newFakeSeedClientSet(kubernetesVersion string) kubernetes.Interface {
 		Build()
 }
 
-func initializeShootResource(shoot *gardencorev1beta1.Shoot, fs afero.Afero, projectName string, runsControlPlane bool) error {
-	shoot.Status.TechnicalID = gardenerutils.ComputeTechnicalID(projectName, shoot)
+func initializeShootResource(resources gardenadm.Resources, fs afero.Afero, runsControlPlane bool) error {
+	shoot := resources.Shoot
+	shoot.Status.TechnicalID = gardenerutils.ComputeTechnicalID(resources.Project.Name, shoot)
 	shoot.Status.Gardener = gardencorev1beta1.Gardener{Name: "gardenadm", Version: version.Get().GitVersion}
 
 	if runsControlPlane {
@@ -374,6 +378,22 @@ func initializeShootResource(shoot *gardencorev1beta1.Shoot, fs afero.Afero, pro
 			return fmt.Errorf("failed fetching shoot UID: %w", err)
 		}
 		shoot.Status.UID = uid
+
+		if v1beta1helper.HasManagedInfrastructure(resources.Shoot) {
+			// When running `gardenadm init` for a shoot with managed infrastructure, we need to restore state (secrets,
+			// extensions, etc.) from the ShootState exported by `gardenadm bootstrap`.
+			if resources.ShootState == nil {
+				return fmt.Errorf("shoot has managed infrastructure, but ShootState is missing " +
+					"(the ShootState is usually exported by `gardenadm bootstrap` and read by `gardenadm init`): " +
+					"you should either use `gardenadm bootstrap` to create the autonomous shoot cluster with managed infrastructure or " +
+					"remove the `Shoot.spec.{secret,credentials}BindingName` field to mark the shoot as having unmanaged infrastructure")
+			}
+
+			// Instruct the botanist and shoot package to read the ShootState and restore the state of extensions, secrets, etc.
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				Type: gardencorev1beta1.LastOperationTypeRestore,
+			}
+		}
 	} else {
 		// For `gardenadm bootstrap`, we don't need a stable UID. We generate a random one instead, because we might not be
 		// able to persist the generated UID in /var/lib/gardenadm (e.g., when running `gardenadm bootstrap` on macOS).
@@ -383,9 +403,10 @@ func initializeShootResource(shoot *gardencorev1beta1.Shoot, fs afero.Afero, pro
 	return nil
 }
 
-func initializeSeedResource(seed *gardencorev1beta1.Seed, shootName string, runsControlPlane bool) {
-	seed.Name = shootName
-	seed.Status = gardencorev1beta1.SeedStatus{ClusterIdentity: ptr.To(shootName)}
+func initializeSeedResource(resources gardenadm.Resources, runsControlPlane bool) {
+	seed := resources.Seed
+	seed.Name = resources.Shoot.Name
+	seed.Status = gardencorev1beta1.SeedStatus{ClusterIdentity: ptr.To(resources.Shoot.Name)}
 
 	if runsControlPlane {
 		// When running the control plane (`gardenadm init`), mark the seed as an autonomous shoot cluster.
