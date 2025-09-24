@@ -253,9 +253,11 @@ build:
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/optional/alertmanager.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/prometheus.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/verticalpodautoscaler.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/healthcheck.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-kubelet.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-pods.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/networking.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/healthcheck.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/kube-pods.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/networking.yaml
             - pkg/component/observability/monitoring/prometheusoperator
