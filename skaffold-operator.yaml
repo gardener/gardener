@@ -191,6 +191,7 @@ build:
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/shoot.yaml
             - pkg/component/observability/monitoring/prometheus/garden/assets/scrapeconfigs/cadvisor.yaml
             - pkg/component/observability/monitoring/prometheus/longterm
+            - pkg/component/observability/monitoring/prometheus/longterm/assets/prometheusrules/healthcheck.yaml
             - pkg/component/observability/monitoring/prometheus/longterm/assets/prometheusrules/recording.yaml
             - pkg/component/observability/monitoring/prometheus/longterm/assets/prometheusrules/sla.yaml
             - pkg/component/observability/monitoring/prometheus/seed
