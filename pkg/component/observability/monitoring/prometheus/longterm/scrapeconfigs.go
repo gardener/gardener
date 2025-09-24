@@ -47,7 +47,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "prometheus-" + garden.Label},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels:     ptr.To(true),
+				HonorLabels:     ptr.To(false),
 				HonorTimestamps: ptr.To(true),
 				MetricsPath:     ptr.To("/federate"),
 				Params: map[string][]string{
