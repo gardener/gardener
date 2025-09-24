@@ -169,7 +169,8 @@ type WorkerPool struct {
 	// +optional
 	ClusterAutoscaler *ClusterAutoscalerOptions `json:"clusterAutoscaler,omitempty"`
 	// Priority (or weight) is the importance by which this worker pool will be scaled by cluster autoscaling.
-	Priority int32 `json:"priority"`
+	// +optional
+	Priority *int32 `json:"priority,omitempty"`
 	// UpdateStrategy specifies the machine update strategy for the worker pool.
 	// +optional
 	UpdateStrategy *gardencorev1beta1.MachineUpdateStrategy `json:"updateStrategy,omitempty"`
@@ -276,5 +277,6 @@ type MachineDeployment struct {
 	// Maximum is the maximum number for this machine deployment.
 	Maximum int32 `json:"maximum"`
 	// Priority (or weight) is the importance by which this machine deployment will be scaled by cluster autoscaling.
-	Priority int32 `json:"priority"`
+	// +optional
+	Priority *int32 `json:"priority,omitempty"`
 }

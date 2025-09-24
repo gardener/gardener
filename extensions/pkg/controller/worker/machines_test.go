@@ -147,7 +147,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing priority", func() {
-				p.Priority = int32(1337)
+				p.Priority = ptr.To(int32(1337))
 			})
 
 			It("when changing max surge", func() {
@@ -337,7 +337,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing priority", func() {
-				p.Priority = int32(1337)
+				p.Priority = ptr.To(int32(1337))
 			})
 
 			It("when changing annotations", func() {
@@ -467,7 +467,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing priority", func() {
-				p.Priority = int32(1337)
+				p.Priority = ptr.To(int32(1337))
 			})
 
 			It("when changing annotations", func() {
