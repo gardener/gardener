@@ -638,7 +638,7 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 		if primaryProvider.SecretName != nil {
 			secret := &corev1.Secret{}
 			if err := c.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *primaryProvider.SecretName}, secret); err != nil {
-				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *shoot.Spec.DNS.Providers[0].SecretName, err)
+				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *primaryProvider.SecretName, err)
 			}
 			externalDomain.SecretData = secret.Data
 		} else {
