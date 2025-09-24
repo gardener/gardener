@@ -122,7 +122,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					},
 					{
 						APIGroups: []string{"operator.gardener.cloud"},
-						Resources: []string{"gardens"},
+						Resources: []string{"gardens", "extensions"},
 						Verbs:     []string{"list", "watch"},
 					},
 				},
@@ -345,7 +345,8 @@ var _ = Describe("KubeStateMetrics", func() {
 							"^kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory$," +
 							"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$," +
 							"^garden_garden_condition$," +
-							"^garden_garden_last_operation$",
+							"^garden_garden_last_operation$," +
+							"^gardener_operator_extension_condition$",
 						"--custom-resource-state-config-file=/config/custom-resource-state.yaml",
 					}
 				}
@@ -1077,7 +1078,6 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResource).To(consistOf(expectedObjects...))
-
 			})
 		})
 

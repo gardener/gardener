@@ -183,7 +183,7 @@ func newGardenCustomResourceStateMetrics() customresourcestate.Resource {
 	return resource
 }
 
-func newOperatorExtesionCustomResourceStateMetrics() customresourcestate.Resource {
+func newOperatorExtensionCustomResourceStateMetrics() customresourcestate.Resource {
 	resource := customresourcestate.Resource{
 		GroupVersionKind: customresourcestate.GroupVersionKind{
 			Group:   "operator.gardener.cloud",
@@ -230,7 +230,7 @@ func WithGardenResourceMetrics(c *customresourcestate.Metrics) {
 
 // WithOperatorExtensionMetrics adds the custom resource state configuration for the Garden resource
 func WithOperatorExtensionMetrics(c *customresourcestate.Metrics) {
-	c.Spec.Resources = append(c.Spec.Resources, newOperatorExtesionCustomResourceStateMetrics())
+	c.Spec.Resources = append(c.Spec.Resources, newOperatorExtensionCustomResourceStateMetrics())
 }
 
 // WithVPAMetrics adds the custom resource state configuration for the VerticalPodAutoscaler resource
