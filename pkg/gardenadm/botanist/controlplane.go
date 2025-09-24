@@ -138,8 +138,8 @@ func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlane
 }
 
 // DeployControlPlaneDeployments deploys the deployments for the static control plane components. It also updates the
-// OperatingSystemConfig and deploys the ManagedResource containing the Secret with OperatingSystemConfig for
-// gardener-node-agent.
+// OperatingSystemConfig, waits for it to be reconciled by the OS extension, and deploys the ManagedResource containing
+// the Secret with OperatingSystemConfig for gardener-node-agent.
 func (b *AutonomousBotanist) DeployControlPlaneDeployments(ctx context.Context) error {
 	if err := b.deployControlPlaneDeployments(ctx); err != nil {
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
@@ -147,6 +147,11 @@ func (b *AutonomousBotanist) DeployControlPlaneDeployments(ctx context.Context) 
 
 	if _, _, err := b.deployOperatingSystemConfig(ctx); err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
+	}
+
+	// waiting for the OSC ensures that we also pick up the status written by the OS extension (e.g., extensionUnits)
+	if err := b.Shoot.Components.Extensions.OperatingSystemConfig.Wait(ctx); err != nil {
+		return fmt.Errorf("failed waiting for OperatingSystemConfig to be ready: %w", err)
 	}
 
 	if err := b.DeployManagedResourceForGardenerNodeAgent(ctx); err != nil {
