@@ -136,6 +136,9 @@ func (b *AutonomousBotanist) copyShootState(ctx context.Context) error {
 		return fmt.Errorf("error getting ShootState: %w", err)
 	}
 
+	// Clear fields that must not be set on creation
+	shootState.SetResourceVersion("")
+
 	shootStateBytes, err := runtime.Encode(kubernetes.GardenCodec.EncoderForVersion(kubernetes.GardenSerializer, gardencorev1beta1.SchemeGroupVersion), shootState)
 	if err != nil {
 		return fmt.Errorf("error encoding ShootState: %w", err)
