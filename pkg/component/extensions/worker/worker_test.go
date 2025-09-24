@@ -286,7 +286,7 @@ var _ = Describe("Worker", func() {
 					Maximum:        worker1Maximum,
 					MaxSurge:       worker1MaxSurge,
 					MaxUnavailable: worker1MaxUnavailable,
-					Priority:       *worker1Priority,
+					Priority:       worker1Priority,
 					Annotations:    worker1Annotations,
 					Labels: utils.MergeStringMaps(worker1Labels, map[string]string{
 						"node.kubernetes.io/role":                                                   "node",
@@ -336,7 +336,7 @@ var _ = Describe("Worker", func() {
 					Maximum:        worker2Maximum,
 					MaxSurge:       worker2MaxSurge,
 					MaxUnavailable: worker2MaxUnavailable,
-					Priority:       *worker2Priority,
+					Priority:       worker2Priority,
 					Labels: map[string]string{
 						"node.kubernetes.io/role":                               "node",
 						"kubernetes.io/arch":                                    *worker2Arch,
