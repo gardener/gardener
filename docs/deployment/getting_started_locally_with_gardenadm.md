@@ -33,15 +33,15 @@ This also includes the `gardenadm` CLI, which is installed on the machine pods b
 ## Setting Up the KinD Cluster
 
 ```shell
-make kind-up
+make kind-single-node-up
 ```
 
-Please see [this documentation section](getting_started_locally.md#setting-up-the-kind-cluster-garden-and-seed) for more details.
+Please see [this documentation section](getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator) for more details.
 
 All following steps assume that you are using the kubeconfig for this KinD cluster:
 
 ```shell
-export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
+export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig
 ```
 
 ## High-Touch Scenario
@@ -181,19 +181,16 @@ Based on the described setup, you can execute the e2e test suite for `gardenadm`
 
 ```shell
 make gardenadm-up SCENARIO=high-touch
+make gardenadm-up SCENARIO=connect
+make test-e2e-local-gardenadm-high-touch
+
+# or
 make gardenadm-up SCENARIO=medium-touch
-make test-e2e-local-gardenadm
-```
-
-You can also selectively run the e2e tests for one of the scenarios:
-
-```shell
-make gardenadm-up SCENARIO=high-touch
-./hack/test-e2e-local.sh gardenadm --label-filter="high-touch" ./test/e2e/gardenadm/...
+make test-e2e-local-gardenadm-medium-touch
 ```
 
 ## Tear Down the KinD Cluster
 
 ```shell
-make kind-down
+make kind-single-node-down
 ```
