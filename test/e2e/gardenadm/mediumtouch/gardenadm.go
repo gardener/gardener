@@ -96,7 +96,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 
 		It("should stop machine-controller-manager", func(ctx SpecContext) {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: technicalID}}
-			Eventually(ctx, Get(deployment)).Should(BeNotFoundError())
+			Eventually(ctx, Object(deployment)).Should(HaveField("Replicas", HaveValue(BeEquivalentTo(0))))
 		}, SpecTimeout(time.Minute))
 
 		It("should deploy the DNSRecord", func(ctx SpecContext) {

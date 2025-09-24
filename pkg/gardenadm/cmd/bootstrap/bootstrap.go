@@ -221,11 +221,15 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
 
-		// Delete machine-controller-manager to prevent it from interfering with Machine objects that will be migrated to
-		// the autonomous shoot.
-		deleteMachineControllerManager = g.Add(flow.Task{
-			Name:         "Deleting machine-controller-manager",
-			Fn:           component.OpDestroyAndWait(b.Shoot.Components.ControlPlane.MachineControllerManager).Destroy,
+		// Scale down machine-controller-manager to prevent it from interfering with Machine objects that will be migrated
+		// to the autonomous shoot. Scaling down instead of deleting it, allows operators/developers to simply scale it up
+		// again in case they need to redeploy a control plane machine manually because of errors.
+		scaleDownMachineControllerManager = g.Add(flow.Task{
+			Name: "Scaling down machine-controller-manager",
+			Fn: func(ctx context.Context) error {
+				b.Shoot.Components.ControlPlane.MachineControllerManager.SetReplicas(0)
+				return component.OpWait(b.Shoot.Components.ControlPlane.MachineControllerManager).Deploy(ctx)
+			},
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
 
@@ -247,7 +251,7 @@ func run(ctx context.Context, opts *Options) error {
 				component.MigrateAndWait(b.Shoot.Components.Extensions.Worker),
 				component.MigrateAndWait(b.Shoot.Components.Extensions.ExternalDNSRecord),
 			),
-			Dependencies: flow.NewTaskIDs(deleteMachineControllerManager, deployDNSRecord),
+			Dependencies: flow.NewTaskIDs(scaleDownMachineControllerManager, deployDNSRecord),
 		})
 
 		// In contrast to a usual Shoot control plane migration, there is no garden cluster where the ShootState is stored.
