@@ -2614,6 +2614,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
+					Entry("valid (API group empty)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							APIGroup:  ptr.To(""),
+							Resource:  "secrets",
+							CacheSize: 0,
+						}},
+					}, BeEmpty()),
 					Entry("valid (core/secrets=>0)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "secrets",
@@ -2628,13 +2635,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
-					Entry("invalid (core/resource empty)", &core.WatchCacheSizes{
+					Entry("invalid (core resource empty)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							Resource:  "",
 							CacheSize: 42,
 						}},
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
+					)),
+					Entry("invalid (core resource with casing)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							Resource:  "Secrets",
+							CacheSize: 42,
+						}},
+					}, ConsistOf(
+						field.Invalid(field.NewPath("resources[0].resource"), "Secrets", "must be lower case"),
+					)),
+					Entry("invalid (core resource with illegal character)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							Resource:  "secrets#",
+							CacheSize: 42,
+						}},
+					}, ConsistOf(
+						field.Invalid(field.NewPath("resources[0].resource"), "secrets#", `must not contain any of the following characters: ",. #"`),
 					)),
 
 					// APIGroup set
@@ -2661,13 +2684,32 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, ConsistOf(
 						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
-					Entry("invalid (apps/resource empty)", &core.WatchCacheSizes{
+					Entry("invalid (apps resource empty)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
+							APIGroup:  ptr.To("apps"),
 							Resource:  "",
 							CacheSize: 42,
 						}},
 					}, ConsistOf(
 						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
+					)),
+					Entry("invalid (apps API group with casing)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							APIGroup:  ptr.To("Apps"),
+							Resource:  "deployments",
+							CacheSize: 42,
+						}},
+					}, ConsistOf(
+						field.Invalid(field.NewPath("resources[0].apiGroup"), "Apps", "must be lower case"),
+					)),
+					Entry("invalid (apps API group with illegal character)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							APIGroup:  ptr.To("apps#"),
+							Resource:  "deployments",
+							CacheSize: 42,
+						}},
+					}, ConsistOf(
+						field.Invalid(field.NewPath("resources[0].apiGroup"), "apps#", `must not contain any of the following characters: ",. #"`),
 					)),
 				)
 			})
