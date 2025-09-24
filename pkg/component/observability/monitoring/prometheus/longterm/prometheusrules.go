@@ -15,6 +15,10 @@ import (
 )
 
 var (
+	//go:embed assets/prometheusrules/healthcheck.yaml
+	healthcheckYAML []byte
+	healthcheck     *monitoringv1.PrometheusRule
+
 	//go:embed assets/prometheusrules/recording.yaml
 	recordingYAML []byte
 	recording     *monitoringv1.PrometheusRule
@@ -25,6 +29,9 @@ var (
 )
 
 func init() {
+	healthcheck = &monitoringv1.PrometheusRule{}
+	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, healthcheckYAML, healthcheck))
+
 	recording = &monitoringv1.PrometheusRule{}
 	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, recordingYAML, recording))
 
@@ -35,6 +42,7 @@ func init() {
 // CentralPrometheusRules returns the central PrometheusRule resources for the long-term prometheus.
 func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
 	return []*monitoringv1.PrometheusRule{
+		healthcheck.DeepCopy(),
 		recording.DeepCopy(),
 		sla.DeepCopy(),
 	}
