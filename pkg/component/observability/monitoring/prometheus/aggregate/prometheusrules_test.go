@@ -12,6 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+
+	"github.com/gardener/gardener/pkg/component/test"
 )
 
 var _ = ginkgo.Describe("PrometheusRules", func() {
@@ -52,6 +54,10 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 				Expect(CentralPrometheusRules(seedIsGarden)).To(HaveExactElements(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("health")}),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
 						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("metering-stateful")}),
 					})),
 					Equal(&monitoringv1.PrometheusRule{
@@ -64,6 +70,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 						},
 					}),
 				))
+				test.PrometheusRule(health, "testdata/health.prometheusrule.test.yaml")
 			})
 		})
 
@@ -101,6 +108,10 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 				Expect(CentralPrometheusRules(seedIsGarden)).To(HaveExactElements(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("health")}),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
 						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("metering-stateful")}),
 					})),
 					Equal(&monitoringv1.PrometheusRule{
@@ -113,6 +124,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 						},
 					}),
 				))
+				test.PrometheusRule(health, "testdata/health.prometheusrule.test.yaml")
 			})
 		})
 	})
