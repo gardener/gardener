@@ -29,9 +29,10 @@ func CheckVerb(log logr.Logger, attrs auth.Attributes, allowedVerbs ...string) (
 	return true, ""
 }
 
-// CheckSubresource checks if the subresource in the attributes is allowed for the resource type.
+// CheckSubresource checks if the subresource in the attributes is allowed for the resource type. If no subresource is
+// provided in the attributes, the check always passes.
 func CheckSubresource(log logr.Logger, attrs auth.Attributes, allowedSubresources ...string) (bool, string) {
-	if subresource := attrs.GetSubresource(); len(subresource) > 0 && !slices.Contains(allowedSubresources, attrs.GetSubresource()) {
+	if subresource := attrs.GetSubresource(); len(subresource) > 0 && !slices.Contains(allowedSubresources, subresource) {
 		log.Info("Denying authorization because subresource is not allowed for this resource type", "allowedSubresources", allowedSubresources)
 		return false, fmt.Sprintf("only the following subresources are allowed for this resource type: %+v", allowedSubresources)
 	}

@@ -13,12 +13,13 @@ import (
 	authenticationv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
+	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
 	. "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/shoot"
 )
 
 var _ = Describe("identity", func() {
 	Describe("#FromUserInfoInterface", func() {
-		test := func(u user.Info, expectedShootNamespace, expectedShootName string, expectedIsAutonomousShootValue bool, expectedUserType UserType) {
+		test := func(u user.Info, expectedShootNamespace, expectedShootName string, expectedIsAutonomousShootValue bool, expectedUserType gardenletidentity.UserType) {
 			shootNamespace, shootName, isAutonomousShoot, userType := FromUserInfoInterface(u)
 
 			Expect(shootNamespace).To(Equal(expectedShootNamespace))
@@ -44,16 +45,16 @@ var _ = Describe("identity", func() {
 		})
 
 		It("user name prefix and shoot group", func() {
-			test(&user.DefaultInfo{Name: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, UserTypeGardenlet)
+			test(&user.DefaultInfo{Name: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, gardenletidentity.UserTypeGardenlet)
 		})
 
 		It("Extension ServiceAccount", func() {
-			test(&user.DefaultInfo{Name: "system:serviceaccount:foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:foo"}}, "", "", false, UserTypeExtension)
+			test(&user.DefaultInfo{Name: "system:serviceaccount:foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:foo"}}, "", "", false, gardenletidentity.UserTypeExtension)
 		})
 	})
 
 	Describe("#FromAuthenticationV1UserInfo", func() {
-		test := func(u authenticationv1.UserInfo, expectedShootNamespace, expectedShootName string, expectedIsAutonomousShootValue bool, expectedUserType UserType) {
+		test := func(u authenticationv1.UserInfo, expectedShootNamespace, expectedShootName string, expectedIsAutonomousShootValue bool, expectedUserType gardenletidentity.UserType) {
 			shootNamespace, shootName, isAutonomousShoot, userType := FromAuthenticationV1UserInfo(u)
 
 			Expect(shootNamespace).To(Equal(expectedShootNamespace))
@@ -75,16 +76,16 @@ var _ = Describe("identity", func() {
 		})
 
 		It("user name prefix and shoot group", func() {
-			test(authenticationv1.UserInfo{Username: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, UserTypeGardenlet)
+			test(authenticationv1.UserInfo{Username: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, gardenletidentity.UserTypeGardenlet)
 		})
 
 		It("Extension ServiceAccount", func() {
-			test(authenticationv1.UserInfo{Username: "system:serviceaccount:foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:foo"}, Extra: map[string]authenticationv1.ExtraValue{}}, "", "", false, UserTypeExtension)
+			test(authenticationv1.UserInfo{Username: "system:serviceaccount:foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:foo"}, Extra: map[string]authenticationv1.ExtraValue{}}, "", "", false, gardenletidentity.UserTypeExtension)
 		})
 	})
 
 	Describe("#FromCertificateSigningRequest", func() {
-		test := func(csr *x509.CertificateRequest, expectedShootNamespace, expectedShootName string, expectedIsAutonomousShootValue bool, expectedUserType UserType) {
+		test := func(csr *x509.CertificateRequest, expectedShootNamespace, expectedShootName string, expectedIsAutonomousShootValue bool, expectedUserType gardenletidentity.UserType) {
 			shootNamespace, shootName, isAutonomousShoot, userType := FromCertificateSigningRequest(csr)
 
 			Expect(shootNamespace).To(Equal(expectedShootNamespace))
@@ -106,7 +107,7 @@ var _ = Describe("identity", func() {
 		})
 
 		It("user name prefix and shoot group", func() {
-			test(&x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:shoot:foo:bar", Organization: []string{"gardener.cloud:system:shoots"}}}, "foo", "bar", true, UserTypeGardenlet)
+			test(&x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:shoot:foo:bar", Organization: []string{"gardener.cloud:system:shoots"}}}, "foo", "bar", true, gardenletidentity.UserTypeGardenlet)
 		})
 	})
 })

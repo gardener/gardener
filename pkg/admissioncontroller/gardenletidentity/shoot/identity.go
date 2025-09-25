@@ -13,23 +13,13 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 
+	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-)
-
-// UserType is used for distinguishing between clients running on an autonomous shoot cluster when authenticating
-// against the garden cluster.
-type UserType string
-
-const (
-	// UserTypeGardenlet is the UserType of a gardenlet client.
-	UserTypeGardenlet UserType = "gardenlet"
-	// UserTypeExtension is the UserType of a extension client.
-	UserTypeExtension UserType = "extension"
 )
 
 // FromUserInfoInterface returns the seed name, a boolean indicating whether the provided user is an autonomous shoot
 // client, and the client's UserType.
-func FromUserInfoInterface(u user.Info) (namespace string, name string, isAutonomousShoot bool, userType UserType) {
+func FromUserInfoInterface(u user.Info) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
 	if u == nil {
 		return "", "", false, ""
 	}
@@ -47,7 +37,7 @@ func FromUserInfoInterface(u user.Info) (namespace string, name string, isAutono
 
 // FromAuthenticationV1UserInfo converts an authenticationv1.UserInfo structure to the user.Info interface and calls
 // FromUserInfoInterface to return the seed name.
-func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (namespace string, name string, isAutonomousShoot bool, userType UserType) {
+func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
 	return FromUserInfoInterface(&user.DefaultInfo{
 		Name:   userInfo.Username,
 		UID:    userInfo.UID,
@@ -58,7 +48,7 @@ func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (namespace
 
 // FromCertificateSigningRequest converts a *x509.CertificateRequest structure to the user.Info interface and calls
 // FromUserInfoInterface to return the seed name.
-func FromCertificateSigningRequest(csr *x509.CertificateRequest) (namespace string, name string, isAutonomousShoot bool, userType UserType) {
+func FromCertificateSigningRequest(csr *x509.CertificateRequest) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
 	return FromUserInfoInterface(&user.DefaultInfo{
 		Name:   csr.Subject.CommonName,
 		Groups: csr.Subject.Organization,
@@ -78,7 +68,7 @@ func convertAuthenticationV1ExtraValueToUserInfoExtra(extra map[string]authentic
 	return ret
 }
 
-func getIdentityForShootsGroup(u user.Info) (namespace string, name string, isAutonomousShoot bool, userType UserType) {
+func getIdentityForShootsGroup(u user.Info) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
 	userName := u.GetName()
 
 	if !strings.HasPrefix(userName, v1beta1constants.ShootUserNamePrefix) {
@@ -94,11 +84,11 @@ func getIdentityForShootsGroup(u user.Info) (namespace string, name string, isAu
 		return "", "", false, ""
 	}
 
-	return split[0], split[1], true, UserTypeGardenlet
+	return split[0], split[1], true, gardenletidentity.UserTypeGardenlet
 }
 
-func getIdentityForServiceAccountsGroup(_ user.Info) (namespace string, name string, isAutonomousShoot bool, userType UserType) {
+func getIdentityForServiceAccountsGroup(_ user.Info) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
 	// TODO(rfranzke): Implement this function once the concept of how extensions running in autonomous shoots
 	//  authenticate with the garden cluster gets clear.
-	return "", "", false, UserTypeExtension
+	return "", "", false, gardenletidentity.UserTypeExtension
 }
