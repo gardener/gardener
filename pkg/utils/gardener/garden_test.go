@@ -792,4 +792,94 @@ var _ = Describe("Garden", func() {
 			}))
 		})
 	})
+
+	Describe("#ReadGardenDefaultDomainsSecrets", func() {
+		var (
+			ctx       = context.Background()
+			client    client.Client
+			namespace = "garden"
+		)
+
+		BeforeEach(func() {
+			client = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		})
+
+		It("should return empty slice when no default domain secrets exist", func() {
+			result, err := ReadGardenDefaultDomainsSecrets(ctx, client, namespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeEmpty())
+		})
+
+		It("should return secrets sorted by priority descending", func() {
+			high := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "high",
+					Namespace:   namespace,
+					Labels:      map[string]string{constants.GardenRole: constants.GardenRoleDefaultDomain},
+					Annotations: map[string]string{DNSProvider: "p", DNSDomain: "high.example.com", DNSDefaultDomainPriority: "10"},
+				},
+			}
+			medium := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "medium",
+					Namespace:   namespace,
+					Labels:      map[string]string{constants.GardenRole: constants.GardenRoleDefaultDomain},
+					Annotations: map[string]string{DNSProvider: "p", DNSDomain: "medium.example.com", DNSDefaultDomainPriority: "5"},
+				},
+			}
+			invalid := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "invalid",
+					Namespace:   namespace,
+					Labels:      map[string]string{constants.GardenRole: constants.GardenRoleDefaultDomain},
+					Annotations: map[string]string{DNSProvider: "p", DNSDomain: "invalid.example.com", DNSDefaultDomainPriority: "abc"}, // invalid/missing priorities treated as 0
+				},
+			}
+			missing := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "missing",
+					Namespace:   namespace,
+					Labels:      map[string]string{constants.GardenRole: constants.GardenRoleDefaultDomain},
+					Annotations: map[string]string{DNSProvider: "p", DNSDomain: "missing.example.com"}, // invalid/missing priorities treated as 0
+				},
+			}
+
+			Expect(client.Create(ctx, medium)).To(Succeed())
+			Expect(client.Create(ctx, invalid)).To(Succeed())
+			Expect(client.Create(ctx, high)).To(Succeed())
+			Expect(client.Create(ctx, missing)).To(Succeed())
+
+			result, err := ReadGardenDefaultDomainsSecrets(ctx, client, namespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(HaveLen(4))
+			Expect([]string{result[0].Name, result[1].Name, result[2].Name, result[3].Name}).To(Equal([]string{"high", "medium", "invalid", "missing"}))
+		})
+
+		It("should keep stable ordering for secrets with identical priorities", func() {
+			first := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "first",
+					Namespace:   namespace,
+					Labels:      map[string]string{constants.GardenRole: constants.GardenRoleDefaultDomain},
+					Annotations: map[string]string{DNSProvider: "p", DNSDomain: "first.example.com", DNSDefaultDomainPriority: "7"},
+				},
+			}
+			second := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "second",
+					Namespace:   namespace,
+					Labels:      map[string]string{constants.GardenRole: constants.GardenRoleDefaultDomain},
+					Annotations: map[string]string{DNSProvider: "p", DNSDomain: "second.example.com", DNSDefaultDomainPriority: "7"},
+				},
+			}
+
+			Expect(client.Create(ctx, second)).To(Succeed())
+			Expect(client.Create(ctx, first)).To(Succeed())
+
+			result, err := ReadGardenDefaultDomainsSecrets(ctx, client, namespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(HaveLen(2))
+			Expect([]string{result[0].Name, result[1].Name}).To(Equal([]string{"first", "second"}))
+		})
+	})
 })

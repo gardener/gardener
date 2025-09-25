@@ -144,6 +144,36 @@ func ReadGardenDefaultDomains(
 	}
 
 	// Fall back to reading default domain secrets from the namespace
+	secrets, err := ReadGardenDefaultDomainsSecrets(ctx, c, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, secret := range secrets {
+		domain, err := constructDomainFromSecret(&secret)
+		if err != nil {
+			return nil, fmt.Errorf("error constructing default domain from secret %s: %w", client.ObjectKeyFromObject(&secret), err)
+		}
+		domains = append(domains, domain)
+	}
+
+	return domains, nil
+}
+
+// ReadGardenDefaultDomainsSecrets reads the default domain secrets from the given namespace.
+// This function makes sense only if no default domains are configured in the seed spec.
+// The passed reader should target the garden cluster.
+//
+// Deprecated: Use ReadGardenDefaultDomains instead.
+func ReadGardenDefaultDomainsSecrets(
+	ctx context.Context,
+	c client.Reader,
+	namespace string,
+) (
+	[]corev1.Secret,
+	error,
+) {
+	// TODO(dimityrmirchev): Remove this function once explicit DNS configuration becomes mandatory after release v1.131
 	secretList := &corev1.SecretList{}
 	if err := c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
@@ -178,15 +208,7 @@ func ReadGardenDefaultDomains(
 		return iPriority > jPriority
 	})
 
-	for _, secret := range secretList.Items {
-		domain, err := constructDomainFromSecret(&secret)
-		if err != nil {
-			return nil, fmt.Errorf("error constructing default domain from secret %s: %w", client.ObjectKeyFromObject(&secret), err)
-		}
-		domains = append(domains, domain)
-	}
-
-	return domains, nil
+	return secretList.Items, nil
 }
 
 // ReadInternalDomainSecret reads the internal domain secret from the given namespace.
