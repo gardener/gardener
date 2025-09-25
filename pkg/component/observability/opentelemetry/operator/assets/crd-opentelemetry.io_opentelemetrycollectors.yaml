@@ -8057,6 +8057,12 @@ spec:
                   - whenUnsatisfiable
                   type: object
                 type: array
+              trafficDistribution:
+                description: |-
+                  TrafficDistribution specifies how traffic to this service is routed.
+                  https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution
+                  This is only applicable to Service resources.
+                type: string
               upgradeStrategy:
                 description: UpgradeStrategy represents how the operator will handle
                   upgrades to the CR when a newer version of the operator is deployed
