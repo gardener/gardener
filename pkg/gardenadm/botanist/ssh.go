@@ -25,22 +25,23 @@ import (
 	sshutils "github.com/gardener/gardener/pkg/utils/ssh"
 )
 
-// ConnectToMachine opens an SSH connection via the Bastion to the n-th machine of the autonomous shoot.
-func (b *AutonomousBotanist) ConnectToMachine(ctx context.Context, index int) (*sshutils.Connection, error) {
-	machine, err := b.GetMachineByIndex(index)
+// ConnectToControlPlaneMachine opens an SSH connection via the Bastion to the first control plane machine of the
+// autonomous shoot. The connection is stored in the SSHConnection field.
+func (b *AutonomousBotanist) ConnectToControlPlaneMachine(ctx context.Context) error {
+	machine, err := b.GetMachineByIndex(0)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	machineAddr, err := PreferredAddressForMachine(machine)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	sshAddr := net.JoinHostPort(machineAddr, "22")
 
 	sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
 	if !found {
-		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
 	}
 
 	conn, err := sshutils.Dial(ctx, sshAddr,
@@ -49,12 +50,14 @@ func (b *AutonomousBotanist) ConnectToMachine(ctx context.Context, index int) (*
 		sshutils.WithPrivateKeyBytes(sshKeypairSecret.Data[secretsutils.DataKeyRSAPrivateKey]),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to machine %q at %q via bastion: %w", machine.Name, sshAddr, err)
+		return fmt.Errorf("failed to connect to machine %q at %q via bastion: %w", machine.Name, sshAddr, err)
 	}
 
 	// We need root permissions for running gardenadm commands on the machine.
 	// Also, add a line prefix to distinguish output from different machines.
-	return conn.RunAsUser("root").WithOutputPrefix(fmt.Sprintf("[%s] ", machine.Name)), nil
+	b.SSHConnection = conn.RunAsUser("root").WithOutputPrefix(fmt.Sprintf("[%s] ", machine.Name))
+
+	return nil
 }
 
 var (
@@ -70,14 +73,14 @@ var (
 )
 
 // CopyManifests copies all manifests needed for `gardenadm init` to the remote machine under GardenadmBaseDir.
-func (b *AutonomousBotanist) CopyManifests(ctx context.Context, conn *sshutils.Connection, configDir fs.FS) error {
-	if err := prepareRemoteDirs(conn); err != nil {
+func (b *AutonomousBotanist) CopyManifests(ctx context.Context, configDir fs.FS) error {
+	if err := prepareRemoteDirs(b.SSHConnection); err != nil {
 		return err
 	}
 
 	// Copy all manifest files from --config-dir
 	if err := gardenadm.VisitManifestFiles(configDir, func(path string, file fs.File) error {
-		if err := conn.CopyFile(ctx, filepath.Join(ManifestsDir, path), manifestFilePermissions, file); err != nil {
+		if err := b.SSHConnection.CopyFile(ctx, filepath.Join(ManifestsDir, path), manifestFilePermissions, file); err != nil {
 			return fmt.Errorf("failed copying file %s: %w", path, err)
 		}
 		return nil
@@ -85,11 +88,11 @@ func (b *AutonomousBotanist) CopyManifests(ctx context.Context, conn *sshutils.C
 		return fmt.Errorf("error copying manifests: %w", err)
 	}
 
-	if err := copyImageVectorOverride(ctx, conn); err != nil {
+	if err := copyImageVectorOverride(ctx, b.SSHConnection); err != nil {
 		return err
 	}
 
-	return b.copyShootState(ctx, conn)
+	return b.copyShootState(ctx)
 }
 
 func prepareRemoteDirs(conn *sshutils.Connection) error {
@@ -127,7 +130,7 @@ func copyImageVectorOverride(ctx context.Context, conn *sshutils.Connection) (er
 	return nil
 }
 
-func (b *AutonomousBotanist) copyShootState(ctx context.Context, conn *sshutils.Connection) error {
+func (b *AutonomousBotanist) copyShootState(ctx context.Context) error {
 	shootState := &gardencorev1beta1.ShootState{}
 	if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shootState); err != nil {
 		return fmt.Errorf("error getting ShootState: %w", err)
@@ -138,7 +141,7 @@ func (b *AutonomousBotanist) copyShootState(ctx context.Context, conn *sshutils.
 		return fmt.Errorf("error encoding ShootState: %w", err)
 	}
 
-	if err := conn.Copy(ctx, filepath.Join(ManifestsDir, "shootstate.yaml"), manifestFilePermissions, shootStateBytes); err != nil {
+	if err := b.SSHConnection.Copy(ctx, filepath.Join(ManifestsDir, "shootstate.yaml"), manifestFilePermissions, shootStateBytes); err != nil {
 		return fmt.Errorf("error copying ShootState: %w", err)
 	}
 

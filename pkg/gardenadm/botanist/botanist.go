@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	sshutils "github.com/gardener/gardener/pkg/utils/ssh"
 )
 
 // GardenadmBaseDir is the directory that gardenadm works with for storing information, transferring manifests, etc.
@@ -60,6 +61,9 @@ type AutonomousBotanist struct {
 	Bastion *bastion.Bastion
 	// ControlPlaneMachines is set by ListControlPlaneMachines during `gardenadm bootstrap`.
 	ControlPlaneMachines []machinev1alpha1.Machine
+	// SSHConnection is the SSH connection to the first control plane machine. It is set by ConnectToControlPlaneMachine
+	// during `gardenadm bootstrap`.
+	SSHConnection *sshutils.Connection
 
 	operatingSystemConfigSecret       *corev1.Secret
 	gardenerResourceManagerServiceIPs []string
