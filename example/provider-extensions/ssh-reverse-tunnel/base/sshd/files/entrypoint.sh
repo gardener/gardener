@@ -8,7 +8,7 @@ set -o nounset
 set -o pipefail
 
 # Install openssh
-apk add --no-cache openssh
+apk add --no-cache openssh openssl
 
 # Run sshd for gardener-apiserver reverse tunnel
 echo "Starting sshd"

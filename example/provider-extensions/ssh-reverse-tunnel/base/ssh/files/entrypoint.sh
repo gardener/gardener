@@ -5,7 +5,7 @@
 
 
 # Install openssh
-apk add --no-cache openssh
+apk add --no-cache openssh openssl
 
 host=$(cat /gardener-apiserver-ssh-keys/host)
 
