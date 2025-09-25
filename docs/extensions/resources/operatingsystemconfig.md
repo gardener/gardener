@@ -287,6 +287,9 @@ spec:
 #       server: https://registry-1.docker.io
 #       hosts:
 #       - url: http://<service-ip>:<port>]
+#         capabilities: ["pull", "resolve"] # optional - defaults to ["pull", "resolve"]
+#         caCerts: ["/path/to/ca.crt"] # optional - see https://github.com/containerd/containerd/blob/cef8ce2ecb572bc8026323c0c3dfad9953b952f6/docs/hosts.md?override_path#ca-field 
+#         overridePath: false # optional - see https://github.com/containerd/containerd/blob/cef8ce2ecb572bc8026323c0c3dfad9953b952f6/docs/hosts.md?override_path#override_path-field
 #     plugins:
 #     - op: add # add (default) or remove
 #       path: [io.containerd.grpc.v1.cri, containerd]

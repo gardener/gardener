@@ -8,4 +8,7 @@ server = {{ .server | quote }}
   {{- if .ca }}
   ca = {{ .ca | toJson }}
   {{- end }}
+  {{- if .overridePath }}
+  override_path = {{ .overridePath }}
+  {{- end }}
 {{ end }}
