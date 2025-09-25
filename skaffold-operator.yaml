@@ -762,6 +762,7 @@ build:
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
+            - pkg/operator/client
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
             - pkg/utils/chart
@@ -769,6 +770,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/gardener/gardenlet
             - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/bootstraptoken

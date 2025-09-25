@@ -32,7 +32,6 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	certificatesclientv1 "k8s.io/client-go/kubernetes/typed/certificates/v1"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
@@ -47,7 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 // Reconciler reconciles CertificateSigningRequest.
@@ -147,12 +146,7 @@ func (r *Reconciler) isBootstrapTokenIsForThisCSR(ctx context.Context, csr *cert
 		return false, "CSR does not seem to be requested via a bootstrap token", nil
 	}
 
-	bootstrapTokenSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: bootstraptokenutil.BootstrapTokenSecretName(strings.TrimPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix)), Namespace: metav1.NamespaceSystem}}
-	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(bootstrapTokenSecret), bootstrapTokenSecret); err != nil {
-		return false, "", fmt.Errorf("failed to read bootstrap token secret %s: %w", client.ObjectKeyFromObject(bootstrapTokenSecret), err)
-	}
-
-	shootMeta, err := extractShootMetaFromBootstrapToken(bootstrapTokenSecret)
+	shootMeta, err := gardenletutils.ShootMetaFromBootstrapToken(ctx, r.Client, bootstraptokenutil.BootstrapTokenSecretName(strings.TrimPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix)))
 	if err != nil {
 		// Intentionally, we don't return the err as error here, but rather as reason. This will lead to denial of the
 		// CSR if we cannot extract the shoot metadata from the bootstrap token secret.
@@ -161,25 +155,6 @@ func (r *Reconciler) isBootstrapTokenIsForThisCSR(ctx context.Context, csr *cert
 	}
 
 	return ensureCSRSubjectMatchesBootstrapTokenDescription(shootMeta, csr.Spec.Request)
-}
-
-func extractShootMetaFromBootstrapToken(bootstrapTokenSecret *corev1.Secret) (types.NamespacedName, error) {
-	description := string(bootstrapTokenSecret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey])
-	if !strings.HasPrefix(description, bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix) {
-		return types.NamespacedName{}, fmt.Errorf("bootstrap token description does not start with %q: %s", bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix, description)
-	}
-
-	parts := strings.Fields(strings.TrimPrefix(description, bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix))
-	if len(parts) == 0 {
-		return types.NamespacedName{}, fmt.Errorf("could not extract shoot meta from bootstrap token description: %s", description)
-	}
-
-	split := strings.Split(parts[0], "/")
-	if len(split) != 2 {
-		return types.NamespacedName{}, fmt.Errorf("could not extract shoot namespace and name from bootstrap token description: %s", description)
-	}
-
-	return types.NamespacedName{Namespace: split[0], Name: split[1]}, nil
 }
 
 func ensureCSRSubjectMatchesBootstrapTokenDescription(shootMeta types.NamespacedName, rawCSR []byte) (bool, string, error) {
