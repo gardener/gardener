@@ -107,7 +107,7 @@ var _ = Describe("Scheduler tests", func() {
 				g.Expect(shoot.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeCreate))
 				g.Expect(shoot.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStatePending))
 				return shoot.Status.LastOperation.Description
-			}).Should(And(ContainSubstring("none of the 1 seeds supports the domain"), ContainSubstring("configured in the shoot specification")))
+			}).Should(And(ContainSubstring("none of the 1 seeds support the domain"), ContainSubstring("configured in the shoot specification")))
 		})
 
 		It("should pass because there is a seed with < 3 zones for non-HA shoot", func() {
