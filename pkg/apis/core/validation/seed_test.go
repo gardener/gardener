@@ -347,11 +347,34 @@ var _ = Describe("Seed Validation Tests", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.internal.credentialsRef.apiVersion"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.internal.credentialsRef.kind"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.internal.credentialsRef.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.internal.credentialsRef.name"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.internal.credentialsRef.namespace"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.internal.credentialsRef.namespace"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeNotSupported),
+						"Field":  Equal("spec.dns.internal.credentialsRef"),
+						"Detail": ContainSubstring("supported values: \"/v1, Kind=Secret\""),
 					})),
 				))
 			})
@@ -429,11 +452,34 @@ var _ = Describe("Seed Validation Tests", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[0].credentialsRef.apiVersion"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[0].credentialsRef.kind"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.defaults[0].credentialsRef.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.defaults[0].credentialsRef.name"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.defaults[0].credentialsRef.namespace"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.defaults[0].credentialsRef.namespace"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeNotSupported),
+						"Field":  Equal("spec.dns.defaults[0].credentialsRef"),
+						"Detail": ContainSubstring("supported values: \"/v1, Kind=Secret\""),
 					})),
 				))
 			})
@@ -451,7 +497,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				}))))
 			})
 
-			It("should not return an error if the defaults DNS is configured correctly", func() {
+			It("should succeed if the defaults DNS is configured correctly", func() {
 				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{{
 					Type:   "foo",
 					Domain: "foo.example.com",
@@ -513,26 +559,49 @@ var _ = Describe("Seed Validation Tests", func() {
 				}
 				errorList := ValidateSeed(seed)
 				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.dns.defaults[1].type"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required domain
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.defaults[1].domain"),
 					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required type
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[1].type"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // invalid credentialsRef (must reference a Secret)
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.dns.defaults[1].credentialsRef"),
 						"Detail": Equal("credentialsRef must reference a Secret"),
 					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required apiVersion
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[1].credentialsRef.apiVersion"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required kind
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[1].credentialsRef.kind"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required name
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.defaults[1].credentialsRef.name"),
 					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
+					PointTo(MatchFields(IgnoreExtras, Fields{ // invalid name format
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.defaults[1].credentialsRef.name"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required namespace
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.defaults[1].credentialsRef.namespace"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // invalid namespace format
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.defaults[1].credentialsRef.namespace"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // not supported credentialsRef
+						"Type":   Equal(field.ErrorTypeNotSupported),
+						"Field":  Equal("spec.dns.defaults[1].credentialsRef"),
+						"Detail": ContainSubstring("supported values: \"/v1, Kind=Secret\""),
 					})),
 				))
 			})

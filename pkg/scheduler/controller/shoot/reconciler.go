@@ -342,15 +342,13 @@ func filterSeedsMatchingDomain(seedList []gardencorev1beta1.Seed, shoot *gardenc
 	)
 
 	for _, seed := range seedList {
-		if len(seed.Spec.DNS.Defaults) > 0 {
-			for _, defaultDomain := range seed.Spec.DNS.Defaults {
-				// if the domain matches a seed domain then we only accept it, if it is in a <name>.<project>.<domain> format
-				if strings.HasSuffix(shootDomain, "."+defaultDomain.Domain) {
-					hasMatchedGardenerDomain = true
-					if shootDomain == fmt.Sprintf("%s.%s.%s", shoot.Name, projectName, defaultDomain.Domain) {
-						supportingSeeds = append(supportingSeeds, seed)
-						break
-					}
+		for _, defaultDomain := range seed.Spec.DNS.Defaults {
+			// if the domain matches a seed domain then we only accept it, if it is in a <name>.<project>.<domain> format
+			if strings.HasSuffix(shootDomain, "."+defaultDomain.Domain) {
+				hasMatchedGardenerDomain = true
+				if shootDomain == fmt.Sprintf("%s.%s.%s", shoot.Name, projectName, defaultDomain.Domain) {
+					supportingSeeds = append(supportingSeeds, seed)
+					break
 				}
 			}
 		}
@@ -358,7 +356,7 @@ func filterSeedsMatchingDomain(seedList []gardencorev1beta1.Seed, shoot *gardenc
 
 	if hasMatchedGardenerDomain {
 		if len(supportingSeeds) == 0 {
-			return nil, fmt.Errorf("none of the %d seeds supports the domain %s configured in the shoot specification", len(seedList), shootDomain)
+			return nil, fmt.Errorf("none of the %d seeds support the domain %q configured in the shoot specification", len(seedList), shootDomain)
 		}
 		return supportingSeeds, nil
 	}

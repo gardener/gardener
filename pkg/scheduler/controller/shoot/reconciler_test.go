@@ -1077,7 +1077,7 @@ var _ = Describe("Scheduler_Control", func() {
 			seedList := []gardencorev1beta1.Seed{*seedWithDefaultDomain, *seedWithoutDefaultDomain}
 
 			result, err := filterSeedsMatchingDomain(seedList, testShoot, projectName)
-			Expect(err).To(MatchError("none of the 2 seeds supports the domain wrong-format.example.com configured in the shoot specification"))
+			Expect(err).To(MatchError(`none of the 2 seeds support the domain "wrong-format.example.com" configured in the shoot specification`))
 			Expect(result).To(BeNil())
 		})
 
@@ -1088,7 +1088,7 @@ var _ = Describe("Scheduler_Control", func() {
 			seedList := []gardencorev1beta1.Seed{*seedWithDefaultDomain, *seedWithoutDefaultDomain}
 
 			result, err := filterSeedsMatchingDomain(seedList, testShoot, projectName)
-			Expect(err).To(MatchError(fmt.Sprintf("none of the 2 seeds supports the domain wrong-name.%s.example.com configured in the shoot specification", projectName)))
+			Expect(err).To(MatchError(fmt.Sprintf(`none of the 2 seeds support the domain "wrong-name.%s.example.com" configured in the shoot specification`, projectName)))
 			Expect(result).To(BeNil())
 		})
 
@@ -1099,7 +1099,7 @@ var _ = Describe("Scheduler_Control", func() {
 			seedList := []gardencorev1beta1.Seed{*seedWithDefaultDomain, *seedWithoutDefaultDomain}
 
 			result, err := filterSeedsMatchingDomain(seedList, testShoot, projectName)
-			Expect(err).To(MatchError(fmt.Sprintf("none of the 2 seeds supports the domain %s.wrong-project.example.com configured in the shoot specification", testShoot.Name)))
+			Expect(err).To(MatchError(fmt.Sprintf(`none of the 2 seeds support the domain "%s.wrong-project.example.com" configured in the shoot specification`, testShoot.Name)))
 			Expect(result).To(BeNil())
 		})
 

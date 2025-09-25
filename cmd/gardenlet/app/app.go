@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	goruntime "runtime"
-	"sort"
 	"strconv"
 	"time"
 
@@ -533,7 +532,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 	// If the Seed config does not have spec.dns.defaults set,
 	// set it automatically based on the global default domain secrets.
 	if len(g.config.SeedConfig.Spec.DNS.Defaults) == 0 {
-		defaultDomainSecrets, err := g.readDefaultDomainSecrets(ctx, gardenClient)
+		defaultDomainSecrets, err := gardenerutils.ReadGardenDefaultDomainsSecrets(ctx, gardenClient, gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name))
 		if err != nil {
 			return err
 		}
@@ -581,44 +580,6 @@ func init() {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(seedmanagementv1alpha1.AddToScheme(scheme))
 	seedManagementDecoder = serializer.NewCodecFactory(scheme).UniversalDeserializer()
-}
-
-// readDefaultDomainSecrets reads and sorts default domain secrets by priority
-func (g *garden) readDefaultDomainSecrets(ctx context.Context, gardenClient client.Client) ([]corev1.Secret, error) {
-	secretList := &corev1.SecretList{}
-	if err := gardenClient.List(ctx, secretList, client.InNamespace(gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name)), client.MatchingLabels{
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
-	}); err != nil {
-		return nil, err
-	}
-
-	if len(secretList.Items) == 0 {
-		return nil, nil
-	}
-
-	sort.SliceStable(secretList.Items, func(i, j int) bool {
-		iAnnotations := secretList.Items[i].GetAnnotations()
-		jAnnotations := secretList.Items[j].GetAnnotations()
-		var iPriority, jPriority int
-
-		if iAnnotations != nil {
-			if domainPriority, ok := iAnnotations[gardenerutils.DNSDefaultDomainPriority]; ok {
-				if p, err := strconv.Atoi(domainPriority); err == nil {
-					iPriority = p
-				}
-			}
-		}
-		if jAnnotations != nil {
-			if domainPriority, ok := jAnnotations[gardenerutils.DNSDefaultDomainPriority]; ok {
-				if p, err := strconv.Atoi(domainPriority); err == nil {
-					jPriority = p
-				}
-			}
-		}
-		return iPriority > jPriority
-	})
-
-	return secretList.Items, nil
 }
 
 func (g *garden) createSelfUpgradeConfig(ctx context.Context, log logr.Logger, gardenClient client.Client) error {

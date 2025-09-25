@@ -2239,11 +2239,8 @@ func (c *validationContext) validateDefaultDomainCompatibilityForRescheduling(ol
 func getDefaultDomainsForSeed(seed *gardencorev1beta1.Seed) []string {
 	var defaultDomains []string
 
-	if len(seed.Spec.DNS.Defaults) > 0 {
-		for _, seedDNSDefault := range seed.Spec.DNS.Defaults {
-			defaultDomains = append(defaultDomains, seedDNSDefault.Domain)
-		}
-		return defaultDomains
+	for _, seedDNSDefault := range seed.Spec.DNS.Defaults {
+		defaultDomains = append(defaultDomains, seedDNSDefault.Domain)
 	}
 
 	return defaultDomains
