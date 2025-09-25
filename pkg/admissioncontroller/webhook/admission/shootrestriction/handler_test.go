@@ -93,7 +93,7 @@ var _ = Describe("handler", func() {
 		})
 
 		Context("gardenlet client", func() {
-			// TODO(rfranzke): Unit tests for handled resources will be added here as development on autonomous shoots
+			// TODO(rfranzke): Unit tests for handled resources will be added here as development of autonomous shoots
 			//  progresses.
 		})
 	})

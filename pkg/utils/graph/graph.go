@@ -70,7 +70,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 	var setups []resourceSetup
 
 	if g.forAutonomousShoots {
-		// TODO(rfranzke): We'll add some setup functions here as development on autonomous shoots
+		// TODO(rfranzke): We'll add some setup functions here as development of autonomous shoots
 		//  progresses.
 	} else {
 		setups = append(setups,

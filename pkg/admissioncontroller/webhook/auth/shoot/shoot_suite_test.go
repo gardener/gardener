@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestShootAuthorizer(t *testing.T) {
+func TestShoot(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Webhook Auth ShootAuthorizer Suite")
+	RunSpecs(t, "AdmissionController Webhook Auth Shoot Suite")
 }

@@ -17,8 +17,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-// FromUserInfoInterface returns the seed name, a boolean indicating whether the provided user is an autonomous shoot
-// client, and the client's UserType.
+// FromUserInfoInterface returns the shoot namespace and name, a boolean indicating whether the provided user is an
+// autonomous shoot client, and the client's UserType.
 func FromUserInfoInterface(u user.Info) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
 	if u == nil {
 		return "", "", false, ""
@@ -36,7 +36,7 @@ func FromUserInfoInterface(u user.Info) (namespace string, name string, isAutono
 }
 
 // FromAuthenticationV1UserInfo converts an authenticationv1.UserInfo structure to the user.Info interface and calls
-// FromUserInfoInterface to return the seed name.
+// FromUserInfoInterface to return the shoot namespace and name.
 func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
 	return FromUserInfoInterface(&user.DefaultInfo{
 		Name:   userInfo.Username,
@@ -47,7 +47,7 @@ func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (namespace
 }
 
 // FromCertificateSigningRequest converts a *x509.CertificateRequest structure to the user.Info interface and calls
-// FromUserInfoInterface to return the seed name.
+// FromUserInfoInterface to return the shoot namespace and name.
 func FromCertificateSigningRequest(csr *x509.CertificateRequest) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
 	return FromUserInfoInterface(&user.DefaultInfo{
 		Name:   csr.Subject.CommonName,

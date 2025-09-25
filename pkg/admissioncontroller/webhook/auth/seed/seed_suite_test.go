@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSeedAuthorizer(t *testing.T) {
+func TestSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Webhook Auth SeedAuthorizer Suite")
+	RunSpecs(t, "AdmissionController Webhook Auth Seed Suite")
 }

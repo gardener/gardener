@@ -11,6 +11,6 @@ type UserType string
 const (
 	// UserTypeGardenlet is the UserType of a gardenlet client.
 	UserTypeGardenlet UserType = "gardenlet"
-	// UserTypeExtension is the UserType of a extension client.
+	// UserTypeExtension is the UserType of an extension client.
 	UserTypeExtension UserType = "extension"
 )

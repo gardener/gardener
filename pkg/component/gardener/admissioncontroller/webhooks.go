@@ -376,7 +376,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				TimeoutSeconds:          ptr.To[int32](10),
 				Rules:                   []admissionregistrationv1.RuleWithOperations{
-					// TODO(rfranzke): We'll add some rules here as development on autonomous shoots progresses.
+					// TODO(rfranzke): We'll add some rules here as development of autonomous shoots progresses.
 				},
 				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,
