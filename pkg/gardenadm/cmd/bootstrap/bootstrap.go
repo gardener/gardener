@@ -301,7 +301,15 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(deployDNSRecord, copyManifests),
 		})
 
-		_ = bootstrapControlPlane
+		fetchKubeconfig = g.Add(flow.Task{
+			Name: "Fetching kubeconfig from the first control plane machine",
+			Fn: func(ctx context.Context) error {
+				return b.FetchKubeconfig(ctx, opts.KubeconfigWriter)
+			},
+			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
+		})
+
+		_ = fetchKubeconfig
 
 		// In contrast to the usual Shoot migrate flow, we don't delete the shoot control plane namespace at the end.
 		// The bootstrap cluster is designed to be temporary and thrown away after successfully executing
@@ -316,7 +324,20 @@ func run(ctx context.Context, opts *Options) error {
 		return flow.Errors(err)
 	}
 
-	opts.Log.Info("Command is work in progress")
+	fmt.Fprintf(opts.Out, `
+Warning: this command is work in progress.
+
+For now, you can connect to the autonomous Shoot cluster control-plane by
+fetching the kubeconfig from the secret "%[1]s/kubeconfig"
+on the bootstrap cluster:
+
+  kubectl get secret -n %[1]s kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 --decode > %[1]s-kubeconfig.yaml
+  export KUBECONFIG=$PWD/%[1]s-kubeconfig.yaml
+  kubectl get nodes
+
+Note that the API server of the autonomous Shoot cluster control-plane might
+not be accessible from your current machine.
+`, b.Shoot.GetInfo().Status.TechnicalID)
 	return nil
 }
 
