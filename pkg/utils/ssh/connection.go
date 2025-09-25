@@ -24,9 +24,13 @@ type Connection struct {
 
 	SCP *scp.Client
 
-	// OutputPrefix is an optional line prefix added to stdout and stderr in Run and RunWithStreams.
+	// runAsUser is an optional user to run commands as. If set, commands (Run, Copy, etc.) are executed as the configured
+	// user using sudo. Note that this requires the connecting user to have sudo permissions without password prompt.
+	runAsUser string
+
+	// outputPrefix is an optional line prefix added to stdout and stderr in Run and RunWithStreams.
 	// This is useful when dealing with multiple connections for marking output with different connection information.
-	OutputPrefix string
+	outputPrefix string
 }
 
 // Dial opens a new SSH Connection. Ensure to call Connection.Close() for cleanup.
@@ -56,6 +60,25 @@ func Dial(ctx context.Context, addr string, opts ...Option) (*Connection, error)
 	}, nil
 }
 
+// RunAsUser configures the connection to run commands (Run, Copy, etc.) as the given user using sudo.
+func (c *Connection) RunAsUser(user string) *Connection {
+	c.runAsUser = user
+
+	if c.runAsUser != "" {
+		c.SCP.RemoteBinary = "sudo -u " + c.runAsUser + " scp"
+	} else {
+		c.SCP.RemoteBinary = "scp"
+	}
+
+	return c
+}
+
+// WithOutputPrefix configures the connection to add the given line prefix to stdout and stderr in Run and RunWithStreams.
+func (c *Connection) WithOutputPrefix(prefix string) *Connection {
+	c.outputPrefix = prefix
+	return c
+}
+
 // Run executes the given command on the remote host and returns stdout and stderr streams.
 func (c *Connection) Run(command string) (io.Reader, io.Reader, error) {
 	var stdout, stderr bytes.Buffer
@@ -70,15 +93,19 @@ func (c *Connection) RunWithStreams(stdin io.Reader, stdout, stderr io.Writer, c
 	}
 	defer session.Close()
 
+	if c.runAsUser != "" {
+		command = "sudo -u " + c.runAsUser + " " + command
+	}
+
 	session.Stdin = stdin
 
 	session.Stdout = stdout
-	if c.OutputPrefix != "" {
-		session.Stdout = NewPrefixedWriter(c.OutputPrefix, session.Stdout)
+	if c.outputPrefix != "" {
+		session.Stdout = NewPrefixedWriter(c.outputPrefix, session.Stdout)
 	}
 	session.Stderr = stderr
-	if c.OutputPrefix != "" {
-		session.Stderr = NewPrefixedWriter(c.OutputPrefix, session.Stderr)
+	if c.outputPrefix != "" {
+		session.Stderr = NewPrefixedWriter(c.outputPrefix, session.Stderr)
 	}
 
 	return session.Run(command)

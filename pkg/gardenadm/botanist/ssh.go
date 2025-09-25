@@ -52,10 +52,9 @@ func (b *AutonomousBotanist) ConnectToMachine(ctx context.Context, index int) (*
 		return nil, fmt.Errorf("failed to connect to machine %q at %q via bastion: %w", machine.Name, sshAddr, err)
 	}
 
-	// add a line prefix to distinguish output from different machines
-	conn.OutputPrefix = fmt.Sprintf("[%s] ", machine.Name)
-
-	return conn, nil
+	// We need root permissions for running gardenadm commands on the machine.
+	// Also, add a line prefix to distinguish output from different machines.
+	return conn.RunAsUser("root").WithOutputPrefix(fmt.Sprintf("[%s] ", machine.Name)), nil
 }
 
 var (
@@ -94,12 +93,6 @@ func (b *AutonomousBotanist) CopyManifests(ctx context.Context, conn *sshutils.C
 }
 
 func prepareRemoteDirs(conn *sshutils.Connection) error {
-	// /var/lib/gardenadm is created by the bootstrap OSC script and owned by root accordingly.
-	// Change the ownership so that we can add more manifests via the SSH connection logged in as the gardener user.
-	if _, _, err := conn.Run("sudo chown gardener:gardener " + GardenadmBaseDir); err != nil {
-		return fmt.Errorf("error ensuring ownership of directory %q: %w", GardenadmBaseDir, err)
-	}
-
 	// Empty manifests dir to start with a clean state on re-runs
 	if _, _, err := conn.Run("rm -rf " + ManifestsDir); err != nil {
 		return fmt.Errorf("error removing manifests dir: %w", err)
