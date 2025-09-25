@@ -144,13 +144,45 @@ make gardenadm-up SCENARIO=medium-touch
 
 This will first build the needed images and then render the needed manifests for `gardenadm bootstrap` to the [`./dev-setup/gardenadm/resources/generated/medium-touch`](../../dev-setup/gardenadm/resources/generated/medium-touch) directory.
 
-Afterward, you can use `go run` to execute `gardenadm` commands on your machine:
+### Bootstrapping the Autonomous Shoot Cluster
+
+Use `go run` to execute `gardenadm` commands on your machine:
 
 ```shell
 $ export IMAGEVECTOR_OVERWRITE=$PWD/dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml
 $ go run ./cmd/gardenadm bootstrap -d ./dev-setup/gardenadm/resources/generated/medium-touch
 ...
-Command is work in progress
+[shoot--garden--root-control-plane-58ffc-2l6s7] Your Shoot cluster control-plane has initialized successfully!
+...
+```
+
+### Connecting to the Autonomous Shoot Cluster
+
+`gardenadm init` stores the kubeconfig of the autonomous shoot cluster in the `/etc/kubernetes/admin.conf` file on the control plane machine.
+To connect to the autonomous shoot cluster, set the `KUBECONFIG` environment variable and execute `kubectl` within a `bash` shell in the machine pod:
+
+```shell
+$ machine="$(kubectl -n shoot--garden--root get po -l app=machine -oname | head -1 | cut -d/ -f2)"
+$ kubectl -n shoot--garden--root exec -it $machine -- bash
+root@machine-shoot--garden--root-control-plane-58ffc-2l6s7:/# export KUBECONFIG=/etc/kubernetes/admin.conf
+root@machine-shoot--garden--root-control-plane-58ffc-2l6s7:/# kubectl get node
+NAME                                                    STATUS   ROLES    AGE     VERSION
+machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.33.0
+```
+
+`gardenadm bootstrap` copies the kubeconfig from the control plane machine to the bootstrap cluster.
+You can also copy the kubeconfig to your local machine and use a port-forward to connect to the cluster's API server:
+
+```shell
+$ kubectl get secret -n shoot--garden--root kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 --decode | sed 's/api.root.garden.local.gardener.cloud/localhost:6443/' > /tmp/shoot--garden--root.conf
+$ machine="$(kubectl -n shoot--garden--root get po -l app=machine -oname | head -1 | cut -d/ -f2)"
+$ kubectl -n shoot--garden--root port-forward pod/$machine 6443:443
+
+# in a new terminal
+$ export KUBECONFIG=/tmp/shoot--garden--root.conf
+$ kubectl get no
+NAME                                                    STATUS   ROLES    AGE     VERSION
+machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.33.0
 ```
 
 ## Connecting the Autonomous Shoot Cluster to Gardener
