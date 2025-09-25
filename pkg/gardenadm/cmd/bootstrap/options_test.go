@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -19,14 +20,16 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/bootstrap"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils/test"
+	clitest "github.com/gardener/gardener/pkg/utils/test/cli"
 )
 
 var _ = Describe("Options", func() {
 	var (
 		options *Options
 
-		logBuffer *gbytes.Buffer
-		detector  *fakeDetector
+		logBuffer, stdOut *gbytes.Buffer
+		detector          *fakeDetector
 	)
 
 	BeforeEach(func() {
@@ -35,10 +38,13 @@ var _ = Describe("Options", func() {
 		}
 
 		logBuffer = gbytes.NewBuffer()
+		globalOpts := &cmd.Options{
+			Log: logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(io.MultiWriter(logBuffer, GinkgoWriter))),
+		}
+		globalOpts.IOStreams, _, stdOut, _ = clitest.NewTestIOStreams()
+
 		options = &Options{
-			Options: &cmd.Options{
-				Log: logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(io.MultiWriter(logBuffer, GinkgoWriter))),
-			},
+			Options: globalOpts,
 			ManifestOptions: cmd.ManifestOptions{
 				ConfigDir: "some-path-to-config-dir",
 			},
@@ -60,7 +66,7 @@ var _ = Describe("Options", func() {
 
 		It("should fail because kubeconfig path is not set", func() {
 			options.Kubeconfig = ""
-			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a path to a KinD cluster kubeconfig")))
+			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a path to a bootstrap cluster kubeconfig")))
 		})
 
 		It("should fail because config dir path is not set", func() {
@@ -92,6 +98,31 @@ var _ = Describe("Options", func() {
 	Describe("#Complete", func() {
 		It("should return nil", func() {
 			Expect(options.Complete()).To(Succeed())
+		})
+
+		Describe("kubeconfig output", func() {
+			It("should do nothing if output is unset", func() {
+				options.KubeconfigOutput = ""
+				Expect(options.Complete()).To(Succeed())
+				Expect(options.KubeconfigWriter).To(BeNil())
+			})
+
+			It("should write to stdout if output is '-'", func() {
+				options.KubeconfigOutput = "-"
+				Expect(options.Complete()).To(Succeed())
+				Expect(options.KubeconfigWriter).To(BeIdenticalTo(stdOut))
+			})
+
+			It("should write to the given file path", func() {
+				var fileName string
+				DeferCleanup(test.WithTempFile("", "kubeconfig-output-", nil, &fileName))
+
+				options.KubeconfigOutput = fileName
+				Expect(options.Complete()).To(Succeed())
+				Expect(options.KubeconfigWriter).NotTo(BeNil())
+				Expect(options.KubeconfigWriter).To(BeAssignableToTypeOf(&os.File{}))
+				Expect(options.KubeconfigWriter.(*os.File).Name()).To(Equal(fileName))
+			})
 		})
 
 		Describe("bastion ingress CIDRs", func() {

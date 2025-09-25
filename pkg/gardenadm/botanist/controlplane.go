@@ -5,8 +5,10 @@
 package botanist
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"os"
@@ -34,6 +36,7 @@ import (
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -44,6 +47,10 @@ import (
 
 // PathKubeconfig is the path to a file on the control plane node containing an admin kubeconfig.
 var PathKubeconfig = filepath.Join(string(filepath.Separator), "etc", "kubernetes", "admin.conf")
+
+// KubeconfigSecretName is the name of the secret in the shoot namespace of the bootstrap cluster containing the
+// kubeconfig of the autonomous shoot.
+const KubeconfigSecretName = "kubeconfig"
 
 func (b *AutonomousBotanist) deployETCD(role string) func(context.Context) error {
 	var portClient, portPeer, portMetrics int32 = 2379, 2380, 2381
@@ -363,4 +370,38 @@ func (b *AutonomousBotanist) DiscoverKubernetesVersion(controlPlaneAddress strin
 	}
 
 	return version, nil
+}
+
+// FetchKubeconfig fetches the kubeconfig of the autonomous shoot from the control plane machine via SSH and stores it
+// in a secret in the shoot namespace of the bootstrap cluster for later retrieval. It also writes the kubeconfig to the
+// given output writer, if any.
+func (b *AutonomousBotanist) FetchKubeconfig(ctx context.Context, output io.Writer) error {
+	kubeconfigBuffer := &bytes.Buffer{}
+	if err := b.SSHConnection.SCP.CopyFromRemotePassThru(ctx, kubeconfigBuffer, PathKubeconfig, nil); err != nil {
+		return fmt.Errorf("error fetching kubeconfig: %w", err)
+	}
+	kubeconfigBytes := kubeconfigBuffer.Bytes()
+
+	kubeconfigSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: KubeconfigSecretName, Namespace: b.Shoot.ControlPlaneNamespace}}
+	_, err := controllerutils.CreateOrGetAndMergePatch(ctx, b.SeedClientSet.Client(), kubeconfigSecret, func() error {
+		kubeconfigSecret.Data = map[string][]byte{
+			secretsutils.DataKeyKubeconfig: kubeconfigBytes,
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("error writing kubeconfig secret: %w", err)
+	}
+	b.Logger.Info("Stored kubeconfig of the autonomous shoot in secret", "namespace", kubeconfigSecret.Namespace, "name", kubeconfigSecret.Name)
+
+	if output != nil {
+		if outputFile, ok := output.(*os.File); ok {
+			b.Logger.Info("Writing kubeconfig of the autonomous shoot to file", "path", outputFile.Name())
+		}
+		if _, err := output.Write(kubeconfigBytes); err != nil {
+			return fmt.Errorf("error writing kubeconfig to output: %w", err)
+		}
+	}
+
+	return nil
 }
