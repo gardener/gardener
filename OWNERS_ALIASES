@@ -1,24 +1,59 @@
-# See the OWNERS docs at https://go.k8s.io/owners
+# See the OWNERS docs at https://docs.prow.k8s.io/docs/components/plugins/approve/approvers/#overview and Gardener community roles at https://github.com/gardener/documentation/blob/master/website/documentation/contribute/code/roles/_index.md
 
 aliases:
-  gardener-reviewers:
+  gardener-reviewers-auditlog: # This group is primarily responsible for the auditlog component.
+  - dimityrmirchev
+  - vpnachev
+  gardener-reviewers-autoscaling: # This group is primarily responsible for autoscaling topics.
+  - aaronfern
+  - elankath
+  - ialidzhikov
+  - plkokanov
+  - vitanovs
+  gardener-reviewers-control-plane-migration: # This group is primarily responsible for control plane migration.
+  - plkokanov
+  gardener-reviewers-core: # This group is interdisciplinary might review PRs touching multiple components and adjacent areas.
   - acumino
   - ary1992
-  - dimitar-kostadinov
   - ialidzhikov
   - Kostov6
   - LucaBernstein
+  - MartinWeindel
   - marc1404
   - oliver-goetz
-  - plkokanov
   - rfranzke
   - ScheererJ
   - shafeeqes
   - timebertt
   - timuthy
   - tobschli
-  - vitanovs
-  gardener-approvers:
+  gardener-reviewers-etcd: # This group is primarily responsible for the etcd component.
+  - ishan16696
+  - shreyas-s-rao
+  - unmarshall
+  gardener-reviewers-logging: # This group is primarily responsible for logging topics.
+  - nickytd
+  - rrhubenov
+  gardener-reviewers-monitoring: # This group is primarily responsible for monitoring topics.
+  - chrkl
+  - istvanballok
+  - nickytd
+  - rickardsjp
+  - vicwicker
+  gardener-reviewers-networking: # This group is primarily responsible for networking topics.
+  - axel7born
+  - docktofuture
+  - domdom82
+  - ScheererJ
+  gardener-reviewers-security: # This group is primarily responsible for security topics.
+  - AleksandarSavchev
+  - dimityrmirchev
+  - theoddora
+  - vpnachev
+  gardener-reviewers-ui: # This group is primarily responsible for the Gardener Dashboard and related UI components.
+  - grolu
+  - petersutter
+  gardener-approvers: # This group has the authority to review and approve changes across various components and areas.
   - acumino
   - ary1992
   - ialidzhikov
