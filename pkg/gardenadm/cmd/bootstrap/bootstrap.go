@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/publicip"
-	sshutils "github.com/gardener/gardener/pkg/utils/ssh"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -276,21 +275,17 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
 
-		connMachine0      *sshutils.Connection
-		connectToMachine0 = g.Add(flow.Task{
-			Name: "Connecting to the first control plane machine",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				connMachine0, err = b.ConnectToMachine(ctx, 0)
-				return err
-			}).RetryUntilTimeout(5*time.Second, 5*time.Minute),
+		connectToMachine = g.Add(flow.Task{
+			Name:         "Connecting to the first control plane machine",
+			Fn:           flow.TaskFn(b.ConnectToControlPlaneMachine).RetryUntilTimeout(5*time.Second, 5*time.Minute),
 			Dependencies: flow.NewTaskIDs(listControlPlaneMachines, deployBastion),
 		})
 		copyManifests = g.Add(flow.Task{
 			Name: "Copying manifests to the first control plane machine",
 			Fn: func(ctx context.Context) error {
-				return b.CopyManifests(ctx, connMachine0, os.DirFS(opts.ConfigDir))
+				return b.CopyManifests(ctx, os.DirFS(opts.ConfigDir))
 			},
-			Dependencies: flow.NewTaskIDs(connectToMachine0, compileShootState),
+			Dependencies: flow.NewTaskIDs(connectToMachine, compileShootState),
 		})
 
 		_ = deployDNSRecord
