@@ -19,6 +19,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -247,6 +248,19 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your autonomous shoot cluster has successfully been connected to Gardener!"))
+
+			Eventually(ctx, func(g Gomega) {
+				csrList := &certificatesv1.CertificateSigningRequestList{}
+				g.Expect(shootClientSet.Client().List(ctx, csrList)).To(Succeed())
+				g.Expect(csrList.Items).To(HaveLen(1))
+
+				g.Expect(csrList.Items[0].Status.Conditions).To(ContainCondition(
+					MatchFields(IgnoreExtras, Fields{"Type": Equal(certificatesv1.CertificateApproved)}),
+					MatchFields(IgnoreExtras, Fields{"Status": Equal(corev1.ConditionTrue)}),
+					MatchFields(IgnoreExtras, Fields{"Message": Equal("Auto approving gardenlet client certificate after SubjectAccessReview.")}),
+					MatchFields(IgnoreExtras, Fields{"Reason": Equal("AutoApproved")}),
+				))
+			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		// TODO(rfranzke): Implement this as 'gardenadm connect' progresses.
