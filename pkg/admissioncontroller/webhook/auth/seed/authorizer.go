@@ -21,6 +21,7 @@ import (
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 
+	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
 	seedidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/seed"
 	authwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -98,7 +99,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 	var (
 		log               = a.logger.WithValues("seedName", seedName, "attributes", fmt.Sprintf("%#v", attrs), "userType", userType)
 		requestAuthorizer = &authwebhook.RequestAuthorizer{
-			Log:                    a.logger,
+			Log:                    log,
 			Graph:                  a.graph,
 			AuthorizeWithSelectors: a.authorizeWithSelectors,
 			ToType:                 graph.VertexTypeSeed,
@@ -128,7 +129,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				authwebhook.WithAllowedSubresources("status"),
 			)
 		case certificateSigningRequestResource:
-			if userType == seedidentity.UserTypeExtension {
+			if userType == gardenletidentity.UserTypeExtension {
 				return requestAuthorizer.CheckRead(graph.VertexTypeCertificateSigningRequest, attrs)
 			}
 
@@ -142,7 +143,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		case namespacedCloudProfileResource:
 			return requestAuthorizer.CheckRead(graph.VertexTypeNamespacedCloudProfile, attrs)
 		case clusterRoleBindingResource:
-			if userType == seedidentity.UserTypeExtension {
+			if userType == gardenletidentity.UserTypeExtension {
 				// We don't use authorizeRead here, as it would also grant list and watch permissions, which gardenlet doesn't
 				// have. We want to grant the read-only subset of gardenlet's permissions.
 				return requestAuthorizer.Check(graph.VertexTypeClusterRoleBinding, attrs,
@@ -210,7 +211,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				authwebhook.WithAllowedSubresources("status"),
 			)
 		case serviceAccountResource:
-			if userType == seedidentity.UserTypeExtension {
+			if userType == gardenletidentity.UserTypeExtension {
 				// We don't use authorizeRead here, as it would also grant list and watch permissions, which gardenlet doesn't
 				// have. We want to grant the read-only subset of gardenlet's permissions.
 				return requestAuthorizer.Check(graph.VertexTypeServiceAccount, attrs,
@@ -279,9 +280,9 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 	return auth.DecisionAllow, "", nil
 }
 
-func (a *authorizer) authorizeLease(requestAuthorizer *authwebhook.RequestAuthorizer, userType seedidentity.UserType, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizeLease(requestAuthorizer *authwebhook.RequestAuthorizer, userType gardenletidentity.UserType, attrs auth.Attributes) (auth.Decision, string, error) {
 	// extension clients may only work with leases in the seed namespace
-	if userType == seedidentity.UserTypeExtension {
+	if userType == gardenletidentity.UserTypeExtension {
 		if attrs.GetNamespace() == gardenerutils.ComputeGardenNamespace(requestAuthorizer.ToName) {
 			if ok, reason := authwebhook.CheckVerb(requestAuthorizer.Log, attrs, "create", "get", "list", "watch", "update", "patch", "delete", "deletecollection"); !ok {
 				return auth.DecisionNoOpinion, reason, nil

@@ -44,7 +44,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 	var (
 		log               = a.logger.WithValues("shootNamespace", shootNamespace, "shootName", shootName, "attributes", fmt.Sprintf("%#v", attrs), "userType", userType)
 		requestAuthorizer = &authwebhook.RequestAuthorizer{
-			Log:                    a.logger,
+			Log:                    log,
 			Graph:                  a.graph,
 			AuthorizeWithSelectors: a.authorizeWithSelectors,
 			ToType:                 graph.VertexTypeShoot,
