@@ -15,16 +15,21 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/shoot"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	graphutils "github.com/gardener/gardener/pkg/utils/graph"
 	mockgraph "github.com/gardener/gardener/pkg/utils/graph/mock"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 	fakeauthorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer/fake"
 )
@@ -36,6 +41,7 @@ var _ = Describe("Shoot", func() {
 
 		log                      logr.Logger
 		graph                    *mockgraph.MockInterface
+		fakeClient               client.Client
 		fakeWithSelectorsChecker authorizerwebhook.WithSelectorsChecker
 		authorizer               auth.Authorizer
 
@@ -50,8 +56,9 @@ var _ = Describe("Shoot", func() {
 
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		graph = mockgraph.NewMockInterface(ctrl)
+		fakeClient = fake.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		fakeWithSelectorsChecker = fakeauthorizerwebhook.NewWithSelectorsChecker(true)
-		authorizer = NewAuthorizer(log, graph, fakeWithSelectorsChecker)
+		authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker)
 
 		shootNamespace = "shoot-namespace"
 		shootName = "shoot-name"
@@ -517,6 +524,98 @@ var _ = Describe("Shoot", func() {
 					Entry("patch w/ subresource", "patch", "status"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ subresource", "update", "status"),
+				)
+			})
+
+			Context("when requested for Secrets", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        corev1.SchemeGroupVersion.Group,
+						Resource:        "secrets",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				When("deletion of bootstrap token secret is requested", func() {
+					var bootstrapTokenSecret *corev1.Secret
+
+					BeforeEach(func() {
+						bootstrapTokenSecret = &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "bootstrap-token-abcdef",
+								Namespace: "kube-system",
+							},
+						}
+
+						attrs.Verb = "delete"
+						attrs.Namespace = bootstrapTokenSecret.Namespace
+						attrs.Name = bootstrapTokenSecret.Name
+					})
+
+					It("should allow if shoot meta matches", func() {
+						bootstrapTokenSecret.Data = map[string][]byte{"description": []byte(fmt.Sprintf("Used for connecting the autonomous Shoot %s/%s to the Garden cluster", shootNamespace, shootName))}
+						Expect(fakeClient.Create(ctx, bootstrapTokenSecret)).To(Succeed())
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					})
+
+					It("should not have an opinion if shoot meta does not match", func() {
+						bootstrapTokenSecret.Data = map[string][]byte{"description": []byte("Used for connecting the autonomous Shoot not-the-namespace/not-the-name to the Garden cluster")}
+						Expect(fakeClient.Create(ctx, bootstrapTokenSecret)).To(Succeed())
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring(`shoot meta in bootstrap token secret not-the-namespace/not-the-name does not match with identity of requestor`))
+					})
+
+					It("should return an error if description cannot be fetched", func() {
+						Expect(fakeClient.Create(ctx, bootstrapTokenSecret)).To(Succeed())
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).To(MatchError(ContainSubstring(`failed fetching shoot meta from bootstrap token description: bootstrap token description does not start with "Used for connecting the autonomous Shoot "`)))
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(BeEmpty())
+					})
+
+					It("should return an error if secret is not found", func() {
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).To(BeNotFoundError())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(BeEmpty())
+					})
+				})
+
+				DescribeTable("should have no opinion because no allowed verb",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(BeEmpty())
+					},
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
 				)
 			})
 		})
