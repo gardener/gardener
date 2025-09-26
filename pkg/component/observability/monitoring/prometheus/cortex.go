@@ -83,7 +83,7 @@ api:
 server:
   http_listen_port: ` + strconv.Itoa(portCortex) + `
 frontend:
-  downstream_url: http://localhost:` + strconv.Itoa(port) + `
+  downstream_url: http://localhost:` + servicePorts.Web.TargetPort.String() + `
   log_queries_longer_than: -1s
 query_range:
   split_queries_by_interval: 24h
