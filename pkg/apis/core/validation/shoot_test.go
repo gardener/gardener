@@ -2716,7 +2716,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CacheSize: 42,
 						}},
 					}, ConsistOf(
-						field.Invalid(field.NewPath("resources[0].apiGroup"), "apps#", `must not contain any of the following characters: ",. #"`),
+						field.Invalid(field.NewPath("resources[0].apiGroup"), "apps#", `must not contain any of the following characters: ", #"`),
 					)),
 				)
 			})
