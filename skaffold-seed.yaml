@@ -229,6 +229,7 @@ build:
             - pkg/component/observability/monitoring/persesoperator/templates/crd-perses.dev_persesdatasources.yaml
             - pkg/component/observability/monitoring/prometheus
             - pkg/component/observability/monitoring/prometheus/aggregate
+            - pkg/component/observability/monitoring/prometheus/aggregate/assets/prometheusrules/healthcheck.yaml
             - pkg/component/observability/monitoring/prometheus/aggregate/assets/prometheusrules/metering.rules.stateful.yaml
             - pkg/component/observability/monitoring/prometheus/cache
             - pkg/component/observability/monitoring/prometheus/cache/assets/prometheusrules/healthcheck.yaml
