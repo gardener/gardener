@@ -18,6 +18,21 @@ import (
 func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 	return []*monitoringv1alpha1.ScrapeConfig{
 		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "prometheus-" + Label,
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
+					Action:      "replace",
+					Replacement: ptr.To("prometheus-" + Label),
+					TargetLabel: "job",
+				}},
+				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
+					Targets: []monitoringv1alpha1.Target{"localhost:9090"},
+				}},
+			},
+		},
+		{
 			ObjectMeta: metav1.ObjectMeta{Name: "prometheus"},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				HonorTimestamps: ptr.To(false),
