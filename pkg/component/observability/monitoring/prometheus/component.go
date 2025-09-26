@@ -36,7 +36,8 @@ const (
 )
 
 var servicePorts = struct {
-	Web corev1.ServicePort
+	Web    corev1.ServicePort
+	Cortex corev1.ServicePort
 }{
 	Web: corev1.ServicePort{
 		Name:       "web",
@@ -44,11 +45,18 @@ var servicePorts = struct {
 		Protocol:   corev1.ProtocolTCP,
 		TargetPort: intstr.FromInt32(9090),
 	},
+	Cortex: corev1.ServicePort{
+		Name:       "cortex",
+		Port:       81,
+		Protocol:   corev1.ProtocolTCP,
+		TargetPort: intstr.FromInt32(9091),
+	},
 }
 
 // ServicePorts returns the service ports configuration for a Prometheus service.
 func ServicePorts() struct {
-	Web corev1.ServicePort
+	Web    corev1.ServicePort
+	Cortex corev1.ServicePort
 } {
 	return servicePorts
 }
