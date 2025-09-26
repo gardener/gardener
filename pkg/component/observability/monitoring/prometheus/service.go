@@ -19,7 +19,11 @@ import (
 )
 
 func (p *prometheus) service() *corev1.Service {
-	var targetPort int32 = port
+	var (
+		port       = servicePorts.Web.TargetPort.IntVal
+		targetPort = port
+	)
+
 	if p.values.Cortex != nil {
 		targetPort = portCortex
 	}
@@ -34,8 +38,8 @@ func (p *prometheus) service() *corev1.Service {
 			Type:     corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{"prometheus": p.values.Name},
 			Ports: []corev1.ServicePort{{
-				Name:       ServicePortName,
-				Port:       servicePort,
+				Name:       servicePorts.Web.Name,
+				Port:       servicePorts.Web.Port,
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt32(targetPort),
 			}},

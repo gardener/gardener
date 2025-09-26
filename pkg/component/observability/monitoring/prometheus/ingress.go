@@ -63,7 +63,7 @@ func (p *prometheus) ingress(ctx context.Context) (*networkingv1.Ingress, error)
 							Backend: networkingv1.IngressBackend{
 								Service: &networkingv1.IngressServiceBackend{
 									Name: p.name(),
-									Port: networkingv1.ServiceBackendPort{Number: servicePort},
+									Port: networkingv1.ServiceBackendPort{Number: servicePorts.Web.Port},
 								},
 							},
 							Path:     "/",
