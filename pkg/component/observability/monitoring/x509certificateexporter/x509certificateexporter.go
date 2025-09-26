@@ -52,7 +52,9 @@ type x509CertificateExporter struct {
 	values         Values
 }
 
+// TODO(mimiteto): Support alert params
 // Configurations for the x509 certificate exporter
+// Even generally receive the CM and load the data here.
 type Values struct {
 	// SecretTypes that should be watched by the exporter.
 	SecretTypes []string

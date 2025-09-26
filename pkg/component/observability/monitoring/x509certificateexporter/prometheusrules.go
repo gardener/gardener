@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+// TODO(mimiteto): Now with CM conf, we can make the intervals configurable
 func (x *x509CertificateExporter) prometheusRule(labelz labels.Set, renewalDays, expirationDays uint) *monitoringv1.PrometheusRule {
 	const (
 		readErrorsSeverity        = "info"

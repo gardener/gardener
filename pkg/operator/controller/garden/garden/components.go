@@ -1671,6 +1671,9 @@ func workloadIdentityTokenIssuerURL(garden *operatorv1alpha1.Garden) string {
 	return "https://" + discoveryServerDomain(garden) + "/garden/workload-identity/issuer"
 }
 
+// TODO(mimiteto): Move graden API to configmap
+// We don't want garden here, instead we need to optionally check cm
+// then we can go and get configurations from the env
 func (r *Reconciler) newx509CertificateExporter(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
 	return sharedcomponent.NewX509CertificateExporter(
 		r.RuntimeClientSet.Client(),
