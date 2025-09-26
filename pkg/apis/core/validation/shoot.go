@@ -1141,8 +1141,8 @@ func validateNetworkingStatus(networking *core.NetworkingStatus, fldPath *field.
 func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	invalidCharacters := ",. #"
-	APIGroupInvalidCharacters := ", #"
+	resourceInvalidCharacters := ",. #"
+	apiGroupInvalidCharacters := ", #"
 
 	if sizes != nil {
 		if defaultSize := sizes.Default; defaultSize != nil {
@@ -1160,8 +1160,8 @@ func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) f
 				if strings.ToLower(cacheResource) != cacheResource {
 					allErrs = append(allErrs, field.Invalid(idxPath.Child("resource"), cacheResource, "must be lower case"))
 				}
-				if strings.ContainsAny(cacheResource, invalidCharacters) {
-					allErrs = append(allErrs, field.Invalid(idxPath.Child("resource"), cacheResource, fmt.Sprintf("must not contain any of the following characters: %q", invalidCharacters)))
+				if strings.ContainsAny(cacheResource, resourceInvalidCharacters) {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("resource"), cacheResource, fmt.Sprintf("must not contain any of the following characters: %q", resourceInvalidCharacters)))
 				}
 			}
 
@@ -1169,8 +1169,8 @@ func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) f
 				if strings.ToLower(*cacheAPIGroup) != *cacheAPIGroup {
 					allErrs = append(allErrs, field.Invalid(idxPath.Child("apiGroup"), *cacheAPIGroup, "must be lower case"))
 				}
-				if strings.ContainsAny(*cacheAPIGroup, APIGroupInvalidCharacters) {
-					allErrs = append(allErrs, field.Invalid(idxPath.Child("apiGroup"), *cacheAPIGroup, fmt.Sprintf("must not contain any of the following characters: %q", invalidCharacters)))
+				if strings.ContainsAny(*cacheAPIGroup, apiGroupInvalidCharacters) {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("apiGroup"), *cacheAPIGroup, fmt.Sprintf("must not contain any of the following characters: %q", apiGroupInvalidCharacters)))
 				}
 			}
 
