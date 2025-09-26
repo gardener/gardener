@@ -635,8 +635,9 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-vpa-recommender", 8942): v1beta1constants.LabelNetworkPolicyAllowed,
 		},
 		CentralConfigs: prometheus.CentralConfigs{
-			PodMonitors:   seedprometheus.CentralPodMonitors(),
-			ScrapeConfigs: seedprometheus.CentralScrapeConfigs(),
+			PodMonitors:     seedprometheus.CentralPodMonitors(),
+			ScrapeConfigs:   seedprometheus.CentralScrapeConfigs(),
+			PrometheusRules: seedprometheus.CentralPrometheusRules(),
 		},
 	})
 }
