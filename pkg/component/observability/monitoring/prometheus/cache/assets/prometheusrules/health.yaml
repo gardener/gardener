@@ -1,0 +1,59 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: health
+spec:
+  groups:
+    - name: health.rules
+      rules:
+        # Scrape jobs are down for a period of time
+        - record: healthcheck
+          expr: |2
+              up + (sum_over_time(up[4m] offset 1m) or up * 0) == 0
+            or
+              up * 0 + changes(up[10m]) > 4
+          labels:
+            task: job:failing
+
+        # Scrape pool has no targets for a period of time
+        - record: healthcheck
+          expr: |2
+                prometheus_target_scrape_pool_targets
+              +
+                (
+                    sum_over_time(prometheus_target_scrape_pool_targets[4m] offset 1m)
+                  or
+                    prometheus_target_scrape_pool_targets * 0
+                )
+            ==
+              0
+          labels:
+            task: scrape_pool:no_targets
+
+        # No samples scraped
+        - record: healthcheck
+          expr: scrape_samples_scraped == 0
+          labels:
+            task: job:scrapes:empty
+
+        # cAdvisor metrics are absent
+        - record: healthcheck
+          expr: absent(container_cpu_usage_seconds_total{job="cadvisor", pod=~"gardenlet-.+"})
+          labels:
+            task: cadvisor:absent
+
+        # kube-state-metrics metrics are absent
+        - record: healthcheck
+          expr: absent(kube_pod_container_resource_requests{job="kube-state-metrics", pod=~"gardenlet-.+"})
+          labels:
+            task: kube_state_metrics:absent
+
+        # Report failing health checks but inhibit absent metrics when jobs are down
+        - record: healthcheck:alert
+          expr: count(healthcheck{task="job:failing"} or healthcheck unless on (job) up == 0)
+
+        # Flapping
+        - record: healthcheck:alert
+          expr: count_over_time((count_over_time(healthcheck:alert{flapping=""}[2m]) == 1)[10m:]) > 4
+          labels:
+            flapping: "true"
