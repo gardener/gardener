@@ -604,6 +604,7 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
 		},
 		CentralConfigs: prometheus.CentralConfigs{
+			ScrapeConfigs:           cacheprometheus.CentralScrapeConfigs(),
 			AdditionalScrapeConfigs: additionalScrapeConfigs,
 			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(seedIsShoot),
 			PrometheusRules:         cacheprometheus.CentralPrometheusRules(),
