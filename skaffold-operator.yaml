@@ -193,6 +193,7 @@ build:
             - pkg/component/observability/monitoring/prometheus/longterm/assets/prometheusrules/recording.yaml
             - pkg/component/observability/monitoring/prometheus/longterm/assets/prometheusrules/sla.yaml
             - pkg/component/observability/monitoring/prometheus/seed
+            - pkg/component/observability/monitoring/prometheus/seed/assets/prometheusrules/health.yaml
             - pkg/component/observability/monitoring/prometheus/shoot
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/optional/alertmanager.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/prometheus.yaml
