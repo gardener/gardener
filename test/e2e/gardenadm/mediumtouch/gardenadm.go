@@ -5,6 +5,10 @@
 package mediumtouch
 
 import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -22,9 +26,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	. "github.com/gardener/gardener/test/e2e/gardenadm/common"
+	shootmigration "github.com/gardener/gardener/test/utils/shoots/migration"
 )
 
 var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "medium-touch"), func() {
@@ -36,14 +44,35 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		const (
 			shootName   = "root"
 			technicalID = "shoot--garden--" + shootName
+			localPort   = 6443
 		)
 
-		var session *gexec.Session
+		var (
+			session *gexec.Session
+
+			kubeconfigOutputFile string
+
+			portForwardCtx    context.Context
+			cancelPortForward context.CancelFunc
+		)
+
+		BeforeAll(func() {
+			DeferCleanup(test.WithTempFile("", "kubeconfig", nil, &kubeconfigOutputFile))
+
+			portForwardCtx, cancelPortForward = context.WithCancel(context.Background())
+			DeferCleanup(func() { cancelPortForward() })
+		})
+
+		AfterAll(func(ctx SpecContext) {
+			// Ensure that the gardenadm process is stopped at the end of the test, even in case it didn't finish successfully.
+			// Interrupting gardenadm should output the current error where it is stuck, if any.
+			Eventually(ctx, session.Interrupt()).Should(gexec.Exit())
+		}, NodeTimeout(time.Minute))
 
 		It("should start the bootstrap flow", func() {
 			// Start the gardenadm process but don't wait for it to complete so that we can asynchronously perform assertions
 			// on individual steps in the test specs below.
-			session = Run("bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/medium-touch")
+			session = Run("bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/medium-touch", "--kubeconfig-output", kubeconfigOutputFile)
 		})
 
 		It("should auto-detect the system's public IPs", func(ctx SpecContext) {
@@ -96,7 +125,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 
 		It("should stop machine-controller-manager", func(ctx SpecContext) {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: technicalID}}
-			Eventually(ctx, Object(deployment)).Should(HaveField("Replicas", HaveValue(BeEquivalentTo(0))))
+			Eventually(ctx, Object(deployment)).Should(HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(0))))
 		}, SpecTimeout(time.Minute))
 
 		It("should deploy the DNSRecord", func(ctx SpecContext) {
@@ -151,9 +180,72 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			}
 		}, SpecTimeout(time.Minute))
 
+		It("should bootstrap the control plane", func(ctx SpecContext) {
+			Eventually(ctx, session.Err).Should(gbytes.Say("Bootstrapping control plane on the first control plane machine"))
+			Eventually(ctx, session.Out).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
+		}, SpecTimeout(15*time.Minute))
+
+		It("should write the shoot kubeconfig to the specified file", func(ctx SpecContext) {
+			Eventually(ctx, session.Err).Should(gbytes.Say("Writing kubeconfig of the autonomous shoot to file"))
+
+			Expect(os.ReadFile(kubeconfigOutputFile)).To(ContainSubstring("server: https://api.root.garden.local.gardener.cloud"))
+		}, SpecTimeout(time.Minute))
+
+		var kubeconfig string
+		It("should store the shoot kubeconfig in the bootstrap cluster", func(ctx SpecContext) {
+			kubeconfigSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig", Namespace: technicalID}}
+			Eventually(ctx, Object(kubeconfigSecret)).Should(HaveField("Data", HaveKey("kubeconfig")))
+
+			kubeconfig = strings.ReplaceAll(string(kubeconfigSecret.Data["kubeconfig"]), "api.root.garden.local.gardener.cloud", fmt.Sprintf("localhost:%d", localPort))
+		}, SpecTimeout(time.Minute))
+
+		var shootClientSet kubernetes.Interface
+		It("should connect to the shoot", func(ctx SpecContext) {
+			By("Forward port to control plane machine pod")
+			fw, err := kubernetes.SetupPortForwarder(portForwardCtx, RuntimeClient.RESTConfig(), technicalID, machinePodName(ctx, technicalID, 0), localPort, 443)
+			Expect(err).NotTo(HaveOccurred())
+
+			go func() {
+				if err := fw.ForwardPorts(); err != nil {
+					Fail("Error forwarding ports: " + err.Error())
+				}
+			}()
+
+			Eventually(fw.Ready()).Should(BeClosed())
+
+			By("Create client set")
+			Eventually(func() error {
+				shootClientSet, err = kubernetes.NewClientFromBytes([]byte(kubeconfig),
+					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+					kubernetes.WithDisabledCachedClient(),
+				)
+				return err
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		It("should restore all persisted secrets in the shoot", func(ctx SpecContext) {
+			var persistedSecrets map[string]corev1.Secret
+			Eventually(ctx, func(g Gomega) {
+				var err error
+				persistedSecrets, err = shootmigration.GetPersistedSecrets(ctx, RuntimeClient.Client(), technicalID)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(persistedSecrets).NotTo(BeEmpty())
+			}).Should(Succeed(), "bootstrap cluster should have persisted secrets")
+
+			var shootSecrets map[string]corev1.Secret
+			Eventually(ctx, func(g Gomega) {
+				var err error
+				shootSecrets, err = shootmigration.GetPersistedSecrets(ctx, shootClientSet.Client(), "kube-system")
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(persistedSecrets).NotTo(BeEmpty())
+			}).Should(Succeed())
+
+			Expect(shootmigration.ComparePersistedSecrets(persistedSecrets, shootSecrets)).To(Succeed())
+		}, SpecTimeout(time.Minute))
+
 		It("should finish successfully", func(ctx SpecContext) {
 			Wait(ctx, session)
-			Eventually(ctx, session.Err).Should(gbytes.Say("work in progress"))
+			Eventually(ctx, session.Out).Should(gbytes.Say("work in progress"))
 		}, SpecTimeout(time.Minute))
 
 		It("should run successfully a second time (should be idempotent)", func(ctx SpecContext) {
