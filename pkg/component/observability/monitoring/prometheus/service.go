@@ -25,7 +25,7 @@ func (p *prometheus) service() *corev1.Service {
 	)
 
 	if p.values.Cortex != nil {
-		targetPort = portCortex
+		targetPort = servicePorts.Cortex.TargetPort.IntVal
 	}
 
 	service := &corev1.Service{
