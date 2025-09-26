@@ -102,13 +102,6 @@ type RuntimeCluster struct {
 	// Volume contains settings for persistent volumes created in the runtime cluster.
 	// +optional
 	Volume *Volume `json:"volume,omitempty"`
-	// WorkerGroups contains the worker group representations
-	// +optional
-	WorkerGroups map[string]WorkerGroup `json:"workerGroups,omitempty"`
-	// CertificateSecretKeys is a list of secret keys that will be monitored for certificate expirations
-	CertificateSecretKeys []string `json:"certificateSecretKeys,omitempty"`
-	// CertificateConfigMapKeys is a list of configmap keys that will be monitored for certificate expirations
-	CertificateConfigMapKeys []string `json:"certificateConfigMapKeys,omitempty"`
 }
 
 // Ingress configures the Ingress specific settings of the runtime cluster.
@@ -177,22 +170,6 @@ type Settings struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 	// +optional
 	TopologyAwareRouting *SettingTopologyAwareRouting `json:"topologyAwareRouting,omitempty"`
-}
-
-// WorkerGroup describes worker groups and configures paths to host certificates
-// Parameters are fed to the x509-certificate-exporter DaemonSet
-type WorkerGroup struct {
-	// Selector is a label selector that selects the worker nodes of this group.
-	// +optional
-	Selector *metav1.LabelSelector `json:"selector,omitempty"`
-	// MountPaths are the host paths that will be mounted within the
-	// x509-certificate-exporter DaemonSet
-	// +optional
-	MountPaths []string `json:"mountPaths,omitempty"`
-	// CertificatePaths is a list of certificates within the specified mount
-	// All relative paths are configured based on the specified mount
-	// +optional
-	CertificatePaths []string `json:"certificatePaths,omitempty"`
 }
 
 // SettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the
