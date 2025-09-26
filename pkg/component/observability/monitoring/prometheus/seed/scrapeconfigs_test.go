@@ -21,12 +21,12 @@ var _ = Describe("ScrapeConfigs", func() {
 			Expect(seed.CentralScrapeConfigs()).To(HaveExactElements(
 				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "prometheus",
+						Name: "prometheus-seed",
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action:      "replace",
-							Replacement: ptr.To("prometheus"),
+							Replacement: ptr.To("prometheus-seed"),
 							TargetLabel: "job",
 						}},
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{

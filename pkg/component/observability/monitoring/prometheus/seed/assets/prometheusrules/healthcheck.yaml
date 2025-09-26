@@ -1,0 +1,84 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: healthcheck
+spec:
+  groups:
+    - name: healthcheck
+      rules:
+        # healthcheck{task="job:failing"} is present for each scrape job target that is down.
+        - record: healthcheck
+          expr: up == 0
+          labels:
+            task: job:failing
+
+        # healthcheck{task="scrape_pool:no_targets"} is present for each scrape pool that has no targets.
+        - record: healthcheck
+          expr: prometheus_target_scrape_pool_targets == 0
+          labels:
+            task: scrape_pool:no_targets
+
+        # healthcheck{task="job:scrapes:empty"} is present for each scrape job that has no samples scraped.
+        - record: healthcheck
+          expr: scrape_samples_scraped == 0
+          labels:
+            task: job:scrapes:empty
+
+        # healthcheck{task="kube_state_metrics:absent"} is present when the kube-state-metrics metrics are missing.
+        - record: healthcheck
+          expr: absent(kube_pod_container_resource_requests{job="kube-state-metrics", pod=~"gardenlet-.+"})
+          labels:
+            task: kube_state_metrics:absent
+
+        # healthcheck{task="federate:cadvisor:absent"} is present when the cAdvisor metrics are missing.
+        - record: healthcheck
+          expr: absent(container_cpu_usage_seconds_total{job="cadvisor", pod=~"gardenlet-.+"})
+          labels:
+            task: federate:cadvisor:absent
+
+        # healthcheck{task="rule_evaluation:unknown_status"} is present when the status of the health rule evaluations is unknown.
+        - record: healthcheck
+          expr: absent(prometheus_rule_group_iterations_total{rule_group=~".*;healthcheck"})
+          labels:
+            task: rule_evaluation:unknown_status
+
+        # healthcheck{task="rule_evaluation:very_first_cycle"} is present in the very first evaluation cycle of the health rules.
+        #
+        # The order of the scrape jobs and the rule evaluations during an interval is not defined.
+        # A missing healthcheck time series in the first evaluation cycle does not guarantee that there are no health issues:
+        # some scrape jobs might be executed the first time after the first evaluation of the health rules.
+        # Hence only the second evaluation of the health rules can reliably detect problems in all the scrape jobs.
+        #
+        # As a mitigation, this healthcheck task is hard-coded to mark the very first evaluation cycle as unhealthy.
+        # This prevents a false conclusion of being healthy when there might actually be health issues that are not yet detected.
+        # If Prometheus is restarted within 5 minutes, the state of the previous instance is taken into account.
+        #
+        # This is especially important for PR validation jobs with a fresh Prometheus instance that should not report healthy
+        # before the healthcheck rules are fully operational, to avoid flaky tests and undetected issues.
+        - record: healthcheck
+          expr: max_over_time(prometheus_rule_group_iterations_total{rule_group=~".*;healthcheck"}[5m]) == 0
+          labels:
+            task: rule_evaluation:very_first_cycle
+
+        # healthcheck:status indicates the overall health state
+        #
+        # A query for `healthcheck:status` can return
+        # - no data points: the state should be considered unhealthy. The healthcheck rules have not yet been executed or are not properly working.
+        # - a value == 0:   the state is unhealthy: there are health issues. See the `healthcheck` time series for details.
+        # - a value == 1:   the state is healthy: there are no health issues.
+        #
+        # Checking for the value 1 asserts both that the healthcheck rules are working and there are no health issues.
+        - record: healthcheck:status
+          expr: |2
+              count(healthcheck) * 0
+            or
+              vector(1)
+
+        # healthcheck:up is derived from healthcheck:status, with the addition that a flapping state is consistently reported as unhealthy(0).
+        #
+        # Checking for the value 1 asserts that the healthcheck rules are working, there are no health issues, not even flapping ones.
+        - record: healthcheck:up
+          expr: |2
+              (changes(healthcheck:status[10m]) > 4) * 0
+            or
+              healthcheck:status
