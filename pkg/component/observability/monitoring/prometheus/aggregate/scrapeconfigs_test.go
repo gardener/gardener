@@ -20,6 +20,19 @@ var _ = Describe("ScrapeConfigs", func() {
 		It("should return the expected objects", func() {
 			Expect(aggregate.CentralScrapeConfigs()).To(HaveExactElements(
 				&monitoringv1alpha1.ScrapeConfig{
+					ObjectMeta: metav1.ObjectMeta{Name: "prometheus-aggregate"},
+					Spec: monitoringv1alpha1.ScrapeConfigSpec{
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
+							Action:      "replace",
+							Replacement: ptr.To("prometheus-aggregate"),
+							TargetLabel: "job",
+						}},
+						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
+							Targets: []monitoringv1alpha1.Target{"localhost:9090"},
+						}},
+					},
+				},
+				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "prometheus"},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						HonorTimestamps: ptr.To(false),

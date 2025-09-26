@@ -18,12 +18,19 @@ import (
 )
 
 var (
+	//go:embed assets/prometheusrules/healthcheck.yaml
+	healthcheckYAML []byte
+	healthcheck     *monitoringv1.PrometheusRule
+
 	//go:embed assets/prometheusrules/metering.rules.stateful.yaml
 	meteringStatefulYAML []byte
 	meteringStateful     *monitoringv1.PrometheusRule
 )
 
 func init() {
+	healthcheck = &monitoringv1.PrometheusRule{}
+	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, healthcheckYAML, healthcheck))
+
 	meteringStateful = &monitoringv1.PrometheusRule{}
 	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, meteringStatefulYAML, meteringStateful))
 }
@@ -93,6 +100,7 @@ func CentralPrometheusRules(seedIsGarden bool) []*monitoringv1.PrometheusRule {
 	}
 
 	return []*monitoringv1.PrometheusRule{
+		healthcheck.DeepCopy(),
 		meteringStateful.DeepCopy(),
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "seed"},

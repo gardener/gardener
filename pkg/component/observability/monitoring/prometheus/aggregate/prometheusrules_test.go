@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package aggregate_test
+package aggregate
 
 import (
-	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -13,11 +13,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
+	"github.com/gardener/gardener/pkg/component/test"
 )
 
-var _ = Describe("PrometheusRules", func() {
-	Describe("#CentralPrometheusRules", func() {
+var _ = ginkgo.Describe("PrometheusRules", func() {
+	ginkgo.Describe("#CentralPrometheusRules", func() {
 		rules := []monitoringv1.Rule{
 			{
 				Alert: "PodStuckInPending",
@@ -48,10 +48,14 @@ var _ = Describe("PrometheusRules", func() {
 			},
 		}
 
-		Context("the seed is also the garden cluster", func() {
-			It("should return the expected objects", func() {
+		ginkgo.Context("the seed is also the garden cluster", func() {
+			ginkgo.It("should return the expected objects", func() {
 				seedIsGarden := true
-				Expect(aggregate.CentralPrometheusRules(seedIsGarden)).To(HaveExactElements(
+				Expect(CentralPrometheusRules(seedIsGarden)).To(HaveExactElements(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("healthcheck")}),
+					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
 						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("metering-stateful")}),
@@ -66,11 +70,12 @@ var _ = Describe("PrometheusRules", func() {
 						},
 					}),
 				))
+				test.PrometheusRule(healthcheck, "testdata/healthcheck.prometheusrule.test.yaml")
 			})
 		})
 
-		Context("the seed and the garden clusters are different", func() {
-			It("should return the expected objects", func() {
+		ginkgo.Context("the seed and the garden clusters are different", func() {
+			ginkgo.It("should return the expected objects", func() {
 				seedIsGarden := false
 				vpaRule := monitoringv1.Rule{
 					Alert: "VerticalPodAutoscalerCappedRecommendation",
@@ -100,7 +105,11 @@ var _ = Describe("PrometheusRules", func() {
 							"- container = {{ $labels.container }}",
 					},
 				}
-				Expect(aggregate.CentralPrometheusRules(seedIsGarden)).To(HaveExactElements(
+				Expect(CentralPrometheusRules(seedIsGarden)).To(HaveExactElements(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
+						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("healthcheck")}),
+					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
 						"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("metering-stateful")}),
@@ -115,6 +124,7 @@ var _ = Describe("PrometheusRules", func() {
 						},
 					}),
 				))
+				test.PrometheusRule(healthcheck, "testdata/healthcheck.prometheusrule.test.yaml")
 			})
 		})
 	})
