@@ -20,12 +20,12 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 	return []*monitoringv1alpha1.ScrapeConfig{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "prometheus",
+				Name: "prometheus-" + Label,
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: ptr.To("prometheus"),
+					Replacement: ptr.To("prometheus-" + Label),
 					TargetLabel: "job",
 				}},
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
