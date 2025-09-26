@@ -6503,8 +6503,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 					newShoot := prepareShootForUpdate(shoot)
 
 					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
-					newShoot.Spec.Provider.Workers[0].MaxSurge = ptr.To(intstr.FromInt32(0))
-					newShoot.Spec.Provider.Workers[0].MaxUnavailable = ptr.To(intstr.FromInt32(0))
+					newShoot.Spec.Provider.Workers[0].MaxSurge = nil
+					newShoot.Spec.Provider.Workers[0].MaxUnavailable = nil
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 				})
@@ -7007,9 +7007,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Entry("percentage is not less than zero", core.AutoRollingUpdate, ptr.To(intstr.FromString("-90%")), ptr.To(intstr.FromString("90%")), field.ErrorTypeInvalid),
 
 			// manual in-place update tests
-			// TODO(acumino): Uncomment this after the Gardener v1.127 is released.
-			// Entry("maxSurge is not nil in case of ManualInplaceUpdate update strategy", core.ManualInPlaceUpdate, nil, ptr.To(intstr.FromInt32(1)), field.ErrorTypeInvalid),
-			// Entry("maxUnavailable is not nil in case of ManualInplaceUpdate update strategy", core.ManualInPlaceUpdate, ptr.To(intstr.FromInt32(0)), nil, field.ErrorTypeInvalid),
+			Entry("maxSurge is not nil in case of ManualInplaceUpdate update strategy", core.ManualInPlaceUpdate, nil, ptr.To(intstr.FromInt32(1)), field.ErrorTypeInvalid),
+			Entry("maxUnavailable is not nil in case of ManualInplaceUpdate update strategy", core.ManualInPlaceUpdate, ptr.To(intstr.FromInt32(0)), nil, field.ErrorTypeInvalid),
 		)
 
 		DescribeTable("reject when labels are invalid",
