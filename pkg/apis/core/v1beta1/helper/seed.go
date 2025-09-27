@@ -106,8 +106,8 @@ func SeedBackupCredentialsRefEqual(oldBackup, newBackup *gardencorev1beta1.Backu
 	return apiequality.Semantic.DeepEqual(oldCredentialsRef, newCredentialsRef)
 }
 
-// InternalDNSProviderCredentialsRefEqual returns true when the credentials reference of the internal DNS provider configuration is the same.
-func InternalDNSProviderCredentialsRefEqual(oldDNSProvider, newDNSProvider *gardencorev1beta1.SeedDNSProviderConfig) bool {
+// DNSProviderCredentialsRefEqual returns true when the credentials reference of the DNS provider configuration is the same.
+func DNSProviderCredentialsRefEqual(oldDNSProvider, newDNSProvider *gardencorev1beta1.SeedDNSProviderConfig) bool {
 	var (
 		oldCredentialsRef *corev1.ObjectReference
 		newCredentialsRef *corev1.ObjectReference
@@ -122,6 +122,21 @@ func InternalDNSProviderCredentialsRefEqual(oldDNSProvider, newDNSProvider *gard
 	}
 
 	return apiequality.Semantic.DeepEqual(oldCredentialsRef, newCredentialsRef)
+}
+
+// DNSProvidersCredentialsRefEqual returns true when the credentials references of the DNS provider configurations are the same.
+func DNSProvidersCredentialsRefEqual(oldDNSProviders, newDNSProviders []gardencorev1beta1.SeedDNSProviderConfig) bool {
+	if len(oldDNSProviders) != len(newDNSProviders) {
+		return false
+	}
+
+	for i := range oldDNSProviders {
+		if !DNSProviderCredentialsRefEqual(&oldDNSProviders[i], &newDNSProviders[i]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // CalculateSeedUsage returns a map representing the number of shoots per seed from the given list of shoots.

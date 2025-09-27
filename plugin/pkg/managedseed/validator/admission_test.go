@@ -32,7 +32,6 @@ import (
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/managedseed/validator"
 )
@@ -57,6 +56,7 @@ var _ = Describe("ManagedSeed", func() {
 			secret                  *corev1.Secret
 			dnsSecret               *corev1.Secret
 			seed                    *core.Seed
+			parentSeed              *gardencorev1beta1.Seed
 			credentialsBinding      *securityv1alpha1.CredentialsBinding
 			secretBinding           *gardencorev1beta1.SecretBinding
 			coreInformerFactory     gardencoreinformers.SharedInformerFactory
@@ -115,13 +115,6 @@ var _ = Describe("ManagedSeed", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
-					Labels: map[string]string{
-						v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
-					},
-					Annotations: map[string]string{
-						gardenerutils.DNSProvider: dnsProvider,
-						gardenerutils.DNSDomain:   domain,
-					},
 				},
 			}
 
@@ -187,6 +180,45 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
+			parentSeed = &gardencorev1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "parent-seed",
+				},
+				Spec: gardencorev1beta1.SeedSpec{
+					DNS: gardencorev1beta1.SeedDNS{
+						Provider: &gardencorev1beta1.SeedDNSProvider{
+							Type: dnsProvider,
+							SecretRef: corev1.SecretReference{
+								Name:      name,
+								Namespace: namespace,
+							},
+						},
+						Defaults: []gardencorev1beta1.SeedDNSProviderConfig{
+							{
+								Type:   dnsProvider,
+								Domain: "example.com",
+								CredentialsRef: corev1.ObjectReference{
+									APIVersion: "v1",
+									Kind:       "Secret",
+									Name:       name,
+									Namespace:  namespace,
+								},
+							},
+						},
+					},
+					Networks: gardencorev1beta1.SeedNetworks{
+						Nodes:    ptr.To("10.250.0.0/16"),
+						Pods:     "100.96.0.0/11",
+						Services: "100.64.0.0/13",
+					},
+					Provider: gardencorev1beta1.SeedProvider{
+						Type:   provider,
+						Region: region,
+						Zones:  []string{zone1, zone2},
+					},
+				},
+			}
+
 			var err error
 			admissionHandler, err = New()
 			Expect(err).ToNot(HaveOccurred())
@@ -208,6 +240,8 @@ var _ = Describe("ManagedSeed", func() {
 			admissionHandler.SetSecurityInformerFactory(securityInformerFactory)
 
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(parentSeed)).To(Succeed())
+			Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 		})
 
 		It("should do nothing if the resource is not a ManagedSeed", func() {
@@ -841,7 +875,7 @@ var _ = Describe("ManagedSeed", func() {
 						return true, shoot, nil
 					})
 
-					shoot := &core.Shoot{Spec: core.ShootSpec{SeedName: &newManagedSeed.Name}}
+					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name}}
 					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
@@ -907,6 +941,52 @@ var _ = Describe("ManagedSeed", func() {
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.dns.internal.domain"),
 							"Detail": ContainSubstring("internal domain must not be changed while shoots are still scheduled onto seed"),
+						})),
+					))
+				})
+
+				It("should forbid default domain change when at least one shoot is scheduled to seed", func() {
+					oldGardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					oldGardenletConfig.SeedConfig.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+						{
+							Type:   "aws-route53",
+							Domain: "old-default.com",
+						},
+						{
+							Type:   "gcp-clouddns",
+							Domain: "another-default.com",
+						},
+					}
+
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					newGardenletConfig.SeedConfig.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+						{
+							Type:   "aws-route53",
+							Domain: "old-default.com",
+						},
+					}
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					shoot := &gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							SeedName: &newManagedSeed.Name,
+							DNS: &gardencorev1beta1.DNS{
+								Domain: ptr.To("my-shoot.another-default.com"),
+							},
+						},
+					}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ContainElement(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.dns.defaults"),
+							"Detail": ContainSubstring("default domains must not be removed while shoots are still using them"),
 						})),
 					))
 				})
