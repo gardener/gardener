@@ -1660,6 +1660,8 @@ kind: Config
 metadata:
   name: admission-local
 build:
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
   artifacts:
     - image: local-skaffold/gardener-extension-admission-local
       ko:
