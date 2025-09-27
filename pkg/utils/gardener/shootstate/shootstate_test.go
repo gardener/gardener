@@ -128,7 +128,7 @@ var _ = Describe("ShootState", func() {
 						{
 							Name: "machine-state",
 							Type: "machine-state",
-							Data: runtime.RawExtension{Raw: []byte(`{"state":"H4sIAAAAAAAC/+yUPU8DMQyG/4vnZChst9KFiaFlQgwmsdSgfCl2kaoq/x0lvX4gVEGrG5DoLZfYb177nli3hYBm5SLNKfu0CRSFYdiC7dtZWxbK3hlkGO7VXr2gJnvZQiBBi4JNGDEQDPujmklmoHqUM5qW4lVKonXY6FzSO5ndukdBgSmE4lJcukAsGDIMce29AowxSU/13jj1Osco1KqAM5mWHTt88MhNXRUIhexRqGdP+j1T78TLHE1isrS81qi2RwELyrp/gkeWp0xl1/4YeM4WhZrJeL5W9RPhu2kIe3wjz99LQP3P9F8P8/6rYdejeDb5nSTbfNqrl730UiYEeTlGBWZdCkVZfDl41bDvCf+1qT8BnEv6cJbK4xyGw0Y7Czf2N/ZnfjO11s8AAAD//7Qj9vuIBwAA"}`)},
+							Data: runtime.RawExtension{Raw: []byte(`{"state":"H4sIAAAAAAAC/+yUvW7jMAzH34WzPNjJLV4vy003JDcdMrASgbjQFySmQBDo3QvJdpKiKJo6CRC08WKJpEj6R/m/B4Ny01lakNduZ8hyhHYPqmzrvAzkdScxQjsTY/SSctj/PRhiVMiYAy0agnY8WkXiGkSxRo8yu+LGOa4qs6t8cM8k+3WxggAZCLlzdtUZiozGQ2u3WgtAax0XV+ktulLnaIWUBERPMnuHDn9rjDk6CWAyXiNT8Z70+0G9k1zymMQ6RaupiVJ+BERG3pZP0Bj5r6fQtz8Y/nmFTDnJcD4l8Rnh5jqENT6Rju9LQPrJ9NeH+37OZW+qIfjeZnLC0Qf30ikKfxbQHjZVp+ByxF8HLEBuQyDLyzcHp/wG9ci+vjp7p3Ke/CplL4B/z4TXSQw8m+ma3+RRzB6afzvNL4TnN9WX5qH5Z2l+P4pRd37d2Uy+t+b3QjOynz80f6Lmp/QaAAD//31qkngADAAA"}`)},
 						},
 					},
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
@@ -386,8 +386,73 @@ func createMachineObjects(
 	}
 	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machineDeployment2)).To(Succeed())
 
+	machineSet3 := &machinev1alpha1.MachineSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "deploy2-set3",
+			Namespace:       namespace,
+			OwnerReferences: []metav1.OwnerReference{{Kind: "MachineDeployment", Name: machineDeployment2.Name}},
+			Annotations:     map[string]string{"some": "annotation"},
+		},
+		Status: machinev1alpha1.MachineSetStatus{
+			Replicas:      1234,
+			ReadyReplicas: 5678,
+		},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machineSet3)).To(Succeed())
+
+	machineSet4 := &machinev1alpha1.MachineSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "deploy2-set4",
+			Namespace:   namespace,
+			Labels:      map[string]string{"name": machineDeployment2.Name},
+			Annotations: map[string]string{"some": "annotation"},
+		},
+		Status: machinev1alpha1.MachineSetStatus{
+			Replicas:      1234,
+			ReadyReplicas: 5678,
+		},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machineSet4)).To(Succeed())
+
+	machine4 := &machinev1alpha1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "deploy2-set3-machine4",
+			Namespace:       namespace,
+			OwnerReferences: []metav1.OwnerReference{{Kind: "MachineSet", Name: machineSet3.Name}},
+			Labels:          map[string]string{"node": "nodename"},
+			Annotations:     map[string]string{"some": "annotation"},
+		},
+		Status: machinev1alpha1.MachineStatus{
+			CurrentStatus: machinev1alpha1.CurrentStatus{TimeoutActive: true},
+		},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machine4)).To(Succeed())
+
+	machine5 := &machinev1alpha1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "deploy2-set4-machine5",
+			Namespace:   namespace,
+			Labels:      map[string]string{"name": machineDeployment2.Name},
+			Annotations: map[string]string{"some": "annotation"},
+		},
+		Spec: machinev1alpha1.MachineSpec{ProviderID: "provider-id"},
+		Status: machinev1alpha1.MachineStatus{
+			CurrentStatus: machinev1alpha1.CurrentStatus{TimeoutActive: true},
+		},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machine5)).To(Succeed())
+
+	machineDeployment3 := &machinev1alpha1.MachineDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deploy3",
+			Namespace: namespace,
+		},
+		Spec: machinev1alpha1.MachineDeploymentSpec{Replicas: 3},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machineDeployment3)).To(Succeed())
+
 	objectsToDelete := []client.Object{
-		machineDeployment1, machineDeployment2, machineSet1, machineSet2, machine1, machine2, machine3,
+		machineDeployment1, machineDeployment2, machineDeployment3, machineSet1, machineSet2, machineSet3, machineSet4, machine1, machine2, machine3, machine4, machine5,
 	}
 	return func(ctx context.Context) {
 		for _, obj := range objectsToDelete {
