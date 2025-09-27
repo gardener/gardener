@@ -26,7 +26,7 @@
       hostPath: /etc/gardener-local/kube-apiserver/authz-config-with-seedauthorizer.yaml
     - name: authz-webhook-kubeconfig
       mountPath: /etc/gardener-local/kube-apiserver/authz-webhook-kubeconfig.yaml
-      hostPath: /etc/gardener-local/kube-apiserver/authz-webhook-kubeconfig-{{ if eq .Values.networking.ipFamily "dual" }}ipv6{{ else }}{{ .Values.networking.ipFamily }}{{ end }}.yaml
+      hostPath: /etc/gardener-local/kube-apiserver/authz-webhook-kubeconfig.yaml
       readOnly: true
       pathType: File
 {{- else }}

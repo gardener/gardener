@@ -217,6 +217,15 @@ func validateDomains(dns *operatorv1alpha1.DNSManagement, domains []operatorv1al
 func validateRuntimeClusterNetworking(runtimeNetworking operatorv1alpha1.RuntimeNetworking, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	coreIPFamilies := make([]gardencore.IPFamily, len(runtimeNetworking.IPFamilies))
+	for i, ipf := range runtimeNetworking.IPFamilies {
+		coreIPFamilies[i] = gardencore.IPFamily(ipf)
+	}
+	if errs := gardencorevalidation.ValidateIPFamilies(coreIPFamilies, fldPath.Child("ipFamilies")); len(errs) > 0 {
+		// further validation doesn't make any sense, because we don't know which IP family to check for in the CIDR fields
+		return append(allErrs, errs...)
+	}
+
 	for i, nodes := range runtimeNetworking.Nodes {
 		if _, _, err := net.ParseCIDR(nodes); err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("nodes").Index(i), nodes, "cannot parse node network cidr of runtime cluster: "+err.Error()))

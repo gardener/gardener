@@ -1,0 +1,20 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: provider-local
+spec:
+  deployment:
+    extension:
+      values:
+        controllers:
+          service:
+            hostIP: "::1"
+            zone0IP: "::10"
+            zone1IP: "::11"
+            zone2IP: "::12"
+            bastionIP: "::22"
+        coredns:
+          ipFamilies:
+            - IPv6
+            - IPv4
+          ipFamilyPolicy: PreferDualStack

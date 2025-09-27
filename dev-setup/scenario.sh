@@ -25,6 +25,8 @@ function detect_scenario() {
 
   if [[ "$IPFAMILY" == "ipv6" ]]; then
     export SCENARIO="${SCENARIO}-ipv6"
+  elif [[ "$IPFAMILY" == "dual" ]]; then
+    export SCENARIO="${SCENARIO}-dual"
   fi
 
   echo "DETECTED SCENARIO: $SCENARIO"
@@ -52,6 +54,9 @@ function skaffold_profile() {
       ;;
     multi-zone-ipv6)
       export SKAFFOLD_PROFILE="multi-zone-ipv6"
+      ;;
+    single-node-dual)
+      export SKAFFOLD_PROFILE="single-node-dual"
       ;;
   esac
 

@@ -127,6 +127,11 @@ type DNSDomain struct {
 
 // RuntimeNetworking defines the networking configuration of the runtime cluster.
 type RuntimeNetworking struct {
+	// IPFamilies specifies the IP protocol versions to use for the runtime cluster's networking. This field is
+	// immutable.
+	// Defaults to ["IPv4"].
+	// +optional
+	IPFamilies []gardencorev1beta1.IPFamily `json:"ipFamilies,omitempty"`
 	// Nodes are the CIDRs of the node network. Elements can be appended to this list, but not removed.
 	// +optional
 	Nodes []string `json:"nodes,omitempty"`
