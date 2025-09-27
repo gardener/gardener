@@ -100,7 +100,6 @@ ip6.arpa:53 {
     cache 30
     reload
     }
-    import custom/*.server
 `,
 			},
 		}

@@ -357,7 +357,6 @@ data:
         cache 30
         reload
         }
-        import custom/*.server
 immutable: true
 kind: ConfigMap
 metadata:
@@ -731,7 +730,6 @@ ip6.arpa:53 {
     cache 30
     reload
     }
-    import custom/*.server
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
@@ -1006,7 +1004,6 @@ ip6.arpa:53 {
     cache 30
     reload
     }
-    import custom/*.server
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
