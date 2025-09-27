@@ -38,6 +38,7 @@ var _ = Describe("Admin Kubeconfig", func() {
 			akc := obj.(*authenticationv1alpha1.AdminKubeconfigRequest)
 			return akc.Status.Kubeconfig
 		},
-		ConsistOf("system:masters"),
+		ConsistOf("gardener.cloud:system:admins"),
+		ConsistOf("gardener.cloud:project:admins"),
 	)
 })

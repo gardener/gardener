@@ -39,5 +39,6 @@ var _ = Describe("Viewer Kubeconfig", func() {
 			return akc.Status.Kubeconfig
 		},
 		ConsistOf("gardener.cloud:system:viewers"),
+		ConsistOf("gardener.cloud:project:viewers"),
 	)
 })
