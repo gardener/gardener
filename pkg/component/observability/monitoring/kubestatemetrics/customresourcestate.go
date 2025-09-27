@@ -10,6 +10,7 @@ import (
 
 	"k8s.io/kube-state-metrics/v2/pkg/customresourcestate"
 	"k8s.io/kube-state-metrics/v2/pkg/metric"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -182,12 +183,54 @@ func newGardenCustomResourceStateMetrics() customresourcestate.Resource {
 	return resource
 }
 
+func newOperatorExtesionCustomResourceStateMetrics() customresourcestate.Resource {
+	resource := customresourcestate.Resource{
+		GroupVersionKind: customresourcestate.GroupVersionKind{
+			Group:   "operator.gardener.cloud",
+			Kind:    "Extension",
+			Version: "v1alpha1",
+		},
+		MetricNamePrefix: ptr.To("gardener_operator"),
+		Labels: customresourcestate.Labels{
+			LabelsFromPath: map[string][]string{
+				"name": {"metadata", "name"},
+			},
+		},
+	}
+
+	resource.Metrics = append(resource.Metrics, customresourcestate.Generator{
+		Name: "extension_condition",
+		Help: "represents a condition of an Operator Extension object",
+		Each: customresourcestate.Metric{
+			Type: metric.StateSet,
+			StateSet: &customresourcestate.MetricStateSet{
+				LabelName: "status",
+				List:      []string{"Progressing", "True", "False", "Unknown"},
+				ValueFrom: []string{"status"},
+				MetricMeta: customresourcestate.MetricMeta{
+					LabelsFromPath: map[string][]string{
+						"condition": {"type"},
+					},
+					Path: []string{"status", "conditions"},
+				},
+			},
+		},
+	})
+
+	return resource
+}
+
 // Option is a functional option type used to configure the CustomResourceState settings
 type Option func(*customresourcestate.Metrics)
 
 // WithGardenResourceMetrics adds the custom resource state configuration for the Garden resource
 func WithGardenResourceMetrics(c *customresourcestate.Metrics) {
 	c.Spec.Resources = append(c.Spec.Resources, newGardenCustomResourceStateMetrics())
+}
+
+// WithOperatorExtensionMetrics adds the custom resource state configuration for the Garden resource
+func WithOperatorExtensionMetrics(c *customresourcestate.Metrics) {
+	c.Spec.Resources = append(c.Spec.Resources, newOperatorExtesionCustomResourceStateMetrics())
 }
 
 // WithVPAMetrics adds the custom resource state configuration for the VerticalPodAutoscaler resource
