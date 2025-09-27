@@ -14,8 +14,10 @@ build:
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
+            - pkg/admissioncontroller/gardenletidentity
+            - pkg/admissioncontroller/gardenletidentity/seed
+            - pkg/admissioncontroller/gardenletidentity/shoot
             - pkg/admissioncontroller/metrics
-            - pkg/admissioncontroller/seedidentity
             - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
@@ -985,6 +987,12 @@ build:
               - dev-setup/gardenadm/resources/generate-imagevector-overwrite.sh
               - gardenlet
               - .imagevector-overwrite-charts.yaml
+          - command:
+              - bash
+              - -c
+              - >
+                kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" -n garden patch gardenlet autonomous-shoot-root --type=merge -p "{\"spec\":{\"deployment\":{\"helm\":{\"ociRepository\":{\"ref\":\"$SKAFFOLD_IMAGE\"}}}}}" || true
+
   insecureRegistries:
     - garden.local.gardener.cloud:5001
   tagPolicy:

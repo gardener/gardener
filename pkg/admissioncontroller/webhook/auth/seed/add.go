@@ -6,13 +6,11 @@ package seed
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/graph"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
@@ -27,18 +25,19 @@ const (
 // AddToManager adds Handler to the given manager.
 func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableDebugHandlers *bool) error {
 	if w.Handler == nil {
-		g := graph.New(mgr.GetLogger().WithName("seed-authorizer-graph"), mgr.GetClient())
+		g := graph.New(mgr.GetLogger().WithName("seed-authorizer-graph"), mgr.GetClient(), false)
 		if err := g.Setup(ctx, mgr.GetCache()); err != nil {
 			return err
 		}
 
-		clientSet, err := kubernetes.NewWithConfig(kubernetes.WithRESTConfig(mgr.GetConfig()))
-		if err != nil {
-			return fmt.Errorf("failed setting up Kubernetes client: %w", err)
+		w.Handler = &authorizerwebhook.Handler{
+			Logger: w.Logger,
+			Authorizer: NewAuthorizer(
+				w.Logger,
+				g,
+				authorizerwebhook.NewWithSelectorsChecker(ctx, w.Logger, w.ClientSet, clock.RealClock{}),
+			),
 		}
-
-		authorizer := NewAuthorizer(w.Logger, g, authorizerwebhook.NewWithSelectorsChecker(ctx, w.Logger, clientSet, clock.RealClock{}))
-		w.Handler = &authorizerwebhook.Handler{Logger: w.Logger, Authorizer: authorizer}
 
 		if ptr.Deref(enableDebugHandlers, false) {
 			w.Logger.Info("Registering debug handlers")

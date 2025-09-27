@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seedidentity_test
+package shoot_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSeedIdentity(t *testing.T) {
+func TestShootAuthorizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController SeedIdentity Suite")
+	RunSpecs(t, "AdmissionController Webhook Auth ShootAuthorizer Suite")
 }

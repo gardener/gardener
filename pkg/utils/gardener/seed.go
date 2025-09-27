@@ -6,12 +6,9 @@ package gardener
 
 import (
 	"context"
-	"crypto/x509"
 	"fmt"
-	"reflect"
 	"strings"
 
-	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
@@ -41,37 +38,6 @@ func ComputeSeedName(seedNamespaceName string) string {
 		return ""
 	}
 	return seedName
-}
-
-var (
-	seedClientRequiredOrganization = []string{v1beta1constants.SeedsGroup}
-	seedClientRequiredKeyUsages    = []certificatesv1.KeyUsage{
-		certificatesv1.UsageKeyEncipherment,
-		certificatesv1.UsageDigitalSignature,
-		certificatesv1.UsageClientAuth,
-	}
-)
-
-// IsSeedClientCert returns true when the given CSR and usages match the requirements for a client certificate for a
-// seed. If false is returned, a reason will be returned explaining which requirement was not met.
-func IsSeedClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage) (bool, string) {
-	if !reflect.DeepEqual(seedClientRequiredOrganization, x509cr.Subject.Organization) {
-		return false, fmt.Sprintf("subject's organization is not set to %v", seedClientRequiredOrganization)
-	}
-
-	if (len(x509cr.DNSNames) > 0) || (len(x509cr.EmailAddresses) > 0) || (len(x509cr.IPAddresses) > 0) {
-		return false, "DNSNames, EmailAddresses and IPAddresses fields must be empty"
-	}
-
-	if !sets.New(usages...).Equal(sets.New(seedClientRequiredKeyUsages...)) {
-		return false, fmt.Sprintf("key usages are not set to %v", seedClientRequiredKeyUsages)
-	}
-
-	if !strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.SeedUserNamePrefix) {
-		return false, fmt.Sprintf("CommonName does not start with %q", v1beta1constants.SeedUserNamePrefix)
-	}
-
-	return true, ""
 }
 
 // GetWildcardCertificate gets the wildcard TLS certificate for the seed ingress domain.

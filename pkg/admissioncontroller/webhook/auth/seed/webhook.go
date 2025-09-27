@@ -8,10 +8,13 @@ import (
 	"net/http"
 
 	"github.com/go-logr/logr"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // Webhook represents the webhook of Seed Authorizer.
 type Webhook struct {
-	Logger  logr.Logger
-	Handler http.Handler
+	Logger    logr.Logger
+	ClientSet kubernetes.Interface
+	Handler   http.Handler
 }

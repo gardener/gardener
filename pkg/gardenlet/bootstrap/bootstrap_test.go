@@ -7,6 +7,7 @@ package bootstrap_test
 import (
 	"context"
 	"crypto/x509/pkix"
+	"os"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -20,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
@@ -27,6 +29,7 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -41,20 +44,20 @@ import (
 
 var _ = Describe("Bootstrap", func() {
 	var (
-		ctrl       *gomock.Controller
-		reader     *mockclient.MockReader
-		writer     *mockclient.MockWriter
-		seedClient *mockclient.MockClient
-		ctx        context.Context
-		ctxCancel  context.CancelFunc
-		testLogger = logr.Discard()
+		ctrl          *gomock.Controller
+		reader        *mockclient.MockReader
+		writer        *mockclient.MockWriter
+		runtimeClient *mockclient.MockClient
+		ctx           context.Context
+		ctxCancel     context.CancelFunc
+		testLogger    = logr.Discard()
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		reader = mockclient.NewMockReader(ctrl)
 		writer = mockclient.NewMockWriter(ctrl)
-		seedClient = mockclient.NewMockClient(ctrl)
+		runtimeClient = mockclient.NewMockClient(ctrl)
 		ctx, ctxCancel = context.WithTimeout(context.Background(), 1*time.Minute)
 	})
 
@@ -65,14 +68,13 @@ var _ = Describe("Bootstrap", func() {
 
 	Describe("#RequestKubeconfigWithBootstrapClient", func() {
 		var (
-			seedName = "test"
-
 			kubeClient            *fake.Clientset
 			bootstrapClientConfig *rest.Config
 
 			gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection
 			kubeconfigKey          client.ObjectKey
 			bootstrapKubeconfigKey client.ObjectKey
+			autonomousShootMeta    *types.NamespacedName
 
 			approvedCSR = certificatesv1.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
@@ -128,7 +130,7 @@ var _ = Describe("Bootstrap", func() {
 			}
 			bootstrapKubeconfigKey = kubernetesutils.ObjectKeyFromSecretRef(bootstrapSecretReference)
 
-			kubeClient = fake.NewSimpleClientset()
+			kubeClient = fake.NewClientset()
 			kubeClient.Fake = testing.Fake{Resources: []*metav1.APIResourceList{
 				{
 					GroupVersion: "v1",
@@ -158,79 +160,165 @@ var _ = Describe("Bootstrap", func() {
 			}}
 		})
 
-		It("should not return an error", func() {
-			defer test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
-				return approvedCSR.Name, nil
-			})()
+		When("gardenlet is responsible for seed", func() {
+			var seedConfig = &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{ObjectMeta: metav1.ObjectMeta{Name: "test"}}}
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
-				return true, &approvedCSR, nil
-			})
+			It("should not return an error", func() {
+				DeferCleanup(test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
+					return approvedCSR.Name, nil
+				}))
 
-			bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
-				WithRESTConfig(bootstrapClientConfig).
-				WithKubernetes(kubeClient).
-				Build()
-
-			seedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{}))
-
-			seedClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-				DoAndReturn(func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
-					Expect(secret.Name).To(Equal(gardenClientConnection.KubeconfigSecret.Name))
-					Expect(secret.Namespace).To(Equal(gardenClientConnection.KubeconfigSecret.Namespace))
-					Expect(secret.Data).ToNot(BeNil())
-					Expect(secret.Data[kubernetes.KubeConfig]).ToNot(BeEmpty())
-					return nil
+				kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &approvedCSR, nil
 				})
-			seedClient.EXPECT().Delete(ctx, &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      gardenClientConnection.BootstrapKubeconfig.Name,
-					Namespace: gardenClientConnection.BootstrapKubeconfig.Namespace,
-				},
+
+				bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
+					WithRESTConfig(bootstrapClientConfig).
+					WithKubernetes(kubeClient).
+					Build()
+
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{}))
+
+				runtimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+					DoAndReturn(func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
+						Expect(secret.Name).To(Equal(gardenClientConnection.KubeconfigSecret.Name))
+						Expect(secret.Namespace).To(Equal(gardenClientConnection.KubeconfigSecret.Namespace))
+						Expect(secret.Data).ToNot(BeNil())
+						Expect(secret.Data[kubernetes.KubeConfig]).ToNot(BeEmpty())
+						return nil
+					})
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      gardenClientConnection.BootstrapKubeconfig.Name,
+						Namespace: gardenClientConnection.BootstrapKubeconfig.Namespace,
+					},
+				})
+
+				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, autonomousShootMeta, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(kubeconfig).ToNot(BeEmpty())
+				Expect(csrName).ToNot(BeEmpty())
 			})
 
-			kubeconfig, csrName, seedName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
+			It("should return an error - the CSR got denied", func() {
+				DeferCleanup(test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
+					return deniedCSR.Name, nil
+				}))
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(kubeconfig).ToNot(BeEmpty())
-			Expect(csrName).ToNot(BeEmpty())
-			Expect(seedName).ToNot(BeEmpty())
+				kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &deniedCSR, nil
+				})
+
+				bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
+					WithRESTConfig(bootstrapClientConfig).
+					WithKubernetes(kubeClient).
+					Build()
+
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, autonomousShootMeta, nil)
+				Expect(err).To(MatchError(ContainSubstring("is denied")))
+			})
+
+			It("should return an error - the CSR failed", func() {
+				DeferCleanup(test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
+					return failedCSR.Name, nil
+				}))
+
+				kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &failedCSR, nil
+				})
+
+				bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
+					WithRESTConfig(bootstrapClientConfig).
+					WithKubernetes(kubeClient).
+					Build()
+
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, autonomousShootMeta, nil)
+				Expect(err).To(MatchError(ContainSubstring("failed")))
+			})
 		})
 
-		It("should return an error - the CSR got denied", func() {
-			defer test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
-				return deniedCSR.Name, nil
-			})()
+		When("gardenlet is responsible for shoot", func() {
+			BeforeEach(func() {
+				Expect(os.Setenv("NAMESPACE", "kube-system")).To(Succeed())
+				DeferCleanup(func() { Expect(os.Setenv("NAMESPACE", "")).To(Succeed()) })
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
-				return true, &deniedCSR, nil
+				autonomousShootMeta = &types.NamespacedName{Namespace: "shoot-namespace", Name: "shoot-name"}
 			})
 
-			bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
-				WithRESTConfig(bootstrapClientConfig).
-				WithKubernetes(kubeClient).
-				Build()
+			It("should not return an error", func() {
+				DeferCleanup(test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
+					return approvedCSR.Name, nil
+				}))
 
-			_, _, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
-			Expect(err).To(MatchError(ContainSubstring("is denied")))
-		})
+				kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &approvedCSR, nil
+				})
 
-		It("should return an error - the CSR failed", func() {
-			defer test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
-				return failedCSR.Name, nil
-			})()
+				bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
+					WithRESTConfig(bootstrapClientConfig).
+					WithKubernetes(kubeClient).
+					Build()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
-				return true, &failedCSR, nil
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{}))
+
+				runtimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+					DoAndReturn(func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
+						Expect(secret.Name).To(Equal(gardenClientConnection.KubeconfigSecret.Name))
+						Expect(secret.Namespace).To(Equal(gardenClientConnection.KubeconfigSecret.Namespace))
+						Expect(secret.Data).ToNot(BeNil())
+						Expect(secret.Data[kubernetes.KubeConfig]).ToNot(BeEmpty())
+						return nil
+					})
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      gardenClientConnection.BootstrapKubeconfig.Name,
+						Namespace: gardenClientConnection.BootstrapKubeconfig.Namespace,
+					},
+				})
+
+				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, autonomousShootMeta, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(kubeconfig).ToNot(BeEmpty())
+				Expect(csrName).ToNot(BeEmpty())
 			})
 
-			bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
-				WithRESTConfig(bootstrapClientConfig).
-				WithKubernetes(kubeClient).
-				Build()
+			It("should return an error - the CSR got denied", func() {
+				DeferCleanup(test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
+					return deniedCSR.Name, nil
+				}))
 
-			_, _, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
-			Expect(err).To(MatchError(ContainSubstring("failed")))
+				kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &deniedCSR, nil
+				})
+
+				bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
+					WithRESTConfig(bootstrapClientConfig).
+					WithKubernetes(kubeClient).
+					Build()
+
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, autonomousShootMeta, nil)
+				Expect(err).To(MatchError(ContainSubstring("is denied")))
+			})
+
+			It("should return an error - the CSR failed", func() {
+				DeferCleanup(test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
+					return failedCSR.Name, nil
+				}))
+
+				kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &failedCSR, nil
+				})
+
+				bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
+					WithRESTConfig(bootstrapClientConfig).
+					WithKubernetes(kubeClient).
+					Build()
+
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, autonomousShootMeta, nil)
+				Expect(err).To(MatchError(ContainSubstring("failed")))
+			})
 		})
 	})
 

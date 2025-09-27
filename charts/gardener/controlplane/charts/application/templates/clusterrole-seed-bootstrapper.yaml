@@ -15,5 +15,6 @@ rules:
   - certificates.k8s.io
   resources:
   - certificatesigningrequests/seedclient
+  - certificatesigningrequests/shootclient
   verbs:
   - create
