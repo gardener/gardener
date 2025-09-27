@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seedidentity
+package seed
 
 import (
 	"crypto/x509"
@@ -13,24 +13,14 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 
+	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-// UserType is used for distinguishing between clients running on a seed cluster when authenticating against the garden
-// cluster.
-type UserType string
-
-const (
-	// UserTypeGardenlet is the UserType of a gardenlet client.
-	UserTypeGardenlet UserType = "gardenlet"
-	// UserTypeExtension is the UserType of a extension client.
-	UserTypeExtension UserType = "extension"
-)
-
 // FromUserInfoInterface returns the seed name, a boolean indicating whether the provided user is a seed client,
 // and the client's UserType.
-func FromUserInfoInterface(u user.Info) (string, bool, UserType) {
+func FromUserInfoInterface(u user.Info) (string, bool, gardenletidentity.UserType) {
 	if u == nil {
 		return "", false, ""
 	}
@@ -48,7 +38,7 @@ func FromUserInfoInterface(u user.Info) (string, bool, UserType) {
 
 // FromAuthenticationV1UserInfo converts an authenticationv1.UserInfo structure to the user.Info interface and calls
 // FromUserInfoInterface to return the seed name.
-func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (string, bool, UserType) {
+func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (string, bool, gardenletidentity.UserType) {
 	return FromUserInfoInterface(&user.DefaultInfo{
 		Name:   userInfo.Username,
 		UID:    userInfo.UID,
@@ -59,7 +49,7 @@ func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (string, b
 
 // FromCertificateSigningRequest converts a *x509.CertificateRequest structure to the user.Info interface and calls
 // FromUserInfoInterface to return the seed name.
-func FromCertificateSigningRequest(csr *x509.CertificateRequest) (string, bool, UserType) {
+func FromCertificateSigningRequest(csr *x509.CertificateRequest) (string, bool, gardenletidentity.UserType) {
 	return FromUserInfoInterface(&user.DefaultInfo{
 		Name:   csr.Subject.CommonName,
 		Groups: csr.Subject.Organization,
@@ -79,7 +69,7 @@ func convertAuthenticationV1ExtraValueToUserInfoExtra(extra map[string]authentic
 	return ret
 }
 
-func getIdentityForSeedsGroup(u user.Info) (string, bool, UserType) {
+func getIdentityForSeedsGroup(u user.Info) (string, bool, gardenletidentity.UserType) {
 	userName := u.GetName()
 
 	if !strings.HasPrefix(userName, v1beta1constants.SeedUserNamePrefix) {
@@ -91,10 +81,10 @@ func getIdentityForSeedsGroup(u user.Info) (string, bool, UserType) {
 		return "", false, ""
 	}
 
-	return seedName, true, UserTypeGardenlet
+	return seedName, true, gardenletidentity.UserTypeGardenlet
 }
 
-func getIdentityForServiceAccountsGroup(u user.Info) (string, bool, UserType) {
+func getIdentityForServiceAccountsGroup(u user.Info) (string, bool, gardenletidentity.UserType) {
 	var serviceAccountNamespaceGroup string
 	for _, g := range u.GetGroups() {
 		if strings.HasPrefix(g, serviceaccount.ServiceAccountGroupPrefix) {
@@ -112,7 +102,7 @@ func getIdentityForServiceAccountsGroup(u user.Info) (string, bool, UserType) {
 	name := strings.TrimPrefix(u.GetName(), serviceaccount.ServiceAccountUsernamePrefix+seedNamespace+serviceaccount.ServiceAccountUsernameSeparator)
 
 	if seedName != "" && strings.HasPrefix(name, v1beta1constants.ExtensionGardenServiceAccountPrefix) {
-		return seedName, true, UserTypeExtension
+		return seedName, true, gardenletidentity.UserTypeExtension
 	}
 
 	return "", false, ""

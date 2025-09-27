@@ -96,7 +96,7 @@ func run(ctx context.Context, opts *Options) error {
 
 	fmt.Fprintf(opts.Out, "Computing required resources for Shoot...\n")
 
-	g := graph.New(opts.Log, clientSet.Client())
+	g := graph.New(opts.Log, clientSet.Client(), true)
 	g.HandleShootCreateOrUpdate(ctx, shoot)
 	if binding != nil {
 		switch b := binding.(type) {
