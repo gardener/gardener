@@ -2675,6 +2675,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CacheSize: 42,
 						}},
 					}, BeEmpty()),
+					Entry("valid (coordination.k8s.io/leases=0)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							APIGroup:  ptr.To("coordination.k8s.io"),
+							Resource:  "leases",
+							CacheSize: 0,
+						}},
+					}, BeEmpty()),
 					Entry("invalid (apps/deployments=<0)", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
 							APIGroup:  ptr.To("apps"),
@@ -2709,7 +2716,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							CacheSize: 42,
 						}},
 					}, ConsistOf(
-						field.Invalid(field.NewPath("resources[0].apiGroup"), "apps#", `must not contain any of the following characters: ",. #"`),
+						field.Invalid(field.NewPath("resources[0].apiGroup"), "apps#", `must not contain any of the following characters: ", #"`),
 					)),
 				)
 			})
