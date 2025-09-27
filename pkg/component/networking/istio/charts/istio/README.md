@@ -2,7 +2,6 @@
 
 Render current version in gardener repository:
 ```console
-helm template istio pkg/component/networking/istio/charts/istio/istio-crds -n istio-system > istio-crds.yaml
 
 helm template istio pkg/component/networking/istio/charts/istio/istio-istiod -n istio-system \
 --set=deployNamespace=true > istio-istiod.yaml
@@ -23,7 +22,7 @@ git checkout $ISTIO_VERSION
 
 Compare crds:
 ```console
-diff istio-crds.yaml istio/${ISTIO_VERSION}/manifests/charts/base/files/crd-all.gen.yaml
+diff istio/manifests/charts/base/files/crd-all.gen.yaml gardener/pkg/component/networking/istio/charts/istio/istio-crds/crd-all.gen.yaml
 ```
 
 Render new version in istio/istio repository:
