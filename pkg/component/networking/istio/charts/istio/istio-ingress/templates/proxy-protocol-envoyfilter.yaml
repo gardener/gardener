@@ -28,6 +28,7 @@ spec:
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
 ---
+# TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
