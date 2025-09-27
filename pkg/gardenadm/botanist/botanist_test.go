@@ -54,18 +54,47 @@ var _ = Describe("AutonomousBotanist", func() {
 		})
 
 		When("running the control plane (acting on the autonomous shoot cluster)", func() {
-			It("should create a new Autonomous Botanist", func() {
-				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
-				Expect(err).NotTo(HaveOccurred())
+			Context("with unmanaged infrastructure (high-touch scenario)", func() {
+				It("should create a new Autonomous Botanist", func() {
+					b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(b.Shoot.CloudProfile.Name).To(Equal("stackit"))
-				Expect(b.Shoot.GetInfo().Name).To(Equal("gardenadm"))
-				Expect(b.Garden.Project.Name).To(Equal("gardenadm"))
-				Expect(b.Extensions).To(ConsistOf(
-					HaveField("ControllerRegistration.Name", "provider-stackit"),
-					HaveField("ControllerRegistration.Name", "networking-cilium"),
-				))
-				Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", HaveKeyWithValue("seed.gardener.cloud/autonomous-shoot-cluster", "true")))
+					Expect(b.Shoot.CloudProfile.Name).To(Equal("stackit"))
+					Expect(b.Shoot.GetInfo().Name).To(Equal("gardenadm"))
+					Expect(b.Garden.Project.Name).To(Equal("gardenadm"))
+					Expect(b.Extensions).To(ConsistOf(
+						HaveField("ControllerRegistration.Name", "provider-stackit"),
+						HaveField("ControllerRegistration.Name", "networking-cilium"),
+					))
+					Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", HaveKeyWithValue("seed.gardener.cloud/autonomous-shoot-cluster", "true")))
+				})
+			})
+
+			Context("with managed infrastructure (medium-touch scenario)", func() {
+				BeforeEach(func() {
+					shootFile := fsys[configDir+"/shoot.yaml"]
+					shootFile.Data = append(shootFile.Data, []byte("\n  credentialsBindingName: provider-account\n")...)
+
+					fsys[configDir+"/shootstate.yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1beta1
+kind: ShootState
+metadata:
+  name: gardenadm
+`)}
+				})
+
+				It("should fail if the ShootState is missing", func() {
+					delete(fsys, configDir+"/shootstate.yaml")
+					Expect(NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)).Error().To(MatchError(ContainSubstring("ShootState is missing")))
+				})
+
+				It("should set the LastOperation to Restore and fetch the ShootState", func() {
+					b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(b.Shoot.GetInfo().Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeRestore))
+					Expect(b.Shoot.GetShootState().Name).To(Equal("gardenadm"))
+					Expect(b.IsRestorePhase()).To(BeTrue())
+				})
 			})
 
 			It("should use kube-system as the control plane namespace", func() {
@@ -112,6 +141,7 @@ var _ = Describe("AutonomousBotanist", func() {
 				Expect(b.Garden.Project.Name).To(Equal("gardenadm"))
 				Expect(b.Extensions).To(ConsistOf(
 					HaveField("ControllerRegistration.Name", "provider-stackit"),
+					HaveField("ControllerRegistration.Name", "dns-local"),
 				))
 				Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", Not(HaveKeyWithValue("seed.gardener.cloud/autonomous-shoot-cluster", "true"))))
 			})
@@ -143,6 +173,7 @@ var _ = Describe("AutonomousBotanist", func() {
 
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret1"}, &corev1.Secret{})).To(Succeed())
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret2"}, &corev1.Secret{})).To(Succeed())
+			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret-dns"}, &corev1.Secret{})).To(Succeed())
 		})
 
 		It("should create the secret binding and credentials binding", func() {
@@ -181,6 +212,12 @@ spec:
     workers:
     - name: control-plane
       controlPlane: {}
+  dns:
+    domain: api.gardenadm.local.gardener.cloud
+    providers:
+    - type: local
+      primary: true
+      secretName: secret-dns
   networking:
     type: cilium
     nodes: 10.1.0.0/16
@@ -230,6 +267,23 @@ metadata:
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
 metadata:
+  name: dns-local
+spec:
+  resources:
+  - kind: DNSRecord
+    type: local
+  deployment:
+    deploymentRefs:
+    - name: dns-local
+---
+apiVersion: core.gardener.cloud/v1
+kind: ControllerDeployment
+metadata:
+  name: dns-local
+---
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerRegistration
+metadata:
   name: unused
 spec:
   resources:
@@ -255,6 +309,11 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: secret2
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-dns
 ---
 apiVersion: v1
 kind: Secret

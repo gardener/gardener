@@ -117,7 +117,7 @@ var _ = Describe("dnsrecord", func() {
 							"external-foo": []byte("external-bar"),
 						},
 					},
-					InternalClusterDomain: internalDomain,
+					InternalClusterDomain: ptr.To(internalDomain),
 					Components: &shoot.Components{
 						Extensions: &shoot.Extensions{
 							ExternalDNSRecord: externalDNSRecord,

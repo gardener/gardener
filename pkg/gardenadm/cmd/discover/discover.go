@@ -134,7 +134,7 @@ func run(ctx context.Context, opts *Options) error {
 		return getAndExportObject(ctx, clientSet.Client(), fs, opts, "Project", project)
 	})
 
-	extensions, err := requiredExtensions(ctx, clientSet.Client(), shoot, opts.RunsControlPlane)
+	extensions, err := requiredExtensions(ctx, clientSet.Client(), shoot, opts.ManagedInfrastructure)
 	if err != nil {
 		return fmt.Errorf("failed computing required extensions: %w", err)
 	}
@@ -189,7 +189,7 @@ func secretBindingForShoot(ctx context.Context, c client.Client, shoot *gardenco
 	}
 }
 
-func requiredExtensions(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot, runsControlPlane bool) ([]botanist.Extension, error) {
+func requiredExtensions(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot, managedInfrastructure bool) ([]botanist.Extension, error) {
 	resources := gardenadm.Resources{Shoot: shoot}
 
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
@@ -215,7 +215,7 @@ func requiredExtensions(ctx context.Context, c client.Client, shoot *gardencorev
 		return nil, fmt.Errorf("failed adding ControllerDeployments: %w", err)
 	}
 
-	return botanist.ComputeExtensions(resources, runsControlPlane)
+	return botanist.ComputeExtensions(resources, true, managedInfrastructure)
 }
 
 func getAndExportObject(ctx context.Context, c client.Client, fs afero.Afero, opts *Options, kind string, obj client.Object) error {

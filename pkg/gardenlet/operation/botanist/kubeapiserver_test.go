@@ -124,7 +124,7 @@ var _ = Describe("KubeAPIServer", func() {
 							KubeAPIServer: kubeAPIServer,
 						},
 					},
-					InternalClusterDomain: internalClusterDomain,
+					InternalClusterDomain: ptr.To(internalClusterDomain),
 					ExternalClusterDomain: &externalClusterDomain,
 					Networks: &shootpkg.Networks{
 						APIServer: apiServerNetwork,

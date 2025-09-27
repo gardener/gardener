@@ -13,7 +13,7 @@ import (
 )
 
 // AllExtensionKinds contains all supported extension kinds.
-var AllExtensionKinds = sets.New(
+var AllExtensionKinds = sets.New[string](
 	BackupBucketResource,
 	BackupEntryResource,
 	BastionResource,
