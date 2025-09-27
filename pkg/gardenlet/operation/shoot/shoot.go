@@ -500,13 +500,9 @@ func (s *Shoot) ComputeInClusterAPIServerAddress(runsInShootNamespace bool) stri
 
 // ComputeOutOfClusterAPIServerAddress returns the external address for the shoot API server depending on whether
 // the caller wants to use the internal cluster domain and whether DNS is disabled on this seed.
-func (s *Shoot) ComputeOutOfClusterAPIServerAddress(useInternalClusterDomain bool) string {
-	if v1beta1helper.ShootUsesUnmanagedDNS(s.GetInfo()) {
-		return v1beta1helper.GetAPIServerDomain(s.InternalClusterDomain)
-	}
-
-	if useInternalClusterDomain || s.ExternalClusterDomain == nil {
-		return v1beta1helper.GetAPIServerDomain(s.InternalClusterDomain)
+func (s *Shoot) ComputeOutOfClusterAPIServerAddress(preferInternalClusterDomain bool) string {
+	if s.InternalClusterDomain != nil && (preferInternalClusterDomain || s.ExternalClusterDomain == nil || v1beta1helper.ShootUsesUnmanagedDNS(s.GetInfo())) {
+		return v1beta1helper.GetAPIServerDomain(*s.InternalClusterDomain)
 	}
 
 	return v1beta1helper.GetAPIServerDomain(*s.ExternalClusterDomain)
@@ -677,4 +673,10 @@ func (s *Shoot) IsAutonomous() bool {
 // `gardenadm bootstrap` (medium-touch scenario).
 func (s *Shoot) RunsControlPlane() bool {
 	return s.ControlPlaneNamespace == metav1.NamespaceSystem
+}
+
+// HasManagedInfrastructure returns true if the shoot's infrastructure (network, machines, etc.) is managed by Gardener.
+// I.e., it returns false for high-touch autonomous shoots, where the infrastructure is managed by the user.
+func (s *Shoot) HasManagedInfrastructure() bool {
+	return v1beta1helper.HasManagedInfrastructure(s.GetInfo())
 }

@@ -99,10 +99,16 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 			Eventually(ctx, Get(deployment)).Should(BeNotFoundError())
 		}, SpecTimeout(time.Minute))
 
+		It("should deploy the DNSRecord", func(ctx SpecContext) {
+			dnsRecord := &extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-external", Namespace: technicalID}}
+			Eventually(ctx, Object(dnsRecord)).Should(BeHealthy(health.CheckExtensionObject))
+		}, SpecTimeout(time.Minute))
+
 		It("should prepare extension resources for migration", func(ctx SpecContext) {
 			extensionKinds := map[string]client.ObjectList{
 				extensionsv1alpha1.InfrastructureResource: &extensionsv1alpha1.InfrastructureList{},
 				extensionsv1alpha1.WorkerResource:         &extensionsv1alpha1.WorkerList{},
+				extensionsv1alpha1.DNSRecordResource:      &extensionsv1alpha1.DNSRecordList{},
 			}
 
 			for kind, list := range extensionKinds {

@@ -73,7 +73,7 @@ var _ = Describe("APIServerProxy", func() {
 					Components: &shootpkg.Components{
 						SystemComponents: &shootpkg.SystemComponents{},
 					},
-					InternalClusterDomain: internalClusterDomain,
+					InternalClusterDomain: &internalClusterDomain,
 					ExternalClusterDomain: &externalClusterDomain,
 					ExternalDomain:        &gardenerutils.Domain{Provider: "some-external-provider"},
 				},
