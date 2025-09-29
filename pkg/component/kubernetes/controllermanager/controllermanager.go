@@ -457,7 +457,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			Name:       k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
