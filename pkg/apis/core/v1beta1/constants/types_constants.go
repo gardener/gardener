@@ -1064,4 +1064,14 @@ const (
 	// GardenerInfoConfigMapDataKeyGardenerAPIServer is the data key in the gardener-info ConfigMap that contains
 	// information about gardener-apiserver.
 	GardenerInfoConfigMapDataKeyGardenerAPIServer = "gardenerAPIServer"
+
+	// LabelShootEndpointPrefix is the prefix used for labels related to
+	// advertised shoot endpoints.
+	LabelShootEndpointPrefix = "endpoint.shoot.gardener.cloud/"
+	// LabelShootEndpointAdvertise is the name of the label which controls
+	// whether an endpoint is advertised for a shoot.
+	LabelShootEndpointAdvertise = LabelShootEndpointPrefix + "advertise"
+	// LabelShootEndpointName is the name of the label, which sets the name
+	// of a shoot advertised endpoint.
+	LabelShootEndpointName = LabelShootEndpointPrefix + "name"
 )
