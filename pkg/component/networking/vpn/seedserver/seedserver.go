@@ -52,7 +52,10 @@ import (
 
 const (
 	// GatewayPort is the port exposed by the istio ingress gateway
+	// TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
 	GatewayPort = 8132
+	// HTTPProxyGatewayPort is the port exposed by the istio ingress gateway to accept HTTP Connect proxy requests
+	HTTPProxyGatewayPort = 8443
 	// SecretNameTLSAuth is the name of seed server tlsauth Secret.
 	SecretNameTLSAuth = "vpn-seed-server-tlsauth" // #nosec G101 -- No credential.
 	deploymentName    = v1beta1constants.DeploymentNameVPNSeedServer
@@ -167,17 +170,15 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	var (
-		configMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "vpn-seed-server-envoy-config",
-				Namespace: v.namespace,
-			},
-			Data: map[string]string{
-				fileNameEnvoyConfig: envoyConfig,
-			},
-		}
-	)
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "vpn-seed-server-envoy-config",
+			Namespace: v.namespace,
+		},
+		Data: map[string]string{
+			fileNameEnvoyConfig: envoyConfig,
+		},
+	}
 
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
@@ -260,9 +261,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 
 func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, secretServer, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {
 	hostPathCharDev := corev1.HostPathCharDev
-	var (
-		ipFamilies []string
-	)
+	var ipFamilies []string
 
 	for _, v := range v.values.Network.IPFamilies {
 		ipFamilies = append(ipFamilies, string(v))

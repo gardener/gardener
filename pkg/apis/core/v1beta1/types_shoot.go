@@ -2038,6 +2038,8 @@ const (
 	ShootDualStackNodesMigrationReady ConditionType = "DualStackNodesMigrationReady"
 	// ShootDNSServiceMigrationReady is a constant for a condition type indicating whether the kube-dns service is migrated.
 	ShootDNSServiceMigrationReady ConditionType = "DNSServiceMigrationReady"
+	// ShootUsesUnifiedHTTPProxyPort is a constant for a condition type indicating whether the new http-proxy port is consumed from istio.
+	ShootUsesUnifiedHTTPProxyPort ConditionType = "UsesUnifiedHTTPProxyPort"
 )
 
 // ShootPurpose is a type alias for string.
