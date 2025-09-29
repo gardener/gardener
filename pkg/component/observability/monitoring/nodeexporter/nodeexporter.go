@@ -472,7 +472,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 	)
 
 	if n.values.VPAEnabled {
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
 		vpaControlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
