@@ -284,11 +284,10 @@ type ShootCredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
 	// +optional
 	CertificateAuthorities *CARotation `json:"certificateAuthorities,omitempty" protobuf:"bytes,1,opt,name=certificateAuthorities"`
-	// Kubeconfig contains information about the kubeconfig credential rotation.
-	// +optional
-	//
-	// Deprecated: This field is deprecated and will be removed in gardener v1.120
-	Kubeconfig *ShootKubeconfigRotation `json:"kubeconfig,omitempty" protobuf:"bytes,2,opt,name=kubeconfig"`
+
+	// Kubeconfig is tombstoned to show why 2 is reserved protobuf tag.
+	// Kubeconfig *ShootKubeconfigRotation `json:"kubeconfig,omitempty" protobuf:"bytes,2,opt,name=kubeconfig"`
+
 	// SSHKeypair contains information about the ssh-keypair credential rotation.
 	// +optional
 	SSHKeypair *ShootSSHKeypairRotation `json:"sshKeypair,omitempty" protobuf:"bytes,3,opt,name=sshKeypair"`

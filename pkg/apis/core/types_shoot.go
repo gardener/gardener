@@ -221,10 +221,6 @@ type ShootCredentials struct {
 type ShootCredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
 	CertificateAuthorities *CARotation
-	// Kubeconfig contains information about the kubeconfig credential rotation.
-	//
-	// Deprecated: This field is deprecated and will be removed in gardener v1.120
-	Kubeconfig *ShootKubeconfigRotation
 	// SSHKeypair contains information about the ssh-keypair credential rotation.
 	SSHKeypair *ShootSSHKeypairRotation
 	// Observability contains information about the observability credential rotation.
