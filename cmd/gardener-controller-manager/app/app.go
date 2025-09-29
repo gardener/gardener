@@ -12,28 +12,20 @@ import (
 	"os"
 	goruntime "runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/api/indexer"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/bootstrappers"
@@ -41,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // Name is a const for the name of this component.
@@ -145,91 +136,6 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 	log.Info("Adding controllers to manager")
 	if err := controller.AddToManager(ctx, mgr, cfg); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
-	}
-
-	// TODO(rfranzke): Remove this runnable after Gardener v1.119 has been released.
-	if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-		var fns []flow.TaskFn
-
-		seedList := &gardencorev1beta1.SeedList{}
-		if err := mgr.GetClient().List(ctx, seedList); err != nil {
-			return fmt.Errorf("failed listing seeds: %w", err)
-		}
-
-		seedNames := sets.New[string]()
-		for _, seed := range seedList.Items {
-			seedNames.Insert(seed.Name)
-		}
-
-		for _, list := range []client.ObjectList{
-			&gardencorev1beta1.BackupEntryList{},
-			&gardencorev1beta1.ShootList{},
-			&gardencorev1beta1.SeedList{},
-			&seedmanagementv1alpha1.ManagedSeedList{},
-		} {
-			if err := mgr.GetClient().List(ctx, list); err != nil {
-				return fmt.Errorf("failed listing objects: %w", err)
-			}
-
-			if err := meta.EachListItem(list, func(o runtime.Object) error {
-				fns = append(fns, func(ctx context.Context) error {
-					obj := o.(client.Object)
-
-					gvk, err := apiutil.GVKForObject(obj, mgr.GetScheme())
-					if err != nil {
-						return fmt.Errorf("could not get GroupVersionKind from object %v: %w", obj, err)
-					}
-
-					var patchNeeded bool
-
-					patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
-					labels := obj.GetLabels()
-					for k, v := range labels {
-						if strings.HasPrefix(k, "seed.gardener.cloud/") && v == "true" && seedNames.Has(strings.TrimPrefix(k, "seed.gardener.cloud/")) {
-							delete(labels, k)
-							patchNeeded = true
-						}
-					}
-
-					if patchNeeded {
-						mgr.GetLogger().Info("Removing legacy seed name labels", "gvk", gvk, "objectKey", client.ObjectKeyFromObject(obj))
-
-						obj.SetLabels(labels)
-
-						return mgr.GetClient().Patch(ctx, obj, patch)
-					}
-
-					return nil
-				})
-				return nil
-			}); err != nil {
-				return fmt.Errorf("failed preparing removal tasks for %T: %w", list, err)
-			}
-		}
-
-		managedSeedList := &seedmanagementv1alpha1.ManagedSeedList{}
-		if err := mgr.GetClient().List(ctx, managedSeedList); err != nil {
-			return fmt.Errorf("failed listing managed seeds: %w", err)
-		}
-		for _, managedSeed := range managedSeedList.Items {
-			fns = append(fns, func(ctx context.Context) error {
-				obj := &managedSeed
-				label := v1beta1constants.LabelPrefixSeedName + obj.GetName()
-				if _, ok := obj.GetLabels()[label]; ok {
-					emptyPatch := client.MergeFrom(obj)
-					if err := mgr.GetClient().Patch(ctx, obj, emptyPatch); err != nil {
-						return fmt.Errorf("failed to patch managed seed %s: %w", client.ObjectKeyFromObject(obj), err)
-					}
-					if _, ok := obj.GetLabels()[label]; ok {
-						return fmt.Errorf("the label %s on the managed seed %s is still present, the mutating webhook is running in an older version", label, client.ObjectKeyFromObject(obj))
-					}
-				}
-				return nil
-			})
-		}
-		return flow.Parallel(fns...)(ctx)
-	})); err != nil {
-		return fmt.Errorf("failed adding seed name label removal runnable to manager: %w", err)
 	}
 
 	log.Info("Starting manager")
