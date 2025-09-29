@@ -17,7 +17,11 @@ import (
 )
 
 func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
-	updateMode, controlledValuesRequestsOnly, containerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerControlledValuesRequestsOnly, vpaautoscalingv1.ContainerScalingModeOff
+	var (
+		updateMode                   = vpaautoscalingv1.UpdateModeRecreate
+		controlledValuesRequestsOnly = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		containerScalingModeOff      = vpaautoscalingv1.ContainerScalingModeOff
+	)
 
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{

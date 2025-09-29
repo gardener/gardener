@@ -206,7 +206,13 @@ var _ = Describe("Alertmanager", func() {
 				AlertmanagerConfiguration:           &monitoringv1.AlertmanagerConfiguration{Name: "alertmanager-" + name},
 			},
 		}
-		vpaUpdateMode, vpaControlledValuesRequestsOnly, vpaContainerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerControlledValuesRequestsOnly, vpaautoscalingv1.ContainerScalingModeOff
+
+		var (
+			vpaUpdateMode                   = vpaautoscalingv1.UpdateModeRecreate
+			vpaControlledValuesRequestsOnly = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+			vpaContainerScalingModeOff      = vpaautoscalingv1.ContainerScalingModeOff
+		)
+
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "alertmanager-" + name,
