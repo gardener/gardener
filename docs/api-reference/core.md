@@ -12636,21 +12636,6 @@ CARotation
 </tr>
 <tr>
 <td>
-<code>kubeconfig</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.ShootKubeconfigRotation">
-ShootKubeconfigRotation
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Kubeconfig contains information about the kubeconfig credential rotation.</p>
-<p>Deprecated: This field is deprecated and will be removed in gardener v1.120</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>sshKeypair</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.ShootSSHKeypairRotation">
@@ -12709,10 +12694,6 @@ ETCDEncryptionKeyRotation
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootKubeconfigRotation">ShootKubeconfigRotation
 </h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
-</p>
 <p>
 <p>ShootKubeconfigRotation contains information about the kubeconfig credential rotation.</p>
 </p>

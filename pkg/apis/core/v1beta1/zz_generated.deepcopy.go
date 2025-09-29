@@ -5397,11 +5397,6 @@ func (in *ShootCredentialsRotation) DeepCopyInto(out *ShootCredentialsRotation) 
 		*out = new(CARotation)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Kubeconfig != nil {
-		in, out := &in.Kubeconfig, &out.Kubeconfig
-		*out = new(ShootKubeconfigRotation)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.SSHKeypair != nil {
 		in, out := &in.SSHKeypair, &out.SSHKeypair
 		*out = new(ShootSSHKeypairRotation)
