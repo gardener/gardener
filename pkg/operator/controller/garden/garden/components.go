@@ -1429,7 +1429,6 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 		},
 		CentralConfigs: prometheus.CentralConfigs{
 			AdditionalScrapeConfigs: gardenprometheus.AdditionalScrapeConfigs(),
-			PrometheusRules:         gardenprometheus.CentralPrometheusRules(garden.Spec.VirtualCluster.Gardener.DiscoveryServer != nil),
 			ServiceMonitors:         gardenprometheus.CentralServiceMonitors(),
 		},
 		Alerting: &prometheus.AlertingValues{Alertmanagers: []*prometheus.Alertmanager{{Name: "alertmanager-garden"}}},

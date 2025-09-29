@@ -58,7 +58,7 @@ metric_relabel_configs:
 	Describe("#CentralScrapeConfigs", func() {
 		var (
 			scrapeConfigPrometheus = &monitoringv1alpha1.ScrapeConfig{
-				ObjectMeta: metav1.ObjectMeta{Name: "prometheus"},
+				ObjectMeta: metav1.ObjectMeta{Name: "prometheus-garden"},
 				Spec: monitoringv1alpha1.ScrapeConfigSpec{
 					StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 						Targets: []monitoringv1alpha1.Target{"localhost:9090"},
