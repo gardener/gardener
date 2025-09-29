@@ -10,7 +10,7 @@ set -o pipefail
 
 TYPE="default"
 case $1 in
-  operator|operator-seed|gardenadm)
+  operator|gardenadm)
   TYPE="$1"
   # shift that type argument is removed from ginkgo cli parameters
   shift
@@ -47,7 +47,7 @@ ensure_glgc_resolves_to_localhost
 
 # If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
 case $TYPE in
-  operator|operator-seed)
+  operator)
     if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
       printf "\n$local_address_operator api.virtual-garden.local.gardener.cloud\n" >>/etc/hosts
       printf "\n$local_address_operator plutono-garden.ingress.runtime-garden.local.gardener.cloud\n" >>/etc/hosts
@@ -60,14 +60,6 @@ case $TYPE in
         printf "Hostname for Plutono is missing in /etc/hosts. To access Plutono and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator\n\n"
         exit 1
       fi
-    fi
-
-    if [[ "$TYPE" == "operator-seed" ]]; then
-      # /etc/hosts must have been updated before garden can be created (otherwise, we could put this command to the
-      # hack/ci-e2e-kind-operator-seed.sh script).
-      echo "> Deploying Garden and Soil"
-      make operator-seed-up
-      export OPERATOR_SEED="true"
     fi
     ;;
 
