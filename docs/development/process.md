@@ -23,21 +23,6 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
 
 Version | Week No    | Begin Validation Phase | Due Date           | Release Responsible                                          |
 ------- |------------| ---------------------- | -------------------|--------------------------------------------------------------|
-v1.115  | Week 11-12 | March 10, 2025         | March 23, 2025     | [@ialidzhikov](https://github.com/ialidzhikov)               |
-v1.116  | Week 13-14 | March 24, 2025         | April 6, 2025      | [@Kostov6](https://github.com/Kostov6)                       |
-v1.117  | Week 15-16 | April 7, 2025          | April 20, 2025     | [@marc1404](https://github.com/marc1404)                     |
-v1.118  | Week 17-18 | April 21, 2025         | May 4, 2025        | [@acumino](https://github.com/acumino)                       |
-v1.119  | Week 19-20 | May 5, 2025            | May 18, 2025       | [@LucaBernstein](https://github.com/LucaBernstein)           |
-v1.120  | Week 21-22 | May 19, 2025           | June 1, 2025       | [@timuthy](https://github.com/timuthy)                       |
-v1.121  | Week 23-24 | June 2, 2025           | June 15, 2025      | [@ary1992](https://github.com/ary1992)                       |
-v1.122  | Week 25-26 | June 16, 2025          | June 29, 2025      | [@ialidzhikov](https://github.com/ialidzhikov)               |
-v1.123  | Week 27-28 | June 30, 2025          | July 13, 2025      | [@ScheererJ](https://github.com/ScheererJ)                   |
-v1.124  | Week 29-30 | July 14, 2025          | July 27, 2025      | [@oliver-goetz](https://github.com/oliver-goetz)             |
-v1.125  | Week 31-32 | July 28, 2025          | August 10, 2025    | [@tobschli](https://github.com/tobschli)                     |
-v1.126  | Week 33-34 | August 11, 2025        | August 24, 2025    | [@plkokanov](https://github.com/plkokanov)                   |
-v1.127  | Week 35-36 | August 25, 2025        | September 7, 2025  | [@rfranzke](https://github.com/rfranzke)                     |
-v1.128  | Week 37-38 | September 8, 2025      | September 21, 2025 | [@shafeeqes](https://github.com/shafeeqes)                   |
-v1.129  | Week 39-40 | September 22, 2025     | October 5, 2025    | [@Kostov6](https://github.com/Kostov6)                       |
 v1.130  | Week 41-42 | October 6, 2025        | October 19, 2025   | [@vitanovs](https://github.com/vitanovs)                     |
 v1.131  | Week 43-44 | October 20, 2025       | November 2, 2025   | [@dimitar-kostadinov](https://github.com/dimitar-kostadinov) |
 
@@ -147,6 +132,21 @@ The release responsible is the main contact person for coordinating new feature 
   v1.112  | Week 05-06 | January 27, 2025       | February 9, 2025   | [@tobschli](https://github.com/tobschli)                                               |
   v1.113  | Week 07-08 | February 10, 2025      | February 23, 2025  | [@plkokanov](https://github.com/plkokanov)                                             |
   v1.114  | Week 09-10 | February 24, 2025      | March 9, 2025      | [@rfranzke](https://github.com/rfranzke)                                               |
+  v1.115  | Week 11-12 | March 10, 2025         | March 23, 2025     | [@ialidzhikov](https://github.com/ialidzhikov)                                         |
+  v1.116  | Week 13-14 | March 24, 2025         | April 6, 2025      | [@Kostov6](https://github.com/Kostov6)                                                 |
+  v1.117  | Week 15-16 | April 7, 2025          | April 20, 2025     | [@marc1404](https://github.com/marc1404)                                               |
+  v1.118  | Week 17-18 | April 21, 2025         | May 4, 2025        | [@acumino](https://github.com/acumino)                                                 |
+  v1.119  | Week 19-20 | May 5, 2025            | May 18, 2025       | [@LucaBernstein](https://github.com/LucaBernstein)                                     |
+  v1.120  | Week 21-22 | May 19, 2025           | June 1, 2025       | [@timuthy](https://github.com/timuthy)                                                 |
+  v1.121  | Week 23-24 | June 2, 2025           | June 15, 2025      | [@ary1992](https://github.com/ary1992)                                                 |
+  v1.122  | Week 25-26 | June 16, 2025          | June 29, 2025      | [@ialidzhikov](https://github.com/ialidzhikov)                                         |
+  v1.123  | Week 27-28 | June 30, 2025          | July 13, 2025      | [@ScheererJ](https://github.com/ScheererJ)                                             |
+  v1.124  | Week 29-30 | July 14, 2025          | July 27, 2025      | [@oliver-goetz](https://github.com/oliver-goetz)                                       |
+  v1.125  | Week 31-32 | July 28, 2025          | August 10, 2025    | [@tobschli](https://github.com/tobschli)                                               |
+  v1.126  | Week 33-34 | August 11, 2025        | August 24, 2025    | [@plkokanov](https://github.com/plkokanov)                                             |
+  v1.127  | Week 35-36 | August 25, 2025        | September 7, 2025  | [@rfranzke](https://github.com/rfranzke)                                               |
+  v1.128  | Week 37-38 | September 8, 2025      | September 21, 2025 | [@shafeeqes](https://github.com/shafeeqes)                                             |
+  v1.129  | Week 39-40 | September 22, 2025     | October 5, 2025    | [@Kostov6](https://github.com/Kostov6)                                                 |
 </details>
 
 Click [here](new-kubernetes-version.md#kubernetes-release-responsible-plan) to view the Kubernetes Release Responsible plan.
