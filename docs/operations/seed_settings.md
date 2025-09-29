@@ -104,6 +104,28 @@ For disruption-free migration to proxy protocol, set `.spec.settings.loadBalance
 
 When switching back from use of proxy protocol to no use of it, use the inverse order, i.e. disable proxy protocol first on the load balancer before disabling `.spec.settings.loadBalancerServices.proxyProtocol.allow`.
 
+### Zonal Ingress
+
+By default, Gardener deploys istio ingress gateways in each availability zone of a seed. This reduces cross-zonal traffic for single-zone shoot control planes.  
+If cross-zonal traffic costs are not a concern and minimizing the number of load balancers is preferred to save resources, zonal istio ingress gateways can be disabled.
+
+The behavior is controlled by the `.spec.settings.loadBalancerServices.zonalIngress.enabled` field, which defaults to `true`.
+
+#### Impact of Disabling Zonal Ingress
+
+When zonal ingress is disabled:
+
+- A single default istio ingress gateway is deployed, spanning all availability zones
+- All shoot control plane traffic (single-zone and multi-zone) is routed through the default gateway
+- Cross-zonal traffic may increase, since single-zone shoots no longer use zonal gateways
+- Fewer load balancers are created, potentially reducing infrastructure costs
+
+> [!CAUTION]
+> Disabling zonal istio ingress gateways while shoots still rely on them makes those shoots inaccessible until the next reconcile.  
+> Only after reconciliation will the `Gateway` resource be updated to point to the default istio ingress gateway.
+
+For more about Istio’s multi-zone behavior, see the [Istio documentation](./istio.md#handling-multiple-availability-zones-with-istio).
+
 ### Zone-Specific Settings
 
 In case a seed cluster is configured to use multiple zones via `.spec.provider.zones`, it may be necessary to configure the load balancers in individual zones in different way, e.g., by utilizing
@@ -123,6 +145,7 @@ By setting the `.spec.settings.verticalPodAutoscaler.enabled=false`, you can dis
 ⚠️ In any case, there must be a VPA available for your seed cluster. Using a seed without VPA is not supported.
 
 ### VPA Pitfall: Excessive Resource Requests Making Pod Unschedulable
+
 VPA is unaware of node capacity, and can increase the resource requests of a pod beyond the capacity of any single node.
 Such pod is likely to become permanently unschedulable. That problem can be partly mitigated by using the
 `VerticalPodAutoscaler.Spec.ResourcePolicy.ContainerPolicies[].MaxAllowed` field to constrain pod resource requests to
@@ -152,6 +175,7 @@ for example, to prevent faulty updates from propagating further or to avoid gard
 To temporarily disable reconciliations, add the annotation `shoot.gardener.cloud/emergency-stop-reconciliations=true` to the `Seed` resource.
 
 While this annotation is present:
+
 - The `Shoot` controller will not reconcile any `Shoot` clusters in the affected `Seed`.
 - New `Shoot` clusters will not be scheduled to this `Seed`.
 - The `Seed` will expose the `SeedDisabledShootReconciliations` condition.
