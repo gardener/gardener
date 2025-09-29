@@ -58,13 +58,14 @@ type AutonomousBotanist struct {
 
 	// Bastion is only set for `gardenadm bootstrap`.
 	Bastion *bastion.Bastion
-	// ControlPlaneMachines is set by ListControlPlaneMachines during `gardenadm bootstrap`.
-	ControlPlaneMachines []machinev1alpha1.Machine
 
 	operatingSystemConfigSecret       *corev1.Secret
 	gardenerResourceManagerServiceIPs []string
 	staticPodNameToHash               map[string]string
 	useEtcdManagedByDruid             bool
+
+	// controlPlaneMachines is set by ListControlPlaneMachines during `gardenadm bootstrap`.
+	controlPlaneMachines []machinev1alpha1.Machine
 }
 
 // Extension contains the resources needed for an extension registration.

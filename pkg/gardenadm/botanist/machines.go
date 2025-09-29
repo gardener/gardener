@@ -14,23 +14,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ListControlPlaneMachines stores all control plane machines in ControlPlaneMachines for later retrieval.
+// ListControlPlaneMachines stores all control plane machines in controlPlaneMachines for later retrieval.
 // Listing the machines only once ensures consistent ordering when accessing them by index.
 func (b *AutonomousBotanist) ListControlPlaneMachines(ctx context.Context) error {
 	machineList := &machinev1alpha1.MachineList{}
 	if err := b.SeedClientSet.Client().List(ctx, machineList, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
 		return fmt.Errorf("failed to list machines: %w", err)
 	}
-	b.ControlPlaneMachines = machineList.Items
+	b.controlPlaneMachines = machineList.Items
 	return nil
 }
 
 // GetMachineByIndex returns the control plane machine with the given index or an error if the index is out of bounds.
 func (b *AutonomousBotanist) GetMachineByIndex(index int) (*machinev1alpha1.Machine, error) {
-	if len(b.ControlPlaneMachines) <= index {
-		return nil, fmt.Errorf("only %q machines founds, but wanted machine with index %d", len(b.ControlPlaneMachines), index)
+	if len(b.controlPlaneMachines) <= index {
+		return nil, fmt.Errorf("only %q machines founds, but wanted machine with index %d", len(b.controlPlaneMachines), index)
 	}
-	return &b.ControlPlaneMachines[index], nil
+	return &b.controlPlaneMachines[index], nil
 }
 
 // addressTypePreference when retrieving the SSH Address of a machine. Higher value means higher priority.
