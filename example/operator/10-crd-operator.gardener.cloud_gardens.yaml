@@ -205,6 +205,16 @@ spec:
                         items:
                           type: string
                         type: array
+                      ipFamilies:
+                        description: |-
+                          IPFamilies specifies the IP protocol versions to use for the runtime cluster's networking. This field is
+                          immutable.
+                          Defaults to ["IPv4"].
+                        items:
+                          description: IPFamily is a type for specifying an IP protocol
+                            version to use in Gardener clusters.
+                          type: string
+                        type: array
                       nodes:
                         description: Nodes are the CIDRs of the node network. Elements
                           can be appended to this list, but not removed.

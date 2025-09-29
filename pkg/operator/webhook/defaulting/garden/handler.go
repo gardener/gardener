@@ -24,6 +24,10 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 		return fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", obj)
 	}
 
+	if len(garden.Spec.RuntimeCluster.Networking.IPFamilies) == 0 {
+		garden.Spec.RuntimeCluster.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}
+	}
+
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer == nil {
 		garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{}
 	}

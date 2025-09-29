@@ -682,6 +682,11 @@ profiles:
       kustomize:
         paths:
           - dev-setup/gardenlet/overlays/single-node-ipv6
+  - name: single-node-dual
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenlet/overlays/single-node-dual
   - name: multi-node
     manifests:
       kustomize:

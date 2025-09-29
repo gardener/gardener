@@ -614,14 +614,6 @@ profiles:
           - apply
           - -f
           - example/provider-extensions/garden/controlplane/domain-secrets.yaml
-  - name: dual
-    activation:
-      - env: IPFAMILY=dual
-    patches:
-      - op: add
-        path: /deploy/helm/releases/0/setValues
-        value:
-          global.admission.service.clusterIP: fd00:10:2::1000
   - name: debug
     activation:
       - command: debug
@@ -894,15 +886,6 @@ resourceSelector:
     - groupKind: CloudProfile.core.gardener.cloud
       image:
         - .*
-profiles:
-  - name: dual
-    activation:
-      - env: IPFAMILY=dual
-    manifests:
-      kustomize:
-        paths:
-          - example/provider-local/garden/skaffold-dual
-          - example/provider-local/seed-kind/skaffold
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
@@ -1642,13 +1625,6 @@ profiles:
           - bash
           - -ec
           - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady SeedSystemComponentsHealthy ExtensionsReady
-  - name: dual
-    activation:
-      - env: IPFAMILY=dual
-    patches:
-      - op: add
-        path: /deploy/helm/releases/0/valuesFiles/-
-        value: example/gardener-local/gardenlet/values-dual.yaml
   - name: debug
     activation:
       - command: debug

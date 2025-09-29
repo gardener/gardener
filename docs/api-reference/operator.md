@@ -3040,6 +3040,20 @@ Volume
 <tbody>
 <tr>
 <td>
+<code>ipFamilies</code></br>
+<em>
+[]github.com/gardener/gardener/pkg/apis/core/v1beta1.IPFamily
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamilies specifies the IP protocol versions to use for the runtime cluster&rsquo;s networking. This field is
+immutable.
+Defaults to [&ldquo;IPv4&rdquo;].</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>nodes</code></br>
 <em>
 []string

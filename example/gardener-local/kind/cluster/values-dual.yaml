@@ -1,4 +1,7 @@
 gardener:
+  garden:
+    virtualGarden:
+      listenAddress: ::3
   seed:
     istio:
       listenAddresses:

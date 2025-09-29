@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+  - patch: |
+      - op: replace
+        path: /spec/config/seedConfig/spec/networks/ipFamilies
+        value:
+        - IPv6
+        - IPv4
+    target:
+      group: seedmanagement.gardener.cloud
+      kind: Gardenlet
+      name: local
+      namespace: garden

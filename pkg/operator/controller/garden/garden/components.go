@@ -910,7 +910,7 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		nil,
 		false,
 		garden.Spec.RuntimeCluster.Provider.Zones,
-		false,
+		len(garden.Spec.RuntimeCluster.Networking.IPFamilies) == 2,
 		r.RuntimeVersion,
 	)
 }
