@@ -9168,12 +9168,6 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation"),
 						},
 					},
-					"kubeconfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kubeconfig contains information about the kubeconfig credential rotation.\n\nDeprecated: This field is deprecated and will be removed in gardener v1.120",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation"),
-						},
-					},
 					"sshKeypair": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SSHKeypair contains information about the ssh-keypair credential rotation.",
@@ -9202,7 +9196,7 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation"},
 	}
 }
 

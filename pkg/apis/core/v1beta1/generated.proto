@@ -3152,12 +3152,6 @@ message ShootCredentialsRotation {
   // +optional
   optional CARotation certificateAuthorities = 1;
 
-  // Kubeconfig contains information about the kubeconfig credential rotation.
-  // +optional
-  //
-  // Deprecated: This field is deprecated and will be removed in gardener v1.120
-  optional ShootKubeconfigRotation kubeconfig = 2;
-
   // SSHKeypair contains information about the ssh-keypair credential rotation.
   // +optional
   optional ShootSSHKeypairRotation sshKeypair = 3;
