@@ -603,7 +603,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		updateMode          = vpaautoscalingv1.UpdateModeAuto
+		updateMode          = vpaautoscalingv1.UpdateModeRecreate
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 		networkPolicy       *networkingv1.NetworkPolicy

@@ -11,7 +11,7 @@ spec:
     kind: Deployment
     name: istiod
   updatePolicy:
-    updateMode: Auto
+    updateMode: Recreate
   resourcePolicy:
     containerPolicies:
       - containerName: discovery
