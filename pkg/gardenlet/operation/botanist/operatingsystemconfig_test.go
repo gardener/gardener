@@ -89,7 +89,7 @@ var _ = Describe("operatingsystemconfig", func() {
 							OperatingSystemConfig: operatingSystemConfig,
 						},
 					},
-					InternalClusterDomain: shootDomain,
+					InternalClusterDomain: ptr.To(shootDomain),
 					Purpose:               "development",
 					Networks: &shootpkg.Networks{
 						CoreDNS: []net.IP{net.ParseIP(coreDNS[0]), net.ParseIP(coreDNS[1])},

@@ -12,10 +12,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"slices"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -30,60 +27,35 @@ import (
 
 // ConnectToMachine opens an SSH connection via the Bastion to the n-th machine of the autonomous shoot.
 func (b *AutonomousBotanist) ConnectToMachine(ctx context.Context, index int) (*sshutils.Connection, error) {
-	machineList := &machinev1alpha1.MachineList{}
-	if err := b.SeedClientSet.Client().List(ctx, machineList, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
-		return nil, fmt.Errorf("failed to list machines: %w", err)
-	}
-	if len(machineList.Items) <= index {
-		return nil, fmt.Errorf("only %q machines founds, but wanted to connect to machine with index %d", len(machineList.Items), index)
-	}
-	machine := machineList.Items[index]
-	machineAddr, err := b.sshAddressForMachine(&machine)
+	machine, err := b.GetMachineByIndex(index)
 	if err != nil {
 		return nil, err
 	}
+
+	machineAddr, err := PreferredAddressForMachine(machine)
+	if err != nil {
+		return nil, err
+	}
+	sshAddr := net.JoinHostPort(machineAddr, "22")
 
 	sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
 	if !found {
 		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
 	}
 
-	conn, err := sshutils.Dial(ctx, machineAddr,
+	conn, err := sshutils.Dial(ctx, sshAddr,
 		sshutils.WithProxyConnection(b.Bastion.Connection),
 		sshutils.WithUser("gardener"),
 		sshutils.WithPrivateKeyBytes(sshKeypairSecret.Data[secretsutils.DataKeyRSAPrivateKey]),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to machine %q at %q via bastion: %w", machine.Name, machineAddr, err)
+		return nil, fmt.Errorf("failed to connect to machine %q at %q via bastion: %w", machine.Name, sshAddr, err)
 	}
 
 	// add a line prefix to distinguish output from different machines
 	conn.OutputPrefix = fmt.Sprintf("[%s] ", machine.Name)
 
 	return conn, nil
-}
-
-// addressTypePriority when retrieving the SSH Address of a machine. 0 is the highest priority
-var addressTypePriority = map[corev1.NodeAddressType]int{
-	// internal names have priority, as we jump via a bastion host
-	corev1.NodeInternalIP:  0,
-	corev1.NodeInternalDNS: 1,
-	corev1.NodeExternalIP:  2,
-	corev1.NodeExternalDNS: 3,
-	// this should be returned by all providers, and is actually locally resolvable in many infrastructures
-	corev1.NodeHostName: 4,
-}
-
-func (b *AutonomousBotanist) sshAddressForMachine(machine *machinev1alpha1.Machine) (string, error) {
-	if len(machine.Status.Addresses) == 0 {
-		return "", fmt.Errorf("no addresses found in status of machine %s", machine.Name)
-	}
-
-	address := slices.MinFunc(machine.Status.Addresses, func(a, b corev1.NodeAddress) int {
-		return addressTypePriority[a.Type] - addressTypePriority[b.Type]
-	})
-
-	return net.JoinHostPort(address.Address, "22"), nil
 }
 
 var (

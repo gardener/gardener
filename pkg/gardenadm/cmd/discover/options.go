@@ -23,9 +23,10 @@ type Options struct {
 	Kubeconfig string
 	// ShootManifest is the path to the shoot manifest file.
 	ShootManifest string
-	// RunsControlPlane indicates whether the control plane is run in the same cluster. This should be set to false
-	// if `gardenadm bootstrap` will be used for bootstrapping the shoot cluster.
-	RunsControlPlane bool
+	// ManagedInfrastructure indicates whether Gardener will manage the shoot's infrastructure (network, domains,
+	// machines, etc.). Set this to true if using 'gardenadm bootstrap' for bootstrapping the shoot cluster. Set this to
+	// false if managing the infrastructure outside of Gardener.
+	ManagedInfrastructure bool
 }
 
 // ParseArgs parses the arguments to the options.
@@ -64,5 +65,5 @@ func (o *Options) Complete() error { return o.ManifestOptions.Complete() }
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	o.ManifestOptions.AddFlags(fs)
 	fs.StringVarP(&o.Kubeconfig, "kubeconfig", "k", "", "Path to the kubeconfig file pointing to the garden cluster")
-	fs.BoolVar(&o.RunsControlPlane, "runs-control-plane", true, "Indicates whether the control plane is run in the same cluster. This should be set to false if `gardenadm bootstrap` will be used for bootstrapping the shoot cluster.")
+	fs.BoolVar(&o.ManagedInfrastructure, "managed-infrastructure", true, "Indicates whether Gardener will manage the shoot's infrastructure (network, domains, machines, etc.). Set this to true if using 'gardenadm bootstrap' for bootstrapping the shoot cluster. Set this to false if managing the infrastructure outside of Gardener.")
 }

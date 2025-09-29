@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +27,7 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/bastion"
@@ -61,6 +63,9 @@ type AutonomousBotanist struct {
 	gardenerResourceManagerServiceIPs []string
 	staticPodNameToHash               map[string]string
 	useEtcdManagedByDruid             bool
+
+	// controlPlaneMachines is set by ListControlPlaneMachines during `gardenadm bootstrap`.
+	controlPlaneMachines []machinev1alpha1.Machine
 }
 
 // Extension contains the resources needed for an extension registration.
@@ -95,7 +100,7 @@ func NewAutonomousBotanistFromManifests(
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", dir, err)
 	}
 
-	extensions, err := ComputeExtensions(resources, runsControlPlane)
+	extensions, err := ComputeExtensions(resources, runsControlPlane, v1beta1helper.HasManagedInfrastructure(resources.Shoot))
 	if err != nil {
 		return nil, fmt.Errorf("failed computing extensions: %w", err)
 	}
@@ -298,8 +303,7 @@ func newShootObject(
 		NewBuilder().
 		WithProjectName(resources.Project.Name).
 		WithCloudProfileObject(resources.CloudProfile).
-		WithShootObject(resources.Shoot).
-		WithInternalDomain(&gardenerutils.Domain{Domain: "gardenadm.local"})
+		WithShootObject(resources.Shoot)
 
 	if resources.Shoot.Spec.SecretBindingName != nil || resources.Shoot.Spec.CredentialsBindingName != nil {
 		b = b.WithShootCredentialsFrom(gardenClient)

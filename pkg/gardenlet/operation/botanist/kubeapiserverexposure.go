@@ -158,7 +158,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 			values := &kubeapiserverexposure.SNIValues{
 				Hosts: []string{
 					v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-					v1beta1helper.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+					v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain),
 				},
 				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
 					APIServerClusterIP: b.APIServerClusterIP,
@@ -192,7 +192,7 @@ func (b *Botanist) ReconcileIstioInternalLoadBalancingConfigMap(ctx context.Cont
 		b.Shoot.ControlPlaneNamespace,
 		b.IstioNamespace(),
 		[]string{
-			v1beta1helper.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain),
 		},
 		features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
 	)

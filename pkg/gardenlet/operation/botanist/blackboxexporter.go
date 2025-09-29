@@ -10,7 +10,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
@@ -40,7 +39,7 @@ func (b *Botanist) DefaultBlackboxExporterControlPlane() (component.DeployWaiter
 			},
 			PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
 			Config:            controlplaneblackboxexporter.Config(),
-			ScrapeConfigs:     controlplaneblackboxexporter.ScrapeConfig(b.Shoot.ControlPlaneNamespace, monitoringv1alpha1.Target("https://"+v1beta1helper.GetAPIServerDomain(b.Shoot.InternalClusterDomain)+"/healthz")),
+			ScrapeConfigs:     controlplaneblackboxexporter.ScrapeConfig(b.Shoot.ControlPlaneNamespace, monitoringv1alpha1.Target("https://"+b.Shoot.ComputeOutOfClusterAPIServerAddress(true)+"/healthz")),
 			Replicas:          b.Shoot.GetReplicas(1),
 		},
 	)

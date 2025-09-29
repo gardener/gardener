@@ -261,7 +261,7 @@ var _ = Describe("Etcd", func() {
 				},
 				ControlPlaneNamespace: namespace,
 				BackupEntryName:       namespace + "--" + string(shootUID),
-				InternalClusterDomain: "internal.example.com",
+				InternalClusterDomain: ptr.To("internal.example.com"),
 			}
 			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 				Status: gardencorev1beta1.SeedStatus{

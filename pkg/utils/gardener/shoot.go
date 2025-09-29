@@ -587,14 +587,14 @@ func IsIncompleteDNSConfigError(err error) bool {
 // already contains "internal", the result is constructed as "<shootName>.<shootProject>.<internalDomain>."
 // In case it does not, the word "internal" will be appended, resulting in
 // "<shootName>.<shootProject>.internal.<internalDomain>".
-func ConstructInternalClusterDomain(shootName, shootProject string, internalDomain *Domain) string {
+func ConstructInternalClusterDomain(shootName, shootProject string, internalDomain *Domain) *string {
 	if internalDomain == nil {
-		return ""
+		return nil
 	}
 	if strings.Contains(internalDomain.Domain, InternalDomainKey) {
-		return fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain.Domain)
+		return ptr.To(fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain.Domain))
 	}
-	return fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, InternalDomainKey, internalDomain.Domain)
+	return ptr.To(fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, InternalDomainKey, internalDomain.Domain))
 }
 
 // ConstructExternalClusterDomain constructs the external Shoot cluster domain, i.e. the domain which will be put
@@ -622,6 +622,13 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 	)
 
 	switch {
+	case v1beta1helper.IsShootAutonomous(shoot.Spec.Provider.Workers) && !v1beta1helper.HasManagedInfrastructure(shoot):
+		// For high-touch autonomous shoots, the external domain is managed outside of Gardener, but must be specified
+		// in the Shoot resource. Therefore, we do not have to set any secret/zone data here.
+		// When removing the "unmanaged provider" (https://github.com/gardener/gardener/issues/12212), replace this value
+		// with a bool field on the Domain type that is considered by the NeedsExternalDNS func.
+		externalDomain.Provider = core.DNSUnmanaged
+
 	case defaultDomain != nil:
 		externalDomain.SecretData = defaultDomain.SecretData
 		externalDomain.Provider = defaultDomain.Provider

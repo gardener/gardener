@@ -31,13 +31,12 @@ import (
 
 // ComputeExtensions takes a list of ControllerRegistrations and ControllerDeployments and computes a corresponding list
 // of Extensions.
-func ComputeExtensions(resources gardenadm.Resources, runsControlPlane bool) ([]Extension, error) {
+func ComputeExtensions(resources gardenadm.Resources, runsControlPlane, managedInfrastructure bool) ([]Extension, error) {
 	var extensions []Extension
 
 	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(
-		resources.Shoot,
-		resources.ControllerRegistrations,
-		wantedExtensionKinds(runsControlPlane),
+		resources,
+		wantedExtensionKinds(runsControlPlane, managedInfrastructure),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed computing the names of the wanted ControllerRegistrations: %w", err)
@@ -88,32 +87,37 @@ func ComputeExtensions(resources gardenadm.Resources, runsControlPlane bool) ([]
 // wantedExtensionKinds returns the set of extension kinds that are needed and supported for autonomous shoot clusters.
 // runsControlPlane indicates whether we are bootstrapping the control plane of the cluster (i.e., when executing
 // `gardenadm init`).
-func wantedExtensionKinds(runsControlPlane bool) sets.Set[string] {
-	if runsControlPlane {
-		// In `gardenadm init`, we deploy all extensions referenced by the shoot, except for Infrastructure and Worker
-		// (we only support the high-touch scenario here for now).
-		// TODO(timebertt): distinguish between high-touch and medium-touch scenario in `gardenadm init`
-		return extensionsv1alpha1.AllExtensionKinds.Clone().Delete(extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.WorkerResource)
+// managedInfrastructure indicates whether the infrastructure of the shoot cluster is managed by Gardener (medium-touch
+// scenario) or not (high-touch scenario).
+func wantedExtensionKinds(runsControlPlane, managedInfrastructure bool) sets.Set[string] {
+	if !runsControlPlane {
+		// When running `gardenadm bootstrap` against the bootstrap cluster, we create Infrastructure, OSC, Worker, and
+		// DNSRecord for the control plane of the autonomous shoot cluster, so we only need to deploy a subset of the
+		// extensions required for the shoot.
+		return sets.New[string](extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.OperatingSystemConfigResource, extensionsv1alpha1.WorkerResource, extensionsv1alpha1.DNSRecordResource)
 	}
 
-	// In `gardenadm bootstrap`, we create Infrastructure, OSC, and Worker for the control plane of the autonomous shoot
-	// cluster, so we only need these extensions.
-	return sets.New(extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.OperatingSystemConfigResource, extensionsv1alpha1.WorkerResource)
+	// In the high-touch scenario, we don't deploy Infrastructure, Worker, and DNSRecord extensions because they are
+	// managed outside of Gardener.
+	if !managedInfrastructure {
+		return extensionsv1alpha1.AllExtensionKinds.Clone().Delete(extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.WorkerResource, extensionsv1alpha1.DNSRecordResource)
+	}
+
+	// In `gardenadm init`, we deploy all extensions referenced by the shoot in the medium-touch scenario.
+	return extensionsv1alpha1.AllExtensionKinds.Clone()
 }
 
 // computeWantedControllerRegistrationNames returns the names of all ControllerRegistrations relevant for the autonomous
 // botanist based on the parsed manifests and the wanted extension kinds.
-func computeWantedControllerRegistrationNames(
-	shoot *gardencorev1beta1.Shoot,
-	controllerRegistrations []*gardencorev1beta1.ControllerRegistration,
-	wantedExtensionKinds sets.Set[string],
-) (sets.Set[string], error) {
+func computeWantedControllerRegistrationNames(resources gardenadm.Resources, wantedExtensionKinds sets.Set[string]) (sets.Set[string], error) {
 	var (
 		result                                   = sets.New[string]()
+		requiredExtensionIDs                     = sets.New[string]()
 		extensionIDToControllerRegistrationNames = make(map[string][]string)
 	)
 
-	for _, controllerRegistration := range controllerRegistrations {
+	// collect available extension IDs from ControllerRegistrations, and add always-deployed extensions to result
+	for _, controllerRegistration := range resources.ControllerRegistrations {
 		for _, resource := range controllerRegistration.Spec.Resources {
 			id := gardenerutils.ExtensionsID(resource.Kind, resource.Type)
 			extensionIDToControllerRegistrationNames[id] = append(extensionIDToControllerRegistrationNames[id], controllerRegistration.Name)
@@ -124,16 +128,20 @@ func computeWantedControllerRegistrationNames(
 		}
 	}
 
-	for _, extensionID := range gardenerutils.ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationSliceToList(controllerRegistrations), nil, nil).UnsortedList() {
+	// collect extension IDs required by the shoot
+	for _, extensionID := range gardenerutils.ComputeRequiredExtensionsForShoot(resources.Shoot, nil, controllerRegistrationSliceToList(resources.ControllerRegistrations), nil, nil).UnsortedList() {
 		extensionKind, _, err := gardenerutils.ExtensionKindAndTypeForID(extensionID)
 		if err != nil {
 			return nil, err
 		}
 
-		if !wantedExtensionKinds.Has(extensionKind) {
-			continue
+		if wantedExtensionKinds.Has(extensionKind) {
+			requiredExtensionIDs.Insert(extensionID)
 		}
+	}
 
+	// map required extension IDs back to ControllerRegistration names
+	for extensionID := range requiredExtensionIDs {
 		names, ok := extensionIDToControllerRegistrationNames[extensionID]
 		if !ok {
 			return nil, fmt.Errorf("need to install an extension controller for %q but no appropriate ControllerRegistration found", extensionID)
