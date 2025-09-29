@@ -1057,6 +1057,7 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 	var (
 		prometheusAggregateTargets        []monitoringv1alpha1.Target
 		prometheusAggregateIngressTargets []monitoringv1alpha1.Target
+		prometheusAggregateTargetNames    []string
 	)
 	for _, seed := range seedList.Items {
 		if seed.Spec.Ingress != nil {
@@ -1066,12 +1067,16 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 			} else {
 				prometheusAggregateIngressTargets = append(prometheusAggregateIngressTargets, monitoringv1alpha1.Target(ingressHost))
 			}
+			prometheusAggregateTargetNames = append(prometheusAggregateTargetNames, seed.Name)
 		}
 	}
 
 	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateTargets, prometheusAggregateIngressTargets, globalMonitoringSecretRuntime))
 
-	rules := gardenprometheus.CentralPrometheusRules(discoveryServerEnabled)
+	rules, err := gardenprometheus.CentralPrometheusRules(discoveryServerEnabled, prometheusAggregateTargetNames)
+	if err != nil {
+		return fmt.Errorf("failed creating central Prometheus rules: %w", err)
+	}
 	prometheus.SetCentralPrometheusRules(rules)
 
 	return prometheus.Deploy(ctx)

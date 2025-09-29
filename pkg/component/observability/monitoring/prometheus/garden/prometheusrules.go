@@ -5,7 +5,9 @@
 package garden
 
 import (
+	"bytes"
 	_ "embed"
+	"text/template"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +28,10 @@ var (
 	//go:embed assets/prometheusrules/etcd.yaml
 	etcdYAML []byte
 	etcd     *monitoringv1.PrometheusRule
+
+	//go:embed assets/prometheusrules/health.yaml.tmpl
+	healthYAML []byte
+	health     *monitoringv1.PrometheusRule
 
 	//go:embed assets/prometheusrules/metering-meta.yaml
 	meteringYAML []byte
@@ -65,16 +71,32 @@ func init() {
 }
 
 // CentralPrometheusRules returns the central PrometheusRule resources for the garden prometheus.
-func CentralPrometheusRules(isGardenerDiscoveryServerEnabled bool) []*monitoringv1.PrometheusRule {
+func CentralPrometheusRules(isGardenerDiscoveryServerEnabled bool, prometheusAggregateTargetNames []string) ([]*monitoringv1.PrometheusRule, error) {
+	tpl, err := template.New("PrometheusGarden:CentralPrometheusRules").Parse(string(healthYAML))
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	if err = tpl.Execute(&buf, map[string]any{"Seeds": prometheusAggregateTargetNames}); err != nil {
+		return nil, err
+	}
+
+	health = &monitoringv1.PrometheusRule{}
+	if err = runtime.DecodeInto(monitoringutils.Decoder, buf.Bytes(), health); err != nil {
+		return nil, err
+	}
+
 	return []*monitoringv1.PrometheusRule{
 		auditLog.DeepCopy(),
 		etcd.DeepCopy(),
+		health,
 		gardenPrometheusRule(isGardenerDiscoveryServerEnabled).DeepCopy(),
 		metering.DeepCopy(),
 		recording.DeepCopy(),
 		seed.DeepCopy(),
 		shoot.DeepCopy(),
-	}
+	}, nil
 }
 
 func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.PrometheusRule {
