@@ -10,12 +10,12 @@ import (
 	"slices"
 	"strings"
 
+	networkingv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	networkingv1 "k8s.io/api/networking/v1"
 )
 
 // UpdateAdvertisedAddresses updates the shoot.status.advertisedAddresses with the list of
@@ -105,15 +105,14 @@ func (b *Botanist) GetIngressAdvertisedEndpoints(ctx context.Context) ([]gardenc
 	result := make([]gardencorev1beta1.ShootAdvertisedAddress, 0)
 	var ingressList networkingv1.IngressList
 
-	err := b.SeedClientSet.Client().List(
+	if err := b.SeedClientSet.Client().List(
 		ctx,
 		&ingressList,
-		client.InNamespace(b.Shoot.GetInfo().Status.TechnicalID),
+		client.InNamespace(b.Shoot.ControlPlaneNamespace),
 		client.MatchingLabels(map[string]string{
 			v1beta1constants.LabelShootEndpointAdvertise: "true",
 		}),
-	)
-	if err != nil {
+	); err != nil {
 		return nil, err
 	}
 

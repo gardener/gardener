@@ -13,6 +13,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -22,26 +23,27 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
-	seedop "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
-	shootop "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
+	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 )
 
 var _ = Describe("AdvertisedAddresses", func() {
 	var (
 		botanist       *Botanist
+		fakeClient     client.Client
+		fakeSeedClient kubernetes.Interface
 		ctx            = context.TODO()
-		fakeClient     = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 		shootNamespace = corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "shoot--test--test"}}
 	)
 
 	BeforeEach(func() {
-		ctx = context.Background()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		fakeSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.SeedClientSet = fakeSeedClient
-		botanist.Seed = &seedop.Seed{}
+		botanist.Seed = &seedpkg.Seed{}
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
-		botanist.Shoot = &shootop.Shoot{
+		botanist.Shoot = &shootpkg.Shoot{
 			ControlPlaneNamespace: shootNamespace.Name,
 		}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
@@ -222,13 +224,13 @@ var _ = Describe("AdvertisedAddresses", func() {
 	})
 
 	Describe("#GetIngressAdvertisedEndpoints", func() {
-		It("returns none with no ingress resources", func() {
+		It("returns nothing with no ingress resources", func() {
 			items, err := botanist.GetIngressAdvertisedEndpoints(ctx)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(items).To(HaveLen(0))
+			Expect(items).To(BeEmpty())
 		})
 
-		It("returns none when no ingress is labeled", func() {
+		It("returns nothing when no ingress is labeled", func() {
 			// Resource does not have the expected labels
 			ingress := &networkingv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
@@ -247,8 +249,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 			Expect(botanist.SeedClientSet.Client().Create(ctx, ingress)).To(Succeed())
 			items, err := botanist.GetIngressAdvertisedEndpoints(ctx)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(items).To(HaveLen(0))
-			Expect(botanist.SeedClientSet.Client().Delete(ctx, ingress)).To(Succeed())
+			Expect(items).To(BeEmpty())
 		})
 
 		It("returns valid endpoints from ingress resources", func() {
@@ -289,8 +290,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 			Expect(botanist.SeedClientSet.Client().Create(ctx, ingressB)).To(Succeed())
 			items, err := botanist.GetIngressAdvertisedEndpoints(ctx)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(items).To(HaveLen(2))
-			Expect(items).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+			Expect(items).To(HaveExactElements([]gardencorev1beta1.ShootAdvertisedAddress{
 				{
 					Name: "ingress/ingress-1",
 					URL:  "https://foo.example.org",
@@ -300,8 +300,6 @@ var _ = Describe("AdvertisedAddresses", func() {
 					URL:  "https://bar.example.org",
 				},
 			}))
-			Expect(botanist.SeedClientSet.Client().Delete(ctx, ingressA)).To(Succeed())
-			Expect(botanist.SeedClientSet.Client().Delete(ctx, ingressB)).To(Succeed())
 		})
 
 		It("returns valid endpoint with custom name", func() {
@@ -326,14 +324,12 @@ var _ = Describe("AdvertisedAddresses", func() {
 			Expect(botanist.SeedClientSet.Client().Create(ctx, ingress)).To(Succeed())
 			items, err := botanist.GetIngressAdvertisedEndpoints(ctx)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(items).To(HaveLen(1))
-			Expect(items).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+			Expect(items).To(HaveExactElements([]gardencorev1beta1.ShootAdvertisedAddress{
 				{
 					Name: "my-custom-name",
 					URL:  "https://foo.example.org",
 				},
 			}))
-			Expect(botanist.SeedClientSet.Client().Delete(ctx, ingress)).To(Succeed())
 		})
 	})
 })
