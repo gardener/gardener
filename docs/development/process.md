@@ -30,7 +30,7 @@ v1.133  | Week 47-48 | November 17, 2025      | November 30, 2025  | [@ialidzhik
 v1.134  | Week 49-50 | December 1, 2025       | December 14, 2025  | [@LucaBernstein](https://github.com/LucaBernstein)           |
 v1.135  | Week 01-04 | December 29, 2025      | January 25, 2026   | [@timuthy](https://github.com/timuthy)                       |
 v1.137  | Week 05-06 | January 26, 2026       | February 8, 2026   | [@ary1992](https://github.com/ary1992)                       |
-v1.138  | Week 07-08 | February 9, 2026       | February 22, 2026  | [@ialidzhikov](https://github.com/ialidzhikov)               |
+v1.138  | Week 07-08 | February 9, 2026       | February 22, 2026  | [@acumino](https://github.com/acumino)                       |
 v1.139  | Week 09-10 | February 23, 2026      | March 8, 2026      | [@ScheererJ](https://github.com/ScheererJ)                   |
 v1.140  | Week 11-12 | March 9, 2026          | March 22, 2026     | [@oliver-goetz](https://github.com/oliver-goetz)             |
 v1.141  | Week 13-14 | March 23, 2026         | April 5, 2026      | [@tobschli](https://github.com/tobschli)                     |
