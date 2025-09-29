@@ -7,6 +7,8 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -135,6 +137,10 @@ func (b *Botanist) GetIngressAdvertisedEndpoints(ctx context.Context) ([]gardenc
 			}
 		}
 	}
+
+	slices.SortStableFunc(result, func(a, b gardencorev1beta1.ShootAdvertisedAddress) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 
 	return result, nil
 }
