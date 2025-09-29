@@ -9,11 +9,14 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -29,6 +32,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 		ctx            = context.TODO()
 		fakeClient     = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
+		shootNamespace = corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "shoot--test--test"}}
 	)
 
 	BeforeEach(func() {
@@ -37,7 +41,9 @@ var _ = Describe("AdvertisedAddresses", func() {
 		botanist.SeedClientSet = fakeSeedClient
 		botanist.Seed = &seedop.Seed{}
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
-		botanist.Shoot = &shootop.Shoot{}
+		botanist.Shoot = &shootop.Shoot{
+			ControlPlaneNamespace: shootNamespace.Name,
+		}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
@@ -212,6 +218,122 @@ var _ = Describe("AdvertisedAddresses", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("shoot requires managed issuer, but gardener does not have shoot service account hostname configured"))
 			Expect(addresses).To(BeNil())
+		})
+	})
+
+	Describe("#GetIngressAdvertisedEndpoints", func() {
+		It("returns none with no ingress resources", func() {
+			items, err := botanist.GetIngressAdvertisedEndpoints(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(items).To(HaveLen(0))
+		})
+
+		It("returns none when no ingress is labeled", func() {
+			// Resource does not have the expected labels
+			ingress := &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-1",
+					Namespace: shootNamespace.Name,
+				},
+				Spec: networkingv1.IngressSpec{
+					TLS: []networkingv1.IngressTLS{
+						{
+							Hosts: []string{"foo.example.org"},
+						},
+					},
+				},
+			}
+
+			Expect(botanist.SeedClientSet.Client().Create(ctx, ingress)).To(Succeed())
+			items, err := botanist.GetIngressAdvertisedEndpoints(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(items).To(HaveLen(0))
+			Expect(botanist.SeedClientSet.Client().Delete(ctx, ingress)).To(Succeed())
+		})
+
+		It("returns valid endpoints from ingress resources", func() {
+			ingressA := &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-1",
+					Namespace: shootNamespace.Name,
+					Labels: map[string]string{
+						v1beta1constants.LabelShootEndpointAdvertise: "true",
+					},
+				},
+				Spec: networkingv1.IngressSpec{
+					TLS: []networkingv1.IngressTLS{
+						{
+							Hosts: []string{"foo.example.org"},
+						},
+					},
+				},
+			}
+			ingressB := &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-2",
+					Namespace: shootNamespace.Name,
+					Labels: map[string]string{
+						v1beta1constants.LabelShootEndpointAdvertise: "true",
+					},
+				},
+				Spec: networkingv1.IngressSpec{
+					TLS: []networkingv1.IngressTLS{
+						{
+							Hosts: []string{"bar.example.org"},
+						},
+					},
+				},
+			}
+
+			Expect(botanist.SeedClientSet.Client().Create(ctx, ingressA)).To(Succeed())
+			Expect(botanist.SeedClientSet.Client().Create(ctx, ingressB)).To(Succeed())
+			items, err := botanist.GetIngressAdvertisedEndpoints(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(items).To(HaveLen(2))
+			Expect(items).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name: "ingress/ingress-1",
+					URL:  "https://foo.example.org",
+				},
+				{
+					Name: "ingress/ingress-2",
+					URL:  "https://bar.example.org",
+				},
+			}))
+			Expect(botanist.SeedClientSet.Client().Delete(ctx, ingressA)).To(Succeed())
+			Expect(botanist.SeedClientSet.Client().Delete(ctx, ingressB)).To(Succeed())
+		})
+
+		It("returns valid endpoint with custom name", func() {
+			ingress := &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-1",
+					Namespace: shootNamespace.Name,
+					Labels: map[string]string{
+						v1beta1constants.LabelShootEndpointAdvertise: "true",
+						v1beta1constants.LabelShootEndpointName:      "my-custom-name",
+					},
+				},
+				Spec: networkingv1.IngressSpec{
+					TLS: []networkingv1.IngressTLS{
+						{
+							Hosts: []string{"foo.example.org"},
+						},
+					},
+				},
+			}
+
+			Expect(botanist.SeedClientSet.Client().Create(ctx, ingress)).To(Succeed())
+			items, err := botanist.GetIngressAdvertisedEndpoints(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(items).To(HaveLen(1))
+			Expect(items).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name: "my-custom-name",
+					URL:  "https://foo.example.org",
+				},
+			}))
+			Expect(botanist.SeedClientSet.Client().Delete(ctx, ingress)).To(Succeed())
 		})
 	})
 })
