@@ -70,6 +70,8 @@ type Interface interface {
 	SetIngressWildcardCertSecret(*corev1.Secret)
 	// SetCentralScrapeConfigs sets the central scrape configs.
 	SetCentralScrapeConfigs([]*monitoringv1alpha1.ScrapeConfig)
+	// SetCentralPrometheusRules sets the central Prometheus rules.
+	SetCentralPrometheusRules([]*monitoringv1.PrometheusRule)
 	// SetNamespaceUID sets the namespace UID.
 	SetNamespaceUID(name types.UID)
 	// SetAdditionalAlertRelabelConfigs sets the additional alert relabel configs.
@@ -354,6 +356,10 @@ func (p *prometheus) SetIngressWildcardCertSecret(secret *corev1.Secret) {
 
 func (p *prometheus) SetCentralScrapeConfigs(configs []*monitoringv1alpha1.ScrapeConfig) {
 	p.values.CentralConfigs.ScrapeConfigs = configs
+}
+
+func (p *prometheus) SetCentralPrometheusRules(rules []*monitoringv1.PrometheusRule) {
+	p.values.CentralConfigs.PrometheusRules = rules
 }
 
 func (p *prometheus) SetNamespaceUID(uid types.UID) {
