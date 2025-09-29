@@ -144,7 +144,7 @@ var _ = Describe("EventLogger", func() {
 			return obj
 		}
 
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
+		vpaUpdateMode    = vpaautoscalingv1.UpdateModeRecreate
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 	)
 
