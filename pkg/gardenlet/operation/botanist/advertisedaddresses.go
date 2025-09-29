@@ -6,17 +6,21 @@ package botanist
 
 import (
 	"context"
+	"fmt"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	networkingv1 "k8s.io/api/networking/v1"
 )
 
 // UpdateAdvertisedAddresses updates the shoot.status.advertisedAddresses with the list of
 // addresses on which the API server of the shoot is accessible.
 func (b *Botanist) UpdateAdvertisedAddresses(ctx context.Context) error {
 	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, false, false, func(shoot *gardencorev1beta1.Shoot) error {
-		addresses, err := b.ToAdvertisedAddresses()
+		addresses, err := b.ToAdvertisedAddresses(ctx)
 		if err != nil {
 			return err
 		}
@@ -25,8 +29,8 @@ func (b *Botanist) UpdateAdvertisedAddresses(ctx context.Context) error {
 	})
 }
 
-// ToAdvertisedAddresses returns list of advertised addresses on a Shoot cluster.
-func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedAddress, error) {
+// ToAdvertisedAddresses returns a list of advertised addresses for a Shoot cluster.
+func (b *Botanist) ToAdvertisedAddresses(ctx context.Context) ([]gardencorev1beta1.ShootAdvertisedAddress, error) {
 	var addresses []gardencorev1beta1.ShootAdvertisedAddress
 
 	if b.Shoot == nil {
@@ -82,5 +86,55 @@ func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedA
 		})
 	}
 
+	ingressItems, err := b.GetIngressAdvertisedEndpoints(ctx)
+	if err != nil {
+		return nil, err
+	}
+	addresses = append(addresses, ingressItems...)
+
 	return addresses, nil
+}
+
+// GetIngressAdvertisedEndpoints returns a list of
+// [gardencorev1beta1.ShootAdvertisedAddress] items, which have been derived
+// from any existing [networkingv1.Ingress] resources labeled with
+// [v1beta1constants.LabelShootEndpointAdvertise].
+func (b *Botanist) GetIngressAdvertisedEndpoints(ctx context.Context) ([]gardencorev1beta1.ShootAdvertisedAddress, error) {
+	result := make([]gardencorev1beta1.ShootAdvertisedAddress, 0)
+	var ingressList networkingv1.IngressList
+
+	err := b.SeedClientSet.Client().List(
+		ctx,
+		&ingressList,
+		client.InNamespace(b.Shoot.GetInfo().Status.TechnicalID),
+		client.MatchingLabels(map[string]string{
+			v1beta1constants.LabelShootEndpointAdvertise: "true",
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Only the TLS items are processed, since
+	// [gardencorev1beta1.ShootAdvertisedAddress] is constrained to https://
+	// endpoints only.
+	for _, ingress := range ingressList.Items {
+		for _, tlsItem := range ingress.Spec.TLS {
+			for _, hostItem := range tlsItem.Hosts {
+				addrName := fmt.Sprintf("ingress/%s", ingress.Name)
+				addrLabelName, ok := ingress.GetLabels()[v1beta1constants.LabelShootEndpointName]
+				if ok && addrLabelName != "" {
+					addrName = addrLabelName
+				}
+
+				addr := gardencorev1beta1.ShootAdvertisedAddress{
+					Name: addrName,
+					URL:  fmt.Sprintf("https://%s", hostItem),
+				}
+				result = append(result, addr)
+			}
+		}
+	}
+
+	return result, nil
 }
