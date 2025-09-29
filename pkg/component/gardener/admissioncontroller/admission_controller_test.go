@@ -811,7 +811,7 @@ func serviceMonitor(namespace string) *monitoringv1.ServiceMonitor {
 }
 
 func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
-	autoUpdateMode := vpaautoscalingv1.UpdateModeAuto
+	updateMode := vpaautoscalingv1.UpdateModeRecreate
 
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
@@ -829,7 +829,7 @@ func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
 				Name:       "gardener-admission-controller",
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: &autoUpdateMode,
+				UpdateMode: &updateMode,
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{

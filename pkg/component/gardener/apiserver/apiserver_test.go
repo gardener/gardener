@@ -241,7 +241,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					Name:       "gardener-apiserver",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{

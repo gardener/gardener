@@ -14,7 +14,7 @@ import (
 )
 
 func (a *gardenerAdmissionController) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
-	autoUpdateMode := vpaautoscalingv1.UpdateModeAuto
+	updateMode := vpaautoscalingv1.UpdateModeRecreate
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName,
@@ -28,7 +28,7 @@ func (a *gardenerAdmissionController) vpa() *vpaautoscalingv1.VerticalPodAutosca
 				Name:       DeploymentName,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: &autoUpdateMode,
+				UpdateMode: &updateMode,
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
