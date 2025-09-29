@@ -152,7 +152,7 @@ func (r *Reconciler) instantiateComponents(
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
 	wildcardCertSecret *corev1.Secret,
-	enableSeedAuthorizer bool,
+	enableAdmissionControllerAuthorizers bool,
 	extensionList *operatorv1alpha1.ExtensionList,
 ) (
 	c components,
@@ -240,7 +240,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.kubeAPIServer, err = r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion, enableSeedAuthorizer)
+	c.kubeAPIServer, err = r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion, enableAdmissionControllerAuthorizers)
 	if err != nil {
 		return
 	}
@@ -255,7 +255,7 @@ func (r *Reconciler) instantiateComponents(
 
 	primaryIngressDomain := garden.Spec.RuntimeCluster.Ingress.Domains[0]
 
-	c.virtualSystem = r.newVirtualSystem(enableSeedAuthorizer)
+	c.virtualSystem = r.newVirtualSystem(enableAdmissionControllerAuthorizers)
 	c.virtualGardenGardenerAccess = r.newGardenerAccess(garden, secretsManager)
 
 	// gardener control plane components
@@ -265,7 +265,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerAdmissionController, err = r.newGardenerAdmissionController(garden, secretsManager, enableSeedAuthorizer)
+	c.gardenerAdmissionController, err = r.newGardenerAdmissionController(garden, secretsManager, enableAdmissionControllerAuthorizers)
 	if err != nil {
 		return
 	}
@@ -351,13 +351,13 @@ func (r *Reconciler) instantiateComponents(
 	return c, nil
 }
 
-func (r *Reconciler) enableSeedAuthorizer(ctx context.Context, version *semver.Version) (bool, error) {
+func (r *Reconciler) enableAdmissionControllerAuthorizers(ctx context.Context, version *semver.Version) (bool, error) {
 	// The reconcile flow deploys the kube-apiserver of the virtual garden cluster before the gardener-apiserver and
 	// gardener-admission-controller (it has to be this way, otherwise the Gardener components cannot start). However,
-	// GAC serves an authorization webhook for the SeedAuthorizer feature. We can only configure kube-apiserver to
+	// GAC serves authorization webhooks for the Seed/ShootAuthorizer features. We can only configure kube-apiserver to
 	// consult this webhook when GAC runs, obviously. This is not possible in the initial Garden deployment (due to
 	// above order). Hence, we have to run the flow as second time after the initial Garden creation - this time with
-	// the SeedAuthorizer feature getting enabled. From then on, all subsequent reconciliations can always enable it and
+	// the authorizer features getting enabled. From then on, all subsequent reconciliations can always enable it and
 	// only one reconciliation is needed.
 	// TODO(rfranzke): Consider removing this two-step deployment once we only support Kubernetes 1.32+ (in this
 	//  version, the structured authorization feature has been promoted to GA). We already use structured authz for
@@ -628,7 +628,7 @@ func (r *Reconciler) newKubeAPIServer(
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
-	enableSeedAuthorizer bool,
+	enableAdmissionControllerAuthorizers bool,
 ) (
 	kubeapiserver.Interface,
 	error,
@@ -660,45 +660,65 @@ func (r *Reconciler) newKubeAPIServer(
 		}
 	}
 
-	if enableSeedAuthorizer {
+	if enableAdmissionControllerAuthorizers {
 		caSecret, found := secretsManager.Get(operatorv1alpha1.SecretNameCAGardener)
 		if !found {
 			return nil, fmt.Errorf("secret %q not found", operatorv1alpha1.SecretNameCAGardener)
 		}
 
-		kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
-			"authorization-webhook",
-			clientcmdv1.Cluster{
-				Server:                   fmt.Sprintf("https://%s/webhooks/auth/seed", gardeneradmissioncontroller.ServiceName),
-				CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle],
-			},
-			clientcmdv1.AuthInfo{},
-		))
+		var (
+			newAuthorizationKubeconfig = func(name string) ([]byte, error) {
+				return runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
+					name+"-authorization-webhook",
+					clientcmdv1.Cluster{
+						Server:                   fmt.Sprintf("https://%s/webhooks/auth/"+name, gardeneradmissioncontroller.ServiceName),
+						CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle],
+					},
+					clientcmdv1.AuthInfo{},
+				))
+			}
+			newAuthorizationWebhook = func(name string, kubeconfig []byte, matchExpression string) kubeapiserver.AuthorizationWebhook {
+				return kubeapiserver.AuthorizationWebhook{
+					Name:       name + "-authorizer",
+					Kubeconfig: kubeconfig,
+					WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
+						// Set TTL to a very low value since it cannot be set to 0 because of defaulting.
+						// See https://github.com/kubernetes/apiserver/blob/3658357fea9fa8b36173d072f2d548f135049e05/pkg/apis/apiserver/v1beta1/defaults.go#L29-L36
+						// TODO(rfranzke): Use `Cache{Una,A}uthorizedRequests` instead of `AuthorizedTTL` and
+						//  `UnauthorizedTTL` once Kubernetes 1.34 is the lowest supported version.
+						//  More info: https://github.com/kubernetes/kubernetes/pull/129237
+						AuthorizedTTL:                            metav1.Duration{Duration: 1 * time.Nanosecond},
+						UnauthorizedTTL:                          metav1.Duration{Duration: 1 * time.Nanosecond},
+						Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
+						FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
+						SubjectAccessReviewVersion:               "v1",
+						MatchConditionSubjectAccessReviewVersion: "v1",
+						MatchConditions:                          []apiserverv1beta1.WebhookMatchCondition{{Expression: matchExpression}},
+					},
+				}
+			}
+		)
+
+		kubeconfigSeedAuthz, err := newAuthorizationKubeconfig("seed")
 		if err != nil {
-			return nil, fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
+			return nil, fmt.Errorf("failed generating seed authorization webhook kubeconfig: %w", err)
+		}
+		kubeconfigShootAuthz, err := newAuthorizationKubeconfig("shoot")
+		if err != nil {
+			return nil, fmt.Errorf("failed generating shoot authorization webhook kubeconfig: %w", err)
 		}
 
-		authorizationWebhookConfigs = append(authorizationWebhookConfigs, kubeapiserver.AuthorizationWebhook{
-			Name:       "seed-authorizer",
-			Kubeconfig: kubeconfig,
-			WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
-				// Set TTL to a very low value since it cannot be set to 0 because of defaulting.
-				// See https://github.com/kubernetes/apiserver/blob/3658357fea9fa8b36173d072f2d548f135049e05/pkg/apis/apiserver/v1beta1/defaults.go#L29-L36
-				// TODO(rfranzke): Use `Cache{Una,A}uthorizedRequests` instead of `AuthorizedTTL` and
-				//  `UnauthorizedTTL` once Kubernetes 1.34 is the lowest supported version.
-				//  More info: https://github.com/kubernetes/kubernetes/pull/129237
-				AuthorizedTTL:                            metav1.Duration{Duration: 1 * time.Nanosecond},
-				UnauthorizedTTL:                          metav1.Duration{Duration: 1 * time.Nanosecond},
-				Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
-				FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
-				SubjectAccessReviewVersion:               "v1",
-				MatchConditionSubjectAccessReviewVersion: "v1",
-				MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
-					// only intercept request from gardenlets and service accounts from seed namespaces
-					Expression: fmt.Sprintf("'%s' in request.groups || request.groups.exists(e, e.startsWith('%s%s'))", v1beta1constants.SeedsGroup, serviceaccount.ServiceAccountGroupPrefix, gardenerutils.SeedNamespaceNamePrefix),
-				}},
-			},
-		})
+		authorizationWebhookConfigs = append(authorizationWebhookConfigs,
+			newAuthorizationWebhook("seed", kubeconfigSeedAuthz,
+				// only intercept request from seed gardenlets and service accounts from seed namespaces
+				fmt.Sprintf("'%s' in request.groups || request.groups.exists(e, e.startsWith('%s%s'))", v1beta1constants.SeedsGroup, serviceaccount.ServiceAccountGroupPrefix, gardenerutils.SeedNamespaceNamePrefix),
+			),
+			newAuthorizationWebhook("shoot", kubeconfigShootAuthz,
+				// only intercept request from shoot gardenlets
+				// TODO(rfranzke): Also handle requests from ServiceAccounts of extensions running in the autonomous shoot.
+				fmt.Sprintf("'%s' in request.groups", v1beta1constants.ShootsGroup),
+			),
+		)
 	}
 
 	return sharedcomponent.NewKubeAPIServer(
@@ -1138,7 +1158,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 	)
 }
 
-func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, enableSeedRestriction bool) (component.DeployWaiter, error) {
+func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, enableAuthorizerRestrictions bool) (component.DeployWaiter, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerAdmissionController)
 	if err != nil {
 		return nil, err
@@ -1146,11 +1166,11 @@ func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Gar
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	values := gardeneradmissioncontroller.Values{
-		Image:                       image.String(),
-		LogLevel:                    logger.InfoLevel,
-		RuntimeVersion:              r.RuntimeVersion,
-		SeedRestrictionEnabled:      enableSeedRestriction,
-		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+		Image:                         image.String(),
+		LogLevel:                      logger.InfoLevel,
+		RuntimeVersion:                r.RuntimeVersion,
+		AuthorizerRestrictionsEnabled: enableAuthorizerRestrictions,
+		TopologyAwareRoutingEnabled:   helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.AdmissionController; config != nil {

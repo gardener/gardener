@@ -40,44 +40,57 @@ type Interface interface {
 }
 
 type graph struct {
-	lock     sync.RWMutex
-	logger   logr.Logger
-	client   client.Client
-	graph    *simple.DirectedGraph
-	vertices typeVertexMapping
+	lock                sync.RWMutex
+	logger              logr.Logger
+	client              client.Client
+	graph               *simple.DirectedGraph
+	vertices            typeVertexMapping
+	forAutonomousShoots bool
 }
 
 var _ Interface = &graph{}
 
 // New creates a new graph interface for tracking resource dependencies.
-func New(logger logr.Logger, client client.Client) *graph {
+func New(logger logr.Logger, client client.Client, forAutonomousShoots bool) *graph {
 	return &graph{
-		logger:   logger,
-		client:   client,
-		graph:    simple.NewDirectedGraph(),
-		vertices: make(typeVertexMapping),
+		logger:              logger,
+		client:              client,
+		graph:               simple.NewDirectedGraph(),
+		vertices:            make(typeVertexMapping),
+		forAutonomousShoots: forAutonomousShoots,
 	}
 }
 
+type resourceSetup struct {
+	obj     client.Object
+	setupFn func(ctx context.Context, informer cache.Informer) error
+}
+
 func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
-	for _, resource := range []struct {
-		obj     client.Object
-		setupFn func(context.Context, cache.Informer) error
-	}{
-		{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
-		{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
-		{&operationsv1alpha1.Bastion{}, g.setupBastionWatch},
-		{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
-		{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
-		{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
-		{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
-		{&gardencorev1beta1.Project{}, g.setupProjectWatch},
-		{&gardencorev1beta1.SecretBinding{}, g.setupSecretBindingWatch},
-		{&gardencorev1beta1.Seed{}, g.setupSeedWatch},
-		{&corev1.ServiceAccount{}, g.setupServiceAccountWatch},
-		{&gardencorev1beta1.Shoot{}, g.setupShootWatch},
-		{&securityv1alpha1.CredentialsBinding{}, g.setupCredentialsBindingWatch},
-	} {
+	var setups []resourceSetup
+
+	if g.forAutonomousShoots {
+		// TODO(rfranzke): We'll add some setup functions here as development of autonomous shoots
+		//  progresses.
+	} else {
+		setups = append(setups,
+			resourceSetup{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
+			resourceSetup{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
+			resourceSetup{&operationsv1alpha1.Bastion{}, g.setupBastionWatch},
+			resourceSetup{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
+			resourceSetup{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
+			resourceSetup{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
+			resourceSetup{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
+			resourceSetup{&gardencorev1beta1.Project{}, g.setupProjectWatch},
+			resourceSetup{&gardencorev1beta1.SecretBinding{}, g.setupSecretBindingWatch},
+			resourceSetup{&gardencorev1beta1.Seed{}, g.setupSeedWatch},
+			resourceSetup{&corev1.ServiceAccount{}, g.setupServiceAccountWatch},
+			resourceSetup{&gardencorev1beta1.Shoot{}, g.setupShootWatch},
+			resourceSetup{&securityv1alpha1.CredentialsBinding{}, g.setupCredentialsBindingWatch},
+		)
+	}
+
+	for _, resource := range setups {
 		informer, err := c.GetInformer(ctx, resource.obj)
 		if err != nil {
 			return err

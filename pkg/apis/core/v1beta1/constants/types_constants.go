@@ -811,8 +811,14 @@ const (
 
 	// SeedsGroup is the identity group for gardenlets when authenticating to the API server.
 	SeedsGroup = "gardener.cloud:system:seeds"
-	// SeedUserNamePrefix is the identity user name prefix for gardenlets when authenticating to the API server.
+	// SeedUserNamePrefix is the identity username prefix for gardenlets when authenticating to the API server.
 	SeedUserNamePrefix = "gardener.cloud:system:seed:"
+	// ShootsGroup is the identity group for gardenlets running in autonomous shoot clusters when authenticating to the
+	// API server.
+	ShootsGroup = "gardener.cloud:system:shoots"
+	// ShootUserNamePrefix is the identity username prefix for gardenlets running in autonomous shoot clusters when
+	// authenticating to the API server.
+	ShootUserNamePrefix = "gardener.cloud:system:shoot:"
 
 	// ClusterRoleNameGardenerAdministrators is the name of a cluster role in the garden cluster defining privileges
 	// for administrators.

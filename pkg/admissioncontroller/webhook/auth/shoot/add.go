@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seed
+package shoot
 
 import (
 	"context"
@@ -17,15 +17,15 @@ import (
 
 const (
 	// HandlerName is the name of this authorization webhook handler.
-	HandlerName = "seedauthorizer"
+	HandlerName = "shootauthorizer"
 	// WebhookPath is the HTTP handler path for this authorization webhook handler.
-	WebhookPath = "/webhooks/auth/seed"
+	WebhookPath = "/webhooks/auth/shoot"
 )
 
 // AddToManager adds Handler to the given manager.
 func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableDebugHandlers *bool) error {
 	if w.Handler == nil {
-		g := graph.New(mgr.GetLogger().WithName("seed-authorizer-graph"), mgr.GetClient(), false)
+		g := graph.New(mgr.GetLogger().WithName("shoot-authorizer-graph"), mgr.GetClient(), true)
 		if err := g.Setup(ctx, mgr.GetCache()); err != nil {
 			return err
 		}
@@ -41,7 +41,7 @@ func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableD
 
 		if ptr.Deref(enableDebugHandlers, false) {
 			w.Logger.Info("Registering debug handlers")
-			mgr.GetWebhookServer().Register(graph.DebugHandlerPath, graph.NewDebugHandler(g))
+			mgr.GetWebhookServer().Register(graph.DebugHandlerPath+"-shoot", graph.NewDebugHandler(g))
 		}
 	}
 

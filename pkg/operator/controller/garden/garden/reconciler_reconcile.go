@@ -129,7 +129,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	log.Info("Instantiating component deployers")
-	enableSeedAuthorizer, err := r.enableSeedAuthorizer(ctx, targetVersion)
+	enableAdmissionControllerAuthorizers, err := r.enableAdmissionControllerAuthorizers(ctx, targetVersion)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -151,7 +151,7 @@ func (r *Reconciler) reconcile(
 		secretsManager,
 		targetVersion,
 		wildcardCert,
-		enableSeedAuthorizer,
+		enableAdmissionControllerAuthorizers,
 		extensionList,
 	)
 	if err != nil {
@@ -630,8 +630,8 @@ func (r *Reconciler) reconcile(
 	}
 	*garden = *gardenCopy
 
-	if !enableSeedAuthorizer {
-		log.Info("Triggering a second reconciliation to enable seed authorizer feature")
+	if !enableAdmissionControllerAuthorizers {
+		log.Info("Triggering a second reconciliation to enable authorizers in gardener-admission-controller")
 		return reconcile.Result{Requeue: true}, nil
 	}
 

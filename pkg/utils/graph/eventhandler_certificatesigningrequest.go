@@ -12,7 +12,7 @@ import (
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
-	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
+	seedidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )

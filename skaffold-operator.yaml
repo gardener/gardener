@@ -875,8 +875,10 @@ build:
             - pkg/admissioncontroller/apis/config/v1alpha1
             - pkg/admissioncontroller/apis/config/v1alpha1/helper
             - pkg/admissioncontroller/apis/config/v1alpha1/validation
+            - pkg/admissioncontroller/gardenletidentity
+            - pkg/admissioncontroller/gardenletidentity/seed
+            - pkg/admissioncontroller/gardenletidentity/shoot
             - pkg/admissioncontroller/metrics
-            - pkg/admissioncontroller/seedidentity
             - pkg/admissioncontroller/webhook
             - pkg/admissioncontroller/webhook/admission
             - pkg/admissioncontroller/webhook/admission/auditpolicy
@@ -889,8 +891,11 @@ build:
             - pkg/admissioncontroller/webhook/admission/resourcesize
             - pkg/admissioncontroller/webhook/admission/seedrestriction
             - pkg/admissioncontroller/webhook/admission/shootkubeconfigsecretref
+            - pkg/admissioncontroller/webhook/admission/shootrestriction
             - pkg/admissioncontroller/webhook/admission/updaterestriction
+            - pkg/admissioncontroller/webhook/auth
             - pkg/admissioncontroller/webhook/auth/seed
+            - pkg/admissioncontroller/webhook/auth/shoot
             - pkg/api
             - pkg/apis/authentication
             - pkg/apis/authentication/install
