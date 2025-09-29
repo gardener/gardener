@@ -27,7 +27,10 @@ func (b *AutonomousBotanist) ListControlPlaneMachines(ctx context.Context) error
 
 // GetMachineByIndex returns the control plane machine with the given index or an error if the index is out of bounds.
 func (b *AutonomousBotanist) GetMachineByIndex(index int) (*machinev1alpha1.Machine, error) {
-	if len(b.controlPlaneMachines) <= index {
+	if index < 0 {
+		return nil, fmt.Errorf("machine index must be non-negative, got %d", index)
+	}
+	if index >= len(b.controlPlaneMachines) {
 		return nil, fmt.Errorf("only %q machines founds, but wanted machine with index %d", len(b.controlPlaneMachines), index)
 	}
 	return &b.controlPlaneMachines[index], nil

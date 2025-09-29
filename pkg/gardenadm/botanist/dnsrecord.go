@@ -14,7 +14,7 @@ import (
 // DeployBootstrapDNSRecord deploys the external DNSRecord pointing to the first control plane machine for bootstrapping
 // the autonomous shoot cluster. The DNSRecord might be publicly resolvable but not publicly accessible, depending on
 // shoot's infrastructure provider and network setup. It should be resolvable and accessible from within the shoot
-// cluster's network including the machines, so it `gardenadm init` can use it to bootstrap the cluster.
+// cluster's network including the machines, so `gardenadm init` can use it to bootstrap the cluster.
 func (b *AutonomousBotanist) DeployBootstrapDNSRecord(ctx context.Context) error {
 	machine, err := b.GetMachineByIndex(0)
 	if err != nil {

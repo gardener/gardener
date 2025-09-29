@@ -97,13 +97,13 @@ func wantedExtensionKinds(runsControlPlane, managedInfrastructure bool) sets.Set
 		return sets.New[string](extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.OperatingSystemConfigResource, extensionsv1alpha1.WorkerResource, extensionsv1alpha1.DNSRecordResource)
 	}
 
-	// In `gardenadm init`, we deploy all extensions referenced by the shoot in the medium-touch scenario.
 	// In the high-touch scenario, we don't deploy Infrastructure, Worker, and DNSRecord extensions because they are
 	// managed outside of Gardener.
 	if !managedInfrastructure {
 		return extensionsv1alpha1.AllExtensionKinds.Clone().Delete(extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.WorkerResource, extensionsv1alpha1.DNSRecordResource)
 	}
 
+	// In `gardenadm init`, we deploy all extensions referenced by the shoot in the medium-touch scenario.
 	return extensionsv1alpha1.AllExtensionKinds.Clone()
 }
 
