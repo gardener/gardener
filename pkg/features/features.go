@@ -37,15 +37,6 @@ const (
 	// beta: v1.126.0
 	NewWorkerPoolHash featuregate.Feature = "NewWorkerPoolHash"
 
-	// CredentialsRotationWithoutWorkersRollout enables starting the credentials rotation without immediately causing
-	// a rolling update of all worker nodes. Instead, the rolling update can be triggered manually by the user at a
-	// later point in time of their convenience.
-	// owner: @rfranzke
-	// alpha: v1.112.0
-	// beta: v1.121.0
-	// GA: v1.127.0
-	CredentialsRotationWithoutWorkersRollout featuregate.Feature = "CredentialsRotationWithoutWorkersRollout"
-
 	// InPlaceNodeUpdates enables setting the update strategy of worker pools to `AutoInPlaceUpdate` or `ManualInPlaceUpdate` in the Shoot API.
 	// owner: @acumino @ary1992 @shafeeqes
 	// alpha: v1.113.0
@@ -104,15 +95,14 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	DefaultSeccompProfile:                    {Default: false, PreRelease: featuregate.Alpha},
-	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
-	NewWorkerPoolHash:                        {Default: true, PreRelease: featuregate.Beta},
-	CredentialsRotationWithoutWorkersRollout: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
-	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},
-	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha},
-	DoNotCopyBackupCredentials:               {Default: true, PreRelease: featuregate.Beta},
-	OpenTelemetryCollector:                   {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:      {Default: false, PreRelease: featuregate.Alpha},
+	ShootCredentialsBinding:    {Default: true, PreRelease: featuregate.Beta},
+	NewWorkerPoolHash:          {Default: true, PreRelease: featuregate.Beta},
+	InPlaceNodeUpdates:         {Default: false, PreRelease: featuregate.Alpha},
+	IstioTLSTermination:        {Default: false, PreRelease: featuregate.Alpha},
+	CloudProfileCapabilities:   {Default: false, PreRelease: featuregate.Alpha},
+	DoNotCopyBackupCredentials: {Default: true, PreRelease: featuregate.Beta},
+	OpenTelemetryCollector:     {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

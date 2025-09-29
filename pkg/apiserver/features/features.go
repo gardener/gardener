@@ -14,7 +14,6 @@ import (
 func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.ShootCredentialsBinding,
-		features.CredentialsRotationWithoutWorkersRollout,
 		features.InPlaceNodeUpdates,
 		features.CloudProfileCapabilities,
 	)))
