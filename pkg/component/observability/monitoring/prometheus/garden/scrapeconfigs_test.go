@@ -79,25 +79,61 @@ metric_relabel_configs:
 
 		When("no global monitoring secret provided", func() {
 			It("should only contain the prometheus-garden scrape config", func() {
-				Expect(garden.CentralScrapeConfigs(nil, nil)).To(HaveExactElements(scrapeConfigPrometheus))
+				Expect(garden.CentralScrapeConfigs(nil, nil, nil)).To(HaveExactElements(scrapeConfigPrometheus))
 			})
 		})
 
 		When("global monitoring secret provided", func() {
 			var (
+				prometheusAggregateTargets        = []monitoringv1alpha1.Target{"foo", "bar"}
 				prometheusAggregateIngressTargets = []monitoringv1alpha1.Target{"ingress-foo", "ingress-bar"}
 				globalMonitoringSecret            = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "global-monitoring-secret"}}
 			)
 
 			When("there are no aggregate targets", func() {
 				It("should only contain the prometheus-garden scrape config", func() {
-					Expect(garden.CentralScrapeConfigs(nil, globalMonitoringSecret)).To(HaveExactElements(scrapeConfigPrometheus))
+					Expect(garden.CentralScrapeConfigs(nil, nil, globalMonitoringSecret)).To(HaveExactElements(scrapeConfigPrometheus))
 				})
 			})
 
 			It("should also contain the aggregate prometheus scrape config", func() {
-				Expect(garden.CentralScrapeConfigs(prometheusAggregateIngressTargets, globalMonitoringSecret)).To(HaveExactElements(
+				Expect(garden.CentralScrapeConfigs(prometheusAggregateTargets, prometheusAggregateIngressTargets, globalMonitoringSecret)).To(HaveExactElements(
 					scrapeConfigPrometheus,
+					&monitoringv1alpha1.ScrapeConfig{
+						ObjectMeta: metav1.ObjectMeta{Name: "prometheus-aggregate"},
+						Spec: monitoringv1alpha1.ScrapeConfigSpec{
+							HonorLabels:     ptr.To(true),
+							HonorTimestamps: ptr.To(false),
+							MetricsPath:     ptr.To("/federate"),
+							Params: map[string][]string{
+								"match[]": {
+									`{__name__=~"seed:(.+):count"}`,
+									`{__name__=~"seed:(.+):sum"}`,
+									`{__name__=~"seed:(.+):sum_cp"}`,
+									`{__name__=~"seed:(.+):sum_by_pod",namespace=~"extension-(.+)"}`,
+									`{__name__=~"seed:(.+):sum_by_container",__name__!="seed:kube_pod_container_status_restarts_total:sum_by_container",container="kube-apiserver"}`,
+									`{__name__=~"shoot:(.+):(.+)",__name__!="shoot:apiserver_storage_objects:sum_by_resource",__name__!="shoot:apiserver_watch_duration:quantile"}`,
+									`{__name__="ALERTS"}`,
+									`{__name__="shoot:availability"}`,
+									`{__name__="prometheus_tsdb_lowest_timestamp"}`,
+									`{__name__="prometheus_tsdb_storage_blocks_bytes"}`,
+									`{__name__="seed:persistentvolume:inconsistent_size"}`,
+									`{__name__="seed:kube_pod_container_status_restarts_total:max_by_namespace"}`,
+									`{__name__=~"metering:.+:(sum_by_namespace|sum_by_instance_type)"}`,
+								},
+							},
+							StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: prometheusAggregateTargets}},
+							RelabelConfigs: []monitoringv1.RelabelConfig{{
+								Action:      "replace",
+								Replacement: ptr.To("prometheus-aggregate"),
+								TargetLabel: "job",
+							}},
+							MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+								SourceLabels: []monitoringv1.LabelName{"alertname"},
+								TargetLabel:  "shoot_alertname",
+							}},
+						},
+					},
 					&monitoringv1alpha1.ScrapeConfig{
 						ObjectMeta: metav1.ObjectMeta{Name: "prometheus-aggregate-ingress"},
 						Spec: monitoringv1alpha1.ScrapeConfigSpec{

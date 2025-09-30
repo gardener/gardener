@@ -1037,7 +1037,7 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 		}
 	}
 
-	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateIngressTargets, globalMonitoringSecretRuntime))
+	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(nil, prometheusAggregateIngressTargets, globalMonitoringSecretRuntime))
 	return prometheus.Deploy(ctx)
 }
 
