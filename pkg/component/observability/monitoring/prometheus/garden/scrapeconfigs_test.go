@@ -85,8 +85,8 @@ metric_relabel_configs:
 
 		When("global monitoring secret provided", func() {
 			var (
-				prometheusAggregateTargets = []monitoringv1alpha1.Target{"foo", "bar"}
-				globalMonitoringSecret     = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "global-monitoring-secret"}}
+				prometheusAggregateIngressTargets = []monitoringv1alpha1.Target{"ingress-foo", "ingress-bar"}
+				globalMonitoringSecret            = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "global-monitoring-secret"}}
 			)
 
 			When("there are no aggregate targets", func() {
@@ -96,10 +96,10 @@ metric_relabel_configs:
 			})
 
 			It("should also contain the aggregate prometheus scrape config", func() {
-				Expect(garden.CentralScrapeConfigs(prometheusAggregateTargets, globalMonitoringSecret)).To(HaveExactElements(
+				Expect(garden.CentralScrapeConfigs(prometheusAggregateIngressTargets, globalMonitoringSecret)).To(HaveExactElements(
 					scrapeConfigPrometheus,
 					&monitoringv1alpha1.ScrapeConfig{
-						ObjectMeta: metav1.ObjectMeta{Name: "prometheus-aggregate"},
+						ObjectMeta: metav1.ObjectMeta{Name: "prometheus-aggregate-ingress"},
 						Spec: monitoringv1alpha1.ScrapeConfigSpec{
 							HonorLabels:     ptr.To(true),
 							HonorTimestamps: ptr.To(false),
@@ -127,7 +127,7 @@ metric_relabel_configs:
 								Username: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: globalMonitoringSecret.Name}, Key: "username"},
 								Password: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: globalMonitoringSecret.Name}, Key: "password"},
 							},
-							StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: prometheusAggregateTargets}},
+							StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: prometheusAggregateIngressTargets}},
 							RelabelConfigs: []monitoringv1.RelabelConfig{{
 								Action:      "replace",
 								Replacement: ptr.To("prometheus-aggregate"),

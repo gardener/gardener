@@ -1030,14 +1030,14 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 		return fmt.Errorf("failed listing secrets in virtual garden: %w", err)
 	}
 
-	var prometheusAggregateTargets []monitoringv1alpha1.Target
+	var prometheusAggregateIngressTargets []monitoringv1alpha1.Target
 	for _, seed := range seedList.Items {
 		if seed.Spec.Ingress != nil {
-			prometheusAggregateTargets = append(prometheusAggregateTargets, monitoringv1alpha1.Target(v1beta1constants.IngressDomainPrefixPrometheusAggregate+"."+seed.Spec.Ingress.Domain))
+			prometheusAggregateIngressTargets = append(prometheusAggregateIngressTargets, monitoringv1alpha1.Target(v1beta1constants.IngressDomainPrefixPrometheusAggregate+"."+seed.Spec.Ingress.Domain))
 		}
 	}
 
-	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateTargets, globalMonitoringSecretRuntime))
+	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateIngressTargets, globalMonitoringSecretRuntime))
 	return prometheus.Deploy(ctx)
 }
 
