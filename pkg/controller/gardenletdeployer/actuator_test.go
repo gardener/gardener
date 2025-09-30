@@ -533,6 +533,45 @@ var _ = Describe("Interface", func() {
 				))
 			})
 
+			It("should not create seed secrets when backup is using WorkloadIdentity credentials", func() {
+				seedTemplate.Spec.Backup.CredentialsRef = &corev1.ObjectReference{
+					APIVersion: "security.gardener.cloud/v1alpha1",
+					Kind:       "WorkloadIdentity",
+					Namespace:  "garden",
+					Name:       "backup",
+				}
+				managedSeed.Spec.Gardenlet.Config = runtime.RawExtension{
+					Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+							SeedTemplate: *seedTemplate,
+						},
+					},
+				}
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
+				expectGetSeed(false)
+				expectCheckSeedSpec()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				expectCreateGardenNamespace()
+				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				expectMergeWithParent()
+				expectPrepareGardenClientConnection(true)
+				expectGetGardenletChartValues(true, false)
+				expectApplyGardenletChart()
+
+				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(conditions).To(ContainCondition(
+					OfType(seedmanagementv1alpha1.SeedRegistered),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					WithReason(gardencorev1beta1.EventReconciled),
+				))
+			})
+
 			When("DoNotCopyBackupCredentials feature gate is enabled", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DoNotCopyBackupCredentials, true))
@@ -894,6 +933,39 @@ var _ = Describe("Interface", func() {
 				))
 				Expect(wait).To(BeTrue())
 				Expect(removeFinalizer).To(BeFalse())
+			})
+
+			It("should not delete any seed secrets when backup is using WorkloadIdentity credentials", func() {
+				seedTemplate.Spec.Backup.CredentialsRef = &corev1.ObjectReference{
+					APIVersion: "security.gardener.cloud/v1alpha1",
+					Kind:       "WorkloadIdentity",
+					Namespace:  "garden",
+					Name:       "backup",
+				}
+				managedSeed.Spec.Gardenlet.Config = runtime.RawExtension{
+					Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+							SeedTemplate: *seedTemplate,
+						},
+					},
+				}
+				expectGetSeed(false)
+				expectGetGardenletDeployment(false)
+				expectGetGardenNamespace(false)
+
+				conditions, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(conditions).To(ContainCondition(
+					OfType(seedmanagementv1alpha1.SeedRegistered),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason(gardencorev1beta1.EventDeleted),
+				))
+				Expect(wait).To(BeFalse())
+				Expect(removeFinalizer).To(BeTrue())
 			})
 
 			It("should delete the garden namespace if it still exists, and set wait to true", func() {
