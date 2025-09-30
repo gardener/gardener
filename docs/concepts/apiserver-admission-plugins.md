@@ -136,6 +136,13 @@ This admission controller is defined in the generic API server library (`k8s.io/
 
 This admission controller is defined in the generic API server library (`k8s.io/apiserver`). See the [NamespaceLifecycle section](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#namespacelifecycle).
 
+## `NamespacedCloudProfileValidator`
+
+**Type**: Validating. **Enabled by default**: Yes.
+
+This admission controller reacts on `CREATE` and `UPDATE` operations for `NamespacedCloudProfile`s.
+It primarily validates if the referenced parent `CloudProfile` exists in the system. In addition, the admission controller ensures that the `NamespacedCloudProfile` only configures new machine types, and does not overwrite those from the parent `CloudProfile`.
+
 ## `ProjectMutator`
 
 **Type**: Mutating. **Enabled by default**: Yes.
@@ -276,13 +283,6 @@ Already existing `Shoot`s will not be affected by this admission plugin.
 
 This admission controller reacts on `Create` operations for `Shoot`s.
 It mutates `Shoot` resources which have an `ExposureClass` referenced by merging both their `shootSelectors` and/or `tolerations` into the `Shoot` resource.
-
-## `NamespacedCloudProfileValidator`
-
-**Type**: Validating. **Enabled by default**: Yes.
-
-This admission controller reacts on `CREATE` and `UPDATE` operations for `NamespacedCloudProfile`s.
-It primarily validates if the referenced parent `CloudProfile` exists in the system. In addition, the admission controller ensures that the `NamespacedCloudProfile` only configures new machine types, and does not overwrite those from the parent `CloudProfile`.
 
 ## `ValidatingAdmissionPolicy`
 
