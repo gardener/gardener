@@ -48,15 +48,11 @@ type ShootMigrationTest struct {
 
 // ShootMigrationConfig is the configuration for a shoot migration test that will be filled with user provided data
 type ShootMigrationConfig struct {
-	TargetSeedName          string
-	SourceSeedName          string
-	ShootName               string
-	ShootNamespace          string
-	AddTestRunTaint         string
-	SkipNodeCheck           bool
-	SkipMachinesCheck       bool
-	SkipShootClientCreation bool
-	SkipProtectedToleration bool
+	TargetSeedName  string
+	SourceSeedName  string
+	ShootName       string
+	ShootNamespace  string
+	AddTestRunTaint string
 }
 
 // ShootComparisonElements contains details about Machines and Nodes that will be compared during the tests
@@ -95,7 +91,7 @@ func (t *ShootMigrationTest) initShootAndClient(ctx context.Context) (err error)
 		return err
 	}
 
-	if !shoot.Status.IsHibernated && !t.Config.SkipShootClientCreation {
+	if !shoot.Status.IsHibernated {
 		t.ShootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, t.GardenerFramework.GardenClient, shoot)
 		if err != nil {
 			return err
@@ -136,9 +132,7 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 
 	t.MigrationTime = metav1.Now()
 	return t.GardenerFramework.MigrateShoot(ctx, &t.Shoot, t.TargetSeed, func(shoot *gardencorev1beta1.Shoot) error {
-		if !t.Config.SkipProtectedToleration {
-			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, gardencorev1beta1.SeedTaintProtected, nil)
-		}
+		shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, gardencorev1beta1.SeedTaintProtected, nil)
 		if applyTestRunTaint, err := strconv.ParseBool(t.Config.AddTestRunTaint); applyTestRunTaint && err == nil {
 			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, SeedTaintTestRun, ptr.To(GetTestRunID()))
 		}
@@ -235,17 +229,13 @@ func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient
 
 // PopulateBeforeMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsBeforeMigration with the necessary Machine details and Node names
 func (t *ShootMigrationTest) populateBeforeMigrationComparisonElements(ctx context.Context) (err error) {
-	if !t.Config.SkipMachinesCheck {
-		t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsBeforeMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.SourceSeedClient)
-		if err != nil {
-			return
-		}
+	t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsBeforeMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.SourceSeedClient)
+	if err != nil {
+		return
 	}
-	if !t.Config.SkipNodeCheck {
-		t.ComparisonElementsBeforeMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
-		if err != nil {
-			return
-		}
+	t.ComparisonElementsBeforeMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
+	if err != nil {
+		return
 	}
 	t.ComparisonElementsBeforeMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.SourceSeedClient)
 	return
@@ -253,17 +243,13 @@ func (t *ShootMigrationTest) populateBeforeMigrationComparisonElements(ctx conte
 
 // PopulateAfterMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsAfterMigration with the necessary Machine details and Node names
 func (t *ShootMigrationTest) populateAfterMigrationComparisonElements(ctx context.Context) (err error) {
-	if !t.Config.SkipMachinesCheck {
-		t.ComparisonElementsAfterMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.TargetSeedClient)
-		if err != nil {
-			return
-		}
+	t.ComparisonElementsAfterMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.TargetSeedClient)
+	if err != nil {
+		return
 	}
-	if !t.Config.SkipNodeCheck {
-		t.ComparisonElementsAfterMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
-		if err != nil {
-			return
-		}
+	t.ComparisonElementsAfterMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
+	if err != nil {
+		return
 	}
 	t.ComparisonElementsAfterMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.TargetSeedClient)
 	return
@@ -271,21 +257,17 @@ func (t *ShootMigrationTest) populateAfterMigrationComparisonElements(ctx contex
 
 // CompareElementsAfterMigration compares the Machine details, Node names and Pod statuses before and after migration and returns error if there are differences.
 func (t *ShootMigrationTest) compareElementsAfterMigration() error {
-	if !t.Config.SkipMachinesCheck {
-		if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames) {
-			return fmt.Errorf("initial Machines %s, do not match after-migrate Machines %s", t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames)
-		}
-		if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes) {
-			return fmt.Errorf("initial Machine Nodes (label) %s, do not match after-migrate Machine Nodes (label) %s", t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes)
-		}
+	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames) {
+		return fmt.Errorf("initial Machines %s, do not match after-migrate Machines %s", t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames)
 	}
-	if t.Config.SkipNodeCheck {
-		if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames) {
-			return fmt.Errorf("initial Nodes %s, do not match after-migrate Nodes %s", t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames)
-		}
-		if !reflect.DeepEqual(t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames) {
-			return fmt.Errorf("machine Nodes (label) %s, do not match after-migrate Nodes %s", t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames)
-		}
+	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes) {
+		return fmt.Errorf("initial Machine Nodes (label) %s, do not match after-migrate Machine Nodes (label) %s", t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes)
+	}
+	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames) {
+		return fmt.Errorf("initial Nodes %s, do not match after-migrate Nodes %s", t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames)
+	}
+	if !reflect.DeepEqual(t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames) {
+		return fmt.Errorf("machine Nodes (label) %s, do not match after-migrate Nodes %s", t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames)
 	}
 
 	return shootmigration.ComparePersistedSecrets(t.ComparisonElementsBeforeMigration.SecretsMap, t.ComparisonElementsAfterMigration.SecretsMap)
