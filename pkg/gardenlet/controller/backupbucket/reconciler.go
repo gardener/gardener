@@ -114,10 +114,17 @@ func (r *Reconciler) reconcileBackupBucket(
 		return err
 	}
 
-	if !controllerutil.ContainsFinalizer(backupCredentials, gardencorev1beta1.ExternalGardenerName) {
+	if !controllerutil.ContainsFinalizer(backupCredentials, finalizerName) {
 		log.Info("Adding finalizer to backup credentials", "gvk", backupCredentials.GetObjectKind().GroupVersionKind().String(), "key", client.ObjectKeyFromObject(backupCredentials))
-		if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, backupCredentials, gardencorev1beta1.ExternalGardenerName); err != nil {
+		if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, backupCredentials, finalizerName); err != nil {
 			return fmt.Errorf("failed to add finalizer to backup credentials: %w", err)
+		}
+	}
+	// TODO(dimityrmirchev): Remove this handling in a future release
+	if controllerutil.ContainsFinalizer(backupCredentials, gardencorev1beta1.ExternalGardenerName) {
+		log.Info("Removing finalizer from backup credentials", "gvk", backupCredentials.GetObjectKind().GroupVersionKind().String(), "key", client.ObjectKeyFromObject(backupCredentials))
+		if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, backupCredentials, gardencorev1beta1.ExternalGardenerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer from backup credentials: %w", err)
 		}
 	}
 
@@ -330,9 +337,9 @@ func (r *Reconciler) deleteBackupBucket(
 
 	log.Info("Successfully deleted")
 
-	if controllerutil.ContainsFinalizer(backupCredentials, gardencorev1beta1.ExternalGardenerName) {
+	if controllerutil.ContainsFinalizer(backupCredentials, gardencorev1beta1.ExternalGardenerName) || controllerutil.ContainsFinalizer(backupCredentials, finalizerName) {
 		log.Info("Removing finalizer from credentials", "gvk", backupCredentials.GetObjectKind().GroupVersionKind().String(), "credentials", client.ObjectKeyFromObject(backupCredentials))
-		if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, backupCredentials, gardencorev1beta1.ExternalGardenerName); err != nil {
+		if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, backupCredentials, gardencorev1beta1.ExternalGardenerName, finalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from credentials: %w", err)
 		}
 	}
