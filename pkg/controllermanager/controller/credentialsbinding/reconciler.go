@@ -83,7 +83,7 @@ func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *security
 	kind := credential.GetObjectKind().GroupVersionKind().Kind
 
 	if !controllerutil.ContainsFinalizer(credential, finalizerName) {
-		log.Info("Adding finalizer", kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
+		log.Info("Adding finalizer", "finalizer", finalizerName, kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
 		if err := controllerutils.AddFinalizers(ctx, r.Client, credential, finalizerName); err != nil {
 			return fmt.Errorf("could not add finalizer to %s: %w", kind, err)
 		}
@@ -91,7 +91,7 @@ func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *security
 
 	// TODO(dimityrmirchev): Remove the ExternalGardenerName finalizer handling in a future release
 	if controllerutil.ContainsFinalizer(credential, gardencorev1beta1.ExternalGardenerName) {
-		log.Info("Removing finalizer", kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
+		log.Info("Removing finalizer", "finalizer", gardencorev1beta1.ExternalGardenerName, kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
 		if err := controllerutils.RemoveFinalizers(ctx, r.Client, credential, gardencorev1beta1.ExternalGardenerName); err != nil {
 			return fmt.Errorf("could not remove finalizer from %s: %w", kind, err)
 		}
@@ -160,14 +160,14 @@ func (r *Reconciler) delete(ctx context.Context, credentialsBinding *securityv1a
 	} else if errCredentials == nil {
 		// TODO(dimityrmirchev): remove this handling in a future release, the finalizer should be added by the reconcile function
 		// ensure the new finalizer is present on the referenced secret/workload identity before removing the old finalizer
-		if !controllerutil.ContainsFinalizer(credential, finalizerName) {
-			log.Info("Adding finalizer", kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
+		if !controllerutil.ContainsFinalizer(credential, finalizerName) && credential.GetDeletionTimestamp() == nil {
+			log.Info("Adding finalizer", "finalizer", finalizerName, kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
 			if err := controllerutils.AddFinalizers(ctx, r.Client, credential, finalizerName); err != nil {
 				return fmt.Errorf("could not add finalizer to %s: %w", kind, err)
 			}
 		}
 		if controllerutil.ContainsFinalizer(credential, gardencorev1beta1.ExternalGardenerName) {
-			log.Info("Removing finalizer", kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
+			log.Info("Removing finalizer", "finalizer", gardencorev1beta1.ExternalGardenerName, kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
 			if err := controllerutils.RemoveFinalizers(ctx, r.Client, credential, gardencorev1beta1.ExternalGardenerName); err != nil {
 				return fmt.Errorf("failed to remove finalizer from %s: %w", kind, err)
 			}
@@ -213,7 +213,7 @@ func (r *Reconciler) delete(ctx context.Context, credentialsBinding *securityv1a
 
 		// Remove finalizer from referenced secret
 		if controllerutil.ContainsFinalizer(credential, finalizerName) {
-			log.Info("Removing finalizer", kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
+			log.Info("Removing finalizer", "finalizer", finalizerName, kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
 			if err := controllerutils.RemoveFinalizers(ctx, r.Client, credential, finalizerName); err != nil {
 				return fmt.Errorf("failed to remove finalizer from %s: %w", kind, err)
 			}
