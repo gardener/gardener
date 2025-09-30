@@ -28,7 +28,8 @@ type GardenKubeconfig struct {
 	Log logr.Logger
 	// Config is the gardenlet component configuration.
 	Config *gardenletconfigv1alpha1.GardenletConfiguration
-	// AutonomousShootMeta is the NamespacedName of the autonomous shoot the gardenlet is running in (if applicable).
+	// AutonomousShootMeta is the NamespacedName of the autonomous shoot the gardenlet is responsible for (if
+	// applicable).
 	AutonomousShootMeta *types.NamespacedName
 	// Result is a structure that will be filled with information about the requested kubeconfig. Must be initialized
 	// by the caller.

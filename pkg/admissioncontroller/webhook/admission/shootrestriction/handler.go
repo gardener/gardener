@@ -79,8 +79,8 @@ func (h *Handler) admitCertificateSigningRequest(gardenletShootInfo types.Namesp
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
-	if userType == gardenletidentity.UserTypeExtension {
-		return admission.Errored(http.StatusForbidden, errors.New("extension client may not create CertificateSigningRequests"))
+	if userType != gardenletidentity.UserTypeGardenlet {
+		return admission.Errored(http.StatusForbidden, errors.New("only gardenlet clients may create CertificateSigningRequests"))
 	}
 
 	csr := &certificatesv1.CertificateSigningRequest{}

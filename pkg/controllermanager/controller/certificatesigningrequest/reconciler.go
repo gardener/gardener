@@ -112,7 +112,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	case isShootClient:
 		subResource = "shootclient"
-		if ok, reason, err := r.isBootstrapTokenIsForThisCSR(ctx, csr); err != nil {
+		if ok, reason, err := r.isBootstrapTokenForThisCSR(ctx, csr); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed checking bootstrap token description: %w", err)
 		} else if !ok {
 			return reconcile.Result{}, r.denyCSR(ctx, log, csr, fmt.Sprintf("Bootstrap token does not fulfill requirements for auto-approval: %s", reason))
@@ -137,11 +137,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, r.approveCSR(ctx, log, csr)
 }
 
-// isBootstrapTokenIsForThisCSR checks if the CSR was requested via a bootstrap token. If yes, it extracts the
+// isBootstrapTokenForThisCSR checks if the CSR was requested via a bootstrap token. If yes, it extracts the
 // shoot metadata from the bootstrap token secret's description (namespace and name of the shoot). The namespace and
 // name must be used in the CSR's subject as organization and common name, respectively, to ensure that the bootstrap
 // token was created for exactly this shoot.
-func (r *Reconciler) isBootstrapTokenIsForThisCSR(ctx context.Context, csr *certificatesv1.CertificateSigningRequest) (bool, string, error) {
+func (r *Reconciler) isBootstrapTokenForThisCSR(ctx context.Context, csr *certificatesv1.CertificateSigningRequest) (bool, string, error) {
 	if !strings.HasPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix) || !slices.Contains(csr.Spec.Groups, bootstraptokenapi.BootstrapDefaultGroup) {
 		return false, "CSR does not seem to be requested via a bootstrap token", nil
 	}
@@ -164,7 +164,7 @@ func ensureCSRSubjectMatchesBootstrapTokenDescription(shootMeta types.Namespaced
 	}
 
 	if username := v1beta1constants.ShootUserNamePrefix + shootMeta.Namespace + ":" + shootMeta.Name; x509cr.Subject.CommonName != username {
-		return false, "the common name in the certificate request does not match the expected format " + username, nil
+		return false, fmt.Sprintf("the common name in the certificate request (%s) does not match the expected format %s", x509cr.Subject.CommonName, username), nil
 	}
 
 	return true, "all requirements met", nil

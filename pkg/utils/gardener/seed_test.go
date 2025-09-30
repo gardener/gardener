@@ -69,7 +69,7 @@ var _ = Describe("utils", func() {
 		Entry("email addresses given", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:test", Organization: []string{"gardener.cloud:system:seeds"}}, EmailAddresses: []string{"foo"}}, nil, false, ContainSubstring("EmailAddresses")),
 		Entry("ip addresses given", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:test", Organization: []string{"gardener.cloud:system:seeds"}}, IPAddresses: []net.IP{{}}}, nil, false, ContainSubstring("IPAddresses")),
 		Entry("key usages do not match", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:test", Organization: []string{"gardener.cloud:system:seeds"}}}, nil, false, ContainSubstring("key usages")),
-		Entry("common name does not match", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, false, ContainSubstring("CommonName")),
+		Entry("common name does not match", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, false, ContainSubstring("common name does not start with")),
 		Entry("everything matches", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:test", Organization: []string{"gardener.cloud:system:seeds"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, true, Equal("")),
 	)
 
