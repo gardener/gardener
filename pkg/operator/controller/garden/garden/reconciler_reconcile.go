@@ -17,6 +17,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -59,6 +60,7 @@ import (
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
+	aggregateprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/component/shared"
@@ -583,7 +585,11 @@ func (r *Reconciler) reconcile(
 		deployPrometheusGarden = g.Add(flow.Task{
 			Name: "Deploying Garden Prometheus",
 			Fn: func(ctx context.Context) error {
-				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheusGarden, virtualClusterClient)
+				aggregatePrometheusIngressHost, err := r.getAggregatePrometheusIngressHost(ctx)
+				if err != nil {
+					return err
+				}
+				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheusGarden, virtualClusterClient, aggregatePrometheusIngressHost)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
 		})
@@ -991,7 +997,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 	}
 }
 
-func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client) error {
+func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusIngressHost string) error {
 	if err := gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
@@ -1030,14 +1036,20 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 		return fmt.Errorf("failed listing secrets in virtual garden: %w", err)
 	}
 
-	var prometheusAggregateIngressTargets []monitoringv1alpha1.Target
+	var (
+		prometheusAggregateTargets        []monitoringv1alpha1.Target
+		prometheusAggregateIngressTargets []monitoringv1alpha1.Target
+	)
 	for _, seed := range seedList.Items {
-		if seed.Spec.Ingress != nil {
-			prometheusAggregateIngressTargets = append(prometheusAggregateIngressTargets, monitoringv1alpha1.Target(v1beta1constants.IngressDomainPrefixPrometheusAggregate+"."+seed.Spec.Ingress.Domain))
+		ingressHost := v1beta1constants.IngressDomainPrefixPrometheusAggregate + "." + seed.Spec.Ingress.Domain
+		if ingressHost == aggregatePrometheusIngressHost {
+			prometheusAggregateTargets = append(prometheusAggregateTargets, monitoringv1alpha1.Target("prometheus-"+aggregateprometheus.Label))
+		} else {
+			prometheusAggregateIngressTargets = append(prometheusAggregateIngressTargets, monitoringv1alpha1.Target(ingressHost))
 		}
 	}
 
-	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(nil, prometheusAggregateIngressTargets, globalMonitoringSecretRuntime))
+	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateTargets, prometheusAggregateIngressTargets, globalMonitoringSecretRuntime))
 	return prometheus.Deploy(ctx)
 }
 
@@ -1371,4 +1383,21 @@ func (r *Reconciler) reconcileIstioInternalLoadbalancingConfigMap(ctx context.Co
 		},
 		features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
 	)
+}
+
+// getAggregatePrometheusIngressHost fetches the host of the prometheus-aggregate ingress, if it exists. Otherwise, it returns an empty string.
+func (r *Reconciler) getAggregatePrometheusIngressHost(ctx context.Context) (string, error) {
+	ingress := &networkingv1.Ingress{}
+	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: "prometheus-aggregate"}, ingress); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return "", fmt.Errorf("failed getting aggregate Prometheus ingress: %w", err)
+		}
+		return "", nil
+	}
+
+	if len(ingress.Spec.Rules) == 0 {
+		return "", nil
+	}
+
+	return ingress.Spec.Rules[0].Host, nil
 }
