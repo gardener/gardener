@@ -79,6 +79,12 @@ Find all information about it [in this document](../usage/project/projects.md#fo
 Furthermore, this admission controller reacts on `CREATE` or `UPDATE` operations for `Shoot`s.
 It makes sure that the `deletion.gardener.cloud/confirmed-by` annotation is properly maintained in case the `Shoot` deletion is confirmed with above mentioned annotation.
 
+## `ExtensionLabels`
+
+**Type**: Mutating. **Enabled by default**: Yes.
+
+This admission controller reacts on `CREATE` and `UPDATE` operations for `BackupBucket`s, `BackupEntry`s, `CloudProfile`s, `NamespacedCloudProfile`s, `Seed`s, `SecretBinding`s, `CredentialsBinding`s, `WorkloadIdentity`s and `Shoot`s. For all the various extension types in the specifications of these objects, it adds a corresponding label in the resource. This would allow extension admission webhooks to filter out the resources they are responsible for and ignore all others. This label is of the form `<extension-type>.extensions.gardener.cloud/<extension-name> : "true"`. For example, an extension label for provider extension type `aws`, looks like `provider.extensions.gardener.cloud/aws : "true"`.
+
 ## `ShootExposureClass`
 
 **Type**: Mutating. **Enabled by default**: Yes.
@@ -93,12 +99,6 @@ It mutates `Shoot` resources which have an `ExposureClass` referenced by merging
 This admission controller reacts on `CREATE` and `UPDATE` operations for `BackupEntry`s, `BackupBucket`s, `Seed`s, and `Shoot`s.
 For all the various extension types in the specifications of these objects, it validates whether there exists a `ControllerRegistration` in the system that is primarily responsible for the stated extension type(s).
 This prevents misconfigurations that would otherwise allow users to create such resources with extension types that don't exist in the cluster, effectively leading to failing reconciliation loops.
-
-## `ExtensionLabels`
-
-**Type**: Mutating. **Enabled by default**: Yes.
-
-This admission controller reacts on `CREATE` and `UPDATE` operations for `BackupBucket`s, `BackupEntry`s, `CloudProfile`s, `NamespacedCloudProfile`s, `Seed`s, `SecretBinding`s, `CredentialsBinding`s, `WorkloadIdentity`s and `Shoot`s. For all the various extension types in the specifications of these objects, it adds a corresponding label in the resource. This would allow extension admission webhooks to filter out the resources they are responsible for and ignore all others. This label is of the form `<extension-type>.extensions.gardener.cloud/<extension-name> : "true"`. For example, an extension label for provider extension type `aws`, looks like `provider.extensions.gardener.cloud/aws : "true"`.
 
 ## `FinalizerRemoval`
 
