@@ -10,6 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -88,7 +89,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		Complete(reconcilerutils.OperationAnnotationWrapper(
 			mgr,
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
-			r,
+			reconcilerutils.RateLimitedRequeueReconcilerAdapter(r, workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]()),
 		))
 }
 
