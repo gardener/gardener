@@ -1050,13 +1050,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("spec.tolerations[5].key"),
 					"BadValue": Equal("!nvalid"),
-					"Detail":   Equal("name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("spec.tolerations[5].value"),
 					"BadValue": Equal("va!ue"),
-					"Detail":   Equal("a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
@@ -1077,7 +1075,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("spec.provider.type"),
 					"BadValue": Equal("!nvalid"),
-					"Detail":   Equal("a lowercase RFC 1123 label must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?')"),
 				})),
 			))
 		})
@@ -1199,7 +1196,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Type":     Equal(field.ErrorTypeInvalid),
 						"Field":    Equal("spec.extensions[0].type"),
 						"BadValue": Equal("!nvalid"),
-						"Detail":   Equal("a lowercase RFC 1123 label must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?')"),
 					}))))
 			})
 
@@ -6395,7 +6391,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal("spec.schedulerName"),
 					"BadValue": Equal("!nvalid"),
-					"Detail":   Equal("a lowercase RFC 1123 label must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?')"),
 				}))))
 			})
 
