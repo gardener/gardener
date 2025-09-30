@@ -2,7 +2,8 @@
 
 reviewers:
 - gardener-reviewers-auditlog
-- gardener-reviewers-autoscaling
+- gardener-reviewers-autoscaling-cluster
+- gardener-reviewers-autoscaling-pod
 - gardener-reviewers-control-plane-migration
 - gardener-reviewers-core
 - gardener-reviewers-etcd

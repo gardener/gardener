@@ -4,9 +4,10 @@ aliases:
   gardener-reviewers-auditlog: # This group is primarily responsible for the auditlog component.
   - dimityrmirchev
   - vpnachev
-  gardener-reviewers-autoscaling: # This group is primarily responsible for autoscaling topics.
+  gardener-reviewers-autoscaling-cluster: # This group is primarily responsible for autoscaling topics.
   - aaronfern
   - elankath
+  gardener-reviewers-autoscaling-pod: # This group is primarily responsible for autoscaling topics.
   - ialidzhikov
   - plkokanov
   - vitanovs
