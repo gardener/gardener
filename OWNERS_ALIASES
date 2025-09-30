@@ -15,18 +15,20 @@ aliases:
   gardener-reviewers-core: # This group is interdisciplinary might review PRs touching multiple components and adjacent areas.
   - acumino
   - ary1992
+  - dimitar-kostadinov
   - ialidzhikov
   - Kostov6
   - LucaBernstein
-  - MartinWeindel
   - marc1404
   - oliver-goetz
+  - plkokanov
   - rfranzke
   - ScheererJ
   - shafeeqes
   - timebertt
   - timuthy
   - tobschli
+  - vitanovs
   gardener-reviewers-etcd: # This group is primarily responsible for the etcd component.
   - ishan16696
   - shreyas-s-rao
