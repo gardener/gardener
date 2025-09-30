@@ -562,8 +562,8 @@ github.com/onsi/gomega v0.0.0-20170829124025-dcabb60a477c/go.mod h1:C1qb7wdrVGGV
 github.com/onsi/gomega v1.7.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.38.0 h1:c/WX+w8SLAinvuKKQFh77WEucCnPk4j2OTUr7lt7BeY=
 github.com/onsi/gomega v1.38.0/go.mod h1:OcXcwId0b9QsE7Y49u+BTrL4IdKOBOKnD6VQNTJEB6o=
-github.com/open-telemetry/opentelemetry-operator v0.135.0 h1:YS2WL6r3emKRDRwZ63ZK8QSpJthYC/nUCIIzNyslZZE=
-github.com/open-telemetry/opentelemetry-operator v0.135.0/go.mod h1:RuM1oKvL0W9gNONH1mpV/1g08jGu7LugSl0BOkhuQhk=
+github.com/open-telemetry/opentelemetry-operator v0.136.0 h1:izyLrje0aYyTJcakQExLYb3lZ6GqiTaZYcQOlyA/rKs=
+github.com/open-telemetry/opentelemetry-operator v0.136.0/go.mod h1:RuM1oKvL0W9gNONH1mpV/1g08jGu7LugSl0BOkhuQhk=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJwooC2xJA040=
