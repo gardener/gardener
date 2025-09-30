@@ -127,7 +127,7 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 	guestBookApp.DeployGuestBookApp(ctx)
 	guestBookApp.Test(ctx)
 
-	return nil
+	return t.PopulateBeforeMigrationComparisonElements(ctx)
 }
 
 func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp applications.GuestBookTest) error {

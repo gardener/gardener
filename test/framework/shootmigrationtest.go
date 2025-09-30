@@ -17,14 +17,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/test/utils/access"
 	shootmigration "github.com/gardener/gardener/test/utils/shoots/migration"
 )
@@ -78,11 +76,7 @@ func (t *ShootMigrationTest) initializeShootMigrationTest(ctx context.Context) e
 	}
 	t.SeedShootNamespace = ComputeTechnicalID(t.GardenerFramework.ProjectNamespace, &t.Shoot)
 
-	if err := t.initSeedsAndClients(ctx); err != nil {
-		return err
-	}
-
-	return t.populateBeforeMigrationComparisonElements(ctx)
+	return t.initSeedsAndClients(ctx)
 }
 
 func (t *ShootMigrationTest) initShootAndClient(ctx context.Context) (err error) {
@@ -228,7 +222,7 @@ func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient
 }
 
 // PopulateBeforeMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsBeforeMigration with the necessary Machine details and Node names
-func (t *ShootMigrationTest) populateBeforeMigrationComparisonElements(ctx context.Context) (err error) {
+func (t *ShootMigrationTest) PopulateBeforeMigrationComparisonElements(ctx context.Context) (err error) {
 	t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsBeforeMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.SourceSeedClient)
 	if err != nil {
 		return
@@ -326,12 +320,7 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 
 // MarkOSCSecret marks the operating system config pool hashes secret to verify that it is correctly migrated
 func (t ShootMigrationTest) MarkOSCSecret(ctx context.Context) error {
-	secret := &corev1.Secret{}
-	if err := t.SourceSeedClient.Client().Get(ctx, types.NamespacedName{Namespace: t.SeedShootNamespace, Name: operatingsystemconfig.WorkerPoolHashesSecretName}, secret); err != nil {
-		return err
-	}
-	metav1.SetMetaDataLabel(&secret.ObjectMeta, "gardener.cloud/custom-test-annotation", "test")
-	return t.SourceSeedClient.Client().Update(ctx, secret)
+	return shootmigration.MarkOSCSecret(ctx, t.SourceSeedClient.Client(), t.SeedShootNamespace)
 }
 
 // CreateSecretAndServiceAccount creates test secret and service account
