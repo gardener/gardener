@@ -34,7 +34,7 @@ func AdditionalScrapeConfigs() []string {
 }
 
 // CentralScrapeConfigs returns the central ScrapeConfig resources for the garden prometheus.
-func CentralScrapeConfigs(prometheusAggregateIngressTargets []monitoringv1alpha1.Target, globalMonitoringSecret *corev1.Secret) []*monitoringv1alpha1.ScrapeConfig {
+func CentralScrapeConfigs(prometheusAggregateTargets []monitoringv1alpha1.Target, prometheusAggregateIngressTargets []monitoringv1alpha1.Target, globalMonitoringSecret *corev1.Secret) []*monitoringv1alpha1.ScrapeConfig {
 	out := []*monitoringv1alpha1.ScrapeConfig{{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "prometheus",
@@ -51,6 +51,11 @@ func CentralScrapeConfigs(prometheusAggregateIngressTargets []monitoringv1alpha1
 			MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig("prometheus_(.+)"),
 		},
 	}}
+
+	if len(prometheusAggregateTargets) > 0 {
+		name := "prometheus-" + aggregate.Label
+		out = append(out, newScrapeConfigForFederation(federationConfig{name: name, targets: prometheusAggregateTargets, isIngress: false}))
+	}
 
 	if len(prometheusAggregateIngressTargets) > 0 && globalMonitoringSecret != nil {
 		name := "prometheus-" + aggregate.Label + "-ingress"
