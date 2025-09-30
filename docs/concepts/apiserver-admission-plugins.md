@@ -174,15 +174,6 @@ Generally, it checks whether referred resources stated in the specifications of 
 However, it also has some special behaviours for certain resources:
 * `CloudProfile`s: It rejects removing Kubernetes or machine image versions if there is at least one `Shoot` that refers to them.
 
-## `SeedValidator`
-
-**Type**: Validating. **Enabled by default**: Yes.
-
-This admission controller reacts on `CREATE`, `UPDATE`, and `DELETE` operations for `Seed`s.
-Rejects the deletion if `Shoot`(s) reference the seed cluster.
-While the seed is still used by `Shoot`(s), the plugin disallows removal of entries from the `seed.spec.provider.zones` field.
-When the seed is using `WorkloadIdentity` as backup credentials, the plugin ensures the seed backup and the workload identity have the same provider type, i.e. `seed.spec.backup.provider` and `workloadIdentity.spec.targetSystem.type` have the same value.
-
 ## `SeedMutator`
 
 **Type**: Mutating. **Enabled by default**: Yes.
@@ -192,6 +183,15 @@ It maintains the `name.seed.gardener.cloud/<name>` labels for it.
 More specifically, it adds that the `name.seed.gardener.cloud/<name>=true` label where `<name>` is
 - the name of the `Seed` resource (a `Seed` named `foo` will get label `name.seed.gardener.cloud/foo=true`).
 - the name of the parent `Seed` resource in case it is a `ManagedSeed` (a `Seed` named `foo` that is created by a `ManagedSeed` which references a `Shoot` running a `Seed` called `bar` will get label `name.seed.gardener.cloud/bar=true`).
+
+## `SeedValidator`
+
+**Type**: Validating. **Enabled by default**: Yes.
+
+This admission controller reacts on `CREATE`, `UPDATE`, and `DELETE` operations for `Seed`s.
+Rejects the deletion if `Shoot`(s) reference the seed cluster.
+While the seed is still used by `Shoot`(s), the plugin disallows removal of entries from the `seed.spec.provider.zones` field.
+When the seed is using `WorkloadIdentity` as backup credentials, the plugin ensures the seed backup and the workload identity have the same provider type, i.e. `seed.spec.backup.provider` and `workloadIdentity.spec.targetSystem.type` have the same value.
 
 ## `ShootDNS`
 
