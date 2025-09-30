@@ -56,7 +56,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 	openTelemetryCollectorLogShipperEnabled, openTelemetryIngressHost := false, ""
 	if b.isShootNodeLoggingEnabled() {
 		valitailEnabled, valiIngressHost = true, b.ComputeValiHost()
-		openTelemetryCollectorLogShipperEnabled, openTelemetryIngressHost = true, valiIngressHost
+		openTelemetryCollectorLogShipperEnabled, openTelemetryIngressHost = true, b.ComputeOpenTelemetryCollectorHost()
 	}
 
 	return operatingsystemconfig.New(

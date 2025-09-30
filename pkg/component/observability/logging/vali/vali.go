@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
-	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -173,12 +172,12 @@ func (v *vali) Deploy(ctx context.Context) error {
 	var (
 		telegrafConfigMapName            string
 		genericTokenKubeconfigSecretName string
-		valitailShootAccessSecret        = v.newValitailShootAccessSecret()
+		loggingAgentShootAccessSecret    = v.newLoggingAgentShootAccessSecret()
 		kubeRBACProxyShootAccessSecret   = v.newKubeRBACProxyShootAccessSecret()
 	)
 
-	if v.values.ShootNodeLoggingEnabled {
-		if err := valitailShootAccessSecret.Reconcile(ctx, v.client); err != nil {
+	if v.values.ShootNodeLoggingEnabled && !features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		if err := loggingAgentShootAccessSecret.Reconcile(ctx, v.client); err != nil {
 			return err
 		}
 		if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, v.client); err != nil {
@@ -215,12 +214,16 @@ func (v *vali) Deploy(ctx context.Context) error {
 			telegrafConfigMap,
 		)
 
+		kubeRBACProxyClusterRoleBinding := v.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName)
+		loggingAgentClusterRole := v.getLoggingAgentClusterRole()
+		loggingAgentClusterRoleBinding := v.getLoggingAgentClusterRoleBinding(loggingAgentShootAccessSecret.ServiceAccountName, loggingAgentClusterRole.Name)
+
 		resourcesTarget, err := managedresources.
 			NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
 			AddAllAndSerialize(
-				v.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName),
-				v.getValitailClusterRole(),
-				v.getValitailClusterRoleBinding(valitailShootAccessSecret.ServiceAccountName),
+				kubeRBACProxyClusterRoleBinding,
+				loggingAgentClusterRole,
+				loggingAgentClusterRoleBinding,
 			)
 		if err != nil {
 			return err
@@ -229,13 +232,13 @@ func (v *vali) Deploy(ctx context.Context) error {
 		if err := managedresources.CreateForShoot(ctx, v.client, v.namespace, managedResourceNameTarget, managedresources.LabelValueGardener, false, resourcesTarget); err != nil {
 			return err
 		}
-	} else {
+	} else if !features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
 		if err := managedresources.DeleteForShoot(ctx, v.client, v.namespace, managedResourceNameTarget); err != nil {
 			return err
 		}
 
 		if err := kubernetesutils.DeleteObjects(ctx, v.client,
-			valitailShootAccessSecret.Secret,
+			loggingAgentShootAccessSecret.Secret,
 			kubeRBACProxyShootAccessSecret.Secret,
 		); err != nil {
 			return err
@@ -262,6 +265,12 @@ func (v *vali) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if v.values.ClusterType == component.ClusterTypeShoot && !features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		if err := v.openTelemetryCollectorFeatureGateCleanup(ctx); err != nil {
+			return fmt.Errorf("failed to delete opentelemetry collector access secret during `OpenTelemetryCollector` featuregate deactivation: %w", err)
+		}
+	}
+
 	return managedresources.CreateForSeedWithLabels(ctx, v.client, v.namespace, valiconstants.ManagedResourceNameRuntime, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, serializedObjects)
 }
 
@@ -275,19 +284,23 @@ func (v *vali) Destroy(ctx context.Context) error {
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, v.client,
-		v.newValitailShootAccessSecret().Secret,
+		v.newLoggingAgentShootAccessSecret().Secret,
 		v.newKubeRBACProxyShootAccessSecret().Secret,
 	)
 }
 
-func (v *vali) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
-	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		return gardenerutils.NewShootAccessSecret("opentelemetry-collector", v.namespace).
-			WithServiceAccountName(openTelemetryCollectorName).
-			WithTokenExpirationDuration("720h").
-			WithTargetSecret(valiconstants.OpenTelemetryCollectorSecretName, metav1.NamespaceSystem)
-	}
+// TODO(rrhubenov): Remove after featuregate reaches GA.
+// Old secret needs to be removed whenever we switch the featuregate on/off
+func (v *vali) openTelemetryCollectorFeatureGateCleanup(ctx context.Context) error {
+	openTelemetryCollectorAccessSecret := gardenerutils.NewShootAccessSecret("opentelemetry-collector", v.namespace).
+		WithServiceAccountName(openTelemetryCollectorName).
+		WithTokenExpirationDuration("720h").
+		WithTargetSecret(valiconstants.OpenTelemetryCollectorSecretName, metav1.NamespaceSystem)
 
+	return kubernetesutils.DeleteObjects(ctx, v.client, openTelemetryCollectorAccessSecret.Secret)
+}
+
+func (v *vali) newLoggingAgentShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret("valitail", v.namespace).
 		WithServiceAccountName(valitailName).
 		WithTokenExpirationDuration("720h").
@@ -364,13 +377,6 @@ func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
 		port        = kubeRBACProxyPort
 		annotations = map[string]string{}
 	)
-
-	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		serviceName = collectorconstants.ServiceName
-		endpoint = collectorconstants.PushEndpoint
-		port = collectorconstants.KubeRBACProxyPort
-		annotations = map[string]string{"nginx.ingress.kubernetes.io/backend-protocol": "GRPC"}
-	}
 
 	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -694,7 +700,7 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 	if v.values.Storage != nil {
 		statefulSet.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage] = *v.values.Storage
 	}
-	if !v.values.ShootNodeLoggingEnabled {
+	if !v.values.ShootNodeLoggingEnabled || features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
 		utilruntime.Must(references.InjectAnnotations(statefulSet))
 		return statefulSet
 	}
@@ -815,15 +821,11 @@ func (v *vali) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rb
 	}
 }
 
-func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
+func (v *vali) getLoggingAgentClusterRole() *rbacv1.ClusterRole {
 	endpoint := valiconstants.PushEndpoint
 	appName := valitailName
 	clusterRoleName := valitailClusterRoleName
-	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		endpoint = collectorconstants.PushEndpoint
-		appName = openTelemetryCollectorName
-		clusterRoleName = openTelemetryClusterRoleName
-	}
+
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   clusterRoleName,
@@ -854,15 +856,10 @@ func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
 	}
 }
 
-func (v *vali) getValitailClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+func (v *vali) getLoggingAgentClusterRoleBinding(serviceAccountName, clusterRoleName string) *rbacv1.ClusterRoleBinding {
 	name := "gardener.cloud:logging:valitail"
-	clusterRoleName := valitailClusterRoleName
 	appName := valitailName
-	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		name = "gardener.cloud:logging:opentelemetry-collector"
-		clusterRoleName = openTelemetryClusterRoleName
-		appName = openTelemetryCollectorName
-	}
+
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,

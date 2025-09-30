@@ -244,7 +244,7 @@ var _ = Describe("Vali", func() {
 						InitLargeDirImage:       initLargeDirImage,
 						TelegrafImage:           telegrafImage,
 						KubeRBACProxyImage:      kubeRBACProxyImage,
-						WithRBACProxy:           true,
+						WithRBACProxy:           false,
 						PriorityClassName:       priorityClassName,
 						ClusterType:             "shoot",
 						IngressHost:             valiHost,
@@ -255,9 +255,6 @@ var _ = Describe("Vali", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
 				Expect(valiDeployer.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKey{Name: opentelemetryCollectorShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBacProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedMr := &resourcesv1alpha1.ManagedResource{
@@ -278,12 +275,10 @@ var _ = Describe("Vali", func() {
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
 				Expect(managedResource).To(DeepEqual(expectedMr))
 				Expect(managedResource).To(consistOf(
-					getTelegrafConfigMap(),
 					getValiConfigMap(),
 					getVPA(true),
-					getIngress("/opentelemetry.proto.collector.logs.v1.LogsService/Export", "opentelemetry-collector-collector", 8080),
 					getService(true, "shoot"),
-					getStatefulSet(true),
+					getStatefulSet(false),
 					getServiceMonitor("shoot", true),
 					getPrometheusRule("shoot"),
 				))
@@ -294,36 +289,7 @@ var _ = Describe("Vali", func() {
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
-				expectedTargetMr := &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResourceNameTarget,
-						Namespace:       namespace,
-						ResourceVersion: "1",
-						Labels:          map[string]string{"origin": "gardener"},
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						SecretRefs: []corev1.LocalObjectReference{{
-							Name: managedResourceTarget.Spec.SecretRefs[0].Name,
-						}},
-						KeepObjects: ptr.To(false),
-					},
-				}
-				utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
-				Expect(managedResourceTarget).To(DeepEqual(expectedTargetMr))
-				Expect(managedResourceTarget).To(consistOf(
-					getKubeRBACProxyClusterRoleBinding(),
-					getValitailClusterRole("gardener.cloud:logging:opentelemetry-collector", "gardener-opentelemetry-collector", "/opentelemetry.proto.collector.logs.v1.LogsService/Export"),
-					getValitailClusterRoleBinding("gardener.cloud:logging:opentelemetry-collector", "gardener-opentelemetry-collector", "gardener.cloud:logging:opentelemetry-collector", "gardener-opentelemetry-collector"),
-				))
-
-				managedResourceSecretTarget.Name = managedResourceTarget.Spec.SecretRefs[0].Name
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
-				Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
-				Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(BeNotFoundError())
 				test.PrometheusRule(getPrometheusRule("shoot"), "testdata/shoot-vali.prometheusrule.test.yaml")
 			})
 		})
