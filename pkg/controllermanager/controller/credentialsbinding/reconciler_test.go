@@ -280,6 +280,27 @@ var _ = Describe("CredentialsBindingControl", func() {
 			Expect(workloadIdentity.ObjectMeta.Labels).To(BeEmpty())
 		})
 
+		It("should remove labels and finalizers from the WorkloadIdentity when there are CredentialsBindings referring it, but those are being deleted", func() {
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			credentialsBinding2 := credentialsBinding.DeepCopy()
+			credentialsBinding2.ResourceVersion = ""
+			credentialsBinding2.Name = "credentialsbinding-2"
+			credentialsBinding2.Finalizers = []string{"test"} // prevent deletion
+			Expect(fakeClient.Create(ctx, credentialsBinding2)).To(Succeed())
+			Expect(fakeClient.Delete(ctx, credentialsBinding2)).To(Succeed())
+			Expect(fakeClient.Delete(ctx, credentialsBinding)).To(Succeed())
+
+			_, err = reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity)).To(Succeed())
+			Expect(workloadIdentity.ObjectMeta.Labels).To(BeEmpty())
+			Expect(workloadIdentity.ObjectMeta.Finalizers).To(BeEmpty())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(credentialsBinding2), credentialsBinding2)).To(Succeed()) // ensure the CredentialsBinding is still there
+		})
+
 		It("should not remove any of the label from the WorkloadIdentity when there are other CredentialsBindings referring it", func() {
 			credentialsBinding2 := &securityv1alpha1.CredentialsBinding{
 				ObjectMeta: metav1.ObjectMeta{
