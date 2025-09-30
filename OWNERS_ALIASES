@@ -39,6 +39,9 @@ aliases:
   gardener-reviewers-logging: # This group is primarily responsible for logging topics.
   - nickytd
   - rrhubenov
+  gardener-reviewers-machine-controller-manager: # This group is primarily responsible for the machine-controller-manager component.
+  - aaronfern
+  - unmarshall
   gardener-reviewers-monitoring: # This group is primarily responsible for monitoring topics.
   - chrkl
   - istvanballok

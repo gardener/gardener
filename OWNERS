@@ -8,6 +8,7 @@ reviewers:
 - gardener-reviewers-core
 - gardener-reviewers-etcd
 - gardener-reviewers-logging
+- gardener-reviewers-machine-controller-manager
 - gardener-reviewers-monitoring
 - gardener-reviewers-networking
 - gardener-reviewers-security
