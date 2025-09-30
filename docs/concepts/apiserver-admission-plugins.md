@@ -209,6 +209,13 @@ This admission controller reacts on `CREATE` operations for `Shoot`s.
 If enabled, it adds a set of common suffixes configured in its admission plugin configuration to the `Shoot` (`spec.systemComponents.coreDNS.rewriting.commonSuffixes`) (for more information, see [DNS Search Path Optimization](../usage/networking/dns-search-path-optimization.md)).
 Already existing `Shoot`s will not be affected by this admission plugin.
 
+## `ShootExposureClass`
+
+**Type**: Mutating. **Enabled by default**: Yes.
+
+This admission controller reacts on `Create` operations for `Shoot`s.
+It mutates `Shoot` resources which have an `ExposureClass` referenced by merging both their `shootSelectors` and/or `tolerations` into the `Shoot` resource.
+
 ## `ShootNodeLocalDNSEnabledByDefault`
 
 **Type**: Mutating. **Enabled by default**: No.
@@ -276,13 +283,6 @@ Additionally, it takes over certain defaulting tasks (e.g., default machine imag
 This admission controller reacts on `UPDATE` and `DELETE` operations for `Shoot`s.
 It validates certain configuration values in the specification that are specific to `ManagedSeed`s (e.g. the nginx-addon of the Shoot has to be disabled, the Shoot VPA has to be enabled).
 It rejects the deletion if the `Shoot` is referred to by a `ManagedSeed`.
-
-## `ShootExposureClass`
-
-**Type**: Mutating. **Enabled by default**: Yes.
-
-This admission controller reacts on `Create` operations for `Shoot`s.
-It mutates `Shoot` resources which have an `ExposureClass` referenced by merging both their `shootSelectors` and/or `tolerations` into the `Shoot` resource.
 
 ## `ValidatingAdmissionPolicy`
 
