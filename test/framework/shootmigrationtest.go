@@ -44,7 +44,7 @@ type ShootMigrationTest struct {
 	MigrationTime                     metav1.Time
 }
 
-// ShootMigrationConfig is the configuration for a shoot migration test that will be filled with user provided data
+// ShootMigrationConfig is the configuration for a shoot migration test that will be filled with user provided data.
 type ShootMigrationConfig struct {
 	TargetSeedName  string
 	SourceSeedName  string
@@ -53,7 +53,7 @@ type ShootMigrationConfig struct {
 	AddTestRunTaint string
 }
 
-// ShootComparisonElements contains details about Machines and Nodes that will be compared during the tests
+// ShootComparisonElements contains details about Machines and Nodes that will be compared during the tests.
 type ShootComparisonElements struct {
 	MachineNames []string
 	MachineNodes []string
@@ -61,7 +61,7 @@ type ShootComparisonElements struct {
 	SecretsMap   map[string]corev1.Secret
 }
 
-// NewShootMigrationTest creates a new simple shoot migration test
+// NewShootMigrationTest creates a new simple shoot migration test.
 func NewShootMigrationTest(ctx context.Context, f *GardenerFramework, cfg *ShootMigrationConfig) (*ShootMigrationTest, error) {
 	t := &ShootMigrationTest{
 		GardenerFramework: f,
@@ -113,7 +113,7 @@ func (t *ShootMigrationTest) initSeedsAndClients(ctx context.Context) error {
 	return nil
 }
 
-// MigrateShoot triggers shoot migration by changing the value of "shoot.Spec.SeedName" to the value of "ShootMigrationConfig.TargetSeedName"
+// MigrateShoot triggers shoot migration by changing the value of "shoot.Spec.SeedName" to the value of "ShootMigrationConfig.TargetSeedName".
 func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 	// Dump gardener state if delete shoot is in exit handler
 	if os.Getenv("TM_PHASE") == "Exit" {
@@ -152,7 +152,7 @@ func appendToleration(tolerations []gardencorev1beta1.Toleration, key string, va
 	return append(tolerations, toleration)
 }
 
-// VerifyMigration checks that the shoot components are migrated properly
+// VerifyMigration checks that the shoot components are migrated properly.
 func (t ShootMigrationTest) VerifyMigration(ctx context.Context) error {
 	if err := t.populateAfterMigrationComparisonElements(ctx); err != nil {
 		return err
@@ -167,7 +167,7 @@ func (t ShootMigrationTest) VerifyMigration(ctx context.Context) error {
 	return shootmigration.CheckForOrphanedNonNamespacedResources(ctx, t.SeedShootNamespace, t.SourceSeedClient.Client())
 }
 
-// GetNodeNames uses the shootClient to fetch all Node names from the Shoot
+// GetNodeNames uses the shootClient to fetch all Node names from the Shoot.
 func (t *ShootMigrationTest) GetNodeNames(ctx context.Context, shootClient kubernetes.Interface) (nodeNames []string, err error) {
 	if t.Shoot.Status.IsHibernated {
 		return make([]string, 0), nil // Initialize to empty slice in order pass 0 elements DeepEqual check
@@ -188,7 +188,7 @@ func (t *ShootMigrationTest) GetNodeNames(ctx context.Context, shootClient kuber
 	return
 }
 
-// GetMachineDetails uses the seedClient to fetch all Machine names and the names of their corresponding Nodes
+// GetMachineDetails uses the seedClient to fetch all Machine names and the names of their corresponding Nodes.
 func (t *ShootMigrationTest) GetMachineDetails(ctx context.Context, seedClient kubernetes.Interface) (machineNames, machineNodes []string, err error) {
 	log := t.GardenerFramework.Logger.WithValues("namespace", t.SeedShootNamespace)
 
@@ -216,12 +216,12 @@ func (t *ShootMigrationTest) GetMachineDetails(ctx context.Context, seedClient k
 }
 
 // GetPersistedSecrets uses the seedClient to fetch the data of all Secrets that have the `persist` label key set to true
-// from the Shoot's control plane namespace
+// from the Shoot's control plane namespace.
 func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient kubernetes.Interface) (map[string]corev1.Secret, error) {
 	return shootmigration.GetPersistedSecrets(ctx, seedClient.Client(), t.SeedShootNamespace)
 }
 
-// PopulateBeforeMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsBeforeMigration with the necessary Machine details and Node names
+// PopulateBeforeMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsBeforeMigration with the necessary Machine details and Node names.
 func (t *ShootMigrationTest) PopulateBeforeMigrationComparisonElements(ctx context.Context) (err error) {
 	t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsBeforeMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.SourceSeedClient)
 	if err != nil {
@@ -235,7 +235,7 @@ func (t *ShootMigrationTest) PopulateBeforeMigrationComparisonElements(ctx conte
 	return
 }
 
-// PopulateAfterMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsAfterMigration with the necessary Machine details and Node names
+// PopulateAfterMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsAfterMigration with the necessary Machine details and Node names.
 func (t *ShootMigrationTest) populateAfterMigrationComparisonElements(ctx context.Context) (err error) {
 	t.ComparisonElementsAfterMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.TargetSeedClient)
 	if err != nil {
@@ -318,12 +318,12 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 	return nil
 }
 
-// MarkOSCSecret marks the operating system config pool hashes secret to verify that it is correctly migrated
+// MarkOSCSecret marks the operating system config pool hashes secret to verify that it is correctly migrated.
 func (t ShootMigrationTest) MarkOSCSecret(ctx context.Context) error {
 	return shootmigration.MarkOSCSecret(ctx, t.SourceSeedClient.Client(), t.SeedShootNamespace)
 }
 
-// CreateSecretAndServiceAccount creates test secret and service account
+// CreateSecretAndServiceAccount creates test secret and service account.
 func (t ShootMigrationTest) CreateSecretAndServiceAccount(ctx context.Context) error {
 	testSecret, testServiceAccount := constructTestSecretAndServiceAccount()
 	if err := t.ShootClient.Client().Create(ctx, testSecret); err != nil {
@@ -343,7 +343,7 @@ func (t ShootMigrationTest) CheckSecretAndServiceAccount(ctx context.Context) er
 	return t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(testServiceAccount), testServiceAccount)
 }
 
-// CleanUpSecretAndServiceAccount cleans up the test secret and service account
+// CleanUpSecretAndServiceAccount cleans up the test secret and service account.
 func (t ShootMigrationTest) CleanUpSecretAndServiceAccount(ctx context.Context) error {
 	testSecret, testServiceAccount := constructTestSecretAndServiceAccount()
 
