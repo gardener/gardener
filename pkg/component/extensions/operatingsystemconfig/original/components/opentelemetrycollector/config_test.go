@@ -152,7 +152,7 @@ processors:
     attributes:
       - action: insert
         key: origin
-        value: systemd-journal
+        value: systemd_journal
       - key: loki.resource.labels
         value: unit, nodename, origin
         action: insert
@@ -163,7 +163,7 @@ processors:
   resource/pod_labels:
     attributes:
       - key: origin
-        value: "shoot-system"
+        value: "shoot_system"
         action: insert
       - key: namespace_name
         value: "kube-system"
