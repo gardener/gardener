@@ -15,7 +15,7 @@ vpa:
     minAllowed:
       memory: 64Mi
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Recreate"
 
 controllers:
   bastion:
