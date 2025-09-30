@@ -164,6 +164,27 @@ var _ = Describe("SecretBindingControl", func() {
 			Expect(secret.ObjectMeta.Labels).To(BeEmpty())
 		})
 
+		It("should remove labels and finalizers from the Secret when there are SecretBindings referring it, but those are being deleted", func() {
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			secretBinding2 := secretBinding.DeepCopy()
+			secretBinding2.ResourceVersion = ""
+			secretBinding2.Name = "secretbinding-2"
+			secretBinding2.Finalizers = []string{"test"} // prevent deletion
+			Expect(fakeClient.Create(ctx, secretBinding2)).To(Succeed())
+			Expect(fakeClient.Delete(ctx, secretBinding2)).To(Succeed())
+			Expect(fakeClient.Delete(ctx, secretBinding)).To(Succeed())
+
+			_, err = reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.ObjectMeta.Labels).To(BeEmpty())
+			Expect(secret.ObjectMeta.Finalizers).To(BeEmpty())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretBinding2), secretBinding2)).To(Succeed()) // ensure the SecretBinding is still there
+		})
+
 		It("should not remove any of the label from the secret when there are other secretbindings referring it", func() {
 			secretBinding2 := &gardencorev1beta1.SecretBinding{
 				ObjectMeta: metav1.ObjectMeta{
