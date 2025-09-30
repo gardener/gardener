@@ -11,7 +11,9 @@ aliases:
   - plkokanov
   - vitanovs
   gardener-reviewers-control-plane-migration: # This group is primarily responsible for control plane migration.
+  - ary1992
   - plkokanov
+  - shafeeqes
   gardener-reviewers-core: # This group is interdisciplinary might review PRs touching multiple components and adjacent areas.
   - acumino
   - ary1992
