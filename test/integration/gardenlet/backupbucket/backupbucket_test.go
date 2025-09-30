@@ -201,7 +201,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 				g.Expect(backupBucket.Annotations).NotTo(HaveKey("gardener.cloud/operation"))
 
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenSecret), gardenSecret)).To(Succeed())
-				g.Expect(gardenSecret.Finalizers).To(ConsistOf("gardener.cloud/gardener"))
+				g.Expect(gardenSecret.Finalizers).To(ConsistOf("core.gardener.cloud/backupbucket"))
 			}).Should(Succeed())
 		})
 
@@ -267,7 +267,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 			By("Ensure finalizers are removed and BackupBucket is released")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenSecret), gardenSecret)).To(Succeed())
-				g.Expect(gardenSecret.Finalizers).NotTo(ContainElement("gardener.cloud/gardener"))
+				g.Expect(gardenSecret.Finalizers).NotTo(ContainElement("core.gardener.cloud/backupbucket"))
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(BeNotFoundError())
 			}).Should(Succeed())
 		})
