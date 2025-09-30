@@ -13,6 +13,8 @@ import (
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -26,17 +28,22 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
-	managedResourceName = "opentelemetry-collector"
-	scrapeJobName       = "opentelemetry-collector"
-	serviceMonitorName  = "opentelemetry-collector"
+	managedResourceNameTarget  = "logging-target"
+	managedResourceName        = "opentelemetry-collector"
+	scrapeJobName              = "opentelemetry-collector"
+	serviceMonitorName         = "opentelemetry-collector"
+	valitailName               = "gardener-valitail"
+	openTelemetryCollectorName = "gardener-opentelemetry-collector"
 
 	otelCollectorConfigName = "opentelemetry-collector-config"
-	kubeRBACProxyName       = "kube-rbac-proxy"
+	kubeRBACProxyName       = "rbac-proxy"
 
 	metricsEndpointName            = "metrics"
 	metricsPort                    = 8888
@@ -55,6 +62,10 @@ type Values struct {
 	LokiEndpoint string
 	// Replicas is the number of replicas for the OpenTelemetry Collector deployment.
 	Replicas int32
+	// ShootNodeLoggingEnabled indicates whether the necessary resources for scraping logs from shoot nodes should be created.
+	ShootNodeLoggingEnabled bool
+	// IngressHost is the name for the ingress to access the OpenTelemetry Collector.
+	IngressHost string
 }
 
 type otelCollector struct {
@@ -97,27 +108,75 @@ func (o *otelCollector) newKubeRBACProxyShootAccessSecret() *gardenerutils.Acces
 func (o *otelCollector) Deploy(ctx context.Context) error {
 	var (
 		genericTokenKubeconfigSecretName string
+		loggingAgentShootAccessSecret    = o.newLoggingAgentShootAccessSecret()
 		kubeRBACProxyShootAccessSecret   = o.newKubeRBACProxyShootAccessSecret()
 		objects                          = []client.Object{}
 	)
 
-	if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
-		return err
-	}
+	if o.values.ShootNodeLoggingEnabled {
+		if err := loggingAgentShootAccessSecret.Reconcile(ctx, o.client); err != nil {
+			return err
+		}
+		if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
+			return err
+		}
+		ingressTLSSecret, err := o.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+			Name:                        "logging-tls",
+			CommonName:                  o.values.IngressHost,
+			Organization:                []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:                    []string{o.values.IngressHost},
+			CertType:                    secrets.ServerCert,
+			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
+			SkipPublishingCACertificate: true,
+		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
+		if err != nil {
+			return err
+		}
 
-	genericTokenKubeconfigSecret, found := o.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
-	}
-	genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
+		genericTokenKubeconfigSecret, found := o.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+		}
+		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
 
-	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		objects = append(objects, o.getIngress(ingressTLSSecret.Name))
+
+		kubeRBACProxyClusterRoleBinding := o.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName)
+		loggingAgentClusterRole := o.getLoggingAgentClusterRole()
+		loggingAgentClusterRoleBinding := o.getLoggingAgentClusterRoleBinding(loggingAgentShootAccessSecret.ServiceAccountName, loggingAgentClusterRole.Name)
+
+		resourcesTarget, err := managedresources.
+			NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
+			AddAllAndSerialize(
+				kubeRBACProxyClusterRoleBinding,
+				loggingAgentClusterRole,
+				loggingAgentClusterRoleBinding,
+			)
+		if err != nil {
+			return err
+		}
+
+		if err := managedresources.CreateForShoot(ctx, o.client, o.namespace, managedResourceNameTarget, managedresources.LabelValueGardener, false, resourcesTarget); err != nil {
+			return err
+		}
+	} else {
+		if err := managedresources.DeleteForShoot(ctx, o.client, o.namespace, managedResourceNameTarget); err != nil {
+			return err
+		}
+
+		if err := kubernetesutils.DeleteObjects(ctx, o.client,
+			loggingAgentShootAccessSecret.Secret,
+			kubeRBACProxyShootAccessSecret.Secret,
+		); err != nil {
+			return err
+		}
+	}
 
 	objects = append(objects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName))
-
 	objects = append(objects, o.serviceMonitor())
 	objects = append(objects, o.serviceAccount())
 
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	serializedResources, err := registry.AddAllAndSerialize(objects...)
 	if err != nil {
 		return err
@@ -126,8 +185,38 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 	return managedresources.CreateForSeedWithLabels(ctx, o.client, o.namespace, managedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, serializedResources)
 }
 
+func (o *otelCollector) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:rbac-proxy",
+			Labels: map[string]string{v1beta1constants.LabelApp: kubeRBACProxyName},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "system:auth-delegator",
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccountName,
+			Namespace: metav1.NamespaceSystem,
+		}},
+	}
+}
+
 func (o *otelCollector) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, o.client, o.namespace, managedResourceName)
+	if err := managedresources.DeleteForShoot(ctx, o.client, o.namespace, managedResourceNameTarget); err != nil {
+		return err
+	}
+
+	if err := managedresources.DeleteForSeed(ctx, o.client, o.namespace, managedResourceName); err != nil {
+		return err
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, o.client,
+		o.newLoggingAgentShootAccessSecret().Secret,
+		o.newKubeRBACProxyShootAccessSecret().Secret,
+	)
 }
 
 func (o *otelCollector) Wait(ctx context.Context) error {
@@ -385,6 +474,100 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 	}
 
 	return obj
+}
+
+func (o *otelCollector) newLoggingAgentShootAccessSecret() *gardenerutils.AccessSecret {
+	return gardenerutils.NewShootAccessSecret("opentelemetry-collector", o.namespace).
+		WithServiceAccountName(openTelemetryCollectorName).
+		WithTokenExpirationDuration("720h").
+		WithTargetSecret(valiconstants.OpenTelemetryCollectorSecretName, metav1.NamespaceSystem)
+}
+
+func (o *otelCollector) getIngress(secretName string) *networkingv1.Ingress {
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "logging",
+			Namespace:   o.namespace,
+			Annotations: map[string]string{"nginx.ingress.kubernetes.io/backend-protocol": "GRPC"},
+			Labels:      getLabels(),
+		},
+		Spec: networkingv1.IngressSpec{
+			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
+			TLS: []networkingv1.IngressTLS{{
+				SecretName: secretName,
+				Hosts:      []string{o.values.IngressHost},
+			}},
+			Rules: []networkingv1.IngressRule{{
+				Host: o.values.IngressHost,
+				IngressRuleValue: networkingv1.IngressRuleValue{
+					HTTP: &networkingv1.HTTPIngressRuleValue{
+						Paths: []networkingv1.HTTPIngressPath{{
+							Backend: networkingv1.IngressBackend{
+								Service: &networkingv1.IngressServiceBackend{
+									Name: collectorconstants.ServiceName,
+									Port: networkingv1.ServiceBackendPort{Number: collectorconstants.KubeRBACProxyPort},
+								},
+							},
+							Path:     collectorconstants.PushEndpoint,
+							PathType: ptr.To(networkingv1.PathTypePrefix),
+						}},
+					},
+				},
+			}},
+		},
+	}
+
+	return ingress
+}
+
+func (o *otelCollector) getLoggingAgentClusterRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:opentelemetry-collector",
+			Labels: map[string]string{v1beta1constants.LabelApp: openTelemetryCollectorName},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"", "apps"},
+				Resources: []string{
+					"nodes",
+					"nodes/proxy",
+					"services",
+					"endpoints",
+					"pods",
+					"replicasets",
+				},
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+			},
+			{
+				NonResourceURLs: []string{collectorconstants.PushEndpoint},
+				Verbs:           []string{"create"},
+			},
+		},
+	}
+}
+
+func (o *otelCollector) getLoggingAgentClusterRoleBinding(serviceAccountName, clusterRoleName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   clusterRoleName,
+			Labels: map[string]string{v1beta1constants.LabelApp: openTelemetryCollectorName},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     clusterRoleName,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccountName,
+			Namespace: metav1.NamespaceSystem,
+		}},
+	}
 }
 
 func getLabels() map[string]string {

@@ -16,7 +16,7 @@ const (
 	// ServiceAccountName is the name of the ServiceAccount used by the OpenTelemetry Collector.
 	ServiceAccountName = OpenTelemetryCollectorResourceName
 	// PushEndpoint is the endpoint where the OpenTelemetry Collector receives logs from log shippers.
-	// This endpoint will be hard to find in the OpenTelemetry Collector documentation. Since the OTLP exporter
+	// This endpoint is hard to find in the OpenTelemetry Collector documentation. Since the OTLP exporter
 	// works via gRPC, the structure of the path is defined by the gRPC spec and it's not explicitly documented in the OpenTelemetry docs.
 	// The meaning of this URL in the gRPC world is:
 	// - "opentelemetry.proto.collector.logs.v1.LogsService" is the service
@@ -25,5 +25,5 @@ const (
 	// PushPort is the port that the OTLP receiver listens on in the OpenTelemetry Collector deployment.
 	PushPort = 4317
 	// KubeRBACProxyPort is the port that the KubeRBACProxy listens on in the OpenTelemetry Collector deployment.
-	KubeRBACProxyPort = 8080
+	KubeRBACProxyPort int32 = 8080
 )
