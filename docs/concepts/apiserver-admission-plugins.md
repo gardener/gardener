@@ -257,6 +257,14 @@ If a shoot contains global resource reservations, then no per worker pool resour
 By default, `useGKEFormula: true` applies to all Shoots.
 Operators can provide an optional label selector via the `selector` field to limit which Shoots get worker specific resource reservations injected.
 
+## `ShootTolerationRestriction`
+
+**Type**: Validating and Mutating. **Enabled by default**: Yes.
+
+This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`s.
+It validates the `.spec.tolerations` used in `Shoot`s against the whitelist of its `Project`, or against the whitelist configured in the admission controller's configuration, respectively.
+Additionally, it defaults the `.spec.tolerations` in `Shoot`s with those configured in its `Project`, and those configured in the admission controller's configuration, respectively.
+
 ## `ShootVPAEnabledByDefault`
 
 **Type**: Mutating. **Enabled by default**: Yes.
@@ -266,14 +274,6 @@ If enabled, it will enable the managed `VerticalPodAutoscaler` components (for m
 by setting `spec.kubernetes.verticalPodAutoscaler.enabled=true` for newly created Shoots.
 Already existing Shoots and new Shoots that explicitly disable VPA (`spec.kubernetes.verticalPodAutoscaler.enabled=false`)
 will not be affected by this admission plugin.
-
-## `ShootTolerationRestriction`
-
-**Type**: Validating and Mutating. **Enabled by default**: Yes.
-
-This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`s.
-It validates the `.spec.tolerations` used in `Shoot`s against the whitelist of its `Project`, or against the whitelist configured in the admission controller's configuration, respectively.
-Additionally, it defaults the `.spec.tolerations` in `Shoot`s with those configured in its `Project`, and those configured in the admission controller's configuration, respectively.
 
 ## `ShootValidator`
 
