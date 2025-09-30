@@ -68,7 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		} else if errSecret == nil {
 			// TODO(dimityrmirchev): remove this handling in a future release, the finalizer should be added by the reconcile function
 			// ensure the new finalizer is present on the referenced secret before removing the old finalizer
-			if !controllerutil.ContainsFinalizer(secret, finalizerName) {
+			if !controllerutil.ContainsFinalizer(secret, finalizerName) && secret.GetDeletionTimestamp() == nil {
 				log.Info("Adding finalizer", "finalizer", finalizerName) //nolint:logcheck
 				if err := controllerutils.AddFinalizers(ctx, r.Client, secret, finalizerName); err != nil {
 					return reconcile.Result{}, fmt.Errorf("could not add finalizer to secret: %w", err)
