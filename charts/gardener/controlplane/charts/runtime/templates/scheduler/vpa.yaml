@@ -10,7 +10,7 @@ spec:
     kind: Deployment
     name: gardener-scheduler
   updatePolicy:
-    updateMode: Auto
+    updateMode: Recreate
   resourcePolicy:
     containerPolicies:
       - containerName: '*'

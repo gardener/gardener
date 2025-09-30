@@ -10,7 +10,7 @@ spec:
     kind: Deployment
     name: gardener-admission-controller
   updatePolicy:
-    updateMode: Auto
+    updateMode: Recreate
   resourcePolicy:
     containerPolicies:
       - containerName: '*'
