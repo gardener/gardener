@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -131,7 +132,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// The second reconciliation will remove the old key and set the phase to completed.
 	if etcdEncryptionKeyRotationPhase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPrepared &&
 		helper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(garden.Status.Credentials) {
-		return reconcile.Result{RequeueAfter: 5 * time.Millisecond}, nil
+		return reconcile.Result{RequeueAfter: controllerutils.DefaultRequeueAfterDuration}, nil
 	}
 
 	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, nil
