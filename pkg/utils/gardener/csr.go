@@ -32,7 +32,7 @@ func IsSeedClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.K
 	}
 
 	if !strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.SeedUserNamePrefix) {
-		return false, fmt.Sprintf("CommonName does not start with %q", v1beta1constants.SeedUserNamePrefix)
+		return false, fmt.Sprintf("subject's common name does not start with %q", v1beta1constants.SeedUserNamePrefix)
 	}
 
 	return areCSRRequirementsMet(x509cr, usages)
@@ -48,12 +48,12 @@ func IsShootClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.
 	}
 
 	if !strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.ShootUserNamePrefix) {
-		return false, fmt.Sprintf("subject's common name must start with %q", v1beta1constants.ShootUserNamePrefix)
+		return false, fmt.Sprintf("subject's common name does not start with %q", v1beta1constants.ShootUserNamePrefix)
 	}
 
 	if parts := strings.Split(strings.TrimPrefix(x509cr.Subject.CommonName, v1beta1constants.ShootUserNamePrefix), ":"); len(parts) != 2 ||
 		parts[0] == "" || parts[1] == "" {
-		return false, fmt.Sprintf("subject's common name must be %q", v1beta1constants.ShootUserNamePrefix+"<namespace>:<name>")
+		return false, fmt.Sprintf("subject's common name must follow this structure: %q", v1beta1constants.ShootUserNamePrefix+"<namespace>:<name>")
 	}
 
 	return areCSRRequirementsMet(x509cr, usages)

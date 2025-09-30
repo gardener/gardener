@@ -100,7 +100,26 @@ var _ = Describe("handler", func() {
 
 		Context("gardenlet client", func() {
 			Context("when requested for CertificateSigningRequests", func() {
-				var name string
+				var (
+					name   string
+					rawCSR = []byte(`-----BEGIN CERTIFICATE REQUEST-----
+MIICrTCCAZUCAQAwaDElMCMGA1UECgwcZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNo
+b290czE/MD0GA1UEAww2Z2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNob290OnNob290
+LW5hbWVzcGFjZTpzaG9vdC1uYW1lMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+CgKCAQEA4pgVu/dZ3SFK8myE1ywscgaAuA4WRPDCegjIyrCK6ZCXc/srdzkFkcck
+pAkebs5q4XfO8/ELQfpsUU0kIrZG+AgzuBKLq2DwIK/0Xb8xtyExb+supVum0ugA
+1h2yJVK0QdzgSoEIBTezvnIqy1p3zNgOOaPlIUBWzCiGoQIQOb2PWDkrv/IQL4I4
+Pt1pwVolNqNH7iExpCLCAqHYQYnNYjHdX3lw+cS72Vx8YwE2ex7v89o0O8yoSk6/
+w/t/GNRtfdXlCipI5XP+iH3kGVQa3485eu/MP7Zj1goYJQclHNBvDcWk5BcIIA7B
+dZQgw3VRmapOlsuHjQHTa+MIccdRQQIDAQABoAAwDQYJKoZIhvcNAQELBQADggEB
+AL8QqH9x4D3Hi8EkQ+bL7U81o766T1oKWksnMeJk7jyilrWKRotBLJzijzRTe6Br
+wst2faOXTCqsSgHu31z2MU3bCS0pYA8SrFLCp2uEP3oQgDFmVv6Gm9MViK6cHIe/
+zNvBwqnrpCkOtjQnjDga4MxZZo2d/Ada11/arIR9Two0/EFJr0pYI0RnQ+SBdTEQ
+PxC38H4SLeAx0x4CV/lKVT/7a2siOIcW1LTtjRVaCFbplTeUqFYm9uA4quYObb4d
+Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
+2MyLm9v3qQ4mbHB8XgV2Nrg=
+-----END CERTIFICATE REQUEST-----`)
+				)
 
 				BeforeEach(func() {
 					name = "foo"
@@ -159,23 +178,7 @@ var _ = Describe("handler", func() {
 								Kind:       "CertificateSigningRequest",
 							},
 							Spec: certificatesv1.CertificateSigningRequestSpec{
-								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
-MIICrTCCAZUCAQAwaDElMCMGA1UECgwcZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNo
-b290czE/MD0GA1UEAww2Z2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNob290OnNob290
-LW5hbWVzcGFjZTpzaG9vdC1uYW1lMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
-CgKCAQEA4pgVu/dZ3SFK8myE1ywscgaAuA4WRPDCegjIyrCK6ZCXc/srdzkFkcck
-pAkebs5q4XfO8/ELQfpsUU0kIrZG+AgzuBKLq2DwIK/0Xb8xtyExb+supVum0ugA
-1h2yJVK0QdzgSoEIBTezvnIqy1p3zNgOOaPlIUBWzCiGoQIQOb2PWDkrv/IQL4I4
-Pt1pwVolNqNH7iExpCLCAqHYQYnNYjHdX3lw+cS72Vx8YwE2ex7v89o0O8yoSk6/
-w/t/GNRtfdXlCipI5XP+iH3kGVQa3485eu/MP7Zj1goYJQclHNBvDcWk5BcIIA7B
-dZQgw3VRmapOlsuHjQHTa+MIccdRQQIDAQABoAAwDQYJKoZIhvcNAQELBQADggEB
-AL8QqH9x4D3Hi8EkQ+bL7U81o766T1oKWksnMeJk7jyilrWKRotBLJzijzRTe6Br
-wst2faOXTCqsSgHu31z2MU3bCS0pYA8SrFLCp2uEP3oQgDFmVv6Gm9MViK6cHIe/
-zNvBwqnrpCkOtjQnjDga4MxZZo2d/Ada11/arIR9Two0/EFJr0pYI0RnQ+SBdTEQ
-PxC38H4SLeAx0x4CV/lKVT/7a2siOIcW1LTtjRVaCFbplTeUqFYm9uA4quYObb4d
-Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
-2MyLm9v3qQ4mbHB8XgV2Nrg=
------END CERTIFICATE REQUEST-----`),
+								Request: rawCSR,
 							},
 						})
 						Expect(err).NotTo(HaveOccurred())
@@ -199,23 +202,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 								Kind:       "CertificateSigningRequest",
 							},
 							Spec: certificatesv1.CertificateSigningRequestSpec{
-								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
-MIICrTCCAZUCAQAwaDElMCMGA1UECgwcZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNo
-b290czE/MD0GA1UEAww2Z2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNob290OnNob290
-LW5hbWVzcGFjZTpzaG9vdC1uYW1lMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
-CgKCAQEA4pgVu/dZ3SFK8myE1ywscgaAuA4WRPDCegjIyrCK6ZCXc/srdzkFkcck
-pAkebs5q4XfO8/ELQfpsUU0kIrZG+AgzuBKLq2DwIK/0Xb8xtyExb+supVum0ugA
-1h2yJVK0QdzgSoEIBTezvnIqy1p3zNgOOaPlIUBWzCiGoQIQOb2PWDkrv/IQL4I4
-Pt1pwVolNqNH7iExpCLCAqHYQYnNYjHdX3lw+cS72Vx8YwE2ex7v89o0O8yoSk6/
-w/t/GNRtfdXlCipI5XP+iH3kGVQa3485eu/MP7Zj1goYJQclHNBvDcWk5BcIIA7B
-dZQgw3VRmapOlsuHjQHTa+MIccdRQQIDAQABoAAwDQYJKoZIhvcNAQELBQADggEB
-AL8QqH9x4D3Hi8EkQ+bL7U81o766T1oKWksnMeJk7jyilrWKRotBLJzijzRTe6Br
-wst2faOXTCqsSgHu31z2MU3bCS0pYA8SrFLCp2uEP3oQgDFmVv6Gm9MViK6cHIe/
-zNvBwqnrpCkOtjQnjDga4MxZZo2d/Ada11/arIR9Two0/EFJr0pYI0RnQ+SBdTEQ
-PxC38H4SLeAx0x4CV/lKVT/7a2siOIcW1LTtjRVaCFbplTeUqFYm9uA4quYObb4d
-Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
-2MyLm9v3qQ4mbHB8XgV2Nrg=
------END CERTIFICATE REQUEST-----`),
+								Request: rawCSR,
 								Usages: []certificatesv1.KeyUsage{
 									certificatesv1.UsageKeyEncipherment,
 									certificatesv1.UsageDigitalSignature,
@@ -249,23 +236,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 								Kind:       "CertificateSigningRequest",
 							},
 							Spec: certificatesv1.CertificateSigningRequestSpec{
-								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
-MIICrTCCAZUCAQAwaDElMCMGA1UECgwcZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNo
-b290czE/MD0GA1UEAww2Z2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNob290OnNob290
-LW5hbWVzcGFjZTpzaG9vdC1uYW1lMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
-CgKCAQEA4pgVu/dZ3SFK8myE1ywscgaAuA4WRPDCegjIyrCK6ZCXc/srdzkFkcck
-pAkebs5q4XfO8/ELQfpsUU0kIrZG+AgzuBKLq2DwIK/0Xb8xtyExb+supVum0ugA
-1h2yJVK0QdzgSoEIBTezvnIqy1p3zNgOOaPlIUBWzCiGoQIQOb2PWDkrv/IQL4I4
-Pt1pwVolNqNH7iExpCLCAqHYQYnNYjHdX3lw+cS72Vx8YwE2ex7v89o0O8yoSk6/
-w/t/GNRtfdXlCipI5XP+iH3kGVQa3485eu/MP7Zj1goYJQclHNBvDcWk5BcIIA7B
-dZQgw3VRmapOlsuHjQHTa+MIccdRQQIDAQABoAAwDQYJKoZIhvcNAQELBQADggEB
-AL8QqH9x4D3Hi8EkQ+bL7U81o766T1oKWksnMeJk7jyilrWKRotBLJzijzRTe6Br
-wst2faOXTCqsSgHu31z2MU3bCS0pYA8SrFLCp2uEP3oQgDFmVv6Gm9MViK6cHIe/
-zNvBwqnrpCkOtjQnjDga4MxZZo2d/Ada11/arIR9Two0/EFJr0pYI0RnQ+SBdTEQ
-PxC38H4SLeAx0x4CV/lKVT/7a2siOIcW1LTtjRVaCFbplTeUqFYm9uA4quYObb4d
-Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
-2MyLm9v3qQ4mbHB8XgV2Nrg=
------END CERTIFICATE REQUEST-----`),
+								Request: rawCSR,
 								Usages: []certificatesv1.KeyUsage{
 									certificatesv1.UsageKeyEncipherment,
 									certificatesv1.UsageDigitalSignature,

@@ -176,7 +176,7 @@ var _ = Describe("Shoot", func() {
 					Entry("get with subresource", "get", "shootclient"),
 				)
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -184,7 +184,6 @@ var _ = Describe("Shoot", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
 						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get list watch]"))
-
 					},
 
 					Entry("update", "update"),
