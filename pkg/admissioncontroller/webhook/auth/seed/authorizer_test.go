@@ -986,7 +986,7 @@ var _ = Describe("Seed", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [finalizers status]"))
 				})
 
 				It("should allow when verb is delete and resource does not exist", func() {
@@ -1022,9 +1022,11 @@ var _ = Describe("Seed", func() {
 					},
 
 					Entry("patch w/o subresource", "patch", ""),
-					Entry("patch w/ subresource", "patch", "status"),
+					Entry("patch w/ status subresource", "patch", "status"),
+					Entry("patch w/ finalizers subresource", "patch", "finalizers"),
 					Entry("update w/o subresource", "update", ""),
-					Entry("update w/ subresource", "update", "status"),
+					Entry("update w/ status subresource", "update", "status"),
+					Entry("update w/ finalizers subresource", "update", "finalizers"),
 					Entry("delete", "delete", ""),
 				)
 			})
@@ -1724,7 +1726,7 @@ var _ = Describe("Seed", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [finalizers status]"))
 				})
 
 				DescribeTable("should return correct result if path exists",
@@ -1746,9 +1748,11 @@ var _ = Describe("Seed", func() {
 					},
 
 					Entry("patch w/o subresource", "patch", ""),
-					Entry("patch w/ subresource", "patch", "status"),
+					Entry("patch w/ status subresource", "patch", "status"),
+					Entry("patch w/ finalizers subresource", "patch", "finalizers"),
 					Entry("update w/o subresource", "update", ""),
-					Entry("update w/ subresource", "update", "status"),
+					Entry("update w/ status subresource", "update", "status"),
+					Entry("update w/ finalizers subresource", "update", "finalizers"),
 				)
 			})
 

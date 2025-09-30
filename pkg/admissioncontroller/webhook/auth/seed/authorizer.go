@@ -114,7 +114,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return requestAuthorizer.Check(graph.VertexTypeBackupBucket, attrs,
 				authwebhook.WithAllowedVerbs("update", "patch", "delete"),
 				authwebhook.WithAlwaysAllowedVerbs("create", "get", "list", "watch"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "finalizers"),
 			)
 		case backupEntryResource:
 			return requestAuthorizer.Check(graph.VertexTypeBackupEntry, attrs,
@@ -224,7 +224,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return requestAuthorizer.Check(graph.VertexTypeShoot, attrs,
 				authwebhook.WithAllowedVerbs("update", "patch"),
 				authwebhook.WithAlwaysAllowedVerbs("get", "list", "watch"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "finalizers"),
 			)
 		case shootStateResource:
 			return requestAuthorizer.Check(graph.VertexTypeShootState, attrs,
