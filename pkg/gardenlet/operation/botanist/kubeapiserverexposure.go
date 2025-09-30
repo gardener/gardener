@@ -84,13 +84,10 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 					TLSSecret: *b.ControlPlaneWildcardCert,
 				}
 
-				// Wildcard endpoint must use the default istio ingress gateway if the shoot uses zonal istio ingress gateway.
-				// Otherwise, the wildcard endpoint can share the same istio ingress gateway as the kube-apiserver endpoint.
-				if b.DefaultIstioNamespace() != b.IstioNamespace() {
-					wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
-						Namespace: b.DefaultIstioNamespace(),
-						Labels:    b.DefaultIstioLabels(),
-					}
+				// Wildcard endpoint must always use the non-zonal and not the exposureclass istio ingress gateway.
+				wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
+					Namespace: b.IstioNamespaceIgnoreExposureClass(),
+					Labels:    b.IstioLabelsIgnoreExposureClass(),
 				}
 			}
 
@@ -145,13 +142,10 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 					TLSSecret: *b.ControlPlaneWildcardCert,
 				}
 
-				// Wildcard endpoint must use the default istio ingress gateway if the shoot uses zonal istio ingress gateway.
-				// Otherwise, the wildcard endpoint can share the same istio ingress gateway as the kube-apiserver endpoint.
-				if b.DefaultIstioNamespace() != b.IstioNamespace() {
-					wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
-						Namespace: b.DefaultIstioNamespace(),
-						Labels:    b.DefaultIstioLabels(),
-					}
+				// Wildcard endpoint must always use the non-zonal and not the exposureclass istio ingress gateway.
+				wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
+					Namespace: b.IstioNamespaceIgnoreExposureClass(),
+					Labels:    b.IstioLabelsIgnoreExposureClass(),
 				}
 			}
 

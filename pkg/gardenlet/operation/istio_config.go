@@ -30,6 +30,12 @@ func (o *Operation) DefaultIstioNamespace() string {
 	return *o.sniConfig().Ingress.Namespace
 }
 
+// IstioNamespaceIgnoreExposureClass returns the Istio ingress gateway namespace from the SNI configuration,
+// ignoring any exposure class handler logic.
+func (o *Operation) IstioNamespaceIgnoreExposureClass() string {
+	return *o.Config.SNI.Ingress.Namespace
+}
+
 // IstioLabels contain the labels to be used for the istio ingress gateway entities.
 func (o *Operation) IstioLabels() map[string]string {
 	return o.istioLabels(o.singleZoneIfPinned())
@@ -38,6 +44,12 @@ func (o *Operation) IstioLabels() map[string]string {
 // DefaultIstioLabels contain the labels to be used for the default istio ingress gateway entities disregarding zonal affinities.
 func (o *Operation) DefaultIstioLabels() map[string]string {
 	return o.istioLabels(nil)
+}
+
+// IstioLabelsIgnoreExposureClass returns the Istio ingress gateway labels from the SNI configuration,
+// ignoring any exposure class handler logic.
+func (o *Operation) IstioLabelsIgnoreExposureClass() map[string]string {
+	return sharedcomponent.GetIstioZoneLabels(o.Config.SNI.Ingress.Labels, nil)
 }
 
 func (o *Operation) istioLabels(zone *string) map[string]string {
