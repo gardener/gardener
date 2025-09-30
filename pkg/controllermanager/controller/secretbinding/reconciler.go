@@ -221,6 +221,13 @@ func (r *Reconciler) mayReleaseSecret(ctx context.Context, secretBindingNamespac
 		if secretBinding.Namespace == secretBindingNamespace && secretBinding.Name == secretBindingName {
 			continue
 		}
+
+		if secretBinding.DeletionTimestamp != nil {
+			// secret bindings that are already marked for deletion
+			// are not considered to be protecting the referenced secret
+			continue
+		}
+
 		if secretBinding.SecretRef.Namespace == secretNamespace && secretBinding.SecretRef.Name == secretName {
 			return false, nil
 		}
