@@ -19,9 +19,10 @@ import (
 )
 
 type federationConfig struct {
-	name    string
-	targets []monitoringv1alpha1.Target
-	secret  *corev1.Secret
+	name      string
+	targets   []monitoringv1alpha1.Target
+	isIngress bool
+	secret    *corev1.Secret
 }
 
 //go:embed assets/scrapeconfigs/cadvisor.yaml
@@ -53,7 +54,7 @@ func CentralScrapeConfigs(prometheusAggregateTargets []monitoringv1alpha1.Target
 
 	if len(prometheusAggregateTargets) > 0 && globalMonitoringSecret != nil {
 		name := "prometheus-" + aggregate.Label
-		out = append(out, newScrapeConfigForFederation(federationConfig{name: name, targets: prometheusAggregateTargets, secret: globalMonitoringSecret}))
+		out = append(out, newScrapeConfigForFederation(federationConfig{name: name, targets: prometheusAggregateTargets, isIngress: true, secret: globalMonitoringSecret}))
 	}
 
 	return out
@@ -66,7 +67,6 @@ func newScrapeConfigForFederation(federation federationConfig) *monitoringv1alph
 			HonorLabels:     ptr.To(true),
 			HonorTimestamps: ptr.To(false),
 			MetricsPath:     ptr.To("/federate"),
-			Scheme:          ptr.To("HTTPS"),
 			Params: map[string][]string{
 				"match[]": {
 					`{__name__=~"seed:(.+):count"}`,
@@ -84,11 +84,6 @@ func newScrapeConfigForFederation(federation federationConfig) *monitoringv1alph
 					`{__name__=~"metering:.+:(sum_by_namespace|sum_by_instance_type)"}`,
 				},
 			},
-			TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
-			BasicAuth: &monitoringv1.BasicAuth{
-				Username: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: federation.secret.Name}, Key: secretsutils.DataKeyUserName},
-				Password: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: federation.secret.Name}, Key: secretsutils.DataKeyPassword},
-			},
 			StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: federation.targets}},
 			RelabelConfigs: []monitoringv1.RelabelConfig{{
 				Action:      "replace",
@@ -100,6 +95,15 @@ func newScrapeConfigForFederation(federation federationConfig) *monitoringv1alph
 				TargetLabel:  "shoot_alertname",
 			}},
 		},
+	}
+
+	if federation.isIngress {
+		config.Spec.Scheme = ptr.To("HTTPS")
+		config.Spec.TLSConfig = &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}
+		config.Spec.BasicAuth = &monitoringv1.BasicAuth{
+			Username: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: federation.secret.Name}, Key: secretsutils.DataKeyUserName},
+			Password: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: federation.secret.Name}, Key: secretsutils.DataKeyPassword},
+		}
 	}
 
 	return config
