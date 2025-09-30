@@ -111,6 +111,13 @@ It validates certain configuration values in the specification against the refer
 Similar to `ShootValidator`, it performs validations that cannot be handled by the static API validation due to their dynamic nature.
 Additionally, it performs certain defaulting tasks, making sure that configuration values that are not specified are defaulted to the values of the referred `Shoot`, for example Seed provider, network ranges, DNS domain, etc.
 
+## `ManagedSeedShoot`
+
+**Type**: Validating. **Enabled by default**: Yes.
+
+This admission controller reacts on `DELETE` operations for `ManagedSeed`s.
+It rejects the deletion if there are `Shoot`s that are scheduled onto the `Seed` that is registered by the `ManagedSeed`.
+
 ## `MutatingAdmissionPolicy`
 
 **Type**: Mutating. **Enabled by default**: No.
@@ -254,13 +261,6 @@ Additionally, it takes over certain defaulting tasks (e.g., default machine imag
 This admission controller reacts on `UPDATE` and `DELETE` operations for `Shoot`s.
 It validates certain configuration values in the specification that are specific to `ManagedSeed`s (e.g. the nginx-addon of the Shoot has to be disabled, the Shoot VPA has to be enabled).
 It rejects the deletion if the `Shoot` is referred to by a `ManagedSeed`.
-
-## `ManagedSeedShoot`
-
-**Type**: Validating. **Enabled by default**: Yes.
-
-This admission controller reacts on `DELETE` operations for `ManagedSeed`s.
-It rejects the deletion if there are `Shoot`s that are scheduled onto the `Seed` that is registered by the `ManagedSeed`.
 
 ## `ShootDNSRewriting`
 
