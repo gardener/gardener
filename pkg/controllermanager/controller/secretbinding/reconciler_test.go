@@ -139,7 +139,7 @@ var _ = Describe("SecretBindingControl", func() {
 			request = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: secretBindingNamespace, Name: secretBindingName}}
 		})
 
-		It("should add the secretbinding referred label to the secret referred by the secretbinding", func() {
+		It("should add the secretbinding referred label and finalizer to the secret referred by the secretbinding", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -148,6 +148,7 @@ var _ = Describe("SecretBindingControl", func() {
 				HaveKeyWithValue("reference.gardener.cloud/secretbinding", "true"),
 				HaveKeyWithValue("provider.shoot.gardener.cloud/provider", "true"),
 			))
+			Expect(secret.ObjectMeta.Finalizers).To(ConsistOf("gardener.cloud/secretbinding"))
 		})
 
 		It("should remove both the labels from the secret when there are no other secretbindings referring it", func() {
@@ -191,7 +192,7 @@ var _ = Describe("SecretBindingControl", func() {
 			))
 		})
 
-		It("should only remove the secretbinding ref label from the secret when secret is labeled with credentialsbinding reference", func() {
+		It("should persist the credentialsbinding reference label", func() {
 			Expect(fakeClient.Delete(ctx, secret)).To(Succeed())
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -212,10 +213,33 @@ var _ = Describe("SecretBindingControl", func() {
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.ObjectMeta.Labels).To(Equal(map[string]string{
-				"provider.shoot.gardener.cloud/provider":      "true",
 				"reference.gardener.cloud/credentialsbinding": "true",
 			}))
-			Expect(secret.ObjectMeta.Finalizers).To(ConsistOf("gardener.cloud/gardener"))
+		})
+
+		It("should remove the finalizer", func() {
+			Expect(fakeClient.Delete(ctx, secret)).To(Succeed())
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "namespace",
+				},
+			}
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.ObjectMeta.Finalizers).To(ConsistOf("gardener.cloud/secretbinding"))
+
+			Expect(fakeClient.Delete(ctx, secretBinding)).To(Succeed())
+
+			_, err = reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.ObjectMeta.Finalizers).To(BeEmpty())
 		})
 	})
 
