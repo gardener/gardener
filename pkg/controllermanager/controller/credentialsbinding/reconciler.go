@@ -245,6 +245,13 @@ func (r *Reconciler) mayReleaseCredentials(ctx context.Context, binding *securit
 		if cb.Namespace == binding.Namespace && cb.Name == binding.Name {
 			continue
 		}
+
+		if cb.DeletionTimestamp != nil {
+			// credentials bindings that are already marked for deletion
+			// are not considered to be protecting the referenced credentials
+			continue
+		}
+
 		if cb.CredentialsRef.APIVersion == binding.CredentialsRef.APIVersion &&
 			cb.CredentialsRef.Kind == binding.CredentialsRef.Kind &&
 			cb.CredentialsRef.Namespace == binding.CredentialsRef.Namespace &&
