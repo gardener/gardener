@@ -32,7 +32,8 @@ type Cluster struct {
 // ClusterList is a list of Cluster resources.
 type ClusterList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is the list of Cluster.
 	Items []Cluster `json:"items"`
