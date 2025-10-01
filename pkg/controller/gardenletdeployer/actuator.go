@@ -443,7 +443,7 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 	if spec.Backup == nil {
 		return nil
 	}
-	if spec.Backup.CredentialsRef.APIVersion != "v1" || spec.Backup.CredentialsRef.Kind != "Secret" {
+	if spec.Backup.CredentialsRef.APIVersion != corev1.SchemeGroupVersion.String() || spec.Backup.CredentialsRef.Kind != "Secret" {
 		return nil
 	}
 
@@ -544,7 +544,7 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 func (a *Actuator) deleteBackupSecret(ctx context.Context, spec *gardencorev1beta1.SeedSpec, obj client.Object) error {
 	// If backup is specified, delete the backup secret if it exists and is owned by the object
 	if spec.Backup != nil {
-		if spec.Backup.CredentialsRef.APIVersion != "v1" || spec.Backup.CredentialsRef.Kind != "Secret" {
+		if spec.Backup.CredentialsRef.APIVersion != corev1.SchemeGroupVersion.String() || spec.Backup.CredentialsRef.Kind != "Secret" {
 			return nil
 		}
 		backupSecret, err := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
@@ -568,7 +568,7 @@ func (a *Actuator) getBackupSecret(ctx context.Context, spec *gardencorev1beta1.
 	)
 
 	// If backup is specified, get the backup secret if it exists and is owned by the object
-	if spec.Backup != nil && spec.Backup.CredentialsRef.APIVersion == "v1" && spec.Backup.CredentialsRef.Kind == "Secret" {
+	if spec.Backup != nil && spec.Backup.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() && spec.Backup.CredentialsRef.Kind == "Secret" {
 		backupSecret, err = kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
