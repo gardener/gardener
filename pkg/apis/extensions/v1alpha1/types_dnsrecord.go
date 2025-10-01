@@ -51,7 +51,8 @@ func (i *DNSRecord) GetExtensionStatus() Status {
 // DNSRecordList is a list of DNSRecord resources.
 type DNSRecordList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is the list of DNSRecords.
 	Items []DNSRecord `json:"items"`
