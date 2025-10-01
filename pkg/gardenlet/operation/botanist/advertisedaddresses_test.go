@@ -292,42 +292,12 @@ var _ = Describe("AdvertisedAddresses", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(items).To(HaveExactElements([]gardencorev1beta1.ShootAdvertisedAddress{
 				{
-					Name: "ingress-1",
+					Name: "ingress/ingress-1/0/0",
 					URL:  "https://foo.example.org",
 				},
 				{
-					Name: "ingress-2",
+					Name: "ingress/ingress-2/0/0",
 					URL:  "https://bar.example.org",
-				},
-			}))
-		})
-
-		It("returns valid endpoint with custom name", func() {
-			ingress := &networkingv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ingress-1",
-					Namespace: shootNamespace.Name,
-					Labels: map[string]string{
-						v1beta1constants.LabelShootEndpointAdvertise: "true",
-						v1beta1constants.LabelShootEndpointName:      "my-custom-name",
-					},
-				},
-				Spec: networkingv1.IngressSpec{
-					TLS: []networkingv1.IngressTLS{
-						{
-							Hosts: []string{"foo.example.org"},
-						},
-					},
-				},
-			}
-
-			Expect(botanist.SeedClientSet.Client().Create(ctx, ingress)).To(Succeed())
-			items, err := botanist.GetIngressAdvertisedEndpoints(ctx)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(items).To(HaveExactElements([]gardencorev1beta1.ShootAdvertisedAddress{
-				{
-					Name: "my-custom-name",
-					URL:  "https://foo.example.org",
 				},
 			}))
 		})

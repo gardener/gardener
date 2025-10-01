@@ -120,19 +120,13 @@ func (b *Botanist) GetIngressAdvertisedEndpoints(ctx context.Context) ([]gardenc
 	// [gardencorev1beta1.ShootAdvertisedAddress] is constrained to https://
 	// endpoints only.
 	for _, ingress := range ingressList.Items {
-		addrName := ingress.Name
-		for _, tlsItem := range ingress.Spec.TLS {
-			for _, hostItem := range tlsItem.Hosts {
+		for tlsIdx, tlsItem := range ingress.Spec.TLS {
+			for hostIdx, hostItem := range tlsItem.Hosts {
 				if strings.Contains(hostItem, "*") {
 					continue
 				}
-				addrLabelName, ok := ingress.GetLabels()[v1beta1constants.LabelShootEndpointName]
-				if ok && addrLabelName != "" {
-					addrName = addrLabelName
-				}
-
 				addr := gardencorev1beta1.ShootAdvertisedAddress{
-					Name: addrName,
+					Name: fmt.Sprintf("ingress/%s/%d/%d", ingress.Name, tlsIdx, hostIdx),
 					URL:  fmt.Sprintf("https://%s", hostItem),
 				}
 				result = append(result, addr)
