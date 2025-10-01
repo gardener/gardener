@@ -292,11 +292,11 @@ var _ = Describe("AdvertisedAddresses", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(items).To(HaveExactElements([]gardencorev1beta1.ShootAdvertisedAddress{
 				{
-					Name: "ingress/ingress-1",
+					Name: "ingress-1",
 					URL:  "https://foo.example.org",
 				},
 				{
-					Name: "ingress/ingress-2",
+					Name: "ingress-2",
 					URL:  "https://bar.example.org",
 				},
 			}))
