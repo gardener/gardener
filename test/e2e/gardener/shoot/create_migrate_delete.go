@@ -50,6 +50,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			seedClientSourceCluster = s.SeedClient
 		})
 
+		if !v1beta1helper.IsWorkerless(s.Shoot) {
+			// The operating system config pool hashes secret is only deployed for shoots with workers.
+			It("Mark the operating system config pool hashes secret to verify that it will be correctly migrated", func(ctx SpecContext) {
+				Eventually(ctx, func() error {
+					return shootmigration.MarkOSCSecret(ctx, s.SeedClientSet.Client(), s.Shoot.Status.TechnicalID)
+				}).Should(Succeed())
+			}, SpecTimeout(time.Minute))
+		}
+
 		It("Populate comparison elements before migration", func(ctx SpecContext) {
 			Eventually(ctx, func() error {
 				var err error

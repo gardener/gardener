@@ -14,15 +14,28 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
+// MarkOSCSecret marks the operating system config pool hashes secret to verify that it is correctly migrated.
+func MarkOSCSecret(ctx context.Context, seedClient client.Client, namespace string) error {
+	secret := &corev1.Secret{}
+	if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: operatingsystemconfig.WorkerPoolHashesSecretName}, secret); err != nil {
+		return err
+	}
+	metav1.SetMetaDataLabel(&secret.ObjectMeta, "gardener.cloud/custom-test-label", "test")
+	return seedClient.Update(ctx, secret)
+}
+
 // GetPersistedSecrets uses the seedClient to fetch the data of all Secrets that have the `persist` label key set to true
-// from the Shoot's control plane namespace
+// from the Shoot's control plane namespace.
 func GetPersistedSecrets(ctx context.Context, seedClient client.Reader, namespace string) (map[string]corev1.Secret, error) {
 	secretList := &corev1.SecretList{}
 	if err := seedClient.List(
@@ -65,7 +78,7 @@ func ComparePersistedSecrets(secretsBefore, secretsAfter map[string]corev1.Secre
 }
 
 // CheckForOrphanedNonNamespacedResources checks if there are orphaned resources left on the target seed after the shoot migration.
-// The function checks for Cluster, DNSOwner, BackupEntry, ClusterRoleBinding, ClusterRole and PersistentVolume
+// The function checks for Cluster, DNSOwner, BackupEntry, ClusterRoleBinding, ClusterRole and PersistentVolume.
 func CheckForOrphanedNonNamespacedResources(ctx context.Context, shootNamespace string, sourceSeedClient client.Client) error {
 	seedClientScheme := sourceSeedClient.Scheme()
 

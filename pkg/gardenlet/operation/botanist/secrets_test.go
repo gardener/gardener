@@ -456,10 +456,6 @@ var _ = Describe("Secrets", func() {
 								Data:   runtime.RawExtension{Raw: rawData("extension-foo-secret")},
 							},
 							{
-								Name: "secret-without-labels",
-								Type: "secret",
-							},
-							{
 								Name: "some-other-data",
 								Type: "not-a-secret",
 							},
@@ -495,7 +491,6 @@ var _ = Describe("Secrets", func() {
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
 				By("Verify unrelated data not to be restored")
-				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "secret-without-labels"}, &corev1.Secret{})).To(BeNotFoundError())
 				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "some-other-data"}, &corev1.Secret{})).To(BeNotFoundError())
 			})
 		})
