@@ -82,12 +82,12 @@ var _ = Describe("health check", func() {
 
 	Describe("#ComputeRequiredControlPlaneDeployments", func() {
 		var (
-			workerlessDepoymentNames = []any{
+			workerlessDeploymentNames = []any{
 				"gardener-resource-manager",
 				"kube-apiserver",
 				"kube-controller-manager",
 			}
-			commonDeploymentNames = append(workerlessDepoymentNames, "kube-scheduler", "machine-controller-manager")
+			commonDeploymentNames = append(workerlessDeploymentNames, "kube-scheduler", "machine-controller-manager")
 		)
 
 		tests := func(shoot *gardencorev1beta1.Shoot, names []any, isWorkerless bool) {
@@ -145,7 +145,7 @@ var _ = Describe("health check", func() {
 		})
 
 		Context("workerless shoot", func() {
-			tests(workerlessShoot, workerlessDepoymentNames, true)
+			tests(workerlessShoot, workerlessDeploymentNames, true)
 		})
 	})
 

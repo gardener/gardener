@@ -24,7 +24,7 @@
 	Test:
 		Rotate kubeconfig for a shoot cluster.
 	Expected Output
-		- The old kubeconfig to be updated and the old file to be no longer autorized.
+		- The old kubeconfig to be updated and the old file to be no longer authorized.
 
 	Test:
 		Rotate ssh keypair for a shoot cluster.

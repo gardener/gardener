@@ -4,7 +4,7 @@ Changes to the Gardener code base are often incorporated directly via pull reque
 
 If a perspective feature has a bigger extent, requires the involvement of several parties or more discussion is needed before the actual implementation can be started, you may consider filing a pull request with a Gardener Enhancement Proposal (GEP) first.
 
-GEPs are a measure to propose a change or to add a feature to Gardener, help you to describe the change(s) conceptionally, and to list the steps that are necessary to reach this goal. It helps the Gardener maintainers as well as the community to understand the motivation and scope around your proposed change(s) and encourages their contribution to discussions and future pull requests. If you are familiar with the Kubernetes community, GEPs are analogue to Kubernetes Enhancement Proposals ([KEPs]( https://github.com/kubernetes/enhancements/tree/master/keps)).
+GEPs are a measure to propose a change or to add a feature to Gardener, help you to describe the change(s) conceptually, and to list the steps that are necessary to reach this goal. It helps the Gardener maintainers as well as the community to understand the motivation and scope around your proposed change(s) and encourages their contribution to discussions and future pull requests. If you are familiar with the Kubernetes community, GEPs are analogue to Kubernetes Enhancement Proposals ([KEPs]( https://github.com/kubernetes/enhancements/tree/master/keps)).
 
 ## Reasons for a GEP
 
