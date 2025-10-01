@@ -36,7 +36,7 @@ The proposal, as outlined below, suggests to implement the necessary changes in 
 
 ### Goals
 - Operators can request and will be granted time-limited `ssh` access to shoot cluster nodes via bastion hosts.
-- To that end, requestors must present their public `ssh` key and only this will be installed into `sshd` on the bastion hosts.
+- To that end, requesters must present their public `ssh` key and only this will be installed into `sshd` on the bastion hosts.
 - The bastion hosts will be firewalled and ingress traffic will be permitted only from the client IP of the requestor. Except for traffic on port 22 to the cluster worker nodes, no egress from the bastion is allowed.
 - The actual node `ssh` private key (resp. key pair) will be rotated by Gardener and access to the nodes is only possible with this constantly rotated key pair and not with the personal one that is used only for the bastion host.
 - Bastion host and access is granted only for the extent of this operator request (of course multiple `ssh` sessions are possible, in parallel or repeatedly, but after "the time is up", access is no longer possible).

@@ -48,7 +48,7 @@ func NewConditionBuilder(conditionType gardencorev1beta1.ConditionType) (Conditi
 	}, nil
 }
 
-// WithOldCondition sets the old condition. It can be used to prodive default values.
+// WithOldCondition sets the old condition. It can be used to provide default values.
 // The old's condition type is overridden to the one specified in the builder.
 func (b *defaultConditionBuilder) WithOldCondition(old gardencorev1beta1.Condition) ConditionBuilder {
 	old.Type = b.conditionType

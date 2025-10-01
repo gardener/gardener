@@ -73,7 +73,7 @@ var _ = Describe("BeAlreadyExistsError", func() {
 })
 
 var _ = Describe("BeForbiddenError", func() {
-	It("should be true when error is fobidden", func() {
+	It("should be true when error is forbidden", func() {
 		err := apierrors.NewForbidden(schema.GroupResource{Group: "baz", Resource: "bar"}, "foo", fmt.Errorf("got err"))
 		Expect(err).To(BeForbiddenError())
 	})

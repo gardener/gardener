@@ -140,7 +140,7 @@ The restriction regarding the `192.168.123.0/24` network range in the current VP
 
 ### Performance and Scalability
 
-We do expect performance and throughput to be slightly lower compared to the existing solution. This is because the OpenVPN server acts as an additional hop and must decrypt and re-encrypt traffic that passes through. As there are no low latency or high thoughput requirements for this connection, we do not assume this to be an issue.
+We do expect performance and throughput to be slightly lower compared to the existing solution. This is because the OpenVPN server acts as an additional hop and must decrypt and re-encrypt traffic that passes through. As there are no low latency or high throughput requirements for this connection, we do not assume this to be an issue.
 
 ### Availability and Failure Scenarios
 

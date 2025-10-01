@@ -607,9 +607,9 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets:            v1beta1constants.LabelNetworkPolicyAllowed,
 			"networking.resources.gardener.cloud/to-extensions-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
 			// TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.
-			//  Conceptionally, this is wrong and should be improved (seed-prometheus should only scrape
-			//  vpa-recommenders in garden namespace, and prometheis in shoot namespaces should scrape their
-			//  vpa-recommenders, respectively).
+			// Conceptually, this is wrong and should be improved (seed-prometheus should only scrape
+			// vpa-recommenders in garden namespace, and prometheis in shoot namespaces should scrape their
+			// vpa-recommenders, respectively).
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-vpa-recommender", 8942): v1beta1constants.LabelNetworkPolicyAllowed,
 		},
 		CentralConfigs: prometheus.CentralConfigs{

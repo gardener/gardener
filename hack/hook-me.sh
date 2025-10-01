@@ -428,7 +428,7 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
                 --cert-key=/certs/client.key \
                 --v=3
         ;;
-        [Nn]* ) echo "You need to set \`ignoreResources\` to true and generate the controller installlation first in your extension chart before proceeding!"; exit;;
+        [Nn]* ) echo "You need to set \`ignoreResources\` to true and generate the controller installation first in your extension chart before proceeding!"; exit;;
         * ) echo "Please answer yes or no.";;
     esac
 done
