@@ -100,7 +100,7 @@ var _ = Describe("istioconfig", func() {
 		})
 
 		DescribeTable("#component.IstioConfigInterface implementation",
-			func(zoneAnnotation *string, useExposureClass bool, matcherService, matcherNamespace, matchLabels, ignoreExposureClassLabels gomegatypes.GomegaMatcher) {
+			func(zoneAnnotation *string, useExposureClass bool, matcherService, matcherNamespace, matchLabels, matchWildcardLabels gomegatypes.GomegaMatcher) {
 				if zoneAnnotation != nil {
 					operation.SeedNamespaceObject.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones] = *zoneAnnotation
 				}
@@ -114,7 +114,7 @@ var _ = Describe("istioconfig", func() {
 				Expect(operation.IstioServiceName()).To(matcherService)
 				Expect(operation.IstioNamespace()).To(matcherNamespace)
 				Expect(operation.IstioLabels()).To(matchLabels)
-				Expect(operation.IstioLabelsIgnoreExposureClass()).To(ignoreExposureClassLabels)
+				Expect(operation.WildcardIstioLabels()).To(matchWildcardLabels)
 			},
 
 			Entry("non-pinned control plane without exposure class", nil, false,
@@ -163,7 +163,7 @@ var _ = Describe("istioconfig", func() {
 			})
 
 			DescribeTable("#component.IstioConfigInterface implementation",
-				func(zoneAnnotation *string, useExposureClass bool, matcherService, matcherNamespace, matchLabels, ignoreExposureClassLabels gomegatypes.GomegaMatcher) {
+				func(zoneAnnotation *string, useExposureClass bool, matcherService, matcherNamespace, matchLabels, matchWildcardLabels gomegatypes.GomegaMatcher) {
 					if zoneAnnotation != nil {
 						operation.SeedNamespaceObject.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones] = *zoneAnnotation
 					}
@@ -177,7 +177,7 @@ var _ = Describe("istioconfig", func() {
 					Expect(operation.IstioServiceName()).To(matcherService)
 					Expect(operation.IstioNamespace()).To(matcherNamespace)
 					Expect(operation.IstioLabels()).To(matchLabels)
-					Expect(operation.IstioLabelsIgnoreExposureClass()).To(ignoreExposureClassLabels)
+					Expect(operation.WildcardIstioLabels()).To(matchWildcardLabels)
 				},
 
 				Entry("pinned control plane (single zone) without exposure class", &zoneName, false,
