@@ -6,7 +6,6 @@ package istio_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -446,10 +445,6 @@ var _ = Describe("istiod", func() {
 
 				istioSystemManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSystemSecret.Data)
 				Expect(err).NotTo(HaveOccurred())
-				fmt.Println("IstioSystemManifests")
-				fmt.Println(istioSystemManifests)
-				fmt.Println("expectedIstioSystemManifests")
-				fmt.Println(expectedIstioSystemManifests)
 				Expect(istioSystemManifests).To(ContainElements(expectedIstioSystemManifests))
 			} else {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(BeNotFoundError())
