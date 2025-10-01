@@ -83,7 +83,8 @@ type BastionStatus struct {
 type BastionList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard list object metadata.
-	metav1.ListMeta `json:"metadata"`
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is the list of Bastions.
 	Items []Bastion `json:"items"`
