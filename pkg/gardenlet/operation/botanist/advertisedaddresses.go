@@ -122,7 +122,7 @@ func (b *Botanist) GetIngressAdvertisedEndpoints(ctx context.Context) ([]gardenc
 	for _, ingress := range ingressList.Items {
 		for _, tlsItem := range ingress.Spec.TLS {
 			for _, hostItem := range tlsItem.Hosts {
-				addrName := fmt.Sprintf("ingress/%s", ingress.Name)
+				addrName := fmt.Sprintf("%s", ingress.Name)
 				addrLabelName, ok := ingress.GetLabels()[v1beta1constants.LabelShootEndpointName]
 				if ok && addrLabelName != "" {
 					addrName = addrLabelName
