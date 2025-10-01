@@ -50,7 +50,8 @@ func (i *ControlPlane) GetExtensionStatus() Status {
 // ControlPlaneList is a list of ControlPlane resources.
 type ControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is the list of ControlPlanes.
 	Items []ControlPlane `json:"items"`
