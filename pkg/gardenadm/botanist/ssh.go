@@ -79,7 +79,7 @@ var (
 
 // CopyManifests copies all manifests needed for `gardenadm init` to the remote machine under GardenadmBaseDir.
 func (b *AutonomousBotanist) CopyManifests(ctx context.Context, configDir fs.FS) error {
-	if err := prepareRemoteDirs(b.sshConnection); err != nil {
+	if err := prepareRemoteDirs(ctx, b.sshConnection); err != nil {
 		return err
 	}
 
@@ -100,12 +100,12 @@ func (b *AutonomousBotanist) CopyManifests(ctx context.Context, configDir fs.FS)
 	return b.copyShootState(ctx)
 }
 
-func prepareRemoteDirs(conn *sshutils.Connection) error {
+func prepareRemoteDirs(ctx context.Context, conn *sshutils.Connection) error {
 	// Empty manifests dir to start with a clean state on re-runs
-	if _, _, err := conn.Run("rm -rf " + ManifestsDir); err != nil {
+	if _, _, err := conn.Run(ctx, "rm -rf "+ManifestsDir); err != nil {
 		return fmt.Errorf("error removing manifests dir: %w", err)
 	}
-	if _, _, err := conn.Run("mkdir -p " + ManifestsDir); err != nil {
+	if _, _, err := conn.Run(ctx, "mkdir -p "+ManifestsDir); err != nil {
 		return fmt.Errorf("error ensuring manifests dir: %w", err)
 	}
 

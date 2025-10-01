@@ -283,29 +283,29 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		copyManifests = g.Add(flow.Task{
 			Name: "Copying manifests to the first control plane machine",
-			Fn: func(ctx context.Context) error {
+			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return b.CopyManifests(ctx, os.DirFS(opts.ConfigDir))
-			},
+			}).Timeout(time.Minute),
 			Dependencies: flow.NewTaskIDs(connectToMachine, compileShootState),
 		})
 
 		bootstrapControlPlane = g.Add(flow.Task{
 			Name: "Bootstrapping control plane on the first control plane machine",
-			Fn: func(context.Context) error {
-				return b.SSHConnection().RunWithStreams(nil, opts.Out, opts.ErrOut,
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.SSHConnection().RunWithStreams(ctx, nil, opts.Out, opts.ErrOut,
 					fmt.Sprintf("%s=%q /opt/bin/gardenadm init -d %q --log-level=%s",
 						imagevector.OverrideEnv, botanist.ImageVectorOverrideFile, botanist.ManifestsDir, opts.LogLevel,
 					),
 				)
-			},
+			}).Timeout(30 * time.Minute),
 			Dependencies: flow.NewTaskIDs(deployDNSRecord, copyManifests),
 		})
 
 		fetchKubeconfig = g.Add(flow.Task{
 			Name: "Fetching kubeconfig from the first control plane machine",
-			Fn: func(ctx context.Context) error {
+			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return b.FetchKubeconfig(ctx, opts.KubeconfigWriter)
-			},
+			}).Timeout(time.Minute),
 			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
 		})
 

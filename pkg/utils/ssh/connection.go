@@ -7,8 +7,11 @@ package ssh
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"io/fs"
+	"time"
 
 	"github.com/bramvdbogaerde/go-scp"
 	"golang.org/x/crypto/ssh"
@@ -80,13 +83,13 @@ func (c *Connection) WithOutputPrefix(prefix string) *Connection {
 }
 
 // Run executes the given command on the remote host and returns stdout and stderr streams.
-func (c *Connection) Run(command string) (io.Reader, io.Reader, error) {
+func (c *Connection) Run(ctx context.Context, command string) (io.Reader, io.Reader, error) {
 	var stdout, stderr bytes.Buffer
-	return &stdout, &stderr, c.RunWithStreams(nil, &stdout, &stderr, command)
+	return &stdout, &stderr, c.RunWithStreams(ctx, nil, &stdout, &stderr, command)
 }
 
 // RunWithStreams executes the given command on the remote host with the configured streams.
-func (c *Connection) RunWithStreams(stdin io.Reader, stdout, stderr io.Writer, command string) error {
+func (c *Connection) RunWithStreams(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, command string) error {
 	session, err := c.NewSession()
 	if err != nil {
 		return err
@@ -108,7 +111,49 @@ func (c *Connection) RunWithStreams(stdin io.Reader, stdout, stderr io.Writer, c
 		session.Stderr = NewPrefixedWriter(c.outputPrefix, session.Stderr)
 	}
 
-	return session.Run(command)
+	if err := session.Start(command); err != nil {
+		return fmt.Errorf("failed starting remote command: %w", err)
+	}
+
+	waitCh := make(chan error, 1)
+	go func() {
+		waitCh <- session.Wait()
+		close(waitCh)
+	}()
+
+	// Wait for the command to finish or the context to be done
+	select {
+	case err := <-waitCh:
+		// The command finished, return its error (if any).
+		return err
+
+	case <-ctx.Done():
+		// The context was canceled, interrupt the remote process to initiate graceful termination.
+		// At this point, we return the original context error in all cases.
+		if err := session.Signal(ssh.SIGINT); err != nil {
+			return errors.Join(ctx.Err(), fmt.Errorf("failed sending SIGINT to remote process: %w", err))
+		}
+
+		const terminationGracePeriod = 30 * time.Second
+
+		select {
+		case err := <-waitCh:
+			// The command terminated gracefully, return its error (if any)
+			if err != nil {
+				return errors.Join(ctx.Err(), fmt.Errorf("terminated remote process: %w", err))
+			}
+
+			return fmt.Errorf("terminated remote process: %w", ctx.Err())
+
+		case <-time.After(terminationGracePeriod):
+			// The command hasn't terminated gracefully within the grace period, force kill it.
+			if err := session.Signal(ssh.SIGKILL); err != nil {
+				return errors.Join(ctx.Err(), fmt.Errorf("failed sending SIGKILL to remote process after grace period (%s): %w", terminationGracePeriod.String(), err))
+			}
+
+			return fmt.Errorf("killed remote process: %w", ctx.Err())
+		}
+	}
 }
 
 // Copy copies the given bytes to a file at remotePath with the given permissions.
