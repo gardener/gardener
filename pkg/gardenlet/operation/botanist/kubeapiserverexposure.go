@@ -50,7 +50,7 @@ func (b *Botanist) defaultKubeAPIServerServiceWithSuffix(suffix string, register
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		&kubeapiserverexposure.ServiceValues{
-			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
+			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled && !v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
 			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
 			NameSuffix:                  suffix,
 		},
