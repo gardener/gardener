@@ -58,7 +58,7 @@ func computeMachineState(ctx context.Context, seedClient client.Client, namespac
 		}
 
 		// get machines that have a machine deployment as owner
-		machinesForMachineDeployment := machineSetOrDeploymentToMachines[machineDeployment.Name]
+		machinesForMachineDeployment := append([]machinev1alpha1.Machine{}, machineSetOrDeploymentToMachines[machineDeployment.Name]...)
 
 		for i, machineSet := range machineSets {
 			removeIrrelevantDataFromObject(&machineSets[i])
