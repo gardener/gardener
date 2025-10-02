@@ -613,7 +613,7 @@ func (r *Reconciler) newKubeAPIServerServiceWithSuffix(log logr.Logger, garden *
 		&kubeapiserverexposure.ServiceValues{
 			NamePrefix:                  namePrefix,
 			NameSuffix:                  suffix,
-			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings) && !features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
 		},
 		func() client.ObjectKey {
