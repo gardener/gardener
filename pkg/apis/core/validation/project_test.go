@@ -6,6 +6,7 @@ package validation_test
 
 import (
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -467,6 +468,8 @@ var _ = Describe("Project Validation Tests", func() {
 				{Key: "bar", Value: ptr.To("baz")},
 				{Key: "baz"},
 				{Key: "baz", Value: ptr.To("baz")},
+				{Key: "!nvalid", Value: ptr.To("va!ue")},
+				{Key: strings.Repeat("n", 64)},
 			}
 			project.Spec.Tolerations = &core.ProjectTolerations{
 				Defaults:  tolerations,
@@ -493,6 +496,22 @@ var _ = Describe("Project Validation Tests", func() {
 					"Field": Equal("spec.tolerations.defaults[6]"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.tolerations.defaults[7].key"),
+					"BadValue": Equal("!nvalid"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.tolerations.defaults[7].value"),
+					"BadValue": Equal("va!ue"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.tolerations.defaults[8].key"),
+					"BadValue": Equal(strings.Repeat("n", 64)),
+					"Detail":   Equal("name part must be no more than 63 characters"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.tolerations.whitelist[0].key"),
 				})),
@@ -507,6 +526,22 @@ var _ = Describe("Project Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("spec.tolerations.whitelist[6]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.tolerations.whitelist[7].key"),
+					"BadValue": Equal("!nvalid"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.tolerations.whitelist[7].value"),
+					"BadValue": Equal("va!ue"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.tolerations.whitelist[8].key"),
+					"BadValue": Equal(strings.Repeat("n", 64)),
+					"Detail":   Equal("name part must be no more than 63 characters"),
 				})),
 			))
 		})

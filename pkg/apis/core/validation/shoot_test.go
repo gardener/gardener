@@ -1027,6 +1027,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				{Key: "foo"},
 				{Key: "bar", Value: ptr.To("baz")},
 				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "!nvalid", Value: ptr.To("va!ue")},
+				{Key: strings.Repeat("n", 64)},
 			}
 
 			errorList := ValidateShoot(shoot)
@@ -1043,6 +1045,36 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("spec.tolerations[4]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.tolerations[5].key"),
+					"BadValue": Equal("!nvalid"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.tolerations[5].value"),
+					"BadValue": Equal("va!ue"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.tolerations[6].key"),
+					"BadValue": Equal(strings.Repeat("n", 64)),
+					"Detail":   Equal("name part must be no more than 63 characters"),
+				})),
+			))
+		})
+
+		It("should forbid invalid provider type", func() {
+			shoot.Spec.Provider.Type = "!nvalid"
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.provider.type"),
+					"BadValue": Equal("!nvalid"),
 				})),
 			))
 		})
@@ -1148,6 +1180,22 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.extensions[0].type"),
+					}))))
+			})
+
+			It("should forbid passing an extension w/ invalid type information", func() {
+				extension := core.Extension{
+					Type: "!nvalid",
+				}
+				shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("spec.extensions[0].type"),
+						"BadValue": Equal("!nvalid"),
 					}))))
 			})
 
@@ -3297,6 +3345,37 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.kubernetes.kubeScheduler.profile"),
 				}))))
 			})
+
+			It("should succeed when setting valid kubeMaxPDVols", func() {
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("127")
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should fail when setting invalid kubeMaxPDVols", func() {
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("foo")
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.kubernetes.kubeScheduler.kubeMaxPDVols"),
+					"BadValue": Equal("foo"),
+					"Detail":   Equal("conversion error: strconv.Atoi: parsing \"foo\": invalid syntax"),
+				}))))
+			})
+
+			It("should fail when setting invalid non positive kubeMaxPDVols", func() {
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("0")
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.kubernetes.kubeScheduler.kubeMaxPDVols"),
+					"BadValue": Equal("0"),
+					"Detail":   Equal("must be positive"),
+				}))))
+			})
 		})
 
 		Context("KubeProxy validation", func() {
@@ -3685,6 +3764,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 					core.VerticalPodAutoscaler{EvictAfterOOMThreshold: &negativeDuration}, "",
 					ConsistOf(field.Invalid(field.NewPath("evictAfterOOMThreshold"), negativeDuration.Duration.String(), "must be non-negative")),
 				),
+				Entry("with invalid evictionRateBurst field",
+					core.VerticalPodAutoscaler{EvictionRateBurst: ptr.To[int32](-1)}, "",
+					ConsistOf(field.Invalid(field.NewPath("evictionRateBurst"), int32(-1), "must be non-negative")),
+				),
+				Entry("with invalid evictionTolerance field",
+					core.VerticalPodAutoscaler{EvictionTolerance: ptr.To(-0.1)}, "",
+					ConsistOf(field.Invalid(field.NewPath("evictionTolerance"), -0.1, "fraction value must be in the range [0, 1)")),
+				),
+				Entry("with invalid recommendationMarginFraction field",
+					core.VerticalPodAutoscaler{RecommendationMarginFraction: ptr.To(1.0)}, "",
+					ConsistOf(field.Invalid(field.NewPath("recommendationMarginFraction"), 1.0, "fraction value must be in the range [0, 1)")),
+				),
 				Entry("with invalid updaterInterval field",
 					core.VerticalPodAutoscaler{UpdaterInterval: &negativeDuration}, "",
 					ConsistOf(field.Invalid(field.NewPath("updaterInterval"), negativeDuration.Duration.String(), "must be non-negative")),
@@ -3755,6 +3846,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("with valid fields",
 					core.VerticalPodAutoscaler{
 						EvictAfterOOMThreshold:                   &metav1.Duration{Duration: 5 * time.Minute},
+						EvictionRateBurst:                        ptr.To[int32](1),
+						EvictionTolerance:                        ptr.To(0.4),
+						RecommendationMarginFraction:             ptr.To(0.1),
 						UpdaterInterval:                          &metav1.Duration{Duration: 2 * time.Minute},
 						RecommenderInterval:                      &metav1.Duration{Duration: 2 * time.Minute},
 						TargetCPUPercentile:                      ptr.To(0.333),
@@ -6337,6 +6431,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("scheduler name", func() {
+			It("forbid setting an invalid scheduler name", func() {
+				shoot.Spec.SchedulerName = ptr.To("!nvalid")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.schedulerName"),
+					"BadValue": Equal("!nvalid"),
+				}))))
+			})
+
 			It("allow setting the default scheduler name when name was 'nil'", func() {
 				shoot.Spec.SchedulerName = nil
 				oldShoot := shoot.DeepCopy()
