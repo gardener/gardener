@@ -1163,7 +1163,12 @@ query_range:
 					})
 					Expect(references.InjectAnnotations(prometheusObj)).To(Succeed())
 
-					service.Spec.Ports[0].TargetPort = intstr.FromInt32(9091)
+					service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
+						Name:       "cortex",
+						Port:       81,
+						TargetPort: intstr.FromInt32(9091),
+						Protocol:   corev1.ProtocolTCP,
+					})
 
 					vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 						ContainerName: "cortex",
