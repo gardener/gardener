@@ -554,7 +554,7 @@ var _ = Describe("Interface", func() {
 				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
