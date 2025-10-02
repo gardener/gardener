@@ -186,7 +186,7 @@ var _ = Describe("Strategy", func() {
 			}
 			newCloudProfile := oldCloudProfile.DeepCopy()
 			newCloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
-				{Name: "architecture", Values: []string{"amd64"}},
+				{Name: "architecture", Values: []string{"amd64", "arm64"}},
 			}
 
 			cloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), newCloudProfile, oldCloudProfile)

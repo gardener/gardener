@@ -149,8 +149,7 @@ func validateMachineImageMapping(coreMachineImages []core.MachineImage, machineI
 
 		// validate that for each machine image there is a corresponding cpConfig image
 		if _, existsInConfig := providerImages.GetImage(machineImage.Name); !existsInConfig {
-			allErrs = append(allErrs, field.Required(machineImagePath,
-				fmt.Sprintf("must provide an image mapping for image %q in providerConfig", machineImage.Name)))
+			allErrs = append(allErrs, field.Required(machineImagePath, fmt.Sprintf("must provide an image mapping for image %q in providerConfig", machineImage.Name)))
 			continue
 		}
 
@@ -177,8 +176,7 @@ func validateMachineImageVersionMapping(machineImage core.MachineImage, provider
 		imageVersion, exists := providerImages.GetImageVersion(machineImage.Name, version.Version)
 		if !exists {
 			allErrs = append(allErrs, field.Required(machineImageVersionPath,
-				fmt.Sprintf("machine image version %s@%s is not defined in the providerConfig",
-					machineImage.Name, version.Version),
+				fmt.Sprintf("machine image version %s@%s is not defined in the providerConfig", machineImage.Name, version.Version),
 			))
 			continue // Skip further validation if version doesn't exist
 		}

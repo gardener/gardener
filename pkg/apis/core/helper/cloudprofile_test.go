@@ -552,7 +552,7 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 	})
 
-	Describe("#GetImageFlavorWithAppliedDefaults", func() {
+	Describe("#GetImageFlavorsWithAppliedDefaults", func() {
 		It("should apply defaults when capabilityFlavors are empty", func() {
 			var imageFlavors []core.MachineImageFlavor
 			capabilityDefinitions := []core.CapabilityDefinition{
@@ -560,7 +560,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				{Name: "architecture", Values: []string{"amd64"}},
 			}
 
-			result := GetImageFlavorWithAppliedDefaults(imageFlavors, capabilityDefinitions)
+			result := GetImageFlavorsWithAppliedDefaults(imageFlavors, capabilityDefinitions)
 
 			Expect(result).To(HaveLen(1))
 			Expect(result[0].Capabilities).To(Equal(core.Capabilities{
@@ -579,7 +579,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				{Name: "architecture", Values: []string{"amd64", "arm64"}},
 			}
 
-			result := GetImageFlavorWithAppliedDefaults(imageFlavors, capabilityDefinitions)
+			result := GetImageFlavorsWithAppliedDefaults(imageFlavors, capabilityDefinitions)
 
 			Expect(result).To(HaveLen(2))
 			Expect(result[0].Capabilities).To(Equal(core.Capabilities{

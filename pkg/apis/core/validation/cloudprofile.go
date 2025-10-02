@@ -56,18 +56,18 @@ func ValidateCloudProfileUpdate(newProfile, oldProfile *core.CloudProfile) field
 // ValidateCloudProfileSpec validates the specification of a CloudProfile object.
 func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	var (
-		allErrs      = field.ErrorList{}
-		capabilities = helper.CapabilityDefinitionsToCapabilities(spec.MachineCapabilities)
+		allErrs             = field.ErrorList{}
+		machineCapabilities = helper.CapabilityDefinitionsToCapabilities(spec.MachineCapabilities)
 	)
 
 	if len(spec.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must provide a provider type"))
 	}
 
-	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
-	allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, capabilities, fldPath.Child("machineImages"))...)
-	allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, capabilities, fldPath.Child("machineTypes"))...)
 	allErrs = append(allErrs, validateCapabilityDefinitions(spec.MachineCapabilities, fldPath.Child("machineCapabilities"))...)
+	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, machineCapabilities, fldPath.Child("machineImages"))...)
+	allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, machineCapabilities, fldPath.Child("machineTypes"))...)
 	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
 	allErrs = append(allErrs, validateCloudProfileRegions(spec.Regions, fldPath.Child("regions"))...)
 	allErrs = append(allErrs, validateCloudProfileBastion(spec, fldPath.Child("bastion"))...)
