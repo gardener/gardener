@@ -48,9 +48,9 @@ func (cp *cloudProfileValidator) Validate(_ context.Context, newObj, _ client.Ob
 	if err != nil {
 		return fmt.Errorf("could not decode providerConfig of CloudProfile %q: %w", cloudProfile.Name, err)
 	}
-	CapabilityDefinition, err := helper.ConvertV1beta1CapabilityDefinitions(cloudProfile.Spec.MachineCapabilities)
+	capabilityDefinitions, err := helper.ConvertV1beta1CapabilityDefinitions(cloudProfile.Spec.MachineCapabilities)
 	if err != nil {
 		return field.InternalError(field.NewPath("spec").Child("machineCapabilities"), err)
 	}
-	return validation.ValidateCloudProfileConfig(cpConfig, cloudProfile.Spec.MachineImages, CapabilityDefinition, providerConfigPath).ToAggregate()
+	return validation.ValidateCloudProfileConfig(cpConfig, cloudProfile.Spec.MachineImages, capabilityDefinitions, providerConfigPath).ToAggregate()
 }
