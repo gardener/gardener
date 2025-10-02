@@ -13,19 +13,19 @@ This guide describes the typical steps to deprecate a Kubernetes version in the 
 ## Tasks
 - Create an umbrella issue and include a list of all repositories that must be checked out and potentially be modified in order to deprecate the Kubernetes version.
     - example: https://github.com/gardener/gardener/issues/12409
-- Research all the possible deprecations that could be related to the deprecation of the version.
+- Research all the possible deprecations (API, functions, etc) that could be related to the deprecation of the version.
 - Search for the version in codebase. Include all its variants - if it's 1.33, search for both "1.33" and "133".
 - Replace the version in the code search findings with the highest version supporting the surrounding logic. 
 - In documentation you can usually replace the version with a newer one or just remove the version (for example in README.md files).
 - Adapt examples to use a newer version, preferably one of the newest ones.
-- For provider-extensions remove the images for the version in `imagevector/images.yaml` and also check files containing Cloud Profiles.
+- Remove the images for the version in `imagevector/images.yaml` and also check files containing Cloud Profiles.
 - Adapt charts, for example:
 ```
     {{- if semverCompare ">= <version>" .Values.kubernetesVersion }}
     - --provide-node-service=false
     {{- end }}
 ```
-- Adapt featuregates that were added or removed in <= \<version>
+- Adapt featuregates, admission plugins, controllers that were added or removed in <= \<version> and documentation related to them
 
 
 
