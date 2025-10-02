@@ -59,7 +59,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 							"__meta_kubernetes_service_name",
 							"__meta_kubernetes_service_port_name",
 						},
-						Regex:  "prometheus-cache;" + prometheus.ServicePortName,
+						Regex:  "prometheus-cache;" + prometheus.ServicePorts().Web.Name,
 						Action: "keep",
 					},
 					{

@@ -41,7 +41,7 @@ func CentralServiceMonitors() []*monitoringv1.ServiceMonitor {
 							`{__name__="container_cpu_usage_seconds_total",container="kube-apiserver"}`,
 						},
 					},
-					Port: prometheus.ServicePortName,
+					Port: prometheus.ServicePorts().Web.Name,
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						// This service monitor is targeting the prometheis in multiple namespaces. Without explicitly
 						// overriding the job label, prometheus-operator would choose job=prometheus-web (service name).
