@@ -188,6 +188,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		It("should write the shoot kubeconfig to the specified file", func(ctx SpecContext) {
 			Eventually(ctx, session.Err).Should(gbytes.Say("Writing kubeconfig of the autonomous shoot to file"))
 
+			// #nosec G304 -- kubeconfigOutputFile is controlled by the test
 			Expect(os.ReadFile(kubeconfigOutputFile)).To(ContainSubstring("server: https://api.root.garden.local.gardener.cloud"))
 		}, SpecTimeout(time.Minute))
 
