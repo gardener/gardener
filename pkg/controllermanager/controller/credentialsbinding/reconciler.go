@@ -29,9 +29,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-const (
-	finalizerName = "gardener.cloud/credentialsbinding"
-)
+const finalizerName = "gardener.cloud/credentialsbinding"
 
 // Reconciler reconciles CredentialsBinding.
 type Reconciler struct {
