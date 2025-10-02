@@ -26,9 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
-const (
-	finalizerName = "gardener.cloud/secretbinding"
-)
+const finalizerName = "gardener.cloud/secretbinding"
 
 // Reconciler reconciles SecretBindings.
 type Reconciler struct {
