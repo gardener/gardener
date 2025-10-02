@@ -165,6 +165,18 @@
       ],
     },
     {
+      // Group opentelemetry-operator updates in one PR.
+      groupName: 'opentelemetry-operator',
+      matchDatasources: [
+        'github-releases',
+        'go',
+      ],
+      matchPackageNames: [
+        '/.*open-telemetry/opentelemetry-operator$/',
+        '/github\\.com/open-telemetry/opentelemetry-operator$/',
+      ],
+    },
+    {
       // Group Prometheus updates in one PR.
       groupName: 'prometheus',
       matchDatasources: [
@@ -433,6 +445,7 @@
         '!/envoyproxy/.+/',
         '!/fluent/.+/',
         '!/perses/.+/',
+        '!/open-telemetry/.+/',
       ],
     },
     {
