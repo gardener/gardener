@@ -26,6 +26,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
+const finalizerName = "gardener.cloud/secretbinding"
+
 // Reconciler reconciles SecretBindings.
 type Reconciler struct {
 	Client   client.Client
@@ -57,6 +59,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, nil
 		}
 
+		secret := &corev1.Secret{}
+		errSecret := r.Client.Get(ctx, client.ObjectKey{Namespace: secretBinding.SecretRef.Namespace, Name: secretBinding.SecretRef.Name}, secret)
+		if errSecret != nil && !apierrors.IsNotFound(errSecret) {
+			return reconcile.Result{}, errSecret
+		} else if errSecret == nil {
+			// TODO(dimityrmirchev): remove this handling in a future release, the finalizer should be added by the reconcile function
+			// ensure the new finalizer is present on the referenced secret before removing the old finalizer
+			if !controllerutil.ContainsFinalizer(secret, finalizerName) && secret.GetDeletionTimestamp() == nil {
+				log.Info("Adding finalizer", "finalizer", finalizerName) //nolint:logcheck
+				if err := controllerutils.AddFinalizers(ctx, r.Client, secret, finalizerName); err != nil {
+					return reconcile.Result{}, fmt.Errorf("could not add finalizer to secret: %w", err)
+				}
+			}
+			if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
+				log.Info("Removing finalizer", "finalizer", gardencorev1beta1.ExternalGardenerName) //nolint:logcheck
+				if err := controllerutils.RemoveFinalizers(ctx, r.Client, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
+				}
+			}
+			// end TODO
+		}
+
 		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.Client, secretBinding)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -70,35 +94,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				return reconcile.Result{}, err
 			}
 
-			if mayReleaseSecret {
-				secret := &corev1.Secret{}
-				if err := r.Client.Get(ctx, client.ObjectKey{Namespace: secretBinding.SecretRef.Namespace, Name: secretBinding.SecretRef.Name}, secret); err == nil {
-					// Remove shoot provider label and 'referred by a secret binding' label
-					hasProviderLabel, providerLabel := getProviderLabel(secret.Labels)
-					if hasProviderLabel || metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
-						patch := client.MergeFrom(secret.DeepCopy())
-						delete(secret.Labels, v1beta1constants.LabelSecretBindingReference)
+			if mayReleaseSecret && errSecret == nil {
+				// Remove shoot provider label and 'referred by a secret binding' label
+				hasProviderLabel, providerLabel := getProviderLabel(secret.Labels)
+				if hasProviderLabel || metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
+					patch := client.MergeFrom(secret.DeepCopy())
+					delete(secret.Labels, v1beta1constants.LabelSecretBindingReference)
 
-						// The secret can be still referenced by a credentialsbinding so
-						// only remove the provider label if there is no credentialsbinding reference label
-						if !metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference) {
-							delete(secret.Labels, providerLabel)
-						}
+					// We rely on the sync-provider-secret-labels.gardener.cloud webhook to re-add the provider label if needed
+					delete(secret.Labels, providerLabel)
 
-						if err := r.Client.Patch(ctx, secret, patch); err != nil {
-							return reconcile.Result{}, fmt.Errorf("failed to remove referred label from Secret: %w", err)
-						}
+					if err := r.Client.Patch(ctx, secret, patch); err != nil {
+						return reconcile.Result{}, fmt.Errorf("failed to remove referred label from Secret: %w", err)
 					}
-					// Remove finalizer from referenced secret
-					// only if the secret does not have a credentialsbinding reference label
-					if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) && !metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference) {
-						log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
-						if err := controllerutils.RemoveFinalizers(ctx, r.Client, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-							return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
-						}
+				}
+
+				if controllerutil.ContainsFinalizer(secret, finalizerName) {
+					log.Info("Removing finalizer", "finalizer", finalizerName)
+					if err := controllerutils.RemoveFinalizers(ctx, r.Client, secret, finalizerName); err != nil {
+						return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
 					}
-				} else if !apierrors.IsNotFound(err) {
-					return reconcile.Result{}, err
 				}
 			}
 
@@ -136,9 +151,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
-		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
-		if err := controllerutils.AddFinalizers(ctx, r.Client, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+	if !controllerutil.ContainsFinalizer(secret, finalizerName) {
+		log.Info("Adding finalizer", "finalizer", finalizerName)
+		if err := controllerutils.AddFinalizers(ctx, r.Client, secret, finalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("could not add finalizer to secret: %w", err)
+		}
+	}
+
+	if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
+		log.Info("Removing finalizer", "finalizer", gardencorev1beta1.ExternalGardenerName)
+		if err := controllerutils.RemoveFinalizers(ctx, r.Client, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not add finalizer to secret: %w", err)
 		}
 	}
@@ -197,6 +219,13 @@ func (r *Reconciler) mayReleaseSecret(ctx context.Context, secretBindingNamespac
 		if secretBinding.Namespace == secretBindingNamespace && secretBinding.Name == secretBindingName {
 			continue
 		}
+
+		if secretBinding.DeletionTimestamp != nil {
+			// secret bindings that are already marked for deletion
+			// are not considered to be protecting the referenced secret
+			continue
+		}
+
 		if secretBinding.SecretRef.Namespace == secretNamespace && secretBinding.SecretRef.Name == secretName {
 			return false, nil
 		}

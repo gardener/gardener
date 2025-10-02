@@ -171,7 +171,7 @@ var _ = Describe("CredentialsBinding controller test", func() {
 			By("Ensure finalizer and labels got added to Secret and Quota")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				g.Expect(secret.Finalizers).To(ConsistOf("gardener.cloud/gardener"))
+				g.Expect(secret.Finalizers).To(ConsistOf("gardener.cloud/credentialsbinding"))
 				g.Expect(secret.Labels).To(And(
 					HaveKeyWithValue("provider.shoot.gardener.cloud/"+providerType, "true"),
 					HaveKeyWithValue("reference.gardener.cloud/credentialsbinding", "true"),
@@ -194,7 +194,7 @@ var _ = Describe("CredentialsBinding controller test", func() {
 			By("Ensure finalizer and labels got removed from Secret and Quota")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				g.Expect(secret.Finalizers).NotTo(ContainElement("gardener.cloud/gardener"))
+				g.Expect(secret.Finalizers).NotTo(ContainElement("gardener.cloud/credentialsbinding"))
 				g.Expect(secret.Labels).NotTo(HaveKeyWithValue("reference.gardener.cloud/credentialsbinding", "true"))
 			}).Should(Succeed())
 
@@ -208,7 +208,7 @@ var _ = Describe("CredentialsBinding controller test", func() {
 			By("Ensure finalizer and labels got added to Secret and Quota")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				g.Expect(secret.Finalizers).To(ConsistOf("gardener.cloud/gardener"))
+				g.Expect(secret.Finalizers).To(ConsistOf("gardener.cloud/credentialsbinding"))
 				g.Expect(secret.Labels).To(And(
 					HaveKeyWithValue("provider.shoot.gardener.cloud/"+providerType, "true"),
 					HaveKeyWithValue("reference.gardener.cloud/credentialsbinding", "true"),
@@ -239,7 +239,7 @@ var _ = Describe("CredentialsBinding controller test", func() {
 			By("Ensure finalizer and labels are still present on Secret and Quota")
 			Consistently(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				g.Expect(secret.Finalizers).To(ConsistOf("gardener.cloud/gardener"))
+				g.Expect(secret.Finalizers).To(ConsistOf("gardener.cloud/credentialsbinding"))
 				g.Expect(secret.Labels).To(And(
 					HaveKeyWithValue("provider.shoot.gardener.cloud/"+providerType, "true"),
 					HaveKeyWithValue("reference.gardener.cloud/credentialsbinding", "true"),
