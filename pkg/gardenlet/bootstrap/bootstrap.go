@@ -16,62 +16,93 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 )
 
-// SeedCSRPrefix defines the prefix of seed CSR created by gardenlet.
-const SeedCSRPrefix = "seed-csr-"
+const (
+	// SeedCSRPrefix defines the prefix of seed CSR created by gardenlet.
+	SeedCSRPrefix = "seed-csr-"
+	// ShootCSRPrefix defines the prefix of autonomous shoot CSR created by gardenlet.
+	ShootCSRPrefix = "shoot-csr-"
+)
 
 // RequestKubeconfigWithBootstrapClient creates a kubeconfig with a signed certificate using the given bootstrap client
 // returns the kubeconfig []byte representation, the CSR name, the seed name or an error.
 func RequestKubeconfigWithBootstrapClient(
 	ctx context.Context,
 	log logr.Logger,
-	seedClient client.Client,
+	runtimeClient client.Client,
 	bootstrapClientSet kubernetes.Interface,
 	kubeconfigKey, bootstrapKubeconfigKey client.ObjectKey,
-	seedName string,
+	seedConfig *gardenletconfigv1alpha1.SeedConfig,
+	autonomousShootMeta *types.NamespacedName,
 	validityDuration *metav1.Duration,
 ) (
 	[]byte,
 	string,
-	string,
 	error,
 ) {
-	certificateSubject := &pkix.Name{
-		Organization: []string{v1beta1constants.SeedsGroup},
-		CommonName:   v1beta1constants.SeedUserNamePrefix + seedName,
+	var (
+		csrPrefix          string
+		certificateSubject *pkix.Name
+	)
+
+	switch {
+	case seedConfig != nil && seedConfig.Name != "":
+		seedName := gardenletbootstraputil.GetSeedName(seedConfig)
+		log = log.WithValues("seedName", seedName)
+
+		csrPrefix = SeedCSRPrefix
+		certificateSubject = &pkix.Name{
+			Organization: []string{v1beta1constants.SeedsGroup},
+			CommonName:   v1beta1constants.SeedUserNamePrefix + seedName,
+		}
+
+	case gardenlet.IsResponsibleForAutonomousShoot():
+		log = log.WithValues("shoot", autonomousShootMeta)
+
+		csrPrefix = ShootCSRPrefix
+		certificateSubject = &pkix.Name{
+			Organization: []string{v1beta1constants.ShootsGroup},
+			CommonName:   v1beta1constants.ShootUserNamePrefix + autonomousShootMeta.Namespace + ":" + autonomousShootMeta.Name,
+		}
+
+	default:
+		return nil, "", fmt.Errorf("failed determining gardenlet bootstrap scenario (seed or autonomous shoot)")
 	}
 
-	certData, privateKeyData, csrName, err := certificatesigningrequest.RequestCertificate(ctx, log, bootstrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, validityDuration, SeedCSRPrefix)
+	certData, privateKeyData, csrName, err := certificatesigningrequest.RequestCertificate(ctx, log, bootstrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, validityDuration, csrPrefix)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
+		return nil, "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
 	}
 
 	log.Info("Storing kubeconfig with bootstrapped certificate in kubeconfig secret on target cluster")
-	kubeconfig, err := gardenletbootstraputil.UpdateGardenKubeconfigSecret(ctx, bootstrapClientSet.RESTConfig(), certData, privateKeyData, seedClient, kubeconfigKey)
+	kubeconfig, err := gardenletbootstraputil.UpdateGardenKubeconfigSecret(ctx, bootstrapClientSet.RESTConfig(), certData, privateKeyData, runtimeClient, kubeconfigKey)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("unable to update secret %q with bootstrapped kubeconfig: %w", kubeconfigKey.String(), err)
+		return nil, "", fmt.Errorf("unable to update secret %q with bootstrapped kubeconfig: %w", kubeconfigKey.String(), err)
 	}
 
 	log.Info("Deleting bootstrap kubeconfig secret from target cluster")
-	if err := kubernetesutils.DeleteObject(ctx, seedClient, &corev1.Secret{
+	if err := kubernetesutils.DeleteObject(ctx, runtimeClient, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bootstrapKubeconfigKey.Name,
 			Namespace: bootstrapKubeconfigKey.Namespace,
 		},
 	}); err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
-	return kubeconfig, csrName, seedName, nil
+	return kubeconfig, csrName, nil
 }
 
 // DeleteBootstrapAuth checks which authentication mechanism was used to request a certificate
@@ -90,7 +121,7 @@ func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer clien
 		resourcesToDelete = append(resourcesToDelete,
 			&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      bootstraptokenapi.BootstrapTokenSecretPrefix + strings.TrimPrefix(csr.Spec.Username, "system:bootstrap:"),
+					Name:      bootstraptokenapi.BootstrapTokenSecretPrefix + strings.TrimPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix),
 					Namespace: metav1.NamespaceSystem,
 				},
 			},

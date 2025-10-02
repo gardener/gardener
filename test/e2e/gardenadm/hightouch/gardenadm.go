@@ -19,6 +19,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -58,8 +59,11 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			cancelPortForward context.CancelFunc
 			shootClientSet    kubernetes.Interface
 
-			configDirectory             = "/gardenadm/resources"
-			gardenClusterKubeconfigPath = "/tmp/virtual-garden-kubeconfig"
+			configDirectory = "/gardenadm/resources"
+
+			gardenClientSet                      kubernetes.Interface
+			gardenClusterKubeconfigPathOnHost    = filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "virtual-garden", "kubeconfig")
+			gardenClusterKubeconfigPathOnMachine = "/tmp/virtual-garden-kubeconfig"
 		)
 
 		BeforeAll(func() {
@@ -223,23 +227,35 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			}).Should(Succeed())
 		}, SpecTimeout(2*time.Minute))
 
+		It("should create a client for garden cluster", func(ctx SpecContext) {
+			By("Create client set")
+			Eventually(ctx, func() error {
+				var err error
+				gardenClientSet, err = kubernetes.NewClientFromFile("", gardenClusterKubeconfigPathOnHost,
+					kubernetes.WithDisabledCachedClient(),
+					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
+				)
+				return err
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
 		It("should copy the garden cluster kubeconfig to the machine pod", func(ctx SpecContext) {
 			// In the test setup via Skaffold, we build the 'gardenadm' binary and copy it to the machine pods. Hence,
 			// the binary is not available on the host without further ado. For simplicity, we copy the garden cluster
 			// kubeconfig from the host into the machine pod here. This enables us to execute
 			// 'gardenadm token create --print-connect-command' from the machine pod.
 			By("Copy local garden cluster kubeconfig to file in machine pod")
-			gardenClusterKubeconfig, err := os.ReadFile(filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "virtual-garden", "kubeconfig"))
+			gardenClusterKubeconfig, err := os.ReadFile(gardenClusterKubeconfigPathOnHost) // #nosec: G304 -- variable points to a static file path
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, func() error {
-				_, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("echo '%s' > %s", string(gardenClusterKubeconfig), gardenClusterKubeconfigPath))
+				_, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("echo '%s' > %s", string(gardenClusterKubeconfig), gardenClusterKubeconfigPathOnMachine))
 				return err
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("should generate a bootstrap token and connect the autonomous shoot to Gardener", func(ctx SpecContext) {
-			stdOut, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=garden --shoot-name=root", gardenClusterKubeconfigPath))
+			stdOut, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=garden --shoot-name=root", gardenClusterKubeconfigPathOnMachine))
 			Expect(err).NotTo(HaveOccurred())
 			connectCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
 
@@ -247,6 +263,27 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your autonomous shoot cluster has successfully been connected to Gardener!"))
+
+			Eventually(ctx, func(g Gomega) {
+				csrList := &certificatesv1.CertificateSigningRequestList{}
+				g.Expect(gardenClientSet.Client().List(ctx, csrList)).To(Succeed())
+
+				var gardenletCSR *certificatesv1.CertificateSigningRequest
+				for i := range csrList.Items {
+					if strings.HasPrefix(csrList.Items[i].Name, "shoot-csr") {
+						gardenletCSR = &csrList.Items[i]
+						break
+					}
+				}
+
+				g.Expect(gardenletCSR).NotTo(BeNil())
+				g.Expect(gardenletCSR.Status.Conditions).To(ContainCondition(
+					MatchFields(IgnoreExtras, Fields{"Type": Equal(certificatesv1.CertificateApproved)}),
+					MatchFields(IgnoreExtras, Fields{"Status": Equal(corev1.ConditionTrue)}),
+					MatchFields(IgnoreExtras, Fields{"Message": Equal("Auto approving gardenlet client certificate after SubjectAccessReview.")}),
+					MatchFields(IgnoreExtras, Fields{"Reason": Equal("AutoApproved")}),
+				))
+			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		// TODO(rfranzke): Implement this as 'gardenadm connect' progresses.

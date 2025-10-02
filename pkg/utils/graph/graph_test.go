@@ -40,7 +40,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-var _ = Describe("graph", func() {
+var _ = Describe("graph for seeds", func() {
 	var (
 		ctx = context.TODO()
 
@@ -2423,6 +2423,115 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))
 		Expect(graph.graph.Edges().Len()).To(Equal(1))
 		expectPaths(graph, 0, paths)
+	})
+})
+
+var _ = Describe("graph for shoots", func() {
+	var (
+		ctx = context.TODO()
+
+		fakeClient                            client.Client
+		fakeInformerCertificateSigningRequest *controllertest.FakeInformer
+		fakeInformerGardenlet                 *controllertest.FakeInformer
+		fakeInformers                         *informertest.FakeInformers
+
+		log   logr.Logger
+		graph *graph
+
+		shootNamespace = "shoot-namespace"
+		shootName      = "shoot-name"
+
+		csr1 *certificatesv1.CertificateSigningRequest
+
+		gardenlet1 *seedmanagementv1alpha1.Gardenlet
+	)
+
+	BeforeEach(func() {
+		scheme := kubernetes.GardenScheme
+		Expect(metav1.AddMetaToScheme(scheme)).To(Succeed())
+
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		fakeInformerCertificateSigningRequest = &controllertest.FakeInformer{}
+		fakeInformerGardenlet = &controllertest.FakeInformer{}
+
+		fakeInformers = &informertest.FakeInformers{
+			Scheme: scheme,
+			InformersByGVK: map[schema.GroupVersionKind]toolscache.SharedIndexInformer{
+				certificatesv1.SchemeGroupVersion.WithKind("CertificateSigningRequest"): fakeInformerCertificateSigningRequest,
+				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("Gardenlet"):         fakeInformerGardenlet,
+			},
+		}
+
+		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
+		graph = New(log, fakeClient, true)
+		Expect(graph.Setup(ctx, fakeInformers)).To(Succeed())
+
+		csr1 = &certificatesv1.CertificateSigningRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: "csr1"},
+			Spec: certificatesv1.CertificateSigningRequestSpec{
+				Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
+MIICrTCCAZUCAQAwaDElMCMGA1UECgwcZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNo
+b290czE/MD0GA1UEAww2Z2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNob290OnNob290
+LW5hbWVzcGFjZTpzaG9vdC1uYW1lMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+CgKCAQEA4pgVu/dZ3SFK8myE1ywscgaAuA4WRPDCegjIyrCK6ZCXc/srdzkFkcck
+pAkebs5q4XfO8/ELQfpsUU0kIrZG+AgzuBKLq2DwIK/0Xb8xtyExb+supVum0ugA
+1h2yJVK0QdzgSoEIBTezvnIqy1p3zNgOOaPlIUBWzCiGoQIQOb2PWDkrv/IQL4I4
+Pt1pwVolNqNH7iExpCLCAqHYQYnNYjHdX3lw+cS72Vx8YwE2ex7v89o0O8yoSk6/
+w/t/GNRtfdXlCipI5XP+iH3kGVQa3485eu/MP7Zj1goYJQclHNBvDcWk5BcIIA7B
+dZQgw3VRmapOlsuHjQHTa+MIccdRQQIDAQABoAAwDQYJKoZIhvcNAQELBQADggEB
+AL8QqH9x4D3Hi8EkQ+bL7U81o766T1oKWksnMeJk7jyilrWKRotBLJzijzRTe6Br
+wst2faOXTCqsSgHu31z2MU3bCS0pYA8SrFLCp2uEP3oQgDFmVv6Gm9MViK6cHIe/
+zNvBwqnrpCkOtjQnjDga4MxZZo2d/Ada11/arIR9Two0/EFJr0pYI0RnQ+SBdTEQ
+PxC38H4SLeAx0x4CV/lKVT/7a2siOIcW1LTtjRVaCFbplTeUqFYm9uA4quYObb4d
+Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
+2MyLm9v3qQ4mbHB8XgV2Nrg=
+-----END CERTIFICATE REQUEST-----`),
+				Usages: []certificatesv1.KeyUsage{
+					certificatesv1.UsageKeyEncipherment,
+					certificatesv1.UsageDigitalSignature,
+					certificatesv1.UsageClientAuth,
+				},
+			},
+		}
+
+		gardenlet1 = &seedmanagementv1alpha1.Gardenlet{
+			ObjectMeta: metav1.ObjectMeta{Name: "autonomous-shoot-" + shootName, Namespace: shootNamespace},
+		}
+	})
+
+	It("should behave as expected for certificatesv1.CertificateSigningRequest", func() {
+		By("Add")
+		fakeInformerCertificateSigningRequest.Add(csr1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeCertificateSigningRequest, "", csr1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeTrue())
+
+		By("Delete")
+		fakeInformerCertificateSigningRequest.Delete(csr1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeCertificateSigningRequest, "", csr1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeFalse())
+
+		By("Add unrelated")
+		csr1.Spec.Usages = nil
+		fakeInformerCertificateSigningRequest.Add(csr1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeCertificateSigningRequest, "", csr1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeFalse())
+	})
+
+	It("should behave as expected for seedmanagementv1alpha1.Gardenlet", func() {
+		By("Add")
+		fakeInformerGardenlet.Add(gardenlet1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeTrue())
+
+		By("Delete")
+		fakeInformerGardenlet.Delete(gardenlet1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, VertexTypeShoot, shootNamespace, shootName)).To(BeFalse())
 	})
 })
 
