@@ -190,7 +190,7 @@ images:
   - name: opentelemetry-collector
     sourceRepository: github.com/open-telemetry/opentelemetry-collector
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/opentelemetry-collector-releases/opentelemetry-collector-contrib
-    tag: "0.129.1"
+    tag: "v0.136.0"
     #TODO(rrhubenov) Replace the repo & tag when the release pipelines for gardener/opentelemetry-collector are ready.
     # repository: europe-docker.pkg.dev/gardener-project/releases/3rd/opentelemetry-collector/opentelemetry-collector-control-plane
     # tag: "v0.0.1"
