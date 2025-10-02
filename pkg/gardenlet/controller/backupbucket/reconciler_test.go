@@ -226,6 +226,9 @@ var _ = Describe("Controller", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
 			Expect(extensionSecret.Data).To(Equal(gardenSecret.Data))
 
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(gardenSecret), gardenSecret)).To(Succeed())
+			Expect(gardenSecret.Finalizers).To(Equal([]string{"core.gardener.cloud/backupbucket"}))
+
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
 			Expect(extensionBackupBucket.Spec).To(Equal(extensionsv1alpha1.BackupBucketSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -356,6 +359,9 @@ var _ = Describe("Controller", func() {
 			Expect(extensionSecret.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/namespace", workloadIdentity.Namespace))
 			Expect(extensionSecret.Annotations).To(HaveKey("gardener.cloud/timestamp"))
 			Expect(extensionSecret.Type).To(BeEquivalentTo("Opaque"))
+
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity)).To(Succeed())
+			Expect(workloadIdentity.Finalizers).To(Equal([]string{"core.gardener.cloud/backupbucket"}))
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
 			Expect(extensionBackupBucket.Spec).To(Equal(extensionsv1alpha1.BackupBucketSpec{
