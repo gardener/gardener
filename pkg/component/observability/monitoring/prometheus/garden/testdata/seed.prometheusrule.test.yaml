@@ -15,16 +15,20 @@ tests:
     interval: 1m
     input_series:
       - series: garden_seed_condition{condition = "ExtensionsReady",
-                                      name      = "seed-flapping"}
+                                      name      = "seed-flapping",
+                                      project   = "garden"}
         values: 0x2 0 0 2 -1 2 0x24
       - series: garden_seed_condition{condition = "ExtensionsReady",
-                                      name      = "seed-progressing-for-long"}
+                                      name      = "seed-progressing-for-long",
+                                      project   = "garden"}
         values: 0x2 2 2 0 2 2 2 0x23
       - series: garden_seed_condition{condition = "GardenletReady",
-                                      name      = "seed-flapping"}
+                                      name      = "seed-flapping",
+                                      project   = "garden"}
         values: 0 0 2 -1 2 0 0 0 0 0
       - series: garden_seed_condition{condition = "GardenletReady",
-                                      name      = "seed-progressing-for-long"}
+                                      name      = "seed-progressing-for-long",
+                                      project   = "garden"}
         values: 2 2 0 0 2 2 0 0 0 0
       - series: garden_shoot_condition{condition = "APIServerUnavailable",
                                        is_seed   = "true",
@@ -48,6 +52,7 @@ tests:
               condition: ExtensionsReady
               name: seed-flapping
               mute_on_weekends: "true"
+              project: garden
             exp_annotations:
               summary: >-
                 Seed Condition Failing
@@ -63,6 +68,7 @@ tests:
               condition: GardenletReady
               name: seed-flapping
               mute_on_weekends: "true"
+              project: garden
             exp_annotations:
               summary: >-
                 Seed Condition Failing
@@ -75,6 +81,7 @@ tests:
               condition: APIServerUnavailable
               name: seed-flapping
               mute_on_weekends: "true"
+              project: garden
             exp_annotations:
               summary: >-
                 Seed Condition Failing
@@ -109,6 +116,7 @@ tests:
               condition: SystemComponentsHealthy
               name: seed-one
               mute_on_weekends: "true"
+              project: garden
             exp_annotations:
               summary: >-
                 Seed Condition Failing
@@ -121,6 +129,7 @@ tests:
               condition: SeedSystemComponentsHealthy
               name: seed-two
               mute_on_weekends: "true"
+              project: garden
             exp_annotations:
               summary: >-
                 Seed Condition Failing
@@ -136,6 +145,7 @@ tests:
               condition: GardenletReady
               name: seed-three
               mute_on_weekends: "true"
+              project: garden
             exp_annotations:
               summary: >-
                 Seed Condition Failing
@@ -148,6 +158,7 @@ tests:
               condition: APIServerUnavailable
               name: seed-four
               mute_on_weekends: "true"
+              project: garden
             exp_annotations:
               summary: >-
                 Seed Condition Failing
