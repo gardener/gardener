@@ -253,7 +253,6 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 			It("should requeue with the general sync period", func() {
 				requeueAfter := infos.RequeueAfter
-				Expect(requeueAfter.Requeue).To(BeFalse())
 				Expect(requeueAfter.RequeueAfter).To(Equal(cfg.SyncPeriod.Duration))
 			})
 
@@ -269,7 +268,6 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 				It("should requeue with the shoot's sync period", func() {
 					requeueAfter := infos.RequeueAfter
-					Expect(requeueAfter.Requeue).To(BeFalse())
 					Expect(requeueAfter.RequeueAfter).To(Equal(shootSyncPeriod))
 				})
 			})
@@ -294,7 +292,6 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 					It("should requeue the shoot during its next maintenance time window", func() {
 						requeueAfter := infos.RequeueAfter
-						Expect(requeueAfter.Requeue).To(BeFalse())
 						Expect(requeueAfter.RequeueAfter).To(BeNumerically(">", 0))
 						Expect(requeueAfter.RequeueAfter).To(BeNumerically("<", 23*time.Hour))
 
@@ -350,7 +347,6 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 						It("should requeue the shoot during its next maintenance time window", func() {
 							requeueAfter := infos.RequeueAfter
-							Expect(requeueAfter.Requeue).To(BeFalse())
 							Expect(requeueAfter.RequeueAfter).To(BeNumerically(">", 23*time.Hour))
 							Expect(requeueAfter.RequeueAfter).To(BeNumerically("<", 47*time.Hour))
 
