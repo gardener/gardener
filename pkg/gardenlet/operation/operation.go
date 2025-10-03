@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributorsgardenlet/operation/operation
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -446,6 +446,11 @@ func (o *Operation) ComputePrometheusHost() string {
 // ComputeValiHost computes the host for vali.
 func (o *Operation) ComputeValiHost() string {
 	return o.ComputeIngressHost("v")
+}
+
+// ComputeOpenTelemetryCollectorHost computes the host for the Collector in the control-plane.
+func (o *Operation) ComputeOpenTelemetryCollectorHost() string {
+	return o.ComputeIngressHost("otc")
 }
 
 // technicalIDPattern addresses the ambiguity that one or two dashes could follow the prefix "shoot" in the technical ID of the shoot.

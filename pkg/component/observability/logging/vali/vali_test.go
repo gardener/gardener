@@ -46,23 +46,24 @@ import (
 )
 
 const (
-	namespace                          = "shoot--foo--bar"
-	managedResourceName                = "vali"
-	managedResourceSecretName          = "managedresource-vali"
-	managedResourceNameTarget          = "vali-target"
-	managedResourceSecretNameTarget    = "managedresource-vali-target"
-	valiName                           = "vali"
-	valiConfigMapName                  = "vali-config-bc8a885d"
-	telegrafConfigMapName              = "telegraf-config-b4c38756"
-	valiImage                          = "vali:0.0.1"
-	curatorImage                       = "curator:0.0.1"
-	initLargeDirImage                  = "tune2fs:0.0.1"
-	telegrafImage                      = "telegraf-iptables:0.0.1"
-	kubeRBACProxyImage                 = "kube-rbac-proxy:0.0.1"
-	priorityClassName                  = "foo-bar"
-	valiHost                           = "vali.foo.bar"
-	valitailShootAccessSecretName      = "shoot-access-valitail"
-	kubeRBacProxyShootAccessSecretName = "shoot-access-kube-rbac-proxy"
+	namespace                                   = "shoot--foo--bar"
+	managedResourceName                         = "vali"
+	managedResourceSecretName                   = "managedresource-vali"
+	managedResourceNameTarget                   = "vali-target"
+	managedResourceSecretNameTarget             = "managedresource-vali-target"
+	valiName                                    = "vali"
+	valiConfigMapName                           = "vali-config-bc8a885d"
+	telegrafConfigMapName                       = "telegraf-config-b4c38756"
+	valiImage                                   = "vali:0.0.1"
+	curatorImage                                = "curator:0.0.1"
+	initLargeDirImage                           = "tune2fs:0.0.1"
+	telegrafImage                               = "telegraf-iptables:0.0.1"
+	kubeRBACProxyImage                          = "kube-rbac-proxy:0.0.1"
+	priorityClassName                           = "foo-bar"
+	valiHost                                    = "vali.foo.bar"
+	valitailShootAccessSecretName               = "shoot-access-valitail"
+	opentelemetryCollectorShootAccessSecretName = "shoot-access-opentelemetry-collector"
+	kubeRBacProxyShootAccessSecretName          = "shoot-access-kube-rbac-proxy"
 )
 
 var _ = Describe("Vali", func() {
@@ -210,8 +211,8 @@ var _ = Describe("Vali", func() {
 				Expect(managedResourceTarget).To(DeepEqual(expectedTargetMr))
 				Expect(managedResourceTarget).To(consistOf(
 					getKubeRBACProxyClusterRoleBinding(),
-					getValitailClusterRole("/vali/api/v1/push"),
-					getValitailClusterRoleBinding(),
+					getValitailClusterRole("gardener.cloud:logging:valitail", "gardener-valitail", "/vali/api/v1/push"),
+					getValitailClusterRoleBinding("gardener.cloud:logging:valitail", "gardener-valitail", "gardener.cloud:logging:valitail", "gardener-valitail"),
 				))
 
 				managedResourceSecretTarget.Name = managedResourceTarget.Spec.SecretRefs[0].Name
@@ -243,7 +244,7 @@ var _ = Describe("Vali", func() {
 						InitLargeDirImage:       initLargeDirImage,
 						TelegrafImage:           telegrafImage,
 						KubeRBACProxyImage:      kubeRBACProxyImage,
-						WithRBACProxy:           true,
+						WithRBACProxy:           false,
 						PriorityClassName:       priorityClassName,
 						ClusterType:             "shoot",
 						IngressHost:             valiHost,
@@ -254,9 +255,6 @@ var _ = Describe("Vali", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
 				Expect(valiDeployer.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKey{Name: valitailShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBacProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedMr := &resourcesv1alpha1.ManagedResource{
@@ -277,12 +275,10 @@ var _ = Describe("Vali", func() {
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
 				Expect(managedResource).To(DeepEqual(expectedMr))
 				Expect(managedResource).To(consistOf(
-					getTelegrafConfigMap(),
 					getValiConfigMap(),
 					getVPA(true),
-					getIngress("/loki/api/v1/push", "opentelemetry-collector-collector", 8080),
 					getService(true, "shoot"),
-					getStatefulSet(true),
+					getStatefulSet(false),
 					getServiceMonitor("shoot", true),
 					getPrometheusRule("shoot"),
 				))
@@ -293,36 +289,7 @@ var _ = Describe("Vali", func() {
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
-				expectedTargetMr := &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResourceNameTarget,
-						Namespace:       namespace,
-						ResourceVersion: "1",
-						Labels:          map[string]string{"origin": "gardener"},
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						SecretRefs: []corev1.LocalObjectReference{{
-							Name: managedResourceTarget.Spec.SecretRefs[0].Name,
-						}},
-						KeepObjects: ptr.To(false),
-					},
-				}
-				utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
-				Expect(managedResourceTarget).To(DeepEqual(expectedTargetMr))
-				Expect(managedResourceTarget).To(consistOf(
-					getKubeRBACProxyClusterRoleBinding(),
-					getValitailClusterRole("/loki/api/v1/push"),
-					getValitailClusterRoleBinding(),
-				))
-
-				managedResourceSecretTarget.Name = managedResourceTarget.Spec.SecretRefs[0].Name
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
-				Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
-				Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(BeNotFoundError())
 				test.PrometheusRule(getPrometheusRule("shoot"), "testdata/shoot-vali.prometheusrule.test.yaml")
 			})
 		})
@@ -1168,11 +1135,16 @@ func getVPA(isRBACProxyEnabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
 
 func getIngress(path, serviceName string, port int32) *networkingv1.Ingress {
 	pathType := networkingv1.PathTypePrefix
+	annotations := map[string]string{}
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		annotations = map[string]string{"nginx.ingress.kubernetes.io/backend-protocol": "GRPC"}
+	}
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      valiName,
-			Namespace: namespace,
-			Labels:    getLabels(),
+			Name:        valiName,
+			Namespace:   namespace,
+			Annotations: annotations,
+			Labels:      getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
 			IngressClassName: ptr.To("nginx-ingress-gardener"),
@@ -1564,21 +1536,22 @@ func getKubeRBACProxyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-func getValitailClusterRole(path string) *rbacv1.ClusterRole {
+func getValitailClusterRole(name, appName, path string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "gardener.cloud:logging:valitail",
-			Labels: map[string]string{"app": "gardener-valitail"},
+			Name:   name,
+			Labels: map[string]string{"app": appName},
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
-				APIGroups: []string{""},
+				APIGroups: []string{"", "apps"},
 				Resources: []string{
 					"nodes",
 					"nodes/proxy",
 					"services",
 					"endpoints",
 					"pods",
+					"replicasets",
 				},
 				Verbs: []string{
 					"get",
@@ -1594,20 +1567,20 @@ func getValitailClusterRole(path string) *rbacv1.ClusterRole {
 	}
 }
 
-func getValitailClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+func getValitailClusterRoleBinding(name, appName, roleName, subjectName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "gardener.cloud:logging:valitail",
-			Labels: map[string]string{"app": "gardener-valitail"},
+			Name:   name,
+			Labels: map[string]string{"app": appName},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "gardener.cloud:logging:valitail",
+			Name:     roleName,
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      "ServiceAccount",
-			Name:      "gardener-valitail",
+			Name:      subjectName,
 			Namespace: "kube-system",
 		}},
 	}
