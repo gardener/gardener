@@ -54,18 +54,47 @@ var _ = Describe("AutonomousBotanist", func() {
 		})
 
 		When("running the control plane (acting on the autonomous shoot cluster)", func() {
-			It("should create a new Autonomous Botanist", func() {
-				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
-				Expect(err).NotTo(HaveOccurred())
+			Context("with unmanaged infrastructure (high-touch scenario)", func() {
+				It("should create a new Autonomous Botanist", func() {
+					b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(b.Shoot.CloudProfile.Name).To(Equal("stackit"))
-				Expect(b.Shoot.GetInfo().Name).To(Equal("gardenadm"))
-				Expect(b.Garden.Project.Name).To(Equal("gardenadm"))
-				Expect(b.Extensions).To(ConsistOf(
-					HaveField("ControllerRegistration.Name", "provider-stackit"),
-					HaveField("ControllerRegistration.Name", "networking-cilium"),
-				))
-				Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", HaveKeyWithValue("seed.gardener.cloud/autonomous-shoot-cluster", "true")))
+					Expect(b.Shoot.CloudProfile.Name).To(Equal("stackit"))
+					Expect(b.Shoot.GetInfo().Name).To(Equal("gardenadm"))
+					Expect(b.Garden.Project.Name).To(Equal("gardenadm"))
+					Expect(b.Extensions).To(ConsistOf(
+						HaveField("ControllerRegistration.Name", "provider-stackit"),
+						HaveField("ControllerRegistration.Name", "networking-cilium"),
+					))
+					Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", HaveKeyWithValue("seed.gardener.cloud/autonomous-shoot-cluster", "true")))
+				})
+			})
+
+			Context("with managed infrastructure (medium-touch scenario)", func() {
+				BeforeEach(func() {
+					shootFile := fsys[configDir+"/shoot.yaml"]
+					shootFile.Data = append(shootFile.Data, []byte("\n  credentialsBindingName: provider-account\n")...)
+
+					fsys[configDir+"/shootstate.yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1beta1
+kind: ShootState
+metadata:
+  name: gardenadm
+`)}
+				})
+
+				It("should fail if the ShootState is missing", func() {
+					delete(fsys, configDir+"/shootstate.yaml")
+					Expect(NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)).Error().To(MatchError(ContainSubstring("ShootState is missing")))
+				})
+
+				It("should set the LastOperation to Restore and fetch the ShootState", func() {
+					b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(b.Shoot.GetInfo().Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeRestore))
+					Expect(b.Shoot.GetShootState().Name).To(Equal("gardenadm"))
+					Expect(b.IsRestorePhase()).To(BeTrue())
+				})
 			})
 
 			It("should use kube-system as the control plane namespace", func() {

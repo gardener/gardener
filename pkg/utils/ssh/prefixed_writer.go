@@ -14,7 +14,7 @@ import (
 // PrefixedWriter wraps an io.Writer, emitting the passed in prefix at the beginning of each new line.
 // This can be useful when running multiple ssh.Connections concurrently - you can prefix the log output of each
 // session by passing in a PrefixedWriter.
-// This is used by Connection.OutputPrefix.
+// This is used by Connection.WithOutputPrefix.
 type PrefixedWriter struct {
 	prefix        []byte
 	writer        io.Writer
