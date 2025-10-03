@@ -127,6 +127,7 @@ func RewriteEncryptedDataRemoveLabel(
 	}); err != nil {
 		return fmt.Errorf("failed patching metadata of an API Server deployment: %w", err)
 	}
+	return nil
 }
 
 func rewriteEncryptedData(
