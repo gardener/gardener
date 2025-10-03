@@ -253,7 +253,7 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 				},
 			},
 		}
-		vpaUpdateMode = vpaautoscalingv1.UpdateModeAuto
+		vpaUpdateMode = vpaautoscalingv1.UpdateModeRecreate
 		vpa           = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,

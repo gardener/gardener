@@ -62,7 +62,7 @@ var _ = Describe("KubeStateMetrics", func() {
 		managedResourceTarget     *resourcesv1alpha1.ManagedResource
 		managedResourceSecret     *corev1.Secret
 
-		vpaUpdateMode       = vpaautoscalingv1.UpdateModeAuto
+		vpaUpdateMode       = vpaautoscalingv1.UpdateModeRecreate
 		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 		serviceAccountFor            func(string) *corev1.ServiceAccount

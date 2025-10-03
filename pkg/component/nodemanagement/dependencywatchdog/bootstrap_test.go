@@ -399,7 +399,7 @@ spec:
     kind: Deployment
     name: ` + dwdName + `
   updatePolicy:
-    updateMode: Auto
+    updateMode: Recreate
 status: {}
 `
 

@@ -323,7 +323,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			Kind:       "Deployment",
 			Name:       deployment.Name,
 		}
-		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto)}
+		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate)}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 				ContainerName:    containerName,

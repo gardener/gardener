@@ -616,7 +616,7 @@ spec:
     kind: DaemonSet
     name: node-local-dns-worker-aaaa
   updatePolicy:
-    updateMode: Auto
+    updateMode: Recreate
 status: {}
 `
 		)

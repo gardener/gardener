@@ -350,7 +350,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 		clientObjects = append(clientObjects, daemonSet)
 
 		if n.values.VPAEnabled {
-			vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+			vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
 			vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "node-local-dns-" + worker.Name,

@@ -113,7 +113,7 @@ var _ = Describe("Etcd", func() {
 		backupLeaderElectionEtcdConnectionTimeout = &metav1.Duration{Duration: 10 * time.Second}
 		backupLeaderElectionReelectionPeriod      = &metav1.Duration{Duration: 11 * time.Second}
 
-		vpaUpdateMode       = vpaautoscalingv1.UpdateModeAuto
+		vpaUpdateMode       = vpaautoscalingv1.UpdateModeRecreate
 		containerPolicyOff  = vpaautoscalingv1.ContainerScalingModeOff
 		containerPolicyAuto = vpaautoscalingv1.ContainerScalingModeAuto
 		controlledValues    = vpaautoscalingv1.ContainerControlledValuesRequestsOnly

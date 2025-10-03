@@ -14,7 +14,7 @@ vpa:
     minAllowed:
       memory: 64Mi
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Recreate"
 webhookConfig:
   mode: url
   serverPort: 10250

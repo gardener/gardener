@@ -280,7 +280,7 @@ spec:
     kind: DaemonSet
     name: node-problem-detector
   updatePolicy:
-    updateMode: Auto
+    updateMode: Recreate
 status: {}
 `
 		)
