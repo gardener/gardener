@@ -1,18 +1,18 @@
 spec:
   resources:
-    - metricNamePrefix: garden
+    - metricNamePrefix: gardener_operator
       groupVersionKind:
         group: operator.gardener.cloud
         version: v1alpha1
-        kind: Garden
+        kind: Extension
       commonLabels: {}
       labelsFromPath:
         name:
           - metadata
           - name
       metrics:
-        - name: garden_condition
-          help: represents a condition of a Garden object
+        - name: extension_condition
+          help: represents a condition of an Operator Extension object
           each:
             type: stateset
             gauge: null
@@ -31,29 +31,6 @@ spec:
               labelName: status
               valueFrom:
                 - status
-            info: null
-          commonLabels: {}
-          labelsFromPath: {}
-          errorLogV: 0
-        - name: garden_last_operation
-          help: denotes the last operation performed on a Garden object
-          each:
-            type: stateset
-            gauge: null
-            stateSet:
-              labelsFromPath: {}
-              path:
-                - status
-                - lastOperation
-              list:
-                - Create
-                - Reconcile
-                - Delete
-                - Migrate
-                - Restore
-              labelName: last_operation
-              valueFrom:
-                - type
             info: null
           commonLabels: {}
           labelsFromPath: {}
