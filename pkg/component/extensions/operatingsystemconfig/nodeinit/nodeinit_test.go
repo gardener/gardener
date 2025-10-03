@@ -64,6 +64,8 @@ RestartSec=5
 StartLimitBurst=0
 EnvironmentFile=/etc/environment
 ExecStart=/var/lib/gardener-node-agent/init.sh
+StandardOutput=journal+console
+StandardError=journal+console
 [Install]
 WantedBy=multi-user.target`),
 					FilePaths: []string{"/var/lib/gardener-node-agent/init.sh"},
