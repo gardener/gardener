@@ -1,6 +1,17 @@
 # See the OWNERS docs at https://go.k8s.io/owners
 
 reviewers:
-- gardener-reviewers
+- gardener-reviewers-auditlog
+- gardener-reviewers-autoscaling-cluster
+- gardener-reviewers-autoscaling-pod
+- gardener-reviewers-control-plane-migration
+- gardener-reviewers-core
+- gardener-reviewers-etcd
+- gardener-reviewers-logging
+- gardener-reviewers-machine-controller-manager
+- gardener-reviewers-monitoring
+- gardener-reviewers-networking
+- gardener-reviewers-security
+- gardener-reviewers-ui
 approvers:
 - gardener-approvers
