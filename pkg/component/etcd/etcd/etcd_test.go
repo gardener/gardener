@@ -186,7 +186,9 @@ var _ = Describe("Etcd", func() {
 				},
 			}
 			if topologyAwareRoutingEnabled {
-				if versionutils.ConstraintK8sGreaterEqual132.Check(runtimeKubernetesVersion) {
+				if versionutils.ConstraintK8sGreaterEqual134.Check(runtimeKubernetesVersion) {
+					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
+				} else if versionutils.ConstraintK8sGreaterEqual132.Check(runtimeKubernetesVersion) {
 					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
 				} else if versionutils.ConstraintK8sEqual131.Check(runtimeKubernetesVersion) {
 					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
