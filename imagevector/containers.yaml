@@ -49,7 +49,7 @@ images:
   - name: gardener-discovery-server
     sourceRepository: github.com/gardener/gardener-discovery-server
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-discovery-server
-    tag: "v0.7.0"
+    tag: "v0.8.0"
   # Gardener Dashboard components
   - name: gardener-dashboard
     sourceRepository: github.com/gardener/dashboard
