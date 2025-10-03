@@ -379,7 +379,9 @@ Reference documentation:
 Gardener maintains DNS records for a `Shoot` which requires a DNS zone and credentials to manage records in this zone. Provide the credentials alongside with information about the zone. The secrets are deployed to the virtual Garden cluster.
 
 > [!IMPORTANT]
-> The preferred way to configure the internal domain settings is by explicitly setting them through the [`Seed` API](../../example/50-seed.yaml) (see `.spec.dns.internal`).
+> The preferred way to configure domain settings is by explicitly setting them through the [`Seed` API](../../example/50-seed.yaml):
+> - internal domain can be configured through see `.spec.dns.internal`
+> - default domains can be configured through see `.spec.dns.defaults`
 
 Reference documentation:
 

@@ -5927,6 +5927,7 @@ func Convert_core_Seed_To_v1beta1_Seed(in *core.Seed, out *Seed, s conversion.Sc
 func autoConvert_v1beta1_SeedDNS_To_core_SeedDNS(in *SeedDNS, out *core.SeedDNS, s conversion.Scope) error {
 	out.Provider = (*core.SeedDNSProvider)(unsafe.Pointer(in.Provider))
 	out.Internal = (*core.SeedDNSProviderConfig)(unsafe.Pointer(in.Internal))
+	out.Defaults = *(*[]core.SeedDNSProviderConfig)(unsafe.Pointer(&in.Defaults))
 	return nil
 }
 
@@ -5938,6 +5939,7 @@ func Convert_v1beta1_SeedDNS_To_core_SeedDNS(in *SeedDNS, out *core.SeedDNS, s c
 func autoConvert_core_SeedDNS_To_v1beta1_SeedDNS(in *core.SeedDNS, out *SeedDNS, s conversion.Scope) error {
 	out.Provider = (*SeedDNSProvider)(unsafe.Pointer(in.Provider))
 	out.Internal = (*SeedDNSProviderConfig)(unsafe.Pointer(in.Internal))
+	out.Defaults = *(*[]SeedDNSProviderConfig)(unsafe.Pointer(&in.Defaults))
 	return nil
 }
 
