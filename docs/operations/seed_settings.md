@@ -106,8 +106,8 @@ When switching back from use of proxy protocol to no use of it, use the inverse 
 
 ### Zonal Ingress
 
-By default, Gardener deploys istio ingress gateways in each availability zone of a seed. This reduces cross-zonal traffic for single-zone shoot control planes.  
-If cross-zonal traffic costs are not a concern and minimizing the number of load balancers is preferred to save resources, zonal istio ingress gateways can be disabled.
+By default, Gardener deploys Istio ingress gateways in each availability zone of a seed. This reduces cross-zonal traffic for single-zone shoot control planes.  
+If cross-zonal traffic costs are not a concern and minimizing the number of load balancers is preferred to save resources, zonal Istio ingress gateways can be disabled.
 
 The behavior is controlled by the `.spec.settings.loadBalancerServices.zonalIngress.enabled` field, which defaults to `true`.
 
@@ -115,16 +115,29 @@ The behavior is controlled by the `.spec.settings.loadBalancerServices.zonalIngr
 
 When zonal ingress is disabled:
 
-- A single default istio ingress gateway is deployed, spanning all availability zones
+- A single default Istio ingress gateway is deployed, spanning all availability zones
 - All shoot control plane traffic (single-zone and multi-zone) is routed through the default gateway
 - Cross-zonal traffic may increase, since single-zone shoots no longer use zonal gateways
 - Fewer load balancers are created, potentially reducing infrastructure costs
 
-> [!CAUTION]
-> Disabling zonal istio ingress gateways while shoots still rely on them makes those shoots inaccessible until the next reconcile.  
-> Only after reconciliation will the `Gateway` resource be updated to point to the default istio ingress gateway.
+#### Migration Guide
 
-For more about Istio’s multi-zone behavior, see the [Istio documentation](./istio.md#handling-multiple-availability-zones-with-istio).
+To disable zonal ingress gateways, follow these steps:
+
+1. Set `.spec.settings.loadBalancerServices.zonalIngress.enabled=false` in the `Seed` specification
+2. Wait for all shoots to reconcile (during reconciliation, single-zone shoots will update their `Gateway` resources to use the default gateway)
+3. Once all shoots have reconciled, zonal ingress gateways are automatically cleaned up
+
+During migration, zonal ingress gateways remain deployed as long as any shoot `Gateway` resource still selects them. This ensures minimal downtime for shoot control planes during the transition.
+
+> [!CAUTION]
+> When disabling zonal ingress gateways, expect temporary unavailability of shoot control planes due to DNS propagation delays.
+> During migration, DNS entries are updated to point to the default gateway, but clients may continue using cached DNS
+> entries pointing to the zonal gateways for up to the configured DNS TTL. Additionally, existing long-running connections
+> will be interrupted when the Gateway resources are updated to no longer use the zonal ingress gateways.
+> This downtime should be scheduled during a maintenance window.
+
+For more about Istio's multi-zone behavior, see the [Istio documentation](./istio.md#handling-multiple-availability-zones-with-istio).
 
 ### Zone-Specific Settings
 
