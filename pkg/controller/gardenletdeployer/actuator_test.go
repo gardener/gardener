@@ -63,7 +63,7 @@ var _ = Describe("Interface", func() {
 		recorder          *mockrecord.MockEventRecorder
 
 		log      logr.Logger
-		actuator Interface
+		actuator *Actuator
 
 		ctx context.Context
 
@@ -438,10 +438,10 @@ var _ = Describe("Interface", func() {
 			)
 		}
 
-		expectGetGardenletChartValues = func(withBootstrap bool, seedIsGarden bool) {
+		expectGetGardenletChartValues = func(withBootstrap, seedIsGarden, autonomousShoot bool) {
 			gardenletChartValues = map[string]any{"foo": "bar"}
 
-			vh.EXPECT().GetGardenletChartValues(mergedDeployment, gomock.AssignableToTypeOf(&gardenletconfigv1alpha1.GardenletConfiguration{}), gomock.AssignableToTypeOf("")).DoAndReturn(
+			vh.EXPECT().GetGardenletChartValues(gomock.AssignableToTypeOf(&seedmanagementv1alpha1.GardenletDeployment{}), gomock.AssignableToTypeOf(&gardenletconfigv1alpha1.GardenletConfiguration{}), gomock.AssignableToTypeOf("")).DoAndReturn(
 				func(deployment *seedmanagementv1alpha1.GardenletDeployment, gc *gardenletconfigv1alpha1.GardenletConfiguration, _ string) (map[string]any, error) {
 					if withBootstrap {
 						Expect(gc.GardenClientConnection.Kubeconfig).To(Equal(""))
@@ -465,14 +465,16 @@ var _ = Describe("Interface", func() {
 						Expect(deployment.PodLabels).To(BeEmpty())
 					}
 
-					Expect(gc.SeedConfig.SeedTemplate).To(Equal(gardencorev1beta1.SeedTemplate{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        name,
-							Labels:      seedTemplate.Labels,
-							Annotations: seedTemplate.Annotations,
-						},
-						Spec: seedTemplate.Spec,
-					}))
+					if !autonomousShoot {
+						Expect(gc.SeedConfig.SeedTemplate).To(Equal(gardencorev1beta1.SeedTemplate{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        name,
+								Labels:      seedTemplate.Labels,
+								Annotations: seedTemplate.Annotations,
+							},
+							Spec: seedTemplate.Spec,
+						}))
+					}
 
 					return gardenletChartValues, nil
 				},
@@ -521,7 +523,7 @@ var _ = Describe("Interface", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
-				expectGetGardenletChartValues(true, false)
+				expectGetGardenletChartValues(true, false, false)
 				expectApplyGardenletChart()
 
 				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -560,7 +562,7 @@ var _ = Describe("Interface", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
-				expectGetGardenletChartValues(true, false)
+				expectGetGardenletChartValues(true, false, false)
 				expectApplyGardenletChart()
 
 				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -612,7 +614,7 @@ var _ = Describe("Interface", func() {
 					recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 					expectMergeWithParent()
 					expectPrepareGardenClientConnection(true)
-					expectGetGardenletChartValues(true, false)
+					expectGetGardenletChartValues(true, false, false)
 					expectApplyGardenletChart()
 
 					conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -638,7 +640,7 @@ var _ = Describe("Interface", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
-				expectGetGardenletChartValues(true, false)
+				expectGetGardenletChartValues(true, false, false)
 				expectApplyGardenletChart()
 
 				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -664,7 +666,7 @@ var _ = Describe("Interface", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
-				expectGetGardenletChartValues(true, false)
+				expectGetGardenletChartValues(true, false, false)
 				expectApplyGardenletChart()
 
 				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -698,7 +700,7 @@ var _ = Describe("Interface", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
-				expectGetGardenletChartValues(true, false)
+				expectGetGardenletChartValues(true, false, false)
 				expectApplyGardenletChart()
 
 				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -722,10 +724,49 @@ var _ = Describe("Interface", func() {
 				expectCreateSeedSecrets()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
-				expectGetGardenletChartValues(false, false)
+				expectGetGardenletChartValues(false, false, false)
 				expectApplyGardenletChart()
 
 				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(conditions).To(ContainCondition(
+					OfType(seedmanagementv1alpha1.SeedRegistered),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					WithReason(gardencorev1beta1.EventReconciled),
+				))
+			})
+		})
+
+		Context("autonomous shoot", func() {
+			var (
+				deployment *seedmanagementv1alpha1.GardenletDeployment
+				config     *gardenletconfigv1alpha1.GardenletConfiguration
+				shoot      *gardencorev1beta1.Shoot
+			)
+
+			BeforeEach(func() {
+				actuator.BootstrapToken = "token-for-gardenlet"
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any())
+
+				deployment = &seedmanagementv1alpha1.GardenletDeployment{}
+				config = &gardenletconfigv1alpha1.GardenletConfiguration{}
+				shoot = &gardencorev1beta1.Shoot{}
+			})
+
+			It("should deploy the gardenlet", func() {
+				recorder.EXPECT().Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring gardenlet namespace in target cluster")
+				expectCreateGardenNamespace()
+				recorder.EXPECT().Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+				shootClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet-kubeconfig"}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
+						return apierrors.NewNotFound(corev1.Resource("secret"), "gardenlet-kubeconfig")
+					},
+				)
+				vh.EXPECT().MergeGardenletDeployment(deployment).Return(deployment, nil)
+				expectGetGardenletChartValues(true, false, true)
+				expectApplyGardenletChart()
+
+				conditions, err := actuator.Reconcile(ctx, log, shoot, nil, deployment, &runtime.RawExtension{Object: config}, seedmanagementv1alpha1.BootstrapToken, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(conditions).To(ContainCondition(
 					OfType(seedmanagementv1alpha1.SeedRegistered),
@@ -754,7 +795,7 @@ var _ = Describe("Interface", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
-				expectGetGardenletChartValues(true, true)
+				expectGetGardenletChartValues(true, true, false)
 				expectApplyGardenletChart()
 
 				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -778,7 +819,7 @@ var _ = Describe("Interface", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
-				expectGetGardenletChartValues(true, true)
+				expectGetGardenletChartValues(true, true, false)
 				expectApplyGardenletChart()
 
 				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -803,7 +844,7 @@ var _ = Describe("Interface", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
-				expectGetGardenletChartValues(true, true)
+				expectGetGardenletChartValues(true, true, false)
 				expectApplyGardenletChart()
 
 				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -836,7 +877,7 @@ var _ = Describe("Interface", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
-				expectGetGardenletChartValues(true, true)
+				expectGetGardenletChartValues(true, true, false)
 				expectApplyGardenletChart()
 
 				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -859,7 +900,7 @@ var _ = Describe("Interface", func() {
 				expectCreateSeedSecrets()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
 				expectMergeWithParent()
-				expectGetGardenletChartValues(false, true)
+				expectGetGardenletChartValues(false, true, false)
 				expectApplyGardenletChart()
 
 				conditions, err := actuator.Reconcile(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -903,7 +944,7 @@ var _ = Describe("Interface", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting gardenlet from target cluster")
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
-				expectGetGardenletChartValues(true, false)
+				expectGetGardenletChartValues(true, false, false)
 				expectDeleteGardenletChart()
 
 				conditions, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &gardenlet.Config, *managedSeed.Spec.Gardenlet.Bootstrap, *managedSeed.Spec.Gardenlet.MergeWithParent)
@@ -1038,7 +1079,6 @@ var _ = Describe("Utils", func() {
 
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).To(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Value).To(Equal(preserveDomain))
-
 		})
 
 		It("should should not inject KUBERNETES_SERVICE_HOST environment", func() {
@@ -1047,6 +1087,7 @@ var _ = Describe("Utils", func() {
 			Expect(ensuredDeploymentWithoutDomain.Env).To(HaveLen(1))
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).ToNot(Equal(kubernetesServiceHost))
 		})
+
 		It("should should inject KUBERNETES_SERVICE_HOST environment", func() {
 			ensuredDeploymentWithoutDomain := ensureGardenletEnvironment(otherEnvDeployment, domain)
 
@@ -1054,7 +1095,6 @@ var _ = Describe("Utils", func() {
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).ToNot(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithoutDomain.Env[1].Name).To(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithoutDomain.Env[1].Value).To(Equal(v1beta1helper.GetAPIServerDomain(domain)))
-
 		})
 	})
 })

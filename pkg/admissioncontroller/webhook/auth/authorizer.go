@@ -40,10 +40,21 @@ func CheckSubresource(log logr.Logger, attrs auth.Attributes, allowedSubresource
 	return true, ""
 }
 
+// CheckNamespace checks if namespace verbs in the attributes is allowed for the resource type.
+func CheckNamespace(log logr.Logger, attrs auth.Attributes, allowedNamespaces ...string) (bool, string) {
+	if len(allowedNamespaces) > 0 && !slices.Contains(allowedNamespaces, attrs.GetNamespace()) {
+		log.Info("Denying authorization because namespace is not allowed for this resource type", "allowedNamespaces", allowedNamespaces)
+		return false, fmt.Sprintf("only the following namespaces are allowed for this resource type: %+v", allowedNamespaces)
+	}
+
+	return true, ""
+}
+
 type authzRequest struct {
 	allowedVerbs        sets.Set[string]
 	alwaysAllowedVerbs  sets.Set[string]
 	allowedSubresources sets.Set[string]
+	allowedNamespaces   sets.Set[string]
 	listWatchSelector   selector
 }
 
@@ -52,13 +63,14 @@ func newAuthzRequest() *authzRequest {
 		allowedVerbs:        sets.Set[string]{},
 		alwaysAllowedVerbs:  sets.Set[string]{},
 		allowedSubresources: sets.Set[string]{},
-		listWatchSelector:   selector{fieldNames: sets.Set[string]{}, labelKeys: sets.Set[string]{}},
+		allowedNamespaces:   sets.Set[string]{},
+		listWatchSelector:   selector{fields: make(map[string]string), labels: make(map[string]string)},
 	}
 }
 
 type selector struct {
-	fieldNames sets.Set[string]
-	labelKeys  sets.Set[string]
+	fields map[string]string
+	labels map[string]string
 }
 
 type configFunc func(req *authzRequest)
@@ -84,29 +96,29 @@ func WithAllowedSubresources(resources ...string) configFunc {
 	}
 }
 
-// WithFieldSelectorFields is a config function for setting the field selector fields. Field names are matched against
-// the name of the object the requestor is associated with. For example, if the field name is '.spec.seedName' and the
-// requestor is associated with seed 'foo', then they must send a field selector for '.spec.seedName=foo' in order to be
-// authorized for list/watch requests.
-// TODO(rfranzke): Remove this 'nolint' annotation once the function is used.
-//
-//nolint:unused
-func WithFieldSelectorFields(fieldNames ...string) configFunc {
+// WithAllowedNamespaces is a config function for setting the allowed namespaces.
+func WithAllowedNamespaces(namespaceNames ...string) configFunc {
 	return func(req *authzRequest) {
-		req.listWatchSelector.fieldNames.Insert(fieldNames...)
+		req.allowedNamespaces.Insert(namespaceNames...)
 	}
 }
 
-// WithLabelSelectorKeys is a config function for setting the label selector keys. Label keys must contain the name of
-// the object the requestor is associated with. For example, if the label key is 'name.seed.gardener.cloud/foo' and the
-// requestor is associated with seed 'foo', then they must send a label selector for 'name.seed.gardener.cloud/foo=true'
-// in order to be authorized for list/watch requests.
+// WithFieldSelectors is a config function for setting the field selector field keys and values. In case multiple fields
+// are provided, they are OR-ed, i.e., it is enough for a request to be authorized if one of the selectors matches.
+func WithFieldSelectors(fields map[string]string) configFunc {
+	return func(req *authzRequest) {
+		req.listWatchSelector.fields = fields
+	}
+}
+
+// WithLabelSelectors is a config function for setting the label selector keys and values. In case multiple pairs are
+// provided, they are OR-ed, i.e., it is enough for a request to be authorized if one of the selectors matches.
 // TODO(rfranzke): Remove this 'nolint' annotation once the function is used.
 //
 //nolint:unused
-func WithLabelSelectorKeys(labelKeys ...string) configFunc {
+func WithLabelSelectors(labels map[string]string) configFunc {
 	return func(req *authzRequest) {
-		req.listWatchSelector.labelKeys.Insert(labelKeys...)
+		req.listWatchSelector.labels = labels
 	}
 }
 
@@ -145,6 +157,10 @@ func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attribut
 		f(req)
 	}
 
+	if ok, reason := CheckNamespace(log, attrs, sets.List(req.allowedNamespaces)...); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
 	if ok, reason := CheckSubresource(log, attrs, sets.List(req.allowedSubresources)...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
@@ -167,17 +183,17 @@ func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attribut
 		// the request specifies `.metadata.name` as field name for a selector. This means that the client wants to
 		// list/watch the resource with the object name as field selector. This is a valid scenario and needs to be
 		// handled by the below check function.
-		(attrs.GetName() == "" || req.listWatchSelector.fieldNames.Has(metav1.ObjectNameField)) {
+		(attrs.GetName() == "" || req.listWatchSelector.fields[metav1.ObjectNameField] != "") {
 		if canAuthorizeWithSelectors, err := a.AuthorizeWithSelectors.IsPossible(); err != nil {
 			return auth.DecisionNoOpinion, "", fmt.Errorf("failed checking if authorization with selectors is possible: %w", err)
 		} else if canAuthorizeWithSelectors {
 			if ok, reason := a.checkListWatchRequests(attrs, req.listWatchSelector); !ok {
-				log.Info("Denying list/watch request because field/label selectors don't the 'to object'", "fieldNames", req.listWatchSelector.fieldNames, "labelKeys", req.listWatchSelector.labelKeys)
+				log.Info("Denying list/watch request because field/label selectors don't the 'to object'", "fields", req.listWatchSelector.fields, "labels", req.listWatchSelector.labels)
 				return auth.DecisionNoOpinion, reason, nil
 			} else {
 				return auth.DecisionAllow, "", nil
 			}
-		} else if len(req.listWatchSelector.labelKeys) > 0 || len(req.listWatchSelector.fieldNames) > 0 {
+		} else if len(req.listWatchSelector.labels) > 0 || len(req.listWatchSelector.fields) > 0 {
 			// TODO(rfranzke): Remove this else-if branch once the lowest supported Kubernetes version is 1.34.
 			return auth.DecisionAllow, "", nil
 		}
@@ -196,15 +212,15 @@ func (a *RequestAuthorizer) checkListWatchRequests(attrs auth.Attributes, select
 
 	for _, req := range fieldSelectorRequirements {
 		if (req.Operator == selection.Equals || req.Operator == selection.DoubleEquals || req.Operator == selection.In) &&
-			req.Value == a.ToName &&
-			selector.fieldNames.Has(req.Field) {
+			selector.fields[req.Field] != "" &&
+			req.Value == selector.fields[req.Field] {
 			return true, "field selector provided and matches name of 'to object'"
 		}
 	}
 
 	for _, req := range labelSelectorRequirements {
-		for key := range selector.labelKeys {
-			if req.Matches(labels.Set{key: "true"}) {
+		for key, value := range selector.labels {
+			if req.Matches(labels.Set{key: value}) {
 				return true, "label selector provided and matches  name of 'to object'"
 			}
 		}

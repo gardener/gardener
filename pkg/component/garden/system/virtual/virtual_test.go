@@ -116,7 +116,7 @@ var _ = Describe("Virtual", func() {
 				},
 				{
 					APIGroups: []string{"certificates.k8s.io"},
-					Resources: []string{"certificatesigningrequests/seedclient"},
+					Resources: []string{"certificatesigningrequests/seedclient", "certificatesigningrequests/shootclient"},
 					Verbs:     []string{"create"},
 				},
 			},

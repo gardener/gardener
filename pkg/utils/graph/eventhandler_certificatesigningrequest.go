@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	seedidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/seed"
+	shootidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -52,17 +53,28 @@ func (g *graph) handleCertificateSigningRequestCreate(name string, request []byt
 	if err != nil {
 		return
 	}
-	if ok, _ := gardenerutils.IsSeedClientCert(x509cr, usages); !ok {
-		return
+
+	if ok, _ := gardenerutils.IsSeedClientCert(x509cr, usages); ok {
+		seedName, _, _ := seedidentity.FromCertificateSigningRequest(x509cr)
+
+		var (
+			certificateSigningRequestVertex = g.getOrCreateVertex(VertexTypeCertificateSigningRequest, "", name)
+			seedVertex                      = g.getOrCreateVertex(VertexTypeSeed, "", seedName)
+		)
+
+		g.addEdge(certificateSigningRequestVertex, seedVertex)
 	}
-	seedName, _, _ := seedidentity.FromCertificateSigningRequest(x509cr)
 
-	var (
-		certificateSigningRequestVertex = g.getOrCreateVertex(VertexTypeCertificateSigningRequest, "", name)
-		seedVertex                      = g.getOrCreateVertex(VertexTypeSeed, "", seedName)
-	)
+	if ok, _ := gardenerutils.IsShootClientCert(x509cr, usages); ok {
+		shootNamespace, shootName, _, _ := shootidentity.FromCertificateSigningRequest(x509cr)
 
-	g.addEdge(certificateSigningRequestVertex, seedVertex)
+		var (
+			certificateSigningRequestVertex = g.getOrCreateVertex(VertexTypeCertificateSigningRequest, "", name)
+			shootVertex                     = g.getOrCreateVertex(VertexTypeShoot, shootNamespace, shootName)
+		)
+
+		g.addEdge(certificateSigningRequestVertex, shootVertex)
+	}
 }
 
 func (g *graph) handleCertificateSigningRequestDelete(name string) {

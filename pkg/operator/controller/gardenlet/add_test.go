@@ -50,6 +50,11 @@ var _ = Describe("Add", func() {
 			test(gardenlet, BeTrue())
 		})
 
+		It("should return false because gardenlet name is prefixed with 'autonomous-shoot'", func() {
+			gardenlet.Name = "autonomous-shoot-" + gardenlet.Name
+			test(gardenlet, BeFalse())
+		})
+
 		When("seed object exists", func() {
 			BeforeEach(func() {
 				Expect(fakeClient.Create(ctx, &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: gardenlet.Name}})).To(Succeed())

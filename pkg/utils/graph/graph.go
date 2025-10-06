@@ -70,8 +70,10 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 	var setups []resourceSetup
 
 	if g.forAutonomousShoots {
-		// TODO(rfranzke): We'll add some setup functions here as development of autonomous shoots
-		//  progresses.
+		setups = append(setups,
+			resourceSetup{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
+			resourceSetup{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
+		)
 	} else {
 		setups = append(setups,
 			resourceSetup{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},

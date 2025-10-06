@@ -1244,7 +1244,7 @@ var _ = Describe("Seed", func() {
 					Entry("create", "create"),
 				)
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -1704,7 +1704,7 @@ var _ = Describe("Seed", func() {
 					Entry("watch", "watch"),
 				)
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -1881,7 +1881,7 @@ var _ = Describe("Seed", func() {
 					Entry("watch", "watch"),
 				)
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -1927,7 +1927,7 @@ var _ = Describe("Seed", func() {
 					}
 				})
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -2036,7 +2036,7 @@ var _ = Describe("Seed", func() {
 					Entry("create", "create"),
 				)
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -2265,7 +2265,7 @@ var _ = Describe("Seed", func() {
 					Entry("get with subresource", "get", "seedclient"),
 				)
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -2350,7 +2350,7 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(BeEmpty())
 				})
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -2560,7 +2560,7 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(BeEmpty())
 				})
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -2645,7 +2645,7 @@ var _ = Describe("Seed", func() {
 					Entry("watch", "watch"),
 				)
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -2711,7 +2711,7 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(ContainSubstring("no relationship found"))
 				})
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -2865,7 +2865,7 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(ContainSubstring("no relationship found"))
 				})
 
-				DescribeTable("should deny because verb is not allowed",
+				DescribeTable("should not have an opinion because verb is not allowed",
 					func(verb string) {
 						attrs.Verb = verb
 

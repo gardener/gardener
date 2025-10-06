@@ -12,11 +12,14 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -131,6 +134,223 @@ var _ = Describe("Gardenlet", func() {
 
 		It("should return false because the NAMESPACE environment variable is not set to 'kube-system'", func() {
 			Expect(IsResponsibleForAutonomousShoot()).To(BeFalse())
+		})
+	})
+
+	Describe("#ShootMetaFromBootstrapToken", func() {
+		var (
+			ctx        = context.Background()
+			fakeClient client.Client
+
+			bootstrapTokenSecretName string
+			expectedShootNamespace   string
+			expectedShootName        string
+			expectedNamespacedName   types.NamespacedName
+		)
+
+		BeforeEach(func() {
+			fakeClient = fake.NewClientBuilder().Build()
+
+			bootstrapTokenSecretName = "bootstrap-token-123456"
+			expectedShootNamespace = "garden-my-project"
+			expectedShootName = "my-shoot"
+			expectedNamespacedName = types.NamespacedName{
+				Namespace: expectedShootNamespace,
+				Name:      expectedShootName,
+			}
+		})
+
+		It("should successfully extract shoot meta from bootstrap token", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      bootstrapTokenSecretName,
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"description": []byte("Used for connecting the autonomous Shoot " + expectedShootNamespace + "/" + expectedShootName + " to Gardener via 'gardenadm connect'"),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(expectedNamespacedName))
+		})
+
+		It("should return error when bootstrap token secret is not found", func() {
+			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to read bootstrap token secret"))
+			Expect(result).To(Equal(types.NamespacedName{}))
+		})
+
+		It("should return error when description does not start with required prefix", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      bootstrapTokenSecretName,
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"description": []byte("Invalid prefix " + expectedShootNamespace + "/" + expectedShootName),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("bootstrap token description does not start with"))
+			Expect(result).To(Equal(types.NamespacedName{}))
+		})
+
+		It("should return error when description has no shoot meta after prefix", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      bootstrapTokenSecretName,
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"description": []byte("Used for connecting the autonomous Shoot "),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("could not extract shoot meta from bootstrap token description"))
+			Expect(result).To(Equal(types.NamespacedName{}))
+		})
+
+		It("should return error when description has only whitespace after prefix", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      bootstrapTokenSecretName,
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"description": []byte("Used for connecting the autonomous Shoot    "),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("could not extract shoot meta from bootstrap token description"))
+			Expect(result).To(Equal(types.NamespacedName{}))
+		})
+
+		It("should return error when shoot meta format is invalid (no slash)", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      bootstrapTokenSecretName,
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"description": []byte("Used for connecting the autonomous Shoot invalid-format-no-slash"),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("could not extract shoot namespace and name from bootstrap token description"))
+			Expect(result).To(Equal(types.NamespacedName{}))
+		})
+
+		It("should return error when shoot meta format has multiple slashes", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      bootstrapTokenSecretName,
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"description": []byte("Used for connecting the autonomous Shoot namespace/shoot/extra"),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("could not extract shoot namespace and name from bootstrap token description"))
+			Expect(result).To(Equal(types.NamespacedName{}))
+		})
+
+		It("should return error when shoot meta format has empty namespace", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      bootstrapTokenSecretName,
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"description": []byte("Used for connecting the autonomous Shoot /my-shoot"),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(types.NamespacedName{Namespace: "", Name: "my-shoot"}))
+		})
+
+		It("should return error when shoot meta format has empty name", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      bootstrapTokenSecretName,
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"description": []byte("Used for connecting the autonomous Shoot my-namespace/"),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(types.NamespacedName{Namespace: "my-namespace", Name: ""}))
+		})
+
+		It("should handle description with additional text after shoot meta", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      bootstrapTokenSecretName,
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"description": []byte("Used for connecting the autonomous Shoot " + expectedShootNamespace + "/" + expectedShootName + " additional text here"),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(expectedNamespacedName))
+		})
+
+		It("should return error when description key is missing", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      bootstrapTokenSecretName,
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"other-key": []byte("some-value"),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("bootstrap token description does not start with"))
+			Expect(result).To(Equal(types.NamespacedName{}))
 		})
 	})
 })

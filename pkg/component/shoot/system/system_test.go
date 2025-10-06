@@ -186,6 +186,7 @@ var _ = Describe("ShootSystem", func() {
 					"region":            region,
 					"serviceNetwork":    serviceCIDRs[0].String(),
 					"serviceNetworks":   serviceCIDRs[0].String() + "," + serviceCIDRs[1].String(),
+					"shootNamespace":    projectNamespace,
 					"shootName":         shootName,
 				},
 			}

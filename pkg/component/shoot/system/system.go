@@ -360,6 +360,7 @@ func (s *shootSystem) shootInfoData() map[string]string {
 	data := map[string]string{
 		"extensions":        strings.Join(s.values.Extensions, ","),
 		"projectName":       s.values.ProjectName,
+		"shootNamespace":    s.values.Object.Namespace,
 		"shootName":         s.values.Object.Name,
 		"provider":          s.values.Object.Spec.Provider.Type,
 		"region":            s.values.Object.Spec.Region,

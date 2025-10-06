@@ -21,10 +21,12 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -683,12 +685,8 @@ func PrepareGardenletChartValues(
 		}
 	}
 
-	if _, ok := obj.(*gardencorev1beta1.Shoot); !ok {
-		// Ensure seed config is set if we are not deploying gardenlet into an autonomous shoot cluster
-		if gardenletConfig.SeedConfig == nil {
-			gardenletConfig.SeedConfig = &gardenletconfigv1alpha1.SeedConfig{}
-		}
-		// Set the seed name
+	// Ensure seed name is set if we are not deploying gardenlet into an autonomous shoot cluster
+	if gardenletConfig.SeedConfig != nil {
 		gardenletConfig.SeedConfig.Name = obj.GetName()
 	}
 
@@ -713,11 +711,32 @@ func PrepareGardenletChartValues(
 	gardenletConfig.LeaderElection.ResourceNamespace = gardenletNamespaceTargetCluster
 
 	// Get gardenlet chart values
-	return vp.GetGardenletChartValues(
+	values, err := vp.GetGardenletChartValues(
 		gardenletDeployment,
 		gardenletConfig,
 		bootstrapKubeconfig,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed retrieving gardenlet values: %w", err)
+	}
+
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return values, nil
+	}
+
+	// enable self-upgrades for autonomous shoots
+	gardenletChartImage, err := imagevector.Charts().FindImage(imagevector.ChartImageNameGardenlet)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching gardenlet chart image: %w", err)
+	}
+	gardenletChartImage.WithOptionalTag(version.Get().GitVersion)
+
+	return utils.SetToValuesMap(values, map[string]any{
+		"name":       gardenletutils.ResourcePrefixAutonomousShoot + shoot.Name,
+		"namespace":  shoot.Namespace,
+		"deployment": map[string]any{"helm": map[string]any{"ociRepository": map[string]any{"ref": gardenletChartImage.String()}}},
+	}, "selfUpgrade")
 }
 
 // ensureGardenletEnvironment sets the KUBERNETES_SERVICE_HOST to the provided domain.
@@ -794,12 +813,13 @@ func prepareGardenClientConnectionWithBootstrap(
 			return "", err
 		}
 	} else {
-		seedIsAlreadyBootstrapped, err := isAlreadyBootstrapped(ctx, targetClusterClient, gcc.KubeconfigSecret)
+		certificateBasedKubeconfigExists, err := isAlreadyBootstrapped(ctx, targetClusterClient, gcc.KubeconfigSecret)
 		if err != nil {
 			return "", fmt.Errorf("failed checking if gardenlet is already bootstrapped: %w", err)
 		}
 
-		if seedIsAlreadyBootstrapped {
+		if certificateBasedKubeconfigExists {
+			gcc.BootstrapKubeconfig = nil
 			return "", nil
 		}
 	}

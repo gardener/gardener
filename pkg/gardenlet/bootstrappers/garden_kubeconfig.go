@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -21,12 +22,15 @@ import (
 
 // GardenKubeconfig implements manager.Runnable and can be used to fetch a kubeconfig for the garden cluster.
 type GardenKubeconfig struct {
-	// SeedClient is the seed cluster client.
-	SeedClient client.Client
+	// RuntimeClient is the runtime cluster client (seed or autonomous shoot).
+	RuntimeClient client.Client
 	// Log is a logger.
 	Log logr.Logger
 	// Config is the gardenlet component configuration.
 	Config *gardenletconfigv1alpha1.GardenletConfiguration
+	// AutonomousShootMeta is the NamespacedName of the autonomous shoot the gardenlet is responsible for (if
+	// applicable).
+	AutonomousShootMeta *types.NamespacedName
 	// Result is a structure that will be filled with information about the requested kubeconfig. Must be initialized
 	// by the caller.
 	Result *KubeconfigBootstrapResult
@@ -46,13 +50,14 @@ type KubeconfigBootstrapResult struct {
 
 // Start starts the garden kubeconfig bootstrap process. It either uses the provided bootstrap kubeconfig with a
 // bootstrap token to create a CertificateSigningRequest for retrieving a client certificate, or it returns the already
-// existing kubeconfig (stored in the seed cluster as secret).
+// existing kubeconfig (stored in the runtime cluster as secret).
 func (g *GardenKubeconfig) Start(ctx context.Context) (err error) {
 	if g.Config.GardenClientConnection.KubeconfigSecret != nil {
-		g.Result.Kubeconfig, g.Result.CSRName, g.Result.SeedName, err = g.getOrBootstrapKubeconfig(ctx)
+		g.Result.Kubeconfig, g.Result.CSRName, err = g.getOrBootstrapKubeconfig(ctx)
 		if err != nil {
 			return err
 		}
+		g.Result.SeedName = gardenletbootstraputil.GetSeedName(g.Config.SeedConfig)
 	} else {
 		g.Log.Info("No kubeconfig secret given in the configuration under `.gardenClientConnection.kubeconfigSecret`. Skipping the kubeconfig bootstrap process and certificate rotation")
 	}
@@ -77,7 +82,7 @@ func (g *GardenKubeconfig) Start(ctx context.Context) (err error) {
 		gardenAPIReader = gardenClient.APIReader()
 	}
 
-	g.Result.Kubeconfig, err = gardenletbootstraputil.UpdateGardenKubeconfigCAIfChanged(ctx, g.Log, gardenAPIReader, g.SeedClient, g.Result.Kubeconfig, g.Config.GardenClientConnection)
+	g.Result.Kubeconfig, err = gardenletbootstraputil.UpdateGardenKubeconfigCAIfChanged(ctx, g.Log, gardenAPIReader, g.RuntimeClient, g.Result.Kubeconfig, g.Config.GardenClientConnection)
 	if err != nil {
 		return fmt.Errorf("error updating CA in garden cluster kubeconfig secret: %w", err)
 	}
@@ -95,64 +100,54 @@ var (
 )
 
 // getOrBootstrapKubeconfig retrieves an already existing kubeconfig for the Garden cluster from the Seed or bootstraps a new one
-func (g *GardenKubeconfig) getOrBootstrapKubeconfig(
-	ctx context.Context,
-) (
-	[]byte,
-	string,
-	string,
-	error,
-) {
+func (g *GardenKubeconfig) getOrBootstrapKubeconfig(ctx context.Context) ([]byte, string, error) {
 	kubeconfigKey := kubernetesutils.ObjectKeyFromSecretRef(*g.Config.GardenClientConnection.KubeconfigSecret)
-	gardenKubeconfig, err := gardenletbootstraputil.GetKubeconfigFromSecret(ctx, g.SeedClient, kubeconfigKey)
+	gardenKubeconfig, err := gardenletbootstraputil.GetKubeconfigFromSecret(ctx, g.RuntimeClient, kubeconfigKey)
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
 
 	log := g.Log.WithValues("kubeconfigSecret", kubeconfigKey)
 	if len(gardenKubeconfig) > 0 {
 		log.Info("Found kubeconfig generated from bootstrap process. Using it")
-		return gardenKubeconfig, "", "", nil
+		return gardenKubeconfig, "", nil
 	}
 
 	log.Info("No kubeconfig from a previous bootstrap found. Starting bootstrap process")
 
 	if g.Config.GardenClientConnection.BootstrapKubeconfig == nil {
 		log.Info("Unable to perform kubeconfig bootstrapping. The gardenlet configuration `.gardenClientConnection.bootstrapKubeconfig` is not set")
-		return nil, "", "", nil
+		return nil, "", nil
 	}
 
 	bootstrapKubeconfigKey := kubernetesutils.ObjectKeyFromSecretRef(*g.Config.GardenClientConnection.BootstrapKubeconfig)
-	log.WithValues("bootstrapKubeconfigSecret", bootstrapKubeconfigKey)
+	log = log.WithValues("bootstrapKubeconfigSecret", bootstrapKubeconfigKey)
 
-	bootstrapKubeconfig, err := gardenletbootstraputil.GetKubeconfigFromSecret(ctx, g.SeedClient, bootstrapKubeconfigKey)
+	bootstrapKubeconfig, err := gardenletbootstraputil.GetKubeconfigFromSecret(ctx, g.RuntimeClient, bootstrapKubeconfigKey)
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
 
 	if len(bootstrapKubeconfig) == 0 {
 		log.Info("Unable to perform kubeconfig bootstrap. Bootstrap secret does not contain a kubeconfig")
-		return nil, "", "", errors.New("bootstrap secret does not contain a kubeconfig, cannot bootstrap")
+		return nil, "", errors.New("bootstrap secret does not contain a kubeconfig, cannot bootstrap")
 	}
 
 	bootstrapClientSet, err := NewClientFromBytes(bootstrapKubeconfig)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("unable to bootstrap client from bootstrap kubeconfig: %w", err)
+		return nil, "", fmt.Errorf("unable to bootstrap client from bootstrap kubeconfig: %w", err)
 	}
 
-	seedName := gardenletbootstraputil.GetSeedName(g.Config.SeedConfig)
-	log = log.WithValues("seedName", seedName)
-
 	log.Info("Using provided bootstrap kubeconfig to request signed certificate")
-
 	return RequestKubeconfigWithBootstrapClient(
 		ctx,
 		log,
-		g.SeedClient,
+		g.RuntimeClient,
 		bootstrapClientSet,
 		kubeconfigKey,
 		bootstrapKubeconfigKey,
-		seedName,
+		g.Config.SeedConfig,
+		g.AutonomousShootMeta,
 		g.Config.GardenClientConnection.KubeconfigValidity.Validity,
 	)
 }

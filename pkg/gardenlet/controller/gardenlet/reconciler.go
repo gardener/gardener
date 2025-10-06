@@ -7,10 +7,12 @@ package gardenlet
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
@@ -28,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -74,14 +77,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error extracting gardenlet configuration: %w", err)
 	}
 
-	seed, err := gardenletdeployer.GetSeed(ctx, r.GardenClient, gardenlet.Name)
-	if err != nil {
-		r.Recorder.Eventf(gardenlet, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
-		updateCondition(r.Clock, status, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
-		if updateErr := r.updateStatus(ctx, gardenlet, status); updateErr != nil {
-			log.Error(updateErr, "Could not update status")
+	var seed *gardencorev1beta1.Seed
+	if !strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixAutonomousShoot) {
+		seed, err = gardenletdeployer.GetSeed(ctx, r.GardenClient, gardenlet.Name)
+		if err != nil {
+			r.Recorder.Eventf(gardenlet, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+			updateCondition(r.Clock, status, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
+			if updateErr := r.updateStatus(ctx, gardenlet, status); updateErr != nil {
+				log.Error(updateErr, "Could not update status")
+			}
+			return reconcile.Result{}, fmt.Errorf("error getting seed: %w", err)
 		}
-		return reconcile.Result{}, fmt.Errorf("error getting seed: %w", err)
 	}
 
 	log.Info("Deploying gardenlet")
@@ -117,7 +123,12 @@ func (r *Reconciler) deployGardenlet(
 		return fmt.Errorf("failed preparing gardenlet chart values: %w", err)
 	}
 
-	subCtx := context.WithValue(ctx, oci.ContextKeyPullSecretNamespace, gardenerutils.ComputeGardenNamespace(seed.Name))
+	pullSecretNamespace := metav1.NamespaceSystem
+	if seed != nil {
+		pullSecretNamespace = gardenerutils.ComputeGardenNamespace(seed.Name)
+	}
+
+	subCtx := context.WithValue(ctx, oci.ContextKeyPullSecretNamespace, pullSecretNamespace)
 	archive, err := r.HelmRegistry.Pull(subCtx, &gardenlet.Spec.Deployment.Helm.OCIRepository)
 	if err != nil {
 		return fmt.Errorf("failed pulling Helm chart from OCI repository: %w", err)
