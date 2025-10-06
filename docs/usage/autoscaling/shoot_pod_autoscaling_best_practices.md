@@ -170,7 +170,7 @@ spec:
         memory: 16G
 ```
 
-In this example, VPA is configured to scale `foo-deployment` requests (`RequestsOnly`) from 50m cores (`minAllowed`) up to 4 cores (`maxAllowed`) and 200M memory (`minAllowed`) up to 16G memory (`maxAllowed`) automatically (`updateMode`). VPA doesn't support in-place updates, so in `updateMode` `Auto` it will evict pods under certain conditions and then mutate the requests (and possibly limits if you omit `controlledValues` or set it to `RequestsAndLimits`, which is the default) of upcoming new pods.
+In this example, VPA is configured to scale `foo-deployment` requests (`RequestsOnly`) from 50m cores (`minAllowed`) up to 4 cores (`maxAllowed`) and 200M memory (`minAllowed`) up to 16G memory (`maxAllowed`) automatically (`updateMode`). VPA doesn't support in-place updates, so in `updateMode` `Recreate` it will evict pods under certain conditions and then mutate the requests (and possibly limits if you omit `controlledValues` or set it to `RequestsAndLimits`, which is the default) of upcoming new pods.
 
 [Multiple update modes exist](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/README.md#quick-start). They influence eviction and mutation. The most important ones are:
 - `Off`: In this mode, recommendations are computed, but never applied. This mode is useful, if you want to learn more about your workload or if you have a custom controller that depends on VPA's recommendations but shall act instead of VPA.
