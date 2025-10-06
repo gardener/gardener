@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -21,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/webhook/validation"
 	extensionvalidation "github.com/gardener/gardener/pkg/operator/webhook/validation/extension"
 	gardenvalidation "github.com/gardener/gardener/pkg/operator/webhook/validation/garden"
+	"github.com/gardener/gardener/pkg/operator/webhook/validation/namespace"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
@@ -85,6 +87,26 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 						admissionregistrationv1.Delete,
 					},
 				}},
+				SideEffects:    &sideEffects,
+				FailurePolicy:  &failurePolicy,
+				MatchPolicy:    &matchPolicy,
+				TimeoutSeconds: ptr.To[int32](10),
+			},
+			{
+				Name:                    "namespace-deletion-validation.operator.gardener.cloud",
+				ClientConfig:            getClientConfig(namespace.WebhookPath, mode, url),
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{corev1.SchemeGroupVersion.Group},
+						APIVersions: []string{corev1.SchemeGroupVersion.Version},
+						Resources:   []string{"namespaces"},
+					},
+					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Delete,
+					},
+				}},
+				ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": v1beta1constants.GardenNamespace}},
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
