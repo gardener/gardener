@@ -175,7 +175,8 @@ In this example, VPA is configured to scale `foo-deployment` requests (`Requests
 [Multiple update modes exist](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/README.md#quick-start). They influence eviction and mutation. The most important ones are:
 - `Off`: In this mode, recommendations are computed, but never applied. This mode is useful, if you want to learn more about your workload or if you have a custom controller that depends on VPA's recommendations but shall act instead of VPA.
 - `Initial`: In this mode, recommendations are computed and applied, but pods are never proactively evicted to enforce new recommendations over time. This mode is useful, if you want to control pod evictions yourself (similar to the [`StatefulSet` `updateStrategy` `OnDelete`](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies)) or your workload is sensitive to evictions, e.g. some brownfield singleton application or a daemon set pod that is critical for the node.
-- `Auto` (default): In this mode, recommendations are computed, applied, and pods are even proactively evicted to enforce new recommendations over time. This applies recommendations continuously without you having to worry too much.
+- `Auto` (__deprecated__): VPA assigns resource requests on pod creation as well as updates them on existing pods using the preferred update mechanism. Currently, this is equivalent to `Recreate`.
+- `Recreate` (default): In this mode, recommendations are computed, applied, and pods are even proactively evicted to enforce new recommendations over time. This applies recommendations continuously without you having to worry too much.
 
 As mentioned, `controlledValues` influences whether only requests or requests and limits are scaled:
 - `RequestsOnly`: Updates only requests and doesn't change limits. Useful if you have defined absolute limits (unrelated to the requests).
