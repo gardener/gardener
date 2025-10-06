@@ -678,6 +678,11 @@ In an `UPDATE` request, the configured `.spec.resources` are validated to ensure
 `DELETE` requests for `Extension` resources are denied if they are reported as required (also see [required-runtime](#required-runtime-reconciler) and [required-virtual](#required-virtual-reconciler)).
 These deletions often happen accidentally, and this handler safeguards the system from such actions.
 
+#### `Namespace`
+
+This webhook handler validates `DELETE` operations on the `core/v1.Namespace` resource with name `garden` (which is Gardener's system namespace).
+It prevents deleting it as long as a `operator.gardener.cloud/v1alpha1.Garden` resource (still) exists, i.e., it has to be deleted first before any attempt of deleting the namespace.
+
 ### Defaulting
 
 This webhook handler mutates `Garden` resources on `CREATE`/`UPDATE`/`DELETE` operations.
