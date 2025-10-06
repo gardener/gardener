@@ -103,35 +103,22 @@ func WithAllowedNamespaces(namespaceNames ...string) configFunc {
 	}
 }
 
-// WithFieldSelectors is a config function for setting the field selector field key and value pairs. In case multiple
-// pairs are provided, they are OR-ed, i.e., it is enough for a request to be authorized if one of the selectors
-// matches.
-func WithFieldSelectors(keysAndValues ...string) configFunc {
+// WithFieldSelectors is a config function for setting the field selector field keys and values. In case multiple fields
+// are provided, they are OR-ed, i.e., it is enough for a request to be authorized if one of the selectors matches.
+func WithFieldSelectors(fields map[string]string) configFunc {
 	return func(req *authzRequest) {
-		if len(keysAndValues)%2 != 0 {
-			panic("WithFieldSelectors requires an even number of arguments")
-		}
-
-		for i := 0; i < len(keysAndValues); i += 2 {
-			req.listWatchSelector.fields[keysAndValues[i]] = keysAndValues[i+1]
-		}
+		req.listWatchSelector.fields = fields
 	}
 }
 
-// WithLabelSelectors is a config function for setting the label selector key and value pairs. In case multiple pairs
-// are provided, they are OR-ed, i.e., it is enough for a request to be authorized if one of the selectors matches.
+// WithLabelSelectors is a config function for setting the label selector keys and values. In case multiple pairs are
+// provided, they are OR-ed, i.e., it is enough for a request to be authorized if one of the selectors matches.
 // TODO(rfranzke): Remove this 'nolint' annotation once the function is used.
 //
 //nolint:unused
-func WithLabelSelectors(keysAndValues ...string) configFunc {
+func WithLabelSelectors(labels map[string]string) configFunc {
 	return func(req *authzRequest) {
-		if len(keysAndValues)%2 != 0 {
-			panic("WithLabelSelectors requires an even number of arguments")
-		}
-
-		for i := 0; i < len(keysAndValues); i += 2 {
-			req.listWatchSelector.labels[keysAndValues[i]] = keysAndValues[i+1]
-		}
+		req.listWatchSelector.labels = labels
 	}
 }
 

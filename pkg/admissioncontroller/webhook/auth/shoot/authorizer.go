@@ -102,7 +102,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 				authwebhook.WithAlwaysAllowedVerbs("create"),
 				authwebhook.WithAllowedSubresources("status"),
 				authwebhook.WithAllowedNamespaces(requestAuthorizer.ToNamespace),
-				authwebhook.WithFieldSelectors(metav1.ObjectNameField, gardenletutils.ResourcePrefixAutonomousShoot+requestAuthorizer.ToName),
+				authwebhook.WithFieldSelectors(map[string]string{metav1.ObjectNameField: gardenletutils.ResourcePrefixAutonomousShoot + requestAuthorizer.ToName}),
 			)
 
 		case secretResource:
