@@ -11,6 +11,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/operator/webhook/validation/extension"
 	"github.com/gardener/gardener/pkg/operator/webhook/validation/garden"
+	"github.com/gardener/gardener/pkg/operator/webhook/validation/namespace"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
@@ -22,6 +23,10 @@ func AddToManager(mgr manager.Manager) error {
 	}
 
 	if err := (&extension.Handler{}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", extension.HandlerName, err)
+	}
+
+	if err := (&namespace.Handler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", extension.HandlerName, err)
 	}
 

@@ -273,6 +273,7 @@ build:
             - pkg/operator/webhook/validation
             - pkg/operator/webhook/validation/extension
             - pkg/operator/webhook/validation/garden
+            - pkg/operator/webhook/validation/namespace
             - pkg/resourcemanager/apis/config/v1alpha1
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/resourcemanager/webhook/crddeletionprotection
