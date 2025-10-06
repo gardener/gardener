@@ -90,7 +90,7 @@ func (b *Botanist) ToAdvertisedAddresses(ctx context.Context) ([]gardencorev1bet
 
 	ingressItems, err := b.GetIngressAdvertisedEndpoints(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get ingress advertised endpoints: %w", err)
 	}
 	addresses = append(addresses, ingressItems...)
 
@@ -113,7 +113,7 @@ func (b *Botanist) GetIngressAdvertisedEndpoints(ctx context.Context) ([]gardenc
 			v1beta1constants.LabelShootEndpointAdvertise: "true",
 		}),
 	); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list ingress resources: %w", err)
 	}
 
 	// Only the TLS items are processed, since
@@ -125,11 +125,10 @@ func (b *Botanist) GetIngressAdvertisedEndpoints(ctx context.Context) ([]gardenc
 				if strings.Contains(hostItem, "*") {
 					continue
 				}
-				addr := gardencorev1beta1.ShootAdvertisedAddress{
+				result = append(result, gardencorev1beta1.ShootAdvertisedAddress{
 					Name: fmt.Sprintf("ingress/%s/%d/%d", ingress.Name, tlsIdx, hostIdx),
 					URL:  fmt.Sprintf("https://%s", hostItem),
-				}
-				result = append(result, addr)
+				})
 			}
 		}
 	}
