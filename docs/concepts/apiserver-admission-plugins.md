@@ -10,6 +10,8 @@ If you want to get an overview of the what and why of admission plugins then [th
 
 This document lists all existing admission plugins with a short explanation of what it is responsible for.
 
+<!-- Keep the list of admission plugins in (case-sensitive) lexicographical order. -->
+
 ## `BackupBucketValidator`
 
 **Type**: Validating. **Enabled by default**: Yes.
