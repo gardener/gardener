@@ -119,7 +119,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				switch operation {
 				case v1beta1constants.GardenerOperationReconcile:
 					mustIncrease = true
-					patchOperations = removeOperation(patchOperations, operation)
+					patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 
 				case v1beta1constants.OperationRotateCAStart,
 					v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
@@ -137,7 +137,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				case v1beta1constants.OperationRotateCredentialsStart:
 					// We remove operations that are covered by rotate-credentials-start
 					mustIncrease = true
-					patchOperations = removeOperation(patchOperations, v1beta1constants.OperationRotateCAStart,
+					patchOperations = v1beta1helper.RemoveOperation(patchOperations, v1beta1constants.OperationRotateCAStart,
 						v1beta1constants.OperationRotateServiceAccountKeyStart,
 						v1beta1constants.OperationRotateETCDEncryptionKey,
 						v1beta1constants.OperationRotateETCDEncryptionKeyStart,
@@ -147,7 +147,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				case v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
 					// We remove operations that are covered by rotate-credentials-start-without-workers-rollout
 					mustIncrease = true
-					patchOperations = removeOperation(patchOperations, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
+					patchOperations = v1beta1helper.RemoveOperation(patchOperations, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
 						v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
 						v1beta1constants.OperationRotateETCDEncryptionKey,
 						v1beta1constants.OperationRotateETCDEncryptionKeyStart,
@@ -157,7 +157,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				case v1beta1constants.OperationRotateCredentialsComplete:
 					// We remove operations that are covered by rotate-credentials-complete
 					mustIncrease = true
-					patchOperations = removeOperation(patchOperations, v1beta1constants.OperationRotateCAComplete,
+					patchOperations = v1beta1helper.RemoveOperation(patchOperations, v1beta1constants.OperationRotateCAComplete,
 						v1beta1constants.OperationRotateServiceAccountKeyComplete,
 						v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
 					)
@@ -165,7 +165,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				case v1beta1constants.ShootOperationRotateSSHKeypair:
 					if !gardencorehelper.ShootEnablesSSHAccess(newShoot) {
 						// If SSH is not enabled for the Shoot, don't increase generation, just remove the annotation
-						patchOperations = removeOperation(patchOperations, operation)
+						patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 					} else {
 						mustIncrease = true
 					}
@@ -380,14 +380,4 @@ func getStatusSeedName(shoot *core.Shoot) string {
 		return ""
 	}
 	return *shoot.Status.SeedName
-}
-
-func removeOperation(operations []string, operationsToRemove ...string) []string {
-	res := slices.Clone(operations)
-	for _, op := range operationsToRemove {
-		res = slices.DeleteFunc(res, func(operation string) bool {
-			return op == operation
-		})
-	}
-	return res
 }
