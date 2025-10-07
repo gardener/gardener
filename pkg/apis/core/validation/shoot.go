@@ -69,7 +69,7 @@ var (
 		v1beta1constants.ShootOperationForceInPlaceUpdate,
 	).Union(availableShootMaintenanceOperations)
 	// All operations that can be executed in the maintenance window are
-	// also allowed to be ran in parallel with other operations.
+	// also allowed to be run in parallel with other operations.
 	availableShootMaintenanceOperations = sets.New(
 		v1beta1constants.GardenerOperationReconcile,
 		v1beta1constants.OperationRotateCAStart,
@@ -2629,7 +2629,7 @@ func ValidateHibernation(annotations map[string]string, hibernation *core.Hibern
 
 	for _, mOp := range v1beta1helper.GetShootMaintenanceOperations(annotations) {
 		if forbiddenShootOperationsWhenHibernated.Has(mOp) && ptr.Deref(hibernation.Enabled, false) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s=%s annotation is set", v1beta1constants.GardenerMaintenanceOperation, mOp)))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s annotation contains %s operation", v1beta1constants.GardenerMaintenanceOperation, mOp)))
 		}
 	}
 
@@ -2946,10 +2946,10 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		if !availableShootOperations.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, op, sets.List(availableShootOperations)))
 		} else if len(operations) > 1 && !availableShootOperationsToRunInParallel.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be ran in parallel with other operations", op)))
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", op)))
 		}
 		if forbiddenOps, ok := forbiddenShootOperationsToRunTogether[op]; ok && forbiddenOps.HasAny(operations...) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation %s is not permitted to be ran together with %s in operations", op, sets.List(forbiddenOps))))
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be run together with %s operations", op, strings.Join(sets.List(forbiddenOps), ", "))))
 		}
 		if helper.IsShootInHibernation(shoot) &&
 			(forbiddenShootOperationsWhenHibernated.Has(op) || strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers)) {
@@ -2968,10 +2968,10 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		if !availableShootMaintenanceOperations.Has(mOp) && !strings.HasPrefix(mOp, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, mOp, sets.List(availableShootMaintenanceOperations)))
 		} else if len(maintenanceOperations) > 1 && !availableShootOperationsToRunInParallel.Has(mOp) && !strings.HasPrefix(mOp, v1beta1constants.OperationRotateRolloutWorkers) {
-			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted to be ran in parallel with other operations", mOp)))
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", mOp)))
 		}
 		if forbiddenOps, ok := forbiddenShootOperationsToRunTogether[mOp]; ok && forbiddenOps.HasAny(maintenanceOperations...) {
-			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation %s is not permitted to be ran together with %s in maintenance operations", mOp, sets.List(forbiddenOps))))
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted to be run together with %s maintenance operations", mOp, strings.Join(sets.List(forbiddenOps), ", "))))
 		}
 		if helper.IsShootInHibernation(shoot) &&
 			(forbiddenShootOperationsWhenHibernated.Has(mOp) || strings.HasPrefix(mOp, v1beta1constants.OperationRotateRolloutWorkers)) {
@@ -2982,6 +2982,7 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		}
 	}
 
+	// Validate operation conflicts with maintenance operations
 	for _, mOp := range maintenanceOperations {
 		switch mOp {
 		case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
@@ -2999,7 +3000,6 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		}
 	}
 
-	// Validate operation conflicts with maintenance operations
 	for _, op := range operations {
 		switch op {
 		case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:

@@ -68,6 +68,22 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: gardenOld, ObjectNew: garden})).To(BeFalse())
 			})
 
+			It("should return true when different operation annotation present old and new object", func() {
+				gardenOld := garden.DeepCopy()
+				metav1.SetMetaDataAnnotation(&gardenOld.ObjectMeta, "gardener.cloud/operation", "reconcile")
+				metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-start")
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: gardenOld, ObjectNew: garden})).To(BeTrue())
+			})
+
+			It("should return true when parallel operations differ in old and new object", func() {
+				gardenOld := garden.DeepCopy()
+				metav1.SetMetaDataAnnotation(&gardenOld.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key;rotate-ssh-keypair")
+				metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key;rotate-ssh-keypair;rotate-ca-start")
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: gardenOld, ObjectNew: garden})).To(BeTrue())
+			})
+
 			DescribeTable("operation annotation present only on new object",
 				func(operation string, matcher gomegatypes.GomegaMatcher) {
 					gardenOld := garden.DeepCopy()
