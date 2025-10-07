@@ -1201,6 +1201,18 @@ var _ = Describe("Validation Tests", func() {
 				})))),
 			)
 
+			DescribeTable("should reject operations not allowed to run in parallel",
+				func(operation, expectedOperation string) {
+					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", operation)
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted to be run together with", expectedOperation)),
+					}))))
+				},
+
+				Entry("rotate-etcd-encryption-key and rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key;rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key"),
+			)
 		})
 
 		Context("extensions", func() {

@@ -6556,7 +6556,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.hibernation.enabled"),
-						"Detail": ContainSubstring("shoot cannot be hibernated when maintenance.gardener.cloud/operation=" + operation + " annotation is set"),
+						"Detail": ContainSubstring(fmt.Sprintf("shoot cannot be hibernated when maintenance.gardener.cloud/operation annotation contains %s operation", operation)),
 					}))))
 				},
 
@@ -6719,7 +6719,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-							"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted to be ran in parallel with other operations", expectedOperation)),
+							"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", expectedOperation)),
 						}))))
 						delete(shoot.Annotations, "gardener.cloud/operation")
 					},
@@ -6734,7 +6734,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-							"Detail": ContainSubstring(fmt.Sprintf("operation %s is not permitted to be ran together with %s in operations", notCompatibleOperation, notCompatibleWith)),
+							"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted to be run together with %s operations", notCompatibleOperation, notCompatibleWith)),
 						}))))
 						delete(shoot.Annotations, "gardener.cloud/operation")
 
@@ -6742,27 +6742,27 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-							"Detail": ContainSubstring(fmt.Sprintf("operation %s is not permitted to be ran together with %s in maintenance operations", notCompatibleOperation, notCompatibleWith)),
+							"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted to be run together with %s maintenance operations", notCompatibleOperation, notCompatibleWith)),
 						}))))
 						delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
 					},
 
 					Entry("rotate-credentials-start with rotate-credentials-start-without-workers-rollout", "rotate-credentials-start;rotate-credentials-start-without-workers-rollout",
-						"rotate-credentials-start", "[rotate-ca-start-without-workers-rollout rotate-credentials-start-without-workers-rollout rotate-serviceaccount-key-start-without-workers-rollout]"),
+						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout"),
 					Entry("rotate-credentials-start with rotate-ca-start-without-workers-rollout", "rotate-credentials-start;rotate-ca-start-without-workers-rollout",
-						"rotate-credentials-start", "[rotate-ca-start-without-workers-rollout rotate-credentials-start-without-workers-rollout rotate-serviceaccount-key-start-without-workers-rollout]"),
+						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout"),
 					Entry("rotate-credentials-start with rotate-serviceaccount-key-start-without-workers-rollout", "rotate-credentials-start;rotate-serviceaccount-key-start-without-workers-rollout",
-						"rotate-credentials-start", "[rotate-ca-start-without-workers-rollout rotate-credentials-start-without-workers-rollout rotate-serviceaccount-key-start-without-workers-rollout]"),
+						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout"),
 					Entry("rotate-credentials-start-without-workers-rollout with rotate-ca-start", "rotate-credentials-start-without-workers-rollout;rotate-ca-start",
-						"rotate-credentials-start-without-workers-rollout", "[rotate-ca-start rotate-serviceaccount-key-start]"),
+						"rotate-credentials-start-without-workers-rollout", "rotate-ca-start, rotate-serviceaccount-key-start"),
 					Entry("rotate-credentials-start-without-workers-rollout with rotate-serviceaccount-key-start", "rotate-credentials-start-without-workers-rollout;rotate-serviceaccount-key-start",
-						"rotate-credentials-start-without-workers-rollout", "[rotate-ca-start rotate-serviceaccount-key-start]"),
+						"rotate-credentials-start-without-workers-rollout", "rotate-ca-start, rotate-serviceaccount-key-start"),
 					Entry("rotate-ca-start with rotate-ca-start-without-workers-rollout", "rotate-ca-start;rotate-ca-start-without-workers-rollout",
-						"rotate-ca-start", "[rotate-ca-start-without-workers-rollout]"),
+						"rotate-ca-start", "rotate-ca-start-without-workers-rollout"),
 					Entry("rotate-serviceaccount-key-start with rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start;rotate-serviceaccount-key-start-without-workers-rollout",
-						"rotate-serviceaccount-key-start", "[rotate-serviceaccount-key-start-without-workers-rollout]"),
+						"rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start-without-workers-rollout"),
 					Entry("rotate-etcd-encryption-key with rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key;rotate-etcd-encryption-key-start",
-						"rotate-etcd-encryption-key", "[rotate-etcd-encryption-key-start]"),
+						"rotate-etcd-encryption-key", "rotate-etcd-encryption-key-start"),
 				)
 
 				It("should prevent duplicate operations across annotations", func() {

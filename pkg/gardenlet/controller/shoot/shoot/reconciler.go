@@ -635,7 +635,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	for _, operation := range operations {
 		switch operation {
 		case v1beta1constants.OperationRotateCredentialsStart:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			startRotationCA(shoot, &now)
 			startRotationServiceAccountKey(shoot, &now)
 			if v1beta1helper.ShootEnablesSSHAccess(shoot) {
@@ -644,7 +644,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 			startRotationObservability(shoot, &now)
 			startRotationETCDEncryptionKey(shoot, !k8sLess134, &now)
 		case v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			startRotationCAWithoutWorkersRollout(shoot, &now)
 			startRotationServiceAccountKeyWithoutWorkersRollout(shoot, &now)
 			if v1beta1helper.ShootEnablesSSHAccess(shoot) {
@@ -653,55 +653,55 @@ func (r *Reconciler) updateShootStatusOperationStart(
 			startRotationObservability(shoot, &now)
 			startRotationETCDEncryptionKey(shoot, !k8sLess134, &now)
 		case v1beta1constants.OperationRotateCredentialsComplete:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			completeRotationCA(shoot, &now)
 			completeRotationServiceAccountKey(shoot, &now)
 			if k8sLess134 {
 				completeRotationETCDEncryptionKey(shoot, &now)
 			}
 		case v1beta1constants.OperationRotateCAStart:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			startRotationCA(shoot, &now)
 		case v1beta1constants.OperationRotateCAStartWithoutWorkersRollout:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			startRotationCAWithoutWorkersRollout(shoot, &now)
 		case v1beta1constants.OperationRotateCAComplete:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			completeRotationCA(shoot, &now)
 
 		case v1beta1constants.ShootOperationRotateSSHKeypair:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			if v1beta1helper.ShootEnablesSSHAccess(shoot) {
 				startRotationSSHKeypair(shoot, &now)
 			}
 
 		case v1beta1constants.OperationRotateObservabilityCredentials:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			startRotationObservability(shoot, &now)
 
 		case v1beta1constants.OperationRotateServiceAccountKeyStart:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			startRotationServiceAccountKey(shoot, &now)
 		case v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			startRotationServiceAccountKeyWithoutWorkersRollout(shoot, &now)
 		case v1beta1constants.OperationRotateServiceAccountKeyComplete:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			completeRotationServiceAccountKey(shoot, &now)
 
 		case v1beta1constants.OperationRotateETCDEncryptionKey:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			startRotationETCDEncryptionKey(shoot, true, &now)
 		case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			startRotationETCDEncryptionKey(shoot, false, &now)
 		case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			completeRotationETCDEncryptionKey(shoot, &now)
 		}
 
 		if strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			poolNames := sets.NewString(strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers+"="), ",")...)
 
 			if v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials) == gardencorev1beta1.RotationWaitingForWorkersRollout {
@@ -1307,10 +1307,4 @@ func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1bet
 
 func manualInPlacePendingWorkersPresent(inPlaceUpdates *gardencorev1beta1.InPlaceUpdatesStatus) bool {
 	return inPlaceUpdates != nil && inPlaceUpdates.PendingWorkerUpdates != nil && len(inPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) > 0
-}
-
-func removeOperation(operations []string, operation string) []string {
-	return slices.DeleteFunc(operations, func(op string) bool {
-		return op == operation
-	})
 }

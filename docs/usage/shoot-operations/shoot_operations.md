@@ -74,6 +74,24 @@ Specific `Shoot` operations can also be ran in parallel by using `;` as separato
 kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation="rotate-ssh-keypair;rotate-ca-start"
 ```
 
+List of allowed operations, that can be run in parallel:
+- `reconcile`
+- `rotate-ca-start`
+- `rotate-ca-start-without-workers-rollout`
+- `rotate-ca-complete`
+- `rotate-observability-credentials`
+- `rotate-ssh-keypair`
+- `rotate-rollout-workers`
+- `rotate-credentials-start`
+- `rotate-credentials-start-without-workers-rollout`
+- `rotate-credentials-complete`
+- `rotate-etcd-encryption-key`
+- `rotate-etcd-encryption-key-start`
+- `rotate-etcd-encryption-key-complete`
+- `rotate-serviceaccount-key-start`
+- `rotate-serviceaccount-key-start-without-workers-rollout`
+- `rotate-serviceaccount-key-complete`
+
 ## Force Deletion
 
 When a Shoot fails to be deleted normally, users can force-delete the Shoot if it meets the following conditions:

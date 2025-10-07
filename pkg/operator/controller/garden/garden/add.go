@@ -6,6 +6,7 @@ package garden
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/utils/clock"
@@ -90,7 +91,8 @@ func (r *Reconciler) HasOperationAnnotation() predicate.Predicate {
 			return hasOperationAnnotation(e.Object.GetAnnotations())
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return !hasOperationAnnotation(e.ObjectOld.GetAnnotations()) && hasOperationAnnotation(e.ObjectNew.GetAnnotations())
+			return (!hasOperationAnnotation(e.ObjectOld.GetAnnotations()) && hasOperationAnnotation(e.ObjectNew.GetAnnotations())) ||
+				(hasOperationAnnotation(e.ObjectOld.GetAnnotations()) && hasOperationAnnotation(e.ObjectNew.GetAnnotations()) && !maps.Equal(e.ObjectOld.GetAnnotations(), e.ObjectNew.GetAnnotations()))
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },

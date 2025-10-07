@@ -769,15 +769,22 @@ func GetShootMaintenanceOperations(annotations map[string]string) []string {
 	return splitAndTrimString(annotations[v1beta1constants.GardenerMaintenanceOperation], ";")
 }
 
+// RemoveOperation returns a new slice with the given operations removed from the original operations slice.
+func RemoveOperation(operations []string, operationsToRemove ...string) []string {
+	return slices.DeleteFunc(slices.Clone(operations), func(operation string) bool {
+		return slices.Contains(operationsToRemove, operation)
+	})
+}
+
 func splitAndTrimString(s, sep string) []string {
-	var res []string
-
 	if len(s) == 0 {
-		return res
+		return nil
 	}
 
-	for _, s0 := range strings.Split(s, sep) {
-		res = append(res, (strings.TrimSpace(s0)))
+	result := strings.Split(s, sep)
+	for i := range result {
+		result[i] = strings.TrimSpace(result[i])
 	}
-	return res
+
+	return result
 }

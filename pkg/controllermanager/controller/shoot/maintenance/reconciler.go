@@ -709,11 +709,11 @@ func needsRetry(shoot *gardencorev1beta1.Shoot) bool {
 func getOperation(shoot *gardencorev1beta1.Shoot) string {
 	var (
 		operation            = v1beta1constants.GardenerOperationReconcile
-		maintenanceOperation = v1beta1helper.GetShootMaintenanceOperations(shoot.Annotations)
+		maintenanceOperation = shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]
 	)
 
-	if len(maintenanceOperation) > 0 {
-		operation = strings.Join(maintenanceOperation, ";")
+	if maintenanceOperation != "" {
+		operation = maintenanceOperation
 	}
 
 	return operation

@@ -259,14 +259,14 @@ func GetGardenerOperations(annotations map[string]string) []string {
 }
 
 func splitAndTrimString(s, sep string) []string {
-	var res []string
-
 	if len(s) == 0 {
-		return res
+		return nil
 	}
 
-	for _, s0 := range strings.Split(s, sep) {
-		res = append(res, (strings.TrimSpace(s0)))
+	result := strings.Split(s, sep)
+	for i := range result {
+		result[i] = strings.TrimSpace(result[i])
 	}
-	return res
+
+	return result
 }

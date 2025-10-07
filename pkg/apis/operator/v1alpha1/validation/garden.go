@@ -48,7 +48,12 @@ import (
 )
 
 var (
-	gardenCoreScheme *runtime.Scheme
+	gardenCoreScheme                      *runtime.Scheme
+	forbiddenShootOperationsToRunTogether = map[string]sets.Set[string]{
+		v1beta1constants.OperationRotateETCDEncryptionKey: sets.New(
+			v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+		),
+	}
 	// TODO(AleksandarSavchev): Remove this variable and the associated validation after support for Kubernetes v1.33 is dropped.
 	forbiddenETCDEncryptionKeyShootOperationsWithK8s134 = sets.New(
 		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
@@ -628,6 +633,9 @@ func validateOperation(operations []string, garden *operatorv1alpha1.Garden, fld
 		}
 		if !operatorv1alpha1.AvailableOperationAnnotations.Has(operation) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(operatorv1alpha1.AvailableOperationAnnotations)))
+		}
+		if forbiddenOps, ok := forbiddenShootOperationsToRunTogether[operation]; ok && forbiddenOps.HasAny(operations...) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be run together with %s operations", operation, strings.Join(sets.List(forbiddenOps), ", "))))
 		}
 	}
 
