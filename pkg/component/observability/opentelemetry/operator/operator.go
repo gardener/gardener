@@ -193,6 +193,11 @@ func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
+				APIGroups: []string{"networking.k8s.io"},
+				Resources: []string{"networkpolicies"},
+				Verbs:     []string{"list", "watch"},
+			},
+			{
 				APIGroups: []string{"opentelemetry.io"},
 				Resources: []string{"instrumentations", "opentelemetrycollectors"},
 				Verbs:     []string{"get", "list", "patch", "update", "watch"},
