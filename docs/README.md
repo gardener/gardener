@@ -185,6 +185,7 @@
 * [Checklist For Adding New Components](development/component-checklist.md)
 * [Defaulting Strategy and Developer Guideline](development/defaulting.md)
 * [Autoscaling Specifics for Components](development/autoscaling-specifics-for-components.md)
+* [Shoot Advertised Addresses](development/shoot-advertised-addresses.md)
 
 ## Extensions
 
