@@ -329,7 +329,7 @@ spec:
     kind: Deployment
     name: blackbox-exporter
   updatePolicy:
-    updateMode: Auto
+    updateMode: Recreate
 status: {}
 `
 	})

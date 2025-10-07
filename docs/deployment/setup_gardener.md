@@ -188,7 +188,7 @@ spec:
             minAllowed:
               memory: 128Mi
           updatePolicy:
-            updateMode: Auto
+            updateMode: Recreate
       values:
         replicaCount: 3
         resources:

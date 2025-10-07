@@ -461,7 +461,7 @@ func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisrup
 func (b *bootstrapper) getVPA(deploymentName string) *vpaautoscalingv1.VerticalPodAutoscaler {
 	var (
 		vpaMinAllowedMemory = "25Mi"
-		updateMode          = vpaautoscalingv1.UpdateModeAuto
+		updateMode          = vpaautoscalingv1.UpdateModeRecreate
 	)
 
 	if b.values.Role == RoleProber {

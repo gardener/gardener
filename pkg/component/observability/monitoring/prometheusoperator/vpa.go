@@ -14,7 +14,7 @@ import (
 )
 
 func (p *prometheusOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
-	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+	vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "prometheus-operator",

@@ -229,7 +229,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 		protocolTCP         = corev1.ProtocolTCP
 		protocolUDP         = corev1.ProtocolUDP
 
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
+		vpaUpdateMode    = vpaautoscalingv1.UpdateModeRecreate
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)

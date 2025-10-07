@@ -387,7 +387,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 			corev1.ResourceMemory: resource.MustParse("60Mi"),
 		}
 
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
 		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{

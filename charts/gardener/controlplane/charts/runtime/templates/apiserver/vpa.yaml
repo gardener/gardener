@@ -16,7 +16,7 @@ spec:
     kind: Deployment
     name: gardener-apiserver
   updatePolicy:
-    updateMode: Auto
+    updateMode: Recreate
   resourcePolicy:
     containerPolicies:
       - containerName: '*'

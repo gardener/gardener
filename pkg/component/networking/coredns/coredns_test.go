@@ -590,7 +590,7 @@ spec:
     kind: Deployment
     name: coredns-autoscaler
   updatePolicy:
-    updateMode: Auto
+    updateMode: Recreate
 status: {}
 `
 

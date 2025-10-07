@@ -322,7 +322,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 	)
 
 	if c.values.VPAEnabled {
-		updateMode := vpaautoscalingv1.UpdateModeAuto
+		updateMode := vpaautoscalingv1.UpdateModeRecreate
 		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{

@@ -317,7 +317,7 @@ var _ = Describe("VPNShoot", func() {
 						Name:       "vpn-shoot",
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -346,7 +346,7 @@ var _ = Describe("VPNShoot", func() {
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 						UpdateMode: func() *vpaautoscalingv1.UpdateMode {
-							mode := vpaautoscalingv1.UpdateModeAuto
+							mode := vpaautoscalingv1.UpdateModeRecreate
 							return &mode
 						}(),
 					},
