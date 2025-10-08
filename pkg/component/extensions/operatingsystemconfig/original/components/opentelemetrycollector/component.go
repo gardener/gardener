@@ -76,7 +76,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			Content: extensionsv1alpha1.FileContent{
 				ImageRef: &extensionsv1alpha1.FileContentImageRef{
 					Image:           ctx.Images[imagevector.ContainerImageNameOpentelemetryCollector].String(),
-					FilePathInImage: "/otelcol-contrib",
+					FilePathInImage: "/bin/otelcol",
 				},
 			},
 		}, extensionsv1alpha1.File{
