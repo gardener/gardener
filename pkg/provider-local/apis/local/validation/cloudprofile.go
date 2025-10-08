@@ -12,6 +12,7 @@ import (
 	coreapi "github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/utils"
@@ -226,4 +227,25 @@ func NewProviderImagesContext(providerImages []api.MachineImages) *gardenerutils
 			return utils.CreateMapFromSlice(mi.Versions, func(v api.MachineImageVersion) string { return v.Version })
 		},
 	)
+}
+
+// ValidateSupportedCapabilities validates that only supported capabilities and values are used.
+// This function can be deleted once the dedicated architecture field on MachineType and MachineImageVersion is retired.
+// This strict behavior is required to ensure automatic format conversion of namespaced CloudProfiles during the transition to machine capabilities.
+func ValidateSupportedCapabilities(capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, child *field.Path) error {
+	// During transition to machineCapability based cloud profiles only the following capability is allowed to be set: architecture
+	allErrs := field.ErrorList{}
+	for i, def := range capabilityDefinitions {
+		idxPath := child.Index(i)
+		if def.Name != v1beta1constants.ArchitectureName {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), def.Name, []string{v1beta1constants.ArchitectureName}))
+		}
+		for j, value := range def.Values {
+			jdxPath := idxPath.Child("values").Index(j)
+			if value != v1beta1constants.ArchitectureAMD64 && value != v1beta1constants.ArchitectureARM64 {
+				allErrs = append(allErrs, field.NotSupported(jdxPath, value, []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64}))
+			}
+		}
+	}
+	return allErrs.ToAggregate()
 }
