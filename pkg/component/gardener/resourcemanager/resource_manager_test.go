@@ -3009,22 +3009,84 @@ subjects:
 
 	Describe("#Wait", func() {
 		BeforeEach(func() {
-			configMap = configMapFor(&watchedNamespace, ForTarget, false, false)
-			deployment = deploymentFor(configMap.Name, false, nil, false)
-			resourceManager = New(fakeClient, deployNamespace, nil, cfg)
+			DeferCleanup(test.WithVars(
+				&IntervalWaitForDeployment, time.Millisecond,
+				&TimeoutWaitForDeployment, 100*time.Millisecond,
+			))
 		})
 
-		It("should successfully wait for the deployment to be ready", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+		Context("responsibility mode is ForTarget", func() {
+			BeforeEach(func() {
+				configMap = configMapFor(&watchedNamespace, ForTarget, false, false)
+				deployment = deploymentFor(configMap.Name, true, nil, false)
+				resourceManager = New(fakeClient, deployNamespace, nil, cfg)
+			})
 
-			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+			It("should successfully wait for the deployment to be ready", func() {
+				Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
-			timer := time.AfterFunc(10*time.Millisecond, func() {
-				deployment.Spec.Replicas = ptr.To[int32](0)
-				Expect(fakeClient.Update(ctx, deployment)).To(Succeed())
+				timer := time.AfterFunc(10*time.Millisecond, func() {
+					deployment.Spec.Replicas = ptr.To[int32](0)
+					Expect(fakeClient.Update(ctx, deployment)).To(Succeed())
 
+					deployment.Status.Conditions = []appsv1.DeploymentCondition{
+						{
+							Type:   appsv1.DeploymentAvailable,
+							Status: corev1.ConditionTrue,
+						},
+						{
+							Type:   appsv1.DeploymentProgressing,
+							Status: corev1.ConditionTrue,
+							Reason: "NewReplicaSetAvailable",
+						},
+					}
+					Expect(fakeClient.Status().Update(ctx, deployment)).To(Succeed())
+				})
+				defer timer.Stop()
+
+				Expect(resourceManager.Wait(ctx)).To(Succeed())
+			})
+
+			It("should fail while waiting for the deployment to be ready because it is unavailable", func() {
+				deployment.Status.Conditions = []appsv1.DeploymentCondition{
+					{
+						Type:   appsv1.DeploymentAvailable,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   appsv1.DeploymentProgressing,
+						Status: corev1.ConditionTrue,
+						Reason: "NewReplicaSetAvailable",
+					},
+				}
+
+				Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+				Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring(`condition "Available" has invalid status False (expected True)`)))
+			})
+
+			It("should fail while waiting for the deployment to be ready because it is still progressing", func() {
+				deployment.Status.Conditions = []appsv1.DeploymentCondition{
+					{
+						Type:   appsv1.DeploymentAvailable,
+						Status: corev1.ConditionTrue,
+					},
+					{
+						Type:    appsv1.DeploymentProgressing,
+						Status:  corev1.ConditionFalse,
+						Message: "still progressing",
+					},
+				}
+
+				Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+				Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring("still progressing")))
+			})
+
+			It("should fail while waiting for the deployment to be ready because there are old non-terminated pods", func() {
 				deployment.Status.Conditions = []appsv1.DeploymentCondition{
 					{
 						Type:   appsv1.DeploymentAvailable,
@@ -3036,77 +3098,79 @@ subjects:
 						Reason: "NewReplicaSetAvailable",
 					},
 				}
-				Expect(fakeClient.Status().Update(ctx, deployment)).To(Succeed())
+
+				Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+				Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring("there are still non-terminated old pods")))
 			})
-			defer timer.Stop()
-
-			Expect(resourceManager.Wait(ctx)).To(Succeed())
 		})
 
-		It("should fail while waiting for the deployment to be ready because it is unavailable", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
+		Context("responsibility mode is != ForTarget", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithVars(
+					&kubernetesutils.IntervalWait, time.Millisecond,
+					&kubernetesutils.WaitTimeout, 10*time.Millisecond,
+				))
 
-			deployment.Status.Conditions = []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionFalse,
-				},
-				{
-					Type:   appsv1.DeploymentProgressing,
-					Status: corev1.ConditionTrue,
-					Reason: "NewReplicaSetAvailable",
-				},
-			}
+				cfg.ResponsibilityMode = ForSource
+				configMap = configMapFor(nil, ForSource, false, false)
+				deployment = deploymentFor(configMap.Name, true, nil, false)
+				resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 
-			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+				deployment.Spec.Replicas = ptr.To[int32](0)
+				deployment.Status.Conditions = []appsv1.DeploymentCondition{
+					{
+						Type:   appsv1.DeploymentAvailable,
+						Status: corev1.ConditionTrue,
+					},
+					{
+						Type:   appsv1.DeploymentProgressing,
+						Status: corev1.ConditionTrue,
+						Reason: "NewReplicaSetAvailable",
+					},
+				}
+				Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(fakeClient.Delete(ctx, deployment)).To(Succeed())
+				})
+			})
 
-			Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring(`condition "Available" has invalid status False (expected True)`)))
-		})
+			It("should pass because the CRD is ready", func() {
+				readyCRD := &apiextensionsv1.CustomResourceDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "managedresources.resources.gardener.cloud",
+					},
+					Status: apiextensionsv1.CustomResourceDefinitionStatus{
+						Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
+							{Type: apiextensionsv1.Established, Status: apiextensionsv1.ConditionTrue},
+							{Type: apiextensionsv1.NamesAccepted, Status: apiextensionsv1.ConditionTrue},
+						},
+					},
+				}
 
-		It("should fail while waiting for the deployment to be ready because it is still progressing", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
+				Expect(fakeClient.Create(ctx, readyCRD)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(fakeClient.Delete(ctx, readyCRD)).To(Succeed())
+				})
 
-			deployment.Status.Conditions = []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionTrue,
-				},
-				{
-					Type:    appsv1.DeploymentProgressing,
-					Status:  corev1.ConditionFalse,
-					Message: "still progressing",
-				},
-			}
+				Expect(resourceManager.Wait(ctx)).To(Succeed())
+			})
 
-			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+			It("should fail because the CRD is not ready", func() {
+				unreadyCRD := &apiextensionsv1.CustomResourceDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "managedresources.resources.gardener.cloud",
+					},
+				}
 
-			Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring("still progressing")))
-		})
+				Expect(fakeClient.Create(ctx, unreadyCRD)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(fakeClient.Delete(ctx, unreadyCRD)).To(Succeed())
+				})
 
-		It("should fail while waiting for the deployment to be ready because there are old non-terminated pods", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
-
-			deployment.Status.Conditions = []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionTrue,
-				},
-				{
-					Type:   appsv1.DeploymentProgressing,
-					Status: corev1.ConditionTrue,
-					Reason: "NewReplicaSetAvailable",
-				},
-			}
-
-			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-			Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring("there are still non-terminated old pods")))
+				Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring("failed waiting for CRD \"managedresources.resources.gardener.cloud\" to be ready")))
+			})
 		})
 	})
 
