@@ -8,4 +8,3 @@ components:
 - ../../components/cloudprofile
 - ../../components/projects/garden
 - ../../components/credentials/etcd-backup
-- ../../components/credentials/secret-project-garden

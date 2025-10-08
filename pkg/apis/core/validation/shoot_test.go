@@ -1833,6 +1833,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 						}))
 					})
 				})
+
+				It("should allow not referencing a SecretBinding and CredentialsBinding", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+					shoot.Spec.SecretBindingName = nil
+					shoot.Spec.CredentialsBindingName = nil
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
 			})
 
 			Describe("ClusterAutoscaler options validation", func() {
