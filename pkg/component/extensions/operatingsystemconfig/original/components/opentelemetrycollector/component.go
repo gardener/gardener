@@ -30,6 +30,9 @@ const (
 	PathConfig = "/var/lib/opentelemetry-collector/config/config"
 	// PathCACert is the path for the otelCollector-tls certificate authority.
 	PathCACert = PathDirectory + "/ca.crt"
+	// MetricsPort is the port on which the OpenTelemetry collector exposes
+	// its internal metrics.
+	MetricsPort = 8888
 
 	openTelemetryCollectorBinaryPath     = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/opentelemetry-collector"
 	openTelemetryCollectorKubeconfigPath = PathDirectory + "/kubeconfig"

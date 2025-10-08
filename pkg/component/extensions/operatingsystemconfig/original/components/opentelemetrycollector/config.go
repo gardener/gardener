@@ -43,6 +43,7 @@ func getOpentelemetryCollectorConfigurationFile(ctx components.Context) (extensi
 		"clientURL":     ctx.OpenTelemetryCollectorIngressHostName + ":443",
 		"pathCACert":    PathCACert,
 		"pathAuthToken": PathAuthToken,
+		"metricsPort":   MetricsPort,
 	}); err != nil {
 		return extensionsv1alpha1.File{}, err
 	}

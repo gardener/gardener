@@ -1,3 +1,8 @@
+# OpenTelemetry Collector configuration.
+#
+# https://opentelemetry.io/docs/collector/
+# https://opentelemetry.io/docs/collector/configuration/
+# https://opentelemetry.io/docs/collector/internal-telemetry/
 extensions:
   file_storage:
     directory: /var/log/otelcol
@@ -60,7 +65,7 @@ processors:
   # If the log came from a pod that is managed by Gardener, the 'k8sattributes' processor
   # will successfully associate the datapoint (log) with the a pod. Since we only
   # watch the kube-system namespace for pods that are managed by Gardener, we can
-  # simply drop all logs that do not have a specific label that we know should have been 
+  # simply drop all logs that do not have a specific label that we know should have been
   # added by the 'k8sattributes' processor. In this case, we check for the
   # existence of the 'k8s.node.name' attribute.
   filter/drop_non_gardener:
@@ -93,6 +98,19 @@ exporters:
       ca_file: {{ .pathCACert }}
 
 service:
+  telemetry:
+    metrics:
+      level: normal
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: {{ .metricsPort }}
+    logs:
+      level: INFO
+      encoding: json
+
   extensions: [file_storage, bearertokenauth]
   pipelines:
     logs/journal:
