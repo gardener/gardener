@@ -3115,7 +3115,7 @@ subjects:
 
 				cfg.ResponsibilityMode = ForSource
 				configMap = configMapFor(nil, ForSource, false, false)
-				deployment = deploymentFor(configMap.Name, true, nil, false)
+				deployment = deploymentFor(configMap.Name, false, nil, false)
 				resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 
 				deployment.Spec.Replicas = ptr.To[int32](0)
