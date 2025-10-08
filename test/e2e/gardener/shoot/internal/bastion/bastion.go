@@ -191,7 +191,7 @@ func VerifyBastion(s *ShootContext) {
 			}).Should(Succeed())
 			closers = append(closers, nodeConnection)
 
-			Eventually(ctx, execute(nodeConnection, "hostname")).Should(gbytes.Say(nodeName))
+			Eventually(ctx, execute(ctx, nodeConnection, "hostname")).Should(gbytes.Say(nodeName))
 		}
 
 		It("should connect to the Node via Bastion on Hostname", func(ctx SpecContext) {
@@ -214,11 +214,12 @@ func VerifyBastion(s *ShootContext) {
 	})
 }
 
-func execute(c *sshutils.Connection, command string) *gbytes.Buffer {
+func execute(ctx context.Context, c *sshutils.Connection, command string) *gbytes.Buffer {
 	GinkgoHelper()
 
 	combinedBuffer := gbytes.NewBuffer()
 	Expect(c.RunWithStreams(
+		ctx,
 		nil,
 		io.MultiWriter(combinedBuffer, gexec.NewPrefixedWriter("[out] ", GinkgoWriter)),
 		io.MultiWriter(combinedBuffer, gexec.NewPrefixedWriter("[err] ", GinkgoWriter)),

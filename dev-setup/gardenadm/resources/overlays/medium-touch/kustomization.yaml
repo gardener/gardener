@@ -13,12 +13,8 @@ patches:
     kind: Shoot
   patch: |
     - op: add
-      path: /spec/provider/workers/0/machine/image
-      value:
-        name: local
-        version: 1.0.0
+      path: /spec/provider/workers/0/machine/image/version
+      value: 1.0.0
     - op: add
-      path: /spec/provider/workers/1/machine/image
-      value:
-        name: local
-        version: 1.0.0
+      path: /spec/provider/workers/1/machine/image/version
+      value: 1.0.0

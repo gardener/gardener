@@ -1065,7 +1065,8 @@ func KeyV2(
 	)
 
 	if worker.Machine.Image != nil {
-		data = append(data, worker.Machine.Image.Name+*worker.Machine.Image.Version)
+		// worker.Machine.Image.Version is unset for autonomous shoots with unmanaged infrastructure
+		data = append(data, worker.Machine.Image.Name+ptr.Deref(worker.Machine.Image.Version, ""))
 	}
 
 	if worker.Volume != nil {

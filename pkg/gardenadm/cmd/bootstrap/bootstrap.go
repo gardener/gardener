@@ -29,8 +29,8 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/publicip"
-	sshutils "github.com/gardener/gardener/pkg/utils/ssh"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -221,11 +221,15 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
 
-		// Delete machine-controller-manager to prevent it from interfering with Machine objects that will be migrated to
-		// the autonomous shoot.
-		deleteMachineControllerManager = g.Add(flow.Task{
-			Name:         "Deleting machine-controller-manager",
-			Fn:           component.OpDestroyAndWait(b.Shoot.Components.ControlPlane.MachineControllerManager).Destroy,
+		// Scale down machine-controller-manager to prevent it from interfering with Machine objects that will be migrated
+		// to the autonomous shoot. Scaling down instead of deleting it, allows operators/developers to simply scale it up
+		// again in case they need to redeploy a control plane machine manually because of errors.
+		scaleDownMachineControllerManager = g.Add(flow.Task{
+			Name: "Scaling down machine-controller-manager",
+			Fn: func(ctx context.Context) error {
+				b.Shoot.Components.ControlPlane.MachineControllerManager.SetReplicas(0)
+				return component.OpWait(b.Shoot.Components.ControlPlane.MachineControllerManager).Deploy(ctx)
+			},
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
 
@@ -247,7 +251,7 @@ func run(ctx context.Context, opts *Options) error {
 				component.MigrateAndWait(b.Shoot.Components.Extensions.Worker),
 				component.MigrateAndWait(b.Shoot.Components.Extensions.ExternalDNSRecord),
 			),
-			Dependencies: flow.NewTaskIDs(deleteMachineControllerManager, deployDNSRecord),
+			Dependencies: flow.NewTaskIDs(scaleDownMachineControllerManager, deployDNSRecord),
 		})
 
 		// In contrast to a usual Shoot control plane migration, there is no garden cluster where the ShootState is stored.
@@ -272,25 +276,40 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
 
-		connMachine0      *sshutils.Connection
-		connectToMachine0 = g.Add(flow.Task{
-			Name: "Connecting to the first control plane machine",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				connMachine0, err = b.ConnectToMachine(ctx, 0)
-				return err
-			}).RetryUntilTimeout(5*time.Second, 5*time.Minute),
+		connectToMachine = g.Add(flow.Task{
+			Name:         "Connecting to the first control plane machine",
+			Fn:           flow.TaskFn(b.ConnectToControlPlaneMachine).RetryUntilTimeout(5*time.Second, 5*time.Minute),
 			Dependencies: flow.NewTaskIDs(listControlPlaneMachines, deployBastion),
 		})
 		copyManifests = g.Add(flow.Task{
 			Name: "Copying manifests to the first control plane machine",
-			Fn: func(ctx context.Context) error {
-				return b.CopyManifests(ctx, connMachine0, os.DirFS(opts.ConfigDir))
-			},
-			Dependencies: flow.NewTaskIDs(connectToMachine0, compileShootState),
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.CopyManifests(ctx, os.DirFS(opts.ConfigDir))
+			}).Timeout(time.Minute),
+			Dependencies: flow.NewTaskIDs(connectToMachine, compileShootState),
 		})
 
-		_ = deployDNSRecord
-		_ = copyManifests
+		bootstrapControlPlane = g.Add(flow.Task{
+			Name: "Bootstrapping control plane on the first control plane machine",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.SSHConnection().RunWithStreams(ctx, nil, opts.Out, opts.ErrOut,
+					fmt.Sprintf("%s=%q /opt/bin/gardenadm init -d %q --log-level=%s",
+						imagevector.OverrideEnv, botanist.ImageVectorOverrideFile, botanist.ManifestsDir, opts.LogLevel,
+					),
+				)
+			}).Timeout(30 * time.Minute),
+			Dependencies: flow.NewTaskIDs(deployDNSRecord, copyManifests),
+		})
+
+		fetchKubeconfig = g.Add(flow.Task{
+			Name: "Fetching kubeconfig from the first control plane machine",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.FetchKubeconfig(ctx, opts.KubeconfigWriter)
+			}).Timeout(time.Minute),
+			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
+		})
+
+		_ = fetchKubeconfig
 
 		// In contrast to the usual Shoot migrate flow, we don't delete the shoot control plane namespace at the end.
 		// The bootstrap cluster is designed to be temporary and thrown away after successfully executing
@@ -305,7 +324,20 @@ func run(ctx context.Context, opts *Options) error {
 		return flow.Errors(err)
 	}
 
-	opts.Log.Info("Command is work in progress")
+	fmt.Fprintf(opts.Out, `
+Warning: this command is work in progress.
+
+For now, you can connect to the autonomous Shoot cluster control-plane by
+fetching the kubeconfig from the secret "%[1]s/kubeconfig"
+on the bootstrap cluster:
+
+  kubectl get secret -n %[1]s kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 --decode > %[1]s-kubeconfig.yaml
+  export KUBECONFIG=$PWD/%[1]s-kubeconfig.yaml
+  kubectl get nodes
+
+Note that the API server of the autonomous Shoot cluster control-plane might
+not be accessible from your current machine.
+`, b.Shoot.GetInfo().Status.TechnicalID)
 	return nil
 }
 

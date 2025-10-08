@@ -7,7 +7,9 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
+	"os"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -21,14 +23,20 @@ type Options struct {
 	*cmd.Options
 	cmd.ManifestOptions
 
-	// Kubeconfig is the path to the kubeconfig file pointing to the KinD cluster.
+	// Kubeconfig is the path to the kubeconfig file pointing to the bootstrap cluster.
 	Kubeconfig string
+	// KubeconfigOutput is the path where the kubeconfig file for the shoot cluster should be written to.
+	// If set, Complete opens the file for writing and stores the writer in KubeconfigWriter.
+	KubeconfigOutput string
 	// BastionIngressCIDRs is a list of CIDRs to be allowed for accessing the created bastion host.
 	// If not given, the system's public IPs are detected using PublicIPDetector.
 	BastionIngressCIDRs []string
 
 	// exposed for testing, defaults to publicip.IpifyDetector
 	PublicIPDetector publicip.Detector
+
+	// KubeconfigWriter is the optional writer for the file given in KubeconfigOutput (or stdout).
+	KubeconfigWriter io.Writer
 }
 
 // ParseArgs parses the arguments to the options.
@@ -43,7 +51,7 @@ func (o *Options) ParseArgs(args []string) error {
 // Validate validates the options.
 func (o *Options) Validate() error {
 	if len(o.Kubeconfig) == 0 {
-		return fmt.Errorf("must provide a path to a KinD cluster kubeconfig")
+		return fmt.Errorf("must provide a path to a bootstrap cluster kubeconfig")
 	}
 
 	for _, cidr := range o.BastionIngressCIDRs {
@@ -81,11 +89,22 @@ func (o *Options) Complete() error {
 		o.Log.Info("Using auto-detected public IP addresses as bastion ingress CIDRs", "cidrs", o.BastionIngressCIDRs)
 	}
 
+	if o.KubeconfigOutput == "-" {
+		o.KubeconfigWriter = o.Out
+	} else if len(o.KubeconfigOutput) > 0 {
+		var err error
+		o.KubeconfigWriter, err = os.OpenFile(o.KubeconfigOutput, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+		if err != nil {
+			return fmt.Errorf("error opening kubeconfig output file: %w", err)
+		}
+	}
+
 	return o.ManifestOptions.Complete()
 }
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	o.ManifestOptions.AddFlags(fs)
-	fs.StringVarP(&o.Kubeconfig, "kubeconfig", "k", "", "Path to the kubeconfig file pointing to the KinD cluster")
+	fs.StringVarP(&o.Kubeconfig, "kubeconfig", "k", "", "Path to the kubeconfig file pointing to the bootstrap cluster")
+	fs.StringVar(&o.KubeconfigOutput, "kubeconfig-output", "", "Path where the kubeconfig file for the shoot cluster should be written to. If not set, the kubeconfig is not written to disk. Set to '-' to write to stdout.")
 	fs.StringSliceVar(&o.BastionIngressCIDRs, "bastion-ingress-cidr", nil, "Restrict bastion host ingress to the given CIDRs. Defaults to your system's public IPs (IPv4 and/or IPv6) as detected using https://ipify.org/.")
 }

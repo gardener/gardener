@@ -1518,6 +1518,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
+		It("should handle an empty machine image version", func() {
+			p.Machine.Image.Version = nil
+			Expect(CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)).NotTo(BeEmpty())
+		})
+
 		Context("hash value should not change", func() {
 			AfterEach(func() {
 				kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{
