@@ -57,7 +57,9 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile status for '%s': %w", profile.Name, err)
 	}
 
-	statusConfig.MachineImages = mergeMachineImages(specConfig.MachineImages, statusConfig.MachineImages)
+	uniformSpecConfig := EnsureUniformFormat(specConfig, profile.Status.CloudProfileSpec.MachineCapabilities)
+
+	statusConfig.MachineImages = mergeMachineImages(uniformSpecConfig.MachineImages, statusConfig.MachineImages)
 
 	modifiedStatusConfig, err := json.Marshal(statusConfig)
 	if err != nil {
@@ -66,6 +68,38 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 	profile.Status.CloudProfileSpec.ProviderConfig.Raw = modifiedStatusConfig
 
 	return nil
+}
+
+// EnsureUniformFormat ensures that the given CloudProfileConfig is in a uniform format.
+// Depending on whether the parent CloudProfile is in capability format or not, it transforms the given config to
+// capability format or old format respectively.
+// It assumes that the given config is either completely in capability format or in old format.
+func EnsureUniformFormat(config *v1alpha1.CloudProfileConfig, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) *v1alpha1.CloudProfileConfig {
+	transformedConfig := v1alpha1.CloudProfileConfig{}
+	isParentInCapabilityFormat := len(capabilityDefinitions) != 0
+
+	for idx, machineImage := range config.MachineImages {
+		transformedConfig.MachineImages = append(transformedConfig.MachineImages, v1alpha1.MachineImages{
+			Name:     machineImage.Name,
+			Versions: make([]v1alpha1.MachineImageVersion, 0, len(machineImage.Versions)),
+		})
+		for _, version := range machineImage.Versions {
+			isVersionInCapabilityFormat := len(version.CapabilityFlavors) != 0
+			transformedVersion := v1alpha1.MachineImageVersion{Version: version.Version}
+			if isParentInCapabilityFormat && !isVersionInCapabilityFormat {
+				// transform to capability format
+				transformedVersion.CapabilityFlavors = []v1alpha1.MachineImageFlavor{{Image: version.Image}}
+			} else if !isParentInCapabilityFormat && isVersionInCapabilityFormat {
+				// transform to old format
+				transformedVersion.Image = version.CapabilityFlavors[0].Image
+			} else {
+				transformedVersion = version
+			}
+
+			transformedConfig.MachineImages[idx].Versions = append(transformedConfig.MachineImages[idx].Versions, transformedVersion)
+		}
+	}
+	return &transformedConfig
 }
 
 func mergeMachineImages(specMachineImages, statusMachineImages []v1alpha1.MachineImages) []v1alpha1.MachineImages {
