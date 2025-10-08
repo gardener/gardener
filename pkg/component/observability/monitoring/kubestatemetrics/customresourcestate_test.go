@@ -28,7 +28,7 @@ func expectedCustomResourceStateConfig(suffix string) string {
 	relativePaths := []string{"testdata/custom-resource-state-vpa.expectation.yaml"}
 	if suffix == SuffixRuntime {
 		options = append(options, WithGardenResourceMetrics, WithOperatorExtensionMetrics)
-		relativePaths = append(relativePaths, "testdata/custom-resource-state-garden.expectation.yaml", "testdata/custom-resource-state-operator-extension.expectation.yaml")
+		relativePaths = append(relativePaths, "testdata/custom-resource-state-garden.expectation.yaml", "testdata/custom-resource-state-garden-extension.expectation.yaml")
 	}
 
 	var expectedMetrics customresourcestate.Metrics

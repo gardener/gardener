@@ -190,7 +190,7 @@ func newOperatorExtensionCustomResourceStateMetrics() customresourcestate.Resour
 			Kind:    "Extension",
 			Version: "v1alpha1",
 		},
-		MetricNamePrefix: ptr.To("gardener_operator"),
+		MetricNamePrefix: ptr.To("garden"),
 		Labels: customresourcestate.Labels{
 			LabelsFromPath: map[string][]string{
 				"name": {"metadata", "name"},

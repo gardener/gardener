@@ -1,6 +1,6 @@
 spec:
   resources:
-    - metricNamePrefix: gardener_operator
+    - metricNamePrefix: garden
       groupVersionKind:
         group: operator.gardener.cloud
         version: v1alpha1
