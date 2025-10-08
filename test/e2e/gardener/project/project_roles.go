@@ -46,6 +46,7 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
 			},
 		}
 
+		time.Sleep(60 * time.Second)
 		s = NewTestContext().ForProject(project)
 	})
 
@@ -77,6 +78,8 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
 		testUserConfig.Impersonate = rest.ImpersonationConfig{
 			UserName: testUserName,
 		}
+
+		Expect(false).To(BeTrue())
 
 		Eventually(ctx, func(g Gomega) {
 			var err error
