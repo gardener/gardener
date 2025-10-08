@@ -100,9 +100,9 @@ receivers:
       - type: move
         from: body._HOSTNAME
         to: resource.nodename
-      - type: retain
-        fields:
-          - body.MESSAGE
+      - type: move
+        from: body.MESSAGE
+        to: body
 
   filelog/pods:
     include: /var/log/pods/kube-system_*/*/*.log
@@ -153,12 +153,6 @@ processors:
       - action: insert
         key: origin
         value: systemd_journal
-      - key: loki.resource.labels
-        value: unit, nodename, origin
-        action: insert
-      - key: loki.format
-        value: logfmt
-        action: insert
 
   resource/pod_labels:
     attributes:
@@ -167,21 +161,6 @@ processors:
         action: insert
       - key: namespace_name
         value: "kube-system"
-        action: insert
-      - key: nodename
-        from_attribute: k8s.node.name
-        action: insert
-      - key: pod_name
-        from_attribute: k8s.pod.name
-        action: insert
-      - key: container_name
-        from_attribute: k8s.container.name
-        action: insert
-      - key: loki.resource.labels
-        value: pod_name, container_name, origin, namespace_name, nodename, host.name
-        action: insert
-      - key: loki.format
-        value: logfmt
         action: insert
 
 exporters:

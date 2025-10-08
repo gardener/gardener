@@ -364,10 +364,25 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 						"batch": map[string]any{
 							"timeout": "10s",
 						},
-						"attributes/labels": map[string]any{
-							"actions": []any{
+						"resource/vali": map[string]any{
+							"attributes": []any{
 								map[string]any{
-									"key":    "loki.attribute.labels",
+									"key":            "nodename",
+									"from_attribute": "k8s.node.name",
+									"action":         "insert",
+								},
+								map[string]any{
+									"key":            "pod_name",
+									"from_attribute": "k8s.pod.name",
+									"action":         "insert",
+								},
+								map[string]any{
+									"key":            "container_name",
+									"from_attribute": "k8s.container.name",
+									"action":         "insert",
+								},
+								map[string]any{
+									"key":    "loki.resource.labels",
 									"value":  "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
 									"action": "insert",
 								},
@@ -412,7 +427,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 						},
 					},
 					Pipelines: map[string]*otelv1beta1.Pipeline{
-						"logs": {
+						"logs/vali": {
 							Exporters: []string{
 								"loki",
 							},
@@ -420,7 +435,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 								"otlp",
 							},
 							Processors: []string{
-								"attributes/labels",
+								"resource/vali",
 								"batch",
 							},
 						},
