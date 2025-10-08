@@ -41,11 +41,11 @@ aliases:
   - rrhubenov
   gardener-reviewers-machine-controller-manager: # This group is primarily responsible for the machine-controller-manager component.
   - aaronfern
+  - elankath
   - unmarshall
   gardener-reviewers-monitoring: # This group is primarily responsible for monitoring topics.
   - chrkl
   - istvanballok
-  - nickytd
   - rickardsjp
   - vicwicker
   gardener-reviewers-networking: # This group is primarily responsible for networking topics.
