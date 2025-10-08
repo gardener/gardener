@@ -53,7 +53,7 @@ require (
 	go.yaml.in/yaml/v4 v4.0.0-rc.2
 	golang.org/x/crypto v0.42.0
 	golang.org/x/exp v0.0.0-20251002181428-27f1f14c8bb9
-	golang.org/x/text v0.29.0
+	golang.org/x/text v0.30.0
 	golang.org/x/time v0.13.0
 	golang.org/x/tools v0.37.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
