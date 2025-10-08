@@ -1305,9 +1305,18 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				Name:                    "shoot-restriction.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				TimeoutSeconds:          ptr.To[int32](10),
-				Rules:                   []admissionregistrationv1.RuleWithOperations{},
-				FailurePolicy:           &failurePolicyFail,
-				MatchPolicy:             &matchPolicyEquivalent,
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"core.gardener.cloud"},
+							APIVersions: []string{"v1beta1"},
+							Resources:   []string{"projects", "shoots"},
+						},
+					},
+				},
+				FailurePolicy: &failurePolicyFail,
+				MatchPolicy:   &matchPolicyEquivalent,
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/admission/shootrestriction"),
 					CABundle: caBundle,

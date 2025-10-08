@@ -19,10 +19,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/utils/ptr"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/shootrestriction"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
@@ -45,6 +47,7 @@ var _ = Describe("handler", func() {
 		shootNamespace string
 		shootName      string
 		gardenletUser  authenticationv1.UserInfo
+		gardenadmUser  authenticationv1.UserInfo
 
 		responseAllowed = admission.Response{
 			AdmissionResponse: admissionv1.AdmissionResponse{
@@ -74,6 +77,10 @@ var _ = Describe("handler", func() {
 			Username: "gardener.cloud:system:shoot:" + shootNamespace + ":" + shootName,
 			Groups:   []string{"gardener.cloud:system:shoots"},
 		}
+		gardenadmUser = authenticationv1.UserInfo{
+			Username: "gardener.cloud:gardenadm:shoot:" + shootNamespace + ":" + shootName,
+			Groups:   []string{"gardener.cloud:system:shoots"},
+		}
 	})
 
 	Describe("#Handle", func() {
@@ -87,14 +94,30 @@ var _ = Describe("handler", func() {
 			It("should have no opinion because no resource request", func() {
 				request.UserInfo = gardenletUser
 
-				Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+					AdmissionResponse: admissionv1.AdmissionResponse{
+						Allowed: false,
+						Result: &metav1.Status{
+							Code:    int32(http.StatusBadRequest),
+							Message: `unexpected resource: ""`,
+						},
+					},
+				}))
 			})
 
 			It("should have no opinion because resource is irrelevant", func() {
 				request.UserInfo = gardenletUser
 				request.Resource = metav1.GroupVersionResource{}
 
-				Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+					AdmissionResponse: admissionv1.AdmissionResponse{
+						Allowed: false,
+						Result: &metav1.Status{
+							Code:    int32(http.StatusBadRequest),
+							Message: `unexpected resource: ""`,
+						},
+					},
+				}))
 			})
 		})
 
@@ -242,6 +265,204 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 									certificatesv1.UsageDigitalSignature,
 									certificatesv1.UsageClientAuth,
 								},
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+			})
+		})
+
+		Context("gardenadm client", func() {
+			Context("when requested for Projects", func() {
+				var (
+					name string
+				)
+
+				BeforeEach(func() {
+					name = "foo"
+
+					request.Name = name
+					request.UserInfo = gardenadmUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+						Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+						Resource: "projects",
+					}
+				})
+
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
+							},
+						}))
+					},
+
+					Entry("update", admissionv1.Update),
+					Entry("delete", admissionv1.Delete),
+				)
+
+				Context("when operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					It("should return an error because decoding the object failed", func() {
+						request.Object.Raw = []byte(`{]`)
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
+								},
+							},
+						}))
+					})
+
+					It("should deny the request because project namespace does not match shoot namespaces", func() {
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.Project{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+								Kind:       "Project",
+							},
+							Spec: gardencorev1beta1.ProjectSpec{
+								Namespace: ptr.To("other-namespace"),
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+								},
+							},
+						}))
+					})
+
+					It("should allow the request because project namespace matches shoot namespaces", func() {
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.Project{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+								Kind:       "Project",
+							},
+							Spec: gardencorev1beta1.ProjectSpec{
+								Namespace: &shootNamespace,
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+			})
+
+			Context("when requested for Shoots", func() {
+				var (
+					name string
+				)
+
+				BeforeEach(func() {
+					name = "foo"
+
+					request.Name = name
+					request.UserInfo = gardenadmUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+						Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+						Resource: "shoots",
+					}
+				})
+
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
+							},
+						}))
+					},
+
+					Entry("update", admissionv1.Update),
+					Entry("delete", admissionv1.Delete),
+				)
+
+				Context("when operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					It("should return an error because decoding the object failed", func() {
+						request.Object.Raw = []byte(`{]`)
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
+								},
+							},
+						}))
+					})
+
+					It("should deny the request because shoot does not match shoot info", func() {
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.Shoot{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+								Kind:       "Shoot",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "other-namespace",
+								Name:      "other-name",
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+								},
+							},
+						}))
+					})
+
+					It("should allow the request because shoot namespace matches shoot namespaces", func() {
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.Shoot{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+								Kind:       "Shoot",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: shootNamespace,
+								Name:      shootName,
 							},
 						})
 						Expect(err).NotTo(HaveOccurred())

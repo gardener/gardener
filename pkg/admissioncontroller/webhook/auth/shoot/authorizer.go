@@ -24,6 +24,7 @@ import (
 	shootidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/shoot"
 	authwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/graph"
@@ -53,11 +54,17 @@ var (
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
+	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource                 = corev1.Resource("configmaps")
+	controllerDeploymentResource      = gardencorev1beta1.Resource("controllerdeployments")
+	controllerRegistrationResource    = gardencorev1beta1.Resource("controllerregistrations")
+	credentialsBindingResource        = securityv1alpha1.Resource("credentialsbindings")
 	eventCoreResource                 = corev1.Resource("events")
 	eventResource                     = eventsv1.Resource("events")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
+	projectResource                   = gardencorev1beta1.Resource("projects")
 	secretResource                    = corev1.Resource("secrets")
+	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 )
 
@@ -78,6 +85,10 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			ToName:                 shootName,
 		}
 	)
+
+	if userType == gardenletidentity.UserTypeGardenadm {
+		return a.authorizeGardenadmRequests(log, shootNamespace, shootName, attrs)
+	}
 
 	if attrs.IsResourceRequest() {
 		requestResource := schema.GroupResource{Group: attrs.GetAPIGroup(), Resource: attrs.GetResource()}
