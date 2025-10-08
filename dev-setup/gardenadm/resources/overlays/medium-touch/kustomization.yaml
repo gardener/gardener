@@ -7,6 +7,9 @@ sortOptions:
 resources:
 - ../../base
 
+components:
+- ../../../../gardenconfig/components/credentials/secret-project-garden
+
 patches:
 - path: patch-shoot-medium-touch.yaml
 - target:
