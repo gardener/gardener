@@ -24,6 +24,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -102,12 +103,9 @@ func run(ctx context.Context, opts *Options) error {
 				return requestShortLivedClientCertificateForGarden(ctx, b, bootstrapClientSet)
 			},
 		})
-		prepareGardenerResources = g.Add(flow.Task{
-			Name: "Preparing Gardener resources in garden cluster",
-			Fn: func(ctx context.Context) error {
-				// TODO(rfranzke): Dummy call with garden client - replaced in a subsequent commit with actual logic.
-				return b.GardenClient.List(ctx, &corev1.NodeList{})
-			},
+		prepareResources = g.Add(flow.Task{
+			Name:         "Preparing Gardener resources in garden cluster",
+			Fn:           func(ctx context.Context) error { return prepareGardenerResources(ctx, b) },
 			Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
 		})
 		_ = g.Add(flow.Task{
@@ -125,7 +123,7 @@ func run(ctx context.Context, opts *Options) error {
 				)
 				return err
 			},
-			Dependencies: flow.NewTaskIDs(prepareGardenerResources),
+			Dependencies: flow.NewTaskIDs(prepareResources),
 		})
 	)
 
@@ -175,13 +173,86 @@ func requestShortLivedClientCertificateForGarden(ctx context.Context, b *botanis
 		return fmt.Errorf("failed creating short-lived kubeconfig with the retrieved client certificate: %w", err)
 	}
 
-	gardenClientSet, err := kubernetes.NewClientFromBytes(kubeconfig)
+	gardenClientSet, err := kubernetes.NewClientFromBytes(
+		kubeconfig,
+		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
+		kubernetes.WithDisabledCachedClient(),
+	)
 	if err != nil {
 		return fmt.Errorf("failed creating garden client set from short-lived kubeconfig: %w", err)
 	}
 
 	b.Logger.Info("Successfully retrieved short-lived kubeconfig for garden cluster")
 	b.GardenClient = gardenClientSet.Client()
+
+	// TODO(rfranzke): Store this in a temp file on the file system to prevent issuing it again and again - subsequent
+	//  commit.
+	return nil
+}
+
+func prepareGardenerResources(ctx context.Context, b *botanist.AutonomousBotanist) error {
+	if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Resources.CloudProfile), &gardencorev1beta1.CloudProfile{}); err != nil {
+		return fmt.Errorf("failed checking for existence of CloudProfile %s (this is not created by 'gardenadm connect' and must exist in the garden cluster): %w", b.Resources.CloudProfile.Name, err)
+	}
+	b.Logger.Info("CloudProfile existence ensured in garden cluster")
+
+	for _, registration := range b.Resources.ControllerRegistrations {
+		if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(registration), &gardencorev1beta1.ControllerRegistration{}); err != nil {
+			return fmt.Errorf("failed checking for existence of ControllerRegistration %s (this is not created by 'gardenadm connect' and must exist in the garden cluster): %w", registration.Name, err)
+		}
+	}
+	b.Logger.Info("ControllerRegistration existences ensured in garden cluster")
+
+	for _, deployment := range b.Resources.ControllerDeployments {
+		if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(deployment), &gardencorev1.ControllerDeployment{}); err != nil {
+			return fmt.Errorf("failed checking for existence of ControllerDeployment %s (this is not created by 'gardenadm connect' and must exist in the garden cluster): %w", deployment.Name, err)
+		}
+	}
+	b.Logger.Info("ControllerDeployments existences ensured in garden cluster")
+
+	// We do not handle the 'garden' Project because gardener-apiserver defaults .spec.tolerations for this project.
+	// This requires special permissions for a custom verb that we do not want to grant to the gardenadm user for
+	// autonomous shoots.
+	if project := b.Resources.Project.DeepCopy(); project.Name != v1beta1constants.GardenNamespace {
+		if err := b.GardenClient.Create(ctx, project); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating Project resource %s in garden cluster: %w", project.Name, err)
+		}
+		b.Logger.Info("Project resource ensured in garden cluster")
+	}
+
+	for _, configMap := range b.Resources.ConfigMaps {
+		if err := b.GardenClient.Create(ctx, configMap.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating ConfigMap resource %s in garden cluster: %w", client.ObjectKeyFromObject(configMap), err)
+		}
+	}
+	b.Logger.Info("ConfigMap resources ensured in garden cluster")
+
+	for _, secret := range b.Resources.Secrets {
+		if err := b.GardenClient.Create(ctx, secret.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating Secret resource %s in garden cluster: %w", client.ObjectKeyFromObject(secret), err)
+		}
+	}
+	b.Logger.Info("Secret resources ensured in garden cluster")
+
+	if b.Resources.SecretBinding != nil {
+		if err := b.GardenClient.Create(ctx, b.Resources.SecretBinding.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating SecretBinding resource %s in garden cluster: %w", client.ObjectKeyFromObject(b.Resources.SecretBinding), err)
+		}
+		b.Logger.Info("SecretBinding resource ensured in garden cluster")
+	}
+
+	if b.Resources.CredentialsBinding != nil {
+		if err := b.GardenClient.Create(ctx, b.Resources.CredentialsBinding.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating CredentialsBinding resource %s in garden cluster: %w", client.ObjectKeyFromObject(b.Resources.CredentialsBinding), err)
+		}
+		b.Logger.Info("CredentialsBinding resource ensured in garden cluster")
+	}
+
+	if err := b.GardenClient.Create(ctx, b.Shoot.GetInfo().DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+		return fmt.Errorf("failed creating Shoot resource %s in garden cluster: %w", client.ObjectKeyFromObject(b.Shoot.GetInfo()), err)
+	}
+	b.Logger.Info("Shoot resource ensured in garden cluster")
+
 	return nil
 }
 
