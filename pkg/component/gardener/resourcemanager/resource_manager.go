@@ -2067,6 +2067,17 @@ func (r *resourceManager) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForDeployment)
 	defer cancel()
 
+	if r.values.ResponsibilityMode != ForTarget {
+		desiredCRD, err := r.emptyCustomResourceDefinition()
+		if err != nil {
+			return err
+		}
+
+		if err := kubernetesutils.WaitUntilCRDManifestsReady(ctx, r.client, desiredCRD.Name); err != nil {
+			return fmt.Errorf("failed waiting for CRD %q to be ready: %w", desiredCRD.Name, err)
+		}
+	}
+
 	return Until(timeoutCtx, IntervalWaitForDeployment, health.IsDeploymentUpdated(r.client, r.emptyDeployment()))
 }
 

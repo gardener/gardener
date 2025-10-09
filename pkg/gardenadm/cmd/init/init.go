@@ -161,28 +161,28 @@ func run(ctx context.Context, opts *Options) error {
 		deployNetworkPolicies = g.Add(flow.Task{
 			Name:         "Deploying network policies",
 			Fn:           b.ApplyNetworkPolicies,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployExtensionControllers),
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, deployExtensionControllers),
 		})
 		deployShootNamespaces = g.Add(flow.Task{
 			Name:         "Deploying shoot namespaces system component",
 			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
 		waitUntilShootNamespacesReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespaces have been reconciled",
 			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Wait,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, deployShootNamespaces),
+			Dependencies: flow.NewTaskIDs(deployShootNamespaces),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying kube-proxy system component",
 			Fn:           b.DeployKubeProxy,
 			SkipIf:       !kubeProxyEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady, waitUntilExtensionControllersReady),
+			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, waitUntilExtensionControllersReady),
 		})
 		deployNetwork = g.Add(flow.Task{
 			Name:         "Deploying shoot network plugin",
 			Fn:           b.DeployNetwork,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady, waitUntilExtensionControllersReady),
+			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, waitUntilExtensionControllersReady),
 		})
 		waitUntilNetworkReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been reconciled",
@@ -217,9 +217,9 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		deployExtensionControllersIntoPodNetwork = g.Add(flow.Task{
 			Name: "Redeploying extension controllers into pod network",
-			Fn: func(ctx context.Context) error {
+			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return b.ReconcileExtensionControllerInstallations(ctx, false)
-			},
+			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
 			SkipIf:       podNetworkAvailable,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
 		})
