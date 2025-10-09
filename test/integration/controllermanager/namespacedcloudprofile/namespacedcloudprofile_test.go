@@ -33,6 +33,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 
 		expirationDateFuture metav1.Time
 		imageFlavors         []gardencorev1beta1.MachineImageFlavor
+		capabilities         gardencorev1beta1.Capabilities
 	)
 
 	BeforeEach(func() {
@@ -48,6 +49,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 			imageFlavors = []gardencorev1beta1.MachineImageFlavor{
 				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 			}
+			capabilities = gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}
 		}
 
 		dateNow, _ := time.Parse(time.DateOnly, time.Now().Format(time.DateOnly))
@@ -77,10 +79,11 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 					},
 				},
 				MachineTypes: []gardencorev1beta1.MachineType{{
-					Name:   "some-type",
-					CPU:    resource.MustParse("1"),
-					GPU:    resource.MustParse("0"),
-					Memory: resource.MustParse("1Gi"),
+					Name:         "some-type",
+					CPU:          resource.MustParse("1"),
+					GPU:          resource.MustParse("0"),
+					Memory:       resource.MustParse("1Gi"),
+					Capabilities: capabilities,
 				}},
 				Regions: []gardencorev1beta1.Region{
 					{Name: "some-region"},
@@ -175,6 +178,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 					Memory:       resource.MustParse("1Gi"),
 					Usable:       &usable,
 					Architecture: &architecture,
+					Capabilities: capabilities,
 				},
 				{
 					Name:         "some-other-type",
@@ -183,6 +187,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 					Memory:       resource.MustParse("2Gi"),
 					Usable:       &usable,
 					Architecture: &architecture,
+					Capabilities: capabilities,
 				}},
 			Regions: []gardencorev1beta1.Region{
 				{Name: "some-region"},

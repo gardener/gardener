@@ -743,7 +743,7 @@ var _ = Describe("CloudProfile", func() {
 		Describe("#SyncArchitectureCapabilityFields", func() {
 			var (
 				cloudProfileSpecNew core.CloudProfileSpec
-				cloudProfileSpecOld *core.CloudProfileSpec
+				cloudProfileSpecOld core.CloudProfileSpec
 			)
 
 			BeforeEach(func() {
@@ -755,7 +755,7 @@ var _ = Describe("CloudProfile", func() {
 						{},
 					},
 				}
-				cloudProfileSpecOld = cloudProfileSpecNew.DeepCopy()
+				cloudProfileSpecOld = *cloudProfileSpecNew.DeepCopy()
 			})
 
 			Describe("Initial migration", func() {
@@ -769,7 +769,7 @@ var _ = Describe("CloudProfile", func() {
 					cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures = []string{"amd64"}
 					cloudProfileSpecNew.MachineTypes[0].Architecture = ptr.To("amd64")
 
-					gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, *cloudProfileSpecOld)
+					gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
 					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64"}))
 					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors).To(BeEmpty())
 					Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
@@ -783,7 +783,7 @@ var _ = Describe("CloudProfile", func() {
 						{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 					}
 
-					gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, *cloudProfileSpecOld)
+					gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
 
 					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64", "arm64", "custom"))
 				})
@@ -794,7 +794,7 @@ var _ = Describe("CloudProfile", func() {
 					cloudProfileSpecOld.MachineImages[0].Versions[0].Architectures = []string{"amd64", "arm64"}
 					cloudProfileSpecOld.MachineTypes[0].Architecture = ptr.To("amd64")
 
-					gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, *cloudProfileSpecOld)
+					gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
 
 					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64", "arm64"}))
 					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
@@ -812,7 +812,7 @@ var _ = Describe("CloudProfile", func() {
 					cloudProfileSpecOld.MachineImages[0].Versions[0].Architectures = []string{"amd64", "arm64"}
 					cloudProfileSpecOld.MachineTypes[0].Architecture = ptr.To("amd64")
 
-					gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, *cloudProfileSpecOld)
+					gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
 
 					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"arm64"}))
 					Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors).To(BeEmpty())
