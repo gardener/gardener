@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: metrics
+  namespace: {{ .Release.Namespace }}
+spec:
+  exportTo:
+  - '*'
+  hosts:
+  - metrics.istio.local
+  location: MESH_INTERNAL
+  ports:
+  - name: metrics
+    number: 15020
+    protocol: HTTP
+  resolution: DNS
