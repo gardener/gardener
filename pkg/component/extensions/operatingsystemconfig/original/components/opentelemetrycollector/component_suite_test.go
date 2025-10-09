@@ -13,5 +13,5 @@ import (
 
 func TestOpenTelemetryCollector(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "OpenTelemetryCollector Suite")
+	RunSpecs(t, "Component Extensions OperatingSystemConfig Original Component OpenTelemetryCollector Suite")
 }

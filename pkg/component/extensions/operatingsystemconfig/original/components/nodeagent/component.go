@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
 	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	nodeagenthelper "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1/helper"
@@ -63,7 +64,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	var additionalTokenSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) && ctx.OpenTelemetryCollectorLogShipperEnabled {
 		additionalTokenSyncConfigs = append(additionalTokenSyncConfigs, nodeagentconfigv1alpha1.TokenSecretSyncConfig{
-			SecretName: valiconstants.OpenTelemetryCollectorSecretName,
+			SecretName: collectorconstants.OpenTelemetryCollectorSecretName,
 			Path:       opentelemetrycollector.PathAuthToken,
 		})
 	} else if ctx.ValitailEnabled {

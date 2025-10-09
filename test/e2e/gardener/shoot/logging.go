@@ -78,6 +78,6 @@ func ShootLogging(s *ShootContext) {
 	ItShouldWaitForLogsCountWithLabelToBeInVali(s, valiLabels, "pod_name", gardenerLoggerAppLabel+".*", shootLogsCount)
 	ItShouldWaitForLogsWithLabelToNotBeInVali(s, valiLabels, "pod_name", nonGardenerLoggerAppLabel+".*")
 
-	ItShouldWaitForLogsWithLabelToBeInVali(s, valiLabels, "unit", "containerd")
-	ItShouldWaitForLogsWithLabelToBeInVali(s, valiLabels, "unit", "kubelet")
+	ItShouldWaitForLogsWithLabelToBeInVali(s, valiLabels, "unit", "containerd.service")
+	ItShouldWaitForLogsWithLabelToBeInVali(s, valiLabels, "unit", "kubelet.service")
 }

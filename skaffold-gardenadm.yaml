@@ -432,6 +432,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail/templates/valitail-config.tpl.yaml
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/observability/logging/vali/constants
+            - pkg/component/observability/opentelemetry/collector/constants
             - pkg/controllerutils
             - pkg/controllerutils/predicate
             - pkg/controllerutils/routes

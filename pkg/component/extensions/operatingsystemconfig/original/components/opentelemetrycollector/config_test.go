@@ -93,9 +93,14 @@ receivers:
   journald/journal:
     start_at: beginning
     storage: file_storage
+    units:
+      - kernel
+      - kubelet.service
+      - containerd.service
+      - gardener-node-agent.service
     operators:
       - type: move
-        from: body.SYSLOG_IDENTIFIER
+        from: body._SYSTEMD_UNIT
         to: resource.unit
       - type: move
         from: body._HOSTNAME

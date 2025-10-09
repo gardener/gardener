@@ -495,11 +495,11 @@ func (o *otelCollector) newLoggingAgentShootAccessSecret() *gardenerutils.Access
 	return gardenerutils.NewShootAccessSecret("opentelemetry-collector", o.namespace).
 		WithServiceAccountName(openTelemetryCollectorName).
 		WithTokenExpirationDuration("720h").
-		WithTargetSecret(valiconstants.OpenTelemetryCollectorSecretName, metav1.NamespaceSystem)
+		WithTargetSecret(collectorconstants.OpenTelemetryCollectorSecretName, metav1.NamespaceSystem)
 }
 
 func (o *otelCollector) getIngress(secretName string) *networkingv1.Ingress {
-	ingress := &networkingv1.Ingress{
+	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "logging",
 			Namespace:   o.namespace,
@@ -531,8 +531,6 @@ func (o *otelCollector) getIngress(secretName string) *networkingv1.Ingress {
 			}},
 		},
 	}
-
-	return ingress
 }
 
 func (o *otelCollector) getLoggingAgentClusterRole() *rbacv1.ClusterRole {

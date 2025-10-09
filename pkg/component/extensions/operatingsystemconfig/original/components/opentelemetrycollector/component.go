@@ -19,7 +19,7 @@ import (
 
 const (
 	// UnitName is the name of the opentelemetry-collector service.
-	UnitName = v1beta1constants.OperatingSystemConfigUnitNameOpenTelemetryCollector
+	UnitName = "opentelemetry-collector.service"
 
 	// PathDirectory is the path for the opentelemetry-collector's directory.
 	PathDirectory = "/var/lib/opentelemetry-collector"
@@ -27,7 +27,7 @@ const (
 	// validated by the kube-rbac-proxy.
 	PathAuthToken = PathDirectory + "/auth-token"
 	// PathConfig is the path for the opentelemetry-collector's configuration file.
-	PathConfig = v1beta1constants.OperatingSystemConfigFilePathOpenTelemetryCollector
+	PathConfig = "/var/lib/opentelemetry-collector/config/config"
 	// PathCACert is the path for the otelCollector-tls certificate authority.
 	PathCACert = PathDirectory + "/ca.crt"
 
@@ -54,43 +54,47 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		files []extensionsv1alpha1.File
 	)
 
-	if ctx.OpenTelemetryCollectorLogShipperEnabled {
-		collectorConfigFile, err := getOpentelemetryCollectorConfigurationFile(ctx)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		authInfo := clientcmdv1.AuthInfo{TokenFile: PathAuthToken}
-		cluster := clientcmdv1.Cluster{Server: ctx.APIServerURL, CertificateAuthority: PathCACert}
-		kubeconfig := kubernetesutils.NewKubeconfig("shoot", cluster, authInfo)
-
-		raw, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		units = append(units, getOpenTelemetryCollectorUnit())
-		files = append(files, collectorConfigFile, getOpenTelemetryCollectorCAFile(ctx), extensionsv1alpha1.File{
-			Path:        openTelemetryCollectorBinaryPath,
-			Permissions: ptr.To[uint32](0700),
-			Content: extensionsv1alpha1.FileContent{
-				ImageRef: &extensionsv1alpha1.FileContentImageRef{
-					Image:           ctx.Images[imagevector.ContainerImageNameOpentelemetryCollector].String(),
-					FilePathInImage: "/bin/otelcol",
-				},
-			},
-		}, extensionsv1alpha1.File{
-			Path:        openTelemetryCollectorKubeconfigPath,
-			Permissions: ptr.To[uint32](0600),
-			Content: extensionsv1alpha1.FileContent{
-				Inline: &extensionsv1alpha1.FileContentInline{
-					// Plain text
-					Encoding: "",
-					Data:     string(raw),
-				},
-			},
-		})
+	if !ctx.OpenTelemetryCollectorLogShipperEnabled {
+		return units, files, nil
 	}
+
+	collectorConfigFile, err := getOpentelemetryCollectorConfigurationFile(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		authInfo   = clientcmdv1.AuthInfo{TokenFile: PathAuthToken}
+		cluster    = clientcmdv1.Cluster{Server: ctx.APIServerURL, CertificateAuthority: PathCACert}
+		kubeconfig = kubernetesutils.NewKubeconfig("shoot", cluster, authInfo)
+	)
+
+	raw, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	units = append(units, getOpenTelemetryCollectorUnit())
+	files = append(files, collectorConfigFile, getOpenTelemetryCollectorCAFile(ctx), extensionsv1alpha1.File{
+		Path:        openTelemetryCollectorBinaryPath,
+		Permissions: ptr.To[uint32](0700),
+		Content: extensionsv1alpha1.FileContent{
+			ImageRef: &extensionsv1alpha1.FileContentImageRef{
+				Image:           ctx.Images[imagevector.ContainerImageNameOpentelemetryCollector].String(),
+				FilePathInImage: "/bin/otelcol",
+			},
+		},
+	}, extensionsv1alpha1.File{
+		Path:        openTelemetryCollectorKubeconfigPath,
+		Permissions: ptr.To[uint32](0600),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				// Plain text
+				Encoding: "",
+				Data:     string(raw),
+			},
+		},
+	})
 
 	return units, files, nil
 }

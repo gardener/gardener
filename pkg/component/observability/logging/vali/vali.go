@@ -61,10 +61,8 @@ const (
 	valiMountPathConfig           = "/etc/vali"
 	valiMountPathInitScript       = "/"
 
-	valitailName                 = "gardener-valitail"
-	openTelemetryCollectorName   = "gardener-opentelemetry-collector"
-	valitailClusterRoleName      = "gardener.cloud:logging:valitail"
-	openTelemetryClusterRoleName = "gardener.cloud:logging:opentelemetry-collector"
+	valitailName            = "gardener-valitail"
+	valitailClusterRoleName = "gardener.cloud:logging:valitail"
 
 	curatorName            = "curator"
 	curatorPort            = 2718
@@ -806,9 +804,11 @@ func (v *vali) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rb
 }
 
 func (v *vali) getLoggingAgentClusterRole() *rbacv1.ClusterRole {
-	endpoint := valiconstants.PushEndpoint
-	appName := valitailName
-	clusterRoleName := valitailClusterRoleName
+	var (
+		endpoint        = valiconstants.PushEndpoint
+		appName         = valitailName
+		clusterRoleName = valitailClusterRoleName
+	)
 
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
@@ -841,12 +841,13 @@ func (v *vali) getLoggingAgentClusterRole() *rbacv1.ClusterRole {
 }
 
 func (v *vali) getLoggingAgentClusterRoleBinding(serviceAccountName, clusterRoleName string) *rbacv1.ClusterRoleBinding {
-	name := "gardener.cloud:logging:valitail"
-	appName := valitailName
+	var (
+		appName = valitailName
+	)
 
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
+			Name:   clusterRoleName,
 			Labels: map[string]string{v1beta1constants.LabelApp: appName},
 		},
 		RoleRef: rbacv1.RoleRef{

@@ -39,8 +39,10 @@ func NewAuthorizer(logger logr.Logger, sourceClient, targetClient client.Client,
 	}
 }
 
-const valitailTokenSecretName = "gardener-valitail"
-const openTelemetryCollectorTokenSecretName = "gardener-opentelemetry-collector"
+const (
+	valitailTokenSecretName               = "gardener-valitail"
+	openTelemetryCollectorTokenSecretName = "gardener-opentelemetry-collector"
+)
 
 var (
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")

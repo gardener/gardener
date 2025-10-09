@@ -181,6 +181,5 @@ var _ = Describe("Original", func() {
 				"opentelemetry-collector",
 			}))
 		})
-
 	})
 })
