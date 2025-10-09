@@ -232,7 +232,7 @@ var _ = Describe("handler", func() {
 		handler = &Handler{
 			Logger:     log,
 			Config:     config(),
-			Client:     fakeClient,
+			APIReader:  fakeClient,
 			RESTMapper: fakeClient.RESTMapper(),
 		}
 

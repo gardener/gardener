@@ -69,7 +69,7 @@ type ResourceAdmissionWebhookMode string
 // WildcardAll is a character which represents all elements in a set.
 const WildcardAll = "*"
 
-// ResourceLimit contains settings about a kind and the size each resource should have at most.
+// ResourceLimit contains settings about a kind and the size as well as count each resource should have at most.
 type ResourceLimit struct {
 	// APIGroups is the name of the APIGroup that contains the limited resource. WildcardAll represents all groups.
 	// +optional

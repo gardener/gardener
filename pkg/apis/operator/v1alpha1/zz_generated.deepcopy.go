@@ -1465,7 +1465,16 @@ func (in *ResourceLimit) DeepCopyInto(out *ResourceLimit) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	out.Size = in.Size.DeepCopy()
+	if in.Size != nil {
+		in, out := &in.Size, &out.Size
+		x := (*in).DeepCopy()
+		*out = &x
+	}
+	if in.Count != nil {
+		in, out := &in.Count, &out.Count
+		*out = new(int64)
+		**out = **in
+	}
 	return
 }
 
