@@ -32,29 +32,31 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
 )
 
-// metricReasonSizeExceeded is a metric reason value for a reason when an object size was exceeded.
-const metricReasonSizeExceeded = "Size Exceeded"
+const (
+	// metricReasonSizeExceeded is a metric reason value for a reason when an object size was exceeded.
+	metricReasonSizeExceeded = "Size Exceeded"
 
-// metricReasonCountExceeded is a metric reason value for a reason when resource count was exceeded.
-const metricReasonCountExceeded = "Count Exceeded"
+	// metricReasonCountExceeded is a metric reason value for a reason when resource count was exceeded.
+	metricReasonCountExceeded = "Count Exceeded"
+)
 
 // Handler checks the resource sizes.
 type Handler struct {
 	Logger     logr.Logger
 	Config     *admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration
-	Client     client.Client
+	APIReader  client.Reader
 	RESTMapper meta.RESTMapper
 }
 
 // Handle checks the resource sizes.
-func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Response {
+func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.Response {
 	var err error
 
 	switch req.Operation {
 	case admissionv1.Create:
-		err = h.handle(req)
+		err = h.handle(ctx, req)
 	case admissionv1.Update:
-		err = h.handle(req)
+		err = h.handle(ctx, req)
 	default:
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unknown operation request %q", req.Operation))
 	}
@@ -71,7 +73,7 @@ func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Res
 	return admission.Allowed("")
 }
 
-func (h *Handler) handle(req admission.Request) error {
+func (h *Handler) handle(ctx context.Context, req admission.Request) error {
 	log := h.Logger.WithValues("user", req.UserInfo.Username, "resource", req.Resource, "name", req.Name)
 	if req.Namespace != "" {
 		log = log.WithValues("namespace", req.Namespace)
@@ -94,15 +96,15 @@ func (h *Handler) handle(req admission.Request) error {
 
 	// Handle resource count limits
 	if count != nil {
-		if err := h.handleCountLimit(req, log, requestedResource, count); err != nil {
-			return err
+		if err := h.handleCountLimit(ctx, req, log, requestedResource, count); err != nil {
+			return fmt.Errorf("error handling count limit: %w", err)
 		}
 	}
 
 	// Handle resource size limits
 	if limit != nil {
 		if err := h.handleSizeLimit(req, log, limit); err != nil {
-			return err
+			return fmt.Errorf("error handling size limit: %w", err)
 		}
 	}
 
@@ -132,7 +134,7 @@ func (h *Handler) handleSizeLimit(req admission.Request, log logr.Logger, limit 
 	return nil
 }
 
-func (h *Handler) handleCountLimit(req admission.Request, log logr.Logger, requestedResource *metav1.GroupVersionResource, count *int64) error {
+func (h *Handler) handleCountLimit(ctx context.Context, req admission.Request, log logr.Logger, requestedResource *metav1.GroupVersionResource, count *int64) error {
 	if req.Namespace != "" {
 		// We only want to restrict non-namespaced resources
 		// namespaced resources can be restricted by ResourceQuotas
@@ -145,26 +147,27 @@ func (h *Handler) handleCountLimit(req admission.Request, log logr.Logger, reque
 		return nil
 	}
 
-	exceedsLimit, err := h.existingResourcesExceedLimit(req, requestedResource, ptr.Deref(count, 0))
+	exceedsLimit, err := h.existingResourcesExceedLimit(ctx, req, requestedResource, ptr.Deref(count, 0))
 	if err != nil {
 		return fmt.Errorf("failed to determine if count exceeds limit: %w", err)
 	}
 
-	if exceedsLimit {
-		if h.Config.OperationMode == nil || *h.Config.OperationMode == admissioncontrollerconfigv1alpha1.AdmissionModeBlock {
-			log.Info("Maximum resource count exceeded, rejected request", "limit", *count)
-			metrics.RejectedResources.WithLabelValues(
-				fmt.Sprint(req.Operation),
-				req.Kind.Kind,
-				req.Namespace,
-				metricReasonCountExceeded,
-			).Inc()
-			return apierrors.NewForbidden(schema.GroupResource{Group: req.Resource.Group, Resource: req.Resource.Resource}, req.Name, fmt.Errorf("maximum resource count exceeded! max allowed: %d", ptr.Deref(count, 0)))
-		}
-
-		log.Info("Maximum resource count exceeded, request would be denied in blocking mode", "limit", ptr.Deref(count, 0))
+	if !exceedsLimit {
+		return nil
 	}
 
+	if h.Config.OperationMode == nil || *h.Config.OperationMode == admissioncontrollerconfigv1alpha1.AdmissionModeBlock {
+		log.Info("Maximum resource count exceeded, rejected request", "limit", *count)
+		metrics.RejectedResources.WithLabelValues(
+			fmt.Sprint(req.Operation),
+			req.Kind.Kind,
+			req.Namespace,
+			metricReasonCountExceeded,
+		).Inc()
+		return apierrors.NewForbidden(schema.GroupResource{Group: req.Resource.Group, Resource: req.Resource.Resource}, req.Name, fmt.Errorf("maximum resource count exceeded! max allowed: %d", ptr.Deref(count, 0)))
+	}
+
+	log.Info("Maximum resource count exceeded, request would be denied in blocking mode", "limit", ptr.Deref(count, 0))
 	return nil
 }
 
@@ -232,23 +235,19 @@ func findRestrictionsForGVR(limits []admissioncontrollerconfigv1alpha1.ResourceL
 }
 
 func (h *Handler) getKindFromGVR(gvr *metav1.GroupVersionResource) (string, error) {
-	if h.RESTMapper == nil {
-		return "", errors.New("RESTMapper not initialized")
-	}
-
 	gvk, err := h.RESTMapper.KindFor(schema.GroupVersionResource{
 		Group:    gvr.Group,
 		Version:  gvr.Version,
 		Resource: gvr.Resource,
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get Kind for GVR %s: %w", gvr.String(), err)
 	}
 	return gvk.Kind, nil
 }
 
-func (h *Handler) existingResourcesExceedLimit(_ admission.Request, gvr *metav1.GroupVersionResource, limit int64) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+func (h *Handler) existingResourcesExceedLimit(ctx context.Context, _ admission.Request, gvr *metav1.GroupVersionResource, limit int64) (bool, error) {
+	timeoutContext, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	// Get the proper Kind for this resource
@@ -263,9 +262,8 @@ func (h *Handler) existingResourcesExceedLimit(_ admission.Request, gvr *metav1.
 		Version: gvr.Version,
 		Kind:    kind + "List",
 	})
-
 	// List all resources of this type cluster-wide (since we only count non-namespaced resources)
-	if err := h.Client.List(ctx, list, client.Limit(limit+1)); err != nil {
+	if err := h.APIReader.List(timeoutContext, list, client.Limit(limit+1)); err != nil {
 		return false, fmt.Errorf("failed to list resources for counting: %v", err)
 	}
 

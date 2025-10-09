@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -33,13 +34,13 @@ var _ = Describe("conversion", func() {
 						APIVersions: []string{"v1beta1"},
 						APIGroups:   []string{"core.gardener.cloud"},
 						Resources:   []string{"shoots"},
-						Size:        resource.MustParse("1Ki"),
+						Size:        ptr.To(resource.MustParse("1Ki")),
 					},
 					{
 						APIVersions: []string{"v1"},
 						APIGroups:   []string{""},
 						Resources:   []string{"secrets", "configmaps"},
-						Size:        resource.MustParse("100Ki"),
+						Size:        ptr.To(resource.MustParse("100Ki")),
 					},
 				},
 				UnrestrictedSubjects: []rbacv1.Subject{},
@@ -56,13 +57,13 @@ var _ = Describe("conversion", func() {
 					APIGroups:   operatorConfig.Limits[0].APIGroups,
 					APIVersions: operatorConfig.Limits[0].APIVersions,
 					Resources:   operatorConfig.Limits[0].Resources,
-					Size:        &operatorConfig.Limits[0].Size,
+					Size:        operatorConfig.Limits[0].Size,
 				},
 				admissioncontrollerconfigv1alpha1.ResourceLimit{
 					APIGroups:   operatorConfig.Limits[1].APIGroups,
 					APIVersions: operatorConfig.Limits[1].APIVersions,
 					Resources:   operatorConfig.Limits[1].Resources,
-					Size:        &operatorConfig.Limits[1].Size,
+					Size:        operatorConfig.Limits[1].Size,
 				},
 			))
 		})

@@ -113,6 +113,10 @@ func ValidateResourceAdmissionConfiguration(config *admissioncontrollerconfigv1a
 			allErrs = append(allErrs, field.Invalid(fld.Child("versions"), limit.Resources, "must at least have one element"))
 		}
 
+		if limit.Count == nil && limit.Size == nil {
+			allErrs = append(allErrs, field.Invalid(fld, limit, "at least one of size or count must be specified"))
+		}
+
 		if limit.Count != nil && apivalidation.ValidateNonnegativeField(*limit.Count, fld.Child("count")).ToAggregate() != nil {
 			allErrs = append(allErrs, field.Invalid(fld.Child("count"), limit.Count, "value must not be negative"))
 		}

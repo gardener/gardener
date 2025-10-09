@@ -93,7 +93,7 @@ Size limitations depend on the individual Gardener setup and choosing the wrong 
 `resourceAdmissionConfiguration.operationMode` allows to control if a violating request is actually denied (default) or only logged.
 It's recommended to start with `log`, check the logs for exceeding requests, adjust the limits if necessary and finally switch to `block`.
 
-In addition to that, it is also possible to restrict the number of **non-namespaced** resources, using the `count` field, like the example above.
+In addition to that, it is also possible to restrict the number of **cluster-scoped** resources, using the `count` field, like the example above.
 This ensures that only a certain number of resources of the given type can exist in the cluster. Like size restrictions, subjects configured under `unrestrictedSubjects` are exempted from this restriction.
 The count restriction can also be used in combination with size restrictions.
 
