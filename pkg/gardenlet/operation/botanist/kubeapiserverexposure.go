@@ -85,9 +85,11 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 				}
 
 				// Wildcard endpoint must always use the non-zonal and not the exposureclass istio ingress gateway.
-				wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
-					Namespace: b.WildcardIstioNamespace(),
-					Labels:    b.WildcardIstioLabels(),
+				if b.WildcardIstioNamespace() != b.IstioNamespace() {
+					wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
+						Namespace: b.WildcardIstioNamespace(),
+						Labels:    b.WildcardIstioLabels(),
+					}
 				}
 			}
 
@@ -143,9 +145,11 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 				}
 
 				// Wildcard endpoint must always use the non-zonal and not the exposureclass istio ingress gateway.
-				wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
-					Namespace: b.WildcardIstioNamespace(),
-					Labels:    b.WildcardIstioLabels(),
+				if b.WildcardIstioNamespace() != b.IstioNamespace() {
+					wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
+						Namespace: b.WildcardIstioNamespace(),
+						Labels:    b.WildcardIstioLabels(),
+					}
 				}
 			}
 
