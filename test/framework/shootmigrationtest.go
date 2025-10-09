@@ -215,12 +215,6 @@ func (t *ShootMigrationTest) GetMachineDetails(ctx context.Context, seedClient k
 	return
 }
 
-// GetPersistedSecrets uses the seedClient to fetch the data of all Secrets that have the `persist` label key set to true
-// from the Shoot's control plane namespace.
-func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient kubernetes.Interface) (map[string]corev1.Secret, error) {
-	return shootmigration.GetPersistedSecrets(ctx, seedClient.Client(), t.SeedShootNamespace)
-}
-
 // PopulateBeforeMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsBeforeMigration with the necessary Machine details and Node names.
 func (t *ShootMigrationTest) PopulateBeforeMigrationComparisonElements(ctx context.Context) (err error) {
 	t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsBeforeMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.SourceSeedClient)
@@ -231,7 +225,7 @@ func (t *ShootMigrationTest) PopulateBeforeMigrationComparisonElements(ctx conte
 	if err != nil {
 		return
 	}
-	t.ComparisonElementsBeforeMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.SourceSeedClient)
+	t.ComparisonElementsBeforeMigration.SecretsMap, err = shootmigration.GetPersistedSecrets(ctx, t.SourceSeedClient.Client(), t.SeedShootNamespace)
 	return
 }
 
@@ -245,7 +239,7 @@ func (t *ShootMigrationTest) populateAfterMigrationComparisonElements(ctx contex
 	if err != nil {
 		return
 	}
-	t.ComparisonElementsAfterMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.TargetSeedClient)
+	t.ComparisonElementsAfterMigration.SecretsMap, err = shootmigration.GetPersistedSecrets(ctx, t.TargetSeedClient.Client(), t.SeedShootNamespace)
 	return
 }
 
@@ -316,11 +310,6 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 		}
 	}
 	return nil
-}
-
-// MarkOSCSecret marks the operating system config pool hashes secret to verify that it is correctly migrated.
-func (t ShootMigrationTest) MarkOSCSecret(ctx context.Context) error {
-	return shootmigration.MarkOSCSecret(ctx, t.SourceSeedClient.Client(), t.SeedShootNamespace)
 }
 
 // CreateSecretAndServiceAccount creates test secret and service account.
