@@ -52,7 +52,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.3
 	go.yaml.in/yaml/v4 v4.0.0-rc.2
 	golang.org/x/crypto v0.43.0
-	golang.org/x/exp v0.0.0-20251002181428-27f1f14c8bb9
+	golang.org/x/exp v0.0.0-20251009144603-d2f985daa21b
 	golang.org/x/text v0.30.0
 	golang.org/x/time v0.14.0
 	golang.org/x/tools v0.38.0
