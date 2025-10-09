@@ -533,7 +533,7 @@ func FilterDeprecatedVersion() func(expirableVersion gardencorev1beta1.Expirable
 	}
 }
 
-func extractArchitecturesFromImageFlavor(imageFlavors []gardencorev1beta1.MachineImageFlavor, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []string {
+func extractArchitecturesFromImageFlavors(imageFlavors []gardencorev1beta1.MachineImageFlavor, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []string {
 	if len(imageFlavors) == 0 {
 		for _, capabilityDefinition := range capabilityDefinitions {
 			if capabilityDefinition.Name == constants.ArchitectureName {
@@ -554,7 +554,7 @@ func extractArchitecturesFromImageFlavor(imageFlavors []gardencorev1beta1.Machin
 // GetArchitecturesFromImageVersion returns the list of supported architectures for the machine image version.
 // It first tries to retrieve the architectures from the capability flavors and falls back to the architectures field if none are found.
 func GetArchitecturesFromImageVersion(imageVersion gardencorev1beta1.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []string {
-	if architectures := extractArchitecturesFromImageFlavor(imageVersion.CapabilityFlavors, capabilityDefinitions); len(architectures) > 0 {
+	if architectures := extractArchitecturesFromImageFlavors(imageVersion.CapabilityFlavors, capabilityDefinitions); len(architectures) > 0 {
 		return architectures
 	}
 	return imageVersion.Architectures

@@ -908,6 +908,278 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(20))))
 				})
 			})
+
+			Describe("ensureUniformFormat functionality", func() {
+				var (
+					cloudProfile           *gardencorev1beta1.CloudProfile
+					namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
+				)
+
+				BeforeEach(func() {
+					cloudProfile = &gardencorev1beta1.CloudProfile{}
+					namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{}
+				})
+
+				When("parent CloudProfile has capability definitions", func() {
+					BeforeEach(func() {
+						cloudProfile.Spec.MachineCapabilities = []gardencorev1beta1.CapabilityDefinition{
+							{Name: "architecture", Values: []string{"amd64", "arm64"}},
+						}
+					})
+
+					It("should transform legacy architectures to capability flavors when parent is in capability format", func() {
+						namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: "ubuntu",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "20.04"},
+										Architectures:    []string{"amd64", "arm64"},
+									},
+								},
+							},
+						}
+
+						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+						Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(HaveLen(1))
+						Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[0].Versions).To(HaveLen(1))
+						version := namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[0].Versions[0]
+						Expect(version.CapabilityFlavors).To(HaveLen(2))
+						Expect(version.CapabilityFlavors[0].Capabilities).To(HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"amd64"}))
+						Expect(version.CapabilityFlavors[1].Capabilities).To(HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"arm64"}))
+						Expect(version.Architectures).To(ConsistOf("amd64", "arm64"))
+					})
+
+					It("should add architecture to capabilityFlavors", func() {
+						namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: "ubuntu",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "20.04"},
+										Architectures:    []string{"amd64"},
+									},
+								},
+							},
+						}
+
+						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+						version := namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[0].Versions[0]
+						Expect(version.CapabilityFlavors).To(HaveLen(1))
+						Expect(version.CapabilityFlavors[0].Capabilities).To(HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"amd64"}))
+						Expect(version.Architectures).To(ConsistOf("amd64"))
+					})
+
+					It("should preserve existing capability flavors", func() {
+						namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: "ubuntu",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "20.04"},
+										CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+											{
+												Capabilities: gardencorev1beta1.Capabilities{
+													"architecture": []string{"arm64"},
+													"gpu":          []string{"nvidia"},
+												},
+											},
+										},
+										Architectures: []string{"arm64"},
+									},
+								},
+							},
+						}
+
+						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+						version := namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[0].Versions[0]
+						Expect(version.CapabilityFlavors).To(HaveLen(1))
+						Expect(version.CapabilityFlavors[0].Capabilities).To(HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"arm64"}))
+						Expect(version.CapabilityFlavors[0].Capabilities).To(HaveKeyWithValue("gpu", gardencorev1beta1.CapabilityValues{"nvidia"}))
+					})
+
+					It("should set architecture capabilities for machine types", func() {
+						namespacedCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+							{
+								Name:   "m5.large",
+								CPU:    resource.MustParse("2"),
+								Memory: resource.MustParse("8Gi"),
+							},
+							{
+								Name:         "m5.arm.large",
+								CPU:          resource.MustParse("2"),
+								Memory:       resource.MustParse("8Gi"),
+								Architecture: ptr.To("arm64"),
+							},
+						}
+
+						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+						machineTypes := namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes
+						Expect(machineTypes).To(HaveLen(2))
+
+						// First machine type should default to amd64
+						Expect(machineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
+						Expect(machineTypes[0].Capabilities).To(HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"amd64"}))
+
+						// Second machine type should keep arm64
+						Expect(machineTypes[1].Architecture).To(Equal(ptr.To("arm64")))
+						Expect(machineTypes[1].Capabilities).To(HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"arm64"}))
+					})
+				})
+
+				When("parent CloudProfile has no capability definitions", func() {
+					BeforeEach(func() {
+						cloudProfile.Spec.MachineCapabilities = nil
+					})
+
+					It("should extract architectures from capability flavors", func() {
+						namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: "ubuntu",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "20.04"},
+										CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+											{
+												Capabilities: gardencorev1beta1.Capabilities{
+													"architecture": []string{"amd64"},
+												},
+											},
+											{
+												Capabilities: gardencorev1beta1.Capabilities{
+													"architecture": []string{"arm64"},
+												},
+											},
+										},
+									},
+								},
+							},
+						}
+
+						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+						version := namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[0].Versions[0]
+						Expect(version.Architectures).To(ConsistOf("amd64", "arm64"))
+						Expect(version.CapabilityFlavors).To(BeNil())
+					})
+
+					It("should preserve existing architectures", func() {
+						namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: "ubuntu",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "20.04"},
+										Architectures:    []string{"amd64", "arm64"},
+									},
+								},
+							},
+						}
+
+						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+						version := namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[0].Versions[0]
+						Expect(version.Architectures).To(ConsistOf("amd64", "arm64"))
+						Expect(version.CapabilityFlavors).To(BeNil())
+					})
+
+					It("should clear capabilities for machine types", func() {
+						namespacedCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+							{
+								Name:   "m5.large",
+								CPU:    resource.MustParse("2"),
+								Memory: resource.MustParse("8Gi"),
+								Capabilities: gardencorev1beta1.Capabilities{
+									"architecture": []string{"amd64"},
+									"gpu":          []string{"nvidia"},
+								},
+							},
+						}
+
+						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+						machineType := namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes[0]
+						Expect(machineType.Architecture).To(Equal(ptr.To("amd64")))
+						Expect(machineType.Capabilities).To(BeNil())
+					})
+
+					It("should handle multiple capability flavors with different architectures", func() {
+						namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: "ubuntu",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "20.04"},
+										CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+											{
+												Capabilities: gardencorev1beta1.Capabilities{
+													"architecture": []string{"amd64"},
+												},
+											},
+											{
+												Capabilities: gardencorev1beta1.Capabilities{
+													"architecture": []string{"arm64"},
+												},
+											},
+										},
+									},
+								},
+							},
+						}
+
+						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+						version := namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[0].Versions[0]
+						Expect(version.Architectures).To(ConsistOf("amd64", "arm64"))
+						Expect(version.CapabilityFlavors).To(BeNil())
+					})
+				})
+
+				Context("edge cases", func() {
+					It("should handle empty machine images list", func() {
+						namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{}
+
+						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+						Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(BeEmpty())
+					})
+
+					It("should handle empty machine types list", func() {
+						namespacedCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{}
+
+						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+						Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes).To(BeEmpty())
+					})
+
+					It("should handle machine image versions with no architectures and no capability flavors", func() {
+						cloudProfile.Spec.MachineCapabilities = []gardencorev1beta1.CapabilityDefinition{
+							{Name: "architecture", Values: []string{"amd64"}},
+						}
+						namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: "ubuntu",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "20.04"},
+									},
+								},
+							},
+						}
+
+						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+						version := namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[0].Versions[0]
+						// no architectures specified so should default to amd64 as per parent capability definition
+						Expect(version.CapabilityFlavors).To(BeEmpty())
+						Expect(version.Architectures).To(ConsistOf("amd64"))
+					})
+				})
+			})
 		})
 	})
 })

@@ -57,6 +57,7 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile status for '%s': %w", profile.Name, err)
 	}
 
+	// @Roncossek: Remove ensureUniformFormat once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are deprecated.
 	uniformSpecConfig := EnsureUniformFormat(specConfig, profile.Status.CloudProfileSpec.MachineCapabilities)
 
 	statusConfig.MachineImages = mergeMachineImages(uniformSpecConfig.MachineImages, statusConfig.MachineImages)

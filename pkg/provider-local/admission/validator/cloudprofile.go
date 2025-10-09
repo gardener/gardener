@@ -54,6 +54,7 @@ func (cp *cloudProfileValidator) Validate(_ context.Context, newObj, _ client.Ob
 		return field.InternalError(field.NewPath("spec").Child("machineCapabilities"), err)
 	}
 
+	// @Roncossek: Remove ValidateSupportedCapabilities once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are deprecated.
 	if err := validation.ValidateSupportedCapabilities(capabilityDefinitions, field.NewPath("spec").Child("machineCapabilities")); err != nil {
 		return err
 	}

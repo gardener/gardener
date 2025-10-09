@@ -294,7 +294,7 @@ func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec,
 		return
 	}
 
-	isInitialMigration := hasCapabilities && len(oldCloudProfileSpec.MachineCapabilities) == 0
+	isInitialMigration := len(oldCloudProfileSpec.MachineCapabilities) == 0
 
 	// During the initial migration to capabilities, synchronize the architecture fields with the capability definitions.
 	// After the migration, only sync architectures from the capability definitions back to the architecture fields.
