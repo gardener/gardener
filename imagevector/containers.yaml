@@ -198,7 +198,7 @@ images:
   - name: prometheus-operator
     sourceRepository: github.com/prometheus-operator/prometheus-operator
     repository: quay.io/prometheus-operator/prometheus-operator
-    tag: v0.85.0
+    tag: v0.86.0
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
@@ -249,7 +249,7 @@ images:
   - name: configmap-reloader
     sourceRepository: github.com/prometheus-operator/prometheus-operator
     repository: quay.io/prometheus-operator/prometheus-config-reloader
-    tag: v0.85.0
+    tag: v0.86.0
     labels:
       - name: gardener.cloud/cve-categorisation
         value:
