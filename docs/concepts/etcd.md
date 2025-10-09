@@ -44,7 +44,7 @@ Furthermore, Gardener creates a [BackupEntry](../extensions/resources/backupentr
 How long backups are stored in the bucket after a shoot has been deleted depends on the configured _retention period_ in the `Seed` resource.
 Please see this [example configuration](https://github.com/gardener/gardener/blob/849cd857d0d20e5dde26b9740ca2814603a56dfd/example/20-componentconfig-gardenlet.yaml#L20) for more information.
 
-For `Garden`s specifying backups for etcd ([example](../../example/operator/20-garden.yaml)), the bucket must be pre-created externally and provided via the `Garden` specification.
+For `Garden`s specifying backups for etcd ([example](../../example/operator/20-garden.yaml)), an existing bucket can be provided via the `Garden` specification. If the bucket does not exist yet, it will be created by Gardener and the respective provider extension.
 
 Both etcd instances are configured to run with a special backup-restore _sidecar_.
 It takes care about regularly backing up etcd data and restoring it in case of data loss (in the main etcd only).
