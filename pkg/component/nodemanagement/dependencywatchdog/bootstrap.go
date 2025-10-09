@@ -287,13 +287,13 @@ func (b *bootstrapper) getClusterRolePolicyRules() []rbacv1.PolicyRule {
 		return []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
-				Resources: []string{"endpoints"},
-				Verbs:     []string{"get", "list", "watch"},
-			},
-			{
-				APIGroups: []string{""},
 				Resources: []string{"pods"},
 				Verbs:     []string{"get", "list", "watch", "delete"},
+			},
+			{
+				APIGroups: []string{"discovery.k8s.io"},
+				Resources: []string{"endpointslices"},
+				Verbs:     []string{"get", "list", "watch"},
 			},
 		}
 
