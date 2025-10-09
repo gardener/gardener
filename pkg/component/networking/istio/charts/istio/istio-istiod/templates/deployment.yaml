@@ -148,6 +148,10 @@ spec:
           - name: istio-csr-ca-configmap
             mountPath: /var/run/secrets/istiod/ca
             readOnly: true
+      hostAliases:
+      - ip: 127.0.0.1
+        hostnames:
+        - metrics.istio.local
       volumes:
       # Technically not needed on this pod - but it helps debugging/testing SDS
       # Should be removed after everything works.
