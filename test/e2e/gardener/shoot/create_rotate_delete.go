@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -238,9 +239,72 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 	testCredentialRotationComplete(s, shootVerifiers, utilsverifiers, v1beta1constants.OperationRotateCredentialsComplete)
 }
 
+// Testing the annotation requires that we assert that a rollout has been triggered and finishes successfully.
+// Current check verifies that a new MachineSet gets created after the annotation is set by
+// checking the creation timestamp of the current MachineSet, annotating the Shoot, then checking that
+// the creation timestamp of the new MachineSet is newer than the old one.
+func testManualWorkersRollout(s *ShootContext) {
+	var oldMachineSetCreationTimestamp time.Time
+	var machineSetCount int
+
+	It("Should fetch old machine set creation timestamp", func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			machineDeployment := s.Shoot.Status.TechnicalID + "-" + s.Shoot.Spec.Provider.Workers[0].Name
+			machineDeploymentObj := &machinev1alpha1.MachineDeployment{}
+			g.Expect(s.SeedClient.Get(ctx, client.ObjectKey{Namespace: s.Shoot.Status.TechnicalID, Name: machineDeployment}, machineDeploymentObj)).To(Succeed())
+			machineSets := &machinev1alpha1.MachineSetList{}
+			g.Expect(s.SeedClient.List(ctx, machineSets, client.InNamespace(s.Shoot.Status.TechnicalID))).To(Succeed())
+
+			g.Expect(machineSets.Items).ToNot(BeEmpty(), "there should be at least one machine set for the machine deployment")
+			var machineSetName string
+			for _, machineSet := range machineSets.Items {
+				if machineSet.ObjectMeta.OwnerReferences[0].Name == machineDeployment {
+					machineSetName = machineSet.Name
+					break
+				}
+			}
+
+			machineSet := &machinev1alpha1.MachineSet{}
+			g.Expect(s.SeedClient.Get(ctx, client.ObjectKey{Namespace: s.Shoot.Status.TechnicalID, Name: machineSetName}, machineSet)).To(Succeed())
+			oldMachineSetCreationTimestamp = machineSet.CreationTimestamp.Time
+			machineSetCount = len(machineSets.Items)
+		}).Should(Succeed())
+	}, SpecTimeout(10*time.Second))
+
+	ItShouldAnnotateShoot(s, map[string]string{
+		v1beta1constants.GardenerOperation: "rollout-workers=" + s.Shoot.Spec.Provider.Workers[0].Name,
+	})
+	ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Shoot)
+
+	It("Should fetch new machineset creation timestamp and it should be newer", func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			machineDeployment := s.Shoot.Status.TechnicalID + "-" + s.Shoot.Spec.Provider.Workers[0].Name
+			machineSets := &machinev1alpha1.MachineSetList{}
+			g.Expect(s.SeedClient.List(ctx, machineSets, client.InNamespace(s.Shoot.Status.TechnicalID))).To(Succeed())
+
+			var machineSetName string
+			for _, machineSet := range machineSets.Items {
+				if machineSet.ObjectMeta.OwnerReferences[0].Name == machineDeployment {
+					machineSetName = machineSet.Name
+					break
+				}
+			}
+
+			machineSet := &machinev1alpha1.MachineSet{}
+			g.Expect(s.SeedClient.Get(ctx, client.ObjectKey{Namespace: s.Shoot.Status.TechnicalID, Name: machineSetName}, machineSet)).To(Succeed())
+			newMachineSetCreationTimestamp := machineSet.CreationTimestamp.Time
+
+			g.Expect(oldMachineSetCreationTimestamp.Before(newMachineSetCreationTimestamp)).To(BeTrue(), "new machine set creation timestamp should be newer than the old one")
+			g.Expect(machineSets.Items).To(HaveLen(machineSetCount), "there should be the same number of machine sets as before the rollout")
+		}).Should(Succeed())
+	}, SpecTimeout(5*time.Minute))
+
+	ItShouldWaitForShootToBeReconciledAndHealthy(s)
+}
+
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
-		test := func(s *ShootContext, withoutWorkersRollout, inPlaceUpdate bool) {
+		test := func(s *ShootContext, withoutWorkersRollout, inPlaceUpdate, workersRollout bool) {
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
@@ -360,6 +424,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				}
 			}
 
+			if workersRollout {
+				testManualWorkersRollout(s)
+			}
+
 			ItShouldDeleteShoot(s)
 			ItShouldWaitForShootToBeDeleted(s)
 		}
@@ -411,7 +479,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 		Context("Shoot with workers", Label("basic"), func() {
 			Context("with workers rollout", Label("with-workers-rollout"), Ordered, func() {
-				test(NewTestContext().ForShoot(DefaultShoot("e2e-rotate")), false, false)
+				test(NewTestContext().ForShoot(DefaultShoot("e2e-rotate")), false, false, false)
 			})
 
 			Context("with workers rollout, in-place update strategy", Label("with-workers-rollout", "in-place"), Ordered, func() {
@@ -440,7 +508,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					return
 				}
 
-				test(s, false, true)
+				test(s, false, true, false)
 			})
 
 			Context("without workers rollout", Label("without-workers-rollout"), Ordered, func() {
@@ -455,7 +523,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					s = NewTestContext().ForShoot(shoot)
 				})
 
-				test(s, true, false)
+				test(s, true, false, true)
 			})
 
 			Context("without workers rollout, in-place update strategy", Label("without-workers-rollout", "in-place"), Ordered, func() {
@@ -488,12 +556,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					return
 				}
 
-				test(s, true, true)
+				test(s, true, true, false)
 			})
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false)
+			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false, false)
 		})
 
 		// TODO(AleksandarSavchev): Remove this e2e test when the k8s version for the default shoots is >= 1.34.
