@@ -620,18 +620,29 @@ spec:
 		// no service controller or GRM running in this test which would make it ready, so let's fake this here.
 		By("Create and patch istio-ingress Service resource to report readiness")
 		var istioService *corev1.Service
+		var istioNamespace *corev1.Namespace
+
 		Eventually(func(g Gomega) {
+
+			istioNamespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "virtual-garden-istio-ingress",
+				},
+			}
+
+			g.Expect(testClient.Create(ctx, istioNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+
 			istioService = &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "istio-ingressgateway",
-					Namespace: "virtual-garden-istio-ingress",
+					Namespace: istioNamespace.Name,
 				},
 				Spec: corev1.ServiceSpec{
 					Type:  corev1.ServiceTypeLoadBalancer,
 					Ports: []corev1.ServicePort{{Protocol: corev1.ProtocolTCP, Port: 443}},
 				},
 			}
-			g.Expect(testClient.Create(ctx, istioService)).To(Succeed())
+			g.Expect(testClient.Create(ctx, istioService)).To(Or(Succeed(), BeAlreadyExistsError()))
 
 			patch := client.MergeFrom(istioService.DeepCopy())
 			istioService.Status.LoadBalancer.Ingress = append(istioService.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{Hostname: "localhost"})
@@ -639,7 +650,8 @@ spec:
 		}).Should(Succeed())
 
 		DeferCleanup(func() {
-			Expect(testClient.Delete(ctx, istioService)).To(Succeed())
+			Expect(testClient.Delete(ctx, istioService)).To(Or(Succeed()))
+			Expect(testClient.Delete(ctx, istioNamespace)).To(Or(Succeed()))
 		})
 
 		// The garden controller waits for the virtual-garden-kube-apiserver Deployment to be healthy, so let's fake
