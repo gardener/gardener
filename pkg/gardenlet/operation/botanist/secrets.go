@@ -42,7 +42,7 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 	// explicitly only done in case of restoration to prevent split-brain situations as described in
 	// https://github.com/gardener/gardener/issues/5377.
 	if b.IsRestorePhase() {
-		if err := b.restoreSecretsFromShootStateForSecretsManagerAdoption(ctx); err != nil {
+		if err := b.restoreSecretsFromShootState(ctx); err != nil {
 			return err
 		}
 	}
@@ -101,14 +101,13 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 	return rotation
 }
 
-func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx context.Context) error {
+func (b *Botanist) restoreSecretsFromShootState(ctx context.Context) error {
 	var fns []flow.TaskFn
 
 	for _, v := range b.Shoot.GetShootState().Spec.Gardener {
 		entry := v
 
-		if entry.Labels[secretsmanager.LabelKeyManagedBy] != secretsmanager.LabelValueSecretsManager ||
-			entry.Type != v1beta1constants.DataTypeSecret {
+		if entry.Type != v1beta1constants.DataTypeSecret {
 			continue
 		}
 
