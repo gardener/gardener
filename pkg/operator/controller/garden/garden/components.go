@@ -392,11 +392,13 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
+	endpointSliceHintsEnabled := helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings) && versionutils.ConstraintK8sLess132.Check(r.RuntimeVersion)
+
 	return sharedcomponent.NewRuntimeGardenerResourceManager(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:              features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
 		DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
-		EndpointSliceHintsEnabled:                 helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+		EndpointSliceHintsEnabled:                 endpointSliceHintsEnabled,
 		LogLevel:                                  r.Config.LogLevel,
 		LogFormat:                                 r.Config.LogFormat,
 		ManagedResourceLabels:                     map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
@@ -602,7 +604,7 @@ func (r *Reconciler) newKubeAPIServerServiceWithSuffix(log logr.Logger, garden *
 		&kubeapiserverexposure.ServiceValues{
 			NamePrefix:                  namePrefix,
 			NameSuffix:                  suffix,
-			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings) && !features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
 		},
 		func() client.ObjectKey {
