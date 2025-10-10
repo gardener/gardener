@@ -87,6 +87,7 @@ func newScrapeConfigForFederation(federation federationConfig) *monitoringv1alph
 					`{__name__="seed:persistentvolume:inconsistent_size"}`,
 					`{__name__="seed:kube_pod_container_status_restarts_total:max_by_namespace"}`,
 					`{__name__=~"metering:.+:(sum_by_namespace|sum_by_instance_type)"}`,
+					`{__name__="kube_node_spec_taint"}`,
 				},
 			},
 			StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: federation.targets}},
