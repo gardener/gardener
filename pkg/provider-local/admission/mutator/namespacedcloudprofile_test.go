@@ -63,7 +63,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 		}
 	})
 
-	Describe("EnsureUniformFormat", func() {
+	Describe("MutateArchitectureCapabilityFields", func() {
 		var parentCloudProfile *gardencorev1beta1.CloudProfile
 		var cpConfig *v1alpha1.CloudProfileConfig
 		var capabilityMachineImage v1alpha1.MachineImages
@@ -108,14 +108,14 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 				machineImages := []v1alpha1.MachineImages{capabilityMachineImage}
 				cpConfig.MachineImages = machineImages
 
-				uniformSpecConfig := mutator.EnsureUniformFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
+				uniformSpecConfig := mutator.MutateArchitectureCapabilityFields(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
 				Expect(uniformSpecConfig.MachineImages).To(ContainElements(machineImages))
 				Expect(uniformSpecConfig).NotTo(BeIdenticalTo(cpConfig))
 			})
 
 			It("should transform the status to capability format if the NamespacedCloudProfile spec is in old format", func() {
 				cpConfig.MachineImages = []v1alpha1.MachineImages{legacyMachineImage}
-				uniformSpecConfig := mutator.EnsureUniformFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
+				uniformSpecConfig := mutator.MutateArchitectureCapabilityFields(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
 				Expect(uniformSpecConfig.MachineImages[0]).To(Equal(capabilityMachineImage))
 			})
 		})
@@ -125,14 +125,14 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 				machineImages := []v1alpha1.MachineImages{legacyMachineImage}
 				cpConfig.MachineImages = machineImages
 
-				uniformSpecConfig := mutator.EnsureUniformFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
+				uniformSpecConfig := mutator.MutateArchitectureCapabilityFields(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
 				Expect(uniformSpecConfig.MachineImages).To(ContainElements(machineImages))
 				Expect(uniformSpecConfig).NotTo(BeIdenticalTo(cpConfig))
 			})
 
 			It("should transform the status to legacy format if the NamespacedCloudProfile spec is in capability format", func() {
 				cpConfig.MachineImages = []v1alpha1.MachineImages{capabilityMachineImage}
-				uniformSpecConfig := mutator.EnsureUniformFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
+				uniformSpecConfig := mutator.MutateArchitectureCapabilityFields(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
 				Expect(uniformSpecConfig.MachineImages[0]).To(Equal(legacyMachineImage))
 			})
 		})

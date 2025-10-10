@@ -301,7 +301,7 @@ func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec,
 	numberOfCloudProfileArchitectures := len(machineCapabilities[v1beta1constants.ArchitectureName])
 	if numberOfCloudProfileArchitectures <= 1 {
 		// syncing is only required if there is more than 1 architectures Spec.MachineCapabilities
-		// 0: means the MachineCapabilities are invalid and will be catched by validation
+		// 0: means the MachineCapabilities are invalid and will be caught by validation
 		// 1: means we have only one architecture and no syncing is required
 		return
 	}
@@ -313,10 +313,8 @@ func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec,
 }
 
 func syncMachineImageArchitectureCapabilities(newMachineImages []core.MachineImage) {
-
 	for imageIdx := range newMachineImages {
 		for versionIdx, version := range newMachineImages[imageIdx].Versions {
-
 			// don't sync if capabilities are set by users
 			if len(version.CapabilityFlavors) > 0 {
 				continue
@@ -339,7 +337,6 @@ func syncMachineImageArchitectureCapabilities(newMachineImages []core.MachineIma
 }
 
 func syncMachineTypeArchitectureCapabilities(newMachineTypes []core.MachineType) {
-
 	for i, machineType := range newMachineTypes {
 		// don't sync if capabilities are set by users
 		if len(machineType.Capabilities) > 0 {
@@ -352,7 +349,6 @@ func syncMachineTypeArchitectureCapabilities(newMachineTypes []core.MachineType)
 		newMachineTypes[i].Capabilities = core.Capabilities{
 			v1beta1constants.ArchitectureName: []string{legacyArchitecture},
 		}
-
 	}
 }
 

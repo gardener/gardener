@@ -122,8 +122,8 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 		namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions, namespacedCloudProfile.Spec.Kubernetes.Versions, expirableVersionKeyFunc, mergeExpirationDates, false)
 	}
 
-	// @Roncossek: Remove ensureUniformFormat once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are deprecated.
-	uniformNamespacedCloudProfileSpec := ensureUniformFormat(namespacedCloudProfile.Spec, cloudProfile.Spec.MachineCapabilities)
+	// TODO(Roncossek): Remove mutateArchitectureCapabilityFields once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are effectively forbidden or have been removed.
+	uniformNamespacedCloudProfileSpec := mutateArchitectureCapabilityFields(namespacedCloudProfile.Spec, cloudProfile.Spec.MachineCapabilities)
 	namespacedCloudProfile.Status.CloudProfileSpec.MachineImages = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages, uniformNamespacedCloudProfileSpec.MachineImages, machineImageKeyFunc, mergeMachineImages, true)
 	namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes, uniformNamespacedCloudProfileSpec.MachineTypes, machineTypeKeyFunc, nil, true)
 	namespacedCloudProfile.Status.CloudProfileSpec.VolumeTypes = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.VolumeTypes, namespacedCloudProfile.Spec.VolumeTypes, volumeTypeKeyFunc, nil, true)
@@ -143,10 +143,10 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 	syncArchitectureCapabilities(namespacedCloudProfile)
 }
 
-// ensureUniformFormat ensures that the given NamespacedCloudProfileSpec is in a uniform format with its parent CloudProfileSpec.
+// mutateArchitectureCapabilityFields ensures that the given NamespacedCloudProfileSpec is in a uniform format with its parent CloudProfileSpec.
 // If the parent CloudProfileSpec uses capability definitions, then the NamespacedCloudProfileSpec is transformed to also use capabilities
 // and vice versa.
-func ensureUniformFormat(
+func mutateArchitectureCapabilityFields(
 	spec gardencorev1beta1.NamespacedCloudProfileSpec,
 	capabilityDefinitions []gardencorev1beta1.CapabilityDefinition,
 ) gardencorev1beta1.NamespacedCloudProfileSpec {
