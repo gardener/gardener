@@ -357,6 +357,21 @@ garden_cluster_ip="$(docker inspect "$garden_cluster"-control-plane | yq ".[].Ne
 # Inject garden.local.gardener.cloud into all nodes
 for node in $nodes; do
   docker exec "$node" sh -c "echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts"
+
+  # Create a systemd service to automatically re-add the garden.local.gardener.cloud entry to /etc/hosts on node startup.
+  docker exec "$node" sh -c "cat <<EOF > /etc/systemd/system/gardener-local-kind-add-hosts.service
+[Unit]
+Description=Gardener Local Kind: Add garden.local.gardener.cloud to /etc/hosts
+After=etc-hosts.mount
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts'
+
+[Install]
+WantedBy=multi-user.target
+EOF"
+  docker exec "$node" sh -c "systemctl enable gardener-local-kind-add-hosts.service"
 done
 
 # Inject garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
