@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
@@ -34,6 +35,11 @@ import (
 )
 
 var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high-touch"), func() {
+	var (
+		shootNamespace = "garden"
+		shootName      = "root"
+	)
+
 	BeforeEach(OncePerOrdered, func(ctx SpecContext) {
 		testRunID := utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
@@ -90,7 +96,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 				stdOut, _, err := execute(ctx, 0, "cat", "/etc/kubernetes/admin.conf")
 				g.Expect(err).NotTo(HaveOccurred())
 
-				kubeconfig := strings.ReplaceAll(string(stdOut.Contents()), "api.root.garden.local.gardener.cloud", fmt.Sprintf("localhost:%d", localPort))
+				kubeconfig := strings.ReplaceAll(string(stdOut.Contents()), fmt.Sprintf("api.%s.%s.local.gardener.cloud", shootName, shootNamespace), fmt.Sprintf("localhost:%d", localPort))
 				return os.WriteFile(adminKubeconfigFile, []byte(kubeconfig), 0600)
 			}).Should(Succeed())
 
@@ -255,7 +261,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 		}, SpecTimeout(time.Minute))
 
 		It("should generate a bootstrap token and connect the autonomous shoot to Gardener", func(ctx SpecContext) {
-			stdOut, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=garden --shoot-name=root", gardenClusterKubeconfigPathOnMachine))
+			stdOut, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s", gardenClusterKubeconfigPathOnMachine, shootNamespace, shootName))
 			Expect(err).NotTo(HaveOccurred())
 			connectCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
 
@@ -286,10 +292,12 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
-		// TODO(rfranzke): Implement this as 'gardenadm connect' progresses.
-		// It("should see the joined shoot in the Gardener API", func(ctx SpecContext) {
-		// 	Eventually(ctx, func(g Gomega) {}).Should(Succeed())
-		// }, SpecTimeout(2*time.Minute))
+		It("should see the Shoot resource in the Gardener API", func(ctx SpecContext) {
+			Eventually(ctx, func() error {
+				shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+				return gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+			}).Should(Succeed())
+		}, SpecTimeout(2*time.Minute))
 	})
 })
 

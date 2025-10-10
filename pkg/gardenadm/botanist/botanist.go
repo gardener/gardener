@@ -56,6 +56,7 @@ type AutonomousBotanist struct {
 	DBus       dbus.DBus
 	FS         afero.Afero
 	Extensions []Extension
+	Resources  gardenadm.Resources
 
 	// Bastion is only set for `gardenadm bootstrap`.
 	Bastion *bastion.Bastion
@@ -161,6 +162,7 @@ func NewAutonomousBotanist(
 		}
 	}
 
+	autonomousBotanist.Resources = resources
 	autonomousBotanist.Extensions = extensions
 
 	return autonomousBotanist, nil

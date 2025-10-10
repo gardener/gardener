@@ -260,6 +260,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	if len(spec.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
 	}
+
 	if workerless {
 		if spec.SecretBindingName != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), workerlessErrorMsg))
@@ -267,7 +268,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		if spec.CredentialsBindingName != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsBindingName"), workerlessErrorMsg))
 		}
-	} else {
+	} else if !helper.IsShootAutonomous(spec.Provider.Workers) {
 		if len(ptr.Deref(spec.SecretBindingName, "")) == 0 && len(ptr.Deref(spec.CredentialsBindingName, "")) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("secretBindingName"), "must be set when credentialsBindingName is not"))
 		} else if len(ptr.Deref(spec.SecretBindingName, "")) != 0 && len(ptr.Deref(spec.CredentialsBindingName, "")) != 0 {
@@ -281,6 +282,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), "is no longer supported for Kubernetes >= 1.34, use spec.credentialsBindingName instead"))
 		}
 	}
+
 	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed name must not be empty when providing the key"))
 	}
