@@ -1,0 +1,30 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: metrics
+  namespace: test-ingress
+spec:
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+        portNumber: 15022
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.compressor
+        typed_config:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+          compressor_library:
+            name: text_optimized
+            typed_config:
+              '@type': type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+          remove_accept_encoding_header: true
+  workloadSelector:
+    labels:
+      app: istio-ingressgateway
+      foo: bar

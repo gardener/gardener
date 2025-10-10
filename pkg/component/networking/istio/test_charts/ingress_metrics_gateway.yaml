@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: metrics
+  namespace: test-ingress
+spec:
+  selector:
+    app: istio-ingressgateway
+    foo: bar
+  servers:
+  - hosts:
+    - '*'
+    port:
+      name: metrics
+      number: 15022
+      protocol: HTTP

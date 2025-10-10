@@ -18,7 +18,7 @@ spec:
     relabelings:
     - action: replace
       regex: (.+)
-      replacement: ${1}:15020
+      replacement: ${1}:15022
       sourceLabels:
       - __meta_kubernetes_pod_ip
       targetLabel: __address__

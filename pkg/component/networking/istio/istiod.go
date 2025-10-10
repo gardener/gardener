@@ -281,7 +281,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 						Action:       "replace",
 						TargetLabel:  "__address__",
 						Regex:        `(.+)`,
-						Replacement:  ptr.To("${1}:15020"),
+						Replacement:  ptr.To("${1}:15022"),
 					}},
 					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
 						"envoy_cluster_upstream_cx_active",

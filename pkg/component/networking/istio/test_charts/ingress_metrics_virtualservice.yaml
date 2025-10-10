@@ -1,0 +1,20 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: metrics
+  namespace: test-ingress
+spec:
+  exportTo:
+  - '*'
+  gateways:
+  - metrics
+  hosts:
+  - '*'
+  http:
+  - match:
+    - port: 15022
+    route:
+    - destination:
+        host: metrics.istio.local
+        port:
+          number: 15020
