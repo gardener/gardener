@@ -177,14 +177,6 @@ var _ = Describe("Admission", func() {
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 						})
 
-						It("should fail adding a machineImage without Capabilities", func() {
-							Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
-							attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(
-								ContainSubstring(`Required value: must provide at least one image flavor when multiple architectures are defined in spec.machineCapabilities`),
-							))
-						})
-
 						It("should reject a machineImage with Capabilities or CapabilityValues not in the parent CloudProfile", func() {
 							Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 							namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors = []gardencore.MachineImageFlavor{
@@ -213,7 +205,10 @@ var _ = Describe("Admission", func() {
 
 							attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(And(
+								ContainSubstring("status.cloudProfileSpec.machineTypes[0].architecture"),
+								ContainSubstring("machine type architecture (amd64) conflicts with the capability architecture (arm64)"),
+							)))
 						})
 
 						It("should reject unsupported Capabilities or CapabilityValues in machineTypes", func() {

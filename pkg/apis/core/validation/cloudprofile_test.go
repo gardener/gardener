@@ -1397,7 +1397,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeRequired),
 							"Field":  Equal("spec.machineImages[0].versions[0].capabilityFlavors[0].architecture"),
-							"Detail": Equal("must provide one architecture"),
+							"Detail": Equal("must specify one architecture explicitly as multiple architectures are defined in spec.machineCapabilities"),
 						})),
 					))
 				})

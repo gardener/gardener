@@ -1022,7 +1022,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						Expect(machineTypes).To(HaveLen(2))
 
 						// First machine type should default to amd64
-						Expect(machineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
+						Expect(machineTypes[0].Architecture).To(BeNil())
 						Expect(machineTypes[0].Capabilities).To(HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"amd64"}))
 
 						// Second machine type should keep arm64
@@ -1176,7 +1176,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						version := namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[0].Versions[0]
 						// no architectures specified so should default to amd64 as per parent capability definition
 						Expect(version.CapabilityFlavors).To(BeEmpty())
-						Expect(version.Architectures).To(ConsistOf("amd64"))
+						Expect(version.Architectures).To(BeEmpty())
 					})
 				})
 			})
