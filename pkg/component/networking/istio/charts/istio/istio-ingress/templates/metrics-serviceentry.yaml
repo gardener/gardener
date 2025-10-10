@@ -13,4 +13,6 @@ spec:
   - name: metrics
     number: 15020
     protocol: HTTP
-  resolution: DNS
+  resolution: STATIC
+  endpoints:
+  - address: 127.0.0.1

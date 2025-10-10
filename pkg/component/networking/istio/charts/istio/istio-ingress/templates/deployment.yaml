@@ -166,10 +166,6 @@ spec:
           - name: ingressgateway-ca-certs
             mountPath: "/etc/istio/ingressgateway-ca-certs"
             readOnly: true
-      hostAliases:
-      - ip: 127.0.0.1
-        hostnames:
-        - metrics.istio.local
       volumes:
       - emptyDir: {}
         name: workload-socket
