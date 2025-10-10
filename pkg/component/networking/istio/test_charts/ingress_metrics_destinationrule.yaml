@@ -1,0 +1,12 @@
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: metrics
+  namespace: test-ingress
+spec:
+  exportTo:
+  - '*'
+  host: metrics.istio.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
