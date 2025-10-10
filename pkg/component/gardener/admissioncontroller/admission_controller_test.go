@@ -103,13 +103,13 @@ var _ = Describe("GardenerAdmissionController", func() {
 							APIGroups:   []string{""},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"secrets", "configmaps"},
-							Size:        resource.MustParse("1Mi"),
+							Size:        ptr.To(resource.MustParse("1Mi")),
 						},
 						{
 							APIGroups:   []string{"core.gardener.cloud"},
 							APIVersions: []string{"v1beta1"},
 							Resources:   []string{"shoots"},
-							Size:        resource.MustParse("100Ki"),
+							Size:        ptr.To(resource.MustParse("100Ki")),
 						},
 					},
 					UnrestrictedSubjects: []rbacv1.Subject{{
