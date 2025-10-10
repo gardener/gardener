@@ -122,10 +122,11 @@ func (b *Botanist) DefaultVali() (vali.Interface, error) {
 		b.SecretsManager,
 		component.ClusterTypeShoot,
 		b.Shoot.GetReplicas(1),
-		b.isShootNodeLoggingEnabled(),
+		b.isShootNodeLoggingEnabled() && !features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector),
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		nil,
 		b.ComputeValiHost(),
+		false,
 	)
 }
 
@@ -145,10 +146,12 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		collector.Values{
-			Image:              collectorImage.String(),
-			KubeRBACProxyImage: kubeRBACProxyImage.String(),
-			LokiEndpoint:       "http://" + valiconstants.ServiceName + ":" + strconv.Itoa(valiconstants.ValiPort) + valiconstants.PushEndpoint,
-			Replicas:           b.Shoot.GetReplicas(1),
+			Image:                   collectorImage.String(),
+			KubeRBACProxyImage:      kubeRBACProxyImage.String(),
+			LokiEndpoint:            "http://" + valiconstants.ServiceName + ":" + strconv.Itoa(valiconstants.ValiPort) + valiconstants.PushEndpoint,
+			Replicas:                b.Shoot.GetReplicas(1),
+			ShootNodeLoggingEnabled: b.isShootNodeLoggingEnabled(),
+			IngressHost:             b.ComputeOpenTelemetryCollectorHost(),
 		},
 		b.SecretsManager,
 	), nil

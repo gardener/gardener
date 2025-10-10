@@ -1367,6 +1367,7 @@ func (r *Reconciler) newVali() (component.Deployer, error) {
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		nil,
 		"",
+		true,
 	)
 }
 
