@@ -13,16 +13,17 @@ import (
 const (
 	commonSettings = `LogLevel info
 Url http://logging.garden.svc:3100/vali/api/v1/push
-BatchWait 60s
-BatchSize 30720
+BatchWait 5s
+BatchSize 1048576
+MaxRetries 5
+Timeout 10s
+MinBackoff 10s
+MaxBackoff 300s
 LineFormat json
 SortByTimestamp true
 DropSingleKey false
 AutoKubernetesLabels false
 HostnameKeyValue nodename ${NODE_NAME}
-MaxRetries 3
-Timeout 10s
-MinBackoff 30s
 Buffer true
 BufferType dque
 QueueSegmentSize 300
