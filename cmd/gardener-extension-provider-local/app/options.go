@@ -74,7 +74,6 @@ func WebhookSwitchOptions() *extensionscmdwebhook.SwitchOptions {
 		extensionscmdwebhook.Switch(istiowebhook.WebhookName, istiowebhook.AddToManager),
 		extensionscmdwebhook.Switch(networkpolicywebhook.WebhookName, networkpolicywebhook.AddToManager),
 		extensionscmdwebhook.Switch(nodewebhook.WebhookName, nodewebhook.AddToManager),
-		extensionscmdwebhook.Switch(nodewebhook.WebhookNameShoot, nodewebhook.AddShootWebhookToManager),
 		extensionscmdwebhook.Switch(prometheuswebhook.WebhookName, prometheuswebhook.AddToManager),
 	)
 }

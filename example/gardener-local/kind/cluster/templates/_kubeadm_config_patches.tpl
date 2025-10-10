@@ -17,6 +17,8 @@
 {{- end }}
     extraArgs:
       authorization-config: /etc/gardener-local/kube-apiserver/authz-config.yaml
+      feature-gates: "MutatingAdmissionPolicy=true"
+      runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
     extraVolumes:
     - name: authz-config
       mountPath: /etc/gardener-local/kube-apiserver/authz-config.yaml
