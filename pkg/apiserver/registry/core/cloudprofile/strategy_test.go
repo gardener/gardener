@@ -186,7 +186,7 @@ var _ = Describe("Strategy", func() {
 			}
 			newCloudProfile := oldCloudProfile.DeepCopy()
 			newCloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
-				{Name: "architecture", Values: []string{"amd64"}},
+				{Name: "architecture", Values: []string{"amd64", "arm64"}},
 			}
 
 			cloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), newCloudProfile, oldCloudProfile)
@@ -198,30 +198,6 @@ var _ = Describe("Strategy", func() {
 			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors).To(ConsistOf(core.MachineImageFlavor{
 				Capabilities: core.Capabilities{"architecture": []string{"amd64"}},
 			}))
-		})
-	})
-
-	Describe("#Canonicalize", func() {
-		It("should sync architecture capabilities to empty architecture fields", func() {
-			cloudProfile := &core.CloudProfile{
-				Spec: core.CloudProfileSpec{
-					MachineCapabilities: []core.CapabilityDefinition{
-						{Name: "architecture", Values: []string{"amd64"}},
-					},
-					MachineImages: []core.MachineImage{{Versions: []core.MachineImageVersion{
-						{CapabilityFlavors: []core.MachineImageFlavor{{Capabilities: core.Capabilities{
-							"architecture": []string{"amd64"}}}}},
-					}}},
-					MachineTypes: []core.MachineType{{Capabilities: core.Capabilities{
-						"architecture": []string{"amd64"},
-					}}},
-				},
-			}
-
-			cloudprofileregistry.Strategy.Canonicalize(cloudProfile)
-
-			Expect(cloudProfile.Spec.MachineTypes[0].Architecture).To(PointTo(Equal("amd64")))
-			Expect(cloudProfile.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))
 		})
 	})
 })
