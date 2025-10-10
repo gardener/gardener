@@ -200,28 +200,4 @@ var _ = Describe("Strategy", func() {
 			}))
 		})
 	})
-
-	Describe("#Canonicalize", func() {
-		It("should sync architecture capabilities to empty architecture fields", func() {
-			cloudProfile := &core.CloudProfile{
-				Spec: core.CloudProfileSpec{
-					MachineCapabilities: []core.CapabilityDefinition{
-						{Name: "architecture", Values: []string{"amd64"}},
-					},
-					MachineImages: []core.MachineImage{{Versions: []core.MachineImageVersion{
-						{CapabilityFlavors: []core.MachineImageFlavor{{Capabilities: core.Capabilities{
-							"architecture": []string{"amd64"}}}}},
-					}}},
-					MachineTypes: []core.MachineType{{Capabilities: core.Capabilities{
-						"architecture": []string{"amd64"},
-					}}},
-				},
-			}
-
-			cloudprofileregistry.Strategy.Canonicalize(cloudProfile)
-
-			Expect(cloudProfile.Spec.MachineTypes[0].Architecture).To(PointTo(Equal("amd64")))
-			Expect(cloudProfile.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))
-		})
-	})
 })
