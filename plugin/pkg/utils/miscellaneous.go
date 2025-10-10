@@ -149,11 +149,7 @@ func ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec
 		}
 
 		if usedRemovedDomains.Len() > 0 {
-			formatted := make([]string, 0, usedRemovedDomains.Len())
-			for domain := range usedRemovedDomains {
-				formatted = append(formatted, domain)
-			}
-			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove default domains %v from %s %q as they are still being used by shoots", formatted, kind, seedName))
+			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove default domains %v from %s %q as they are still being used by shoots", usedRemovedDomains.UnsortedList(), kind, seedName))
 		}
 	}
 

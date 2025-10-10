@@ -6613,7 +6613,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring(`cannot reschedule shoot "shoot" to seed "new-seed" because the shoot uses default domain "default.example.com" which is not supported by the new seed (supported domains: [other.example.com]`))
+						Expect(err.Error()).To(ContainSubstring(`cannot reschedule shoot "shoot" to seed "new-seed" because the shoot uses the default domain "default.example.com" which is not supported by the new seed (supported domains: [other.example.com]`))
 					})
 
 					It("should reject rescheduling when new seed has no default domains configured", func() {
@@ -6645,7 +6645,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring(`cannot reschedule shoot "shoot" to seed "new-seed" because the shoot uses default domain "default.example.com" which is not supported by the new seed (supported domains: []`))
+						Expect(err.Error()).To(ContainSubstring(`cannot reschedule shoot "shoot" to seed "new-seed" because the shoot uses the default domain "default.example.com" which is not supported by the new seed (supported domains: []`))
 					})
 
 					It("should allow rescheduling when new seed supports multiple default domains including the one used by shoot", func() {

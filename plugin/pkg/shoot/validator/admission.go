@@ -2206,11 +2206,9 @@ func (c *validationContext) validateDefaultDomainCompatibilityForRescheduling(ol
 		return nil
 	}
 
-	shootDomain := *c.shoot.Spec.DNS.Domain
-
-	oldDefaultDomains := getDefaultDomainsForSeed(oldSeed)
-
 	var (
+		shootDomain       = *c.shoot.Spec.DNS.Domain
+		oldDefaultDomains = getDefaultDomainsForSeed(oldSeed)
 		usesDefaultDomain bool
 		usedDefaultDomain string
 	)
@@ -2233,7 +2231,7 @@ func (c *validationContext) validateDefaultDomainCompatibilityForRescheduling(ol
 		return nil
 	}
 
-	return fmt.Errorf("cannot reschedule shoot %q to seed %q because the shoot uses default domain %q which is not supported by the new seed (supported domains: %v)", c.shoot.Name, c.seed.Name, usedDefaultDomain, newDefaultDomains)
+	return fmt.Errorf("cannot reschedule shoot %q to seed %q because the shoot uses the default domain %q which is not supported by the new seed (supported domains: %v)", c.shoot.Name, c.seed.Name, usedDefaultDomain, newDefaultDomains)
 }
 
 func getDefaultDomainsForSeed(seed *gardencorev1beta1.Seed) []string {
