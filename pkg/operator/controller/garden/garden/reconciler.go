@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -172,9 +174,10 @@ func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Ga
 
 func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *operatorv1alpha1.Garden, operationType gardencorev1beta1.LastOperationType) error {
 	var (
-		now                           = metav1.NewTime(r.Clock.Now().UTC())
-		description                   string
-		mustRemoveOperationAnnotation bool
+		now                = metav1.NewTime(r.Clock.Now().UTC())
+		operations         = helper.GetGardenerOperations(garden.Annotations)
+		filteredOperations = slices.Clone(operations)
+		description        string
 	)
 
 	k8sLess134, err := versionutils.CompareVersions(garden.Spec.VirtualCluster.Kubernetes.Version, "<", "1.34")
@@ -199,60 +202,82 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	garden.Status.Gardener = r.Identity
 	garden.Status.ObservedGeneration = garden.Generation
 
-	switch garden.Annotations[v1beta1constants.GardenerOperation] {
-	case v1beta1constants.GardenerOperationReconcile:
-		mustRemoveOperationAnnotation = true
-
-	case v1beta1constants.OperationRotateCredentialsStart:
-		mustRemoveOperationAnnotation = true
-		startRotationCA(garden, &now)
-		startRotationServiceAccountKey(garden, &now)
-		startRotationETCDEncryptionKey(garden, !k8sLess134, &now)
-		startRotationObservability(garden, &now)
-		startRotationWorkloadIdentityKey(garden, &now)
-	case v1beta1constants.OperationRotateCredentialsComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationCA(garden, &now)
-		completeRotationServiceAccountKey(garden, &now)
-		if k8sLess134 {
-			completeRotationETCDEncryptionKey(garden, &now)
+	for _, operation := range operations {
+		switch operation {
+		case v1beta1constants.OperationRotateCredentialsStart:
+			filteredOperations = v1beta1helper.RemoveOperation(filteredOperations, v1beta1constants.OperationRotateCAStart,
+				v1beta1constants.OperationRotateServiceAccountKeyStart,
+				v1beta1constants.OperationRotateETCDEncryptionKey,
+				v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+				v1beta1constants.OperationRotateObservabilityCredentials,
+				v1beta1constants.ShootOperationRotateSSHKeypair,
+			)
+		case v1beta1constants.OperationRotateCredentialsComplete:
+			filteredOperations = v1beta1helper.RemoveOperation(filteredOperations, v1beta1constants.OperationRotateCAComplete,
+				v1beta1constants.OperationRotateServiceAccountKeyComplete,
+				v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
+			)
 		}
-		completeRotationWorkloadIdentityKey(garden, &now)
+	}
 
-	case v1beta1constants.OperationRotateCAStart:
-		mustRemoveOperationAnnotation = true
-		startRotationCA(garden, &now)
-	case v1beta1constants.OperationRotateCAComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationCA(garden, &now)
+	patchOperations := slices.Clone(filteredOperations)
 
-	case v1beta1constants.OperationRotateServiceAccountKeyStart:
-		mustRemoveOperationAnnotation = true
-		startRotationServiceAccountKey(garden, &now)
-	case v1beta1constants.OperationRotateServiceAccountKeyComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationServiceAccountKey(garden, &now)
+	for _, operation := range filteredOperations {
+		switch operation {
+		case v1beta1constants.GardenerOperationReconcile:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 
-	case v1beta1constants.OperationRotateETCDEncryptionKey:
-		mustRemoveOperationAnnotation = true
-		startRotationETCDEncryptionKey(garden, true, &now)
-	case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
-		mustRemoveOperationAnnotation = true
-		startRotationETCDEncryptionKey(garden, false, &now)
-	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationETCDEncryptionKey(garden, &now)
+		case v1beta1constants.OperationRotateCredentialsStart:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			startRotationCA(garden, &now)
+			startRotationServiceAccountKey(garden, &now)
+			startRotationETCDEncryptionKey(garden, !k8sLess134, &now)
+			startRotationObservability(garden, &now)
+			startRotationWorkloadIdentityKey(garden, &now)
+		case v1beta1constants.OperationRotateCredentialsComplete:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			completeRotationCA(garden, &now)
+			completeRotationServiceAccountKey(garden, &now)
+			if k8sLess134 {
+				completeRotationETCDEncryptionKey(garden, &now)
+			}
+			completeRotationWorkloadIdentityKey(garden, &now)
 
-	case v1beta1constants.OperationRotateObservabilityCredentials:
-		mustRemoveOperationAnnotation = true
-		startRotationObservability(garden, &now)
+		case v1beta1constants.OperationRotateCAStart:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			startRotationCA(garden, &now)
+		case v1beta1constants.OperationRotateCAComplete:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			completeRotationCA(garden, &now)
 
-	case operatorv1alpha1.OperationRotateWorkloadIdentityKeyStart:
-		mustRemoveOperationAnnotation = true
-		startRotationWorkloadIdentityKey(garden, &now)
-	case operatorv1alpha1.OperationRotateWorkloadIdentityKeyComplete:
-		mustRemoveOperationAnnotation = true
-		completeRotationWorkloadIdentityKey(garden, &now)
+		case v1beta1constants.OperationRotateServiceAccountKeyStart:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			startRotationServiceAccountKey(garden, &now)
+		case v1beta1constants.OperationRotateServiceAccountKeyComplete:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			completeRotationServiceAccountKey(garden, &now)
+
+		case v1beta1constants.OperationRotateETCDEncryptionKey:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			startRotationETCDEncryptionKey(garden, true, &now)
+		case v1beta1constants.OperationRotateETCDEncryptionKeyStart:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			startRotationETCDEncryptionKey(garden, false, &now)
+		case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			completeRotationETCDEncryptionKey(garden, &now)
+
+		case v1beta1constants.OperationRotateObservabilityCredentials:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			startRotationObservability(garden, &now)
+
+		case operatorv1alpha1.OperationRotateWorkloadIdentityKeyStart:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			startRotationWorkloadIdentityKey(garden, &now)
+		case operatorv1alpha1.OperationRotateWorkloadIdentityKeyComplete:
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+			completeRotationWorkloadIdentityKey(garden, &now)
+		}
 	}
 
 	// TODO(AleksandarSavchev): Remove the k8s version check in a future release after support for Kubernetes v1.33 is dropped.
@@ -267,9 +292,13 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		return err
 	}
 
-	if mustRemoveOperationAnnotation {
+	if len(operations) != len(patchOperations) {
 		patch := client.MergeFrom(garden.DeepCopy())
-		delete(garden.Annotations, v1beta1constants.GardenerOperation)
+		if len(patchOperations) == 0 {
+			delete(garden.Annotations, v1beta1constants.GardenerOperation)
+		} else {
+			garden.Annotations[v1beta1constants.GardenerOperation] = strings.Join(patchOperations, ";")
+		}
 		return r.RuntimeClientSet.Client().Patch(ctx, garden, patch)
 	}
 

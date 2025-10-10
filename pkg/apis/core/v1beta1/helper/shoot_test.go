@@ -5,6 +5,7 @@
 package helper_test
 
 import (
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -1600,5 +1601,93 @@ var _ = Describe("Helper", func() {
 		Entry("with control plane version 1.33 and one worker pool with lower version", semver.MustParse("1.33.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("1.31.0")}}}, true),
 		Entry("with control plane version 1.34 and one worker pool with lower version", semver.MustParse("1.34.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("1.31.0")}}}, true),
 		Entry("with control plane version 1.34 and one worker pool with lower version", semver.MustParse("1.34.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("1.34.0")}}}, false),
+	)
+
+	DescribeTable("#GetShootGardenerOperations",
+		func(annotations map[string]string, expectedResult []string) {
+			Expect(GetShootGardenerOperations(annotations)).To(Equal(expectedResult))
+		},
+		Entry("annotations are empty", nil, nil),
+		Entry("gardener.cloud/operation annotation is not set", map[string]string{
+			"maintenance.gardener.cloud/operation": "foo",
+		}, nil),
+		Entry("gardener.cloud/operation annotation is empty", map[string]string{
+			"gardener.cloud/operation": "",
+		}, nil),
+		Entry("gardener.cloud/operation has single operation", map[string]string{
+			"gardener.cloud/operation": "reconcile",
+		}, []string{"reconcile"}),
+		Entry("gardener.cloud/operation has multiple operations", map[string]string{
+			"gardener.cloud/operation": "reconcile;rotate-credentials-start;rotate-ssh-keypair",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair"}),
+		Entry("gardener.cloud/operation has whitespaces", map[string]string{
+			"gardener.cloud/operation": "reconcile ;rotate-credentials-start  ; rotate-ssh-keypair;   ",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair", ""}),
+	)
+
+	DescribeTable("#GetShootMaintenanceOperations",
+		func(annotations map[string]string, expectedResult []string) {
+			Expect(GetShootMaintenanceOperations(annotations)).To(Equal(expectedResult))
+		},
+		Entry("annotations are empty", nil, nil),
+		Entry("maintenance.gardener.cloud/operation annotation is not set", map[string]string{
+			"gardener.cloud/operation": "foo",
+		}, nil),
+		Entry("maintenance.gardener.cloud/operation annotation is empty", map[string]string{
+			"maintenance.gardener.cloud/operation": "",
+		}, nil),
+		Entry("maintenance.gardener.cloud/operation has single operation", map[string]string{
+			"maintenance.gardener.cloud/operation": "reconcile",
+		}, []string{"reconcile"}),
+		Entry("maintenance.gardener.cloud/operation has multiple operations", map[string]string{
+			"maintenance.gardener.cloud/operation": "reconcile;rotate-credentials-start;rotate-ssh-keypair",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair"}),
+		Entry("maintenance.gardener.cloud/operation has whitespaces", map[string]string{
+			"maintenance.gardener.cloud/operation": "reconcile ;rotate-credentials-start  ; rotate-ssh-keypair;   ",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair", ""}),
+	)
+
+	DescribeTable("#RemoveOperation",
+		func(operations []string, operationsToRemove []string, expected []string) {
+			startingOperations := slices.Clone(operations)
+			result := RemoveOperation(operations, operationsToRemove...)
+			Expect(startingOperations).To(Equal(operations))
+			Expect(result).To(Equal(expected))
+		},
+
+		Entry("remove single operation from list",
+			[]string{"rotate-ssh-keypair", "rotate-ca-start", "rotate-observability-credentials"},
+			[]string{"rotate-ca-start"},
+			[]string{"rotate-ssh-keypair", "rotate-observability-credentials"}),
+
+		Entry("remove multiple operations from list",
+			[]string{"rotate-ssh-keypair", "rotate-ca-start", "rotate-observability-credentials", "reconcile"},
+			[]string{"rotate-ca-start", "reconcile"},
+			[]string{"rotate-ssh-keypair", "rotate-observability-credentials"}),
+
+		Entry("remove operation that doesn't exist",
+			[]string{"rotate-ssh-keypair", "rotate-ca-start"},
+			[]string{"non-existent-operation"},
+			[]string{"rotate-ssh-keypair", "rotate-ca-start"}),
+
+		Entry("remove from empty list",
+			[]string{},
+			[]string{"rotate-ssh-keypair"},
+			[]string{}),
+
+		Entry("remove all operations",
+			[]string{"rotate-ssh-keypair", "rotate-ca-start"},
+			[]string{"rotate-ssh-keypair", "rotate-ca-start"},
+			[]string{}),
+
+		Entry("remove no operations (empty remove list)",
+			[]string{"rotate-ssh-keypair", "rotate-ca-start"},
+			[]string{},
+			[]string{"rotate-ssh-keypair", "rotate-ca-start"}),
+
+		Entry("remove duplicate operation from list with duplicates",
+			[]string{"rotate-ssh-keypair", "rotate-ca-start", "rotate-ssh-keypair"},
+			[]string{"rotate-ssh-keypair"},
+			[]string{"rotate-ca-start"}),
 	)
 })
