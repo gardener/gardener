@@ -233,6 +233,7 @@ var _ = Describe("GardenerScheduler", func() {
 					Resources: []string{
 						"cloudprofiles",
 						"namespacedcloudprofiles",
+						"projects",
 						"seeds",
 					},
 					Verbs: []string{"get", "list", "watch"},

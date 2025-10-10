@@ -69,6 +69,8 @@ var _ = Describe("graph for seeds", func() {
 		seed1DNSProviderSecretRef                 = corev1.SecretReference{Namespace: "seed1secret3", Name: "seed1secret3"}
 		seed1SecretResourceRef                    = autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "resource1"}
 		seed1InternalDNSCredentialsRef            = corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "seed1secret4", Name: "seed1secret4"}
+		seed1DefaultDNSCredentialsRef1            = corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "seed1secret5", Name: "seed1secret5"}
+		seed1DefaultDNSCredentialsRef2            = corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "seed1secret6", Name: "seed1secret6"}
 		seed1LeaseNamespace                       = "gardener-system-seed-lease"
 
 		shootIssuerNamespace = "gardener-system-shoot-issuer"
@@ -186,6 +188,14 @@ var _ = Describe("graph for seeds", func() {
 					},
 					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
 						CredentialsRef: seed1InternalDNSCredentialsRef,
+					},
+					Defaults: []gardencorev1beta1.SeedDNSProviderConfig{
+						{
+							CredentialsRef: seed1DefaultDNSCredentialsRef1,
+						},
+						{
+							CredentialsRef: seed1DefaultDNSCredentialsRef2,
+						},
 					},
 				},
 				Resources: []gardencorev1beta1.NamedResourceReference{{
@@ -413,12 +423,14 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 	It("should behave as expected for gardencorev1beta1.Seed", func() {
 		By("Add")
 		fakeInformerSeed.Add(seed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(8))
-		Expect(graph.graph.Edges().Len()).To(Equal(7))
+		Expect(graph.graph.Nodes().Len()).To(Equal(10))
+		Expect(graph.graph.Edges().Len()).To(Equal(9))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, "kube-system", "cluster-identity", VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -427,11 +439,13 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		seed1Copy := seed1.DeepCopy()
 		seed1.Spec.Provider.Type = "providertype"
 		fakeInformerSeed.Update(seed1Copy, seed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(8))
-		Expect(graph.graph.Edges().Len()).To(Equal(7))
+		Expect(graph.graph.Nodes().Len()).To(Equal(10))
+		Expect(graph.graph.Edges().Len()).To(Equal(9))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, "kube-system", "cluster-identity", VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -440,13 +454,15 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		seed1Copy = seed1.DeepCopy()
 		seed1.Spec.Backup.CredentialsRef = &seed1BackupWorkloadIdentityCredentialsRef
 		fakeInformerSeed.Update(seed1Copy, seed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(8))
-		Expect(graph.graph.Edges().Len()).To(Equal(7))
+		Expect(graph.graph.Nodes().Len()).To(Equal(10))
+		Expect(graph.graph.Edges().Len()).To(Equal(9))
 		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, seed1BackupWorkloadIdentityCredentialsRef.Namespace, seed1BackupWorkloadIdentityCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, "kube-system", "cluster-identity", VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -455,13 +471,15 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		seed1Copy = seed1.DeepCopy()
 		seed1.Spec.Backup = nil
 		fakeInformerSeed.Update(seed1Copy, seed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(7))
-		Expect(graph.graph.Edges().Len()).To(Equal(6))
+		Expect(graph.graph.Nodes().Len()).To(Equal(9))
+		Expect(graph.graph.Edges().Len()).To(Equal(8))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, seed1BackupWorkloadIdentityCredentialsRef.Namespace, seed1BackupWorkloadIdentityCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, "kube-system", "cluster-identity", VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -470,13 +488,15 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		seed1Copy = seed1.DeepCopy()
 		seed1.Spec.DNS.Provider = nil
 		fakeInformerSeed.Update(seed1Copy, seed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(6))
-		Expect(graph.graph.Edges().Len()).To(Equal(5))
+		Expect(graph.graph.Nodes().Len()).To(Equal(8))
+		Expect(graph.graph.Edges().Len()).To(Equal(7))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, seed1BackupWorkloadIdentityCredentialsRef.Namespace, seed1BackupWorkloadIdentityCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, "kube-system", "cluster-identity", VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -485,6 +505,23 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		seed1Copy = seed1.DeepCopy()
 		seed1.Spec.DNS.Internal = nil
 		fakeInformerSeed.Update(seed1Copy, seed1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(7))
+		Expect(graph.graph.Edges().Len()).To(Equal(6))
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, seed1BackupWorkloadIdentityCredentialsRef.Namespace, seed1BackupWorkloadIdentityCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, "kube-system", "cluster-identity", VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+
+		By("Update (remove default DNS credentials ref)")
+		seed1Copy = seed1.DeepCopy()
+		seed1.Spec.DNS.Defaults = nil
+		fakeInformerSeed.Update(seed1Copy, seed1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(5))
 		Expect(graph.graph.Edges().Len()).To(Equal(4))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
@@ -492,6 +529,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, "kube-system", "cluster-identity", VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -501,14 +540,23 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		seed1.Spec.Backup = &gardencorev1beta1.Backup{CredentialsRef: &seed1BackupSecretCredentialsRef}
 		seed1.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{SecretRef: seed1DNSProviderSecretRef}
 		seed1.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{CredentialsRef: seed1InternalDNSCredentialsRef}
+		seed1.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+			{
+				CredentialsRef: seed1DefaultDNSCredentialsRef1,
+			}, {
+				CredentialsRef: seed1DefaultDNSCredentialsRef2,
+			},
+		}
 		fakeInformerSeed.Update(seed1Copy, seed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(8))
-		Expect(graph.graph.Edges().Len()).To(Equal(7))
+		Expect(graph.graph.Nodes().Len()).To(Equal(10))
+		Expect(graph.graph.Edges().Len()).To(Equal(9))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, seed1BackupWorkloadIdentityCredentialsRef.Namespace, seed1BackupWorkloadIdentityCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("Delete")
@@ -520,6 +568,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, "kube-system", "cluster-identity", VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeLease, seed1LeaseNamespace, seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
@@ -1784,9 +1834,11 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			fakeInformerSeed.Add(seed1)
 			lock.Lock()
 			defer lock.Unlock()
-			nodes, edges = nodes+8, edges+7
+			nodes, edges = nodes+10, edges+9
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
@@ -1943,6 +1995,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			defer lock.Unlock()
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
@@ -2121,6 +2175,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			defer lock.Unlock()
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
@@ -2293,6 +2349,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			defer lock.Unlock()
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretCredentialsRef.Namespace, seed1BackupSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1InternalDNSCredentialsRef.Namespace, seed1InternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DefaultDNSCredentialsRef1.Namespace, seed1DefaultDNSCredentialsRef1.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DefaultDNSCredentialsRef2.Namespace, seed1DefaultDNSCredentialsRef2.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1DNSProviderSecretRef.Namespace, seed1DNSProviderSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeFalse()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeConfigMap, "kube-system", "cluster-identity", VertexTypeSeed, "", seed1.Name, BeFalse()})

@@ -347,11 +347,34 @@ var _ = Describe("Seed Validation Tests", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.internal.credentialsRef.apiVersion"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.internal.credentialsRef.kind"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.internal.credentialsRef.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.internal.credentialsRef.name"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.dns.internal.credentialsRef.namespace"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.internal.credentialsRef.namespace"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeNotSupported),
+						"Field":  Equal("spec.dns.internal.credentialsRef"),
+						"Detail": ContainSubstring("supported values: \"/v1, Kind=Secret\""),
 					})),
 				))
 			})
@@ -405,6 +428,238 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.dns.internal"),
 					"Detail": ContainSubstring("removing internal DNS configuration is not allowed"),
+				}))))
+			})
+		})
+
+		Context("defaults DNS", func() {
+			It("should require valid fields if defaults DNS is set", func() {
+				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{{}}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[0].type"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[0].domain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.defaults[0].credentialsRef"),
+						"Detail": Equal("credentialsRef must reference a Secret"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[0].credentialsRef.apiVersion"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[0].credentialsRef.kind"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[0].credentialsRef.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.defaults[0].credentialsRef.name"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[0].credentialsRef.namespace"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.defaults[0].credentialsRef.namespace"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeNotSupported),
+						"Field":  Equal("spec.dns.defaults[0].credentialsRef"),
+						"Detail": ContainSubstring("supported values: \"/v1, Kind=Secret\""),
+					})),
+				))
+			})
+
+			It("should return error if the defaults DNS configures a malformed domain", func() {
+				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{{
+					Type:   "foo",
+					Domain: "invalid_dns1123-subdomain",
+				}}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.defaults[0].domain"),
+					"Detail": ContainSubstring("a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters"),
+				}))))
+			})
+
+			It("should succeed if the defaults DNS is configured correctly", func() {
+				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{{
+					Type:   "foo",
+					Domain: "foo.example.com",
+					Zone:   ptr.To("zone-1"),
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "default-domain",
+						Namespace:  "garden",
+					},
+				}}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should validate multiple defaults DNS configurations", func() {
+				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
+					{
+						Type:   "foo",
+						Domain: "foo.example.com",
+						Zone:   ptr.To("zone-1"),
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "default-domain-1",
+							Namespace:  "garden",
+						},
+					},
+					{
+						Type:   "bar",
+						Domain: "bar.example.com",
+						Zone:   ptr.To("zone-2"),
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "default-domain-2",
+							Namespace:  "garden",
+						},
+					},
+				}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should return error for duplicate domains in defaults DNS configurations", func() {
+				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
+					{
+						Type:   "foo",
+						Domain: "example.com",
+						Zone:   ptr.To("zone-1"),
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "default-domain-1",
+							Namespace:  "garden",
+						},
+					},
+					{
+						Type:   "bar",
+						Domain: "example.com",
+						Zone:   ptr.To("zone-2"),
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "default-domain-2",
+							Namespace:  "garden",
+						},
+					},
+				}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.dns.defaults[1].domain"),
+				}))))
+			})
+
+			It("should return errors for invalid entries in defaults DNS configurations", func() {
+				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
+					{
+						Type:   "foo",
+						Domain: "foo.example.com",
+						Zone:   ptr.To("zone-1"),
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "default-domain-1",
+							Namespace:  "garden",
+						},
+					},
+					{},
+				}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required domain
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[1].domain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required type
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[1].type"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // invalid credentialsRef (must reference a Secret)
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.defaults[1].credentialsRef"),
+						"Detail": Equal("credentialsRef must reference a Secret"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required apiVersion
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[1].credentialsRef.apiVersion"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required kind
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[1].credentialsRef.kind"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required name
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[1].credentialsRef.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // invalid name format
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.defaults[1].credentialsRef.name"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // required namespace
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.defaults[1].credentialsRef.namespace"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // invalid namespace format
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.dns.defaults[1].credentialsRef.namespace"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{ // not supported credentialsRef
+						"Type":   Equal(field.ErrorTypeNotSupported),
+						"Field":  Equal("spec.dns.defaults[1].credentialsRef"),
+						"Detail": ContainSubstring("supported values: \"/v1, Kind=Secret\""),
+					})),
+				))
+			})
+
+			It("should return an error if old seed has dns configured, but new one does not", func() {
+				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
+					{
+						Type:   "foo",
+						Domain: "foo.example.com",
+						Zone:   ptr.To("zone-1"),
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "internal-domain",
+							Namespace:  "garden",
+						},
+					},
+				}
+				new := seed.DeepCopy()
+				new.Spec.DNS.Defaults = nil
+
+				errorList := ValidateSeedUpdate(new, seed)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.dns.defaults"),
+					"Detail": ContainSubstring("removing defaults DNS configuration is not allowed"),
 				}))))
 			})
 		})
