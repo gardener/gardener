@@ -176,8 +176,9 @@ honor_labels: true`
 					"name": name,
 				},
 				Annotations: map[string]string{
-					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9090}]`,
-					"networking.resources.gardener.cloud/namespace-selectors":                        `[{"matchLabels":{"gardener.cloud/role":"shoot"}}]`,
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9090}]`,
+					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports":   `[{"protocol":"TCP","port":9090}]`,
+					"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"shoot"}}]`,
 				},
 			},
 			Spec: corev1.ServiceSpec{
