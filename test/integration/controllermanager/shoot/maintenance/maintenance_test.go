@@ -1593,7 +1593,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot132), shoot132)).To(Succeed())
 					g.Expect(shoot132.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot132.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.32.0\" to \"1.33.0\". Reason: Kubernetes version expired - force update required, .spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete is set to nil. Reason: The field was deprecated in favour of `.spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism` and can no longer be enabled for Shoot clusters using Kubernetes version 1.33+"))
+					g.Expect(shoot132.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.32.0\" to \"1.33.0\". Reason: Kubernetes version expired - force update required"))
 					g.Expect(shoot132.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 					g.Expect(shoot132.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					g.Expect(shoot132.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(BeNil())
