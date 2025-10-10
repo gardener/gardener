@@ -267,19 +267,6 @@ spec:
           {{$labels.seed}} in landscape {{$externalLabels.landscape}} is
           stuck in Pending state for more than 10 minutes.
 
-    - alert: SeedNodeNotHealthy
-      expr: |
-        ALERTS{alertname="NodeNotHealthy",alertstate="firing"}
-      for: 0m
-      labels:
-        severity: warning
-        topology: garden
-      annotations:
-        summary:  A node was reported not healthy for several scrapes in the past 30 minutes.
-        description: >-
-          Node {{$labels.node}} in seed {{$labels.seed}} in landscape
-          {{$externalLabels.landscape}} was not healthy for several scrapes in the past 30 minutes.
-
     - alert: SeedConditionFailing
       expr: |
         max by (name, condition) (
