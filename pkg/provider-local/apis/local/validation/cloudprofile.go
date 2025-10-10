@@ -229,22 +229,14 @@ func NewProviderImagesContext(providerImages []api.MachineImages) *gardenerutils
 	)
 }
 
-// ValidateSupportedCapabilities validates that only supported capabilities and values are used.
-// This function can be deleted once the dedicated architecture field on MachineType and MachineImageVersion is retired.
-// This strict behavior is required to ensure automatic format conversion of namespaced CloudProfiles during the transition to machine capabilities.
-func ValidateSupportedCapabilities(capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, child *field.Path) error {
-	// During transition to machineCapability based cloud profiles only the following capability is allowed to be set: architecture
+// RestrictToArchitectureCapability ensures that for the transition period from the deprecated architecture fields to the capabilities format only the `architecture` capability is used to support automatic transformation and migration.
+// TODO(Roncossek): Delete this function once the dedicated architecture fields on MachineType and MachineImageVersion have been removed.
+func RestrictToArchitectureCapability(capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, child *field.Path) error {
 	allErrs := field.ErrorList{}
 	for i, def := range capabilityDefinitions {
 		idxPath := child.Index(i)
 		if def.Name != v1beta1constants.ArchitectureName {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), def.Name, []string{v1beta1constants.ArchitectureName}))
-		}
-		for j, value := range def.Values {
-			jdxPath := idxPath.Child("values").Index(j)
-			if value != v1beta1constants.ArchitectureAMD64 && value != v1beta1constants.ArchitectureARM64 {
-				allErrs = append(allErrs, field.NotSupported(jdxPath, value, []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64}))
-			}
 		}
 	}
 	return allErrs.ToAggregate()

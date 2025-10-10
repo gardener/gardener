@@ -213,7 +213,6 @@ var _ = Describe("Admission", func() {
 
 						It("should reject unsupported Capabilities or CapabilityValues in machineTypes", func() {
 							Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
-							namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{}
 							namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{{Name: "my-other-machine",
 								Capabilities: gardencore.Capabilities{
 									constants.ArchitectureName: []string{"arm64"},

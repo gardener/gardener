@@ -909,7 +909,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				})
 			})
 
-			Describe("ensureUniformFormat functionality", func() {
+			Describe("mutateArchitectureCapabilityFields functionality", func() {
 				var (
 					cloudProfile           *gardencorev1beta1.CloudProfile
 					namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile

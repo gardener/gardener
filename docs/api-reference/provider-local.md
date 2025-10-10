@@ -251,6 +251,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Image is the image for the machine image.</p>
 </td>
 </tr>
