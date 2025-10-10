@@ -236,8 +236,14 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		allErrs = append(allErrs, validateSeedDNSProviderConfig(*internalDNS, fldPath.Child("dns", "internal"))...)
 	}
 
+	defaultDomains := sets.New[string]()
 	for i, defaultDNS := range seedSpec.DNS.Defaults {
 		allErrs = append(allErrs, validateSeedDNSProviderConfig(defaultDNS, fldPath.Child("dns", "defaults").Index(i))...)
+
+		if defaultDomains.Has(defaultDNS.Domain) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Child("dns", "defaults").Index(i).Child("domain"), defaultDNS.Domain))
+		}
+		defaultDomains.Insert(defaultDNS.Domain)
 	}
 
 	allErrs = append(allErrs, validateExtensions(seedSpec.Extensions, fldPath.Child("extensions"))...)

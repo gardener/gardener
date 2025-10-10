@@ -542,6 +542,38 @@ var _ = Describe("Seed Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
+			It("should return error for duplicate domains in defaults DNS configurations", func() {
+				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
+					{
+						Type:   "foo",
+						Domain: "example.com",
+						Zone:   ptr.To("zone-1"),
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "default-domain-1",
+							Namespace:  "garden",
+						},
+					},
+					{
+						Type:   "bar",
+						Domain: "example.com",
+						Zone:   ptr.To("zone-2"),
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "default-domain-2",
+							Namespace:  "garden",
+						},
+					},
+				}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.dns.defaults[1].domain"),
+				}))))
+			})
+
 			It("should return errors for invalid entries in defaults DNS configurations", func() {
 				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
 					{
