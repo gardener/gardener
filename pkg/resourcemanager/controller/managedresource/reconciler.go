@@ -77,25 +77,25 @@ type Reconciler struct {
 }
 
 // Reconcile manages the resources reference by ManagedResources.
-func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (bool, reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	mr := &resourcesv1alpha1.ManagedResource{}
 	if err := r.SourceClient.Get(ctx, req.NamespacedName, mr); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
-			return reconcile.Result{}, nil
+			return false, reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
+		return false, reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if ignore(mr) && mr.DeletionTimestamp == nil {
 		log.Info("Skipping reconciliation since ManagedResource is ignored")
 		if err := r.updateConditionsForIgnoredManagedResource(ctx, mr); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+			return false, reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 		}
 
-		return reconcile.Result{}, nil
+		return false, reconcile.Result{}, nil
 	}
 
 	// If the object should be deleted or the responsibility changed
@@ -104,7 +104,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		if isTransferringResponsibility {
 			log.Info("Class of ManagedResource changed. Cleaning resources as the responsibility changed")
 		}
-		return r.delete(ctx, log, mr)
+		result, err := r.delete(ctx, log, mr)
+		return false, result, err
 	}
 
 	// If the deletion after a change of responsibility is still
@@ -112,9 +113,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// must be delayed, until the deletion is finished.
 	if r.ClassFilter.IsWaitForCleanupRequired(mr) {
 		log.Info("Waiting for previous handler to clean resources created by ManagedResource")
-		return reconcile.Result{Requeue: true}, nil
+		return true, reconcile.Result{}, nil
 	}
-	return r.reconcile(ctx, log, mr)
+	result, err := r.reconcile(ctx, log, mr)
+	return false, result, err
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (reconcile.Result, error) {

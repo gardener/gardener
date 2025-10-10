@@ -162,7 +162,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		}
 	}
 
-	return reconcile.Result{Requeue: true, RequeueAfter: r.Config.SyncPeriod.Duration}, errorList.ErrorOrNil()
+	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, errorList.ErrorOrNil()
 }
 
 type objectId struct {
