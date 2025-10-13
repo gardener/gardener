@@ -1733,8 +1733,8 @@ var _ = Describe("Helper", func() {
 			Expect(SplitAndTrimString(str, sep)).To(Equal(expectedResult))
 		},
 		Entry("string is empty", "", ";", nil),
-		Entry("string shoul be separated", "foo,bar", ",", []string{"foo", "bar"}),
-		Entry("string shoul not be separated", "foo,bar", ";", []string{"foo,bar"}),
-		Entry("string shoul be trimmed", " foo   ,bar  ", ",", []string{"foo", "bar"}),
+		Entry("string should be separated", "foo,bar", ",", []string{"foo", "bar"}),
+		Entry("string should not be separated", "foo,bar", ";", []string{"foo,bar"}),
+		Entry("string should be trimmed", " foo   ,bar  ", ",", []string{"foo", "bar"}),
 	)
 })
