@@ -241,6 +241,31 @@ var _ = Describe("istiod", func() {
 			data, _ := os.ReadFile("./test_charts/strip_trailing_dot_envoyfilter.yaml")
 			return string(data)
 		}
+
+		istioIngressMetricsDestinationRule = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_metrics_destinationrule.yaml")
+			return string(data)
+		}
+
+		istioIngressMetricsEnvoyFilter = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_metrics_envoyfilter.yaml")
+			return string(data)
+		}
+
+		istioIngressMetricsGateway = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_metrics_gateway.yaml")
+			return string(data)
+		}
+
+		istioIngressMetricsServiceEntry = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_metrics_serviceentry.yaml")
+			return string(data)
+		}
+
+		istioIngressMetricsVirtualService = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_metrics_virtualservice.yaml")
+			return string(data)
+		}
 	)
 
 	BeforeEach(func() {
@@ -381,6 +406,11 @@ var _ = Describe("istiod", func() {
 				istioIngressServiceAccount(),
 				istioIngressDeployment(minReplicas),
 				istioIngressEnvoyFilter(),
+				istioIngressMetricsDestinationRule(),
+				istioIngressMetricsEnvoyFilter(),
+				istioIngressMetricsGateway(),
+				istioIngressMetricsServiceEntry(),
+				istioIngressMetricsVirtualService(),
 			}
 
 			// TODO(istvanballok): remove this block once the issue: 'Istio metrics leak for deleted shoots' #12699 is resolved
