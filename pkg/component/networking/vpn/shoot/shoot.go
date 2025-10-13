@@ -67,9 +67,9 @@ const (
 
 // ReversedVPNValues contains the configuration values for the ReversedVPN.
 type ReversedVPNValues struct {
-	// Header is the header for the ReversedVPN.
+	// Header is the header value for the ReversedVPN.
 	Header string
-	// HeaderKey is the header for the ReversedVPN.
+	// HeaderKey is the actual header for the ReversedVPN.
 	HeaderKey string
 	// Endpoint is the endpoint for the ReversedVPN.
 	Endpoint string
