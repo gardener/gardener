@@ -102,20 +102,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	secrets, err := gardenerutils.ReadGardenSecrets(
-		ctx,
-		log,
-		r.Client,
-		gardenerutils.ComputeGardenNamespace(seed.Name),
-	)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if len(secrets) < 1 {
-		return reconcile.Result{}, fmt.Errorf("garden secrets for seed %q have not been synchronized yet", seed.Name)
-	}
-
 	internalDomain, err := gardenerutils.ReadGardenInternalDomain(
 		ctx,
 		r.Client,
