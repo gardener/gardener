@@ -828,9 +828,9 @@ var _ = Describe("CloudProfile", func() {
 
 			It("should use the default architecture amd64 if architecture field is empty and capabilities are empty", func() {
 				gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
-				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(BeEmpty())
+				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64"}))
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
-				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(BeNil())
+				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
 				Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
 			})
 		})

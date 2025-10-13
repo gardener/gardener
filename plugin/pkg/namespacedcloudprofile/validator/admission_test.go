@@ -159,12 +159,18 @@ var _ = Describe("Admission", func() {
 
 					When("Architecture capability has multiple supported values", func() {
 						BeforeEach(func() {
+							parentCloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors = []gardencorev1beta1.MachineImageFlavor{
+								{Capabilities: gardencorev1beta1.Capabilities{constants.ArchitectureName: []string{"amd64"}}},
+							}
 							namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
 								{
 									Name: "test-image",
 									Versions: []gardencore.MachineImageVersion{{
 										ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.1"},
 										CRI:              []gardencore.CRI{{Name: "containerd"}},
+										CapabilityFlavors: []gardencore.MachineImageFlavor{{
+											Capabilities: gardencore.Capabilities{constants.ArchitectureName: []string{"amd64"}},
+										}},
 									}}}}
 						})
 
@@ -234,12 +240,15 @@ var _ = Describe("Admission", func() {
 
 				Describe("Adding machineImages defined in the parent CloudProfile", func() {
 					BeforeEach(func() {
-						namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
-							{
-								Name: "test-image",
-								Versions: []gardencore.MachineImageVersion{{
-									ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: validExpirationDate},
-								}}}}
+						parentCloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors = []gardencorev1beta1.MachineImageFlavor{{
+							Capabilities: gardencorev1beta1.Capabilities{constants.ArchitectureName: []string{"amd64"}},
+						}}
+						namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{{
+							Name: "test-image",
+							Versions: []gardencore.MachineImageVersion{{
+								ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: validExpirationDate},
+							}},
+						}}
 					})
 
 					It("should allow to add a machineImage without Capabilities", func() {
