@@ -293,23 +293,58 @@ func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec,
 	oldHasCapabilities := len(oldCloudProfileSpec.MachineCapabilities) > 0
 	isInitialMigration := !oldHasCapabilities && hasNewCapabilities
 
-	if !isInitialMigration {
-		return
-	}
+	if isInitialMigration {
+		machineCapabilities := gardencorehelper.CapabilityDefinitionsToCapabilities(newCloudProfileSpec.MachineCapabilities)
+		numberOfCloudProfileArchitectures := len(machineCapabilities[v1beta1constants.ArchitectureName])
+		if numberOfCloudProfileArchitectures <= 1 {
+			// syncing is only required if there is more than 1 architectures Spec.MachineCapabilities
+			// 0: means the MachineCapabilities are invalid and will be caught by validation
+			// 1: means we have only one architecture and no syncing is required
+			return
+		}
 
-	machineCapabilities := gardencorehelper.CapabilityDefinitionsToCapabilities(newCloudProfileSpec.MachineCapabilities)
-	numberOfCloudProfileArchitectures := len(machineCapabilities[v1beta1constants.ArchitectureName])
-	if numberOfCloudProfileArchitectures <= 1 {
-		// syncing is only required if there is more than 1 architectures Spec.MachineCapabilities
-		// 0: means the MachineCapabilities are invalid and will be caught by validation
-		// 1: means we have only one architecture and no syncing is required
-		return
+		// During the initial migration to capabilities, synchronize the legacy architecture fields with the architecture capability values.
+		// Any mismatch between capabilities and architecture fields will result in a validation error.
+		syncMachineImageArchitectureCapabilities(newCloudProfileSpec.MachineImages)
+		syncMachineTypeArchitectureCapabilities(newCloudProfileSpec.MachineTypes)
 	}
+	if hasNewCapabilities {
+		// sync back the legacy architecture fields from the capabilities on every update
+		syncMachineImageLegacyArchitecture(newCloudProfileSpec.MachineImages, newCloudProfileSpec.MachineCapabilities)
+		syncMachineTypeLegacyArchitecture(newCloudProfileSpec.MachineTypes, newCloudProfileSpec.MachineCapabilities)
+	}
+}
 
-	// During the initial migration to capabilities, synchronize the legacy architecture fields with the architecture capability values.
-	// Any mismatch between capabilities and architecture fields will result in a validation error.
-	syncMachineImageArchitectureCapabilities(newCloudProfileSpec.MachineImages)
-	syncMachineTypeArchitectureCapabilities(newCloudProfileSpec.MachineTypes)
+func syncMachineImageLegacyArchitecture(newMachineImages []core.MachineImage, capabilityDefinitions []core.CapabilityDefinition) {
+	for imageIdx := range newMachineImages {
+		for versionIdx, imageVersion := range newMachineImages[imageIdx].Versions {
+			// don't sync if architectures are set by users
+			if len(imageVersion.Architectures) > 0 {
+				continue
+			}
+			// Sync capability architectures to architectures field.
+			defaultedImageFlavors := gardencorehelper.GetImageFlavorsWithAppliedDefaults(imageVersion.CapabilityFlavors, capabilityDefinitions)
+			defaultedCapabilityArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(defaultedImageFlavors)
+			if len(defaultedCapabilityArchitectures) > 0 {
+				newMachineImages[imageIdx].Versions[versionIdx].Architectures = defaultedCapabilityArchitectures
+			}
+		}
+	}
+}
+
+func syncMachineTypeLegacyArchitecture(newMachineTypes []core.MachineType, capabilityDefinitions []core.CapabilityDefinition) {
+	for i, machineType := range newMachineTypes {
+		// don't sync if architecture is set by users
+		if machineType.Architecture != nil {
+			continue
+		}
+
+		// Sync capability architecture to architecture field.
+		defaultedCapabilities := gardencorehelper.GetCapabilitiesWithAppliedDefaults(newMachineTypes[i].Capabilities, capabilityDefinitions)
+		if len(defaultedCapabilities[v1beta1constants.ArchitectureName]) == 1 {
+			newMachineTypes[i].Architecture = ptr.To(defaultedCapabilities[v1beta1constants.ArchitectureName][0])
+		}
+	}
 }
 
 func syncMachineImageArchitectureCapabilities(newMachineImages []core.MachineImage) {

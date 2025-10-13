@@ -21,12 +21,12 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Reconciler reconciles NamespacedCloudProfiles.
@@ -173,6 +173,10 @@ func mutateArchitectureCapabilityFields(
 				// Convert capability flavors to legacy architectures
 				if len(legacyArchitectures) == 0 && len(version.CapabilityFlavors) > 0 {
 					architectureSet := sets.New[string]()
+					if len(version.CapabilityFlavors) == 0 {
+						// If there are no capability flavors at all, we default to AMD64
+						architectureSet.Insert(v1beta1constants.ArchitectureAMD64)
+					}
 					for _, flavor := range version.CapabilityFlavors {
 						architectureSet.Insert(flavor.Capabilities[v1beta1constants.ArchitectureName]...)
 					}
@@ -213,17 +217,43 @@ func mutateArchitectureCapabilityFields(
 func syncArchitectureCapabilities(namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) {
 	var coreCloudProfileSpec gardencore.CloudProfileSpec
 	_ = api.Scheme.Convert(&namespacedCloudProfile.Status.CloudProfileSpec, &coreCloudProfileSpec, nil)
-	gardenerutils.SyncArchitectureCapabilityFields(coreCloudProfileSpec, gardencore.CloudProfileSpec{})
-	defaultMachineTypeArchitectures(coreCloudProfileSpec)
+	defaultMachineTypeArchitectures(coreCloudProfileSpec, coreCloudProfileSpec.MachineCapabilities)
+	defaultMachineImageArchitectures(coreCloudProfileSpec, coreCloudProfileSpec.MachineCapabilities)
 	_ = api.Scheme.Convert(&coreCloudProfileSpec, &namespacedCloudProfile.Status.CloudProfileSpec, nil)
 }
 
 // defaultMachineTypeArchitectures defaults the architectures of the machine types for NamespacedCloudProfiles.
 // The sync can only happen after having had a look at the parent CloudProfile and whether it uses capabilities.
-func defaultMachineTypeArchitectures(cloudProfile gardencore.CloudProfileSpec) {
+func defaultMachineTypeArchitectures(cloudProfile gardencore.CloudProfileSpec, capabilitiesDefinitions []gardencore.CapabilityDefinition) {
 	for i, machineType := range cloudProfile.MachineTypes {
-		if machineType.GetArchitecture() == "" {
+		capabilities := gardencorehelper.GetCapabilitiesWithAppliedDefaults(machineType.Capabilities, capabilitiesDefinitions)
+		capabilityArchitecture := capabilities[v1beta1constants.ArchitectureName]
+		if ptr.Deref(machineType.Architecture, "") != "" {
+			continue
+		}
+		if len(capabilityArchitecture) > 0 {
+			cloudProfile.MachineTypes[i].Architecture = &capabilityArchitecture[0]
+		} else {
 			cloudProfile.MachineTypes[i].Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+		}
+	}
+}
+
+// defaultMachineImageArchitectures defaults the architectures of the machine images for NamespacedCloudProfiles.
+// The sync can only happen after having had a look at the parent CloudProfile and whether it uses capabilities.
+func defaultMachineImageArchitectures(cloudProfile gardencore.CloudProfileSpec, capabilitiesDefinitions []gardencore.CapabilityDefinition) {
+	for i, machineImage := range cloudProfile.MachineImages {
+		for j, version := range machineImage.Versions {
+			capabilityFlavors := gardencorehelper.GetImageFlavorsWithAppliedDefaults(version.CapabilityFlavors, capabilitiesDefinitions)
+			capabilityArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(capabilityFlavors)
+			if len(version.Architectures) > 0 {
+				continue
+			}
+			if len(capabilityArchitectures) == 0 {
+				cloudProfile.MachineImages[i].Versions[j].Architectures = []string{v1beta1constants.ArchitectureAMD64}
+			} else if len(capabilityArchitectures) > 0 {
+				cloudProfile.MachineImages[i].Versions[j].Architectures = capabilityArchitectures
+			}
 		}
 	}
 }

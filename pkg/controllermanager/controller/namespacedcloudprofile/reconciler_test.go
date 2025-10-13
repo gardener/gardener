@@ -531,7 +531,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
 					versionOverride := fmt.Sprintf(`{"architectures":["amd64"],"cri":[{"name":"containerd"}],"expirationDate":"%s","kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}`, newExpiryDate.UTC().Format(time.RFC3339))
-					versionAdded := `{"version":"1.1.2"}`
+					versionAdded := `{"architectures":["amd64"],"version":"1.1.2"}`
 					Expect(patch.Data(o)).To(And(
 						// The order is (currently) indeterministic.
 						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[{"name":"test-image","updateStrategy":"major","versions":[`),
@@ -755,10 +755,16 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(ConsistOf(
 					gardencorev1beta1.MachineImage{Name: "machine-image-1", Versions: []gardencorev1beta1.MachineImageVersion{
-						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"},
+							Architectures:    []string{"amd64"},
+						},
 					}},
 					gardencorev1beta1.MachineImage{Name: "machine-image-2", Versions: []gardencorev1beta1.MachineImageVersion{
-						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "2.0.0"}},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "2.0.0"},
+							Architectures:    []string{"amd64"},
+						},
 					}},
 				))
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw).To(Equal(
@@ -803,10 +809,16 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(ConsistOf(
 					gardencorev1beta1.MachineImage{Name: "machine-image-1", Versions: []gardencorev1beta1.MachineImageVersion{
-						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"},
+							Architectures:    []string{"amd64"},
+						},
 					}},
 					gardencorev1beta1.MachineImage{Name: "machine-image-2", Versions: []gardencorev1beta1.MachineImageVersion{
-						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "3.0.0"}},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "3.0.0"},
+							Architectures:    []string{"amd64"},
+						},
 					}},
 				))
 				// Make sure that status providerConfig is set to cloudProfile providerConfig again.
@@ -1022,7 +1034,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						Expect(machineTypes).To(HaveLen(2))
 
 						// First machine type should default to amd64
-						Expect(machineTypes[0].Architecture).To(BeNil())
+						Expect(machineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
 						Expect(machineTypes[0].Capabilities).To(HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"amd64"}))
 
 						// Second machine type should keep arm64
@@ -1176,7 +1188,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						version := namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[0].Versions[0]
 						// no architectures specified so should default to amd64 as per parent capability definition
 						Expect(version.CapabilityFlavors).To(BeEmpty())
-						Expect(version.Architectures).To(BeEmpty())
+						Expect(version.Architectures).To(ConsistOf("amd64"))
 					})
 				})
 			})
