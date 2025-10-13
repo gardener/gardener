@@ -68,7 +68,7 @@ It will also be removed even if the restart of one or more services failed.
 
 ## Running operations in parallel
 
-Specific `Shoot` operations can also be ran in parallel by using `;` as separator.
+Specific `Shoot` operations can also be run in parallel by using `;` as separator.
 
 ``` bash
 kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation="rotate-ssh-keypair;rotate-ca-start"
