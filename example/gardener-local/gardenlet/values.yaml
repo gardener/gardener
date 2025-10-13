@@ -86,7 +86,7 @@ config:
         #     namespace: garden
         #   type: local
         #   domain: internal.local.gardener.cloud
-        # TODO(dimityrmirchev): uncomment after 1.131 release
+        # TODO(dimityrmirchev): uncomment after 1.133 release
         # defaults:
         # - credentialsRef:
         #     apiVersion: v1

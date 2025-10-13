@@ -544,7 +544,7 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get seed %s: %v", *shoot.Spec.SeedName, err))
 		}
 
-		// TODO(dimityrmirchev): Remove the check after v1.131 release
+		// TODO(dimityrmirchev): Remove the check after v1.133 release
 		if len(seed.Spec.DNS.Defaults) > 0 {
 			for _, seedDNSDefault := range seed.Spec.DNS.Defaults {
 				if strings.HasSuffix(*shoot.Spec.DNS.Domain, "."+seedDNSDefault.Domain) {

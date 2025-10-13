@@ -155,7 +155,7 @@ func ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec
 
 	// Validate addition of explicit domain configuration when transitioning from global defaults
 	// TODO(dimityrmirchev): This logic would become obsolete once explicit DNS configuration becomes mandatory
-	// remove it after release v1.131
+	// remove it after release v1.133
 	if len(oldDomains) == 0 && len(newDomains) > 0 {
 		// Old seed had no explicit DNS defaults (used global defaults), new seed has explicit defaults
 		// Need to ensure all globally configured default domains used by shoots are covered

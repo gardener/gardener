@@ -173,7 +173,7 @@ func ReadGardenDefaultDomainsSecrets(
 	[]corev1.Secret,
 	error,
 ) {
-	// TODO(dimityrmirchev): Remove this function once explicit DNS configuration becomes mandatory after release v1.131
+	// TODO(dimityrmirchev): Remove this function once explicit DNS configuration becomes mandatory after release v1.133
 	secretList := &corev1.SecretList{}
 	if err := c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
