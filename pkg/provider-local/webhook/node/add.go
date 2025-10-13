@@ -19,8 +19,6 @@ import (
 const (
 	// WebhookName is the name of the node webhook.
 	WebhookName = "node"
-	// WebhookNameShoot is the name of the node webhook for shoot clusters.
-	WebhookNameShoot = "node-shoot"
 )
 
 var (
@@ -34,16 +32,7 @@ var (
 type AddOptions struct{}
 
 // AddToManagerWithOptions creates a webhook with the given options and adds it to the manager.
-func AddToManagerWithOptions(
-	mgr manager.Manager,
-	_ AddOptions,
-	name string,
-	target string,
-	failurePolicy admissionregistrationv1.FailurePolicyType,
-) (
-	*extensionswebhook.Webhook,
-	error,
-) {
+func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebhook.Webhook, error) {
 	logger.Info("Adding webhook to manager")
 
 	var (
@@ -58,38 +47,21 @@ func AddToManagerWithOptions(
 		return nil, err
 	}
 
-	logger.Info("Creating webhook", "name", name)
+	logger.Info("Creating webhook", "name", WebhookName)
 
 	return &extensionswebhook.Webhook{
-		Name:           name,
+		Name:           WebhookName,
 		Provider:       provider,
 		Types:          types,
-		Target:         target,
-		Path:           name,
+		Target:         extensionswebhook.TargetShoot,
+		Path:           WebhookName,
 		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
-		FailurePolicy:  &failurePolicy,
+		FailurePolicy:  ptr.To(admissionregistrationv1.Ignore),
 		TimeoutSeconds: ptr.To[int32](5),
 	}, nil
 }
 
 // AddToManager creates a webhook with the default options and adds it to the manager.
 func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
-	return AddToManagerWithOptions(
-		mgr,
-		DefaultAddOptions,
-		WebhookName,
-		extensionswebhook.TargetSeed,
-		admissionregistrationv1.Fail,
-	)
-}
-
-// AddShootWebhookToManager creates a shoot webhook with the default options and adds it to the manager.
-func AddShootWebhookToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
-	return AddToManagerWithOptions(
-		mgr,
-		DefaultAddOptions,
-		WebhookNameShoot,
-		extensionswebhook.TargetShoot,
-		admissionregistrationv1.Ignore,
-	)
+	return AddToManagerWithOptions(mgr, DefaultAddOptions)
 }

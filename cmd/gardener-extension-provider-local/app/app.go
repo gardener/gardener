@@ -401,10 +401,6 @@ func (w *webhookTriggerer) Start(ctx context.Context) error {
 		return err
 	}
 
-	if err := w.trigger(ctx, w.client, nil, w.client.Status(), &corev1.NodeList{}); err != nil {
-		return err
-	}
-
 	return w.trigger(ctx, w.client, w.client, nil, &appsv1.DeploymentList{}, client.MatchingLabels{"app": "dependency-watchdog-prober"})
 }
 

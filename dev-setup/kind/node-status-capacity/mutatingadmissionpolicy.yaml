@@ -1,0 +1,42 @@
+apiVersion: admissionregistration.k8s.io/v1alpha1
+kind: MutatingAdmissionPolicy
+metadata:
+  name: node-status-capacity
+spec:
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["UPDATE"]
+        resources: ["nodes/status"]
+  failurePolicy: Fail
+  reinvocationPolicy: IfNeeded
+  mutations:
+  - patchType: "ApplyConfiguration"
+    applyConfiguration:
+      expression: >
+        Object{
+          status: Object.status{
+            capacity: Object.status.capacity{
+              cpu: "100",
+              memory: "100Gi"
+            },
+            allocatable: Object.status.allocatable{
+              cpu: "100",
+              memory: "100Gi"
+            }
+          }
+        }
+---
+apiVersion: admissionregistration.k8s.io/v1alpha1
+kind: MutatingAdmissionPolicyBinding
+metadata:
+  name: node-status-capacity
+spec:
+  policyName: node-status-capacity
+  matchResources:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["nodes/status"]
+        operations: ["UPDATE"]
