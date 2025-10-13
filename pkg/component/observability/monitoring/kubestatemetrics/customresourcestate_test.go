@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.yaml.in/yaml/v2"
 	"k8s.io/kube-state-metrics/v2/pkg/customresourcestate"
@@ -18,12 +17,8 @@ import (
 )
 
 // Returns the expected CustomResourceState config and also asserts that the actual value is the same.
-// This assertion is performed inside this function to allow to give more human readable errors when the
-// long config document actually differs. This also allows to keep the expectation in a standalone yaml
-// file and to easily update it when it needs to be changed
+// Assertion merges the yaml of the expected data together and compares is to the actual value.
 func expectedCustomResourceStateConfig(suffix string) string {
-	defer GinkgoRecover()
-
 	options := []Option{WithVPAMetrics}
 	relativePaths := []string{"testdata/custom-resource-state-vpa.expectation.yaml"}
 	if suffix == SuffixRuntime {
