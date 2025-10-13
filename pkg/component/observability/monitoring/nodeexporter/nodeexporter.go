@@ -94,7 +94,6 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 			"node_disk_written_bytes_total",
 			"node_disk_io_time_weighted_seconds_total",
 			"node_disk_io_time_seconds_total",
-			"node_disk_io_now",
 			"node_disk_write_time_seconds_total",
 			"node_disk_writes_completed_total",
 			"node_disk_read_time_seconds_total",
