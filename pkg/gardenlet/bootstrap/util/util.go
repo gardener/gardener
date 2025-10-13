@@ -54,7 +54,7 @@ func GetKubeconfigFromSecret(ctx context.Context, seedClient client.Client, key 
 
 // UpdateGardenKubeconfigSecret updates the secret in the seed cluster that holds the kubeconfig of the Garden cluster.
 func UpdateGardenKubeconfigSecret(ctx context.Context, certClientConfig *rest.Config, certData, privateKeyData []byte, seedClient client.Client, kubeconfigKey client.ObjectKey) ([]byte, error) {
-	kubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, privateKeyData, certData)
+	kubeconfig, err := CreateKubeconfigWithClientCertificate(certClientConfig, privateKeyData, certData)
 	if err != nil {
 		return nil, err
 	}
@@ -138,16 +138,16 @@ func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, log logr.Logger, gar
 	}, curAuth.ClientCertificateData, curAuth.ClientKeyData, seedClient, kubeconfigKey)
 }
 
-// CreateGardenletKubeconfigWithClientCertificate creates a kubeconfig for the Gardenlet with the given client certificate.
-func CreateGardenletKubeconfigWithClientCertificate(config *rest.Config, privateKeyData, certDat []byte) ([]byte, error) {
+// CreateKubeconfigWithClientCertificate creates a kubeconfig for the Gardenlet with the given client certificate.
+func CreateKubeconfigWithClientCertificate(config *rest.Config, privateKeyData, certDat []byte) ([]byte, error) {
 	return kubeconfigWithAuthInfo(config, &clientcmdapi.AuthInfo{
 		ClientCertificateData: certDat,
 		ClientKeyData:         privateKeyData,
 	})
 }
 
-// CreateGardenletKubeconfigWithToken creates a kubeconfig for the Gardenlet with the given bootstrap token.
-func CreateGardenletKubeconfigWithToken(config *rest.Config, token string) ([]byte, error) {
+// CreateKubeconfigWithToken creates a kubeconfig for the Gardenlet with the given bootstrap token.
+func CreateKubeconfigWithToken(config *rest.Config, token string) ([]byte, error) {
 	return kubeconfigWithAuthInfo(config, &clientcmdapi.AuthInfo{
 		Token: token,
 	})
@@ -210,7 +210,7 @@ func ComputeGardenletKubeconfigWithBootstrapToken(ctx context.Context, gardenCli
 		}
 	}
 
-	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, bootstraptoken.FromSecretData(bootstrapTokenSecret.Data))
+	return CreateKubeconfigWithToken(gardenClientRestConfig, bootstraptoken.FromSecretData(bootstrapTokenSecret.Data))
 }
 
 // ComputeGardenletKubeconfigWithServiceAccountToken creates a kubeconfig containing the token of a service account
@@ -263,7 +263,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 	}
 
 	// Get bootstrap kubeconfig from service account secret
-	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, tokenRequest.Status.Token)
+	return CreateKubeconfigWithToken(gardenClientRestConfig, tokenRequest.Status.Token)
 }
 
 // ClusterRoleBindingName concatenates the gardener seed bootstrapper group with the given name, separated by a colon.

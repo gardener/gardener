@@ -679,7 +679,7 @@ var _ = Describe("Shoot", func() {
 			})
 		})
 
-		Context("gardenlet client", func() {
+		Context("gardenadm client", func() {
 			Context("when requested for CloudProfiles", func() {
 				var attrs *auth.AttributesRecord
 

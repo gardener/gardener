@@ -44,6 +44,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
+const bootstrapKubeconfigValidity = 10 * time.Minute
+
 // NewCommand creates a new cobra.Command.
 func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 	opts := &Options{Options: globalOpts}
@@ -194,8 +196,6 @@ func isGardenletDeployed(ctx context.Context, b *botanist.AutonomousBotanist) (b
 	return true, nil
 }
 
-const bootstrapKubeconfigValidity = 10 * time.Minute
-
 func cachedBootstrapKubeconfigPath(fs afero.Afero) string {
 	return filepath.Join(fs.GetTempDir(""), "gardenadm-connect-bootstrap-kubeconfig")
 }
@@ -209,7 +209,7 @@ func initializeTemporaryGardenClient(ctx context.Context, b *botanist.Autonomous
 	if !cached {
 		bootstrapKubeconfig, err = requestShortLivedBootstrapKubeconfig(ctx, b, bootstrapClientSet)
 		if err != nil {
-			return fmt.Errorf("failed requested short-lived bootstrap kubeconfig via CertificateSigningRequest API: %w", err)
+			return fmt.Errorf("failed to request short-lived bootstrap kubeconfig via CertificateSigningRequest API: %w", err)
 		}
 
 		if err := b.FS.WriteFile(cachedBootstrapKubeconfigPath(b.FS), bootstrapKubeconfig, 0600); err != nil {
@@ -250,7 +250,7 @@ func requestShortLivedBootstrapKubeconfig(ctx context.Context, b *botanist.Auton
 		return nil, fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
 	}
 
-	return gardenletbootstraputil.CreateGardenletKubeconfigWithClientCertificate(bootstrapClientSet.RESTConfig(), privateKeyData, certData)
+	return gardenletbootstraputil.CreateKubeconfigWithClientCertificate(bootstrapClientSet.RESTConfig(), privateKeyData, certData)
 }
 
 func setGardenClientFromKubeconfig(b *botanist.AutonomousBotanist, kubeconfig []byte) error {
@@ -291,11 +291,15 @@ func prepareGardenerResources(ctx context.Context, b *botanist.AutonomousBotanis
 	// We do not handle the 'garden' Project because gardener-apiserver defaults .spec.tolerations for this project.
 	// This requires special permissions for a custom verb that we do not want to grant to the gardenadm user for
 	// autonomous shoots.
-	if project := b.Resources.Project.DeepCopy(); project.Name != v1beta1constants.GardenNamespace {
+	if project := b.Resources.Project.DeepCopy(); ptr.Deref(project.Spec.Namespace, "") != v1beta1constants.GardenNamespace {
 		if err := b.GardenClient.Create(ctx, project); client.IgnoreAlreadyExists(err) != nil {
 			return fmt.Errorf("failed creating Project resource %s in garden cluster: %w", project.Name, err)
 		}
 		b.Logger.Info("Project resource ensured in garden cluster")
+	} else {
+		if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Resources.Project), &gardencorev1beta1.Project{}); err != nil {
+			return fmt.Errorf("failed checking for existence of Project %s (this is not created by 'gardenadm connect' and must exist in the garden cluster): %w", b.Resources.Project.Name, err)
+		}
 	}
 
 	for _, configMap := range b.Resources.ConfigMaps {
