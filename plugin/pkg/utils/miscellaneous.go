@@ -180,13 +180,8 @@ func ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec
 			}
 		}
 
-		missingDomains := usedGlobalDomains.Difference(newDomains)
-		if missingDomains.Len() > 0 {
-			formatted := make([]string, 0, missingDomains.Len())
-			for domain := range missingDomains {
-				formatted = append(formatted, domain)
-			}
-			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot configure explicit default domains for %s %q without including domains %v that are currently being used by shoots", kind, seedName, formatted))
+		if missingDomains := usedGlobalDomains.Difference(newDomains); missingDomains.Len() > 0 {
+			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot configure explicit default domains for %s %q without including domains %v that are currently being used by shoots", kind, seedName, missingDomains.UnsortedList()))
 		}
 	}
 
