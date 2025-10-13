@@ -116,7 +116,7 @@ This will execute the specified `<operation>` during the next maintenance reconc
 Note that Gardener will remove this annotation after it has been performed in the maintenance reconciliation.
 
 
-Specific `Shoot` operations can also be ran in parallel with 
+Specific `Shoot` operations can also be run in parallel with 
 
 ```
 maintenance.gardener.cloud/operation=<operation1>;<operation2>;..;<operationN>
