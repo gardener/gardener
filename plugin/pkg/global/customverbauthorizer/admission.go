@@ -328,22 +328,31 @@ func mustCheckProjectMembers(oldMembers, members []core.ProjectMember, owner *rb
 		return false
 	}
 
-	var oldHumanUsers, newHumanUsers = findHumanUsers(oldMembers), findHumanUsers(members)
+	var oldHumanUsers, newHumanUsers = findHumanUsersWithRoles(oldMembers), findHumanUsersWithRoles(members)
 	// Remove owner subject from `members` list to always allow it to be added
 	if owner != nil && isHumanUser(*owner) {
-		oldHumanUsers.Delete(humanMemberKey(*owner))
-		newHumanUsers.Delete(humanMemberKey(*owner))
+		ownerKeyPrefix := humanMemberKey(*owner)
+		removeEntriesWithPrefix(oldHumanUsers, ownerKeyPrefix)
+		removeEntriesWithPrefix(newHumanUsers, ownerKeyPrefix)
 	}
 
 	return !oldHumanUsers.Equal(newHumanUsers)
 }
 
-func findHumanUsers(members []core.ProjectMember) sets.Set[string] {
+func findHumanUsersWithRoles(members []core.ProjectMember) sets.Set[string] {
 	result := sets.New[string]()
 
 	for _, member := range members {
 		if isHumanUser(member.Subject) {
-			result.Insert(humanMemberKey(member.Subject))
+			memberKey := humanMemberKey(member.Subject)
+			// Create a unique key that includes both subject and roles
+			for _, role := range member.Roles {
+				result.Insert(memberKey + ":" + role)
+			}
+			// If no roles are specified, still create an entry with empty role
+			if len(member.Roles) == 0 {
+				result.Insert(memberKey + ":")
+			}
 		}
 	}
 
@@ -356,6 +365,14 @@ func isHumanUser(subject rbacv1.Subject) bool {
 
 func humanMemberKey(subject rbacv1.Subject) string {
 	return subject.Kind + subject.Name
+}
+
+func removeEntriesWithPrefix(set sets.Set[string], prefix string) {
+	for key := range set {
+		if strings.HasPrefix(key, prefix) {
+			set.Delete(key)
+		}
+	}
 }
 
 func userIsOwner(userInfo user.Info, owner *rbacv1.Subject) bool {
