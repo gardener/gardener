@@ -27,6 +27,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -6314,7 +6315,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					if sets.New(v1beta1constants.OperationRotateCredentialsComplete,
 						v1beta1constants.OperationRotateCAComplete,
 						v1beta1constants.OperationRotateServiceAccountKeyComplete,
-						v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(maintenanceOpAnnotation) {
+						v1beta1constants.OperationRotateETCDEncryptionKeyComplete).HasAny(v1beta1helper.SplitAndTrimString(maintenanceOpAnnotation, ";")...) {
 						shoot.Status.Credentials = &core.ShootCredentials{
 							Rotation: &core.ShootCredentialsRotation{
 								CertificateAuthorities: &core.CARotation{
@@ -6346,15 +6347,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-credentials-start", "rotate-serviceaccount-key-start-without-workers-rollout", "operation 'rotate-serviceaccount-key-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 				Entry("rotate-etcd-encryption-key-start", "rotate-credentials-start", "rotate-etcd-encryption-key-start", "operation 'rotate-etcd-encryption-key-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 				Entry("rotate-etcd-encryption-key", "rotate-credentials-start", "rotate-etcd-encryption-key", "operation 'rotate-etcd-encryption-key' is not permitted when maintenance operation is 'rotate-credentials-start'"),
+				Entry("rotate-ca-start & rotate-etcd-encryption-key", "rotate-credentials-start", "rotate-ca-start; rotate-etcd-encryption-key", "operation 'rotate-ca-start, rotate-etcd-encryption-key' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 
 				Entry("rotate-ca-complete", "rotate-credentials-complete", "rotate-ca-complete", "operation 'rotate-ca-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-credentials-complete", "rotate-serviceaccount-key-complete", "operation 'rotate-serviceaccount-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
 				Entry("rotate-etcd-encryption-key-complete", "rotate-credentials-complete", "rotate-etcd-encryption-key-complete", "operation 'rotate-etcd-encryption-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
+				Entry("rotate-ca-complete & rotate-serviceaccount-key-complete", "rotate-credentials-complete", "rotate-ca-complete; rotate-serviceaccount-key-complete", "operation 'rotate-ca-complete, rotate-serviceaccount-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
 
 				Entry("rotate-credentials-start", "rotate-ca-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-ca-start'"),
 				Entry("rotate-credentials-start", "rotate-serviceaccount-key-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-serviceaccount-key-start'"),
 				Entry("rotate-credentials-start", "rotate-etcd-encryption-key-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-start'"),
 				Entry("rotate-credentials-start", "rotate-etcd-encryption-key", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-etcd-encryption-key'"),
+				Entry("rotate-credentials-start", "rotate-ca-start; rotate-etcd-encryption-key", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-ca-start, rotate-etcd-encryption-key'"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-ca-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-ca-start'"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-serviceaccount-key-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-serviceaccount-key-start'"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-etcd-encryption-key-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-start'"),
@@ -6363,6 +6367,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-credentials-complete", "rotate-ca-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-ca-complete'"),
 				Entry("rotate-credentials-complete", "rotate-serviceaccount-key-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-serviceaccount-key-complete'"),
 				Entry("rotate-credentials-complete", "rotate-etcd-encryption-key-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-complete'"),
+				Entry("rotate-credentials-complete", "rotate-ca-complete; rotate-serviceaccount-key-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-ca-complete, rotate-serviceaccount-key-complete'"),
 			)
 
 			DescribeTable("forbid certain rotation operations when shoot is hibernated",

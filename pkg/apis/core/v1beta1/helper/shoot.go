@@ -761,12 +761,12 @@ func GetShootEncryptedResourcesInStatus(shootStatus gardencorev1beta1.ShootStatu
 
 // GetShootGardenerOperations returns the Shoot's gardener operations specified in the operation annotation.
 func GetShootGardenerOperations(annotations map[string]string) []string {
-	return splitAndTrimString(annotations[v1beta1constants.GardenerOperation], ";")
+	return SplitAndTrimString(annotations[v1beta1constants.GardenerOperation], ";")
 }
 
 // GetShootMaintenanceOperations returns the Shoot's maintenance operations specified in the operation annotation.
 func GetShootMaintenanceOperations(annotations map[string]string) []string {
-	return splitAndTrimString(annotations[v1beta1constants.GardenerMaintenanceOperation], ";")
+	return SplitAndTrimString(annotations[v1beta1constants.GardenerMaintenanceOperation], ";")
 }
 
 // RemoveOperation returns a new slice with the given operations removed from the original operations slice.
@@ -776,7 +776,8 @@ func RemoveOperation(operations []string, operationsToRemove ...string) []string
 	})
 }
 
-func splitAndTrimString(s, sep string) []string {
+// SplitAndTrimString returns a new slice from a string separated by the given separator with all empty entries removed.
+func SplitAndTrimString(s, sep string) []string {
 	if len(s) == 0 {
 		return nil
 	}
