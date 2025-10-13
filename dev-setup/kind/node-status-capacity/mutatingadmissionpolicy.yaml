@@ -39,4 +39,4 @@ spec:
       - apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["nodes/status"]
-        operations: ["CREATE", "UPDATE"]
+        operations: ["UPDATE"]
