@@ -4842,6 +4842,34 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
 
+			DescribeTable("size limist",
+				func(key string, size int, matcher gomegatypes.GomegaMatcher) {
+					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeCreate, State: core.LastOperationStateSucceeded}
+					value := strings.Repeat("a", size)
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, key, value)
+					Expect(ValidateShoot(shoot)).To(matcher)
+				},
+
+				Entry("operation size is over maxSize", "gardener.cloud/operation", 8193, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeTooLong),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": Equal("may not be more than 8192 bytes"),
+				})))),
+				Entry("operation size is within maxSize", "gardener.cloud/operation", 8192, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+				})))),
+				Entry("maintenance operation size is over maxSize", "maintenance.gardener.cloud/operation", 8193, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeTooLong),
+					"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+					"Detail": Equal("may not be more than 8192 bytes"),
+				})))),
+				Entry("maintenance  operation size is within maxSize", "maintenance.gardener.cloud/operation", 8192, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+				})))),
+			)
+
 			DescribeTable("allow specifying some operation annotations",
 				func(key, value string) {
 					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeCreate, State: core.LastOperationStateSucceeded}

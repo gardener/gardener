@@ -48,7 +48,9 @@ import (
 )
 
 var (
-	gardenCoreScheme                      *runtime.Scheme
+	gardenCoreScheme *runtime.Scheme
+	// maxOperationsSize is the maximum allowed length of the operations annotation in bytes.
+	maxOperationsSize                     = 1 * 8 * 1024
 	forbiddenShootOperationsToRunTogether = map[string]sets.Set[string]{
 		v1beta1constants.OperationRotateETCDEncryptionKey: sets.New(
 			v1beta1constants.OperationRotateETCDEncryptionKeyStart,
@@ -618,6 +620,7 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 func validateOperation(operations []string, garden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs       = field.ErrorList{}
+		fldPathOp     = fldPath.Key(v1beta1constants.GardenerOperation)
 		k8sLess134, _ = versionutils.CheckVersionMeetsConstraint(garden.Spec.VirtualCluster.Kubernetes.Version, "< 1.34")
 	)
 
@@ -625,9 +628,13 @@ func validateOperation(operations []string, garden *operatorv1alpha1.Garden, fld
 		return allErrs
 	}
 
-	fldPathOp := fldPath.Key(v1beta1constants.GardenerOperation)
+	if len(strings.Join(operations, ";")) > maxOperationsSize {
+		return append(allErrs, field.TooLong(fldPathOp, len(operations), maxOperationsSize))
+	}
 
-	for _, operation := range operations {
+	operationsSet := sets.New(operations...)
+
+	for _, operation := range operationsSet.UnsortedList() {
 		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(operation) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", operation)))
 		}
@@ -639,7 +646,7 @@ func validateOperation(operations []string, garden *operatorv1alpha1.Garden, fld
 		}
 	}
 
-	allErrs = append(allErrs, validateOperationContext(operations, garden, fldPathOp)...)
+	allErrs = append(allErrs, validateOperationContext(operationsSet.UnsortedList(), garden, fldPathOp)...)
 
 	return allErrs
 }

@@ -52,6 +52,8 @@ import (
 )
 
 var (
+	// maxOperationsSize is the maximum allowed length of the operations annotation in bytes.
+	maxOperationsSize   = 1 * 8 * 1024
 	availableProxyModes = sets.New(
 		string(core.ProxyModeIPTables),
 		string(core.ProxyModeIPVS),
@@ -2944,12 +2946,24 @@ func ValidateCoreDNSRewritingCommonSuffixes(commonSuffixes []string, fldPath *fi
 
 func validateShootOperation(operations, maintenanceOperations []string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
 	var (
+		fldPathOp          = fldPath.Key(v1beta1constants.GardenerOperation)
+		fldPathMaintOp     = fldPath.Key(v1beta1constants.GardenerMaintenanceOperation)
 		allErrs            = field.ErrorList{}
 		encryptedResources = sets.New[schema.GroupResource]()
 		k8sLess134, _      = versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, "< 1.34")
 	)
 
 	if len(operations) == 0 && len(maintenanceOperations) == 0 {
+		return allErrs
+	}
+
+	if len(strings.Join(operations, ";")) > maxOperationsSize {
+		allErrs = append(allErrs, field.TooLong(fldPathOp, len(operations), maxOperationsSize))
+	}
+	if len(strings.Join(maintenanceOperations, ";")) > maxOperationsSize {
+		allErrs = append(allErrs, field.TooLong(fldPathMaintOp, len(maintenanceOperations), maxOperationsSize))
+	}
+	if len(allErrs) > 0 {
 		return allErrs
 	}
 
@@ -2960,15 +2974,15 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 	}
 
 	var (
-		fldPathOp      = fldPath.Key(v1beta1constants.GardenerOperation)
-		fldPathMaintOp = fldPath.Key(v1beta1constants.GardenerMaintenanceOperation)
+		operationsSet            = sets.New(operations...)
+		maintenanceOperationsSet = sets.New(maintenanceOperations...)
 	)
 
-	if sets.New(operations...).HasAny(maintenanceOperations...) {
+	if operationsSet.HasAny(maintenanceOperations...) {
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("annotations %s and %s must not have any equal operations", fldPathOp, fldPathMaintOp)))
 	}
 
-	for _, op := range operations {
+	for _, op := range operationsSet.UnsortedList() {
 		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(op) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", op)))
 		}
@@ -2990,7 +3004,7 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		}
 	}
 
-	for _, mOp := range maintenanceOperations {
+	for _, mOp := range maintenanceOperationsSet.UnsortedList() {
 		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(mOp) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", mOp)))
 		}
@@ -3012,34 +3026,34 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 	}
 
 	// Validate operation conflicts with maintenance operations
-	for _, mOp := range maintenanceOperations {
+	for _, mOp := range maintenanceOperationsSet.UnsortedList() {
 		switch mOp {
 		case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
-			if intersection := sets.New(operations...).Intersection(sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart)); intersection.Len() > 0 {
+			if intersection := operationsSet.Intersection(sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart)); intersection.Len() > 0 {
 				allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", strings.Join(sets.List(intersection), ", "), mOp)))
 			}
 		case v1beta1constants.OperationRotateCredentialsComplete:
-			if intersection := sets.New(operations...).Intersection(sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete)); intersection.Len() > 0 {
+			if intersection := operationsSet.Intersection(sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete)); intersection.Len() > 0 {
 				allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", strings.Join(sets.List(intersection), ", "), mOp)))
 			}
 		}
 	}
 
-	for _, op := range operations {
+	for _, op := range operationsSet.UnsortedList() {
 		switch op {
 		case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
-			if intersection := sets.New(maintenanceOperations...).Intersection(sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart)); intersection.Len() > 0 {
+			if intersection := maintenanceOperationsSet.Intersection(sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart)); intersection.Len() > 0 {
 				allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", op, strings.Join(sets.List(intersection), ", "))))
 			}
 		case v1beta1constants.OperationRotateCredentialsComplete:
-			if intersection := sets.New(maintenanceOperations...).Intersection(sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete)); intersection.Len() > 0 {
+			if intersection := maintenanceOperationsSet.Intersection(sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete)); intersection.Len() > 0 {
 				allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", op, strings.Join(sets.List(intersection), ", "))))
 			}
 		}
 	}
 
 	// Validate operation contexts for each operation
-	for _, op := range operations {
+	for _, op := range operationsSet.UnsortedList() {
 		allErrs = append(allErrs, validateShootOperationContext(op, shoot, fldPathOp)...)
 	}
 
@@ -3048,7 +3062,7 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		// any validation is pointless since there are no maintenance operations for shoots in deletion, so we basically
 		// don't care. Without this, we could wrongly prevent metadata changes in case the annotation is still present
 		// but the shoot is in deletion.
-		for _, mOp := range maintenanceOperations {
+		for _, mOp := range maintenanceOperationsSet.UnsortedList() {
 			allErrs = append(allErrs, validateShootOperationContext(mOp, shoot, fldPathMaintOp)...)
 		}
 	}
