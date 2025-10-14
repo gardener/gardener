@@ -45,7 +45,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -336,8 +335,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	if allErrs = validationContext.ensureMachineImages(); len(allErrs) > 0 {
 		return admission.NewForbidden(a, allErrs.ToAggregate())
 	}
-
-	validationContext.addMetadataAnnotations(a)
 
 	allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
 	allErrs = append(allErrs, validationContext.validateShootNetworks(a, helper.IsWorkerless(shoot))...)
@@ -647,11 +644,6 @@ func (c *validationContext) validateShootHibernation(a admission.Attributes) err
 		}
 	}
 
-	if !newIsHibernated && oldIsHibernated {
-		addInfrastructureDeploymentTask(c.shoot)
-		addDNSRecordDeploymentTasks(c.shoot)
-	}
-
 	return nil
 }
 
@@ -779,45 +771,6 @@ func (c *validationContext) ensureMachineImages() field.ErrorList {
 	}
 
 	return allErrs
-}
-
-func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
-	if a.GetOperation() == admission.Create {
-		addInfrastructureDeploymentTask(c.shoot)
-		addDNSRecordDeploymentTasks(c.shoot)
-	}
-
-	if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) ||
-		c.oldShoot.Spec.Networking != nil && c.oldShoot.Spec.Networking.IPFamilies != nil && !reflect.DeepEqual(c.oldShoot.Spec.Networking.IPFamilies, c.shoot.Spec.Networking.IPFamilies) {
-		addInfrastructureDeploymentTask(c.shoot)
-	}
-
-	// We rely that SSHAccess is defaulted in the shoot creation, that is why we do not check for nils for the new shoot object.
-	if c.oldShoot.Spec.Provider.WorkersSettings != nil &&
-		c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess != nil &&
-		c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled != c.shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled {
-		addInfrastructureDeploymentTask(c.shoot)
-	}
-
-	if !reflect.DeepEqual(c.oldShoot.Spec.DNS, c.shoot.Spec.DNS) {
-		addDNSRecordDeploymentTasks(c.shoot)
-	}
-
-	if sets.New(
-		v1beta1constants.ShootOperationRotateSSHKeypair,
-		v1beta1constants.OperationRotateCredentialsStart,
-		v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
-	).Has(c.shoot.Annotations[v1beta1constants.GardenerOperation]) {
-		addInfrastructureDeploymentTask(c.shoot)
-	}
-
-	if c.shoot.Spec.Maintenance != nil &&
-		ptr.Deref(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout, false) &&
-		!apiequality.Semantic.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) &&
-		c.shoot.Status.LastOperation != nil &&
-		c.shoot.Status.LastOperation.State == core.LastOperationStateFailed {
-		metav1.SetMetaDataAnnotation(&c.shoot.ObjectMeta, v1beta1constants.FailedShootNeedsRetryOperation, "true")
-	}
 }
 
 func (c *validationContext) validateAdmissionPlugins(a admission.Attributes, secretLister kubecorev1listers.SecretLister) field.ErrorList {
@@ -2078,25 +2031,6 @@ func (c *validationContext) ensureMachineImage(oldWorkers []core.Worker, worker 
 	}
 
 	return getDefaultMachineImage(c.cloudProfileSpec.MachineImages, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.MachineCapabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
-}
-
-func addInfrastructureDeploymentTask(shoot *core.Shoot) {
-	addDeploymentTasks(shoot, v1beta1constants.ShootTaskDeployInfrastructure)
-}
-
-func addDNSRecordDeploymentTasks(shoot *core.Shoot) {
-	addDeploymentTasks(shoot,
-		v1beta1constants.ShootTaskDeployDNSRecordInternal,
-		v1beta1constants.ShootTaskDeployDNSRecordExternal,
-		v1beta1constants.ShootTaskDeployDNSRecordIngress,
-	)
-}
-
-func addDeploymentTasks(shoot *core.Shoot, tasks ...string) {
-	if shoot.Annotations == nil {
-		shoot.Annotations = make(map[string]string)
-	}
-	controllerutils.AddTasks(shoot.Annotations, tasks...)
 }
 
 // wasShootRescheduledToNewSeed returns true if the shoot.Spec.SeedName has been changed, but the migration operation has not started yet.
