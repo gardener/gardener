@@ -68,6 +68,12 @@ const (
 	// owner: @rrhubenov
 	// alpha: v1.124.0
 	OpenTelemetryCollector featuregate.Feature = "OpenTelemetryCollector"
+
+	// UseUnifiedHTTPProxyPort enables the gardenlet to set up the unified HTTP proxy network infrastructure.
+	// Gardenlet will also reconfigure the API server proxy and shoot VPN client to connect to the unified port using the new X-Gardener-Destination header.
+	// owner: @hown3d
+	// alpha: v1.130.0
+	UseUnifiedHTTPProxyPort featuregate.Feature = "UseUnifiedHTTPProxyPort"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -103,6 +109,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CloudProfileCapabilities:   {Default: false, PreRelease: featuregate.Alpha},
 	DoNotCopyBackupCredentials: {Default: true, PreRelease: featuregate.Beta},
 	OpenTelemetryCollector:     {Default: false, PreRelease: featuregate.Alpha},
+	UseUnifiedHTTPProxyPort:    {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

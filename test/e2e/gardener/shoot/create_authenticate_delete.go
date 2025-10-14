@@ -29,8 +29,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
+	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
@@ -274,7 +276,13 @@ func copyRESTConfigAndInjectAuthorization(restConfig *rest.Config, authorization
 }
 
 func getAPIServerProxyClient(restConfig *rest.Config, targetShoot *gardencorev1beta1.Shoot) (client.Client, error) {
-	transport, err := newHTTPConnectTransport(restConfig, apiserverexposure.GetAPIServerProxyTargetClusterName(targetShoot.Status.TechnicalID))
+	proxyPort := vpnseedserver.GatewayPort
+	newHTTPProxyPortConstraint := v1beta1helper.GetCondition(targetShoot.Status.Constraints, gardencorev1beta1.ShootUsesUnifiedHTTPProxyPort)
+	if newHTTPProxyPortConstraint != nil && newHTTPProxyPortConstraint.Status == gardencorev1beta1.ConditionTrue {
+		proxyPort = vpnseedserver.HTTPProxyGatewayPort
+	}
+
+	transport, err := newHTTPConnectTransport(restConfig, apiserverexposure.GetAPIServerProxyTargetClusterName(targetShoot.Status.TechnicalID), proxyPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP connect transport: %w", err)
 	}
@@ -378,7 +386,7 @@ type httpConnectTransport struct {
 	bearerToken       string
 }
 
-func newHTTPConnectTransport(restConfig *rest.Config, targetCluster string) (*httpConnectTransport, error) {
+func newHTTPConnectTransport(restConfig *rest.Config, targetCluster string, proxyPort int) (*httpConnectTransport, error) {
 	proxyAddress := strings.Split(strings.TrimPrefix(restConfig.Host, "https://"), ":")[0]
 	connectAddress := strings.TrimPrefix(restConfig.Host, "https://") + ":443"
 
@@ -399,7 +407,7 @@ func newHTTPConnectTransport(restConfig *rest.Config, targetCluster string) (*ht
 	httpConnectClient := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				connection, err := net.DialTimeout("tcp", fmt.Sprintf("%s:8132", proxyAddress), 5*time.Second)
+				connection, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", proxyAddress, proxyPort), 5*time.Second)
 				if err != nil {
 					return nil, fmt.Errorf("failed to connect to proxy: %w", err)
 				}
@@ -410,7 +418,11 @@ func newHTTPConnectTransport(restConfig *rest.Config, targetCluster string) (*ht
 					Host:   connectAddress,
 					Header: http.Header{},
 				}
-				connectRequest.Header.Set("Reversed-VPN", targetCluster)
+				header := "Reversed-VPN"
+				if proxyPort == vpnseedserver.HTTPProxyGatewayPort {
+					header = "X-Gardener-Destination"
+				}
+				connectRequest.Header.Add(header, targetCluster)
 
 				if err := connectRequest.Write(connection); err != nil {
 					return nil, fmt.Errorf("failed sending HTTP CONNECT request: %w", err)

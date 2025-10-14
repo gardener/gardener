@@ -1,0 +1,20 @@
+{{- if eq .Values.vpn.enabled true -}}
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: http-connect
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+{{ .Values.labels | toYaml | indent 4 }}
+  servers:
+  {{- range $name, $p := .Values.vpn.ports }}
+  - hosts:
+    # This service FQDN does not exist, the gateway just needs to be present so that istio opens the port
+    - non-existing-blackhole.garden.svc.cluster.local
+    port:
+      name: {{ $name }}
+      number: {{ $p.port }}
+      protocol: HTTP
+  {{- end }}
+{{- end }}

@@ -1,7 +1,7 @@
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
-  name: reversed-vpn-auth-server
+  name: http-connect
   namespace: test-ingress
 spec:
   selector:
@@ -9,7 +9,8 @@ spec:
     foo: bar
   servers:
   - hosts:
-    - reversed-vpn-auth-server.garden.svc.cluster.local
+    # This service FQDN does not exist, the gateway just needs to be present so that istio opens the port
+    - non-existing-blackhole.garden.svc.cluster.local
     port:
       name: tls-tunnel
       number: 8132
