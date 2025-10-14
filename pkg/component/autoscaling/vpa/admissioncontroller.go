@@ -207,6 +207,17 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Args:            v.computeAdmissionControllerArgs(),
 					LivenessProbe:   newDefaultLivenessProbe(),
+					ReadinessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path:   "/health-check",
+								Port:   intstr.FromString(metricsPortName),
+								Scheme: corev1.URISchemeHTTP,
+							},
+						},
+						PeriodSeconds:    10,
+						FailureThreshold: 3,
+					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("10m"),
