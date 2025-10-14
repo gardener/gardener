@@ -6,15 +6,20 @@ package mutator_test
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/mutator"
 )
@@ -124,6 +129,204 @@ var _ = Describe("mutator", func() {
 				Expect(admissionHandler.Admit(ctx, attrs, nil)).NotTo(HaveOccurred())
 				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenCreatedBy))
 			})
+		})
+
+		Context("tests deploy task", func() {
+			var (
+				oldShoot *core.Shoot
+			)
+
+			BeforeEach(func() {
+				oldShoot = shoot.DeepCopy()
+			})
+
+			It("should add deploy tasks because shoot is being created", func() {
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordInternal")).To(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordExternal")).To(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordIngress")).To(BeTrue())
+			})
+
+			It("should add deploy tasks because shoot is waking up from hibernation", func() {
+				oldShoot.Spec.Hibernation = &core.Hibernation{
+					Enabled: ptr.To(true),
+				}
+				shoot.Spec.Hibernation = &core.Hibernation{
+					Enabled: ptr.To(false),
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordInternal")).To(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordExternal")).To(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordIngress")).To(BeTrue())
+			})
+
+			It("should add deploy infrastructure task because infrastructure config has changed", func() {
+				shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+					Raw: []byte("infrastructure"),
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
+			})
+
+			It("should add deploy infrastructure task because ipFamilies have changed", func() {
+				oldShoot.Spec.Networking = &core.Networking{
+					IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
+				}
+				shoot.Spec.Networking = &core.Networking{
+					IPFamilies: []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6},
+				}
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
+			})
+
+			It("should add deploy infrastructure task because SSHAccess in WorkersSettings config has changed", func() {
+				oldShoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{
+					SSHAccess: &core.SSHAccess{
+						Enabled: true,
+					},
+				}
+				shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{
+					SSHAccess: &core.SSHAccess{
+						Enabled: false,
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
+			})
+
+			It("should add deploy dnsrecord tasks because dns config has changed", func() {
+				shoot.Spec.DNS = &core.DNS{}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordInternal")).To(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordExternal")).To(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordIngress")).To(BeTrue())
+			})
+
+			It("should add deploy infrastructure task because shoot operation annotation to rotate ssh keypair was set", func() {
+				shoot.Annotations = make(map[string]string)
+				shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.ShootOperationRotateSSHKeypair
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
+			})
+
+			It("should add deploy infrastructure task because shoot operation annotation to rotate all credentials was set", func() {
+				shoot.Annotations = make(map[string]string)
+				shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.OperationRotateCredentialsStart
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
+			})
+
+			It("should add deploy infrastructure task because shoot operation annotation to rotate all credentials w/o workers rollout was set", func() {
+				shoot.Annotations = make(map[string]string)
+				shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
+			})
+
+			It("should not add deploy tasks because spec has not changed", func() {
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeFalse())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordInternal")).To(BeFalse())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordExternal")).To(BeFalse())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployDNSRecordIngress")).To(BeFalse())
+			})
+		})
+
+		Context("shoot maintenance checks", func() {
+			var (
+				oldShoot           *core.Shoot
+				confineEnabled     = true
+				specUpdate         = true
+				operationFailed    = &core.LastOperation{State: core.LastOperationStateFailed}
+				operationSucceeded = &core.LastOperation{State: core.LastOperationStateSucceeded}
+			)
+			BeforeEach(func() {
+				shoot.Spec.Maintenance = &core.Maintenance{}
+				oldShoot = shoot.DeepCopy()
+			})
+
+			DescribeTable("confine spec roll-out checks",
+				func(specChange, oldConfine, confine bool, oldOperation, operation *core.LastOperation, matcher types.GomegaMatcher) {
+					oldShoot.Spec.Maintenance.ConfineSpecUpdateRollout = ptr.To(oldConfine)
+					oldShoot.Status.LastOperation = oldOperation
+					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = ptr.To(confine)
+					shoot.Status.LastOperation = operation
+					if specChange {
+						shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
+							NodeMonitorGracePeriod: &metav1.Duration{Duration: 100 * time.Second},
+						}
+					}
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+
+					Expect(shoot.Annotations).To(matcher)
+				},
+				Entry(
+					"should add annotation for failed shoot",
+					specUpdate, confineEnabled, confineEnabled, operationFailed, operationFailed,
+					HaveKeyWithValue(v1beta1constants.FailedShootNeedsRetryOperation, "true"),
+				),
+				Entry(
+					"should not add annotation for failed shoot because of missing spec change",
+					!specUpdate, confineEnabled, confineEnabled, operationFailed, operationFailed,
+					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
+				),
+				Entry(
+					"should not add annotation for succeeded shoot",
+					specUpdate, confineEnabled, confineEnabled, operationFailed, operationSucceeded,
+					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
+				),
+				Entry(
+					"should not add annotation for shoot w/o confine spec roll-out enabled",
+					specUpdate, confineEnabled, !confineEnabled, operationFailed, operationFailed,
+					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
+				),
+				Entry(
+					"should not add annotation for shoot w/o last operation",
+					specUpdate, confineEnabled, confineEnabled, nil, nil,
+					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
+				),
+			)
 		})
 	})
 })
