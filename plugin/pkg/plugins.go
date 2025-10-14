@@ -63,6 +63,8 @@ const (
 	PluginNameShootTolerationRestriction = "ShootTolerationRestriction"
 	// PluginNameShootValidator is the name of the ShootValidator admission plugin.
 	PluginNameShootValidator = "ShootValidator"
+	// PluginNameShootMutator is the name of the ShootMutator admission plugin.
+	PluginNameShootMutator = "ShootMutator"
 	// PluginNameShootVPAEnabledByDefault is the name of the ShootVPAEnabledByDefault admission plugin.
 	PluginNameShootVPAEnabledByDefault = "ShootVPAEnabledByDefault"
 	// PluginNameShootResourceReservation is the name of the ShootResourceReservation admission plugin.
@@ -86,6 +88,7 @@ func AllPluginNames() []string {
 		PluginNameShootDNSRewriting,                 // ShootDNSRewriting
 		PluginNameShootQuotaValidator,               // ShootQuotaValidator
 		PluginNameShootValidator,                    // ShootValidator
+		PluginNameShootMutator,                      // ShootMutator
 		PluginNameSeedValidator,                     // SeedValidator
 		PluginNameSeedMutator,                       // SeedMutator
 		PluginNameControllerRegistrationResources,   // ControllerRegistrationResources
@@ -131,6 +134,7 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameShootResourceReservation,        // ShootResourceReservation
 		PluginNameShootQuotaValidator,             // ShootQuotaValidator
 		PluginNameShootValidator,                  // ShootValidator
+		PluginNameShootMutator,                    // ShootMutator
 		PluginNameShootVPAEnabledByDefault,        // ShootVPAEnabledByDefault
 		PluginNameSeedValidator,                   // SeedValidator
 		PluginNameSeedMutator,                     // SeedMutator
