@@ -24,6 +24,8 @@ import (
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/shoot"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
@@ -48,6 +50,7 @@ var _ = Describe("Shoot", func() {
 		shootNamespace string
 		shootName      string
 		gardenletUser  user.Info
+		gardenadmUser  user.Info
 	)
 
 	BeforeEach(func() {
@@ -64,6 +67,10 @@ var _ = Describe("Shoot", func() {
 		shootName = "shoot-name"
 		gardenletUser = &user.DefaultInfo{
 			Name:   "gardener.cloud:system:shoot:" + shootNamespace + ":" + shootName,
+			Groups: []string{"gardener.cloud:system:shoots"},
+		}
+		gardenadmUser = &user.DefaultInfo{
+			Name:   "gardener.cloud:gardenadm:shoot:" + shootNamespace + ":" + shootName,
 			Groups: []string{"gardener.cloud:system:shoots"},
 		}
 	})
@@ -616,6 +623,347 @@ var _ = Describe("Shoot", func() {
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
 				)
+			})
+
+			Context("when requested for Shoots", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = shootName, shootNamespace
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "shoots",
+						ResourceRequest: true,
+						Verb:            "list",
+					}
+				})
+
+				DescribeTable("should allow without consulting the graph because verb is get, list, or watch",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+
+					},
+
+					Entry("create", "create"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+			})
+		})
+
+		Context("gardenadm client", func() {
+			Context("when requested for CloudProfiles", func() {
+				var attrs *auth.AttributesRecord
+
+				BeforeEach(func() {
+					attrs = &auth.AttributesRecord{
+						User:            gardenadmUser,
+						Name:            shootName,
+						Namespace:       shootNamespace,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "cloudprofiles",
+						ResourceRequest: true,
+					}
+				})
+
+				It("should allow because verb is 'get'", func() {
+					attrs.Verb = "get"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because verb is not allowed", func() {
+					attrs.Verb = "list"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+			})
+
+			Context("when requested for ConfigMaps", func() {
+				var attrs *auth.AttributesRecord
+
+				BeforeEach(func() {
+					attrs = &auth.AttributesRecord{
+						User:            gardenadmUser,
+						Name:            shootName,
+						Namespace:       shootNamespace,
+						APIGroup:        corev1.SchemeGroupVersion.Group,
+						Resource:        "configmaps",
+						ResourceRequest: true,
+					}
+				})
+
+				It("should allow because verb is 'create'", func() {
+					attrs.Verb = "create"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because verb is not allowed", func() {
+					attrs.Verb = "get"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because shoot info does match user info", func() {
+					attrs.Verb = "create"
+					attrs.Namespace = "other-namespace"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+			})
+
+			Context("when requested for CredentialsBindings", func() {
+				var attrs *auth.AttributesRecord
+
+				BeforeEach(func() {
+					attrs = &auth.AttributesRecord{
+						User:            gardenadmUser,
+						Name:            shootName,
+						Namespace:       shootNamespace,
+						APIGroup:        securityv1alpha1.SchemeGroupVersion.Group,
+						Resource:        "credentialsbindings",
+						ResourceRequest: true,
+					}
+				})
+
+				It("should allow because verb is 'create'", func() {
+					attrs.Verb = "create"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because verb is not allowed", func() {
+					attrs.Verb = "get"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because shoot info does match user info", func() {
+					attrs.Verb = "create"
+					attrs.Namespace = "other-namespace"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+			})
+
+			Context("when requested for Projects", func() {
+				var attrs *auth.AttributesRecord
+
+				BeforeEach(func() {
+					attrs = &auth.AttributesRecord{
+						User:            gardenadmUser,
+						Name:            shootName,
+						Namespace:       shootNamespace,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "projects",
+						ResourceRequest: true,
+					}
+				})
+
+				It("should allow because verb is 'create'", func() {
+					attrs.Verb = "create"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because verb is not allowed", func() {
+					attrs.Verb = "list"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+			})
+
+			Context("when requested for Secrets", func() {
+				var attrs *auth.AttributesRecord
+
+				BeforeEach(func() {
+					attrs = &auth.AttributesRecord{
+						User:            gardenadmUser,
+						Name:            shootName,
+						Namespace:       shootNamespace,
+						APIGroup:        corev1.SchemeGroupVersion.Group,
+						Resource:        "secrets",
+						ResourceRequest: true,
+					}
+				})
+
+				It("should allow because verb is 'create'", func() {
+					attrs.Verb = "create"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because verb is not allowed", func() {
+					attrs.Verb = "get"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because shoot info does match user info", func() {
+					attrs.Verb = "create"
+					attrs.Namespace = "other-namespace"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+			})
+
+			Context("when requested for SecretBindings", func() {
+				var attrs *auth.AttributesRecord
+
+				BeforeEach(func() {
+					attrs = &auth.AttributesRecord{
+						User:            gardenadmUser,
+						Name:            shootName,
+						Namespace:       shootNamespace,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "secretbindings",
+						ResourceRequest: true,
+					}
+				})
+
+				It("should allow because verb is 'create'", func() {
+					attrs.Verb = "create"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because verb is not allowed", func() {
+					attrs.Verb = "get"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because shoot info does match user info", func() {
+					attrs.Verb = "create"
+					attrs.Namespace = "other-namespace"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+			})
+
+			Context("when requested for Shoots", func() {
+				var attrs *auth.AttributesRecord
+
+				BeforeEach(func() {
+					attrs = &auth.AttributesRecord{
+						User:            gardenadmUser,
+						Name:            shootName,
+						Namespace:       shootNamespace,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "shoots",
+						ResourceRequest: true,
+					}
+				})
+
+				DescribeTable("should allow because verb is allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("create", "create"),
+					Entry("mark-autonomous", "mark-autonomous"),
+				)
+
+				It("should have no opinion because verb is not allowed", func() {
+					attrs.Verb = "get"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because shoot info does match user info", func() {
+					attrs.Verb = "create"
+					attrs.Namespace = "other-namespace"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
 			})
 		})
 	})

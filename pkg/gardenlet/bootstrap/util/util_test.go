@@ -123,7 +123,7 @@ var _ = Describe("Util", func() {
 					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
 					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, secretKey.Name))
 
-				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
+				expectedKubeconfig, err := CreateKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				expectedSecret.Data = map[string][]byte{kubernetes.KubeConfig: expectedKubeconfig}
@@ -145,7 +145,7 @@ var _ = Describe("Util", func() {
 						return nil
 					})
 
-				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
+				expectedKubeconfig, err := CreateKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				expectedCopy := expectedSecret.DeepCopy()
@@ -193,14 +193,14 @@ var _ = Describe("Util", func() {
 			It("should update the secret if the CA has changed", func() {
 				gardenClientConnection.GardenClusterCACert = []byte("bar")
 
-				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
+				expectedKubeconfig, err := CreateKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				updatedCertClientConfig := &rest.Config{Host: "testhost", TLSClientConfig: rest.TLSClientConfig{
 					Insecure: false,
 					CAData:   gardenClientConnection.GardenClusterCACert,
 				}}
-				expectedUpdatedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
+				expectedUpdatedKubeconfig, err := CreateKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				updatedSecret := expectedSecret.DeepCopy()
@@ -224,7 +224,7 @@ var _ = Describe("Util", func() {
 			It("should not update the secret if the CA didn't change", func() {
 				gardenClientConnection.GardenClusterCACert = certClientConfig.CAData
 
-				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
+				expectedKubeconfig, err := CreateKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, nil, c, expectedKubeconfig, gardenClientConnection)
@@ -235,14 +235,14 @@ var _ = Describe("Util", func() {
 			It("should update the secret if the CA has been removed (via 'none')", func() {
 				gardenClientConnection.GardenClusterCACert = []byte("none")
 
-				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
+				expectedKubeconfig, err := CreateKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				updatedCertClientConfig := &rest.Config{Host: "testhost", TLSClientConfig: rest.TLSClientConfig{
 					Insecure: true,
 					CAData:   []byte{},
 				}}
-				expectedUpdatedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
+				expectedUpdatedKubeconfig, err := CreateKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				updatedSecret := expectedSecret.DeepCopy()
@@ -266,14 +266,14 @@ var _ = Describe("Util", func() {
 			It("should update the secret if the CA has been removed (via 'null')", func() {
 				gardenClientConnection.GardenClusterCACert = []byte("null")
 
-				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
+				expectedKubeconfig, err := CreateKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				updatedCertClientConfig := &rest.Config{Host: "testhost", TLSClientConfig: rest.TLSClientConfig{
 					Insecure: true,
 					CAData:   []byte{},
 				}}
-				expectedUpdatedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
+				expectedUpdatedKubeconfig, err := CreateKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				updatedSecret := expectedSecret.DeepCopy()
@@ -295,7 +295,7 @@ var _ = Describe("Util", func() {
 			})
 
 			It("should update the secret from garden cluster", func() {
-				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
+				expectedKubeconfig, err := CreateKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				caConfigMap := &corev1.ConfigMap{
@@ -312,7 +312,7 @@ var _ = Describe("Util", func() {
 					Insecure: false,
 					CAData:   []byte(caConfigMap.Data["ca.crt"]),
 				}}
-				expectedUpdatedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
+				expectedUpdatedKubeconfig, err := CreateKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				updatedSecret := expectedSecret.DeepCopy()

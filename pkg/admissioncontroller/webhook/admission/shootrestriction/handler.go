@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
 	shootidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/shoot"
 	admissionwebhook "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -33,6 +34,8 @@ var (
 	// group and the resource (but it ignores the version).
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
+	projectResource                   = gardencorev1beta1.Resource("projects")
+	shootResource                     = gardencorev1beta1.Resource("shoots")
 )
 
 // Handler restricts requests made by shoot gardenlets.
@@ -54,6 +57,10 @@ func (h *Handler) Handle(_ context.Context, request admission.Request) admission
 		gardenletShootInfo = types.NamespacedName{Name: shootName, Namespace: shootNamespace}
 	)
 
+	if userType == gardenletidentity.UserTypeGardenadm {
+		return h.admitGardenadmRequests(gardenletShootInfo, request)
+	}
+
 	requestResource := schema.GroupResource{Group: request.Resource.Group, Resource: request.Resource.Resource}
 	switch requestResource {
 	case certificateSigningRequestResource:
@@ -71,7 +78,7 @@ func (h *Handler) Handle(_ context.Context, request admission.Request) admission
 		)
 	}
 
-	return admissionwebhook.Allowed("")
+	return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected resource: %q", requestResource))
 }
 
 func (h *Handler) admitCertificateSigningRequest(gardenletShootInfo types.NamespacedName, userType gardenletidentity.UserType, request admission.Request) admission.Response {

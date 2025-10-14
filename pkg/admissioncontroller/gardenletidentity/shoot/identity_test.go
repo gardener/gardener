@@ -33,6 +33,7 @@ var _ = Describe("identity", func() {
 		Entry("user name prefix but no groups", &user.DefaultInfo{Name: "gardener.cloud:system:shoot:foo:bar"}, "", "", false, gardenletidentity.UserType("")),
 		Entry("user name prefix but shoot group not present", &user.DefaultInfo{Name: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"bar"}}, "", "", false, gardenletidentity.UserType("")),
 		Entry("user name prefix and shoot group", &user.DefaultInfo{Name: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, gardenletidentity.UserTypeGardenlet),
+		Entry("gardenadm usertype", &user.DefaultInfo{Name: "gardener.cloud:gardenadm:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, gardenletidentity.UserTypeGardenadm),
 		Entry("Extension ServiceAccount", &user.DefaultInfo{Name: "system:serviceaccount:foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:foo"}}, "", "", false, gardenletidentity.UserTypeExtension),
 	)
 
@@ -50,6 +51,7 @@ var _ = Describe("identity", func() {
 		Entry("user name prefix but no groups", authenticationv1.UserInfo{Username: "gardener.cloud:system:shoot:foo:bar"}, "", "", false, gardenletidentity.UserType("")),
 		Entry("user name prefix but shoot group not present", authenticationv1.UserInfo{Username: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"bar"}}, "", "", false, gardenletidentity.UserType("")),
 		Entry("user name prefix and shoot group", authenticationv1.UserInfo{Username: "gardener.cloud:system:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, gardenletidentity.UserTypeGardenlet),
+		Entry("gardenadm usertype", authenticationv1.UserInfo{Username: "gardener.cloud:gardenadm:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}, "foo", "bar", true, gardenletidentity.UserTypeGardenadm),
 		Entry("Extension ServiceAccount", authenticationv1.UserInfo{Username: "system:serviceaccount:foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:foo"}, Extra: map[string]authenticationv1.ExtraValue{}}, "", "", false, gardenletidentity.UserTypeExtension),
 	)
 
@@ -67,5 +69,6 @@ var _ = Describe("identity", func() {
 		Entry("user name prefix but no groups", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:shoot:foo:bar"}}, "", "", false, gardenletidentity.UserType("")),
 		Entry("user name prefix but shoot group not present", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:shoot:foo:bar", Organization: []string{"bar"}}}, "", "", false, gardenletidentity.UserType("")),
 		Entry("user name prefix and shoot group", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:shoot:foo:bar", Organization: []string{"gardener.cloud:system:shoots"}}}, "foo", "bar", true, gardenletidentity.UserTypeGardenlet),
+		Entry("gardenadm usertype", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:gardenadm:shoot:foo:bar", Organization: []string{"gardener.cloud:system:shoots"}}}, "foo", "bar", true, gardenletidentity.UserTypeGardenadm),
 	)
 })

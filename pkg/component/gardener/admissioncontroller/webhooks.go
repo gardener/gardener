@@ -375,8 +375,15 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 				Name:                    "shoot-restriction.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				TimeoutSeconds:          ptr.To[int32](10),
-				Rules:                   []admissionregistrationv1.RuleWithOperations{
-					// TODO(rfranzke): We'll add some rules here as development of autonomous shoots progresses.
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{gardencorev1beta1.GroupName},
+							APIVersions: []string{gardencorev1beta1.SchemeGroupVersion.Version},
+							Resources:   []string{"projects", "shoots"},
+						},
+					},
 				},
 				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,

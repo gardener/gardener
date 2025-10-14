@@ -110,7 +110,7 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 		)
 	}
 
-	return admissionwebhook.Allowed("")
+	return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected resource: %q", requestResource))
 }
 
 func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, request admission.Request) admission.Response {

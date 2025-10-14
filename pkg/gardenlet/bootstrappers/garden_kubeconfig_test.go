@@ -116,7 +116,7 @@ var _ = Describe("GardenKubeconfig", func() {
 					runner.Config.GardenClientConnection.GardenClusterCACert = restConfig.CAData
 
 					var err error
-					existingKubeconfig, err = gardenletbootstraputil.CreateGardenletKubeconfigWithClientCertificate(restConfig, nil, nil)
+					existingKubeconfig, err = gardenletbootstraputil.CreateKubeconfigWithClientCertificate(restConfig, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 
 					secret := &corev1.Secret{
@@ -139,7 +139,7 @@ var _ = Describe("GardenKubeconfig", func() {
 					runner.Config.GardenClientConnection.GardenClusterCACert = newCABundle
 
 					restConfig.CAData = newCABundle
-					updatedKubeconfig, err := gardenletbootstraputil.CreateGardenletKubeconfigWithClientCertificate(restConfig, nil, nil)
+					updatedKubeconfig, err := gardenletbootstraputil.CreateKubeconfigWithClientCertificate(restConfig, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(runner.Start(ctx)).To(Succeed())
@@ -203,7 +203,7 @@ var _ = Describe("GardenKubeconfig", func() {
 					It("should request a kubeconfig with the bootstrap kubeconfig", func() {
 						var csrName = "created-csr"
 
-						requestedKubeconfig, err := gardenletbootstraputil.CreateGardenletKubeconfigWithClientCertificate(restConfig, nil, nil)
+						requestedKubeconfig, err := gardenletbootstraputil.CreateKubeconfigWithClientCertificate(restConfig, nil, nil)
 						Expect(err).ToNot(HaveOccurred())
 
 						secret := &corev1.Secret{

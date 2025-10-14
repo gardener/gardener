@@ -113,14 +113,30 @@ var _ = Describe("handler", func() {
 			It("should have no opinion because no resource request", func() {
 				request.UserInfo = gardenletUser
 
-				Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+					AdmissionResponse: admissionv1.AdmissionResponse{
+						Allowed: false,
+						Result: &metav1.Status{
+							Code:    int32(http.StatusBadRequest),
+							Message: `unexpected resource: ""`,
+						},
+					},
+				}))
 			})
 
 			It("should have no opinion because resource is irrelevant", func() {
 				request.UserInfo = gardenletUser
 				request.Resource = metav1.GroupVersionResource{}
 
-				Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+					AdmissionResponse: admissionv1.AdmissionResponse{
+						Allowed: false,
+						Result: &metav1.Status{
+							Code:    int32(http.StatusBadRequest),
+							Message: `unexpected resource: ""`,
+						},
+					},
+				}))
 			})
 		})
 

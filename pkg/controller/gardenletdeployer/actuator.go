@@ -893,7 +893,7 @@ func createBootstrapKubeconfig(
 
 	case seedmanagementv1alpha1.BootstrapToken:
 		if len(bootstrapToken) != 0 {
-			bootstrapKubeconfig, err = gardenletbootstraputil.CreateGardenletKubeconfigWithToken(gardenClientRestConfig, bootstrapToken)
+			bootstrapKubeconfig, err = gardenletbootstraputil.CreateKubeconfigWithToken(gardenClientRestConfig, bootstrapToken)
 			if err != nil {
 				return "", err
 			}

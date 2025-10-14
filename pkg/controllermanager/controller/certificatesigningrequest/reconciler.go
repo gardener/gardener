@@ -100,8 +100,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	var (
-		isSeedClient, reasonSeed   = gardenerutils.IsSeedClientCert(x509cr, csr.Spec.Usages)
-		isShootClient, reasonShoot = gardenerutils.IsShootClientCert(x509cr, csr.Spec.Usages)
+		isSeedClient, reasonSeed           = gardenerutils.IsSeedClientCert(x509cr, csr.Spec.Usages)
+		isShootClient, reasonShoot         = gardenerutils.IsShootClientCert(x509cr, csr.Spec.Usages)
+		isGardenadmClient, reasonGardenadm = gardenerutils.IsGardenadmClientCert(x509cr, csr.Spec.Usages)
 
 		subResource string
 	)
@@ -110,7 +111,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	case isSeedClient:
 		subResource = "seedclient"
 
-	case isShootClient:
+	case isShootClient, isGardenadmClient:
 		subResource = "shootclient"
 		if ok, reason, err := r.isBootstrapTokenForThisCSR(ctx, csr); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed checking bootstrap token description: %w", err)
@@ -119,7 +120,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 	default:
-		log.Info("Ignoring CSR, as it does not match the requirements for a seed client or an autonomous shoot client", "reasonSeedCheck", reasonSeed, "reasonShootCheck", reasonShoot)
+		log.Info("Ignoring CSR, as it does not match the requirements for a seed client or an autonomous shoot client", "reasonSeedCheck", reasonSeed, "reasonShootCheck", reasonShoot, "reasonGardenadmCheck", reasonGardenadm)
 		return reconcile.Result{}, nil
 	}
 
@@ -163,8 +164,17 @@ func ensureCSRSubjectMatchesBootstrapTokenDescription(shootMeta types.Namespaced
 		return false, "", fmt.Errorf("failed decoding certificate signing request: %w", err)
 	}
 
-	if username := v1beta1constants.ShootUserNamePrefix + shootMeta.Namespace + ":" + shootMeta.Name; x509cr.Subject.CommonName != username {
-		return false, fmt.Sprintf("the common name in the certificate request (%s) does not match the expected format %s", x509cr.Subject.CommonName, username), nil
+	var usernameMatchesFormat bool
+
+	for _, prefix := range []string{v1beta1constants.ShootUserNamePrefix, v1beta1constants.GardenadmUserNamePrefix} {
+		if username := prefix + shootMeta.Namespace + ":" + shootMeta.Name; x509cr.Subject.CommonName == username {
+			usernameMatchesFormat = true
+			break
+		}
+	}
+
+	if !usernameMatchesFormat {
+		return false, fmt.Sprintf("the common name in the certificate request (%s) does not match the expected format 'gardener.cloud:{system,gardenadm}:shoot:<namespace>:<name>'", x509cr.Subject.CommonName), nil
 	}
 
 	return true, "all requirements met", nil

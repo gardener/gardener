@@ -183,7 +183,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Ensure gardenlet-kubeconfig secret is created")
-	gardenletKubeconfig, err := gardenletbootstraputil.CreateGardenletKubeconfigWithToken(restConfig, "foobar")
+	gardenletKubeconfig, err := gardenletbootstraputil.CreateKubeconfigWithToken(restConfig, "foobar")
 	Expect(err).NotTo(HaveOccurred())
 
 	gardenletKubeconfigSecret := &corev1.Secret{

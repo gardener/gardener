@@ -13,4 +13,6 @@ const (
 	UserTypeGardenlet UserType = "gardenlet"
 	// UserTypeExtension is the UserType of an extension client.
 	UserTypeExtension UserType = "extension"
+	// UserTypeGardenadm is the UserType of a gardenadm client.
+	UserTypeGardenadm UserType = "gardenadm"
 )

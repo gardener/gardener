@@ -68,6 +68,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // Name is a const for the name of this component.
@@ -359,6 +360,10 @@ func (g *garden) Start(ctx context.Context) error {
 			opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
 				// gardenlet should watch only objects which are related to the shoot it is responsible for.
 				opts.ByObject = map[client.Object]cache.ByObject{
+					&gardencorev1beta1.Shoot{}: {
+						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.autonomousShootMeta.Name}),
+						Namespaces: map[string]cache.Config{g.autonomousShootMeta.Namespace: {}},
+					},
 					&seedmanagementv1alpha1.Gardenlet{}: {
 						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenlet.ResourcePrefixAutonomousShoot + g.autonomousShootMeta.Name}),
 						Namespaces: map[string]cache.Config{g.autonomousShootMeta.Namespace: {}},
@@ -466,6 +471,23 @@ func (g *garden) Start(ctx context.Context) error {
 
 	if err := controllerutils.AddAllRunnables(g.mgr, runnables...); err != nil {
 		return err
+	}
+
+	if gardenlet.IsResponsibleForAutonomousShoot() {
+		if err := retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
+			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: g.autonomousShootMeta.Name, Namespace: g.autonomousShootMeta.Namespace}}
+			if err := gardenCluster.GetClient().Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return retry.SevereError(err)
+				}
+				log.Info("Shoot resource for autonomous shoot not found yet, waiting for it to be created in the Gardener API (usually, the 'gardenadm connect' command invocation creates it)", "shoot", g.autonomousShootMeta)
+				return retry.MinorError(fmt.Errorf("the Shoot resource %s for autonomous shoot was not found yet", g.autonomousShootMeta))
+			}
+			return retry.Ok()
+		}); err != nil {
+			return fmt.Errorf("failed waiting for Shoot %s: %w", g.autonomousShootMeta, err)
+		}
+		log.Info("Successfully fetched Shoot resource for autonomous shoot", "shoot", g.autonomousShootMeta)
 	}
 
 	log.Info("Adding controllers to manager")

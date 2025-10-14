@@ -71,12 +71,18 @@ func convertAuthenticationV1ExtraValueToUserInfoExtra(extra map[string]authentic
 func getIdentityForShootsGroup(u user.Info) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
 	userName := u.GetName()
 
-	if !strings.HasPrefix(userName, v1beta1constants.ShootUserNamePrefix) {
+	var prefix string
+	switch {
+	case strings.HasPrefix(userName, v1beta1constants.ShootUserNamePrefix):
+		prefix = v1beta1constants.ShootUserNamePrefix
+	case strings.HasPrefix(userName, v1beta1constants.GardenadmUserNamePrefix):
+		prefix = v1beta1constants.GardenadmUserNamePrefix
+	default:
 		return "", "", false, ""
 	}
 
 	var (
-		namespaceName = strings.TrimPrefix(userName, v1beta1constants.ShootUserNamePrefix)
+		namespaceName = strings.TrimPrefix(userName, prefix)
 		split         = strings.Split(namespaceName, ":")
 	)
 
@@ -84,7 +90,17 @@ func getIdentityForShootsGroup(u user.Info) (namespace string, name string, isAu
 		return "", "", false, ""
 	}
 
-	return split[0], split[1], true, gardenletidentity.UserTypeGardenlet
+	return split[0], split[1], true, userTypeFromPrefix(prefix)
+}
+
+func userTypeFromPrefix(prefix string) gardenletidentity.UserType {
+	if prefix == v1beta1constants.ShootUserNamePrefix {
+		return gardenletidentity.UserTypeGardenlet
+	}
+	if prefix == v1beta1constants.GardenadmUserNamePrefix {
+		return gardenletidentity.UserTypeGardenadm
+	}
+	return ""
 }
 
 func getIdentityForServiceAccountsGroup(_ user.Info) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
