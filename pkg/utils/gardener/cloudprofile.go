@@ -296,17 +296,15 @@ func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec,
 	if isInitialMigration {
 		machineCapabilities := gardencorehelper.CapabilityDefinitionsToCapabilities(newCloudProfileSpec.MachineCapabilities)
 		numberOfCloudProfileArchitectures := len(machineCapabilities[v1beta1constants.ArchitectureName])
-		if numberOfCloudProfileArchitectures <= 1 {
-			// syncing is only required if there is more than 1 architectures Spec.MachineCapabilities
-			// 0: means the MachineCapabilities are invalid and will be caught by validation
-			// 1: means we have only one architecture and no syncing is required
-			return
+		// syncing is only required if there is more than 1 architecture in spec.machineCapabilities
+		// 0: means the MachineCapabilities are invalid and will be caught by validation
+		// 1: means we have only one architecture and no syncing is required
+		if numberOfCloudProfileArchitectures > 1 {
+			// During the initial migration to capabilities, synchronize the legacy architecture fields with the architecture capability values.
+			// Any mismatch between capabilities and architecture fields will result in a validation error.
+			syncMachineImageArchitectureCapabilities(newCloudProfileSpec.MachineImages)
+			syncMachineTypeArchitectureCapabilities(newCloudProfileSpec.MachineTypes)
 		}
-
-		// During the initial migration to capabilities, synchronize the legacy architecture fields with the architecture capability values.
-		// Any mismatch between capabilities and architecture fields will result in a validation error.
-		syncMachineImageArchitectureCapabilities(newCloudProfileSpec.MachineImages)
-		syncMachineTypeArchitectureCapabilities(newCloudProfileSpec.MachineTypes)
 	}
 	if hasNewCapabilities {
 		// sync back the legacy architecture fields from the capabilities on every update
@@ -318,7 +316,7 @@ func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec,
 func syncMachineImageLegacyArchitecture(newMachineImages []core.MachineImage, capabilityDefinitions []core.CapabilityDefinition) {
 	for imageIdx := range newMachineImages {
 		for versionIdx, imageVersion := range newMachineImages[imageIdx].Versions {
-			// don't sync if architectures are set by users
+			// don't sync if architectures are set by the user
 			if len(imageVersion.Architectures) > 0 {
 				continue
 			}
@@ -334,7 +332,7 @@ func syncMachineImageLegacyArchitecture(newMachineImages []core.MachineImage, ca
 
 func syncMachineTypeLegacyArchitecture(newMachineTypes []core.MachineType, capabilityDefinitions []core.CapabilityDefinition) {
 	for i, machineType := range newMachineTypes {
-		// don't sync if architecture is set by users
+		// don't sync if architecture is set by the user
 		if machineType.Architecture != nil {
 			continue
 		}
@@ -350,13 +348,13 @@ func syncMachineTypeLegacyArchitecture(newMachineTypes []core.MachineType, capab
 func syncMachineImageArchitectureCapabilities(newMachineImages []core.MachineImage) {
 	for imageIdx := range newMachineImages {
 		for versionIdx, version := range newMachineImages[imageIdx].Versions {
-			// don't sync if capabilities are set by users
+			// don't sync if capabilities are set by the user
 			if len(version.CapabilityFlavors) > 0 {
 				continue
 			}
 
 			legacyArchitectures := version.Architectures
-			if len(version.Architectures) == 0 {
+			if len(legacyArchitectures) == 0 {
 				// default to AMD64 if empty as this is the default for the architecture field
 				legacyArchitectures = []string{v1beta1constants.ArchitectureAMD64}
 			}
@@ -373,7 +371,7 @@ func syncMachineImageArchitectureCapabilities(newMachineImages []core.MachineIma
 
 func syncMachineTypeArchitectureCapabilities(newMachineTypes []core.MachineType) {
 	for i, machineType := range newMachineTypes {
-		// don't sync if capabilities are set by users
+		// don't sync if capabilities are set by the user
 		if len(machineType.Capabilities) > 0 {
 			continue
 		}

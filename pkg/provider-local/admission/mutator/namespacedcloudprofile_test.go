@@ -110,7 +110,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 
 				uniformSpecConfig := mutator.MutateArchitectureCapabilityFields(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
 				Expect(uniformSpecConfig.MachineImages).To(ContainElements(machineImages))
-				Expect(uniformSpecConfig).NotTo(BeIdenticalTo(cpConfig))
+				Expect(uniformSpecConfig).To(BeEquivalentTo(cpConfig))
 			})
 
 			It("should transform the status to capability format if the NamespacedCloudProfile spec is in old format", func() {
@@ -127,7 +127,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 
 				uniformSpecConfig := mutator.MutateArchitectureCapabilityFields(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
 				Expect(uniformSpecConfig.MachineImages).To(ContainElements(machineImages))
-				Expect(uniformSpecConfig).NotTo(BeIdenticalTo(cpConfig))
+				Expect(uniformSpecConfig).To(BeEquivalentTo(cpConfig))
 			})
 
 			It("should transform the status to legacy format if the NamespacedCloudProfile spec is in capability format", func() {

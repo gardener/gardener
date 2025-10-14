@@ -75,15 +75,10 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 // Depending on whether the parent CloudProfile is in capability format or not, it transforms the given config to
 // the capability format or the deprecated architecture fields format respectively.
 // It assumes that the given config is either completely in the capability format or in the deprecated architecture fields format.
-func MutateArchitectureCapabilityFields(config *v1alpha1.CloudProfileConfig, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) *v1alpha1.CloudProfileConfig {
-	transformedConfig := v1alpha1.CloudProfileConfig{}
+func MutateArchitectureCapabilityFields(cloudProfileConfig *v1alpha1.CloudProfileConfig, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) *v1alpha1.CloudProfileConfig {
 	isParentInCapabilityFormat := len(capabilityDefinitions) != 0
-
-	for idx, machineImage := range config.MachineImages {
-		transformedConfig.MachineImages = append(transformedConfig.MachineImages, v1alpha1.MachineImages{
-			Name:     machineImage.Name,
-			Versions: make([]v1alpha1.MachineImageVersion, 0, len(machineImage.Versions)),
-		})
+	for idx, machineImage := range cloudProfileConfig.MachineImages {
+		cloudProfileConfig.MachineImages[idx].Versions = make([]v1alpha1.MachineImageVersion, 0, len(machineImage.Versions))
 		for _, version := range machineImage.Versions {
 			isVersionInCapabilityFormat := len(version.CapabilityFlavors) != 0
 			transformedVersion := v1alpha1.MachineImageVersion{Version: version.Version}
@@ -96,11 +91,10 @@ func MutateArchitectureCapabilityFields(config *v1alpha1.CloudProfileConfig, cap
 			} else {
 				transformedVersion = version
 			}
-
-			transformedConfig.MachineImages[idx].Versions = append(transformedConfig.MachineImages[idx].Versions, transformedVersion)
+			cloudProfileConfig.MachineImages[idx].Versions = append(cloudProfileConfig.MachineImages[idx].Versions, transformedVersion)
 		}
 	}
-	return &transformedConfig
+	return cloudProfileConfig
 }
 
 func mergeMachineImages(specMachineImages, statusMachineImages []v1alpha1.MachineImages) []v1alpha1.MachineImages {
