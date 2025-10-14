@@ -23,7 +23,6 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
@@ -272,7 +271,7 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
 	contextName := b.Shoot.ControlPlaneNamespace
 	kubeAPIServerAddress := b.Shoot.ComputeInClusterAPIServerAddress(true)
-	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()) {
+	if b.ShootUsesIstioTLSTermination() {
 		// Add the failure tolerance type to the context name if high availability is enabled. This ensures that the
 		// generic token kubeconfig changes when a shoot is upgraded from non-HA to HA. The generic token kubeconfig is
 		// updated that the control plane pods are restarted and get the updated hosts alias for the kube-apiserver domain.

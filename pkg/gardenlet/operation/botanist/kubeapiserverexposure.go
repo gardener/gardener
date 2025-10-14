@@ -25,7 +25,7 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 	}
 	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false)
 	upgradeService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix, false)
-	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()) {
+	if b.ShootUsesIstioTLSTermination() {
 		deployer = append(deployer, mutualTLSService)
 		deployer = append(deployer, upgradeService)
 	} else {
@@ -50,7 +50,7 @@ func (b *Botanist) defaultKubeAPIServerServiceWithSuffix(suffix string, register
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		&kubeapiserverexposure.ServiceValues{
-			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled && (!features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) || !v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo())),
+			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled && !b.ShootUsesIstioTLSTermination(),
 			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
 			NameSuffix:                  suffix,
 		},
@@ -66,6 +66,11 @@ func (b *Botanist) defaultKubeAPIServerServiceWithSuffix(suffix string, register
 // ShootUsesDNS returns true if the shoot uses internal and external DNS.
 func (b *Botanist) ShootUsesDNS() bool {
 	return b.NeedsInternalDNS() && b.NeedsExternalDNS()
+}
+
+// ShootUsesIstioTLSTermination returns true if the shoot uses Istio TLS termination aka L7 load-balancing.
+func (b *Botanist) ShootUsesIstioTLSTermination() bool {
+	return features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo())
 }
 
 // DefaultKubeAPIServerSNI returns a deployer for the kube-apiserver SNI.
@@ -98,7 +103,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
-				IstioTLSTermination:   features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
+				IstioTLSTermination:   b.ShootUsesIstioTLSTermination(),
 				WildcardConfiguration: wildcardConfiguration,
 			}
 		},
@@ -165,7 +170,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
-				IstioTLSTermination:   features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
+				IstioTLSTermination:   b.ShootUsesIstioTLSTermination(),
 				WildcardConfiguration: wildcardConfiguration,
 			}
 
@@ -192,6 +197,6 @@ func (b *Botanist) ReconcileIstioInternalLoadBalancingConfigMap(ctx context.Cont
 		[]string{
 			v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain),
 		},
-		features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
+		b.ShootUsesIstioTLSTermination(),
 	)
 }
