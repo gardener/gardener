@@ -151,8 +151,8 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istioIngressVPNGateway = func() string {
-			data, _ := os.ReadFile("./test_charts/ingress_vpn_gateway.yaml")
+		istioIngressHTTPConnectGateway = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_http_connect_gateway.yaml")
 			return string(data)
 		}
 
@@ -423,7 +423,7 @@ var _ = Describe("istiod", func() {
 			}
 
 			if igw[0].VPNEnabled {
-				expectedIstioManifests = append(expectedIstioManifests, istioIngressVPNGateway(), istioIngressEnvoyVPNFilter(0), istioIngressEnvoyVPNFilter(1))
+				expectedIstioManifests = append(expectedIstioManifests, istioIngressHTTPConnectGateway(), istioIngressEnvoyVPNFilter(0), istioIngressEnvoyVPNFilter(1))
 			}
 
 			By("Verify istio resources")
@@ -830,9 +830,7 @@ var _ = Describe("istiod", func() {
 	})
 
 	Context("waiting functions", func() {
-		var (
-			fakeOps *retryfake.Ops
-		)
+		var fakeOps *retryfake.Ops
 
 		BeforeEach(func() {
 			fakeOps = &retryfake.Ops{MaxAttempts: 1}
