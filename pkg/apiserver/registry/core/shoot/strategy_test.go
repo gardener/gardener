@@ -711,7 +711,7 @@ var _ = Describe("Strategy", func() {
 					[]string{v1beta1constants.OperationRotateCredentialsComplete, v1beta1constants.ShootOperationRotateSSHKeypair},
 				),
 
-				Entry("remove dublicate operations",
+				Entry("remove duplicate operations",
 					fmt.Sprintf("%s;%s;%s;%s;%s", v1beta1constants.OperationRotateCredentialsComplete, v1beta1constants.OperationRotateCredentialsComplete, v1beta1constants.ShootOperationRotateSSHKeypair,
 						v1beta1constants.OperationRotateCredentialsComplete, v1beta1constants.ShootOperationRotateSSHKeypair),
 					nil,
