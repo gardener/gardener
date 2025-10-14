@@ -642,7 +642,7 @@ message ControlPlane {
 
 // ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
 message ControlPlaneAutoscaling {
-  // MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+  // MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.
   // Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
   // Default values are not applied to this field.
   map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> minAllowed = 1;
@@ -2257,6 +2257,10 @@ message NodeLocalDNS {
   // Default, if unspecified, is to forward requests for external domains to upstream DNS
   // +optional
   optional bool disableForwardToUpstreamDNS = 4;
+
+  // Autoscaling contains auto-scaling configuration options for the node local DNS components.
+  // +optional
+  optional ControlPlaneAutoscaling autoscaling = 5;
 }
 
 // OCIRepository configures where to pull an OCI Artifact, that could contain for example a Helm Chart.

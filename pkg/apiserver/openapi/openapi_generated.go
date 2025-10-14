@@ -2704,7 +2704,7 @@ func schema_pkg_apis_core_v1beta1_ControlPlaneAutoscaling(ref common.ReferenceCa
 				Properties: map[string]spec.Schema{
 					"minAllowed": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.. Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays. Default values are not applied to this field.",
+							Description: "MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling. Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays. Default values are not applied to this field.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -6662,10 +6662,18 @@ func schema_pkg_apis_core_v1beta1_NodeLocalDNS(ref common.ReferenceCallback) com
 							Format:      "",
 						},
 					},
+					"autoscaling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Autoscaling contains auto-scaling configuration options for the node local DNS components.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling"),
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling"},
 	}
 }
 

@@ -397,7 +397,7 @@ spec:
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
                                 description: |-
-                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.
                                   Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
                                   Default values are not applied to this field.
                                 type: object
@@ -436,7 +436,7 @@ spec:
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
                                 description: |-
-                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.
                                   Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
                                   Default values are not applied to this field.
                                 type: object
@@ -1479,7 +1479,7 @@ spec:
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
                                 description: |-
-                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.
                                   Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
                                   Default values are not applied to this field.
                                 type: object
