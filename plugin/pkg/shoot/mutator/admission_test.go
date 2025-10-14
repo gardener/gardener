@@ -92,6 +92,19 @@ var _ = Describe("mutator", func() {
 			Expect(err).To(MatchError("could not convert object to Shoot"))
 		})
 
+		It("should fail when old object is not shoot", func() {
+			project := core.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-project",
+				},
+			}
+			attrs := admission.NewAttributesRecord(&shoot, &project, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+			err := admissionHandler.Admit(ctx, attrs, nil)
+			Expect(err).To(BeBadRequestError())
+			Expect(err).To(MatchError("could not convert old object to Shoot"))
+		})
+
 		Context("created-by annotation", func() {
 			It("should add the created-by annotation on shoot creation", func() {
 				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, userInfo.Name))

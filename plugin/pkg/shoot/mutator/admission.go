@@ -45,9 +45,26 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 		return nil
 	}
 
+	var (
+		shoot    *core.Shoot
+		oldShoot = &core.Shoot{}
+	)
+
 	shoot, ok := a.GetObject().(*core.Shoot)
 	if !ok {
 		return apierrors.NewBadRequest("could not convert object to Shoot")
+	}
+
+	if a.GetOperation() == admission.Update {
+		oldShoot, ok = a.GetOldObject().(*core.Shoot)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert old object to Shoot")
+		}
+	}
+
+	_ = &mutationContext{
+		shoot:    shoot,
+		oldShoot: oldShoot,
 	}
 
 	if a.GetOperation() == admission.Create {
@@ -55,6 +72,11 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	}
 
 	return nil
+}
+
+type mutationContext struct {
+	shoot    *core.Shoot
+	oldShoot *core.Shoot
 }
 
 func addCreatedByAnnotation(shoot *core.Shoot, userName string) {
