@@ -104,7 +104,7 @@ func RewriteEncryptedDataRemoveLabel(
 ) error {
 	encryptedGVKs, message, err := GetResourcesForRewrite(targetClientSet.Kubernetes().Discovery(), resourcesToEncrypt, encryptedResources, defaultGVKs)
 	if err != nil {
-		return fmt.Errorf("failed getting a list of schema.GroupVersionKind for all the resources that need to be rewritten: %w", err)
+		return fmt.Errorf("failed to get resources for rewrite: %w", err)
 	}
 
 	if err := rewriteEncryptedData(
@@ -118,14 +118,14 @@ func RewriteEncryptedDataRemoveLabel(
 		message+" (Remove label)",
 		encryptedGVKs...,
 	); err != nil {
-		return fmt.Errorf("failed rewriting encrypted data: %w", err)
+		return fmt.Errorf("failed to rewrite encrypted data: %w", err)
 	}
 
 	if err := PatchAPIServerDeploymentMeta(ctx, runtimeClient, namespace, name, func(meta *metav1.PartialObjectMetadata) {
 		delete(meta.Annotations, AnnotationKeyEtcdSnapshotted)
 		delete(meta.Annotations, AnnotationKeyResourcesLabeled)
 	}); err != nil {
-		return fmt.Errorf("failed patching metadata of an API Server deployment: %w", err)
+		return fmt.Errorf("failed to remove annotations from API Server deployment: %w", err)
 	}
 	return nil
 }
@@ -168,11 +168,11 @@ func rewriteEncryptedData(
 
 				// Wait until we are allowed by the limiter to not overload the API server with too many requests.
 				if err := limiter.Wait(ctx); err != nil {
-					return fmt.Errorf("failed waiting until we are allowed by the limiter: %w", err)
+					return fmt.Errorf("rate limiter wait failed: %w", err)
 				}
 
 				if err := c.Patch(ctx, &obj, patch); err != nil {
-					return fmt.Errorf("failed patching object when rewriting encrypted data: %w", err)
+					return fmt.Errorf("failed to patch object when rewriting encrypted data: %w", err)
 				}
 
 				return nil
