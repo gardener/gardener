@@ -356,6 +356,25 @@ var _ = Describe("customverbauthorizer", func() {
 							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
 						})
+
+						It("should trigger authorization check when only member roles are changed (user!=owner)", func() {
+							project.Spec.Owner = &owner
+							project.Spec.Members = []core.ProjectMember{
+								{
+									Subject: rbacv1.Subject{
+										Kind: rbacv1.UserKind,
+										Name: "test-user",
+									},
+									Roles: []string{"viewer"},
+								},
+							}
+							oldProject := project.DeepCopy()
+							// Only change the roles, keep the subject the same
+							project.Spec.Members[0].Roles = []string{"admin"}
+
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
+						})
 					})
 				})
 			})
