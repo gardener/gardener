@@ -17,6 +17,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -176,7 +177,8 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	var (
 		now                = metav1.NewTime(r.Clock.Now().UTC())
 		operations         = helper.GetGardenerOperations(garden.Annotations)
-		filteredOperations = slices.Clone(operations)
+		operationsSet      = sets.New(operations...)
+		filteredOperations = slices.Clone(operationsSet.UnsortedList())
 		description        string
 	)
 
