@@ -453,6 +453,10 @@ spec:
 #     forceTCPToClusterDNS: true # {true,false}
 #     forceTCPToUpstreamDNS: true # {true,false}
 #     disableForwardToUpstreamDNS: true # {true,false}
+#     autoscaling:
+#       minAllowed:
+#         cpu: "100m"
+#         memory: 64Mi
 # controlPlane:
 #   highAvailability:
 #     failureTolerance:
