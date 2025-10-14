@@ -131,7 +131,7 @@ var _ = Describe("mutator", func() {
 			})
 		})
 
-		Context("tests deploy task", func() {
+		Context("metadata annotations", func() {
 			var (
 				oldShoot *core.Shoot
 			)
