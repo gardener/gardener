@@ -4796,6 +4796,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("incorrect core dns autoscaler", &core.SystemComponents{CoreDNS: &core.CoreDNS{Autoscaling: &core.CoreDNSAutoscaling{Mode: "dummy"}}}, false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeNotSupported),
 				})))),
+				Entry("incorrect minAllowed for node-local dns", &core.SystemComponents{NodeLocalDNS: &core.NodeLocalDNS{Autoscaling: &core.ControlPlaneAutoscaling{
+					MinAllowed: map[corev1.ResourceName]resource.Quantity{
+						"cpu":    resource.MustParse("9m"),
+						"memory": resource.MustParse("-50Mi"),
+					}}}}, false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Type": Equal(field.ErrorTypeInvalid)})))),
+				Entry("correct minAllowed for node-local dns", &core.SystemComponents{NodeLocalDNS: &core.NodeLocalDNS{Autoscaling: &core.ControlPlaneAutoscaling{
+					MinAllowed: map[corev1.ResourceName]resource.Quantity{
+						"cpu": resource.MustParse("9m"),
+					}}}}, false, BeEmpty()),
 			)
 		})
 

@@ -2825,6 +2825,7 @@ func ValidateSystemComponents(systemComponents *core.SystemComponents, fldPath *
 	}
 
 	allErrs = append(allErrs, validateCoreDNS(systemComponents.CoreDNS, fldPath.Child("coreDNS"))...)
+	allErrs = append(allErrs, validateNodeLocalDNS(systemComponents.NodeLocalDNS, fldPath.Child("nodeLocalDNS"))...)
 
 	return allErrs
 }
@@ -2843,6 +2844,18 @@ func validateCoreDNS(coreDNS *core.CoreDNS, fldPath *field.Path) field.ErrorList
 	if coreDNS.Rewriting != nil {
 		allErrs = append(allErrs, ValidateCoreDNSRewritingCommonSuffixes(coreDNS.Rewriting.CommonSuffixes, fldPath.Child("rewriting"))...)
 	}
+
+	return allErrs
+}
+
+func validateNodeLocalDNS(nodeLocalDNS *core.NodeLocalDNS, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if nodeLocalDNS == nil {
+		return allErrs
+	}
+
+	allErrs = append(allErrs, ValidateControlPlaneAutoscaling(nodeLocalDNS.Autoscaling, corev1.ResourceList{}, fldPath.Child("autoscaling"))...)
 
 	return allErrs
 }
