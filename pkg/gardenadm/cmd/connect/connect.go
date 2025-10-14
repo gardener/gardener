@@ -288,18 +288,14 @@ func prepareGardenerResources(ctx context.Context, b *botanist.AutonomousBotanis
 	}
 	b.Logger.Info("ControllerDeployments existences ensured in garden cluster")
 
-	// We do not handle the 'garden' Project because gardener-apiserver defaults .spec.tolerations for this project.
-	// This requires special permissions for a custom verb that we do not want to grant to the gardenadm user for
-	// autonomous shoots.
+	// We do not handle Project using 'garden' namespace because gardener-apiserver defaults .spec.tolerations for this
+	// Project. This requires special permissions for a custom verb that we do not want to grant to the gardenadm user
+	// for autonomous shoots. Since this is a special project anyway, it must have been created beforehand.
 	if project := b.Resources.Project.DeepCopy(); ptr.Deref(project.Spec.Namespace, "") != v1beta1constants.GardenNamespace {
 		if err := b.GardenClient.Create(ctx, project); client.IgnoreAlreadyExists(err) != nil {
 			return fmt.Errorf("failed creating Project resource %s in garden cluster: %w", project.Name, err)
 		}
 		b.Logger.Info("Project resource ensured in garden cluster")
-	} else {
-		if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Resources.Project), &gardencorev1beta1.Project{}); err != nil {
-			return fmt.Errorf("failed checking for existence of Project %s (this is not created by 'gardenadm connect' and must exist in the garden cluster): %w", b.Resources.Project.Name, err)
-		}
 	}
 
 	for _, configMap := range b.Resources.ConfigMaps {
