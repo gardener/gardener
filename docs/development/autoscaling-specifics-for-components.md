@@ -52,7 +52,7 @@ The Gardener API server's autoscaling is the same as the Shoot Kubernetes API se
 
 ## Configure `minAllowed` Resources for Control Plane Components
 
-It is possible to configure minimum allowed resources (`minAllowed`) for CPU/memory for ETCD instances and the Kubernetes API server.
+It is possible to configure minimum allowed resources (`minAllowed`) for CPU/memory for ETCD instances, the Kubernetes API server and node local DNS.
 This configuration is available for both Shoot clusters and the Garden cluster, see examples below:
 - `Shoot`
   ```yaml
@@ -74,6 +74,12 @@ This configuration is available for both Shoot clusters and the Garden cluster, 
           minAllowed:
             cpu: "1"
             memory: 3Gi
+    systemComponents:
+      nodeLocalDNS:
+        autoscaling:
+          minAllowed:
+            cpu: "100m"
+            memory: 64Mi
   ```
 - `Garden`
   ```yaml
