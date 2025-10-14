@@ -7,7 +7,6 @@ package shoot
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -109,7 +109,8 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			mustIncrease                  bool
 			mustRemoveOperationAnnotation bool
 			operations                    = v1beta1helper.GetShootGardenerOperations(newShoot.Annotations)
-			patchOperations               = slices.Clone(operations)
+			operationsSet                 = sets.New(operations...)
+			patchOperations               = operationsSet.UnsortedList()
 		)
 
 		switch lastOperation.State {
@@ -119,7 +120,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			}
 
 		default:
-			for _, operation := range operations {
+			for _, operation := range operationsSet.UnsortedList() {
 				switch operation {
 				case v1beta1constants.GardenerOperationReconcile:
 					mustIncrease = true
