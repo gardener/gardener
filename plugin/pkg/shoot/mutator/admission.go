@@ -8,9 +8,11 @@ import (
 	"context"
 	"io"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -42,5 +44,23 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 		return nil
 	}
 
+	shoot, ok := a.GetObject().(*core.Shoot)
+	if !ok {
+		return apierrors.NewBadRequest("could not convert object to Shoot")
+	}
+
+	if a.GetOperation() == admission.Create {
+		addCreatedByAnnotation(shoot, a.GetUserInfo().GetName())
+	}
+
 	return nil
+}
+
+func addCreatedByAnnotation(shoot *core.Shoot, userName string) {
+	annotations := shoot.Annotations
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations[v1beta1constants.GardenCreatedBy] = userName
+	shoot.Annotations = annotations
 }
