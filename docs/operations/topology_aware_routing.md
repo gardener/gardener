@@ -133,8 +133,6 @@ The `virtual-garden-etcd-main-client` and `virtual-garden-etcd-events-client` Se
 The `virtual-garden-kube-apiserver` Service is topology-aware if it uses layer 4 load-balancing. If it is using layer 7 load-balancing it is not. It is consumed by `virtual-garden-kube-controller-manager`, `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, extension admission components, `gardener-dashboard` and other components.
 Layer 7 load-balancing is active when `IstioTLSTermination` feature gate is active in `gardener-operator`. Please see this [documentation](./kube_apiserver_loadbalancing.md) for more details.
 
-> Note: Unlike the other Services, the `virtual-garden-kube-apiserver` Service is of type LoadBalancer. In-cluster components consuming the `virtual-garden-kube-apiserver` Service by its Service name will have benefit from the topology-aware routing. However, the TopologyAwareHints feature cannot help with external traffic routed to load balancer's address - such traffic won't be routed in a topology-aware manner and will be routed according to the cloud-provider specific implementation.
-
 ##### gardener-apiserver
 
 The `gardener-apiserver` Service is topology-aware. It is consumed by `virtual-garden-kube-apiserver`. The aggregation layer in `virtual-garden-kube-apiserver` proxies requests sent for the Gardener API types to the `gardener-apiserver`.
