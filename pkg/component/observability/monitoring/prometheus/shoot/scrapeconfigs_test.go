@@ -251,7 +251,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								{
 									SourceLabels: []monitoringv1.LabelName{"__name__"},
 									Action:       "keep",
-									Regex:        `^(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$`,
+									Regex:        `^(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_fs_reads_total|container_fs_writes_total|container_last_seen|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$`,
 								},
 								{
 									SourceLabels: []monitoringv1.LabelName{"namespace"},

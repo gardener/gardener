@@ -267,6 +267,8 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 							"container_fs_inodes_total",
 							"container_fs_limit_bytes",
 							"container_fs_usage_bytes",
+							"container_fs_reads_total",
+							"container_fs_writes_total",
 							"container_last_seen",
 							"container_memory_working_set_bytes",
 							"container_network_receive_bytes_total",
