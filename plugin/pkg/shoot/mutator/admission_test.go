@@ -15,6 +15,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/mutator"
 )
 
@@ -67,14 +68,48 @@ var _ = Describe("mutator", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("should ignore a kind other than shoot", func() {
+			project := core.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-project",
+				},
+			}
+			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+			Expect(admissionHandler.Admit(ctx, attrs, nil)).NotTo(HaveOccurred())
+		})
+
+		It("should fail when object is not shoot", func() {
+			project := core.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-project",
+				},
+			}
+			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+			err := admissionHandler.Admit(ctx, attrs, nil)
+			Expect(err).To(BeBadRequestError())
+			Expect(err).To(MatchError("could not convert object to Shoot"))
+		})
+
 		Context("created-by annotation", func() {
-			It("should add the created-by annotation", func() {
+			It("should add the created-by annotation on shoot creation", func() {
 				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, userInfo.Name))
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				Expect(admissionHandler.Admit(ctx, attrs, nil)).NotTo(HaveOccurred())
 
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).NotTo(HaveOccurred())
 				Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, userInfo.Name))
+			})
+
+			It("should not add the created-by annotation on shoot update", func() {
+				oldShoot := shoot.DeepCopy()
+				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, userInfo.Name))
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).NotTo(HaveOccurred())
+				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenCreatedBy))
 			})
 		})
 	})
