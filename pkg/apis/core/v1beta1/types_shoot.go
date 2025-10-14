@@ -2006,6 +2006,9 @@ type NodeLocalDNS struct {
 	// Default, if unspecified, is to forward requests for external domains to upstream DNS
 	// +optional
 	DisableForwardToUpstreamDNS *bool `json:"disableForwardToUpstreamDNS,omitempty" protobuf:"varint,4,opt,name=disableForwardToUpstreamDNS"`
+	// Autoscaling contains auto-scaling configuration options for the node local DNS components.
+	// +optional
+	Autoscaling *ControlPlaneAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,5,opt,name=autoscaling"`
 }
 
 const (

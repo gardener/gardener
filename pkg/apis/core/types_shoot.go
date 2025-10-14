@@ -1552,6 +1552,8 @@ type NodeLocalDNS struct {
 	// DisableForwardToUpstreamDNS indicates whether requests from node local DNS to upstream DNS should be disabled.
 	// Default, if unspecified, is to forward requests for external domains to upstream DNS
 	DisableForwardToUpstreamDNS *bool
+	// Autoscaling contains auto-scaling configuration options for the node local DNS components.
+	Autoscaling *ControlPlaneAutoscaling
 }
 
 const (
