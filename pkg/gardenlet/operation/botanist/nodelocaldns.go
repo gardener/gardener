@@ -40,6 +40,11 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 		return nil, err
 	}
 
+	var minAllowed corev1.ResourceList
+	if systemComponents := b.Shoot.GetInfo().Spec.SystemComponents; systemComponents != nil && systemComponents.NodeLocalDNS != nil && systemComponents.NodeLocalDNS.Autoscaling != nil {
+		minAllowed = systemComponents.NodeLocalDNS.Autoscaling.MinAllowed
+	}
+
 	return nodelocaldns.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
@@ -52,6 +57,7 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 			Workers:                   b.Shoot.GetInfo().Spec.Provider.Workers,
 			KubeProxyConfig:           b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
 			Log:                       b.Logger,
+			MinAllowed:                minAllowed,
 		},
 	), nil
 }
