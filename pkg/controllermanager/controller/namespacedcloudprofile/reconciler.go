@@ -170,21 +170,20 @@ func mutateArchitectureCapabilityFields(
 				}
 				version.Architectures = legacyArchitectures
 			} else if !isParentInCapabilityFormat {
+				architectureSet := sets.New[string]()
 				// Convert capability flavors to legacy architectures
 				if len(legacyArchitectures) == 0 && len(version.CapabilityFlavors) > 0 {
-					architectureSet := sets.New[string]()
-					if len(version.CapabilityFlavors) == 0 {
-						// If there are no capability flavors at all, we default to AMD64
-						architectureSet.Insert(v1beta1constants.ArchitectureAMD64)
-					}
 					for _, flavor := range version.CapabilityFlavors {
 						architectureSet.Insert(flavor.Capabilities[v1beta1constants.ArchitectureName]...)
 					}
+
 					version.Architectures = architectureSet.UnsortedList()
+				} else {
+					// If there are no capability flavors at all, we default to AMD64
+					architectureSet.Insert(v1beta1constants.ArchitectureAMD64)
 				}
 				version.CapabilityFlavors = nil
 			}
-
 			transformedSpec.MachineImages[idx].Versions[idy] = version
 		}
 	}
@@ -226,11 +225,10 @@ func syncArchitectureCapabilities(namespacedCloudProfile *gardencorev1beta1.Name
 // The sync can only happen after having had a look at the parent CloudProfile and whether it uses capabilities.
 func defaultMachineTypeArchitectures(cloudProfile gardencore.CloudProfileSpec, capabilitiesDefinitions []gardencore.CapabilityDefinition) {
 	for i, machineType := range cloudProfile.MachineTypes {
-		capabilities := gardencorehelper.GetCapabilitiesWithAppliedDefaults(machineType.Capabilities, capabilitiesDefinitions)
-		capabilityArchitecture := capabilities[v1beta1constants.ArchitectureName]
 		if ptr.Deref(machineType.Architecture, "") != "" {
 			continue
 		}
+		capabilityArchitecture := gardencorehelper.GetCapabilitiesWithAppliedDefaults(machineType.Capabilities, capabilitiesDefinitions)[v1beta1constants.ArchitectureName]
 		if len(capabilityArchitecture) > 0 {
 			cloudProfile.MachineTypes[i].Architecture = &capabilityArchitecture[0]
 		} else {
@@ -244,11 +242,11 @@ func defaultMachineTypeArchitectures(cloudProfile gardencore.CloudProfileSpec, c
 func defaultMachineImageArchitectures(cloudProfile gardencore.CloudProfileSpec, capabilitiesDefinitions []gardencore.CapabilityDefinition) {
 	for i, machineImage := range cloudProfile.MachineImages {
 		for j, version := range machineImage.Versions {
-			capabilityFlavors := gardencorehelper.GetImageFlavorsWithAppliedDefaults(version.CapabilityFlavors, capabilitiesDefinitions)
-			capabilityArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(capabilityFlavors)
 			if len(version.Architectures) > 0 {
 				continue
 			}
+			capabilityFlavors := gardencorehelper.GetImageFlavorsWithAppliedDefaults(version.CapabilityFlavors, capabilitiesDefinitions)
+			capabilityArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(capabilityFlavors)
 			if len(capabilityArchitectures) == 0 {
 				cloudProfile.MachineImages[i].Versions[j].Architectures = []string{v1beta1constants.ArchitectureAMD64}
 			} else if len(capabilityArchitectures) > 0 {

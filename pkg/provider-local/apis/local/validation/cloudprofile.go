@@ -12,7 +12,6 @@ import (
 	coreapi "github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/utils"
@@ -227,17 +226,4 @@ func NewProviderImagesContext(providerImages []api.MachineImages) *gardenerutils
 			return utils.CreateMapFromSlice(mi.Versions, func(v api.MachineImageVersion) string { return v.Version })
 		},
 	)
-}
-
-// RestrictToArchitectureCapability ensures that for the transition period from the deprecated architecture fields to the capabilities format only the `architecture` capability is used to support automatic transformation and migration.
-// TODO(Roncossek): Delete this function once the dedicated architecture fields on MachineType and MachineImageVersion have been removed.
-func RestrictToArchitectureCapability(capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, child *field.Path) error {
-	allErrs := field.ErrorList{}
-	for i, def := range capabilityDefinitions {
-		idxPath := child.Index(i)
-		if def.Name != v1beta1constants.ArchitectureName {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), def.Name, []string{v1beta1constants.ArchitectureName}))
-		}
-	}
-	return allErrs.ToAggregate()
 }

@@ -791,15 +791,15 @@ var _ = Describe("CloudProfile", func() {
 
 			It("should create capabilities and capabilityFlavors from architecture fields if they are empty", func() {
 				cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures = []string{"amd64", "arm64"}
-				cloudProfileSpecNew.MachineTypes[0].Architecture = ptr.To("amd64")
+				cloudProfileSpecNew.MachineTypes[0].Architecture = ptr.To("arm64")
 
 				gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
 
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64", "arm64"}))
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors[1].Capabilities["architecture"]).To(BeEquivalentTo([]string{"arm64"}))
-				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
-				Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
+				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("arm64")))
+				Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"arm64"}))
 			})
 
 			It("should not write to capabilities if they are already set", func() {
