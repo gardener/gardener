@@ -76,7 +76,7 @@ func RewriteEncryptedDataAddLabel(
 		message+" (Add label)",
 		encryptedGVKs...,
 	); err != nil {
-		return err
+		return fmt.Errorf("failed to rewrite encrypted data: %w", err)
 	}
 
 	// If we have hit this point then we have labeled all the resources successfully. Now we can mark this step as "completed"
@@ -172,7 +172,7 @@ func rewriteEncryptedData(
 				}
 
 				if err := c.Patch(ctx, &obj, patch); err != nil {
-					return fmt.Errorf("failed to patch object when rewriting encrypted data: %w", err)
+					return fmt.Errorf("failed to patch object: %w", err)
 				}
 
 				return nil
