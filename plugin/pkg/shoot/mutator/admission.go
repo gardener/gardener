@@ -9,6 +9,7 @@ import (
 	"io"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -57,10 +58,5 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 }
 
 func addCreatedByAnnotation(shoot *core.Shoot, userName string) {
-	annotations := shoot.Annotations
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
-	annotations[v1beta1constants.GardenCreatedBy] = userName
-	shoot.Annotations = annotations
+	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenCreatedBy, userName)
 }
