@@ -144,7 +144,7 @@ func (k *kubeAPIServer) reconcilePrometheusRule(ctx context.Context, prometheusR
 							"service":    "auditlog",
 							"severity":   "warning",
 							"type":       "seed",
-							"visibility": "operator",
+							"visibility": "all",
 						},
 						Annotations: map[string]string{
 							"summary":     "The kubernetes API server has too many failed attempts to log audit events",
