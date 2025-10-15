@@ -109,7 +109,8 @@ The `etcd-main-client` and `etcd-events-client` Services are topology-aware. The
 
 ##### kube-apiserver
 
-The `kube-apiserver` Service is topology-aware. It is consumed by the controllers running in the Shoot control plane.
+The `kube-apiserver` Service is topology-aware if the shoot uses layer 4 load-balancing. If it is using layer 7 load-balancing it is not. It is consumed by the controllers running in the Shoot control plane.  
+Layer 7 load-balancing is active when `IstioTLSTermination` feature gate is active on the Seed and the Shoot did not opt out. Please see this [documentation](./kube_apiserver_loadbalancing.md) for more details.
 
 > Note: The `istio-ingressgateway` component routes traffic in topology-aware manner - if possible, it routes traffic to the target `kube-apiserver` Pods in the same zone. If there is no healthy `kube-apiserver` Pod available in the same zone, the traffic is routed to any of the healthy Pods in the other zones. This behaviour is unconditionally enabled.
 
@@ -129,9 +130,8 @@ The `virtual-garden-etcd-main-client` and `virtual-garden-etcd-events-client` Se
 
 ##### virtual-garden-kube-apiserver
 
-The `virtual-garden-kube-apiserver` Service is topology-aware. It is consumed by `virtual-garden-kube-controller-manager`, `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, extension admission components, `gardener-dashboard` and other components.
-
-> Note: Unlike the other Services, the `virtual-garden-kube-apiserver` Service is of type LoadBalancer. In-cluster components consuming the `virtual-garden-kube-apiserver` Service by its Service name will have benefit from the topology-aware routing. However, the TopologyAwareHints feature cannot help with external traffic routed to load balancer's address - such traffic won't be routed in a topology-aware manner and will be routed according to the cloud-provider specific implementation.
+The `virtual-garden-kube-apiserver` Service is topology-aware if it uses layer 4 load-balancing. If it is using layer 7 load-balancing it is not. It is consumed by `virtual-garden-kube-controller-manager`, `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, extension admission components, `gardener-dashboard` and other components.
+Layer 7 load-balancing is active when `IstioTLSTermination` feature gate is active in `gardener-operator`. Please see this [documentation](./kube_apiserver_loadbalancing.md) for more details.
 
 ##### gardener-apiserver
 
