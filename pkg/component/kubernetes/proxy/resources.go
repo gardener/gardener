@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -79,7 +80,16 @@ var (
 	conntrackFixScript string
 	//go:embed resources/cleanup.sh
 	cleanupScript string
+
+	// constraintK8sGreaterEqual1330Less1336 is a version constraint for versions >= 1.33.0, < 1.33.6.
+	constraintK8sGreaterEqual1330Less1336 *semver.Constraints
 )
+
+func init() {
+	var err error
+	constraintK8sGreaterEqual1330Less1336, err = semver.NewConstraint(">= 1.33.0, < 1.33.6")
+	utilruntime.Must(err)
+}
 
 func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 	componentConfigRaw, err := k.getRawComponentConfig()
@@ -230,7 +240,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 							v1beta1constants.LabelWorkerPool:              pool.Name,
 							v1beta1constants.LabelWorkerKubernetesVersion: pool.KubernetesVersion.String(),
 						},
-						InitContainers:    k.getInitContainers(pool.Image),
+						InitContainers:    k.getInitContainers(pool.Image, pool.KubernetesVersion),
 						PriorityClassName: "system-node-critical",
 						SecurityContext: &corev1.PodSecurityContext{
 							SeccompProfile: &corev1.SeccompProfile{
@@ -250,7 +260,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 						HostNetwork:        true,
 						ServiceAccountName: k.serviceAccount.Name,
 						Containers: []corev1.Container{
-							k.getKubeProxyContainer(pool.Image, false),
+							k.getKubeProxyContainer(pool.Image, false, pool.KubernetesVersion),
 							{
 								// sidecar container with fix for conntrack
 								Name:            containerNameConntrackFix,
@@ -478,7 +488,7 @@ func (k *kubeProxy) getMode() kubeproxyconfigv1alpha1.ProxyMode {
 	return "iptables"
 }
 
-func (k *kubeProxy) getInitContainers(image string) []corev1.Container {
+func (k *kubeProxy) getInitContainers(image string, kubernetesVersion *semver.Version) []corev1.Container {
 	initContainers := []corev1.Container{
 		{
 			Name:            "cleanup",
@@ -527,21 +537,17 @@ func (k *kubeProxy) getInitContainers(image string) []corev1.Container {
 		},
 	}
 
-	initContainers = append(initContainers, k.getKubeProxyContainer(image, true))
+	initContainers = append(initContainers, k.getKubeProxyContainer(image, true, kubernetesVersion))
 
 	return initContainers
 }
 
-func (k *kubeProxy) getKubeProxyContainer(image string, init bool) corev1.Container {
+func (k *kubeProxy) getKubeProxyContainer(image string, init bool, kubernetesVersion *semver.Version) corev1.Container {
 	container := corev1.Container{
 		Name:            containerName,
 		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command: []string{
-			"/usr/local/bin/kube-proxy",
-			fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyConfig),
-			"--v=2",
-		},
+		Command:         k.computeCommand(init, kubernetesVersion),
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("20m"),
@@ -581,7 +587,6 @@ func (k *kubeProxy) getKubeProxyContainer(image string, init bool) corev1.Contai
 
 	if init {
 		container.Name += "-init"
-		container.Command = append(container.Command, "--init-only")
 		container.SecurityContext = &corev1.SecurityContext{
 			Privileged: ptr.To(true),
 		}
@@ -609,4 +614,28 @@ func (k *kubeProxy) getKubeProxyContainer(image string, init bool) corev1.Contai
 	}
 
 	return container
+}
+
+func (k *kubeProxy) computeCommand(init bool, kubernetesVersion *semver.Version) []string {
+	command := []string{
+		"/usr/local/bin/kube-proxy",
+		fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyConfig),
+	}
+
+	// kube-proxy versions in the range [1.33.0, 1.33.6) are affected by https://github.com/kubernetes/kubernetes/issues/132678.
+	// For a Service without endpoints, kube-proxy logs thousands log entries per second of type:
+	// "Ignoring same-zone topology hints for service since no hints were provided for zone"
+	// That's why we reduce the log verbosity level from --v=2 to --v=1 for the kube-proxy container
+	// when the kube-proxy version is in the range [1.33.0, 1.33.6).
+	if !init && constraintK8sGreaterEqual1330Less1336.Check(kubernetesVersion) {
+		command = append(command, "--v=1")
+	} else {
+		command = append(command, "--v=2")
+	}
+
+	if init {
+		command = append(command, "--init-only")
+	}
+
+	return command
 }
