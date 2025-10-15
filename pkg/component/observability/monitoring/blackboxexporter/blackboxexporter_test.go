@@ -9,6 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	blackboxexporterconfig "github.com/prometheus/blackbox_exporter/config"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,6 +55,9 @@ var _ = Describe("BlackboxExporter", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
+		monitoringManagedResource       *resourcesv1alpha1.ManagedResource
+		monitoringManagedResourceSecret *corev1.Secret
+
 		configMapName      = "blackbox-exporter-config-eb6ac772"
 		serviceAccountYAML string
 		configMapYAML      string
@@ -91,6 +96,19 @@ var _ = Describe("BlackboxExporter", func() {
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-" + managedResource.Name,
+				Namespace: namespace,
+			},
+		}
+
+		monitoringManagedResource = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceName + "-monitoring-resources",
+				Namespace: namespace,
+			},
+		}
+		monitoringManagedResourceSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "managedresource-" + monitoringManagedResource.Name,
 				Namespace: namespace,
 			},
 		}
@@ -395,6 +413,86 @@ status: {}
 					Expect(manifests).To(ContainElements(expectedManifests))
 				})
 			})
+
+			Context("with ScrapeConfigs and PrometheusRules", func() {
+				var (
+					monitoringManifests []string
+					scrapeConfigYAML    string
+					prometheusRuleYAML  string
+				)
+
+				BeforeEach(func() {
+					values.ScrapeConfigs = []*monitoringv1alpha1.ScrapeConfig{{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "foo",
+							Namespace: namespace,
+						},
+					}}
+					values.PrometheusRules = []*monitoringv1.PrometheusRule{{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "bar",
+							Namespace: namespace,
+						},
+					}}
+
+					scrapeConfigYAML = `apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  creationTimestamp: null
+  name: foo
+  namespace: ` + namespace + `
+spec: {}
+`
+
+					prometheusRuleYAML = `apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  creationTimestamp: null
+  name: bar
+  namespace: ` + namespace + `
+spec: {}
+`
+				})
+
+				JustBeforeEach(func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(monitoringManagedResource), monitoringManagedResource)).To(Succeed())
+					expectedMr := &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            monitoringManagedResource.Name,
+							Namespace:       monitoringManagedResource.Namespace,
+							ResourceVersion: "1",
+							Labels: map[string]string{
+								"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
+								"gardener.cloud/role":                "seed-system-component",
+							},
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							Class: ptr.To("seed"),
+							SecretRefs: []corev1.LocalObjectReference{{
+								Name: monitoringManagedResource.Spec.SecretRefs[0].Name,
+							}},
+							KeepObjects: ptr.To(false),
+						},
+					}
+					utilruntime.Must(references.InjectAnnotations(expectedMr))
+					Expect(monitoringManagedResource).To(DeepEqual(expectedMr))
+
+					monitoringManagedResourceSecret.Name = monitoringManagedResource.Spec.SecretRefs[0].Name
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(monitoringManagedResourceSecret), monitoringManagedResourceSecret)).To(Succeed())
+					Expect(monitoringManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+					Expect(monitoringManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+					Expect(monitoringManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+					var err error
+					monitoringManifests, err = test.ExtractManifestsFromManagedResourceData(monitoringManagedResourceSecret.Data)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should successfully deploy the resources", func() {
+					Expect(manifests).To(ContainElements(expectedManifests))
+					Expect(monitoringManifests).To(ContainElements(scrapeConfigYAML, prometheusRuleYAML))
+				})
+			})
 		})
 
 		Describe("#Destroy", func() {
@@ -405,10 +503,19 @@ status: {}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
+				Expect(c.Create(ctx, monitoringManagedResource)).To(Succeed())
+				Expect(c.Create(ctx, monitoringManagedResourceSecret)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(monitoringManagedResource), monitoringManagedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(monitoringManagedResourceSecret), monitoringManagedResourceSecret)).To(Succeed())
+
 				Expect(deployer.Destroy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(monitoringManagedResource), monitoringManagedResource)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(monitoringManagedResourceSecret), monitoringManagedResourceSecret)).To(BeNotFoundError())
 			})
 		})
 	})
