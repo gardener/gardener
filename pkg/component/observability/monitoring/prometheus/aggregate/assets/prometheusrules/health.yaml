@@ -9,15 +9,15 @@ spec:
         # Scrape jobs are down for a period of time
         - record: healthcheck
           expr: |2
-              up + (sum_over_time(up[4m] offset 1m) or up * 0) == 0
+              up{job!="shoot-prometheus"} + (sum_over_time(up[4m] offset 1m) or up * 0) == 0
             or
-              up * 0 + changes(up[10m]) > 4
+              up{job!="shoot-prometheus"} * 0 + changes(up[10m]) > 4
           labels:
             task: job:failing
 
         # No samples scraped
         - record: healthcheck
-          expr: scrape_samples_scraped == 0
+          expr: scrape_samples_scraped{job!="shoot-prometheus"} == 0
           labels:
             task: job:scrapes:empty
 
