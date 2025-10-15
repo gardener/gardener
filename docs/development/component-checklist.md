@@ -101,9 +101,9 @@ This document provides a checklist for them that you can walk through.
    You should restrict both ingress and egress traffic to/from your component as much as possible to ensure that it only gets access to/from other components if really needed.
    Gardener provides a few default policies for typical usage scenarios. For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../operations/network_policies.md).
 
-5. **Do not run containers in privileged mode** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L324-L328), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L501))
+5. **Do not run containers in privileged mode** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L324-L328), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L501), [example3](https://github.com/gardener/gardener/blob/v1.129.1/pkg/component/networking/istio/charts/istio/istio-istiod/templates/deployment.yaml#L132-L134))
 
-   Avoid running containers with `privileged=true`. Instead, define the needed [Linux capabilities](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container).
+   Avoid running containers with `privileged=true`. Instead, define the needed [Linux capabilities](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container). Configure `securityContext.capabilities` to `drop: ["ALL"]` and selectively add any capabilities if neccessary (e.g. `add: ["NET_BIND_SERVICE"]`).
 
 6. **Do not allow privilege escalation for containers** ([example](https://github.com/gardener/gardener/blob/84e7b436cc5d58efdefd768b8556abec0e3083b6/pkg/component/networking/coredns/coredns.go#L658))
 
