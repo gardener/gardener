@@ -101,17 +101,21 @@ func validateConfig() {
 }
 
 func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *applications.GuestBookTest) error {
+	ginkgo.By("Mark osc hash secret")
+	if err := shootmigration.MarkOSCSecret(ctx, t.SourceSeedClient.Client(), t.SeedShootNamespace); err != nil {
+		return err
+	}
+
+	if err := t.PopulateBeforeMigrationComparisonElements(ctx); err != nil {
+		return err
+	}
+
 	if t.Shoot.Status.IsHibernated {
 		return nil
 	}
 
 	if !v1beta1helper.NginxIngressEnabled(t.Shoot.Spec.Addons) {
 		return errors.New("the shoot must have the nginx-ingress addon enabled")
-	}
-
-	ginkgo.By("Mark osc hash secret")
-	if err := shootmigration.MarkOSCSecret(ctx, t.SourceSeedClient.Client(), t.SeedShootNamespace); err != nil {
-		return err
 	}
 
 	ginkgo.By("Create test Secret and Service Account")
@@ -128,7 +132,7 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 	guestBookApp.DeployGuestBookApp(ctx)
 	guestBookApp.Test(ctx)
 
-	return t.PopulateBeforeMigrationComparisonElements(ctx)
+	return nil
 }
 
 func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp applications.GuestBookTest) error {
