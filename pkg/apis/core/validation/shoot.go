@@ -75,6 +75,7 @@ var (
 		v1beta1constants.OperationRotateObservabilityCredentials,
 		v1beta1constants.ShootOperationRotateSSHKeypair,
 		v1beta1constants.OperationRotateRolloutWorkers,
+		v1beta1constants.OperationRolloutWorkers,
 	).Union(forbiddenShootOperationsWhenHibernated)
 	forbiddenShootOperationsWhenHibernated = sets.New(
 		v1beta1constants.OperationRotateCredentialsStart,
@@ -2915,11 +2916,11 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(operation) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", operation)))
 		}
-		if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
+		if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(availableShootOperations)))
 		}
 		if helper.IsShootInHibernation(shoot) &&
-			(forbiddenShootOperationsWhenHibernated.Has(operation) || strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers)) {
+			(forbiddenShootOperationsWhenHibernated.Has(operation) || strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers)) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
 		if !encryptedResources.Equal(sets.New(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer)...)) &&
@@ -2932,11 +2933,11 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(maintenanceOperation) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", maintenanceOperation)))
 		}
-		if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) {
+		if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, sets.List(availableShootMaintenanceOperations)))
 		}
 		if helper.IsShootInHibernation(shoot) &&
-			(forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers)) {
+			(forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRolloutWorkers)) {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
 		if !encryptedResources.Equal(sets.New(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer)...)) && forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(maintenanceOperation) {
@@ -3071,6 +3072,29 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 				return worker.Name == poolName
 			}) {
 				allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool name "+poolName+" does not exist in .spec.provider.workers[]"))
+			}
+		}
+	}
+
+	if strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers) {
+		poolNames := strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRolloutWorkers+"="), ",")
+		if len(poolNames) == 0 || sets.New(poolNames...).Has("") {
+			allErrs = append(allErrs, field.Required(fldPath, "must provide either '*' or at least one pool name via "+v1beta1constants.OperationRolloutWorkers+"=<poolName1>[,<poolName2>,...]"))
+		}
+
+		if len(poolNames) != 1 || poolNames[0] != "*" {
+			names := sets.New[string]()
+			for _, poolName := range poolNames {
+				if names.Has(poolName) {
+					allErrs = append(allErrs, field.Duplicate(fldPath, "pool name "+poolName+" was specified multiple times"))
+				}
+				names.Insert(poolName)
+
+				if !slices.ContainsFunc(shoot.Spec.Provider.Workers, func(worker core.Worker) bool {
+					return worker.Name == poolName
+				}) {
+					allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool name "+poolName+" does not exist in .spec.provider.workers[]"))
+				}
 			}
 		}
 	}
