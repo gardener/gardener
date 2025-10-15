@@ -27,6 +27,7 @@ gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --gardener-n
 ```
       --bootstrap-token string                   Bootstrap token for joining the cluster (create it with 'gardenadm token' on a control plane node)
       --ca-certificate bytesBase64               Base64-encoded certificate authority bundle of the control plane
+      --control-plane                            Create a new control plane instance on this node
       --gardener-node-agent-secret-name string   Name of the Secret from which gardener-node-agent should download its operating system configuration
   -h, --help                                     help for join
 ```
