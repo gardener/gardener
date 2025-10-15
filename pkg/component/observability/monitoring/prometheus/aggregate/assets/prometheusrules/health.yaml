@@ -10,19 +10,19 @@ spec:
         - record: health:meta:job:down
           labels:
             type: health:meta
-          expr: up == 0 == bool 0
+          expr: up{job!="shoot-prometheus"} == 0 == bool 0
 
         # Scrape jobs are down for a period of time
         - record: health:meta:job:failing
           labels:
             type: health:meta
-          expr: up + (sum_over_time(up[4m] offset 1m) or up * on () group_left() vector(0)) == 0 == bool 0
+          expr: up{job!="shoot-prometheus"} + (sum_over_time(up[4m] offset 1m) or up * on () group_left() vector(0)) == 0 == bool 0
 
         # No samples scraped
         - record: health:meta:job:scrapes:empty
           labels:
             type: health:meta
-          expr: scrape_samples_scraped == 0 == bool 0
+          expr: scrape_samples_scraped{job!="shoot-prometheus"} == 0 == bool 0
 
         # Federated metering metrics are absent
         - record: health:meta:federate:metering:absent

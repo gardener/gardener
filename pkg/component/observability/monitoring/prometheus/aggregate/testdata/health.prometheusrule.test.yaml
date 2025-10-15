@@ -80,6 +80,28 @@ tests:
           - labels: health:failing{namespace="garden", reason="federate:metering:absent", type="health"}
             value: 1
 
+  # The shoot-prometheus job should be ignored.
+  - input_series:
+      - series: up{job="foo"}
+        values: 1 0 0 0 0 0
+      - series: up{job="shoot-prometheus"}
+        values: 1 0 0 0 0 0
+    promql_expr_test:
+      - expr: health:meta:job:down
+        eval_time: 5m
+        exp_samples:
+          - labels: health:meta:job:down{job="foo", type="health:meta"}
+            value: 1
+
+  - input_series:
+      - series: up{job="shoot-prometheus"}
+        values: 1
+      - series: scrape_samples_scraped{job="shoot-prometheus"}
+        values: 0
+    promql_expr_test:
+      - expr: health:job:scrapes:empty
+        eval_time: 0m
+
   # Flapping
 
   # All test cases need 11 values for 10m evaluation (0m-10m inclusive)
