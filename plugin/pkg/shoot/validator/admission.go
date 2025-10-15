@@ -534,6 +534,10 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 		if oldDomain != newDomain {
 			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because internal domain would change from %q to %q", oldDomain, newDomain))
 		}
+
+		if err := c.validateDefaultDomainCompatibilityForRescheduling(oldSeed); err != nil {
+			return admission.NewForbidden(a, err)
+		}
 	} else if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
 		if wasShootRescheduledToNewSeed(c.shoot) {
 			return admission.NewForbidden(a, fmt.Errorf("shoot spec cannot be changed because shoot has been rescheduled to a new seed"))
@@ -2195,6 +2199,49 @@ func validateMaxNodesTotal(workers []core.Worker, maxNodesTotal int32) field.Err
 	}
 
 	return allErrs
+}
+
+func (c *validationContext) validateDefaultDomainCompatibilityForRescheduling(oldSeed *gardencorev1beta1.Seed) error {
+	if c.shoot.Spec.DNS == nil || c.shoot.Spec.DNS.Domain == nil {
+		return nil
+	}
+
+	var (
+		shootDomain       = *c.shoot.Spec.DNS.Domain
+		oldDefaultDomains = getDefaultDomainsForSeed(oldSeed)
+		usesDefaultDomain bool
+		usedDefaultDomain string
+	)
+
+	for _, defaultDomain := range oldDefaultDomains {
+		if strings.HasSuffix(shootDomain, "."+defaultDomain) {
+			usesDefaultDomain = true
+			usedDefaultDomain = defaultDomain
+			break
+		}
+	}
+
+	if !usesDefaultDomain {
+		return nil
+	}
+
+	newDefaultDomains := getDefaultDomainsForSeed(c.seed)
+
+	if slices.Contains(newDefaultDomains, usedDefaultDomain) {
+		return nil
+	}
+
+	return fmt.Errorf("cannot reschedule shoot %q to seed %q because the shoot uses the default domain %q which is not supported by the new seed (supported domains: %v)", c.shoot.Name, c.seed.Name, usedDefaultDomain, newDefaultDomains)
+}
+
+func getDefaultDomainsForSeed(seed *gardencorev1beta1.Seed) []string {
+	var defaultDomains []string
+
+	for _, seedDNSDefault := range seed.Spec.DNS.Defaults {
+		defaultDomains = append(defaultDomains, seedDNSDefault.Domain)
+	}
+
+	return defaultDomains
 }
 
 func addCreatedByAnnotation(shoot *core.Shoot, userName string) {

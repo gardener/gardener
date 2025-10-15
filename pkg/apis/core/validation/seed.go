@@ -233,27 +233,17 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	}
 
 	if internalDNS := seedSpec.DNS.Internal; internalDNS != nil {
-		dnsInternalFieldPath := fldPath.Child("dns", "internal")
-		if len(internalDNS.Domain) == 0 {
-			allErrs = append(allErrs, field.Required(dnsInternalFieldPath.Child("domain"), "cannot be empty"))
-		} else {
-			allErrs = append(allErrs, ValidateDNS1123Subdomain(internalDNS.Domain, dnsInternalFieldPath.Child("domain"))...)
-		}
+		allErrs = append(allErrs, validateSeedDNSProviderConfig(*internalDNS, fldPath.Child("dns", "internal"))...)
+	}
 
-		if len(internalDNS.Type) == 0 {
-			allErrs = append(allErrs, field.Required(dnsInternalFieldPath.Child("type"), "cannot be empty"))
-		}
+	defaultDomains := sets.New[string]()
+	for i, defaultDNS := range seedSpec.DNS.Defaults {
+		allErrs = append(allErrs, validateSeedDNSProviderConfig(defaultDNS, fldPath.Child("dns", "defaults").Index(i))...)
 
-		// TODO(dimityrmirchev): Add support for workload identity
-		if internalDNS.CredentialsRef.Kind != "Secret" || internalDNS.CredentialsRef.APIVersion != corev1.SchemeGroupVersion.String() {
-			allErrs = append(allErrs, field.Invalid(dnsInternalFieldPath.Child("credentialsRef"), internalDNS.CredentialsRef, "credentialsRef must reference a Secret"))
+		if defaultDomains.Has(defaultDNS.Domain) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Child("dns", "defaults").Index(i).Child("domain"), defaultDNS.Domain))
 		}
-		if len(internalDNS.CredentialsRef.Name) == 0 {
-			allErrs = append(allErrs, field.Required(dnsInternalFieldPath.Child("credentialsRef", "name"), "cannot be empty"))
-		}
-		if len(internalDNS.CredentialsRef.Namespace) == 0 {
-			allErrs = append(allErrs, field.Required(dnsInternalFieldPath.Child("credentialsRef", "namespace"), "cannot be empty"))
-		}
+		defaultDomains.Insert(defaultDNS.Domain)
 	}
 
 	allErrs = append(allErrs, validateExtensions(seedSpec.Extensions, fldPath.Child("extensions"))...)
@@ -357,8 +347,13 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 		}
 	}
 
+	// TODO(dimityrmirchev): Remove these checks once the dns.internal and dns.defaults become required
 	if oldSeedSpec.DNS.Internal != nil && newSeedSpec.DNS.Internal == nil {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("dns", "internal"), "removing internal DNS configuration is not allowed"))
+	}
+
+	if len(oldSeedSpec.DNS.Defaults) > 0 && len(newSeedSpec.DNS.Defaults) == 0 {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("dns", "defaults"), "removing defaults DNS configuration is not allowed"))
 	}
 
 	return allErrs
@@ -418,6 +413,31 @@ func validateSeedOperationUpdate(newOperation, oldOperation string, fldPath *fie
 	if newOperation != oldOperation {
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("must not overwrite operation %q with %q", oldOperation, newOperation)))
 	}
+
+	return allErrs
+}
+
+// validateSeedDNSProviderConfig validates a SeedDNSProviderConfig.
+func validateSeedDNSProviderConfig(dnsConfig core.SeedDNSProviderConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(dnsConfig.Domain) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("domain"), "cannot be empty"))
+	} else {
+		allErrs = append(allErrs, ValidateDNS1123Subdomain(dnsConfig.Domain, fldPath.Child("domain"))...)
+	}
+
+	if len(dnsConfig.Type) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "cannot be empty"))
+	}
+
+	// TODO(dimityrmirchev): Add support for workload identity
+	// remove this check once the support is added as ValidateCredentialsRef already does the necessary validation
+	if dnsConfig.CredentialsRef.Kind != "Secret" || dnsConfig.CredentialsRef.APIVersion != corev1.SchemeGroupVersion.String() {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("credentialsRef"), dnsConfig.CredentialsRef, "credentialsRef must reference a Secret"))
+	}
+
+	allErrs = append(allErrs, ValidateCredentialsRef(dnsConfig.CredentialsRef, fldPath.Child("credentialsRef"))...)
 
 	return allErrs
 }

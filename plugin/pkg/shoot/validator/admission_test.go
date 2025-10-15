@@ -6520,6 +6520,182 @@ var _ = Describe("validator", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 				})
+
+				Context("default domain validation", func() {
+					It("should allow rescheduling when shoot doesn't use a default domain", func() {
+						oldShoot.Spec.DNS = &core.DNS{
+							Domain: ptr.To("custom.example.org"),
+						}
+						shoot.Spec.DNS = &core.DNS{
+							Domain: ptr.To("custom.example.org"),
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should allow rescheduling when both seeds support the same default domain", func() {
+						var (
+							defaultDomain = "default.example.com"
+							shootDomain   = "shoot.project." + defaultDomain
+						)
+						oldShoot.Spec.DNS = &core.DNS{
+							Domain: ptr.To(shootDomain),
+						}
+						shoot.Spec.DNS = &core.DNS{
+							Domain: ptr.To(shootDomain),
+						}
+
+						seed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+							{
+								Type:   "aws-route53",
+								Domain: defaultDomain,
+								CredentialsRef: corev1.ObjectReference{
+									Name:      "default-domain-secret",
+									Namespace: "garden",
+								},
+							},
+						}
+						newSeed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+							{
+								Type:   "aws-route53",
+								Domain: defaultDomain,
+								CredentialsRef: corev1.ObjectReference{
+									Name:      "default-domain-secret",
+									Namespace: "garden",
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should reject rescheduling when new seed doesn't support the default domain", func() {
+						var (
+							defaultDomain = "default.example.com"
+							shootDomain   = "shoot.project." + defaultDomain
+						)
+						oldShoot.Spec.DNS = &core.DNS{
+							Domain: ptr.To(shootDomain),
+						}
+						shoot.Spec.DNS = &core.DNS{
+							Domain: ptr.To(shootDomain),
+						}
+
+						seed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+							{
+								Type:   "aws-route53",
+								Domain: defaultDomain,
+								CredentialsRef: corev1.ObjectReference{
+									Name:      "default-domain-secret",
+									Namespace: "garden",
+								},
+							},
+						}
+
+						newSeed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+							{
+								Type:   "aws-route53",
+								Domain: "other.example.com",
+								CredentialsRef: corev1.ObjectReference{
+									Name:      "other-domain-secret",
+									Namespace: "garden",
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring(`cannot reschedule shoot "shoot" to seed "new-seed" because the shoot uses the default domain "default.example.com" which is not supported by the new seed (supported domains: [other.example.com]`))
+					})
+
+					It("should reject rescheduling when new seed has no default domains configured", func() {
+						var (
+							defaultDomain = "default.example.com"
+							shootDomain   = "shoot.project." + defaultDomain
+						)
+						oldShoot.Spec.DNS = &core.DNS{
+							Domain: ptr.To(shootDomain),
+						}
+						shoot.Spec.DNS = &core.DNS{
+							Domain: ptr.To(shootDomain),
+						}
+
+						seed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+							{
+								Type:   "aws-route53",
+								Domain: defaultDomain,
+								CredentialsRef: corev1.ObjectReference{
+									Name:      "default-domain-secret",
+									Namespace: "garden",
+								},
+							},
+						}
+
+						newSeed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{}
+
+						attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring(`cannot reschedule shoot "shoot" to seed "new-seed" because the shoot uses the default domain "default.example.com" which is not supported by the new seed (supported domains: []`))
+					})
+
+					It("should allow rescheduling when new seed supports multiple default domains including the one used by shoot", func() {
+						var (
+							defaultDomain = "default.example.com"
+							shootDomain   = "shoot.project." + defaultDomain
+						)
+						oldShoot.Spec.DNS = &core.DNS{
+							Domain: ptr.To(shootDomain),
+						}
+						shoot.Spec.DNS = &core.DNS{
+							Domain: ptr.To(shootDomain),
+						}
+
+						seed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+							{
+								Type:   "aws-route53",
+								Domain: defaultDomain,
+								CredentialsRef: corev1.ObjectReference{
+									Name:      "default-domain-secret",
+									Namespace: "garden",
+								},
+							},
+						}
+
+						newSeed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
+							{
+								Type:   "aws-route53",
+								Domain: "other.example.com",
+								CredentialsRef: corev1.ObjectReference{
+									Name:      "other-domain-secret",
+									Namespace: "garden",
+								},
+							},
+							{
+								Type:   "aws-route53",
+								Domain: defaultDomain,
+								CredentialsRef: corev1.ObjectReference{
+									Name:      "default-domain-secret",
+									Namespace: "garden",
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+					})
+				})
 			})
 
 			Context("taints and tolerations", func() {

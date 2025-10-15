@@ -87,6 +87,15 @@ config:
         #     namespace: garden
         #   type: local
         #   domain: internal.local.gardener.cloud
+        # TODO(dimityrmirchev): uncomment after 1.133 release
+        # defaults:
+        # - credentialsRef:
+        #     apiVersion: v1
+        #     kind: Secret
+        #     name: default-domain-external-local-gardener-cloud
+        #     namespace: garden
+        #   type: local
+        #   domain: external.local.gardener.cloud
       extensions:
       - type: local-ext-seed
       ingress:

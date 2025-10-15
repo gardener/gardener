@@ -7,6 +7,8 @@ package gardener
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -36,35 +38,6 @@ type Domain struct {
 	Provider   string
 	Zone       string
 	SecretData map[string][]byte
-}
-
-// GetDefaultDomains finds all the default domain secrets within the given map and returns a list of
-// objects that contains all relevant information about the default domains.
-func GetDefaultDomains(secrets map[string]*corev1.Secret) ([]*Domain, error) {
-	var defaultDomains []*Domain
-
-	for key, secret := range secrets {
-		if strings.HasPrefix(key, v1beta1constants.GardenRoleDefaultDomain) {
-			domain, err := constructDomainFromSecret(secret)
-			if err != nil {
-				return nil, fmt.Errorf("error getting information out of default domain secret: %+v", err)
-			}
-			defaultDomains = append(defaultDomains, domain)
-		}
-	}
-
-	return defaultDomains, nil
-}
-
-// GetInternalDomain finds the internal domain secret within the given map and returns the object
-// that contains all relevant information about the internal domain.
-func GetInternalDomain(secrets map[string]*corev1.Secret) (*Domain, error) {
-	internalDomainSecret, ok := secrets[v1beta1constants.GardenRoleInternalDomain]
-	if !ok {
-		return nil, nil
-	}
-
-	return constructDomainFromSecret(internalDomainSecret)
 }
 
 func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
@@ -135,6 +108,109 @@ func ReadGardenInternalDomain(
 	return domain, nil
 }
 
+// ReadGardenDefaultDomains reads the default domain information from the Garden cluster.
+func ReadGardenDefaultDomains(
+	ctx context.Context,
+	c client.Reader,
+	namespace string,
+	seedDNSDefaults []gardencorev1beta1.SeedDNSProviderConfig,
+) (
+	[]*Domain,
+	error,
+) {
+	var domains []*Domain
+
+	if len(seedDNSDefaults) > 0 {
+		for _, seedDNSDefault := range seedDNSDefaults {
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      seedDNSDefault.CredentialsRef.Name,
+				Namespace: seedDNSDefault.CredentialsRef.Namespace,
+			}}
+
+			if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+				return nil, fmt.Errorf("cannot fetch default domain secret %s: %w", client.ObjectKeyFromObject(secret), err)
+			}
+
+			domain := &Domain{
+				Domain:     seedDNSDefault.Domain,
+				Provider:   seedDNSDefault.Type,
+				Zone:       ptr.Deref(seedDNSDefault.Zone, ""),
+				SecretData: secret.Data,
+			}
+			domains = append(domains, domain)
+		}
+
+		return domains, nil
+	}
+
+	// Fall back to reading default domain secrets from the namespace
+	secrets, err := ReadGardenDefaultDomainsSecrets(ctx, c, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, secret := range secrets {
+		domain, err := constructDomainFromSecret(&secret)
+		if err != nil {
+			return nil, fmt.Errorf("error constructing default domain from secret %s: %w", client.ObjectKeyFromObject(&secret), err)
+		}
+		domains = append(domains, domain)
+	}
+
+	return domains, nil
+}
+
+// ReadGardenDefaultDomainsSecrets reads the default domain secrets from the given namespace.
+// This function makes sense only if no default domains are configured in the seed spec.
+// The passed reader should target the garden cluster.
+//
+// Deprecated: Use ReadGardenDefaultDomains instead.
+func ReadGardenDefaultDomainsSecrets(
+	ctx context.Context,
+	c client.Reader,
+	namespace string,
+) (
+	[]corev1.Secret,
+	error,
+) {
+	// TODO(dimityrmirchev): Remove this function once explicit DNS configuration becomes mandatory after release v1.133
+	secretList := &corev1.SecretList{}
+	if err := c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
+	}); err != nil {
+		return nil, err
+	}
+
+	// Sort domain secrets by DNSDefaultDomainPriority to get the domain with the highest priority first
+	sort.SliceStable(secretList.Items, func(i, j int) bool {
+		iAnnotations := secretList.Items[i].GetAnnotations()
+		jAnnotations := secretList.Items[j].GetAnnotations()
+		var iPriority, jPriority int
+		var err error
+
+		if iAnnotations != nil {
+			if domainPriority, ok := iAnnotations[DNSDefaultDomainPriority]; ok {
+				iPriority, err = strconv.Atoi(domainPriority)
+				if err != nil {
+					iPriority = 0
+				}
+			}
+		}
+		if jAnnotations != nil {
+			if domainPriority, ok := jAnnotations[DNSDefaultDomainPriority]; ok {
+				jPriority, err = strconv.Atoi(domainPriority)
+				if err != nil {
+					jPriority = 0
+				}
+			}
+		}
+
+		return iPriority > jPriority
+	})
+
+	return secretList.Items, nil
+}
+
 // ReadInternalDomainSecret reads the internal domain secret from the given namespace.
 // If enforceSecret is true, an error is returned if no secret is found.
 // If enforceSecret is false, the function can return (nil, nil) in case no internal domain secret is found.
@@ -193,20 +269,6 @@ func ReadGardenSecrets(
 	}
 
 	for _, secret := range secretList.Items {
-		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
-		// a label indicating the Garden role default-domain.
-		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
-			_, domain, _, err := GetDomainInfoFromAnnotations(secret.Annotations)
-			if err != nil {
-				log.Error(err, "Error getting information out of default domain secret", "secret", client.ObjectKeyFromObject(&secret))
-				continue
-			}
-
-			defaultDomainSecret := secret
-			secretsMap[fmt.Sprintf("%s-%s", v1beta1constants.GardenRoleDefaultDomain, domain)] = &defaultDomainSecret
-			logInfo = append(logInfo, fmt.Sprintf("default domain secret %q for domain %q", secret.Name, domain))
-		}
-
 		// Retrieve the alerting secret to configure alerting. Either in cluster email alerting or
 		// external alertmanager configuration.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleAlerting {

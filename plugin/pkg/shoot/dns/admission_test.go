@@ -462,6 +462,39 @@ var _ = Describe("dns", func() {
 				))
 			})
 
+			It("should pass because a default domain was generated for the shoot (no domain) and seed has explicit default dns configuration", func() {
+				overwriteSecret := corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "secret-overwrite",
+						Namespace: v1beta1constants.GardenNamespace,
+					},
+				}
+				seed.Spec.DNS = gardencorev1beta1.SeedDNS{
+					Defaults: []gardencorev1beta1.SeedDNSProviderConfig{
+						{
+							Type:   "foo",
+							Domain: "overwrite.example.com",
+							CredentialsRef: corev1.ObjectReference{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       overwriteSecret.Name,
+								Namespace:  overwriteSecret.Namespace,
+							},
+						},
+					},
+				}
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&overwriteSecret)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.DNS.Providers).To(BeNil())
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, "overwrite.example.com")))
+			})
+
 			It("should pass because a default domain was generated for the shoot (no domain)", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -793,11 +826,11 @@ var _ = Describe("dns", func() {
 		Context("Shoot Control Plane Migration", func() {
 			var (
 				destinationSeedName = "my-seed-2"
-				destinationSeed     core.Seed
+				destinationSeed     gardencorev1beta1.Seed
 			)
 
 			BeforeEach(func() {
-				destinationSeed = core.Seed{
+				destinationSeed = gardencorev1beta1.Seed{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: destinationSeedName,
 					},

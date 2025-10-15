@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -66,21 +65,9 @@ func (b *Builder) WithInternalDomain(internalDomain *gardenerutils.Domain) *Buil
 	return b
 }
 
-// WithInternalDomainFromSecrets sets the internalDomainFunc attribute at the Builder based on the given secrets map.
-func (b *Builder) WithInternalDomainFromSecrets(secrets map[string]*corev1.Secret) *Builder {
-	b.internalDomainFunc = func() (*gardenerutils.Domain, error) { return gardenerutils.GetInternalDomain(secrets) }
-	return b
-}
-
 // WithDefaultDomains sets the defaultDomainsFunc attribute at the Builder.
 func (b *Builder) WithDefaultDomains(defaultDomains []*gardenerutils.Domain) *Builder {
 	b.defaultDomainsFunc = func() ([]*gardenerutils.Domain, error) { return defaultDomains, nil }
-	return b
-}
-
-// WithDefaultDomainsFromSecrets sets the defaultDomainsFunc attribute at the Builder based on the given secrets map.
-func (b *Builder) WithDefaultDomainsFromSecrets(secrets map[string]*corev1.Secret) *Builder {
-	b.defaultDomainsFunc = func() ([]*gardenerutils.Domain, error) { return gardenerutils.GetDefaultDomains(secrets) }
 	return b
 }
 

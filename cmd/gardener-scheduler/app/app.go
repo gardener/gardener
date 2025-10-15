@@ -29,6 +29,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
+	"github.com/gardener/gardener/pkg/api/indexer"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
@@ -130,6 +131,11 @@ func run(ctx context.Context, log logr.Logger, cfg *schedulerconfigv1alpha1.Sche
 		return err
 	}
 
+	log.Info("Adding field indexes to informers")
+	if err := addAllFieldIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
+		return fmt.Errorf("failed adding indexes: %w", err)
+	}
+
 	log.Info("Adding controllers to manager")
 	if err := controller.AddToManager(mgr, cfg); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
@@ -137,4 +143,17 @@ func run(ctx context.Context, log logr.Logger, cfg *schedulerconfigv1alpha1.Sche
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		// core API group
+		indexer.AddProjectNamespace,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

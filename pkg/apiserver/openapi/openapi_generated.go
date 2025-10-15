@@ -7836,6 +7836,20 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig"),
 						},
 					},
+					"defaults": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Defaults configures DNS settings related to seed default domains. When determining the DNS settings for a Shoot, the first matching entry in this list will take precedence.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProviderConfig"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

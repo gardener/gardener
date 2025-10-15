@@ -55,6 +55,7 @@ type ManagedSeed struct {
 	*admission.Handler
 
 	shootLister              gardencorev1beta1listers.ShootLister
+	seedLister               gardencorev1beta1listers.SeedLister
 	secretBindingLister      gardencorev1beta1listers.SecretBindingLister
 	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister
 	secretLister             kubecorev1listers.SecretLister
@@ -91,10 +92,13 @@ func (v *ManagedSeed) SetCoreInformerFactory(f gardencoreinformers.SharedInforme
 	shootInformer := f.Core().V1beta1().Shoots()
 	v.shootLister = shootInformer.Lister()
 
+	seedInformer := f.Core().V1beta1().Seeds()
+	v.seedLister = seedInformer.Lister()
+
 	secretBindingInformer := f.Core().V1beta1().SecretBindings()
 	v.secretBindingLister = secretBindingInformer.Lister()
 
-	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, seedInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced)
 }
 
 // SetSecurityInformerFactory gets Lister from SharedInformerFactory.
@@ -127,6 +131,9 @@ func (v *ManagedSeed) SetSeedManagementClientSet(c seedmanagementclientset.Inter
 func (v *ManagedSeed) ValidateInitialization() error {
 	if v.shootLister == nil {
 		return errors.New("missing shoot lister")
+	}
+	if v.seedLister == nil {
+		return errors.New("missing seed lister")
 	}
 	if v.secretBindingLister == nil {
 		return errors.New("missing secret binding lister")
@@ -290,6 +297,7 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 		seedConfigSpecBasePath  = field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec")
 		zonesFieldPath          = seedConfigSpecBasePath.Child("provider", "zones")
 		internalDomainFieldPath = seedConfigSpecBasePath.Child("dns", "internal", "domain")
+		defaultDomainsFieldPath = seedConfigSpecBasePath.Child("dns", "defaults")
 	)
 
 	oldSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(oldManagedSeed)
@@ -307,6 +315,10 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 
 	if err := admissionutils.ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
 		allErrs = append(allErrs, field.Forbidden(internalDomainFieldPath, "internal domain must not be changed while shoots are still scheduled onto seed"))
+	}
+
+	if err := admissionutils.ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, v.secretLister, "ManagedSeed"); err != nil {
+		allErrs = append(allErrs, field.Forbidden(defaultDomainsFieldPath, "default domains must not be removed while shoots are still using them"))
 	}
 
 	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)
@@ -526,6 +538,31 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 }
 
 func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta1.Shoot) (*gardencore.SeedDNSProvider, error) {
+	if shoot.Spec.SeedName != nil {
+		seed, err := v.seedLister.Get(*shoot.Spec.SeedName)
+		if err != nil {
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not get seed %s: %v", *shoot.Spec.SeedName, err))
+		}
+
+		// TODO(dimityrmirchev): Remove the check after v1.133 release
+		if len(seed.Spec.DNS.Defaults) > 0 {
+			for _, seedDNSDefault := range seed.Spec.DNS.Defaults {
+				if strings.HasSuffix(*shoot.Spec.DNS.Domain, "."+seedDNSDefault.Domain) {
+					// TODO(dimityrmirchev): Handle reference of kind WorkloadIdentity
+					return &gardencore.SeedDNSProvider{
+						Type: seedDNSDefault.Type,
+						SecretRef: corev1.SecretReference{
+							Name:      seedDNSDefault.CredentialsRef.Name,
+							Namespace: seedDNSDefault.CredentialsRef.Namespace,
+						},
+					}, nil
+				}
+			}
+
+			return nil, nil
+		}
+	}
+
 	// Get all default domain secrets in the garden namespace
 	defaultDomainSecrets, err := v.secretLister.Secrets(v1beta1constants.GardenNamespace).List(labels.SelectorFromValidatedSet(map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,

@@ -138,7 +138,7 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 		return apierrors.NewBadRequest("could not convert resource into Shoot object")
 	}
 
-	defaultDomains, err := getDefaultDomains(d.secretLister)
+	defaultDomains, err := getDefaultDomains(d.secretLister, d.seedLister, shoot)
 	if err != nil {
 		return fmt.Errorf("error retrieving default domains: %s", err)
 	}
@@ -294,11 +294,6 @@ func setPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultDom
 // and sets it in the shoot resource in the `spec.dns.domain` field.
 // If for any reason no domain can be generated, no domain is assigned to the Shoot.
 func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister gardencorev1beta1listers.ProjectLister, defaultDomains []string) error {
-	project, err := admissionutils.ProjectForNamespaceFromLister(projectLister, shoot.Namespace)
-	if err != nil {
-		return apierrors.NewInternalError(err)
-	}
-
 	if shoot.Spec.DNS == nil {
 		shoot.Spec.DNS = &core.DNS{}
 	}
@@ -308,10 +303,16 @@ func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister gardencorev1be
 		shootDNSName := shoot.Name
 
 		if len(shoot.Name) == 0 && len(shoot.GenerateName) > 0 {
+			var err error
 			shootDNSName, err = utils.GenerateRandomStringFromCharset(len(shoot.GenerateName)+5, "0123456789abcdefghijklmnopqrstuvwxyz")
 			if err != nil {
 				return apierrors.NewInternalError(err)
 			}
+		}
+
+		project, err := admissionutils.ProjectForNamespaceFromLister(projectLister, shoot.Namespace)
+		if err != nil {
+			return apierrors.NewInternalError(err)
 		}
 		generatedDomain := fmt.Sprintf("%s.%s.%s", shootDNSName, project.Name, domain)
 		shoot.Spec.DNS.Domain = &generatedDomain
@@ -352,7 +353,24 @@ func checkDefaultDomainFormat(a admission.Attributes, shoot *core.Shoot, project
 	return nil
 }
 
-func getDefaultDomains(secretLister kubecorev1listers.SecretLister) ([]string, error) {
+func getDefaultDomains(secretLister kubecorev1listers.SecretLister, seedLister gardencorev1beta1listers.SeedLister, shoot *core.Shoot) ([]string, error) {
+	var defaultDomains []string
+
+	if shoot.Spec.SeedName != nil {
+		seed, err := seedLister.Get(*shoot.Spec.SeedName)
+		if err != nil {
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not get seed %s: %v", *shoot.Spec.SeedName, err))
+		}
+
+		// If seed has DNS defaults configured, use those instead of the global defaults
+		if len(seed.Spec.DNS.Defaults) > 0 {
+			for _, seedDNSDefault := range seed.Spec.DNS.Defaults {
+				defaultDomains = append(defaultDomains, seedDNSDefault.Domain)
+			}
+			return defaultDomains, nil
+		}
+	}
+
 	selector, err := labels.Parse(fmt.Sprintf("%s=%s", v1beta1constants.GardenRole, v1beta1constants.GardenRoleDefaultDomain))
 	if err != nil {
 		return nil, apierrors.NewInternalError(err)
@@ -386,7 +404,6 @@ func getDefaultDomains(secretLister kubecorev1listers.SecretLister) ([]string, e
 		return iPriority > jPriority
 	})
 
-	var defaultDomains []string
 	for _, domainSecret := range domainSecrets {
 		_, domain, _, err := gardenerutils.GetDomainInfoFromAnnotations(domainSecret.GetAnnotations())
 		if err != nil {

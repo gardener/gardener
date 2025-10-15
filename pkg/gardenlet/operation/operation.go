@@ -6,6 +6,7 @@ package operation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"regexp"
@@ -44,31 +45,34 @@ func NewBuilder() *Builder {
 			return clock.RealClock{}
 		},
 		configFunc: func() (*gardenletconfigv1alpha1.GardenletConfiguration, error) {
-			return nil, fmt.Errorf("config is required but not set")
+			return nil, errors.New("config is required but not set")
 		},
-		gardenFunc: func(context.Context, map[string]*corev1.Secret, *gardenerutils.Domain) (*garden.Garden, error) {
-			return nil, fmt.Errorf("garden object is required but not set")
+		gardenFunc: func(context.Context, *gardenerutils.Domain, []*gardenerutils.Domain) (*garden.Garden, error) {
+			return nil, errors.New("garden object is required but not set")
 		},
 		gardenerInfoFunc: func() (*gardencorev1beta1.Gardener, error) {
-			return nil, fmt.Errorf("gardener info is required but not set")
+			return nil, errors.New("gardener info is required but not set")
 		},
 		gardenClusterIdentityFunc: func() (string, error) {
-			return "", fmt.Errorf("garden cluster identity is required but not set")
+			return "", errors.New("garden cluster identity is required but not set")
 		},
 		loggerFunc: func() (logr.Logger, error) {
-			return logr.Discard(), fmt.Errorf("logger is required but not set")
+			return logr.Discard(), errors.New("logger is required but not set")
 		},
 		secretsFunc: func() (map[string]*corev1.Secret, error) {
-			return nil, fmt.Errorf("secrets map is required but not set")
+			return nil, errors.New("secrets map is required but not set")
 		},
 		internalDomainFunc: func() (*gardenerutils.Domain, error) {
-			return nil, fmt.Errorf("internal domain is required but not set")
+			return nil, errors.New("internal domain is required but not set")
+		},
+		defaultDomainsFunc: func() ([]*gardenerutils.Domain, error) {
+			return nil, errors.New("default domains are required but not set")
 		},
 		seedFunc: func(context.Context) (*seed.Seed, error) {
-			return nil, fmt.Errorf("seed object is required but not set")
+			return nil, errors.New("seed object is required but not set")
 		},
 		shootFunc: func(context.Context, client.Reader, *garden.Garden, *seed.Seed, *corev1.Secret) (*shootpkg.Shoot, error) {
-			return nil, fmt.Errorf("shoot object is required but not set")
+			return nil, errors.New("shoot object is required but not set")
 		},
 	}
 }
@@ -81,7 +85,7 @@ func (b *Builder) WithConfig(cfg *gardenletconfigv1alpha1.GardenletConfiguration
 
 // WithGarden sets the gardenFunc attribute at the Builder.
 func (b *Builder) WithGarden(g *garden.Garden) *Builder {
-	b.gardenFunc = func(context.Context, map[string]*corev1.Secret, *gardenerutils.Domain) (*garden.Garden, error) {
+	b.gardenFunc = func(context.Context, *gardenerutils.Domain, []*gardenerutils.Domain) (*garden.Garden, error) {
 		return g, nil
 	}
 	return b
@@ -89,12 +93,12 @@ func (b *Builder) WithGarden(g *garden.Garden) *Builder {
 
 // WithGardenFrom sets the gardenFunc attribute at the Builder which will build a new Garden object.
 func (b *Builder) WithGardenFrom(reader client.Reader, namespace string) *Builder {
-	b.gardenFunc = func(ctx context.Context, secrets map[string]*corev1.Secret, internalDomain *gardenerutils.Domain) (*garden.Garden, error) {
+	b.gardenFunc = func(ctx context.Context, internalDomain *gardenerutils.Domain, defaultDomains []*gardenerutils.Domain) (*garden.Garden, error) {
 		return garden.
 			NewBuilder().
 			WithProjectFrom(reader, namespace).
 			WithInternalDomain(internalDomain).
-			WithDefaultDomainsFromSecrets(secrets).
+			WithDefaultDomains(defaultDomains).
 			Build(ctx)
 	}
 	return b
@@ -127,6 +131,12 @@ func (b *Builder) WithSecrets(secrets map[string]*corev1.Secret) *Builder {
 // WithInternalDomain sets the internalDomainFunc attribute at the Builder.
 func (b *Builder) WithInternalDomain(domain *gardenerutils.Domain) *Builder {
 	b.internalDomainFunc = func() (*gardenerutils.Domain, error) { return domain, nil }
+	return b
+}
+
+// WithDefaultDomains sets the defaultDomainsFunc attribute at the Builder.
+func (b *Builder) WithDefaultDomains(domains []*gardenerutils.Domain) *Builder {
+	b.defaultDomainsFunc = func() ([]*gardenerutils.Domain, error) { return domains, nil }
 	return b
 }
 
@@ -226,7 +236,12 @@ func (b *Builder) Build(
 		return nil, err
 	}
 
-	garden, err := b.gardenFunc(ctx, secrets, internalDomain)
+	defaultDomains, err := b.defaultDomainsFunc()
+	if err != nil {
+		return nil, err
+	}
+
+	garden, err := b.gardenFunc(ctx, internalDomain, defaultDomains)
 	if err != nil {
 		return nil, err
 	}

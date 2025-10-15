@@ -142,6 +142,10 @@ func (r *Reconciler) DetermineSeed(
 	if err != nil {
 		return nil, err
 	}
+	project, err := gardenerutils.ProjectForNamespaceFromReader(ctx, r.Client, shoot.Namespace)
+	if err != nil {
+		return nil, err
+	}
 
 	filteredSeeds, err := filterUsableSeeds(seedList.Items)
 	if err != nil {
@@ -164,6 +168,10 @@ func (r *Reconciler) DetermineSeed(
 		return nil, err
 	}
 	filteredSeeds, err = filterSeedsForAccessRestrictions(filteredSeeds, shoot)
+	if err != nil {
+		return nil, err
+	}
+	filteredSeeds, err = filterSeedsMatchingDomain(filteredSeeds, shoot, project.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -316,6 +324,46 @@ func filterSeedsWithDisabledShootReconciliations(seedList []gardencorev1beta1.Se
 		return nil, fmt.Errorf("none of the %d seeds have enabled shoot reconciliations currently", len(seedList))
 	}
 	return seedsWithEnabledReconciliations, nil
+}
+
+// filterSeedsMatchingDomain filters seeds that can support the shoot's domain configuration.
+// If the shoot uses a default domain, only seeds that have that domain configured in their DNS defaults are selected.
+// If the shoot uses a custom domain, all seeds are accepted.
+func filterSeedsMatchingDomain(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, projectName string) ([]gardencorev1beta1.Seed, error) {
+	// If the shoot doesn't have a domain specified, all seeds are eligible
+	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
+		return seedList, nil
+	}
+
+	var (
+		shootDomain              = *shoot.Spec.DNS.Domain
+		supportingSeeds          []gardencorev1beta1.Seed
+		hasMatchedGardenerDomain bool
+	)
+
+	for _, seed := range seedList {
+		for _, defaultDomain := range seed.Spec.DNS.Defaults {
+			// if the domain matches a seed domain then we only accept it, if it is in a <name>.<project>.<domain> format
+			if strings.HasSuffix(shootDomain, "."+defaultDomain.Domain) {
+				hasMatchedGardenerDomain = true
+				if shootDomain == fmt.Sprintf("%s.%s.%s", shoot.Name, projectName, defaultDomain.Domain) {
+					supportingSeeds = append(supportingSeeds, seed)
+					break
+				}
+			}
+		}
+	}
+
+	if hasMatchedGardenerDomain {
+		if len(supportingSeeds) == 0 {
+			return nil, fmt.Errorf("none of the %d seeds support the domain %q configured in the shoot specification", len(seedList), shootDomain)
+		}
+		return supportingSeeds, nil
+	}
+
+	// we have not matched a gardener managed domain
+	// all seeds are eligible
+	return seedList, nil
 }
 
 func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy schedulerconfigv1alpha1.CandidateDeterminationStrategy, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
