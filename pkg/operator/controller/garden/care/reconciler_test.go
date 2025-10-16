@@ -27,6 +27,7 @@ import (
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -202,7 +203,7 @@ func (c resultingConditionFunc) Check(_ context.Context, conditions GardenCondit
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(*operatorv1alpha1.Garden, client.Client, kubernetes.Interface, clock.Clock, map[gardencorev1beta1.ConditionType]time.Duration, string) HealthCheck {
+	return func(*operatorv1alpha1.Garden, client.Client, kubernetes.Interface, clock.Clock, map[gardencorev1beta1.ConditionType]time.Duration, string, *checker.HealthChecker) HealthCheck {
 		return fn
 	}
 }
