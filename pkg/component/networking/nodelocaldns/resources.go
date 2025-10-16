@@ -369,6 +369,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 							ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
 							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							MinAllowed:       n.values.MinAllowed,
 						}},
 					},
 				},

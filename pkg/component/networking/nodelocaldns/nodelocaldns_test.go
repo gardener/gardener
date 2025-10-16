@@ -600,7 +600,15 @@ status:
 				}
 				return daemonset
 			}
-			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
+			vpaYAML = func(minAllowed bool) string {
+				minAllowedConfig := ""
+				if minAllowed {
+					minAllowedConfig = `
+      minAllowed:
+        cpu: 100m
+        memory: 100Mi`
+				}
+				vpa := `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -610,7 +618,7 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
-      controlledValues: RequestsOnly
+      controlledValues: RequestsOnly` + minAllowedConfig + `
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet
@@ -619,6 +627,8 @@ spec:
     updateMode: Recreate
 status: {}
 `
+				return vpa
+			}
 		)
 
 		JustBeforeEach(func() {
@@ -767,7 +777,7 @@ ip6.arpa:53 {
 						})
 
 						It("should successfully deploy all resources", func() {
-							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML(false))
 							Expect(manifests).To(ContainElements(expectedManifests))
 
 							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
@@ -813,7 +823,7 @@ ip6.arpa:53 {
 						})
 
 						It("should successfully deploy all resources", func() {
-							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML(false))
 							Expect(manifests).To(ContainElements(expectedManifests))
 
 							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
@@ -858,7 +868,7 @@ ip6.arpa:53 {
 						})
 
 						It("should successfully deploy all resources", func() {
-							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML(false))
 							Expect(manifests).To(ContainElements(expectedManifests))
 
 							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
@@ -903,7 +913,7 @@ ip6.arpa:53 {
 						})
 
 						It("should successfully deploy all resources", func() {
-							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML(false))
 							Expect(manifests).To(ContainElements(expectedManifests))
 
 							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
@@ -1040,7 +1050,7 @@ ip6.arpa:53 {
 						})
 
 						It("should successfully deploy all resources", func() {
-							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML(false))
 							Expect(manifests).To(ContainElements(expectedManifests))
 
 							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
@@ -1086,7 +1096,7 @@ ip6.arpa:53 {
 						})
 
 						It("should successfully deploy all resources", func() {
-							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML(false))
 							Expect(manifests).To(ContainElements(expectedManifests))
 
 							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
@@ -1131,7 +1141,7 @@ ip6.arpa:53 {
 						})
 
 						It("should successfully deploy all resources", func() {
-							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML(false))
 							Expect(manifests).To(ContainElements(expectedManifests))
 
 							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
@@ -1139,6 +1149,26 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+						})
+
+						Context("w/ minAllowed", func() {
+							BeforeEach(func() {
+								values.MinAllowed = corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceMemory: resource.MustParse("100Mi"),
+								}
+							})
+
+							It("should successfully deploy all resources", func() {
+								expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML(true))
+								Expect(manifests).To(ContainElements(expectedManifests))
+
+								managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+								Expect(err).ToNot(HaveOccurred())
+								daemonset := daemonSetYAMLFor()
+								utilruntime.Must(references.InjectAnnotations(daemonset))
+								Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							})
 						})
 					})
 				})
@@ -1176,7 +1206,7 @@ ip6.arpa:53 {
 						})
 
 						It("should successfully deploy all resources", func() {
-							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML(false))
 							Expect(manifests).To(ContainElements(expectedManifests))
 
 							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
@@ -1227,7 +1257,7 @@ ip6.arpa:53 {
 						})
 
 						It("should successfully deploy all resources", func() {
-							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML(false))
 							Expect(manifests).To(ContainElements(expectedManifests))
 
 							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
