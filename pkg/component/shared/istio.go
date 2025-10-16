@@ -13,6 +13,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -269,7 +270,12 @@ func IsZonalIstioExtension(labels map[string]string) (bool, string) {
 func AreZonalGatewaysInUse(ctx context.Context, c client.Client, zones []string) (bool, error) {
 	gatewayList := &istionetworkingv1beta1.GatewayList{}
 	if err := c.List(ctx, gatewayList); err != nil {
-		return true, err
+		// If the Gateway CRD is not yet installed (NoMatchError) return false.
+		// The Gateway CRD will eventually be installed.
+		if meta.IsNoMatchError(err) {
+			return false, nil
+		}
+		return false, err
 	}
 
 	zoneSet := make(map[string]struct{}, len(zones))
