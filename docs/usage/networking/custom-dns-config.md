@@ -102,9 +102,9 @@ This should bring the cluster DNS back to functioning state.
 
 ## Node Local DNS
 
-Starting with Gardener v1.129, custom DNS configurations are fully supported in NodeLocalDNS. In this version, the `coredns-custom` `ConfigMap` is mounted into the NodeLocalDNS pod, allowing custom override and server configurations to be imported into the DNS server. The server configuration is read by a sidecar container and a new configuration file with the correct bind statement and port mappings is generated and imported into NodeLocalDNS pods. Prior to Gardener v1.129, custom DNS configurations might not function as expected with NodeLocalDNS.
-With NodeLocalDNS, ordinary DNS queries targeting upstream DNS servers (i.e., non-Kubernetes domains) are sent directly to the upstream DNS server, bypassing CoreDNS. Therefore, configurations for non-Kubernetes entities, such as the `istio.server` block in the [custom DNS configuration](custom-dns-config.md) example, may not have any effect when NodeLocalDNS is enabled on landscapes with Gardener prior to v1.129.
-If you require custom DNS configurations for non-Kubernetes domains, you need to disable forwarding to upstream DNS with Gardener v1.128 and below. This can be done by setting the `disableForwardToUpstreamDNS` option in the Shoot resource to `true`:
+Starting with Gardener v1.131, custom DNS configurations are fully supported in NodeLocalDNS. In this version, the `coredns-custom` `ConfigMap` is mounted into the NodeLocalDNS pod, allowing custom override and server configurations to be imported into the DNS server. The server configuration is read by a sidecar container and a new configuration file with the correct bind statement and port mappings is generated and imported into NodeLocalDNS pods. Prior to Gardener v1.131, custom DNS configurations might not function as expected with NodeLocalDNS.
+With NodeLocalDNS, ordinary DNS queries targeting upstream DNS servers (i.e., non-Kubernetes domains) are sent directly to the upstream DNS server, bypassing CoreDNS. Therefore, configurations for non-Kubernetes entities, such as the `istio.server` block in the [custom DNS configuration](custom-dns-config.md) example, may not have any effect when NodeLocalDNS is enabled on landscapes with Gardener prior to v1.131.
+If you require custom DNS configurations for non-Kubernetes domains, you need to disable forwarding to upstream DNS with Gardener v1.130 and below. This can be done by setting the `disableForwardToUpstreamDNS` option in the Shoot resource to `true`:
 ```yaml
 ...
 spec:
