@@ -591,7 +591,9 @@ var _ = Describe("Istio", func() {
 		})
 
 		It("should return false when no gateways exist", func() {
-			Expect(AreZonalGatewaysInUse(ctx, cl, zones)).To(BeFalse())
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
 		})
 
 		It("should return false when only non-zonal gateways exist", func() {
@@ -608,7 +610,9 @@ var _ = Describe("Istio", func() {
 			}
 			Expect(cl.Create(ctx, gateway)).To(Succeed())
 
-			Expect(AreZonalGatewaysInUse(ctx, cl, zones)).To(BeFalse())
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
 		})
 
 		It("should return false when gateway uses zonal ingress for different zone", func() {
@@ -625,7 +629,9 @@ var _ = Describe("Istio", func() {
 			}
 			Expect(cl.Create(ctx, gateway)).To(Succeed())
 
-			Expect(AreZonalGatewaysInUse(ctx, cl, zones)).To(BeFalse())
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
 		})
 
 		It("should ignore non-shoot control plane gateways", func() {
@@ -642,7 +648,9 @@ var _ = Describe("Istio", func() {
 			}
 			Expect(cl.Create(ctx, gateway)).To(Succeed())
 
-			Expect(AreZonalGatewaysInUse(ctx, cl, zones)).To(BeFalse())
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
 		})
 
 		It("should return false when multiple non-zonal gateways exist", func() {
@@ -671,7 +679,9 @@ var _ = Describe("Istio", func() {
 			Expect(cl.Create(ctx, gateway1)).To(Succeed())
 			Expect(cl.Create(ctx, gateway2)).To(Succeed())
 
-			Expect(AreZonalGatewaysInUse(ctx, cl, zones)).To(BeFalse())
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
 		})
 
 		It("should return true when one gateway is zonal and one is not", func() {
@@ -700,7 +710,9 @@ var _ = Describe("Istio", func() {
 			Expect(cl.Create(ctx, gateway1)).To(Succeed())
 			Expect(cl.Create(ctx, gateway2)).To(Succeed())
 
-			Expect(AreZonalGatewaysInUse(ctx, cl, zones)).To(BeTrue())
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeTrue())
 		})
 	})
 })

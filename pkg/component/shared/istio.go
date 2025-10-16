@@ -266,11 +266,10 @@ func IsZonalIstioExtension(labels map[string]string) (bool, string) {
 
 // AreZonalGatewaysInUse checks whether any shoots are using zonal Istio ingress gateways.
 // It returns true if any shoot control plane gateway targets a zonal Istio ingress gateway in the specified zones.
-func AreZonalGatewaysInUse(ctx context.Context, c client.Client, zones []string) bool {
+func AreZonalGatewaysInUse(ctx context.Context, c client.Client, zones []string) (bool, error) {
 	gatewayList := &istionetworkingv1beta1.GatewayList{}
 	if err := c.List(ctx, gatewayList); err != nil {
-		// If Gateways can't be listed, return true
-		return true
+		return true, err
 	}
 
 	zoneSet := make(map[string]struct{}, len(zones))
@@ -287,12 +286,12 @@ func AreZonalGatewaysInUse(ctx context.Context, c client.Client, zones []string)
 		// Check if the Gateway selector points to a zonal ingress gateway
 		if isZonal, zone := IsZonalIstioExtension(gateway.Spec.Selector); isZonal {
 			if _, exists := zoneSet[zone]; exists {
-				return true
+				return true, nil
 			}
 		}
 	}
 
-	return false
+	return false, nil
 }
 
 // ShouldEnforceSpreadAcrossHosts checks whether all given zones have at least two nodes so that Istio can be spread across hosts in each zone.
