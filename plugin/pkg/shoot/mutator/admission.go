@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"reflect"
+	"slices"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,6 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -127,6 +130,7 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	}
 
 	mutationContext.addMetadataAnnotations(a)
+	mutationContext.defaultShootNetworks(helper.IsWorkerless(shoot))
 
 	return nil
 }
@@ -207,4 +211,29 @@ func addDeploymentTasks(shoot *core.Shoot, tasks ...string) {
 		shoot.Annotations = make(map[string]string)
 	}
 	controllerutils.AddTasks(shoot.Annotations, tasks...)
+}
+
+func (c *mutationContext) defaultShootNetworks(workerless bool) {
+	if c.seed != nil {
+		if c.shoot.Spec.Networking.Pods == nil && !workerless {
+			if c.seed.Spec.Networks.ShootDefaults != nil {
+				if cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Pods, c.shoot.Spec.Networking.IPFamilies) {
+					c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
+				}
+			}
+		}
+
+		if c.shoot.Spec.Networking.Services == nil {
+			if c.seed.Spec.Networks.ShootDefaults != nil {
+				if cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Services, c.shoot.Spec.Networking.IPFamilies) {
+					c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
+				}
+			}
+		}
+	}
+}
+
+func cidrMatchesIPFamily(cidr string, ipfamilies []core.IPFamily) bool {
+	ip, _, _ := net.ParseCIDR(cidr)
+	return ip != nil && (ip.To4() != nil && slices.Contains(ipfamilies, core.IPFamilyIPv4) || ip.To4() == nil && slices.Contains(ipfamilies, core.IPFamilyIPv6))
 }
