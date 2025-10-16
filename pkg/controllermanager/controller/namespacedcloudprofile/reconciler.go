@@ -196,10 +196,7 @@ func mutateArchitectureCapabilityFields(
 			}
 			architecture := machineType.GetArchitecture(capabilityDefinitions)
 			if architecture == "" {
-				architecture = ptr.Deref(machineType.Architecture, "")
-			}
-			if architecture == "" {
-				architecture = v1beta1constants.ArchitectureAMD64
+				architecture = ptr.Deref(machineType.Architecture, v1beta1constants.ArchitectureAMD64)
 			}
 			machineType.Capabilities = gardencorev1beta1.Capabilities{
 				v1beta1constants.ArchitectureName: []string{architecture},
