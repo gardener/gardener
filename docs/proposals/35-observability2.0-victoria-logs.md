@@ -106,15 +106,38 @@ Access to Vali is exposed via an ingress in the shoot control-plane. This will c
 
 ### 4. Migration from Vali to VictoriaLogs
 
+#### Data Migration
 During all the replacements of `Vali` we want to ensure that existing clusters do not get disrupted. For this reason, 3 strategies for migration have been considered:
-- "One-shot" migration. Basically reformat all the Vali data into the VictoriaLogs format. Could be done via the Collector since there is no tool that exists to do this OOTB. This would include:
-	- Creating a tool that can query all logs from Vali, reformat them into the standard Loki format, and then send them the Collector instance that will transform them to the OTEL format that the VictoriaLogs component can understand.
-	- Creating scripts for the necessary migration on all the landscapes.
-	- Think of a strategy to make the process as safe as possible -- what happens on failure, how should we query & feed the logs in batches, how would we go back to Vali in case of failure.
-- "Rolling" migration. Get the VictoriaLogs instances up and reroute the logs to the them without removing Vali. This would require both of them to be accessible for the whole rotation period of the logs. This would introduce friction for the time being since there would be 2 sources of logs.
-- "Dual" migration. Same thing as the "rolling" one but send logs to both backends. This would remove the friction but would incur a higher storage cost due to the replication of the logs on both backends.
+- "One-shot" migration. Reformat all the Vali data into the VictoriaLogs format (or OTLP). Could be done via the Collector since there is no tool that exists to do this OOTB. This would include:
+    Pros:
+    - Migrations step is quick.
+    - No friction during the migration period since there is only one source of logs after the migration.
+    Cons:
+    - Development of the necessary tooling to do the migration.
+    - Risk of data loss if something goes wrong during the migration.
+- "Rolling" migration. Get the VictoriaLogs instances up and reroute the logs to them without removing Vali. This would require both of them to be accessible for the whole rotation period of the logs and it would introduce friction for the time being since there would be 2 sources of logs.
+    Pros:
+    - No risk of data loss.
+    - Easy to setup when using an OpenTelemetry Collector since it supports multiple backends.
+    Cons:
+    - Operators would need to access 2 sources of logs until the rotation period is over. Vali (Plutono) for the logs before the migration point and VictoriaLogs (VictoriaUI) for the logs after the migration point.
+- "Dual" migration. Same thing as the "rolling" strategy but logs are sent to both backends simultaneously. This would remove the friction but would incur a higher storage cost due to the replication of the logs on both backends.
+    Pros:
+    - No risk of data loss.
+    - No friction during the migration period since all logs are visible in both backends.
+    Cons:
+    - Higher storage cost due to the replication of the logs on both backends.
 
-Which of the approaches is best depends on the specific characteristics of the targeted landscapes. For instance, if the log rotation period is much longer than the time that would be spent developing the tools needed for the "one-shot" migration, then investing in this approach might be best. Bear in mind that this enhancement proposal does not discuss how such tools should be created nor is there a plan for such a proposal to be developed.
+All migration strategies are viable and the choice of which one to use will depend on the specific characteristics of the landscape.
+We recommend the "Rolling" migration strategy for most cases since it is the one that balances risk, cost and friction the best.
+
+#### UI Migration
+There are 2 main issues that we have with our current observability platform - Plutono:
+- Plutono is a fork of Grafana and as such it lags behind the new features in Grafana. Same as Vali, it only receives security updates.
+- Plutono does not support VictoriaLogs as a data source
+
+For this reason, our UI observability platform will temporarily be replaced with the built-in web UI that VictoriaLogs ships with.
+There is a plan to migrate to [Perses](https://github.com/perses/perses) in the near future, but this is out of scope of this GEP.
 
 ---
 
