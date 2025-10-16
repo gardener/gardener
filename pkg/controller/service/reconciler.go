@@ -56,13 +56,12 @@ const (
 
 // Reconciler is a reconciler for Service resources.
 type Reconciler struct {
-	Client      client.Client
-	HostIP      string
-	Zone0IP     string
-	Zone1IP     string
-	Zone2IP     string
-	IsMultiZone bool
-	BastionIP   string
+	Client    client.Client
+	HostIP    string
+	Zone0IP   string
+	Zone1IP   string
+	Zone2IP   string
+	BastionIP string
 }
 
 // Reconcile reconciles Service resources.
@@ -102,11 +101,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		nodePort = nodePortIstioIngressGateway
 		nodePortTunnel = nodePortTunnelIstioIngressGateway
 		nodePortHTTPProxy = nodePortHTTPProxyIstioIngressGateway
-		if r.IsMultiZone {
-			// Docker desktop for mac v4.23 breaks traffic going through a port mapping to a different docker container.
-			// Setting external traffic policy to local mitigates the issue for multi-node setups, e.g. for gardener-operator.
-			service.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
-		}
 		// Internal IPs of the nodes are required to reach the virtual garden from inside the kind cluster.
 		// If there is a virtual-garden-istio-ingress istio-ingressgateway created by operator, the IPs should be added to its LB service (see `keyVirtualGardenIstioIngressGateway` case).
 		// If there is no such ingress, the IPs should be added to the LB service of istio-ingress istio-ingress-gateway (this case).
@@ -141,11 +135,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		ips = append(ips, r.Zone2IP)
 	case keyVirtualGardenIstioIngressGateway:
 		nodePort = nodePortVirtualGardenKubeAPIServer
-		if r.IsMultiZone {
-			// Docker desktop for mac v4.23 breaks traffic going through a port mapping to a different docker container.
-			// Setting external traffic policy to local mitigates the issue for multi-node setups, e.g. for gardener-operator.
-			service.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
-		}
 		nodes, err := r.getNodesInternalIPs(ctx, client.MatchingLabels{"node-role.kubernetes.io/control-plane": ""})
 		if err != nil {
 			return reconcile.Result{}, err

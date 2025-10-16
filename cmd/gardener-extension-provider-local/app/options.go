@@ -34,7 +34,6 @@ import (
 	workercontroller "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	controlplanewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/controlplane"
 	dnsconfigwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/dnsconfig"
-	istiowebhook "github.com/gardener/gardener/pkg/provider-local/webhook/istio"
 	networkpolicywebhook "github.com/gardener/gardener/pkg/provider-local/webhook/networkpolicy"
 	nodewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/node"
 	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
@@ -71,7 +70,6 @@ func WebhookSwitchOptions() *extensionscmdwebhook.SwitchOptions {
 		extensionscmdwebhook.Switch(extensionsshootwebhook.WebhookName, shootwebhook.AddToManager),
 		extensionscmdwebhook.Switch(dnsconfigwebhook.WebhookName, dnsconfigwebhook.AddToManager),
 		extensionscmdwebhook.Switch(rolloutspeedupwebhook.WebhookName, rolloutspeedupwebhook.AddToManager),
-		extensionscmdwebhook.Switch(istiowebhook.WebhookName, istiowebhook.AddToManager),
 		extensionscmdwebhook.Switch(networkpolicywebhook.WebhookName, networkpolicywebhook.AddToManager),
 		extensionscmdwebhook.Switch(nodewebhook.WebhookName, nodewebhook.AddToManager),
 		extensionscmdwebhook.Switch(prometheuswebhook.WebhookName, prometheuswebhook.AddToManager),

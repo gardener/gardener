@@ -146,7 +146,7 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 			return err
 		}
 
-		if err := (&service.Reconciler{IsMultiZone: true}).AddToManager(mgr, predicate.And(
+		if err := (&service.Reconciler{}).AddToManager(mgr, predicate.And(
 			virtualGardenIstioIngressPredicate,
 			predicate.NewPredicateFuncs(func(obj client.Object) bool {
 				return obj.GetNamespace() == "virtual-garden-"+v1beta1constants.DefaultSNIIngressNamespace
