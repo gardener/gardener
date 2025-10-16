@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
+	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -128,6 +129,7 @@ var _ = Describe("Garden health", func() {
 					fakeClock,
 					nil,
 					gardenNamespace,
+					healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 				).Check(ctx, gardenConditions)
 
 				Expect(updatedConditions).ToNot(BeEmpty())
@@ -150,6 +152,7 @@ var _ = Describe("Garden health", func() {
 							fakeClock,
 							nil,
 							gardenNamespace,
+							healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 						).Check(ctx, gardenConditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
@@ -168,16 +171,21 @@ var _ = Describe("Garden health", func() {
 						It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to Progressing if time is within threshold duration", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
+								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								garden,
 								runtimeClient,
 								gardenClientSet,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
-									operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds),
+									healthchecker.WithLastOperation(garden.Status.LastOperation)),
 							).Check(ctx, gardenConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
@@ -197,16 +205,21 @@ var _ = Describe("Garden health", func() {
 						It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to Progressing if time is within threshold duration", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
+								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								garden,
 								runtimeClient,
 								gardenClientSet,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
-									operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds),
+									healthchecker.WithLastOperation(garden.Status.LastOperation)),
 							).Check(ctx, gardenConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
@@ -226,16 +239,21 @@ var _ = Describe("Garden health", func() {
 						It("should not set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to Progressing if Progressing threshold duration has not expired", func() {
 							fakeClock.Step(30 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
+								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								garden,
 								runtimeClient,
 								gardenClientSet,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
-									operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds),
+									healthchecker.WithLastOperation(garden.Status.LastOperation)),
 							).Check(ctx, gardenConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
@@ -248,16 +266,21 @@ var _ = Describe("Garden health", func() {
 						It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to false if Progressing threshold duration has expired", func() {
 							fakeClock.Step(90 * time.Second)
 
+							conditionThresholds := map[gardencorev1beta1.ConditionType]time.Duration{
+								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
+								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
+							}
 							updatedConditions := NewHealth(
 								garden,
 								runtimeClient,
 								gardenClientSet,
 								fakeClock,
-								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
-									operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
-								},
+								conditionThresholds,
 								gardenNamespace,
+								healthchecker.NewHealthChecker(runtimeClient,
+									fakeClock,
+									healthchecker.WithConditionThresholds(conditionThresholds),
+									healthchecker.WithLastOperation(garden.Status.LastOperation)),
 							).Check(ctx, gardenConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
@@ -353,6 +376,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -376,6 +400,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -400,6 +425,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -420,6 +446,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -440,6 +467,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -456,6 +484,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -472,6 +501,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
@@ -491,6 +521,7 @@ var _ = Describe("Garden health", func() {
 						fakeClock,
 						nil,
 						gardenNamespace,
+						healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithLastOperation(garden.Status.LastOperation)),
 					).Check(ctx, gardenConditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())

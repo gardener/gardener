@@ -47,6 +47,7 @@ func NewHealth(
 	clock clock.Clock,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 	gardenNamespace string,
+	healthChecker *healthchecker.HealthChecker,
 ) HealthCheck {
 	return &health{
 		garden:              garden,
@@ -55,11 +56,7 @@ func NewHealth(
 		gardenClientSet:     gardenClientSet,
 		clock:               clock,
 		conditionThresholds: conditionThresholds,
-		healthChecker: healthchecker.NewHealthChecker(
-			runtimeClient,
-			clock,
-			healthchecker.WithConditionThresholds(conditionThresholds),
-			healthchecker.WithLastOperation(garden.Status.LastOperation)),
+		healthChecker:       healthChecker,
 	}
 }
 
