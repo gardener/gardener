@@ -692,7 +692,7 @@ var _ = Describe("KubeAPIServer", func() {
 										"service":    "auditlog",
 										"severity":   "warning",
 										"type":       "seed",
-										"visibility": "operator",
+										"visibility": "all",
 									},
 									Annotations: map[string]string{
 										"summary":     "The kubernetes API server has too many failed attempts to log audit events",

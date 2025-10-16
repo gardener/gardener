@@ -102,7 +102,7 @@ tests:
         service: auditlog
         severity: warning
         type: seed
-        visibility: operator
+        visibility: all
       exp_annotations:
         description: 'The API servers cumulative failure rate in logging audit events is greater than 2%.'
         summary: 'The kubernetes API server has too many failed attempts to log audit events'
