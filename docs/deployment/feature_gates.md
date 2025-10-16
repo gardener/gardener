@@ -31,6 +31,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | DoNotCopyBackupCredentials               | `false` | `Alpha` | `1.121` | `1.122` |
 | DoNotCopyBackupCredentials               | `true`  | `Beta`  | `1.123` |         |
 | OpenTelemetryCollector                   | `false` | `Alpha` | `1.124` |         |
+| UseUnifiedHTTPProxyPort                  | `false` | `Alpha` | `1.130` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -202,7 +203,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | CredentialsRotationWithoutWorkersRollout     | `false` | `Alpha`      | `1.112` | `1.120` |
 | CredentialsRotationWithoutWorkersRollout     | `true`  | `Beta`       | `1.121` | `1.126` |
 | CredentialsRotationWithoutWorkersRollout     | `true`  | `GA`         | `1.127` | `1.128` |
-| CredentialsRotationWithoutWorkersRollout     | `true`  | `Removed`    | `1.129` |         |
+| CredentialsRotationWithoutWorkersRollout     |         | `Removed`    | `1.129` |         |
 
 ## Using a Feature
 
@@ -252,4 +253,5 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | IstioTLSTermination                      | `gardenlet`, `gardener-operator`   | Enables TLS termination for the Istio Ingress Gateway instead of TLS termination at the kube-apiserver. It allows load-balancing of requests to the kube-apiserver on request level instead of connection level.                                                                                                                                                                                                                                                                                                                                         |
 | CloudProfileCapabilities                 | `gardener-apiserver`               | Enables the usage of capabilities in the `CloudProfile`. Capabilities are used to create a relation between machineTypes and machineImages. It allows to validate worker groups of a shoot ensuring the selected image and machine combination will boot up successfully. Capabilities are also used to determine valid upgrade paths during automated maintenance operation.                                                                                                                                                                            |
 | DoNotCopyBackupCredentials               | `gardenlet`                        | Disables the copying of Shoot infrastructure credentials as backup credentials when the Shoot is used as a ManagedSeed. Operators are responsible for providing the credentials for backup explicitly. Credentials that were already copied will be labeled with `secret.backup.gardener.cloud/status=previously-managed` and would have to be cleaned up by operators.                                                                                                                                                                                  |
-| OpenTelemetryCollector                   | `gardenlet`                        | Routes logs through an instance of an `OpenTelemetry Collector` in the control-plane of `Shoots`.                                                                                                                                                                   |
+| OpenTelemetryCollector                   | `gardenlet`                        | Routes logs through an instance of an `OpenTelemetry Collector` in the control-plane of `Shoots`.                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| UseUnifiedHTTPProxyPort                  | `gardenlet`                        | Enables the gardenlet to set up the unified HTTP proxy network infrastructure. Gardenlet will also reconfigure the API server proxy and shoot VPN client to connect to the unified port using the new X-Gardener-Destination header.                                                                                                                                                                                                                                                                                                                     |
