@@ -63,7 +63,7 @@ var _ = BeforeSuite(func() {
 	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ShootDNS"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ShootDNS,ShootMutator"},
 		},
 	}
 
