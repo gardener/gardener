@@ -322,7 +322,6 @@ spec:
           value: ` + apiserverHost + `
 `
 			}
-			// TODO(marc1404): When updating coredns to v1.13.x check if the NET_BIND_SERVICE capability can be removed.
 			out += `        image: ` + image + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
