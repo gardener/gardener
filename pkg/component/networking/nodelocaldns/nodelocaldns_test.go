@@ -31,6 +31,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	. "github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -357,6 +358,7 @@ data:
         cache 30
         reload
         }
+    import generated-config/custom-server-block.server
 immutable: true
 kind: ConfigMap
 metadata:
@@ -460,6 +462,41 @@ status:
 										Type: corev1.SeccompProfileTypeRuntimeDefault,
 									},
 								},
+								InitContainers: []corev1.Container{
+									{
+										Name:  "coredns-config-adapter",
+										Image: values.CoreDNSConfigAdapaterImage,
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("5m"),
+												corev1.ResourceMemory: resource.MustParse("10Mi"),
+											},
+										},
+										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
+											RunAsNonRoot:             ptr.To(true),
+											RunAsUser:                ptr.To[int64](65532),
+											RunAsGroup:               ptr.To[int64](65532),
+										},
+										Args: []string{
+											"-inputDir=/etc/custom",
+											"-outputDir=/etc/generated-config",
+											"-bind=bind " + bindIP(values),
+										},
+										VolumeMounts: []corev1.VolumeMount{
+											{
+												Name:      "custom-config-volume",
+												MountPath: "/etc/custom",
+												ReadOnly:  true,
+											},
+											{
+												MountPath: "/etc/generated-config",
+												Name:      "generated-config",
+											},
+										},
+										RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways),
+									},
+								},
 								Containers: []corev1.Container{
 									{
 										Name:  "node-cache",
@@ -541,6 +578,10 @@ status:
 												MountPath: "/etc/custom",
 												ReadOnly:  true,
 											},
+											{
+												MountPath: "/etc/generated-config",
+												Name:      "generated-config",
+											},
 										},
 									},
 								},
@@ -586,11 +627,17 @@ status:
 										VolumeSource: corev1.VolumeSource{
 											ConfigMap: &corev1.ConfigMapVolumeSource{
 												LocalObjectReference: corev1.LocalObjectReference{
-													Name: "coredns-custom",
+													Name: coredns.CustomConfigMapName,
 												},
 												DefaultMode: ptr.To[int32](420),
 												Optional:    ptr.To(true),
 											},
+										},
+									},
+									{
+										Name: "generated-config",
+										VolumeSource: corev1.VolumeSource{
+											EmptyDir: &corev1.EmptyDirVolumeSource{},
 										},
 									},
 								},
@@ -611,6 +658,8 @@ spec:
     containerPolicies:
     - containerName: '*'
       controlledValues: RequestsOnly
+    - containerName: coredns-config-adapter
+      mode: "Off"
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet
@@ -730,6 +779,7 @@ ip6.arpa:53 {
     cache 30
     reload
     }
+import generated-config/custom-server-block.server
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
@@ -1004,6 +1054,7 @@ ip6.arpa:53 {
     cache 30
     reload
     }
+import generated-config/custom-server-block.server
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]

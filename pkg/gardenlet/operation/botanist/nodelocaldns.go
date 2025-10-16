@@ -35,17 +35,23 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 		return nil, err
 	}
 
+	imageCoreDNSConfigAdapater, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameCoreDNSConfigAdapter)
+	if err != nil {
+		return nil, err
+	}
+
 	return nodelocaldns.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		nodelocaldns.Values{
-			Image:           image.String(),
-			AlpineImage:     imageAlpine.String(),
-			VPAEnabled:      b.Shoot.WantsVerticalPodAutoscaler,
-			Config:          v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
-			Workers:         b.Shoot.GetInfo().Spec.Provider.Workers,
-			KubeProxyConfig: b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
-			Log:             b.Logger,
+			Image:                      image.String(),
+			AlpineImage:                imageAlpine.String(),
+			CoreDNSConfigAdapaterImage: imageCoreDNSConfigAdapater.String(),
+			VPAEnabled:                 b.Shoot.WantsVerticalPodAutoscaler,
+			Config:                     v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
+			Workers:                    b.Shoot.GetInfo().Spec.Provider.Workers,
+			KubeProxyConfig:            b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
+			Log:                        b.Logger,
 		},
 	), nil
 }

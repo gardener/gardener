@@ -25,6 +25,8 @@ const (
 	ContainerImageNameConfigmapReloader = "configmap-reloader"
 	// ContainerImageNameCoredns is a constant for an image in the image vector with name 'coredns'.
 	ContainerImageNameCoredns = "coredns"
+	// ContainerImageNameCoreDNSConfigAdapter is a constant for an image in the image vector with name 'coredns-config-adapter'.
+	ContainerImageNameCoreDNSConfigAdapter = "coredns-config-adapter"
 	// ContainerImageNameCortex is a constant for an image in the image vector with name 'cortex'.
 	ContainerImageNameCortex = "cortex"
 	// ContainerImageNameDependencyWatchdog is a constant for an image in the image vector with name 'dependency-watchdog'.
