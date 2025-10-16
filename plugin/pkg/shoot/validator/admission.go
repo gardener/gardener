@@ -255,8 +255,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	}
 
 	if a.GetOperation() == admission.Create {
-		addCreatedByAnnotation(shoot, a.GetUserInfo().GetName())
-
 		if len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 && shoot.Spec.CloudProfile != nil {
 			return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
 		}
@@ -2242,13 +2240,4 @@ func getDefaultDomainsForSeed(seed *gardencorev1beta1.Seed) []string {
 	}
 
 	return defaultDomains
-}
-
-func addCreatedByAnnotation(shoot *core.Shoot, userName string) {
-	annotations := shoot.Annotations
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
-	annotations[v1beta1constants.GardenCreatedBy] = userName
-	shoot.Annotations = annotations
 }

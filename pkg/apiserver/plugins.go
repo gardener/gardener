@@ -27,6 +27,7 @@ import (
 	shootdnsrewriting "github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting"
 	shootexposureclass "github.com/gardener/gardener/plugin/pkg/shoot/exposureclass"
 	shootmanagedseed "github.com/gardener/gardener/plugin/pkg/shoot/managedseed"
+	shootmutator "github.com/gardener/gardener/plugin/pkg/shoot/mutator"
 	shootnodelocaldns "github.com/gardener/gardener/plugin/pkg/shoot/nodelocaldns"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
@@ -52,6 +53,7 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	shootnodelocaldns.Register(plugins)
 	shootdnsrewriting.Register(plugins)
 	shootvalidator.Register(plugins)
+	shootmutator.Register(plugins)
 	seedvalidator.Register(plugins)
 	seedmutator.Register(plugins)
 	controllerregistrationresources.Register(plugins)

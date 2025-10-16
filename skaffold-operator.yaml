@@ -641,6 +641,7 @@ build:
             - plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting/validation
             - plugin/pkg/shoot/exposureclass
             - plugin/pkg/shoot/managedseed
+            - plugin/pkg/shoot/mutator
             - plugin/pkg/shoot/nodelocaldns
             - plugin/pkg/shoot/oidc
             - plugin/pkg/shoot/oidc/clusteropenidconnectpreset

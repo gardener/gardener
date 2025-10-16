@@ -491,15 +491,6 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("name must not exceed"))
 				})
 			})
-
-			It("should add the created-by annotation", func() {
-				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, userInfo.Name))
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				Expect(admissionHandler.Admit(ctx, attrs, nil)).NotTo(HaveOccurred())
-
-				Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, userInfo.Name))
-			})
 		})
 
 		Context("hibernation checks", func() {
