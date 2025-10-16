@@ -2322,28 +2322,6 @@ var _ = Describe("validator", func() {
 
 			})
 
-			It("should default shoot networks if seed provides ShootDefaults", func() {
-				seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{
-					Pods:     &podsCIDR,
-					Services: &servicesCIDR,
-				}
-				shoot.Spec.Networking.Pods = nil
-				shoot.Spec.Networking.Services = nil
-
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Spec.Networking.Pods).To(Equal(&podsCIDR))
-				Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
-			})
-
 			It("should reject because the shoot node and the seed node networks intersect (HA control plane)", func() {
 				shoot.Spec.Networking.Nodes = &seedNodesCIDR
 				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}

@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"reflect"
 	"slices"
 	"strconv"
@@ -859,11 +858,6 @@ func (c *validationContext) validateReferencedSecret(secretLister kubecorev1list
 	return nil
 }
 
-func cidrMatchesIPFamily(cidr string, ipfamilies []core.IPFamily) bool {
-	ip, _, _ := net.ParseCIDR(cidr)
-	return ip != nil && (ip.To4() != nil && slices.Contains(ipfamilies, core.IPFamilyIPv4) || ip.To4() == nil && slices.Contains(ipfamilies, core.IPFamilyIPv6))
-}
-
 func (c *validationContext) validateShootNetworks(a admission.Attributes, workerless bool) field.ErrorList {
 	var (
 		allErrs field.ErrorList
@@ -876,21 +870,13 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 
 	if c.seed != nil {
 		if c.shoot.Spec.Networking.Pods == nil && !workerless {
-			if c.seed.Spec.Networks.ShootDefaults != nil {
-				if cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Pods, c.shoot.Spec.Networking.IPFamilies) {
-					c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
-				}
-			} else if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
+			if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
 				allErrs = append(allErrs, field.Required(path.Child("pods"), "pods is required"))
 			}
 		}
 
 		if c.shoot.Spec.Networking.Services == nil {
-			if c.seed.Spec.Networks.ShootDefaults != nil {
-				if cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Services, c.shoot.Spec.Networking.IPFamilies) {
-					c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
-				}
-			} else if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
+			if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
 				allErrs = append(allErrs, field.Required(path.Child("services"), "services is required"))
 			}
 		}
