@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
 var (
@@ -76,13 +77,19 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		log.V(1).Info("Could not get garden client", "error", err)
 	}
 
+	conditionThresholds := r.conditionThresholdsToProgressingMapping()
 	updatedConditions := NewHealthCheck(
 		garden,
 		r.RuntimeClient,
 		gardenClientSet,
 		r.Clock,
-		r.conditionThresholdsToProgressingMapping(),
+		conditionThresholds,
 		r.GardenNamespace,
+		checker.NewHealthChecker(
+			r.RuntimeClient,
+			r.Clock,
+			checker.WithConditionThresholds(conditionThresholds),
+			checker.WithLastOperation(garden.Status.LastOperation)),
 	).Check(
 		ctx,
 		gardenConditions,
