@@ -87,9 +87,7 @@ var _ = Describe("Seed health", func() {
 					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 				})
 
-				updatedConditions := healthCheck.Check(ctx, conditions)
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
+				expectHealthySystemComponents(healthCheck.Check(ctx, conditions))
 			})
 		})
 
@@ -378,4 +376,13 @@ func managedResource(name string, conditions []gardencorev1beta1.Condition) *res
 			Conditions: conditions,
 		},
 	}
+}
+
+func expectHealthySystemComponents(conditions []gardencorev1beta1.Condition) {
+	Expect(conditions).ToNot(BeEmpty())
+	Expect(conditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(
+		gardencorev1beta1.SeedSystemComponentsHealthy,
+		gardencorev1beta1.ConditionTrue,
+		"SystemComponentsRunning",
+		"All system components are healthy."))
 }
