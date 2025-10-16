@@ -9,9 +9,14 @@ spec:
   - from:
     # Allow traffic from the docker kind network's gateway IP. This is the source IP seen by NetworkPolicies
     # when using the nodePort port-mapping on the kind control-node node (5353:30053) used by e2e tests and if the
-    # coredns pod runs on the control-plane node.
+    # coredns pod runs on the control-plane node. This is relevant for docker desktop on mac.
     - ipBlock:
         cidr: 172.18.0.1/32
+    # Allow traffic from the docker kind network's gateway IP. This is the source IP seen by NetworkPolicies
+    # when using the nodePort port-mapping on the kind control-node node (5353:30053) used by e2e tests and if the
+    # coredns pod runs on the control-plane node. This is relevant for running on linux.
+    - ipBlock:
+        cidr: 172.18.255.1/32
     # If the coredns pod runs on another node than the control-plane node, incoming traffic on the nodePort gets SNATed
     # by kube-proxy and is then sent over the tunl0 interface to the node where the coredns pod runs. In this case, the
     # source IP seen by NetworkPolicies on the destination node is the node IP of the control-plane node (on the tunl0
