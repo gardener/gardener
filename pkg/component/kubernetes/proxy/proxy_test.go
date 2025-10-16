@@ -37,6 +37,7 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var _ = Describe("KubeProxy", func() {
@@ -245,8 +246,8 @@ var _ = Describe("KubeProxy", func() {
 			Kubeconfig:  kubeconfig,
 			VPAEnabled:  false,
 			WorkerPools: []WorkerPool{
-				{Name: "pool1", KubernetesVersion: semver.MustParse("1.26.4"), Image: "some-image:some-tag1"},
-				{Name: "pool2", KubernetesVersion: semver.MustParse("1.29.0"), Image: "some-image:some-tag2"},
+				{Name: "pool1", KubernetesVersion: semver.MustParse("1.30.4"), Image: "some-image:some-tag1"},
+				{Name: "pool2", KubernetesVersion: semver.MustParse("1.33.0"), Image: "some-image:some-tag2"},
 			},
 		}
 		component = New(c, namespace, values)
@@ -547,6 +548,11 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					return "iptables"
 				}
 
+				kubeProxyContainerLogVerbosity := 2
+				if k8sGreaterEqual1330Less1336, _ := versionutils.CheckVersionMeetsConstraint(pool.KubernetesVersion.String(), ">= 1.33.0, < 1.33.6"); k8sGreaterEqual1330Less1336 {
+					kubeProxyContainerLogVerbosity = 1
+				}
+
 				ds := &appsv1.DaemonSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        daemonSetNameFor(pool),
@@ -584,7 +590,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Command:         []string{"/usr/local/bin/kube-proxy", "--config=/var/lib/kube-proxy-config/config.yaml", "--v=2"},
+										Command:         []string{"/usr/local/bin/kube-proxy", "--config=/var/lib/kube-proxy-config/config.yaml", fmt.Sprintf("--v=%d", kubeProxyContainerLogVerbosity)},
 										Image:           pool.Image,
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Name:            "kube-proxy",
