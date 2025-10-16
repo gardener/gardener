@@ -18,6 +18,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -72,6 +73,7 @@ var _ = Describe("mutator", func() {
 			ctx context.Context
 
 			userInfo = &user.DefaultInfo{Name: "foo"}
+			seed     gardencorev1beta1.Seed
 			shoot    core.Shoot
 
 			coreInformerFactory gardencoreinformers.SharedInformerFactory
@@ -82,10 +84,24 @@ var _ = Describe("mutator", func() {
 		BeforeEach(func() {
 			ctx = context.Background()
 
+			seed = gardencorev1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "seed",
+				},
+			}
 			shoot = core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot",
 					Namespace: "garden-my-project",
+				},
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{
+								Name: "worker-name",
+							},
+						},
+					},
 				},
 			}
 
@@ -361,6 +377,35 @@ var _ = Describe("mutator", func() {
 					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
 				),
 			)
+		})
+
+		Context("networking settings", func() {
+			It("should default shoot networks if seed provides ShootDefaults", func() {
+				var (
+					podsCIDR     = "100.96.0.0/11"
+					servicesCIDR = "100.64.0.0/13"
+				)
+
+				seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{
+					Pods:     &podsCIDR,
+					Services: &servicesCIDR,
+				}
+				shoot.Spec.SeedName = ptr.To(seed.Name)
+				shoot.Spec.Networking = &core.Networking{
+					Pods:       nil,
+					Services:   nil,
+					IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
+				}
+
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(Equal(&podsCIDR))
+				Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
+			})
 		})
 	})
 })
