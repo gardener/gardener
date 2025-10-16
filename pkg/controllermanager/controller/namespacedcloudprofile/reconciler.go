@@ -27,6 +27,7 @@ import (
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Reconciler reconciles NamespacedCloudProfiles.
@@ -122,8 +123,8 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 		namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions, namespacedCloudProfile.Spec.Kubernetes.Versions, expirableVersionKeyFunc, mergeExpirationDates, false)
 	}
 
-	// TODO(Roncossek): Remove mutateArchitectureCapabilityFields once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are effectively forbidden or have been removed.
-	uniformNamespacedCloudProfileSpec := mutateArchitectureCapabilityFields(namespacedCloudProfile.Spec, cloudProfile.Spec.MachineCapabilities)
+	// TODO(Roncossek): Remove TransformSpecToParentFormat once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are effectively forbidden or have been removed.
+	uniformNamespacedCloudProfileSpec := gardenerutils.TransformSpecToParentFormat(namespacedCloudProfile.Spec, cloudProfile.Spec.MachineCapabilities)
 	namespacedCloudProfile.Status.CloudProfileSpec.MachineImages = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages, uniformNamespacedCloudProfileSpec.MachineImages, machineImageKeyFunc, mergeMachineImages, true)
 	namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes, uniformNamespacedCloudProfileSpec.MachineTypes, machineTypeKeyFunc, nil, true)
 	namespacedCloudProfile.Status.CloudProfileSpec.VolumeTypes = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.VolumeTypes, namespacedCloudProfile.Spec.VolumeTypes, volumeTypeKeyFunc, nil, true)
@@ -141,73 +142,6 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 	}
 
 	syncArchitectureCapabilities(namespacedCloudProfile)
-}
-
-// mutateArchitectureCapabilityFields ensures that the given NamespacedCloudProfileSpec is in a uniform format with its parent CloudProfileSpec.
-// If the parent CloudProfileSpec uses capability definitions, then the NamespacedCloudProfileSpec is transformed to also use capabilities
-// and vice versa.
-func mutateArchitectureCapabilityFields(
-	spec gardencorev1beta1.NamespacedCloudProfileSpec,
-	capabilityDefinitions []gardencorev1beta1.CapabilityDefinition,
-) gardencorev1beta1.NamespacedCloudProfileSpec {
-	isParentInCapabilityFormat := len(capabilityDefinitions) > 0
-	transformedSpec := spec.DeepCopy()
-
-	// Normalize MachineImages
-	for idx, machineImage := range transformedSpec.MachineImages {
-		for idy, version := range machineImage.Versions {
-			legacyArchitectures := version.Architectures
-
-			if isParentInCapabilityFormat && len(version.CapabilityFlavors) == 0 {
-				// Convert legacy architectures to capability flavors
-				version.CapabilityFlavors = make([]gardencorev1beta1.MachineImageFlavor, len(legacyArchitectures))
-				for i, arch := range legacyArchitectures {
-					version.CapabilityFlavors[i] = gardencorev1beta1.MachineImageFlavor{
-						Capabilities: gardencorev1beta1.Capabilities{
-							v1beta1constants.ArchitectureName: []string{arch},
-						},
-					}
-				}
-				version.Architectures = legacyArchitectures
-			} else if !isParentInCapabilityFormat {
-				architectureSet := sets.New[string]()
-				// Convert capability flavors to legacy architectures
-				if len(legacyArchitectures) == 0 && len(version.CapabilityFlavors) > 0 {
-					for _, flavor := range version.CapabilityFlavors {
-						architectureSet.Insert(flavor.Capabilities[v1beta1constants.ArchitectureName]...)
-					}
-
-					version.Architectures = architectureSet.UnsortedList()
-				} else {
-					// If there are no capability flavors at all, we default to AMD64
-					architectureSet.Insert(v1beta1constants.ArchitectureAMD64)
-				}
-				version.CapabilityFlavors = nil
-			}
-			transformedSpec.MachineImages[idx].Versions[idy] = version
-		}
-	}
-
-	// Normalize MachineTypes
-	for idx, machineType := range transformedSpec.MachineTypes {
-		if isParentInCapabilityFormat {
-			if len(machineType.Capabilities) > 0 {
-				continue
-			}
-			architecture := machineType.GetArchitecture(capabilityDefinitions)
-			if architecture == "" {
-				architecture = ptr.Deref(machineType.Architecture, v1beta1constants.ArchitectureAMD64)
-			}
-			machineType.Capabilities = gardencorev1beta1.Capabilities{
-				v1beta1constants.ArchitectureName: []string{architecture},
-			}
-		} else {
-			machineType.Capabilities = nil
-		}
-		transformedSpec.MachineTypes[idx] = machineType
-	}
-
-	return *transformedSpec
 }
 
 func syncArchitectureCapabilities(namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) {

@@ -12,6 +12,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"go.uber.org/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -921,7 +922,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				})
 			})
 
-			Describe("mutateArchitectureCapabilityFields functionality", func() {
+			Describe("Transform to parent CloudProfile capability/legacy format  functionality", func() {
 				var (
 					cloudProfile           *gardencorev1beta1.CloudProfile
 					namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
@@ -1033,13 +1034,16 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						machineTypes := namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes
 						Expect(machineTypes).To(HaveLen(2))
 
-						// First machine type should default to amd64
-						Expect(machineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
-						Expect(machineTypes[0].Capabilities).To(HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"amd64"}))
-
-						// Second machine type should keep arm64
-						Expect(machineTypes[1].Architecture).To(Equal(ptr.To("arm64")))
-						Expect(machineTypes[1].Capabilities).To(HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"arm64"}))
+						Expect(machineTypes).To(ConsistOf(
+							MatchFields(IgnoreExtras, Fields{
+								"Architecture": Equal(ptr.To("amd64")),
+								"Capabilities": HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"amd64"}),
+							}),
+							MatchFields(IgnoreExtras, Fields{
+								"Architecture": Equal(ptr.To("arm64")),
+								"Capabilities": HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"arm64"}),
+							}),
+						))
 					})
 				})
 

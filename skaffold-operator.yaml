@@ -1248,6 +1248,8 @@ build:
             - extensions/pkg/apis/config/v1alpha1
             - extensions/pkg/controller
             - extensions/pkg/controller/cmd
+            - extensions/pkg/controller/worker
+            - extensions/pkg/predicate
             - extensions/pkg/util
             - extensions/pkg/webhook
             - extensions/pkg/webhook/certificates
@@ -1291,7 +1293,9 @@ build:
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/controllerutils
+            - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate
+            - pkg/controllerutils/reconciler
             - pkg/extensions
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
@@ -1301,6 +1305,7 @@ build:
             - pkg/provider-local/admission/mutator
             - pkg/provider-local/admission/validator
             - pkg/provider-local/apis/local
+            - pkg/provider-local/apis/local/helper
             - pkg/provider-local/apis/local/install
             - pkg/provider-local/apis/local/v1alpha1
             - pkg/provider-local/apis/local/validation
@@ -1313,6 +1318,7 @@ build:
             - pkg/utils/flow
             - pkg/utils/gardener
             - pkg/utils/gardener/operator
+            - pkg/utils/gardener/shootstate
             - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health

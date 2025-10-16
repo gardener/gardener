@@ -57,8 +57,8 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile status for '%s': %w", profile.Name, err)
 	}
 
-	// TODO(Roncossek): Remove MutateArchitectureCapabilityFields once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are effectively forbidden or have been removed.
-	uniformSpecConfig := MutateArchitectureCapabilityFields(specConfig, profile.Status.CloudProfileSpec.MachineCapabilities)
+	// TODO(Roncossek): Remove TransformProviderConfigToParentFormat once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are effectively forbidden or have been removed.
+	uniformSpecConfig := TransformProviderConfigToParentFormat(specConfig, profile.Status.CloudProfileSpec.MachineCapabilities)
 
 	statusConfig.MachineImages = mergeMachineImages(uniformSpecConfig.MachineImages, statusConfig.MachineImages)
 
@@ -71,11 +71,11 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 	return nil
 }
 
-// MutateArchitectureCapabilityFields supports the migration from the deprecated architecture fields to architecture capabilities during a transition period.
+// TransformProviderConfigToParentFormat supports the migration from the deprecated architecture fields to architecture capabilities during a transition period.
 // Depending on whether the parent CloudProfile is in capability format or not, it transforms the given config to
 // the capability format or the deprecated architecture fields format respectively.
 // It assumes that the given config is either completely in the capability format or in the deprecated architecture fields format.
-func MutateArchitectureCapabilityFields(cloudProfileConfig *v1alpha1.CloudProfileConfig, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) *v1alpha1.CloudProfileConfig {
+func TransformProviderConfigToParentFormat(cloudProfileConfig *v1alpha1.CloudProfileConfig, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) *v1alpha1.CloudProfileConfig {
 	isParentInCapabilityFormat := len(capabilityDefinitions) != 0
 	for idx, machineImage := range cloudProfileConfig.MachineImages {
 		cloudProfileConfig.MachineImages[idx].Versions = make([]v1alpha1.MachineImageVersion, 0, len(machineImage.Versions))
