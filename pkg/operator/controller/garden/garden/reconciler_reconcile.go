@@ -1041,11 +1041,13 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 		prometheusAggregateIngressTargets []monitoringv1alpha1.Target
 	)
 	for _, seed := range seedList.Items {
-		ingressHost := v1beta1constants.IngressDomainPrefixPrometheusAggregate + "." + seed.Spec.Ingress.Domain
-		if ingressHost == aggregatePrometheusIngressHost {
-			prometheusAggregateTargets = append(prometheusAggregateTargets, monitoringv1alpha1.Target("prometheus-"+aggregateprometheus.Label))
-		} else {
-			prometheusAggregateIngressTargets = append(prometheusAggregateIngressTargets, monitoringv1alpha1.Target(ingressHost))
+		if seed.Spec.Ingress != nil {
+			ingressHost := v1beta1constants.IngressDomainPrefixPrometheusAggregate + "." + seed.Spec.Ingress.Domain
+			if ingressHost == aggregatePrometheusIngressHost {
+				prometheusAggregateTargets = append(prometheusAggregateTargets, monitoringv1alpha1.Target("prometheus-"+aggregateprometheus.Label))
+			} else {
+				prometheusAggregateIngressTargets = append(prometheusAggregateIngressTargets, monitoringv1alpha1.Target(ingressHost))
+			}
 		}
 	}
 
