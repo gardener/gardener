@@ -36,7 +36,7 @@ const SecretLabelKeyManagedResource = "managed-resource"
 
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
 func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
-	oscImages, err := imagevectorutils.FindImages(imagevector.Containers(), []string{imagevector.ContainerImageNamePauseContainer, imagevector.ContainerImageNameValitail}, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	oscImages, err := imagevectorutils.FindImages(imagevector.Containers(), []string{imagevector.ContainerImageNamePauseContainer, imagevector.ContainerImageNameValitail, imagevector.ContainerImageNameOpentelemetryCollector}, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +53,10 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 	oscImages[imagevector.ContainerImageNameGardenerNodeAgent].WithOptionalTag(version.Get().GitVersion)
 
 	valitailEnabled, valiIngressHost := false, ""
+	openTelemetryCollectorLogShipperEnabled, openTelemetryIngressHost := false, ""
 	if b.isShootNodeLoggingEnabled() {
 		valitailEnabled, valiIngressHost = true, b.ComputeValiHost()
+		openTelemetryCollectorLogShipperEnabled, openTelemetryIngressHost = true, b.ComputeOpenTelemetryCollectorHost()
 	}
 
 	return operatingsystemconfig.New(
@@ -66,18 +68,20 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
 			OriginalValues: operatingsystemconfig.OriginalValues{
-				ClusterDomain:          gardencorev1beta1.DefaultDomain,
-				Images:                 oscImages,
-				KubeletConfig:          b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
-				KubeProxyEnabled:       v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy),
-				MachineTypes:           b.Shoot.CloudProfile.Spec.MachineTypes,
-				SSHAccessEnabled:       v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()),
-				ValitailEnabled:        valitailEnabled,
-				ValiIngressHostName:    valiIngressHost,
-				NodeLocalDNSEnabled:    v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents),
-				NodeMonitorGracePeriod: *b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod,
-				PrimaryIPFamily:        b.Shoot.GetInfo().Spec.Networking.IPFamilies[0],
-				KubeProxyConfig:        b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
+				ClusterDomain:                           gardencorev1beta1.DefaultDomain,
+				Images:                                  oscImages,
+				KubeletConfig:                           b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
+				KubeProxyEnabled:                        v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy),
+				MachineTypes:                            b.Shoot.CloudProfile.Spec.MachineTypes,
+				SSHAccessEnabled:                        v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()),
+				ValitailEnabled:                         valitailEnabled,
+				ValiIngressHostName:                     valiIngressHost,
+				OpenTelemetryCollectorLogShipperEnabled: openTelemetryCollectorLogShipperEnabled,
+				OpenTelemetryIngressHostName:            openTelemetryIngressHost,
+				NodeLocalDNSEnabled:                     v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents),
+				NodeMonitorGracePeriod:                  *b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod,
+				PrimaryIPFamily:                         b.Shoot.GetInfo().Spec.Networking.IPFamilies[0],
+				KubeProxyConfig:                         b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
 			},
 		},
 		operatingsystemconfig.DefaultInterval,

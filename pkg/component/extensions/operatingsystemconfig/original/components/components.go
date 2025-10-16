@@ -23,26 +23,28 @@ type Component interface {
 
 // Context contains configuration for the components.
 type Context struct {
-	Key                     string
-	CABundle                string
-	ClusterDNSAddresses     []string
-	ClusterDomain           string
-	CRIName                 extensionsv1alpha1.CRIName
-	Images                  map[string]*imagevector.Image
-	NodeLabels              map[string]string
-	NodeMonitorGracePeriod  metav1.Duration
-	KubeletCABundle         []byte
-	KubeletCLIFlags         ConfigurableKubeletCLIFlags
-	KubeletConfigParameters ConfigurableKubeletConfigParameters
-	KubeletDataVolumeName   *string
-	KubeProxyEnabled        bool
-	KubernetesVersion       *semver.Version
-	SSHPublicKeys           []string
-	SSHAccessEnabled        bool
-	ValiIngress             string
-	ValitailEnabled         bool
-	APIServerURL            string
-	Sysctls                 map[string]string
-	PreferIPv6              bool
-	Taints                  []corev1.Taint
+	Key                                     string
+	CABundle                                string
+	ClusterDNSAddresses                     []string
+	ClusterDomain                           string
+	CRIName                                 extensionsv1alpha1.CRIName
+	Images                                  map[string]*imagevector.Image
+	NodeLabels                              map[string]string
+	NodeMonitorGracePeriod                  metav1.Duration
+	KubeletCABundle                         []byte
+	KubeletCLIFlags                         ConfigurableKubeletCLIFlags
+	KubeletConfigParameters                 ConfigurableKubeletConfigParameters
+	KubeletDataVolumeName                   *string
+	KubeProxyEnabled                        bool
+	KubernetesVersion                       *semver.Version
+	SSHPublicKeys                           []string
+	SSHAccessEnabled                        bool
+	ValiIngress                             string
+	ValitailEnabled                         bool
+	OpenTelemetryCollectorIngressHostName   string
+	OpenTelemetryCollectorLogShipperEnabled bool
+	APIServerURL                            string
+	Sysctls                                 map[string]string
+	PreferIPv6                              bool
+	Taints                                  []corev1.Taint
 }

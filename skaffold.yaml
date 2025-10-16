@@ -1044,6 +1044,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/kernelconfig
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector
+            - pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector/templates/opentelemetry-collector-config.yaml.tpl
             - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
             - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer
@@ -1493,6 +1495,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector
+            - pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector/templates/opentelemetry-collector-config.yaml.tpl
             - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
             - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail

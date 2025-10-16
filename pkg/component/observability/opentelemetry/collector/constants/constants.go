@@ -16,9 +16,17 @@ const (
 	// ServiceAccountName is the name of the ServiceAccount used by the OpenTelemetry Collector.
 	ServiceAccountName = OpenTelemetryCollectorResourceName
 	// PushEndpoint is the endpoint where the OpenTelemetry Collector receives logs from log shippers.
-	PushEndpoint = "/loki/api/v1/push"
-	// PushPort is the port that the Loki receiver listens on in the OpenTelemetry Collector deployment.
+	// This endpoint is hard to find in the OpenTelemetry Collector documentation. Since the OTLP exporter
+	// works via gRPC, the structure of the path is defined by the gRPC spec and it's not explicitly documented in the OpenTelemetry docs.
+	// The meaning of this URL in the gRPC world is:
+	// - "opentelemetry.proto.collector.logs.v1.LogsService" is the service
+	// - "Export" is the method of that service
+	PushEndpoint = "/opentelemetry.proto.collector.logs.v1.LogsService/Export"
+	// PushPort is the port that the OTLP receiver listens on in the OpenTelemetry Collector deployment.
 	PushPort = 4317
 	// KubeRBACProxyPort is the port that the KubeRBACProxy listens on in the OpenTelemetry Collector deployment.
-	KubeRBACProxyPort = 8080
+	KubeRBACProxyPort int32 = 8080
+	// OpenTelemetryCollectorSecretName is the name of a secret in the kube-system namespace in the target cluster containing
+	// opentelemetry-collector's token for communication with the kube-apiserver.
+	OpenTelemetryCollectorSecretName = "gardener-opentelemetry-collector"
 )

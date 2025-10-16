@@ -144,6 +144,10 @@ type OriginalValues struct {
 	ValitailEnabled bool
 	// ValiIngressHostName is the ingress host name of the shoot's Vali.
 	ValiIngressHostName string
+	// OpenTelemetryLogShipperEnabled states whether the OpenTelemetry Collector that acts as a log shipper shall be enabled.
+	OpenTelemetryCollectorLogShipperEnabled bool
+	// OpenTelemetryIngressHostName is the ingress host name of the shoot's OpenTelemetry Collector.
+	OpenTelemetryIngressHostName string
 	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
 	NodeMonitorGracePeriod metav1.Duration
 	// NodeLocalDNSEnabled indicates whether node local dns is enabled or not.
@@ -740,35 +744,37 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 	}
 
 	return deployer{
-		client:                       o.client,
-		osc:                          osc,
-		worker:                       worker,
-		purpose:                      purpose,
-		key:                          oscKey,
-		apiServerURL:                 o.values.APIServerURL,
-		caBundle:                     caBundle,
-		clusterCASecretName:          clusterCASecret.Name,
-		clusterCABundle:              clusterCASecret.Data[secretsutils.DataKeyCertificateBundle],
-		clusterDNSAddresses:          o.values.ClusterDNSAddresses,
-		clusterDomain:                o.values.ClusterDomain,
-		criName:                      criName,
-		images:                       images,
-		kubeletCABundle:              kubeletCASecret.Data[secretsutils.DataKeyCertificateBundle],
-		kubeletConfig:                kubeletConfig,
-		kubeletConfigParameters:      kubeletConfigParameters,
-		kubeletCLIFlags:              kubeletCLIFlags,
-		kubeletDataVolumeName:        worker.KubeletDataVolumeName,
-		kubeProxyEnabled:             o.values.KubeProxyEnabled,
-		kubernetesVersion:            kubernetesVersion,
-		sshPublicKeys:                o.values.SSHPublicKeys,
-		sshAccessEnabled:             o.values.SSHAccessEnabled,
-		valiIngressHostName:          o.values.ValiIngressHostName,
-		valitailEnabled:              o.values.ValitailEnabled,
-		nodeMonitorGracePeriod:       o.values.NodeMonitorGracePeriod,
-		nodeLocalDNSEnabled:          o.values.NodeLocalDNSEnabled,
-		primaryIPFamily:              o.values.PrimaryIPFamily,
-		taints:                       taints,
-		caRotationLastInitiationTime: caRotationLastInitiationTime,
+		client:                                  o.client,
+		osc:                                     osc,
+		worker:                                  worker,
+		purpose:                                 purpose,
+		key:                                     oscKey,
+		apiServerURL:                            o.values.APIServerURL,
+		caBundle:                                caBundle,
+		clusterCASecretName:                     clusterCASecret.Name,
+		clusterCABundle:                         clusterCASecret.Data[secretsutils.DataKeyCertificateBundle],
+		clusterDNSAddresses:                     o.values.ClusterDNSAddresses,
+		clusterDomain:                           o.values.ClusterDomain,
+		criName:                                 criName,
+		images:                                  images,
+		kubeletCABundle:                         kubeletCASecret.Data[secretsutils.DataKeyCertificateBundle],
+		kubeletConfig:                           kubeletConfig,
+		kubeletConfigParameters:                 kubeletConfigParameters,
+		kubeletCLIFlags:                         kubeletCLIFlags,
+		kubeletDataVolumeName:                   worker.KubeletDataVolumeName,
+		kubeProxyEnabled:                        o.values.KubeProxyEnabled,
+		kubernetesVersion:                       kubernetesVersion,
+		sshPublicKeys:                           o.values.SSHPublicKeys,
+		sshAccessEnabled:                        o.values.SSHAccessEnabled,
+		valiIngressHostName:                     o.values.ValiIngressHostName,
+		valitailEnabled:                         o.values.ValitailEnabled,
+		openTelemetryCollectorIngressHostName:   o.values.OpenTelemetryIngressHostName,
+		openTelemetryCollectorLogShipperEnabled: o.values.OpenTelemetryCollectorLogShipperEnabled,
+		nodeMonitorGracePeriod:                  o.values.NodeMonitorGracePeriod,
+		nodeLocalDNSEnabled:                     o.values.NodeLocalDNSEnabled,
+		primaryIPFamily:                         o.values.PrimaryIPFamily,
+		taints:                                  taints,
+		caRotationLastInitiationTime:            caRotationLastInitiationTime,
 		serviceAccountKeyRotationLastInitiationTime: serviceAccountKeyRotationLastInitiationTime,
 	}, nil
 }
@@ -833,6 +839,8 @@ type deployer struct {
 	sshAccessEnabled                            bool
 	valiIngressHostName                         string
 	valitailEnabled                             bool
+	openTelemetryCollectorIngressHostName       string
+	openTelemetryCollectorLogShipperEnabled     bool
 	nodeLocalDNSEnabled                         bool
 	nodeMonitorGracePeriod                      metav1.Duration
 	primaryIPFamily                             gardencorev1beta1.IPFamily
@@ -857,28 +865,30 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	)
 
 	componentsContext := components.Context{
-		Key:                     d.key,
-		CABundle:                d.caBundle,
-		ClusterDNSAddresses:     d.clusterDNSAddresses,
-		ClusterDomain:           d.clusterDomain,
-		CRIName:                 d.criName,
-		Images:                  d.images,
-		NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.key),
-		NodeMonitorGracePeriod:  d.nodeMonitorGracePeriod,
-		KubeletCABundle:         d.kubeletCABundle,
-		KubeletConfigParameters: d.kubeletConfigParameters,
-		KubeletCLIFlags:         d.kubeletCLIFlags,
-		KubeletDataVolumeName:   d.kubeletDataVolumeName,
-		KubeProxyEnabled:        d.kubeProxyEnabled,
-		KubernetesVersion:       d.kubernetesVersion,
-		SSHPublicKeys:           d.sshPublicKeys,
-		SSHAccessEnabled:        d.sshAccessEnabled,
-		ValitailEnabled:         d.valitailEnabled,
-		ValiIngress:             d.valiIngressHostName,
-		APIServerURL:            d.apiServerURL,
-		Sysctls:                 d.worker.Sysctls,
-		PreferIPv6:              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
-		Taints:                  d.taints,
+		Key:                                     d.key,
+		CABundle:                                d.caBundle,
+		ClusterDNSAddresses:                     d.clusterDNSAddresses,
+		ClusterDomain:                           d.clusterDomain,
+		CRIName:                                 d.criName,
+		Images:                                  d.images,
+		NodeLabels:                              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.key),
+		NodeMonitorGracePeriod:                  d.nodeMonitorGracePeriod,
+		KubeletCABundle:                         d.kubeletCABundle,
+		KubeletConfigParameters:                 d.kubeletConfigParameters,
+		KubeletCLIFlags:                         d.kubeletCLIFlags,
+		KubeletDataVolumeName:                   d.kubeletDataVolumeName,
+		KubeProxyEnabled:                        d.kubeProxyEnabled,
+		KubernetesVersion:                       d.kubernetesVersion,
+		SSHPublicKeys:                           d.sshPublicKeys,
+		SSHAccessEnabled:                        d.sshAccessEnabled,
+		ValitailEnabled:                         d.valitailEnabled,
+		ValiIngress:                             d.valiIngressHostName,
+		OpenTelemetryCollectorLogShipperEnabled: d.openTelemetryCollectorLogShipperEnabled,
+		OpenTelemetryCollectorIngressHostName:   d.openTelemetryCollectorIngressHostName,
+		APIServerURL:                            d.apiServerURL,
+		Sysctls:                                 d.worker.Sysctls,
+		PreferIPv6:                              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
+		Taints:                                  d.taints,
 	}
 
 	switch d.purpose {

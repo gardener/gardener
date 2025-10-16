@@ -13,6 +13,7 @@ spec:
     featureGates:
       DefaultSeccompProfile: true
       IstioTLSTermination: true
+      OpenTelemetryCollector: true
     controllers:
       shoot:
         reconcileInMaintenanceOnly: true

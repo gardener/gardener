@@ -9,10 +9,13 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -38,20 +41,31 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
+const (
+	ingressName                     = "logging"
+	namespace                       = "some-namespace"
+	valiHost                        = "vali.foo.bar"
+	managedResourceNameTarget       = "logging-target"
+	managedResourceSecretNameTarget = "managedresource-logging-target"
+)
+
 var _ = Describe("OpenTelemetry Collector", func() {
 	var (
 		ctx = context.Background()
 
-		namespace                        = "some-namespace"
-		image                            = "some-image:some-tag"
-		lokiEndpoint                     = "logging"
-		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
-		kubeRBACProxyImage               = "kube-rbac-proxy:latest"
-		values                           = Values{
-			Image:              image,
-			KubeRBACProxyImage: kubeRBACProxyImage,
-			LokiEndpoint:       lokiEndpoint,
-			Replicas:           1,
+		image                                       = "some-image:some-tag"
+		lokiEndpoint                                = "logging"
+		genericTokenKubeconfigSecretName            = "generic-token-kubeconfig"
+		kubeRBACProxyImage                          = "kube-rbac-proxy:latest"
+		kubeRBACProxyShootAccessSecretName          = "shoot-access-rbac-proxy"
+		opentelemetryCollectorShootAccessSecretName = "shoot-access-opentelemetry-collector"
+		values                                      = Values{
+			Image:                   image,
+			KubeRBACProxyImage:      kubeRBACProxyImage,
+			LokiEndpoint:            lokiEndpoint,
+			Replicas:                1,
+			ShootNodeLoggingEnabled: true,
+			IngressHost:             valiHost,
 		}
 
 		c         client.Client
@@ -61,11 +75,13 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		customResourcesManagedResourceName   = "opentelemetry-collector"
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
 		customResourcesManagedResourceSecret *corev1.Secret
+		managedResourceSecretTarget          *corev1.Secret
 		fakeSecretManager                    secretsmanager.Interface
 		kubeRBACProxyContainer               corev1.Container
 
 		volume                 corev1.Volume
 		volumeMount            corev1.VolumeMount
+		managedResourceTarget  *resourcesv1alpha1.ManagedResource
 		openTelemetryCollector *otelv1beta1.OpenTelemetryCollector
 		serviceMonitor         *monitoringv1.ServiceMonitor
 		serviceAccount         *corev1.ServiceAccount
@@ -73,6 +89,9 @@ var _ = Describe("OpenTelemetry Collector", func() {
 	)
 
 	BeforeEach(func() {
+		format.MaxDepth = 100000
+		format.MaxLength = 100000
+		format.TruncateThreshold = 100000
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
 		component = New(c, namespace, values, fakeSecretManager)
@@ -89,9 +108,21 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				Namespace: namespace,
 			},
 		}
+		managedResourceTarget = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceNameTarget,
+				Namespace: namespace,
+			},
+		}
 		customResourcesManagedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-" + customResourcesManagedResource.Name,
+				Namespace: namespace,
+			},
+		}
+		managedResourceSecretTarget = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceSecretNameTarget,
 				Namespace: namespace,
 			},
 		}
@@ -117,7 +148,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						{
 							Secret: &corev1.SecretProjection{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: "shoot-access-kube-rbac-proxy",
+									Name: "shoot-access-rbac-proxy",
 								},
 								Items: []corev1.KeyToPath{{
 									Key:  resourcesv1alpha1.DataKeyToken,
@@ -147,13 +178,14 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		}
 
 		kubeRBACProxyContainer = corev1.Container{
-			Name:  "kube-rbac-proxy",
+			Name:  "rbac-proxy",
 			Image: kubeRBACProxyImage,
 			Args: []string{
 				"--insecure-listen-address=0.0.0.0:8080",
 				"--upstream=http://127.0.0.1:4317/",
 				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--logtostderr=true",
+				"--upstream-force-h2c",
 				"--v=6",
 			},
 			Resources: corev1.ResourceRequirements{
@@ -241,7 +273,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		}
 
 		kubeRBACServicePort = corev1.ServicePort{
-			Name: "kube-rbac-proxy",
+			Name: "rbac-proxy",
 			Port: 8080,
 		}
 
@@ -283,10 +315,10 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				Config: otelv1beta1.Config{
 					Receivers: otelv1beta1.AnyConfig{
 						Object: map[string]any{
-							"loki": map[string]any{
+							"otlp": map[string]any{
 								"protocols": map[string]any{
-									"http": map[string]any{
-										"endpoint": "0.0.0.0:4317",
+									"grpc": map[string]any{
+										"endpoint": "127.0.0.1:4317",
 									},
 								},
 							},
@@ -297,10 +329,25 @@ var _ = Describe("OpenTelemetry Collector", func() {
 							"batch": map[string]any{
 								"timeout": "10s",
 							},
-							"attributes/labels": map[string]any{
-								"actions": []any{
+							"resource/vali": map[string]any{
+								"attributes": []any{
 									map[string]any{
-										"key":    "loki.attribute.labels",
+										"key":            "nodename",
+										"from_attribute": "k8s.node.name",
+										"action":         "insert",
+									},
+									map[string]any{
+										"key":            "pod_name",
+										"from_attribute": "k8s.pod.name",
+										"action":         "insert",
+									},
+									map[string]any{
+										"key":            "container_name",
+										"from_attribute": "k8s.container.name",
+										"action":         "insert",
+									},
+									map[string]any{
+										"key":    "loki.resource.labels",
 										"value":  "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
 										"action": "insert",
 									},
@@ -349,10 +396,10 @@ var _ = Describe("OpenTelemetry Collector", func() {
 							},
 						},
 						Pipelines: map[string]*otelv1beta1.Pipeline{
-							"logs": {
+							"logs/vali": {
 								Exporters:  []string{"loki"},
-								Receivers:  []string{"loki"},
-								Processors: []string{"attributes/labels", "batch"},
+								Receivers:  []string{"otlp"},
+								Processors: []string{"resource/vali", "batch"},
 							},
 						},
 					},
@@ -366,6 +413,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		It("should successfully deploy all resources without kubeRBACProxy when AuthenticationProxy is false", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: opentelemetryCollectorShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(BeNotFoundError())
 
 			component.WithAuthenticationProxy(false)
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -395,10 +443,12 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
+				getIngress("/opentelemetry.proto.collector.logs.v1.LogsService/Export", "opentelemetry-collector-collector", 8080),
 				serviceMonitor,
 				serviceAccount,
 			))
 
+			// Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBACProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
@@ -408,6 +458,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		It("should successfully deploy all resources with kubeRBACProxy when AuthenticationProxy is true", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: opentelemetryCollectorShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(BeNotFoundError())
 
 			component.WithAuthenticationProxy(true)
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -442,6 +493,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			})
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
+				getIngress("/opentelemetry.proto.collector.logs.v1.LogsService/Export", "opentelemetry-collector-collector", 8080),
 				serviceMonitor,
 				serviceAccount,
 			))
@@ -450,6 +502,38 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
+			expectedTargetMr := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            managedResourceNameTarget,
+					Namespace:       namespace,
+					ResourceVersion: "1",
+					Labels:          map[string]string{"origin": "gardener"},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					SecretRefs: []corev1.LocalObjectReference{{
+						Name: managedResourceTarget.Spec.SecretRefs[0].Name,
+					}},
+					KeepObjects: ptr.To(false),
+				},
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
+			Expect(managedResourceTarget).To(DeepEqual(expectedTargetMr))
+			Expect(managedResourceTarget).To(consistOf(
+				getKubeRBACProxyClusterRoleBinding(),
+				getValitailClusterRole("gardener.cloud:logging:opentelemetry-collector", "gardener-opentelemetry-collector", "/opentelemetry.proto.collector.logs.v1.LogsService/Export"),
+				getValitailClusterRoleBinding("gardener.cloud:logging:opentelemetry-collector", "gardener-opentelemetry-collector", "gardener.cloud:logging:opentelemetry-collector", "gardener-opentelemetry-collector"),
+			))
+
+			managedResourceSecretTarget.Name = managedResourceTarget.Spec.SecretRefs[0].Name
+			Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBACProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
+			Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
 		})
 
 	})
@@ -558,6 +642,121 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		})
 	})
 })
+
+func getIngress(path, serviceName string, port int32) *networkingv1.Ingress {
+	pathType := networkingv1.PathTypePrefix
+	annotations := map[string]string{"nginx.ingress.kubernetes.io/backend-protocol": "GRPC"}
+
+	return &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        ingressName,
+			Namespace:   namespace,
+			Annotations: annotations,
+			Labels:      getLabels(),
+		},
+		Spec: networkingv1.IngressSpec{
+			IngressClassName: ptr.To("nginx-ingress-gardener"),
+			TLS: []networkingv1.IngressTLS{
+				{
+					SecretName: "logging-tls",
+					Hosts:      []string{valiHost},
+				},
+			},
+			Rules: []networkingv1.IngressRule{
+				{
+					Host: valiHost,
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{
+								{
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: serviceName,
+											Port: networkingv1.ServiceBackendPort{
+												Number: port,
+											},
+										},
+									},
+									Path:     path,
+									PathType: &pathType,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func getKubeRBACProxyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:rbac-proxy",
+			Labels: map[string]string{"app": "rbac-proxy"},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "system:auth-delegator",
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      "rbac-proxy",
+			Namespace: "kube-system",
+		}},
+	}
+}
+
+func getValitailClusterRole(name, appName, path string) *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"app": appName},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"", "apps"},
+				Resources: []string{
+					"nodes",
+					"nodes/proxy",
+					"services",
+					"endpoints",
+					"pods",
+					"replicasets",
+				},
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+			},
+			{
+				NonResourceURLs: []string{path},
+				Verbs:           []string{"create"},
+			},
+		},
+	}
+}
+
+func getValitailClusterRoleBinding(name, appName, roleName, subjectName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"app": appName},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     roleName,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      subjectName,
+			Namespace: "kube-system",
+		}},
+	}
+}
 
 func getLabels() map[string]string {
 	return map[string]string{

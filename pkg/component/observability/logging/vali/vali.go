@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
-	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -115,6 +114,7 @@ type Values struct {
 	KubeRBACProxyImage string
 	WithRBACProxy      bool
 	InitLargeDirImage  string
+	IsGardenCluster    bool
 
 	ClusterType             component.ClusterType
 	Replicas                int32
@@ -171,12 +171,12 @@ func (v *vali) Deploy(ctx context.Context) error {
 	var (
 		telegrafConfigMapName            string
 		genericTokenKubeconfigSecretName string
-		valitailShootAccessSecret        = v.newValitailShootAccessSecret()
+		loggingAgentShootAccessSecret    = v.newLoggingAgentShootAccessSecret()
 		kubeRBACProxyShootAccessSecret   = v.newKubeRBACProxyShootAccessSecret()
 	)
 
-	if v.values.ShootNodeLoggingEnabled {
-		if err := valitailShootAccessSecret.Reconcile(ctx, v.client); err != nil {
+	if v.values.ShootNodeLoggingEnabled && !features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		if err := loggingAgentShootAccessSecret.Reconcile(ctx, v.client); err != nil {
 			return err
 		}
 		if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, v.client); err != nil {
@@ -213,12 +213,16 @@ func (v *vali) Deploy(ctx context.Context) error {
 			telegrafConfigMap,
 		)
 
+		kubeRBACProxyClusterRoleBinding := v.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName)
+		loggingAgentClusterRole := v.getLoggingAgentClusterRole()
+		loggingAgentClusterRoleBinding := v.getLoggingAgentClusterRoleBinding(loggingAgentShootAccessSecret.ServiceAccountName, loggingAgentClusterRole.Name)
+
 		resourcesTarget, err := managedresources.
 			NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
 			AddAllAndSerialize(
-				v.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName),
-				v.getValitailClusterRole(),
-				v.getValitailClusterRoleBinding(valitailShootAccessSecret.ServiceAccountName),
+				kubeRBACProxyClusterRoleBinding,
+				loggingAgentClusterRole,
+				loggingAgentClusterRoleBinding,
 			)
 		if err != nil {
 			return err
@@ -233,7 +237,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 		}
 
 		if err := kubernetesutils.DeleteObjects(ctx, v.client,
-			valitailShootAccessSecret.Secret,
+			loggingAgentShootAccessSecret.Secret,
 			kubeRBACProxyShootAccessSecret.Secret,
 		); err != nil {
 			return err
@@ -273,12 +277,12 @@ func (v *vali) Destroy(ctx context.Context) error {
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, v.client,
-		v.newValitailShootAccessSecret().Secret,
+		v.newLoggingAgentShootAccessSecret().Secret,
 		v.newKubeRBACProxyShootAccessSecret().Secret,
 	)
 }
 
-func (v *vali) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
+func (v *vali) newLoggingAgentShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret("valitail", v.namespace).
 		WithServiceAccountName(valitailName).
 		WithTokenExpirationDuration("720h").
@@ -353,19 +357,15 @@ func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
 		serviceName = valiServiceName
 		endpoint    = valiconstants.PushEndpoint
 		port        = kubeRBACProxyPort
+		annotations = map[string]string{}
 	)
-
-	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		serviceName = collectorconstants.ServiceName
-		endpoint = collectorconstants.PushEndpoint
-		port = collectorconstants.KubeRBACProxyPort
-	}
 
 	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      valiName,
-			Namespace: v.namespace,
-			Labels:    getLabels(),
+			Name:        valiName,
+			Namespace:   v.namespace,
+			Annotations: annotations,
+			Labels:      getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
 			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
@@ -682,7 +682,7 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 	if v.values.Storage != nil {
 		statefulSet.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage] = *v.values.Storage
 	}
-	if !v.values.ShootNodeLoggingEnabled {
+	if !v.values.ShootNodeLoggingEnabled || (!v.values.IsGardenCluster && features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector)) {
 		utilruntime.Must(references.InjectAnnotations(statefulSet))
 		return statefulSet
 	}
@@ -803,25 +803,28 @@ func (v *vali) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rb
 	}
 }
 
-func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
-	endpoint := valiconstants.PushEndpoint
-	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		endpoint = collectorconstants.PushEndpoint
-	}
+func (v *vali) getLoggingAgentClusterRole() *rbacv1.ClusterRole {
+	var (
+		endpoint        = valiconstants.PushEndpoint
+		appName         = valitailName
+		clusterRoleName = valitailClusterRoleName
+	)
+
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   valitailClusterRoleName,
-			Labels: map[string]string{v1beta1constants.LabelApp: valitailName},
+			Name:   clusterRoleName,
+			Labels: map[string]string{v1beta1constants.LabelApp: appName},
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
-				APIGroups: []string{""},
+				APIGroups: []string{"", "apps"},
 				Resources: []string{
 					"nodes",
 					"nodes/proxy",
 					"services",
 					"endpoints",
 					"pods",
+					"replicasets",
 				},
 				Verbs: []string{
 					"get",
@@ -837,16 +840,20 @@ func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
 	}
 }
 
-func (v *vali) getValitailClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+func (v *vali) getLoggingAgentClusterRoleBinding(serviceAccountName, clusterRoleName string) *rbacv1.ClusterRoleBinding {
+	var (
+		appName = valitailName
+	)
+
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "gardener.cloud:logging:valitail",
-			Labels: map[string]string{v1beta1constants.LabelApp: valitailName},
+			Name:   clusterRoleName,
+			Labels: map[string]string{v1beta1constants.LabelApp: appName},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     valitailClusterRoleName,
+			Name:     clusterRoleName,
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,

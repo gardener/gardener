@@ -2,13 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package valitail
+package opentelemetrycollector
 
 import (
 	"bytes"
 	_ "embed"
 	"errors"
-	"net/url"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -17,49 +16,40 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 var (
-	tplNameValitail = "config"
-	//go:embed templates/valitail-config.tpl.yaml
-	tplContentValitail string
-	tplValitail        *template.Template
+	tplNameOpenTelemetryCollector = "config"
+	//go:embed templates/opentelemetry-collector-config.yaml.tpl
+	tplContentOpenTelemetryCollector string
+	tplOpenTelemetryCollector        *template.Template
 )
 
 func init() {
-	tplValitail = template.Must(template.
-		New(tplNameValitail).
+	tplOpenTelemetryCollector = template.Must(template.
+		New(tplNameOpenTelemetryCollector).
 		Funcs(sprig.TxtFuncMap()).
-		Parse(tplContentValitail))
+		Parse(tplContentOpenTelemetryCollector))
 }
 
-func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.File, error) {
-	if ctx.ValiIngress == "" {
-		return extensionsv1alpha1.File{}, errors.New("vali ingress url is missing")
-	}
-
-	apiServerURL, err := url.Parse(ctx.APIServerURL)
-	if err != nil {
-		return extensionsv1alpha1.File{}, err
+func getOpentelemetryCollectorConfigurationFile(ctx components.Context) (extensionsv1alpha1.File, error) {
+	if ctx.OpenTelemetryCollectorIngressHostName == "" {
+		return extensionsv1alpha1.File{}, errors.New("opentelemetry-collector ingress url is missing")
 	}
 
 	var config bytes.Buffer
-	if err := tplValitail.Execute(&config, map[string]any{
-		"clientURL":         "https://" + ctx.ValiIngress + valiconstants.PushEndpoint,
-		"pathCACert":        PathCACert,
-		"valiIngress":       ctx.ValiIngress,
-		"pathAuthToken":     PathAuthToken,
-		"APIServerURL":      ctx.APIServerURL,
-		"APIServerHostname": apiServerURL.Hostname(),
+	if err := tplOpenTelemetryCollector.Execute(&config, map[string]any{
+		"clientURL":     ctx.OpenTelemetryCollectorIngressHostName + ":443",
+		"pathCACert":    PathCACert,
+		"pathAuthToken": PathAuthToken,
 	}); err != nil {
 		return extensionsv1alpha1.File{}, err
 	}
 
 	return extensionsv1alpha1.File{
 		Path:        PathConfig,
-		Permissions: ptr.To[uint32](0644),
+		Permissions: ptr.To[uint32](0400),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -69,29 +59,32 @@ func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 	}, nil
 }
 
-func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
-	caBundleBase64 := utils.EncodeBase64([]byte(ctx.CABundle))
+func getOpenTelemetryCollectorCAFile(ctx components.Context) extensionsv1alpha1.File {
+	var cABundle []byte
+	if ctx.CABundle != "" {
+		cABundle = []byte(ctx.CABundle)
+	}
 
 	return extensionsv1alpha1.File{
 		Path:        PathCACert,
-		Permissions: ptr.To[uint32](0644),
+		Permissions: ptr.To[uint32](0400),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
-				Data:     caBundleBase64,
+				Data:     utils.EncodeBase64(cABundle),
 			},
 		},
 	}
 }
 
-func getValitailUnit() extensionsv1alpha1.Unit {
+func getOpenTelemetryCollectorUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
 		Command: ptr.To(extensionsv1alpha1.CommandStart),
 		Enable:  ptr.To(true),
 		Content: ptr.To(`[Unit]
-Description=valitail daemon
-Documentation=https://github.com/credativ/plutono
+Description=opentelemetry-collector daemon
+Documentation=https://github.com/open-telemetry/opentelemetry-collector
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -106,8 +99,9 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
+Environment=KUBECONFIG=` + openTelemetryCollectorKubeconfigPath + `
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
-ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/valitail -config.file=` + PathConfig),
-		FilePaths: []string{PathConfig, PathCACert, valitailBinaryPath},
+ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/opentelemetry-collector --config=` + PathConfig),
+		FilePaths: []string{PathConfig, PathCACert, openTelemetryCollectorBinaryPath, openTelemetryCollectorKubeconfigPath},
 	}
 }

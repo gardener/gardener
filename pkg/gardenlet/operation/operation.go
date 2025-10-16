@@ -463,6 +463,11 @@ func (o *Operation) ComputeValiHost() string {
 	return o.ComputeIngressHost("v")
 }
 
+// ComputeOpenTelemetryCollectorHost computes the host for the Collector in the control-plane.
+func (o *Operation) ComputeOpenTelemetryCollectorHost() string {
+	return o.ComputeIngressHost("otc")
+}
+
 // technicalIDPattern addresses the ambiguity that one or two dashes could follow the prefix "shoot" in the technical ID of the shoot.
 var technicalIDPattern = regexp.MustCompile(fmt.Sprintf("^%s-?", v1beta1constants.TechnicalIDPrefix))
 
