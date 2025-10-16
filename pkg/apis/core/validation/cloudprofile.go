@@ -301,7 +301,7 @@ func validateCloudProfileBastion(spec *core.CloudProfileSpec, fldPath *field.Pat
 
 	if spec.Bastion.MachineType != nil {
 		var validationErrors field.ErrorList
-		machineArch, validationErrors = validateBastionMachineType(spec.Bastion.MachineType, spec.MachineTypes, fldPath.Child("machineType"))
+		machineArch, validationErrors = validateBastionMachineType(spec.Bastion.MachineType, spec.MachineTypes, spec.MachineCapabilities, fldPath.Child("machineType"))
 		allErrs = append(allErrs, validationErrors...)
 	}
 
@@ -312,7 +312,7 @@ func validateCloudProfileBastion(spec *core.CloudProfileSpec, fldPath *field.Pat
 	return allErrs
 }
 
-func validateBastionMachineType(bastionMachineType *core.BastionMachineType, machineTypes []core.MachineType, fldPath *field.Path) (*string, field.ErrorList) {
+func validateBastionMachineType(bastionMachineType *core.BastionMachineType, machineTypes []core.MachineType, capabilityDefinitions []core.CapabilityDefinition, fldPath *field.Path) (*string, field.ErrorList) {
 	machineIndex := slices.IndexFunc(machineTypes, func(machineType core.MachineType) bool {
 		return machineType.Name == bastionMachineType.Name
 	})
@@ -321,7 +321,7 @@ func validateBastionMachineType(bastionMachineType *core.BastionMachineType, mac
 		return nil, field.ErrorList{field.Invalid(fldPath.Child("name"), bastionMachineType.Name, "machine type not found in spec.machineTypes")}
 	}
 
-	return ptr.To(machineTypes[machineIndex].GetArchitecture()), nil
+	return ptr.To(machineTypes[machineIndex].GetArchitecture(capabilityDefinitions)), nil
 }
 
 func validateBastionImage(bastionImage *core.BastionMachineImage, machineImages []core.MachineImage, capabilities core.Capabilities, machineArch *string, fldPath *field.Path) field.ErrorList {
