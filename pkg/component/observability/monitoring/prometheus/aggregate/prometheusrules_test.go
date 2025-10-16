@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 )
 
@@ -32,20 +31,6 @@ var _ = Describe("PrometheusRules", func() {
 				Annotations: map[string]string{
 					"description": "Pod {{$labels.pod}} in namespace {{$labels.namespace}} was stuck in Pending state for more than 10 minutes.",
 					"summary":     "A pod is stuck in pending",
-				},
-			},
-			{
-				Alert: "NodeNotHealthy",
-				Expr:  intstr.FromString(`count_over_time((sum by (node) (kube_node_spec_taint{effect="NoSchedule", key!~"node.kubernetes.io/unschedulable|deployment.machine.sapcloud.io/prefer-no-schedule|node-role.kubernetes.io/control-plane|ToBeDeletedByClusterAutoscaler|` + v1beta1constants.TaintNodeCriticalComponentsNotReady + `"}))[30m:]) > 9`),
-				For:   ptr.To(monitoringv1.Duration("0m")),
-				Labels: map[string]string{
-					"severity":   "warning",
-					"type":       "seed",
-					"visibility": "operator",
-				},
-				Annotations: map[string]string{
-					"description": "Node {{$labels.node}} in seed {{$externalLabels.seed}} was not healthy for ten scrapes in the past 30 mins.",
-					"summary":     "A node is not healthy.",
 				},
 			},
 			{
