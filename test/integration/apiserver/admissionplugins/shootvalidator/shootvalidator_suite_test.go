@@ -322,10 +322,6 @@ var _ = BeforeSuite(func() {
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
 				Nodes:    ptr.To("10.2.0.0/16"),
-				ShootDefaults: &gardencorev1beta1.ShootNetworks{
-					Pods:     ptr.To("100.128.0.0/11"),
-					Services: ptr.To("100.72.0.0/13"),
-				},
 			},
 		},
 	}
