@@ -19,6 +19,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/mutator"
@@ -47,13 +48,33 @@ var _ = Describe("mutator", func() {
 		})
 	})
 
+	Describe("#ValidateInitialization", func() {
+		It("should return error if no SeedLister is set", func() {
+			admissionHandler, err := New()
+			Expect(err).NotTo(HaveOccurred())
+
+			err = admissionHandler.ValidateInitialization()
+			Expect(err).To(MatchError("missing seed lister"))
+		})
+
+		It("should not return error if all listers are set", func() {
+			admissionHandler, err := New()
+			Expect(err).NotTo(HaveOccurred())
+			coreInformerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
+
+			Expect(admissionHandler.ValidateInitialization()).To(Succeed())
+		})
+	})
+
 	Describe("#Admit", func() {
 		var (
 			ctx context.Context
 
 			userInfo = &user.DefaultInfo{Name: "foo"}
+			shoot    core.Shoot
 
-			shoot core.Shoot
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
 
 			admissionHandler *MutateShoot
 		)
@@ -71,6 +92,9 @@ var _ = Describe("mutator", func() {
 			var err error
 			admissionHandler, err = New()
 			Expect(err).NotTo(HaveOccurred())
+			admissionHandler.AssignReadyFunc(func() bool { return true })
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 		})
 
 		It("should ignore a kind other than shoot", func() {
@@ -108,6 +132,16 @@ var _ = Describe("mutator", func() {
 			err := admissionHandler.Admit(ctx, attrs, nil)
 			Expect(err).To(BeBadRequestError())
 			Expect(err).To(MatchError("could not convert old object to Shoot"))
+		})
+
+		Context("reference checks", func() {
+			It("should reject because the referenced seed was not found", func() {
+				shoot.Spec.SeedName = ptr.To("seed")
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				err := admissionHandler.Admit(ctx, attrs, nil)
+				Expect(err).To(BeInternalServerError())
+			})
 		})
 
 		Context("created-by annotation", func() {
