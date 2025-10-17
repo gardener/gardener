@@ -231,8 +231,12 @@ It rejects the deletion if the `Shoot` is referred to by a `ManagedSeed`.
 **Type**: Mutating. **Enabled by default**: Yes.
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`s.
-It sets the `gardener.cloud/created-by=<username>` annotation for newly created `Shoot` resources.
-Over time, it will take over all the mutations that are performed by the `ShootValidator` admission plugin.
+
+It mutates the `Shoot` in the following way:
+- It sets the `gardener.cloud/created-by=<username>` annotation for newly created `Shoot` resources.
+- It maintains annotations used for Shoot lifecycle operations such as `shoot.gardener.cloud/tasks` and `maintenance.shoot.gardener.cloud/needs-retry-operation`.
+
+Over time, the `ShootMutator` admission plugin will take over all the mutations that are performed by `ShootValidator`.
 For more details, see https://github.com/gardener/gardener/issues/2158.
 
 ## `ShootNodeLocalDNSEnabledByDefault`
