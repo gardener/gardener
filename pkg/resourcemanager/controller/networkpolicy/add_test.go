@@ -6,6 +6,7 @@ package networkpolicy_test
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -14,9 +15,11 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -229,29 +232,98 @@ var _ = Describe("Add", func() {
 		})
 	})
 
-	Describe("#MapToAllServices", func() {
+	Describe("#EventHandlerForNamespace", func() {
 		var (
-			service1 *corev1.Service
-			service2 *corev1.Service
+			nsName1  = "test-ns"
+			nsName2  = "other-ns"
+			svcName  = "test-svc"
+			queue    workqueue.TypedRateLimitingInterface[reconcile.Request]
+			ns1, ns2 *corev1.Namespace
+			handler  handler.EventHandler
 		)
 
 		BeforeEach(func() {
-			service1 = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "namespace1"}}
-			service2 = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "service2", Namespace: "namespace2"}}
+			queue = workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]())
+			DeferCleanup(func() { queue.ShutDown() })
+			handler = reconciler.EventHandlerForNamespace(log)
+
+			ns1 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nsName1}}
+			Expect(fakeClient.Create(ctx, ns1)).To(Succeed())
+
+			// Service annotation that selects namespaces with label foo=bar
+			namespaceSelectors := []metav1.LabelSelector{{MatchLabels: map[string]string{"foo": "bar"}}}
+			encoded, _ := json.Marshal(namespaceSelectors)
+
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      svcName,
+					Namespace: nsName1,
+					Annotations: map[string]string{
+						"networking.resources.gardener.cloud/namespace-selectors": string(encoded),
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, service)).To(Succeed())
+
+			ns2 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nsName2}}
 		})
 
-		It("should map to all services", func() {
-			Expect(fakeClient.Create(ctx, service1)).To(Succeed())
-			Expect(fakeClient.Create(ctx, service2)).To(Succeed())
-
-			Expect(reconciler.MapToAllServices(log)(ctx, nil)).To(ConsistOf(
-				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: service1.Namespace, Name: service1.Name}},
-				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: service2.Namespace, Name: service2.Name}},
-			))
+		It("should enqueue no services on Create", func() {
+			handler.Create(context.TODO(), event.CreateEvent{Object: ns2}, queue)
+			verifyRequests(queue, 0, "", "")
 		})
 
-		It("should return nil if there are no services", func() {
-			Expect(reconciler.MapToAllServices(log)(ctx, nil)).To(BeNil())
+		It("should enqueue all services of which namespace selector matches namespace label on Create", func() {
+			ns2.Labels = map[string]string{"foo": "bar"}
+			handler.Create(context.TODO(), event.CreateEvent{Object: ns2}, queue)
+			verifyRequests(queue, 1, svcName, nsName1)
+		})
+
+		It("should enqueue no services on Delete", func() {
+			handler.Delete(context.TODO(), event.DeleteEvent{Object: ns2}, queue)
+			verifyRequests(queue, 0, "", "")
+
+		})
+
+		It("should enqueue all services of which namespace selector matches namespace label on Delete", func() {
+			ns2.Labels = map[string]string{"foo": "bar"}
+			handler.Delete(context.TODO(), event.DeleteEvent{Object: ns2}, queue)
+			verifyRequests(queue, 1, svcName, nsName1)
+		})
+
+		It("should enqueue no services on Generic", func() {
+			handler.Generic(context.TODO(), event.GenericEvent{Object: ns2}, queue)
+			verifyRequests(queue, 0, "", "")
+
+		})
+
+		It("should enqueue all services of which namespace selector matches namespace label on Generic", func() {
+			ns2.Labels = map[string]string{"foo": "bar"}
+			handler.Generic(context.TODO(), event.GenericEvent{Object: ns2}, queue)
+			verifyRequests(queue, 1, svcName, nsName1)
+		})
+
+		It("should enqueue all services of which namespace selector matches namespace label on old object but not new", func() {
+			oldNs := ns2.DeepCopy()
+			newNs := ns2.DeepCopy()
+			oldNs.Labels = map[string]string{"foo": "bar"}
+			handler.Update(context.TODO(), event.UpdateEvent{ObjectOld: oldNs, ObjectNew: newNs}, queue)
+			verifyRequests(queue, 1, svcName, nsName1)
+		})
+
+		It("should enqueue all services of which namespace selector matches namespace label on new object but not old", func() {
+			oldNs := ns2.DeepCopy()
+			newNs := ns2.DeepCopy()
+			newNs.Labels = map[string]string{"foo": "bar"}
+			handler.Update(context.TODO(), event.UpdateEvent{ObjectOld: oldNs, ObjectNew: newNs}, queue)
+			verifyRequests(queue, 1, svcName, nsName1)
+		})
+
+		It("should not enqueue services on Update if labels did not change", func() {
+			oldNs := ns2.DeepCopy()
+			newNs := ns2.DeepCopy()
+			handler.Update(context.TODO(), event.UpdateEvent{ObjectOld: oldNs, ObjectNew: newNs}, queue)
+			verifyRequests(queue, 0, "", "")
 		})
 	})
 
@@ -330,13 +402,16 @@ var _ = Describe("Add", func() {
 				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service3}},
 			))
 		})
-
-		It("should return nil if there are no referenced services", func() {
-			Expect(reconciler.MapToAllServices(log)(ctx, &networkingv1.Ingress{Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{Host: "foo"}}}})).To(BeNil())
-		})
-
-		It("should return nil if the passed object is nil", func() {
-			Expect(reconciler.MapToAllServices(log)(ctx, nil)).To(BeNil())
-		})
 	})
 })
+
+func verifyRequests(queue workqueue.TypedRateLimitingInterface[reconcile.Request], queueLength int, svcName, svcNamespace string) {
+	ExpectWithOffset(1, queue.Len()).To(Equal(queueLength))
+
+	if queueLength != 0 {
+		item, _ := queue.Get()
+		ExpectWithOffset(1, item.NamespacedName.Name).To(Equal(svcName))
+		ExpectWithOffset(1, item.NamespacedName.Namespace).To(Equal(svcNamespace))
+		queue.Done(item)
+	}
+}
