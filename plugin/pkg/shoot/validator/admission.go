@@ -6,6 +6,7 @@ package validator
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -939,6 +940,10 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 				}
 			} else if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
 				allErrs = append(allErrs, field.Required(path.Child("services"), "services is required"))
+			}
+			if workerless && c.shoot.Spec.Networking.Services == nil && slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv6) {
+				ulaCIDR := generateULAServicesCIDR()
+				c.shoot.Spec.Networking.Services = &ulaCIDR
 			}
 		}
 
@@ -2240,4 +2245,21 @@ func getDefaultDomainsForSeed(seed *gardencorev1beta1.Seed) []string {
 	}
 
 	return defaultDomains
+}
+
+// generateULAServicesCIDR generates a /112 ULA (Unique Local Address) CIDR for IPv6 services.
+func generateULAServicesCIDR() string {
+	// Generate a random 40-bit Global ID (5 bytes) for the ULA
+	// ULA format: fd + 40-bit Global ID + 16-bit Subnet-ID + 64-bit Interface ID
+	// For services, we use a /112 which leaves 16 bits for service IPs
+
+	var globalID [5]byte
+	if _, err := rand.Read(globalID[:]); err != nil {
+		// Fallback to a deterministic value if random generation fails
+		return "fd00:10:2::/112"
+	}
+
+	// Format as fd + 5 bytes of Global ID + 2 bytes of Subnet ID (using 0000 for services)
+	return fmt.Sprintf("fd%02x:%02x%02x:%02x%02x::/112",
+		globalID[0], globalID[1], globalID[2], globalID[3], globalID[4])
 }
