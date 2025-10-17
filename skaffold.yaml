@@ -335,6 +335,7 @@ build:
             - pkg/controllerutils
             - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate
+            - pkg/controllerutils/reconciler
             - pkg/controllerutils/routes
             - pkg/features
             - pkg/gardenlet/apis/config/v1alpha1
