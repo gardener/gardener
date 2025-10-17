@@ -816,21 +816,22 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 			return fmt.Errorf("%s is referenced by shoot %q, but provider types (%+v) do not match with the shoot provider type %q", attributes.GetKind().Kind, shoot.Name, providerTypes, shoot.Spec.Provider.Type)
 		}
 	}
-
-	readAttributes := authorizer.AttributesRecord{
-		User:            attributes.GetUserInfo(),
-		Verb:            "get",
-		APIGroup:        credentialsAPIGroup,
-		APIVersion:      credentialsAPIVersion,
-		Resource:        credentialsResource,
-		Namespace:       credentialsNamespace,
-		Name:            credentialsName,
-		ResourceRequest: true,
-	}
-	if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
-		return fmt.Errorf("could not authorize read request for credentials: %w", err)
-	} else if decision != authorizer.DecisionAllow {
-		return fmt.Errorf("%s cannot reference a %s you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind, credentialsKind)
+	if credentialsNamespace != attributes.GetNamespace() {
+		readAttributes := authorizer.AttributesRecord{
+			User:            attributes.GetUserInfo(),
+			Verb:            "get",
+			APIGroup:        credentialsAPIGroup,
+			APIVersion:      credentialsAPIVersion,
+			Resource:        credentialsResource,
+			Namespace:       credentialsNamespace,
+			Name:            credentialsName,
+			ResourceRequest: true,
+		}
+		if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
+			return fmt.Errorf("could not authorize read request for credentials: %w", err)
+		} else if decision != authorizer.DecisionAllow {
+			return fmt.Errorf("%s cannot reference a %s you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind, credentialsKind)
+		}
 	}
 
 	switch credentialsKind {
@@ -862,22 +863,24 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 	)
 
 	for _, quotaRef := range quotas {
-		readAttributes := authorizer.AttributesRecord{
-			User:            attributes.GetUserInfo(),
-			Verb:            "get",
-			APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
-			APIVersion:      gardencorev1beta1.SchemeGroupVersion.Version,
-			Resource:        "quotas",
-			Subresource:     "",
-			Namespace:       quotaRef.Namespace,
-			Name:            quotaRef.Name,
-			ResourceRequest: true,
-			Path:            "",
-		}
-		if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
-			return fmt.Errorf("could not authorize read request for quota: %w", err)
-		} else if decision != authorizer.DecisionAllow {
-			return fmt.Errorf("%s cannot reference a quota you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind)
+		if quotaRef.Namespace != attributes.GetNamespace() {
+			readAttributes := authorizer.AttributesRecord{
+				User:            attributes.GetUserInfo(),
+				Verb:            "get",
+				APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+				APIVersion:      gardencorev1beta1.SchemeGroupVersion.Version,
+				Resource:        "quotas",
+				Subresource:     "",
+				Namespace:       quotaRef.Namespace,
+				Name:            quotaRef.Name,
+				ResourceRequest: true,
+				Path:            "",
+			}
+			if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
+				return fmt.Errorf("could not authorize read request for quota: %w", err)
+			} else if decision != authorizer.DecisionAllow {
+				return fmt.Errorf("%s cannot reference a quota you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind)
+			}
 		}
 
 		quota, err := r.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)

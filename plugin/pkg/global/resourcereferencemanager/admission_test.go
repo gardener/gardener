@@ -588,7 +588,22 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should reject because the user is not allowed to read the referenced secret", func() {
+			It("should reject because the user is not allowed to read the referenced secret (cross namespace)", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				coreSecretBindingCopy := coreSecretBinding.DeepCopy()
+				coreSecretBindingCopy.Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(coreSecretBindingCopy, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBindingCopy.Namespace, coreSecretBindingCopy.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should allow even though the user is not allowed to read the referenced secret (same namespace)", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
@@ -597,7 +612,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-				Expect(err).To(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should reject because one of the referenced quotas does not exist", func() {
@@ -611,7 +626,22 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should reject because the user is not allowed to read the referenced quota", func() {
+			It("should reject because the user is not allowed to read the referenced quota (cross namespace)", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				coreSecretBindingCopy := coreSecretBinding.DeepCopy()
+				coreSecretBindingCopy.Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(coreSecretBindingCopy, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBindingCopy.Namespace, coreSecretBindingCopy.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should allow even though the user is not allowed to read the referenced quota (same namespace)", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
@@ -620,7 +650,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-				Expect(err).To(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should pass because exact one quota per scope is referenced", func() {
@@ -778,7 +808,22 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should reject because the user is not allowed to read the referenced secret", func() {
+			It("should reject because the user is not allowed to read the referenced secret (cross-namespace)", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				securityCredentialsBindingRefSecretCopy := securityCredentialsBindingRefSecret.DeepCopy()
+				securityCredentialsBindingRefSecretCopy.Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(securityCredentialsBindingRefSecretCopy, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecretCopy.Namespace, securityCredentialsBindingRefSecretCopy.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should allow because the user is not allowed to read the referenced secret (same namespace)", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
@@ -787,7 +832,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-				Expect(err).To(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should reject because one of the referenced quotas does not exist", func() {
@@ -801,7 +846,22 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should reject because the user is not allowed to read the referenced quota", func() {
+			It("should reject because the user is not allowed to read the referenced quota (cross-namespace)", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				securityCredentialsBindingRefSecretCopy := securityCredentialsBindingRefSecret.DeepCopy()
+				securityCredentialsBindingRefSecretCopy.Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(securityCredentialsBindingRefSecretCopy, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecretCopy.Namespace, securityCredentialsBindingRefSecretCopy.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should allow because the user is not allowed to read the referenced quota (same namespace)", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
@@ -810,7 +870,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-				Expect(err).To(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should pass because exact one quota per scope is referenced", func() {
@@ -951,7 +1011,22 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should reject because the user is not allowed to read the referenced WorkloadIdentity", func() {
+			It("should reject because the user is not allowed to read the referenced WorkloadIdentity (cross-namespace)", func() {
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				securityCredentialsBindingRefWorkloadIdentityCopy := securityCredentialsBindingRefWorkloadIdentity.DeepCopy()
+				securityCredentialsBindingRefWorkloadIdentityCopy.Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(securityCredentialsBindingRefWorkloadIdentityCopy, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentityCopy.Namespace, securityCredentialsBindingRefWorkloadIdentityCopy.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should allow because the user is not allowed to read the referenced WorkloadIdentity (same namespace)", func() {
 				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
@@ -960,7 +1035,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-				Expect(err).To(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should reject because one of the referenced quotas does not exist", func() {
@@ -974,7 +1049,22 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should reject because the user is not allowed to read the referenced quota", func() {
+			It("should reject because the user is not allowed to read the referenced quota (cross-namespace)", func() {
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				securityCredentialsBindingRefWorkloadIdentityCopy := securityCredentialsBindingRefWorkloadIdentity.DeepCopy()
+				securityCredentialsBindingRefWorkloadIdentityCopy.Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(securityCredentialsBindingRefWorkloadIdentityCopy, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentityCopy.Namespace, securityCredentialsBindingRefWorkloadIdentityCopy.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should reject because the user is not allowed to read the referenced quota (same namespace)", func() {
 				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
@@ -983,7 +1073,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-				Expect(err).To(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should pass because exact one quota per scope is referenced", func() {
