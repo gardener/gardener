@@ -124,7 +124,7 @@ var _ = Describe("Seed health", func() {
 						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
-						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message))
+						Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message))
 					})
 
 					It("should set SeedSystemComponentsHealthy condition to Progressing if time is within threshold duration and condition is currently True", func() {
@@ -143,7 +143,7 @@ var _ = Describe("Seed health", func() {
 						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
-						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message))
+						Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message))
 					})
 
 					It("should not set SeedSystemComponentsHealthy condition to false if Progressing threshold duration has not expired", func() {
@@ -162,7 +162,7 @@ var _ = Describe("Seed health", func() {
 						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
-						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message))
+						Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message))
 					})
 
 					It("should set SeedSystemComponentsHealthy condition to false if Progressing threshold duration has expired", func() {
@@ -181,7 +181,7 @@ var _ = Describe("Seed health", func() {
 						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
-						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message))
+						Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedSystemComponentsHealthy, gardencorev1beta1.ConditionFalse, reason, message))
 					})
 				}
 			)
@@ -229,8 +229,8 @@ var _ = Describe("Seed health", func() {
 				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{})
 
 				Expect(conditions.ConvertToSlice()).To(ConsistOf(
-					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
-					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedSystemComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedEmergencyStopShootReconciliations, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -274,8 +274,8 @@ var _ = Describe("Seed health", func() {
 	})
 })
 
-func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
-	return And(WithStatus(status), WithReason(reason), WithMessage(message))
+func beConditionOfTypeWithStatusReasonAndMessage(typ gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
+	return And(OfType(typ), WithStatus(status), WithReason(reason), WithMessage(message))
 }
 
 func healthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
