@@ -518,40 +518,6 @@ var _ = Describe("CloudProfile Helper", func() {
 		Entry("with capabilities", "architecture", "network"),
 	)
 
-	Describe("#GetCapabilitiesWithAppliedDefaults", func() {
-		It("should apply default values when capabilities are nil", func() {
-			var capabilities core.Capabilities
-			capabilityDefinitions := []core.CapabilityDefinition{
-				{Name: "capability1", Values: []string{"value1", "value2"}},
-				{Name: "architecture", Values: []string{"amd64"}},
-			}
-
-			result := GetCapabilitiesWithAppliedDefaults(capabilities, capabilityDefinitions)
-
-			Expect(result).To(Equal(core.Capabilities{
-				"capability1":  []string{"value1", "value2"},
-				"architecture": []string{"amd64"},
-			}))
-		})
-
-		It("should retain existing values and apply defaults for missing capabilities", func() {
-			capabilities := core.Capabilities{
-				"capability1": []string{"value1"},
-			}
-			capabilityDefinitions := []core.CapabilityDefinition{
-				{Name: "capability1", Values: []string{"value1", "value2"}},
-				{Name: "architecture", Values: []string{"amd64"}},
-			}
-
-			result := GetCapabilitiesWithAppliedDefaults(capabilities, capabilityDefinitions)
-
-			Expect(result).To(Equal(core.Capabilities{
-				"capability1":  []string{"value1"},
-				"architecture": []string{"amd64"},
-			}))
-		})
-	})
-
 	Describe("#GetImageFlavorsWithAppliedDefaults", func() {
 		It("should apply defaults when capabilityFlavors are empty", func() {
 			var imageFlavors []core.MachineImageFlavor

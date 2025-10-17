@@ -1506,40 +1506,6 @@ var _ = Describe("CloudProfile Helper", func() {
 			Entry("Should be true for supported architecture", []string{"amd64", "arm64"}, "arm64", true),
 		)
 
-		Describe("#GetCapabilitiesWithAppliedDefaults", func() {
-			It("should apply default values when capabilities are nil", func() {
-				var capabilities gardencorev1beta1.Capabilities
-				capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
-					{Name: "capability1", Values: []string{"value1", "value2"}},
-					{Name: "architecture", Values: []string{"amd64"}},
-				}
-
-				result := GetCapabilitiesWithAppliedDefaults(capabilities, capabilityDefinitions)
-
-				Expect(result).To(Equal(gardencorev1beta1.Capabilities{
-					"capability1":  []string{"value1", "value2"},
-					"architecture": []string{"amd64"},
-				}))
-			})
-
-			It("should retain existing values and apply defaults for missing capabilities", func() {
-				capabilities := gardencorev1beta1.Capabilities{
-					"capability1": []string{"value1"},
-				}
-				capabilityDefinitions := []gardencorev1beta1.CapabilityDefinition{
-					{Name: "capability1", Values: []string{"value1", "value2"}},
-					{Name: "architecture", Values: []string{"amd64"}},
-				}
-
-				result := GetCapabilitiesWithAppliedDefaults(capabilities, capabilityDefinitions)
-
-				Expect(result).To(Equal(gardencorev1beta1.Capabilities{
-					"capability1":  []string{"value1"},
-					"architecture": []string{"amd64"},
-				}))
-			})
-		})
-
 		Describe("#GetImageFlavorsWithAppliedDefaults", func() {
 			It("should apply defaults when capabilityFlavors are empty", func() {
 				var imageFlavors []gardencorev1beta1.MachineImageFlavor

@@ -1052,37 +1052,6 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						cloudProfile.Spec.MachineCapabilities = nil
 					})
 
-					It("should extract architectures from capability flavors", func() {
-						namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
-							{
-								Name: "ubuntu",
-								Versions: []gardencorev1beta1.MachineImageVersion{
-									{
-										ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "20.04"},
-										CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
-											{
-												Capabilities: gardencorev1beta1.Capabilities{
-													"architecture": []string{"amd64"},
-												},
-											},
-											{
-												Capabilities: gardencorev1beta1.Capabilities{
-													"architecture": []string{"arm64"},
-												},
-											},
-										},
-									},
-								},
-							},
-						}
-
-						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
-
-						version := namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[0].Versions[0]
-						Expect(version.Architectures).To(ConsistOf("amd64", "arm64"))
-						Expect(version.CapabilityFlavors).To(BeNil())
-					})
-
 					It("should preserve existing architectures", func() {
 						namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 							{

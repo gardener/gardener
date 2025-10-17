@@ -78,7 +78,7 @@ func selectBestImageFlavor[T CapabilitiesAccessor](
 		capabilitiesWithProviderTypes = append(capabilitiesWithProviderTypes, capabilitiesWithProviderType{
 			providerEntry: set,
 			// Normalize capabilities copy by applying defaults
-			capabilities: v1beta1helper.GetCapabilitiesWithAppliedDefaults(set.GetCapabilities(), capabilityDefinitions),
+			capabilities: v1beta1.GetCapabilitiesWithAppliedDefaults(set.GetCapabilities(), capabilityDefinitions),
 		})
 	}
 
