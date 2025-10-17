@@ -219,36 +219,38 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		}
 	}
 
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+
 	for _, istioIngressGateway := range i.values.IngressGateway {
 		gatewayNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: istioIngressGateway.Namespace}}
-		if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, i.client, gatewayNamespace, func() error {
-			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, "istio-operator-managed", "Reconcile")
-			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, "istio-injection", "disabled")
-			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleIstioIngress)
 
-			if value, ok := istioIngressGateway.Labels[v1beta1constants.GardenRole]; ok && strings.HasPrefix(value, v1beta1constants.GardenRoleExposureClassHandler) {
-				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.GardenRole, value)
-			}
-			if value, ok := istioIngressGateway.Labels[v1beta1constants.LabelExposureClassHandlerName]; ok {
-				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.LabelExposureClassHandlerName, value)
-			}
+		metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, "istio-operator-managed", "Reconcile")
+		metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, "istio-injection", "disabled")
+		metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleIstioIngress)
 
-			if value, ok := istioIngressGateway.Labels[DefaultZoneKey]; ok {
-				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, DefaultZoneKey, value)
-			}
+		if value, ok := istioIngressGateway.Labels[v1beta1constants.GardenRole]; ok && strings.HasPrefix(value, v1beta1constants.GardenRoleExposureClassHandler) {
+			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.GardenRole, value)
+		}
+		if value, ok := istioIngressGateway.Labels[v1beta1constants.LabelExposureClassHandlerName]; ok {
+			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.LabelExposureClassHandlerName, value)
+		}
 
-			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, podsecurityadmissionapi.EnforceLevelLabel, string(podsecurityadmissionapi.LevelBaseline))
-			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
-			zones := i.values.Istiod.Zones
-			if len(istioIngressGateway.Zones) > 0 {
-				zones = istioIngressGateway.Zones
-			}
-			metav1.SetMetaDataAnnotation(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
-			if len(zones) == 1 {
-				metav1.SetMetaDataAnnotation(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZonePinning, "true")
-			}
-			return nil
-		}); err != nil {
+		if value, ok := istioIngressGateway.Labels[DefaultZoneKey]; ok {
+			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, DefaultZoneKey, value)
+		}
+
+		metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, podsecurityadmissionapi.EnforceLevelLabel, string(podsecurityadmissionapi.LevelBaseline))
+		metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
+		zones := i.values.Istiod.Zones
+		if len(istioIngressGateway.Zones) > 0 {
+			zones = istioIngressGateway.Zones
+		}
+		metav1.SetMetaDataAnnotation(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
+		if len(zones) == 1 {
+			metav1.SetMetaDataAnnotation(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZonePinning, "true")
+		}
+
+		if err := registry.Add(gatewayNamespace); err != nil {
 			return err
 		}
 	}
@@ -263,7 +265,6 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		prometheusName = garden.Label
 	}
 
-	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	for _, istioIngressGateway := range i.values.IngressGateway {
 		// TODO(istvanballok): remove this block once the issue: 'Istio metrics leak for deleted shoots' #12699 is resolved
 		if true {
@@ -363,16 +364,6 @@ func (i *istiod) Destroy(ctx context.Context) error {
 		if err := i.client.Delete(ctx, &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: i.values.Istiod.Namespace,
-			},
-		}); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	for _, istioIngressGateway := range i.values.IngressGateway {
-		if err := i.client.Delete(ctx, &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: istioIngressGateway.Namespace,
 			},
 		}); client.IgnoreNotFound(err) != nil {
 			return err

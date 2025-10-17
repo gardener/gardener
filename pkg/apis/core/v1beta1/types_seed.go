@@ -343,6 +343,10 @@ type SeedSettingLoadBalancerServices struct {
 	// Defaults to nil, which is equivalent to not allowing ProxyProtocol.
 	// +optional
 	ProxyProtocol *LoadBalancerServicesProxyProtocol `json:"proxyProtocol,omitempty" protobuf:"bytes,4,opt,name=proxyProtocol"`
+	// ZonalIngress controls whether ingress gateways are deployed per availability zone.
+	// Defaults to true.
+	// +optional
+	ZonalIngress *SeedSettingLoadBalancerServicesZonalIngress `json:"zonalIngress,omitempty" protobuf:"bytes,5,opt,name=zonalIngress"`
 }
 
 // SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
@@ -372,6 +376,16 @@ type LoadBalancerServicesProxyProtocol struct {
 	// The option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure).
 	// Defaults to false.
 	Allowed bool `json:"allowed" protobuf:"bytes,1,opt,name=allowed"`
+}
+
+// SeedSettingLoadBalancerServicesZonalIngress controls the deployment of ingress gateways per availability zone.
+type SeedSettingLoadBalancerServicesZonalIngress struct {
+	// Enabled controls whether seed ingress gateways are deployed in each availability zone.
+	// Defaults to true, which provisions an ingress gateway load balancer for each availability zone.
+	// When disabled, only a single ingress gateway is deployed.
+	// See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zonal-ingress.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty" protobuf:"bytes,1,opt,name=enabled"`
 }
 
 // SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the

@@ -11,12 +11,15 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
@@ -573,4 +576,143 @@ var _ = Describe("Istio", func() {
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
 		}, []string{"z3"}, false),
 	)
+
+	Describe("#AreZonalGatewaysInUse", func() {
+		var (
+			cl    client.Client
+			ctx   context.Context
+			zones []string
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			cl = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			zones = []string{"zone-a", "zone-b", "zone-c"}
+		})
+
+		It("should return false when no gateways exist", func() {
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
+		})
+
+		It("should return false when only non-zonal gateways exist", func() {
+			gateway := &istionetworkingv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.DeploymentNameKubeAPIServer,
+					Namespace: "shoot--project--test",
+				},
+				Spec: istionetworkingv1alpha3.Gateway{
+					Selector: map[string]string{
+						istio.DefaultZoneKey: "ingressgateway",
+					},
+				},
+			}
+			Expect(cl.Create(ctx, gateway)).To(Succeed())
+
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
+		})
+
+		It("should return false when gateway uses zonal ingress for different zone", func() {
+			gateway := &istionetworkingv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.DeploymentNameKubeAPIServer,
+					Namespace: "shoot--project--test",
+				},
+				Spec: istionetworkingv1alpha3.Gateway{
+					Selector: map[string]string{
+						istio.DefaultZoneKey: "ingressgateway--zone--zone-x",
+					},
+				},
+			}
+			Expect(cl.Create(ctx, gateway)).To(Succeed())
+
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
+		})
+
+		It("should ignore non-shoot control plane gateways", func() {
+			gateway := &istionetworkingv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-test",
+					Namespace: "shoot--project--test",
+				},
+				Spec: istionetworkingv1alpha3.Gateway{
+					Selector: map[string]string{
+						istio.DefaultZoneKey: "ingressgateway--zone--zone-a",
+					},
+				},
+			}
+			Expect(cl.Create(ctx, gateway)).To(Succeed())
+
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
+		})
+
+		It("should return false when multiple non-zonal gateways exist", func() {
+			gateway1 := &istionetworkingv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.DeploymentNameKubeAPIServer,
+					Namespace: "shoot--project--test",
+				},
+				Spec: istionetworkingv1alpha3.Gateway{
+					Selector: map[string]string{
+						istio.DefaultZoneKey: "ingressgateway",
+					},
+				},
+			}
+			gateway2 := &istionetworkingv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.DeploymentNameVPNSeedServer,
+					Namespace: "shoot--project--test",
+				},
+				Spec: istionetworkingv1alpha3.Gateway{
+					Selector: map[string]string{
+						istio.DefaultZoneKey: "ingressgateway",
+					},
+				},
+			}
+			Expect(cl.Create(ctx, gateway1)).To(Succeed())
+			Expect(cl.Create(ctx, gateway2)).To(Succeed())
+
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
+		})
+
+		It("should return true when one gateway is zonal and one is not", func() {
+			gateway1 := &istionetworkingv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.DeploymentNameKubeAPIServer,
+					Namespace: "shoot--project--test1",
+				},
+				Spec: istionetworkingv1alpha3.Gateway{
+					Selector: map[string]string{
+						istio.DefaultZoneKey: "ingressgateway--zone--zone-c",
+					},
+				},
+			}
+			gateway2 := &istionetworkingv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.DeploymentNameKubeAPIServer,
+					Namespace: "shoot--project--test2",
+				},
+				Spec: istionetworkingv1alpha3.Gateway{
+					Selector: map[string]string{
+						istio.DefaultZoneKey: "ingressgateway",
+					},
+				},
+			}
+			Expect(cl.Create(ctx, gateway1)).To(Succeed())
+			Expect(cl.Create(ctx, gateway2)).To(Succeed())
+
+			inUse, err := AreZonalGatewaysInUse(ctx, cl, zones)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeTrue())
+		})
+	})
 })

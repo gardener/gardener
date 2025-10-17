@@ -88,6 +88,14 @@ func SeedSettingTopologyAwareRoutingEnabled(settings *gardencorev1beta1.SeedSett
 	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
 }
 
+// SeedSettingZonalIngressEnabled returns true if zonal ingress is enabled for the seed.
+func SeedSettingZonalIngressEnabled(settings *gardencorev1beta1.SeedSettings) bool {
+	if settings == nil || settings.LoadBalancerServices == nil || settings.LoadBalancerServices.ZonalIngress == nil {
+		return true
+	}
+	return ptr.Deref(settings.LoadBalancerServices.ZonalIngress.Enabled, true)
+}
+
 // SeedBackupCredentialsRefEqual returns true when the credentials reference of the backup configuration is the same.
 func SeedBackupCredentialsRefEqual(oldBackup, newBackup *gardencorev1beta1.Backup) bool {
 	var (

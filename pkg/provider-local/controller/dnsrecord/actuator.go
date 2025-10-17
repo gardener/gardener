@@ -121,7 +121,9 @@ func (a *Actuator) configForDNSRecord(ctx context.Context, dnsRecord *extensions
 	}
 
 	var zone string
-	if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok && !strings.Contains(zones, ",") && len(cluster.Seed.Spec.Provider.Zones) > 1 {
+	if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok &&
+		!strings.Contains(zones, ",") && len(cluster.Seed.Spec.Provider.Zones) > 1 &&
+		v1beta1helper.SeedSettingZonalIngressEnabled(cluster.Seed.Spec.Settings) {
 		zone = zones
 	}
 	istioNamespaceSuffix := ""

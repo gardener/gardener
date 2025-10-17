@@ -2839,6 +2839,21 @@ message SeedSettingLoadBalancerServices {
   // Defaults to nil, which is equivalent to not allowing ProxyProtocol.
   // +optional
   optional LoadBalancerServicesProxyProtocol proxyProtocol = 4;
+
+  // ZonalIngress controls whether ingress gateways are deployed per availability zone.
+  // Defaults to true.
+  // +optional
+  optional SeedSettingLoadBalancerServicesZonalIngress zonalIngress = 5;
+}
+
+// SeedSettingLoadBalancerServicesZonalIngress controls the deployment of ingress gateways per availability zone.
+message SeedSettingLoadBalancerServicesZonalIngress {
+  // Enabled controls whether seed ingress gateways are deployed in each availability zone.
+  // Defaults to true, which provisions an ingress gateway load balancer for each availability zone.
+  // When disabled, only a single ingress gateway is deployed.
+  // See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zonal-ingress.
+  // +optional
+  optional bool enabled = 1;
 }
 
 // SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a

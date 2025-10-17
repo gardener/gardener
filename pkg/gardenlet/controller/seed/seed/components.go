@@ -349,7 +349,12 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 	}
 
 	// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
-	if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
+	// Keep deploying zonal gateways if disabled but shoots are still using them (graceful migration)
+	zonalGatewaysInUse, err := sharedcomponent.AreZonalGatewaysInUse(ctx, r.SeedClientSet.Client(), seed.GetInfo().Spec.Provider.Zones)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("failed to check zonal gateway usage for seed %s: %w", seed.GetInfo().Name, err)
+	}
+	if len(seed.GetInfo().Spec.Provider.Zones) > 1 && (v1beta1helper.SeedSettingZonalIngressEnabled(seed.GetInfo().Spec.Settings) || zonalGatewaysInUse) {
 		for _, zone := range seed.GetInfo().Spec.Provider.Zones {
 			if err := sharedcomponent.AddIstioIngressGateway(
 				ctx,
@@ -391,7 +396,8 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 		}
 
 		// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
-		if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
+		// Keep deploying zonal gateways if disabled but shoots are still using them (graceful migration)
+		if len(seed.GetInfo().Spec.Provider.Zones) > 1 && (v1beta1helper.SeedSettingZonalIngressEnabled(seed.GetInfo().Spec.Settings) || zonalGatewaysInUse) {
 			for _, zone := range seed.GetInfo().Spec.Provider.Zones {
 				if err := sharedcomponent.AddIstioIngressGateway(
 					ctx,
