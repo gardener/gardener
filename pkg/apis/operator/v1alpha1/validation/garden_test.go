@@ -6,6 +6,7 @@ package validation_test
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -106,6 +107,25 @@ var _ = Describe("Validation Tests", func() {
 			It("should do nothing if the operation annotation is not set", func() {
 				Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 			})
+
+			DescribeTable("size limist",
+				func(size int, matcher gomegatypes.GomegaMatcher) {
+					garden.DeletionTimestamp = &metav1.Time{}
+					value := strings.Repeat("a", size)
+					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", value)
+					Expect(ValidateGarden(garden, extensions)).To(matcher)
+				},
+
+				Entry("operation size is over maxSize", 8193, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeTooLong),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": Equal("may not be more than 8192 bytes"),
+				})))),
+				Entry("operation size is within maxSize", 8192, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+				})))),
+			)
 
 			DescribeTable("should not allow starting/completing rotation when garden has deletion timestamp",
 				func(operation string) {
@@ -1163,6 +1183,35 @@ var _ = Describe("Validation Tests", func() {
 				}),
 			)
 
+			DescribeTable("multiple operations",
+				func(operations string, matcher gomegatypes.GomegaMatcher) {
+					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", operations)
+					Expect(ValidateGarden(garden, extensions)).To(matcher)
+				},
+
+				Entry("single gardener operation", "rotate-ca-start", BeEmpty()),
+				Entry("two parallel operations", "rotate-ca-start;rotate-observability-credentials", BeEmpty()),
+				Entry("three parallel operations", "rotate-ca-start;rotate-observability-credentials;rotate-serviceaccount-key-start", BeEmpty()),
+				Entry("operations with whitespaces", " rotate-ca-start ; rotate-observability-credentials ", BeEmpty()),
+				Entry("not supported operation", "reconcile;retry", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"Field":    Equal("metadata.annotations[gardener.cloud/operation]"),
+					"BadValue": Equal("retry"),
+				})))),
+			)
+
+			DescribeTable("should reject operations not allowed to run in parallel",
+				func(operation, expectedOperation string) {
+					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", operation)
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted to be run together with", expectedOperation)),
+					}))))
+				},
+
+				Entry("rotate-etcd-encryption-key and rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key;rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key"),
+			)
 		})
 
 		Context("extensions", func() {
