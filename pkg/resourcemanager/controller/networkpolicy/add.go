@@ -6,6 +6,7 @@ package networkpolicy
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"maps"
 
@@ -14,7 +15,10 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -87,7 +91,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		WatchesRawSource(source.Kind[client.Object](
 			targetCluster.GetCache(),
 			namespace,
-			handler.EnqueueRequestsFromMapFunc(r.MapToAllServices(mgr.GetLogger().WithValues("controller", ControllerName))),
+			r.EventHandlerForNamespace(mgr.GetLogger().WithValues("controller", ControllerName)),
 		)).
 		Build(r)
 	if err != nil {
@@ -189,24 +193,79 @@ func (r *Reconciler) MapNetworkPolicyToService(_ context.Context, obj client.Obj
 	}}}
 }
 
-// MapToAllServices is a handler.MapFunc for mapping a Namespace to all Services.
-func (r *Reconciler) MapToAllServices(log logr.Logger) handler.MapFunc {
-	return func(ctx context.Context, _ client.Object) []reconcile.Request {
-		serviceList := &metav1.PartialObjectMetadataList{}
-		serviceList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceList"))
-		if err := r.TargetClient.List(ctx, serviceList); err != nil {
-			log.Error(err, "Failed to list services")
-			return nil
-		}
+// EventHandlerForNamespace is event handler for mapping service to namespaces.
+func (r *Reconciler) EventHandlerForNamespace(log logr.Logger) handler.EventHandler {
+	return handler.Funcs{
+		CreateFunc: func(ctx context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			r.requeueServicesForNamespace(ctx, e.Object, q, log)
+		},
+		UpdateFunc: func(ctx context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			if apiequality.Semantic.DeepEqual(e.ObjectOld.GetLabels(), e.ObjectNew.GetLabels()) {
+				return
+			}
 
-		var requests []reconcile.Request
-
-		for _, service := range serviceList.Items {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: service.Name, Namespace: service.Namespace}})
-		}
-
-		return requests
+			requests := sets.New(r.getServices(ctx, e.ObjectOld, log)...).Union(sets.New(r.getServices(ctx, e.ObjectNew, log)...))
+			for req := range requests {
+				q.Add(req)
+			}
+		},
+		DeleteFunc: func(ctx context.Context, e event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			r.requeueServicesForNamespace(ctx, e.Object, q, log)
+		},
+		GenericFunc: func(ctx context.Context, e event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			r.requeueServicesForNamespace(ctx, e.Object, q, log)
+		},
 	}
+}
+
+// requeueServicesForNamespace is a helper to find and enqueue services that select a given namespace.
+func (r *Reconciler) requeueServicesForNamespace(ctx context.Context, obj client.Object, q workqueue.TypedRateLimitingInterface[reconcile.Request], log logr.Logger) {
+	requests := r.getServices(ctx, obj, log)
+	for _, request := range requests {
+		q.Add(request)
+	}
+}
+
+func (r *Reconciler) getServices(ctx context.Context, obj client.Object, log logr.Logger) []reconcile.Request {
+	serviceList := &metav1.PartialObjectMetadataList{}
+	serviceList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceList"))
+	if err := r.TargetClient.List(ctx, serviceList); err != nil {
+		log.Error(err, "Failed to list services")
+		return nil
+	}
+
+	var requests []reconcile.Request
+
+	for _, service := range serviceList.Items {
+		// enqueue all the services in the same namespace
+		if service.Namespace == obj.GetName() {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: service.Name, Namespace: service.Namespace}})
+			continue
+		}
+
+		var namespaceSelectors []metav1.LabelSelector
+		if v, ok := service.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors]; ok {
+			if err := json.Unmarshal([]byte(v), &namespaceSelectors); err != nil {
+				log.Error(err, "Failed to parse NetworkingNamespaceSelectors", "service", service.Name)
+				continue
+			}
+		}
+
+		for _, namespaceSelector := range namespaceSelectors {
+			selector, err := metav1.LabelSelectorAsSelector(&namespaceSelector)
+			if err != nil {
+				log.Error(err, "Failed to convert LabelSelector", "service", service.Name)
+				continue
+			}
+
+			if selector.Matches(labels.Set(obj.GetLabels())) {
+				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: service.Name, Namespace: service.Namespace}})
+				break // no need to check other selectors
+			}
+		}
+	}
+
+	return requests
 }
 
 // MapIngressToServices is a handler.MapFunc for mapping a Ingresses to all referenced services.
