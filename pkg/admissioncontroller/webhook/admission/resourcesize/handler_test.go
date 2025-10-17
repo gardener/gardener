@@ -22,15 +22,18 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 )
 
@@ -45,12 +48,13 @@ var _ = Describe("handler", func() {
 		logBuffer   *gbytes.Buffer
 		testEncoder runtime.Encoder
 
-		projectsSizeLimit, _ = resource.ParseQuantity("0M")
-		secretSizeLimit, _   = resource.ParseQuantity("1Mi")
+		seedCountLimit    = int64(0)
+		projectsSizeLimit = resource.MustParse("0M")
+		secretSizeLimit   = resource.MustParse("1Mi")
 		// size of shoot w/ namespace, name, w/o spec
-		shootsv1beta1SizeLimit, _ = resource.ParseQuantity("342")
+		shootsv1beta1SizeLimit = resource.MustParse("342")
 		// size of shoot w/ namespace, name, w/o spec -1 byte
-		shootsv1alpha1SizeLimit, _ = resource.ParseQuantity("342")
+		shootsv1alpha1SizeLimit = resource.MustParse("342")
 
 		restrictedUserName                  = "restrictedUser"
 		unrestrictedUserName                = "unrestrictedUser"
@@ -82,25 +86,31 @@ var _ = Describe("handler", func() {
 						APIGroups:   []string{"*"},
 						APIVersions: []string{"*"},
 						Resources:   []string{"projects"},
-						Size:        projectsSizeLimit,
+						Size:        &projectsSizeLimit,
 					},
 					{
 						APIGroups:   []string{""},
 						APIVersions: []string{"v1"},
 						Resources:   []string{"secrets"},
-						Size:        secretSizeLimit,
+						Size:        &secretSizeLimit,
 					},
 					{
 						APIGroups:   []string{"core.gardener.cloud"},
 						APIVersions: []string{"v1beta1"},
 						Resources:   []string{"shoots"},
-						Size:        shootsv1beta1SizeLimit,
+						Size:        &shootsv1beta1SizeLimit,
 					},
 					{
 						APIGroups:   []string{"core.gardener.cloud"},
 						APIVersions: []string{"v1alpha1"},
 						Resources:   []string{"shoots"},
-						Size:        shootsv1alpha1SizeLimit,
+						Size:        &shootsv1alpha1SizeLimit,
+					},
+					{
+						APIGroups:   []string{"core.gardener.cloud"},
+						APIVersions: []string{"v1beta1"},
+						Resources:   []string{"seeds"},
+						Count:       &seedCountLimit,
 					},
 				},
 			}
@@ -153,6 +163,18 @@ var _ = Describe("handler", func() {
 			}
 		}
 
+		seed = func() runtime.Object {
+			return &gardencorev1beta1.Seed{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Seed",
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-seed",
+				},
+			}
+		}
+
 		unrestrictedUser = func() authenticationv1.UserInfo {
 			return authenticationv1.UserInfo{
 				Username: unrestrictedUserName,
@@ -193,14 +215,34 @@ var _ = Describe("handler", func() {
 		logBuffer = gbytes.NewBuffer()
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer)), logzap.Level(zapcore.Level(0)))
 
-		handler = &Handler{Logger: log, Config: config()}
+		// Create a REST mapper that includes Gardener resources
+		restMapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{
+			corev1.SchemeGroupVersion,
+			gardencorev1beta1.SchemeGroupVersion,
+		})
+
+		// Add Seed resource mappings
+		restMapper.Add(schema.GroupVersionKind{
+			Group:   "core.gardener.cloud",
+			Version: "v1beta1",
+			Kind:    "Seed",
+		}, meta.RESTScopeRoot)
+
+		fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithRESTMapper(restMapper).Build()
+		handler = &Handler{
+			Logger:     log,
+			Config:     config(),
+			APIReader:  fakeClient,
+			RESTMapper: fakeClient.RESTMapper(),
+		}
 
 		testEncoder = &json.Serializer{}
 		request = admission.Request{}
-		request.Operation = admissionv1.Update
 	})
 
-	test := func(objFn func() runtime.Object, userFn func() authenticationv1.UserInfo, expectedAllowed bool) {
+	test := func(objFn func() runtime.Object, userFn func() authenticationv1.UserInfo, requestOperation admissionv1.Operation, expectedAllowed bool) {
+		request.Operation = requestOperation
+
 		if obj := objFn(); obj != nil {
 			objData, err := runtime.Encode(testEncoder, obj)
 			Expect(err).NotTo(HaveOccurred())
@@ -237,12 +279,12 @@ var _ = Describe("handler", func() {
 
 	Context("ignored requests", func() {
 		It("empty resource", func() {
-			test(empty, restrictedUser, true)
+			test(empty, restrictedUser, admissionv1.Update, true)
 		})
 	})
 
 	It("should pass because size is in range for v1beta1 shoot", func() {
-		test(shootv1beta1, restrictedUser, true)
+		test(shootv1beta1, restrictedUser, admissionv1.Update, true)
 	})
 
 	It("should pass because size is in range for v1beta1 shoot without considering status", func() {
@@ -267,7 +309,7 @@ var _ = Describe("handler", func() {
 			Expect(shootsv1beta1SizeLimit.CmpInt64(int64(len(objData)))).Should(Equal(-1))
 			return shootWithLargeStatus
 		}
-		test(largeShoot, restrictedUser, true)
+		test(largeShoot, restrictedUser, admissionv1.Update, true)
 	})
 
 	It("should pass because size is in range for v1beta1 shoot without considering managed fields", func() {
@@ -289,42 +331,50 @@ var _ = Describe("handler", func() {
 			return shootWithLargeStatus
 		}
 
-		test(largeShoot, restrictedUser, true)
+		test(largeShoot, restrictedUser, admissionv1.Update, true)
 	})
 
 	It("should pass because of unrestricted user", func() {
-		test(shootv1beta1, unrestrictedUser, true)
+		test(shootv1beta1, unrestrictedUser, admissionv1.Update, true)
 	})
 
 	It("should pass because of unrestricted group", func() {
-		test(shootv1beta1, unrestrictedGroup, true)
+		test(shootv1beta1, unrestrictedGroup, admissionv1.Update, true)
 	})
 
 	It("should pass because size is in range for secret", func() {
-		test(secret, restrictedUser, true)
+		test(secret, restrictedUser, admissionv1.Update, true)
 	})
 
 	It("should pass because no limits configured for configMaps", func() {
-		test(configMap, restrictedUser, true)
+		test(configMap, restrictedUser, admissionv1.Update, true)
 	})
 
 	It("should fail because size is not in range for project", func() {
-		test(project, restrictedUser, false)
+		test(project, restrictedUser, admissionv1.Update, false)
 	})
 
 	It("should pass because of unrestricted user", func() {
-		test(project, unrestrictedUser, true)
+		test(project, unrestrictedUser, admissionv1.Update, true)
 	})
 
 	It("should pass because of unrestricted group", func() {
-		test(project, unrestrictedGroup, true)
+		test(project, unrestrictedGroup, admissionv1.Update, true)
 	})
 
 	It("should pass because of unrestricted service account", func() {
-		test(project, unrestrictedServiceAccount, true)
+		test(project, unrestrictedServiceAccount, admissionv1.Update, true)
 	})
 
 	It("should fail because of restricted service account", func() {
-		test(project, restrictedServiceAccount, false)
+		test(project, restrictedServiceAccount, admissionv1.Update, false)
+	})
+
+	It("should fail because of count limit of seeds", func() {
+		test(seed, restrictedUser, admissionv1.Create, false)
+	})
+
+	It("should pass seed creation despite count limit being reached when user has unrestricted privileges", func() {
+		test(seed, unrestrictedServiceAccount, admissionv1.Create, true)
 	})
 })
