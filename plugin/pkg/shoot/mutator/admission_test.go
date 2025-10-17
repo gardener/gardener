@@ -50,12 +50,12 @@ var _ = Describe("mutator", func() {
 	})
 
 	Describe("#ValidateInitialization", func() {
-		It("should return error if no SeedLister is set", func() {
+		It("should return error if a lister is missing", func() {
 			admissionHandler, err := New()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = admissionHandler.ValidateInitialization()
-			Expect(err).To(MatchError("missing seed lister"))
+			Expect(err).To(MatchError("missing cloudProfile lister"))
 		})
 
 		It("should not return error if all listers are set", func() {
@@ -72,9 +72,10 @@ var _ = Describe("mutator", func() {
 		var (
 			ctx context.Context
 
-			userInfo = &user.DefaultInfo{Name: "foo"}
-			seed     gardencorev1beta1.Seed
-			shoot    core.Shoot
+			userInfo     = &user.DefaultInfo{Name: "foo"}
+			cloudProfile gardencorev1beta1.CloudProfile
+			seed         gardencorev1beta1.Seed
+			shoot        core.Shoot
 
 			coreInformerFactory gardencoreinformers.SharedInformerFactory
 
@@ -84,6 +85,11 @@ var _ = Describe("mutator", func() {
 		BeforeEach(func() {
 			ctx = context.Background()
 
+			cloudProfile = gardencorev1beta1.CloudProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "profile",
+				},
+			}
 			seed = gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "seed",
@@ -95,6 +101,7 @@ var _ = Describe("mutator", func() {
 					Namespace: "garden-my-project",
 				},
 				Spec: core.ShootSpec{
+					CloudProfileName: ptr.To("profile"),
 					Provider: core.Provider{
 						Workers: []core.Worker{
 							{
@@ -151,7 +158,26 @@ var _ = Describe("mutator", func() {
 		})
 
 		Context("reference checks", func() {
+			It("should reject because the referenced cloud profile was not found", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeInternalServerError())
+			})
+
+			It("should exit early if CloudProfile is not set", func() {
+				shoot.Spec.CloudProfileName = nil
+				shoot.Spec.CloudProfile = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				err := admissionHandler.Admit(ctx, attrs, nil)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
 			It("should reject because the referenced seed was not found", func() {
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
 				shoot.Spec.SeedName = ptr.To("seed")
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 
@@ -161,6 +187,10 @@ var _ = Describe("mutator", func() {
 		})
 
 		Context("created-by annotation", func() {
+			BeforeEach(func() {
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+			})
+
 			It("should add the created-by annotation on shoot creation", func() {
 				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, userInfo.Name))
 
@@ -188,6 +218,8 @@ var _ = Describe("mutator", func() {
 
 			BeforeEach(func() {
 				oldShoot = shoot.DeepCopy()
+
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 			})
 
 			It("should add deploy tasks because shoot is being created", func() {
@@ -332,6 +364,8 @@ var _ = Describe("mutator", func() {
 			BeforeEach(func() {
 				shoot.Spec.Maintenance = &core.Maintenance{}
 				oldShoot = shoot.DeepCopy()
+
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 			})
 
 			DescribeTable("confine spec roll-out checks",
@@ -398,6 +432,7 @@ var _ = Describe("mutator", func() {
 				}
 
 				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 				err := admissionHandler.Admit(ctx, attrs, nil)
