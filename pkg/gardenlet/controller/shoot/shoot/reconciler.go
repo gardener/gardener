@@ -626,6 +626,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		operation                     = shoot.Annotations[v1beta1constants.GardenerOperation]
 		mustRemoveOperationAnnotation bool
 	)
+
 	k8sLess134, err := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.34")
 	if err != nil {
 		return fmt.Errorf("failed checking if Shoot k8s version is less than 1.34: %w", err)
@@ -731,26 +732,30 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		}
 
 		for poolName := range poolNames {
-			machineDeployment := &machinev1alpha1.MachineDeployment{}
-			if err := r.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Status.TechnicalID, Name: fmt.Sprintf("%s-%s", shoot.Status.TechnicalID, poolName)}, machineDeployment); err != nil {
-				return fmt.Errorf("failed to get MachineDeployment %s/%s: %w", shoot.Status.TechnicalID, poolName, err)
+			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+			if err := r.SeedClientSet.Client().List(ctx, machineDeploymentList, client.InNamespace(shoot.Status.TechnicalID), client.MatchingLabels{v1beta1constants.LabelWorkerPool: poolName}); err != nil {
+				return fmt.Errorf("failed to list MachineDeployments for pool %s in namespace %s: %w", poolName, shoot.Status.TechnicalID, err)
 			}
 
-			if machineDeployment.Spec.Template.Annotations == nil {
-				machineDeployment.Spec.Template.Annotations = map[string]string{}
+			if len(machineDeploymentList.Items) == 0 {
+				return fmt.Errorf("no MachineDeployment found for worker pool %s in namespace %s", poolName, shoot.Status.TechnicalID)
 			}
 
-			machineDeployment.Spec.Template.Annotations[v1beta1constants.OperationRolloutWorkers] = now.String()
-			if err := r.SeedClientSet.Client().Update(ctx, machineDeployment); err != nil {
-				return fmt.Errorf("failed to annotate MachineDeployment %s: %w", machineDeployment.Name, err)
+			if len(machineDeploymentList.Items) > 1 {
+				return fmt.Errorf("multiple MachineDeployments found for worker pool %s in namespace %s", poolName, shoot.Status.TechnicalID)
+			}
+
+			machineDeployment := &machineDeploymentList.Items[0]
+
+			patch := client.MergeFrom(machineDeployment.DeepCopy())
+			metav1.SetMetaDataAnnotation(&machineDeployment.Spec.Template.ObjectMeta, v1beta1constants.OperationRolloutWorkers, now.String())
+			if err := r.SeedClientSet.Client().Patch(ctx, machineDeployment, patch); err != nil {
+				return fmt.Errorf("failed to annotate MachineDeployment %s: %w", client.ObjectKeyFromObject(machineDeployment), err)
 			}
 		}
 
 		v1beta1helper.MutateShootWorkerPoolRollout(shoot, func(rollout *gardencorev1beta1.ManualWorkerPoolRollout) {
 			workerRolloutInitiationTime := &now
-			if rollout.LastInitiationTime != nil {
-				workerRolloutInitiationTime = rollout.LastInitiationTime.DeepCopy()
-			}
 
 			var pendingWorkersRollouts []gardencorev1beta1.PendingWorkersRollout
 			for worker := range poolNames {
@@ -760,9 +765,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 				})
 			}
 
-			rollout.PendingWorkersRollouts = pendingWorkersRollouts
-			rollout.LastInitiationTime = &now
-			rollout.LastCompletionTime = nil
+			rollout.PendingWorkersRollouts = append(rollout.PendingWorkersRollouts, pendingWorkersRollouts...)
 		})
 	}
 
@@ -902,7 +905,6 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 
 	if shoot.Status.ManualWorkerPoolRollout != nil {
 		v1beta1helper.MutateShootWorkerPoolRollout(shoot, func(rollout *gardencorev1beta1.ManualWorkerPoolRollout) {
-			rollout.LastCompletionTime = &now
 			rollout.PendingWorkersRollouts = nil
 		})
 	}
@@ -1057,12 +1059,10 @@ func removeNonExistentPoolsFromPendingWorkersRollouts(shoot *gardencorev1beta1.S
 		}
 	}
 
-	if shoot.Status.ManualWorkerPoolRollout != nil {
-		if shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts != nil {
-			shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts = slices.DeleteFunc(shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
-				return !poolNames.Has(rollout.Name)
-			})
-		}
+	if shoot.Status.ManualWorkerPoolRollout != nil && shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts != nil {
+		shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts = slices.DeleteFunc(shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+			return !poolNames.Has(rollout.Name)
+		})
 	}
 }
 

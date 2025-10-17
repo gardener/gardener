@@ -540,6 +540,34 @@ var _ = Describe("Helper", func() {
 		)
 	})
 
+	Describe("#MutateShootWorkerPoolRollout", func() {
+		It("should do nothing when mutate function is nil", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			MutateShootWorkerPoolRollout(shoot, nil)
+			Expect(shoot.Status.ManualWorkerPoolRollout).To(BeNil())
+		})
+
+		DescribeTable("mutate function not nil",
+			func(shoot *gardencorev1beta1.Shoot, pendingRollouts []gardencorev1beta1.PendingWorkersRollout) {
+				MutateShootWorkerPoolRollout(shoot, func(rollout *gardencorev1beta1.ManualWorkerPoolRollout) {
+					rollout.PendingWorkersRollouts = pendingRollouts
+				})
+				Expect(shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts).To(Equal(pendingRollouts))
+			},
+
+			Entry("status nil", &gardencorev1beta1.Shoot{}, []gardencorev1beta1.PendingWorkersRollout{
+				{Name: "worker1", LastInitiationTime: &metav1.Time{Time: time.Now()}},
+			}),
+			Entry("manualWorkerPoolRollout nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{}}, []gardencorev1beta1.PendingWorkersRollout{
+				{Name: "worker2", LastInitiationTime: &metav1.Time{Time: time.Now()}},
+			}),
+			Entry("manualWorkerPoolRollout non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{ManualWorkerPoolRollout: &gardencorev1beta1.ManualWorkerPoolRollout{}}}, []gardencorev1beta1.PendingWorkersRollout{
+				{Name: "worker3", LastInitiationTime: &metav1.Time{Time: time.Now()}},
+			}),
+			Entry("empty pending rollouts", &gardencorev1beta1.Shoot{}, []gardencorev1beta1.PendingWorkersRollout{}),
+		)
+	})
+
 	Describe("#GetAllZonesFromShoot", func() {
 		It("should return an empty list because there are no zones", func() {
 			Expect(sets.List(GetAllZonesFromShoot(&gardencorev1beta1.Shoot{}))).To(BeEmpty())

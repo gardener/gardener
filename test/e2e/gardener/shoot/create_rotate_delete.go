@@ -245,29 +245,26 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 // the creation timestamp of the new MachineSet is newer than the old one.
 func testManualWorkersRollout(s *ShootContext) {
 	var oldMachineSetCreationTimestamp time.Time
-	var machineSetCount int
 
 	It("Should fetch old machine set creation timestamp", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			machineDeployment := s.Shoot.Status.TechnicalID + "-" + s.Shoot.Spec.Provider.Workers[0].Name
-			machineDeploymentObj := &machinev1alpha1.MachineDeployment{}
-			g.Expect(s.SeedClient.Get(ctx, client.ObjectKey{Namespace: s.Shoot.Status.TechnicalID, Name: machineDeployment}, machineDeploymentObj)).To(Succeed())
-			machineSets := &machinev1alpha1.MachineSetList{}
-			g.Expect(s.SeedClient.List(ctx, machineSets, client.InNamespace(s.Shoot.Status.TechnicalID))).To(Succeed())
+			poolName := s.Shoot.Spec.Provider.Workers[0].Name
 
-			g.Expect(machineSets.Items).ToNot(BeEmpty(), "there should be at least one machine set for the machine deployment")
-			var machineSetName string
-			for _, machineSet := range machineSets.Items {
-				if machineSet.ObjectMeta.OwnerReferences[0].Name == machineDeployment {
-					machineSetName = machineSet.Name
-					break
-				}
-			}
+			machineDeployments := &machinev1alpha1.MachineDeploymentList{}
+			g.Expect(s.SeedClient.List(ctx, machineDeployments, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{"worker.gardener.cloud/pool": poolName})).To(Succeed())
+			g.Expect(machineDeployments.Items).To(HaveLen(1), "expected exactly one MachineDeployment for worker pool %s", poolName)
 
-			machineSet := &machinev1alpha1.MachineSet{}
-			g.Expect(s.SeedClient.Get(ctx, client.ObjectKey{Namespace: s.Shoot.Status.TechnicalID, Name: machineSetName}, machineSet)).To(Succeed())
-			oldMachineSetCreationTimestamp = machineSet.CreationTimestamp.Time
-			machineSetCount = len(machineSets.Items)
+			machineDeployment := &machineDeployments.Items[0]
+
+			machineSetList := &machinev1alpha1.MachineSetList{}
+			g.Expect(s.SeedClient.List(ctx, machineSetList, client.InNamespace(s.Shoot.Status.TechnicalID))).To(Succeed())
+
+			ownerToMachineSets := gardenerutils.BuildOwnerToMachineSetsMap(machineSetList.Items)
+			machineSetListForDeployment := ownerToMachineSets[machineDeployment.Name]
+			g.Expect(machineSetListForDeployment).NotTo(BeEmpty(), "no MachineSets found for MachineDeployment %s", machineDeployment.Name)
+			g.Expect(machineSetListForDeployment).To(HaveLen(1), "expected exactly one MachineSet for MachineDeployment %s", machineDeployment.Name)
+
+			oldMachineSetCreationTimestamp = machineSetListForDeployment[0].CreationTimestamp.Time
 		}).Should(Succeed())
 	}, SpecTimeout(10*time.Second))
 
@@ -278,24 +275,25 @@ func testManualWorkersRollout(s *ShootContext) {
 
 	It("Should fetch new machineset creation timestamp and it should be newer", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			machineDeployment := s.Shoot.Status.TechnicalID + "-" + s.Shoot.Spec.Provider.Workers[0].Name
-			machineSets := &machinev1alpha1.MachineSetList{}
-			g.Expect(s.SeedClient.List(ctx, machineSets, client.InNamespace(s.Shoot.Status.TechnicalID))).To(Succeed())
+			poolName := s.Shoot.Spec.Provider.Workers[0].Name
 
-			var machineSetName string
-			for _, machineSet := range machineSets.Items {
-				if machineSet.ObjectMeta.OwnerReferences[0].Name == machineDeployment {
-					machineSetName = machineSet.Name
-					break
-				}
-			}
+			machineDeployments := &machinev1alpha1.MachineDeploymentList{}
+			g.Expect(s.SeedClient.List(ctx, machineDeployments, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{"worker.gardener.cloud/pool": poolName})).To(Succeed())
+			g.Expect(machineDeployments.Items).To(HaveLen(1), "expected exactly one MachineDeployment for worker pool %s", poolName)
 
-			machineSet := &machinev1alpha1.MachineSet{}
-			g.Expect(s.SeedClient.Get(ctx, client.ObjectKey{Namespace: s.Shoot.Status.TechnicalID, Name: machineSetName}, machineSet)).To(Succeed())
-			newMachineSetCreationTimestamp := machineSet.CreationTimestamp.Time
+			machineDeployment := &machineDeployments.Items[0]
 
-			g.Expect(oldMachineSetCreationTimestamp.Before(newMachineSetCreationTimestamp)).To(BeTrue(), "new machine set creation timestamp should be newer than the old one")
-			g.Expect(machineSets.Items).To(HaveLen(machineSetCount), "there should be the same number of machine sets as before the rollout")
+			machineSetList := &machinev1alpha1.MachineSetList{}
+			g.Expect(s.SeedClient.List(ctx, machineSetList, client.InNamespace(s.Shoot.Status.TechnicalID))).To(Succeed())
+
+			ownerToMachineSets := gardenerutils.BuildOwnerToMachineSetsMap(machineSetList.Items)
+			machineSetListForDeployment := ownerToMachineSets[machineDeployment.Name]
+			g.Expect(machineSetListForDeployment).NotTo(BeEmpty(), "no MachineSets found for MachineDeployment %s", machineDeployment.Name)
+			g.Expect(machineSetListForDeployment).To(HaveLen(1), "expected exactly one MachineSet for MachineDeployment %s", machineDeployment.Name)
+
+			newMachineSetCreationTimestamp := machineSetListForDeployment[0].CreationTimestamp.Time
+
+			g.Expect(oldMachineSetCreationTimestamp.Before(newMachineSetCreationTimestamp)).To(BeTrue(), "new MachineSet creation timestamp should be newer than the old one")
 		}).Should(Succeed())
 	}, SpecTimeout(5*time.Minute))
 

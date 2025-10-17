@@ -332,15 +332,9 @@ type CARotation struct {
 
 // ManualWorkerPoolRollout contains information about the worker pool rollout progress that has been initiated via the gardener.cloud/operation=rollout-workers annotation.
 type ManualWorkerPoolRollout struct {
-	// LastCompletionTime is the time when the last worker pool rollout was successfully completed.
-	// +optional
-	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
-	// LastInitiationTime is the time when the last worker pool rollout was initiated.
-	// +optional
-	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
 	// PendingWorkersRollouts contains the names of the worker pools that are still pending rollout.
 	// +optional
-	PendingWorkersRollouts []PendingWorkersRollout `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,6,rep,name=pendingWorkersRollouts"`
+	PendingWorkersRollouts []PendingWorkersRollout `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,1,rep,name=pendingWorkersRollouts"`
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.

@@ -6072,18 +6072,6 @@ func schema_pkg_apis_core_v1beta1_ManualWorkerPoolRollout(ref common.ReferenceCa
 				Description: "ManualWorkerPoolRollout contains information about the worker pool rollout progress that has been initiated via the gardener.cloud/operation=rollout-workers annotation.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the time when the last worker pool rollout was successfully completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastInitiationTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationTime is the time when the last worker pool rollout was initiated.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
 					"pendingWorkersRollouts": {
 						SchemaProps: spec.SchemaProps{
 							Description: "PendingWorkersRollouts contains the names of the worker pools that are still pending rollout.",
@@ -6102,7 +6090,7 @@ func schema_pkg_apis_core_v1beta1_ManualWorkerPoolRollout(ref common.ReferenceCa
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout"},
 	}
 }
 

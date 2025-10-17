@@ -48,6 +48,12 @@ spec:
 
 The migration process should usually take place during the corresponding shoot maintenance time window. If you wish to run the migration process earlier, then you need to roll the nodes yourself and then trigger a reconcile so that the status of the `DualStackNodesMigrationReady` constraint is set to `true`. Once this is the case a new reconcile needs to be triggered to update the final components as described in step 5.  
 
+To help with manual rollout, Gardener provides a way to trigger a manual worker pool rollout by annotating the shoot with the `rollout-workers` annotation and specifying which worker pools you'd like to be rolled out:
+```
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rollout-workers=<pool1-name>[,<pool2-name>,...]
+```
+For more information, please refer to the [manual worker pool rollout](../shoot-operations/worker_pool_manual_rollout.md) documentation.
+
 ### Step 1: Update Networking Configuration
 
 Modify the `spec.networking.ipFamilies` field to include the desired dual-stack configuration. For example, change `[IPv4]` to `[IPv4, IPv6]`.

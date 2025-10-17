@@ -3075,27 +3075,38 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 			}
 		}
 	}
-
 	if strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers) {
-		poolNames := strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRolloutWorkers+"="), ",")
-		if len(poolNames) == 0 || sets.New(poolNames...).Has("") {
-			allErrs = append(allErrs, field.Required(fldPath, "must provide either '*' or at least one pool name via "+v1beta1constants.OperationRolloutWorkers+"=<poolName1>[,<poolName2>,...]"))
+		allErrs = append(allErrs, validateOperationRolloutWorkers(operation, shoot, fldPath)...)
+	}
+
+	return allErrs
+}
+
+func validateOperationRolloutWorkers(operation string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	poolNames := strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRolloutWorkers+"="), ",")
+	if len(poolNames) == 0 || sets.New(poolNames...).Has("") {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide either '*' or at least one pool name via "+v1beta1constants.OperationRolloutWorkers+"=<poolName1>[,<poolName2>,...]"))
+	}
+	if len(poolNames) == 1 && poolNames[0] == "*" {
+		return allErrs
+	}
+	if sets.New(poolNames...).Has("*") {
+		allErrs = append(allErrs, field.Required(fldPath, "if '*' is provided, no other pool names are allowed"))
+	}
+
+	names := sets.New[string]()
+	for _, poolName := range poolNames {
+		if names.Has(poolName) {
+			allErrs = append(allErrs, field.Duplicate(fldPath, "pool name "+poolName+" was specified multiple times"))
 		}
+		names.Insert(poolName)
 
-		if len(poolNames) != 1 || poolNames[0] != "*" {
-			names := sets.New[string]()
-			for _, poolName := range poolNames {
-				if names.Has(poolName) {
-					allErrs = append(allErrs, field.Duplicate(fldPath, "pool name "+poolName+" was specified multiple times"))
-				}
-				names.Insert(poolName)
-
-				if !slices.ContainsFunc(shoot.Spec.Provider.Workers, func(worker core.Worker) bool {
-					return worker.Name == poolName
-				}) {
-					allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool name "+poolName+" does not exist in .spec.provider.workers[]"))
-				}
-			}
+		if !slices.ContainsFunc(shoot.Spec.Provider.Workers, func(worker core.Worker) bool {
+			return worker.Name == poolName
+		}) {
+			allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool name "+poolName+" does not exist in .spec.provider.workers[]"))
 		}
 	}
 

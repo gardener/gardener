@@ -156,19 +156,13 @@ var _ = Describe("Reconciler", func() {
 			})
 		})
 
-		It("should set the manual worker rollout completion time, clean the pending workers and maintain last initiation time", func() {
-			now := metav1.Now()
-
-			shoot.Status.ManualWorkerPoolRollout.LastInitiationTime = ptr.To(now)
-			shoot.Status.ManualWorkerPoolRollout.LastCompletionTime = nil
+		It("should clean the pending workers", func() {
 			shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts = []gardencorev1beta1.PendingWorkersRollout{{Name: "worker-1"}}
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
 			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
 
 			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-			Expect(shoot.Status.ManualWorkerPoolRollout.LastInitiationTime.Unix()).To(Equal(now.Unix()))
-			Expect(shoot.Status.ManualWorkerPoolRollout.LastCompletionTime).ToNot(BeNil())
 			Expect(shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts).To(BeNil())
 		})
 

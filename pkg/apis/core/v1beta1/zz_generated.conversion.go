@@ -5006,8 +5006,6 @@ func Convert_core_MaintenanceTimeWindow_To_v1beta1_MaintenanceTimeWindow(in *cor
 }
 
 func autoConvert_v1beta1_ManualWorkerPoolRollout_To_core_ManualWorkerPoolRollout(in *ManualWorkerPoolRollout, out *core.ManualWorkerPoolRollout, s conversion.Scope) error {
-	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
-	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.PendingWorkersRollouts = *(*[]core.PendingWorkersRollout)(unsafe.Pointer(&in.PendingWorkersRollouts))
 	return nil
 }
@@ -5018,8 +5016,6 @@ func Convert_v1beta1_ManualWorkerPoolRollout_To_core_ManualWorkerPoolRollout(in 
 }
 
 func autoConvert_core_ManualWorkerPoolRollout_To_v1beta1_ManualWorkerPoolRollout(in *core.ManualWorkerPoolRollout, out *ManualWorkerPoolRollout, s conversion.Scope) error {
-	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
-	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.PendingWorkersRollouts = *(*[]PendingWorkersRollout)(unsafe.Pointer(&in.PendingWorkersRollouts))
 	return nil
 }

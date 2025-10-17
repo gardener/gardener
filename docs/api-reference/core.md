@@ -8995,34 +8995,6 @@ If not present, the value will be computed based on the &ldquo;Begin&rdquo; valu
 <tbody>
 <tr>
 <td>
-<code>lastCompletionTime</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta">
-Kubernetes meta/v1.Time
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastCompletionTime is the time when the last worker pool rollout was successfully completed.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastInitiationTime</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta">
-Kubernetes meta/v1.Time
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastInitiationTime is the time when the last worker pool rollout was initiated.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>pendingWorkersRollouts</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.PendingWorkersRollout">

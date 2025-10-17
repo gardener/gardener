@@ -2052,17 +2052,9 @@ message MaintenanceTimeWindow {
 
 // ManualWorkerPoolRollout contains information about the worker pool rollout progress that has been initiated via the gardener.cloud/operation=rollout-workers annotation.
 message ManualWorkerPoolRollout {
-  // LastCompletionTime is the time when the last worker pool rollout was successfully completed.
-  // +optional
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
-
-  // LastInitiationTime is the time when the last worker pool rollout was initiated.
-  // +optional
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
-
   // PendingWorkersRollouts contains the names of the worker pools that are still pending rollout.
   // +optional
-  repeated PendingWorkersRollout pendingWorkersRollouts = 6;
+  repeated PendingWorkersRollout pendingWorkersRollouts = 1;
 }
 
 // MemorySwapConfiguration contains kubelet swap configuration

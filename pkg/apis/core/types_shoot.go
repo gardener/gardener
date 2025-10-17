@@ -255,10 +255,6 @@ type CARotation struct {
 
 // ManualWorkerPoolRollout contains information about the worker pool rollout progress that has been initiated via the gardener.cloud/operation=rollout-workers annotation.
 type ManualWorkerPoolRollout struct {
-	// LastCompletionTime is the time when the last worker pool rollout was successfully completed.
-	LastCompletionTime *metav1.Time
-	// LastInitiationTime is the time when the last worker pool rollout was initiated.
-	LastInitiationTime *metav1.Time
 	// PendingWorkersRollouts contains the names of the worker pools that are still pending rollout.
 	PendingWorkersRollouts []PendingWorkersRollout
 }
@@ -353,12 +349,11 @@ const (
 	RotationCompleted CredentialsRotationPhase = "Completed"
 )
 
-// PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
-// credentials rotation.
+// PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout.
 type PendingWorkersRollout struct {
 	// Name is the name of a worker pool.
 	Name string
-	// LastInitiationTime is the most recent time when the credential rotation was initiated.
+	// LastInitiationTime is the most recent time when the worker rollout was initiated.
 	LastInitiationTime *metav1.Time
 }
 
