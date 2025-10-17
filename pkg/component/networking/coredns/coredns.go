@@ -55,6 +55,7 @@ const (
 	containerName = "coredns"
 	serviceName   = "kube-dns" // this is due to legacy reasons
 
+	// CustomConfigMapName is the name of the custom CoreDNS ConfigMap.
 	CustomConfigMapName = "coredns-custom"
 
 	portNameMetrics = "metrics"
