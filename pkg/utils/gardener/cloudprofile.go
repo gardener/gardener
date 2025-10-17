@@ -351,7 +351,7 @@ func syncMachineTypeLegacyArchitecture(newMachineTypes []core.MachineType, capab
 		}
 
 		// Sync capability architecture to architecture field.
-		defaultedCapabilities := gardencorehelper.GetCapabilitiesWithAppliedDefaults(newMachineTypes[i].Capabilities, capabilityDefinitions)
+		defaultedCapabilities := core.GetCapabilitiesWithAppliedDefaults(newMachineTypes[i].Capabilities, capabilityDefinitions)
 		if len(defaultedCapabilities[v1beta1constants.ArchitectureName]) == 1 {
 			newMachineTypes[i].Architecture = ptr.To(defaultedCapabilities[v1beta1constants.ArchitectureName][0])
 		}

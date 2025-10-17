@@ -7,6 +7,7 @@ package gardener_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
@@ -254,18 +255,64 @@ var _ = Describe("TransformSpecToParentFormat", func() {
 		result := TransformSpecToParentFormat(spec, capabilityDefinitions)
 
 		// Verify all machine images have capability flavors
-		Expect(result.MachineImages).To(HaveLen(2))
-		for _, image := range result.MachineImages {
-			for _, version := range image.Versions {
-				Expect(version.CapabilityFlavors).ToNot(BeEmpty())
-			}
-		}
-
+		Expect(result.MachineImages).To(ConsistOf(
+			MatchFields(IgnoreExtras, Fields{
+				"Name": Equal("ubuntu"),
+				"Versions": ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("20.04")}),
+						"Architectures":    Equal([]string{"amd64"}),
+						"CapabilityFlavors": ConsistOf(MatchFields(IgnoreExtras, Fields{
+							"Capabilities": MatchAllKeys(Keys{
+								"architecture": BeEquivalentTo([]string{"amd64"}),
+							}),
+						})),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("22.04")}),
+						"Architectures":    Equal([]string{"arm64"}),
+						"CapabilityFlavors": ConsistOf(MatchFields(IgnoreExtras, Fields{
+							"Capabilities": MatchAllKeys(Keys{
+								"architecture": BeEquivalentTo([]string{"arm64"}),
+							}),
+						})),
+					}),
+				),
+			}),
+			MatchFields(IgnoreExtras, Fields{
+				"Name": Equal("debian"),
+				"Versions": ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("11")}),
+						"Architectures":    Equal([]string{"amd64", "arm64"}),
+						"CapabilityFlavors": ConsistOf(MatchFields(IgnoreExtras, Fields{
+							"Capabilities": MatchAllKeys(Keys{
+								"architecture": BeEquivalentTo([]string{"amd64"}),
+							}),
+						}), MatchFields(IgnoreExtras, Fields{
+							"Capabilities": MatchAllKeys(Keys{
+								"architecture": BeEquivalentTo([]string{"arm64"}),
+							}),
+						})),
+					}),
+				),
+			}),
+		))
 		// Verify all machine types have capabilities
-		Expect(result.MachineTypes).To(HaveLen(2))
-		for _, machineType := range result.MachineTypes {
-			Expect(machineType.Capabilities[v1beta1constants.ArchitectureName]).ToNot(BeEmpty())
-		}
+		Expect(result.MachineTypes).To(ConsistOf(
+			MatchFields(IgnoreExtras, Fields{
+				"Name": Equal("m5.large"),
+				"Capabilities": MatchAllKeys(Keys{
+					"architecture": BeEquivalentTo([]string{"amd64"}),
+				}),
+			}),
+			MatchFields(IgnoreExtras, Fields{
+				"Name": Equal("m6g.large"),
+				"Capabilities": MatchAllKeys(Keys{
+					"architecture": BeEquivalentTo([]string{"arm64"}),
+				}),
+			}),
+		))
 	})
 
 	It("should return empty spec for empty input", func() {

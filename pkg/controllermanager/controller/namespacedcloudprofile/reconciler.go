@@ -156,14 +156,11 @@ func syncArchitectureCapabilities(namespacedCloudProfile *gardencorev1beta1.Name
 // The sync can only happen after having had a look at the parent CloudProfile and whether it uses capabilities.
 func defaultMachineTypeArchitectures(cloudProfile gardencore.CloudProfileSpec, capabilitiesDefinitions []gardencore.CapabilityDefinition) {
 	for i, machineType := range cloudProfile.MachineTypes {
-		if ptr.Deref(machineType.Architecture, "") != "" {
-			continue
-		}
-		capabilityArchitecture := gardencorehelper.GetCapabilitiesWithAppliedDefaults(machineType.Capabilities, capabilitiesDefinitions)[v1beta1constants.ArchitectureName]
-		if len(capabilityArchitecture) > 0 {
-			cloudProfile.MachineTypes[i].Architecture = &capabilityArchitecture[0]
-		} else {
+		effectiveArchitecture := machineType.GetArchitecture(capabilitiesDefinitions)
+		if effectiveArchitecture == "" {
 			cloudProfile.MachineTypes[i].Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+		} else if cloudProfile.MachineTypes[i].Architecture == nil {
+			cloudProfile.MachineTypes[i].Architecture = ptr.To(effectiveArchitecture)
 		}
 	}
 }
