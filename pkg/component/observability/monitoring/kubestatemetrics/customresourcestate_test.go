@@ -8,56 +8,41 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/onsi/ginkgo/v2"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	. "github.com/onsi/gomega"
 	"go.yaml.in/yaml/v2"
+	"k8s.io/kube-state-metrics/v2/pkg/customresourcestate"
 
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 )
 
 // Returns the expected CustomResourceState config and also asserts that the actual value is the same.
-// This assertion is performed inside this function to allow to give more human readable errors when the
-// long config document actually differs. This also allows to keep the expectation in a standalone yaml
-// file and to easily update it when it needs to be changed
+// Assertion merges the yaml of the expected data together and compares is to the actual value.
 func expectedCustomResourceStateConfig(suffix string) string {
-	defer GinkgoRecover()
-	var (
-		rawActual                    []byte
-		expectFilePath, relativePath string
-		err                          error
-		options                      []Option
-	)
-
-	options = []Option{WithVPAMetrics}
-	relativePath = "testdata/custom-resource-state-vpa.expectation.yaml"
-
+	options := []Option{WithVPAMetrics}
+	relativePaths := []string{"testdata/custom-resource-state-vpa.expectation.yaml"}
 	if suffix == SuffixRuntime {
-		options = append(options, WithGardenResourceMetrics)
-		relativePath = "testdata/custom-resource-state-garden.expectation.yaml"
+		options = append(options, WithGardenResourceMetrics, WithOperatorExtensionMetrics)
+		relativePaths = append(relativePaths, "testdata/custom-resource-state-garden.expectation.yaml", "testdata/custom-resource-state-garden-extension.expectation.yaml")
 	}
 
-	expectFilePath, err = filepath.Abs(relativePath)
-	Expect(err).ToNot(HaveOccurred())
-	rawActual, err = yaml.Marshal(NewCustomResourceStateConfig(options...))
-	Expect(err).ToNot(HaveOccurred())
-
-	actual := string(rawActual)
-	rawExpect, err := os.ReadFile(expectFilePath)
-	Expect(err).ToNot(HaveOccurred())
-
-	if actual != string(rawExpect) {
-		actualFilePath := os.TempDir() + "/custom-resource-state.actual.yaml"
-		err = os.WriteFile(actualFilePath, rawActual, 0644)
+	var expectedMetrics customresourcestate.Metrics
+	// merge expected metric yamls together
+	for _, path := range relativePaths {
+		expectFilePath, err := filepath.Abs(path)
 		Expect(err).ToNot(HaveOccurred())
-
-		AbortSuite("CustomResourceState configuration did not match the expectation:\n" +
-			"Expected file\n" +
-			"\t" + actualFilePath + "\n" +
-			"to match contents from file\n" +
-			"\t" + expectFilePath + "\n" +
-			"Execute 'diff -Bb " + actualFilePath + " " + expectFilePath + "' to see the difference",
-		)
+		raw, err := os.ReadFile(expectFilePath)
+		Expect(err).ToNot(HaveOccurred())
+		// this will merge
+		var m customresourcestate.Metrics
+		Expect(yaml.Unmarshal(raw, &m)).ToNot(HaveOccurred())
+		expectedMetrics.Spec.Resources = append(expectedMetrics.Spec.Resources, m.Spec.Resources...)
 	}
 
-	return actual
+	actualMetrics := NewCustomResourceStateConfig(options...)
+	Expect(actualMetrics).To(BeComparableTo(expectedMetrics, cmpopts.EquateEmpty()))
+
+	rawActual, err := yaml.Marshal(actualMetrics)
+	Expect(err).ToNot(HaveOccurred())
+	return string(rawActual)
 }

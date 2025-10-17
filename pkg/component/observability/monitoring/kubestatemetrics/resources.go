@@ -90,7 +90,7 @@ func (k *kubeStateMetrics) clusterRole() *rbacv1.ClusterRole {
 		},
 		{
 			APIGroups: []string{"operator.gardener.cloud"},
-			Resources: []string{"gardens"},
+			Resources: []string{"gardens", "extensions"},
 			Verbs:     []string{"list", "watch"},
 		},
 	}
@@ -405,6 +405,7 @@ var gardenMetricAllowlist = []string{
 	"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$",
 	"^garden_garden_condition$",
 	"^garden_garden_last_operation$",
+	"^garden_extension_condition$",
 }
 
 var cacheMetricAllowlist = []string{
@@ -719,11 +720,10 @@ func (k *kubeStateMetrics) nameSuffix() string {
 func (k *kubeStateMetrics) customResourceStateConfigMap() (*corev1.ConfigMap, error) {
 	opts := []Option{WithVPAMetrics}
 	if k.values.NameSuffix == SuffixRuntime {
-		opts = append(opts, WithGardenResourceMetrics)
+		opts = append(opts, WithGardenResourceMetrics, WithOperatorExtensionMetrics)
 	}
 
 	customResourceStateConfig, err := yaml.Marshal(NewCustomResourceStateConfig(opts...))
-
 	if err != nil {
 		return nil, err
 	}
