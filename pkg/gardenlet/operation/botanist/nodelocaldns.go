@@ -35,7 +35,7 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 		return nil, err
 	}
 
-	imageCoreDNSConfigAdapater, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameCoreDNSConfigAdapter)
+	imageCoreDNSConfigAdapater, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameCorednsConfigAdapter)
 	if err != nil {
 		return nil, err
 	}
