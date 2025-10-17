@@ -281,6 +281,7 @@ spec:
         severity: critical
         topology: seed
         mute_on_weekends: "true"
+        project: garden
       annotations:
         summary: >-
           Seed Condition Failing
@@ -304,6 +305,7 @@ spec:
         severity: critical
         topology: seed
         mute_on_weekends: "true"
+        project: garden
       annotations:
         summary: >-
           Seed Condition Failing
