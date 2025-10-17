@@ -465,7 +465,7 @@ status:
 								InitContainers: []corev1.Container{
 									{
 										Name:  "coredns-config-adapter",
-										Image: values.CoreDNSConfigAdapaterImage,
+										Image: values.CorednsConfigAdapterImage,
 										Resources: corev1.ResourceRequirements{
 											Requests: corev1.ResourceList{
 												corev1.ResourceCPU:    resource.MustParse("5m"),

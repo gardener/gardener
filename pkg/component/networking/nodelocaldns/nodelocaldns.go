@@ -106,8 +106,8 @@ type Values struct {
 	Image string
 	// AlpineImage is the container image used for the cleanup DaemonSet.
 	AlpineImage string
-	// CoreDNSConfigAdapaterImage is the container image used for the coredns config adapter sidecar.
-	CoreDNSConfigAdapaterImage string
+	// CorednsConfigAdapterImage is the container image used for the coredns config adapter sidecar.
+	CorednsConfigAdapterImage string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
 	// Config is the node local configuration for the shoot spec

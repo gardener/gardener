@@ -213,7 +213,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 						InitContainers: []corev1.Container{
 							{
 								Name:  sideCarName,
-								Image: n.values.CoreDNSConfigAdapaterImage,
+								Image: n.values.CorednsConfigAdapterImage,
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("5m"),
