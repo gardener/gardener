@@ -833,6 +833,28 @@ var _ = Describe("CloudProfile", func() {
 				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
 				Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
 			})
+
+			It("should set capabilities and capabilityFlavors to nil on migration to legacy format", func() {
+				// migration to legacy is indicated by old spec having machineCapabilities defined
+				// and new spec having empty machineCapabilities
+				cloudProfileSpecOld.MachineCapabilities = []core.CapabilityDefinition{
+					{Name: "architecture", Values: []string{"arm64", "amd64"}},
+				}
+				cloudProfileSpecNew.MachineCapabilities = []core.CapabilityDefinition{}
+
+				cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors = []core.MachineImageFlavor{
+					{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
+					{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
+				}
+				cloudProfileSpecNew.MachineTypes[0].Capabilities = core.Capabilities{
+					"architecture": []string{"arm64"},
+				}
+
+				gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
+
+				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors).To(BeNil())
+				Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities).To(BeNil())
+			})
 		})
 
 		Describe("#GetCloudProfile", func() {
