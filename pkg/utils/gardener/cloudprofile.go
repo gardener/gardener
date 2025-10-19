@@ -319,7 +319,7 @@ func syncMachineImageLegacyArchitecture(newMachineImages []core.MachineImage, ca
 		for versionIdx, imageVersion := range newMachineImages[imageIdx].Versions {
 			// If there are no capability definitions, clear capability flavors.
 			if len(capabilityDefinitions) == 0 {
-				imageVersion.CapabilityFlavors = nil
+				newMachineImages[imageIdx].Versions[versionIdx].CapabilityFlavors = nil
 				continue
 			}
 
