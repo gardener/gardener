@@ -11,7 +11,9 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -101,12 +103,14 @@ func GetValiLogs(ctx context.Context, valiLabels map[string]string, valiNamespac
 
 	var stdout io.Reader
 	var err error
-	stdout, _, err = PodExecByLabel(ctx, client, valiNamespace, valiLabelsSelector, valiLogging,
-		"wget", "http://localhost:"+strconv.Itoa(valiPort)+"/vali/api/v1/query_range?limit=200", "-O-", "--post-data="+query,
-	)
-	if err != nil {
-		return nil, err
-	}
+
+	// Retry potentially multiple times as vali may be evicted by VPA.
+	Eventually(ctx, func() error {
+		stdout, _, err = PodExecByLabel(ctx, client, valiNamespace, valiLabelsSelector, valiLogging,
+			"wget", "http://localhost:"+strconv.Itoa(valiPort)+"/vali/api/v1/query_range?limit=200", "-O-", "--post-data="+query,
+		)
+		return err
+	}, 45*time.Second, 1*time.Second).Should(Succeed())
 
 	search := &SearchResponse{}
 
