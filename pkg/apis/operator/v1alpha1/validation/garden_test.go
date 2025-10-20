@@ -108,7 +108,7 @@ var _ = Describe("Validation Tests", func() {
 				Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 			})
 
-			DescribeTable("size limist",
+			DescribeTable("size limits",
 				func(size int, matcher gomegatypes.GomegaMatcher) {
 					garden.DeletionTimestamp = &metav1.Time{}
 					value := strings.Repeat("a", size)
@@ -116,12 +116,12 @@ var _ = Describe("Validation Tests", func() {
 					Expect(ValidateGarden(garden, extensions)).To(matcher)
 				},
 
-				Entry("operation size is over maxSize", 8193, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Entry("operation size is over maxSize", 1025, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeTooLong),
 					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-					"Detail": Equal("may not be more than 8192 bytes"),
+					"Detail": Equal("may not be more than 1024 bytes"),
 				})))),
-				Entry("operation size is within maxSize", 8192, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Entry("operation size is within maxSize", 1024, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
 				})))),

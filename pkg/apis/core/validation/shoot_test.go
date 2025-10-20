@@ -4843,29 +4843,44 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			DescribeTable("size limist",
-				func(key string, size int, matcher gomegatypes.GomegaMatcher) {
+				func(key, prefix string, size int, matcher gomegatypes.GomegaMatcher) {
 					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeCreate, State: core.LastOperationStateSucceeded}
-					value := strings.Repeat("a", size)
+					value := fmt.Sprintf("%s%s", prefix, strings.Repeat("a", size))
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, key, value)
+					shoot.Status.Credentials = &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.CARotation{
+								Phase: core.RotationWaitingForWorkersRollout,
+							},
+						},
+					}
 					Expect(ValidateShoot(shoot)).To(matcher)
 				},
 
-				Entry("operation size is over maxSize", "gardener.cloud/operation", 8193, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Entry("operation size is over maxSize", "gardener.cloud/operation", "", 481, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeTooLong),
 					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-					"Detail": Equal("may not be more than 8192 bytes"),
+					"Detail": Equal("may not be more than 480 bytes"),
 				})))),
-				Entry("operation size is within maxSize", "gardener.cloud/operation", 8192, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Entry("operation size is within maxSize", "gardener.cloud/operation", "", 480, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
 				})))),
-				Entry("maintenance operation size is over maxSize", "maintenance.gardener.cloud/operation", 8193, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Entry("allow over maxSize for rotate-rollout-workers", "gardener.cloud/operation", "rotate-rollout-workers=", 500, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+				})))),
+				Entry("maintenance operation size is over maxSize", "maintenance.gardener.cloud/operation", "", 481, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeTooLong),
 					"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-					"Detail": Equal("may not be more than 8192 bytes"),
+					"Detail": Equal("may not be more than 480 bytes"),
 				})))),
-				Entry("maintenance  operation size is within maxSize", "maintenance.gardener.cloud/operation", 8192, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Entry("maintenance  operation size is within maxSize", "maintenance.gardener.cloud/operation", "", 480, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+				})))),
+				Entry("allow over maxSize for rotate-rollout-workers", "maintenance.gardener.cloud/operation", "rotate-rollout-workers=", 500, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
 				})))),
 			)
@@ -6343,7 +6358,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					if sets.New(v1beta1constants.OperationRotateCredentialsComplete,
 						v1beta1constants.OperationRotateCAComplete,
 						v1beta1constants.OperationRotateServiceAccountKeyComplete,
-						v1beta1constants.OperationRotateETCDEncryptionKeyComplete).HasAny(v1beta1helper.SplitAndTrimString(maintenanceOpAnnotation, ";")...) {
+						v1beta1constants.OperationRotateETCDEncryptionKeyComplete).HasAny(v1beta1helper.SplitAndTrimString(maintenanceOpAnnotation, v1beta1constants.GardenerOperationsSeparator)...) {
 						shoot.Status.Credentials = &core.ShootCredentials{
 							Rotation: &core.ShootCredentialsRotation{
 								CertificateAuthorities: &core.CARotation{
@@ -6604,6 +6619,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
 			)
 
+			It("skip maintenance operation validation for hibernation when operation is too long", func() {
+				operation := strings.Repeat("rotate-etcd-encryption-key-start;", 500)
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+
+				Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeTooLong),
+					"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+					"Detail": Equal("may not be more than 480 bytes"),
+				}))))
+			})
+
 			DescribeTable("forbid hibernating the shoot when certain rotation operations are in progress",
 				func(status core.ShootStatus) {
 					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
@@ -6781,11 +6808,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 
 					Entry("rotate-credentials-start with rotate-credentials-start-without-workers-rollout", "rotate-credentials-start;rotate-credentials-start-without-workers-rollout",
-						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout"),
+						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout"),
 					Entry("rotate-credentials-start with rotate-ca-start-without-workers-rollout", "rotate-credentials-start;rotate-ca-start-without-workers-rollout",
-						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout"),
+						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout"),
 					Entry("rotate-credentials-start with rotate-serviceaccount-key-start-without-workers-rollout", "rotate-credentials-start;rotate-serviceaccount-key-start-without-workers-rollout",
-						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout"),
+						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout"),
 					Entry("rotate-credentials-start-without-workers-rollout with rotate-ca-start", "rotate-credentials-start-without-workers-rollout;rotate-ca-start",
 						"rotate-credentials-start-without-workers-rollout", "rotate-ca-start, rotate-serviceaccount-key-start"),
 					Entry("rotate-credentials-start-without-workers-rollout with rotate-serviceaccount-key-start", "rotate-credentials-start-without-workers-rollout;rotate-serviceaccount-key-start",

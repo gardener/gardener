@@ -256,5 +256,5 @@ func GetEncryptedResourcesInStatus(gardenStatus operatorv1alpha1.GardenStatus) [
 
 // GetGardenerOperations returns the Garden's gardener operations specified in the operation annotation.
 func GetGardenerOperations(annotations map[string]string) []string {
-	return v1beta1helper.SplitAndTrimString(annotations[v1beta1constants.GardenerOperation], ";")
+	return v1beta1helper.SplitAndTrimString(annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)
 }

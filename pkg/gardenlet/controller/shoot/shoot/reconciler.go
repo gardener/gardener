@@ -721,7 +721,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 			}
 		}
 		if strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers) {
-			patchOperations = removeOperation(patchOperations, operation)
+			patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
 			poolNames := sets.NewString(strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRolloutWorkers+"="), ",")...)
 
 			if poolNames.Has("*") {
@@ -789,7 +789,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		if len(patchOperations) == 0 {
 			delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 		} else {
-			shoot.Annotations[v1beta1constants.GardenerOperation] = strings.Join(patchOperations, ";")
+			shoot.Annotations[v1beta1constants.GardenerOperation] = strings.Join(patchOperations, v1beta1constants.GardenerOperationsSeparator)
 		}
 		return r.GardenClient.Patch(ctx, shoot, patch)
 	}

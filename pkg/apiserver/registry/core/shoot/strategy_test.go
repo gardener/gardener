@@ -538,7 +538,7 @@ var _ = Describe("Strategy", func() {
 
 					if mutatedAnnotation != nil {
 						Expect(newShoot.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
-						Expect(v1beta1helper.SplitAndTrimString(newShoot.Annotations[v1beta1constants.GardenerOperation], ";")).To(ConsistOf(mutatedAnnotation))
+						Expect(v1beta1helper.SplitAndTrimString(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)).To(ConsistOf(mutatedAnnotation))
 					} else {
 						Expect(newShoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 					}
