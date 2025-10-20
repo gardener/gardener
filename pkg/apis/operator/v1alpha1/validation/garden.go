@@ -50,7 +50,7 @@ import (
 var (
 	gardenCoreScheme *runtime.Scheme
 	// maxOperationsSize is the maximum allowed length of the operations annotation in bytes.
-	maxOperationsSize                     = 1 * 8 * 1024
+	maxOperationsSize                     = 1024
 	forbiddenShootOperationsToRunTogether = map[string]sets.Set[string]{
 		v1beta1constants.OperationRotateETCDEncryptionKey: sets.New(
 			v1beta1constants.OperationRotateETCDEncryptionKeyStart,
@@ -620,6 +620,7 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 func validateOperation(operations []string, garden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs       = field.ErrorList{}
+		operationsLen = len(strings.Join(operations, ","))
 		fldPathOp     = fldPath.Key(v1beta1constants.GardenerOperation)
 		k8sLess134, _ = versionutils.CheckVersionMeetsConstraint(garden.Spec.VirtualCluster.Kubernetes.Version, "< 1.34")
 	)
@@ -628,8 +629,8 @@ func validateOperation(operations []string, garden *operatorv1alpha1.Garden, fld
 		return allErrs
 	}
 
-	if len(strings.Join(operations, ";")) > maxOperationsSize {
-		return append(allErrs, field.TooLong(fldPathOp, len(operations), maxOperationsSize))
+	if operationsLen > maxOperationsSize {
+		return append(allErrs, field.TooLong(fldPathOp, operationsLen, maxOperationsSize))
 	}
 
 	operationsSet := sets.New(operations...)

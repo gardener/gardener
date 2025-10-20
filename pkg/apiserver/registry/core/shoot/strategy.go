@@ -7,6 +7,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -72,6 +73,13 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	newShoot.Status = oldShoot.Status               // can only be changed by shoots/status subresource
 	newShoot.Spec.SeedName = oldShoot.Spec.SeedName // can only be changed by shoots/binding subresource
 
+	if op, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok {
+		newShoot.Annotations[v1beta1constants.GardenerOperation] = cleanUpOperation(op)
+	}
+	if mOp, ok := newShoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]; ok {
+		newShoot.Annotations[v1beta1constants.GardenerOperation] = cleanUpOperation(mOp)
+	}
+
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
@@ -105,8 +113,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			mustIncrease                  bool
 			mustRemoveOperationAnnotation bool
 			operations                    = v1beta1helper.GetShootGardenerOperations(newShoot.Annotations)
-			operationsSet                 = sets.New(operations...)
-			patchOperations               = operationsSet.UnsortedList()
+			patchOperations               = slices.Clone(operations)
 		)
 
 		switch lastOperation.State {
@@ -116,7 +123,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			}
 
 		default:
-			for _, operation := range operationsSet.UnsortedList() {
+			for _, operation := range operations {
 				switch operation {
 				case v1beta1constants.GardenerOperationReconcile:
 					mustIncrease = true
@@ -176,7 +183,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 					// The generation will be increased if there really is a spec change in the object.
 				}
 
-				if strings.HasPrefix(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.OperationRotateRolloutWorkers) {
+				if strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
 					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
 					// the rotation. It has to remove the annotation after it is done.
 					mustIncrease = true
@@ -187,7 +194,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 		if mustRemoveOperationAnnotation || len(patchOperations) == 0 {
 			delete(newShoot.Annotations, v1beta1constants.GardenerOperation)
 		} else if len(operations) != len(patchOperations) {
-			newShoot.Annotations[v1beta1constants.GardenerOperation] = strings.Join(patchOperations, ";")
+			newShoot.Annotations[v1beta1constants.GardenerOperation] = strings.Join(patchOperations, v1beta1constants.GardenerOperationsSeparator)
 		}
 		if mustIncrease {
 			return true
@@ -381,4 +388,9 @@ func getStatusSeedName(shoot *core.Shoot) string {
 		return ""
 	}
 	return *shoot.Status.SeedName
+}
+
+func cleanUpOperation(operation string) string {
+	operations := v1beta1helper.SplitAndTrimString(operation, v1beta1constants.GardenerOperationsSeparator)
+	return strings.Join(sets.New(operations...).UnsortedList(), v1beta1constants.GardenerOperationsSeparator)
 }
