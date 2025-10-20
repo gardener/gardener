@@ -199,63 +199,79 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilities core.
 	duplicateName := sets.Set[string]{}
 	for i, image := range machineImages {
 		idxPath := fldPath.Index(i)
-		if duplicateName.Has(image.Name) {
-			allErrs = append(allErrs, field.Duplicate(idxPath, image.Name))
-		}
-		duplicateName.Insert(image.Name)
+		allErrs = append(allErrs, ValidateMachineImage(image, capabilities, duplicateName, duplicateNameVersion, allowEmptyVersions, idxPath)...)
+	}
 
-		if len(image.Name) == 0 {
-			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "machine image name must not be empty"))
-		} else if errs := validateUnprefixedQualifiedName(image.Name); len(errs) != 0 {
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), image.Name, fmt.Sprintf("machine image name must be a qualified name: %v", errs)))
-		}
+	return allErrs
+}
 
-		if len(image.Versions) == 0 && !allowEmptyVersions {
-			allErrs = append(allErrs, field.Required(idxPath.Child("versions"), fmt.Sprintf("must provide at least one version for the machine image '%s'", image.Name)))
-		}
+// ValidateMachineImage validates a single machine image for valid values and combinations.
+func ValidateMachineImage(image core.MachineImage, capabilities core.Capabilities, duplicateName sets.Set[string], duplicateNameVersion sets.Set[string], allowEmptyVersions bool, idxPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
 
-		if image.UpdateStrategy != nil {
-			if !availableUpdateStrategiesForMachineImage.Has(string(*image.UpdateStrategy)) {
-				allErrs = append(allErrs, field.NotSupported(idxPath.Child("updateStrategy"), *image.UpdateStrategy, sets.List(availableUpdateStrategiesForMachineImage)))
-			}
-		}
+	if duplicateName.Has(image.Name) {
+		allErrs = append(allErrs, field.Duplicate(idxPath, image.Name))
+	}
+	duplicateName.Insert(image.Name)
 
-		for index, machineVersion := range image.Versions {
-			versionsPath := idxPath.Child("versions").Index(index)
-			key := fmt.Sprintf("%s-%s", image.Name, machineVersion.Version)
-			if duplicateNameVersion.Has(key) {
-				allErrs = append(allErrs, field.Duplicate(versionsPath, key))
-			}
-			duplicateNameVersion.Insert(key)
-			if len(machineVersion.Version) == 0 {
-				allErrs = append(allErrs, field.Required(versionsPath.Child("version"), machineVersion.Version))
-			}
+	if len(image.Name) == 0 {
+		allErrs = append(allErrs, field.Required(idxPath.Child("name"), "machine image name must not be empty"))
+	} else if errs := validateUnprefixedQualifiedName(image.Name); len(errs) != 0 {
+		allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), image.Name, fmt.Sprintf("machine image name must be a qualified name: %v", errs)))
+	}
 
-			_, err := semver.NewVersion(machineVersion.Version)
-			if err != nil {
-				allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use a semantic version. In case there is no semantic version for this image use the extensibility provider (define mapping in the CloudProfile) to map to the actual non semantic version"))
-			}
+	if len(image.Versions) == 0 && !allowEmptyVersions {
+		allErrs = append(allErrs, field.Required(idxPath.Child("versions"), fmt.Sprintf("must provide at least one version for the machine image '%s'", image.Name)))
+	}
 
-			if machineVersion.InPlaceUpdates != nil && machineVersion.InPlaceUpdates.MinVersionForUpdate != nil {
-				if _, err = semver.NewVersion(*machineVersion.InPlaceUpdates.MinVersionForUpdate); err != nil {
-					allErrs = append(allErrs, field.Invalid(versionsPath.Child("minVersionForInPlaceUpdate"), *machineVersion.InPlaceUpdates.MinVersionForUpdate, "could not parse version. Use a semantic version."))
-				}
-			}
-
-			if machineVersion.Classification != nil && !supportedVersionClassifications.Has(string(*machineVersion.Classification)) {
-				allErrs = append(allErrs, field.NotSupported(versionsPath.Child("classification"), *machineVersion.Classification, sets.List(supportedVersionClassifications)))
-			}
-
-			allErrs = append(allErrs, validateMachineImageVersionFlavors(machineVersion, capabilities, versionsPath)...)
-
-			if machineVersion.KubeletVersionConstraint != nil {
-				if _, err := semver.NewConstraint(*machineVersion.KubeletVersionConstraint); err != nil {
-					allErrs = append(allErrs, field.Invalid(versionsPath.Child("kubeletVersionConstraint"), machineVersion.KubeletVersionConstraint, fmt.Sprintf("cannot parse the kubeletVersionConstraint: %s", err.Error())))
-				}
-			}
+	if image.UpdateStrategy != nil {
+		if !availableUpdateStrategiesForMachineImage.Has(string(*image.UpdateStrategy)) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("updateStrategy"), *image.UpdateStrategy, sets.List(availableUpdateStrategiesForMachineImage)))
 		}
 	}
 
+	for index, machineVersion := range image.Versions {
+		versionsPath := idxPath.Child("versions").Index(index)
+		allErrs = append(allErrs, ValidateMachineImageVersion(image, machineVersion, capabilities, duplicateNameVersion, versionsPath)...)
+	}
+	return allErrs
+}
+
+// ValidateMachineImageVersion validates a single machine image version for valid values and combinations.
+func ValidateMachineImageVersion(image core.MachineImage, machineVersion core.MachineImageVersion, capabilities core.Capabilities, duplicateNameVersion sets.Set[string], versionsPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	key := fmt.Sprintf("%s-%s", image.Name, machineVersion.Version)
+	if duplicateNameVersion.Has(key) {
+		allErrs = append(allErrs, field.Duplicate(versionsPath, key))
+	}
+	duplicateNameVersion.Insert(key)
+	if len(machineVersion.Version) == 0 {
+		allErrs = append(allErrs, field.Required(versionsPath.Child("version"), machineVersion.Version))
+	}
+
+	_, err := semver.NewVersion(machineVersion.Version)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use a semantic version. In case there is no semantic version for this image use the extensibility provider (define mapping in the CloudProfile) to map to the actual non semantic version"))
+	}
+
+	if machineVersion.InPlaceUpdates != nil && machineVersion.InPlaceUpdates.MinVersionForUpdate != nil {
+		if _, err = semver.NewVersion(*machineVersion.InPlaceUpdates.MinVersionForUpdate); err != nil {
+			allErrs = append(allErrs, field.Invalid(versionsPath.Child("minVersionForInPlaceUpdate"), *machineVersion.InPlaceUpdates.MinVersionForUpdate, "could not parse version. Use a semantic version."))
+		}
+	}
+
+	if machineVersion.Classification != nil && !supportedVersionClassifications.Has(string(*machineVersion.Classification)) {
+		allErrs = append(allErrs, field.NotSupported(versionsPath.Child("classification"), *machineVersion.Classification, sets.List(supportedVersionClassifications)))
+	}
+
+	allErrs = append(allErrs, validateMachineImageVersionFlavors(machineVersion, capabilities, versionsPath)...)
+
+	if machineVersion.KubeletVersionConstraint != nil {
+		if _, err := semver.NewConstraint(*machineVersion.KubeletVersionConstraint); err != nil {
+			allErrs = append(allErrs, field.Invalid(versionsPath.Child("kubeletVersionConstraint"), machineVersion.KubeletVersionConstraint, fmt.Sprintf("cannot parse the kubeletVersionConstraint: %s", err.Error())))
+		}
+	}
 	return allErrs
 }
 
@@ -277,33 +293,40 @@ func validateMachineTypes(machineTypes []core.MachineType, capabilities core.Cap
 
 	for i, machineType := range machineTypes {
 		idxPath := fldPath.Index(i)
-		namePath := idxPath.Child("name")
-		cpuPath := idxPath.Child("cpu")
-		gpuPath := idxPath.Child("gpu")
-		memoryPath := idxPath.Child("memory")
-
-		if len(machineType.Name) == 0 {
-			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
-		} else if errs := validateUnprefixedQualifiedName(machineType.Name); len(errs) != 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("name"), machineType.Name, fmt.Sprintf("machine type name must be a qualified name: %v", errs)))
-		}
-
-		if names.Has(machineType.Name) {
-			allErrs = append(allErrs, field.Duplicate(namePath, machineType.Name))
-			break
-		}
-		names.Insert(machineType.Name)
-
-		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
-		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
-		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
-		allErrs = append(allErrs, validateMachineTypeCapabilities(machineType, capabilities, idxPath)...)
-
-		if machineType.Storage != nil {
-			allErrs = append(allErrs, validateMachineTypeStorage(*machineType.Storage, idxPath.Child("storage"))...)
-		}
+		allErrs = append(allErrs, ValidateMachineType(machineType, names, capabilities, idxPath)...)
 	}
 
+	return allErrs
+}
+
+// ValidateMachineType validates a single machine type for valid values and combinations.
+func ValidateMachineType(machineType core.MachineType, names sets.Set[string], capabilities core.Capabilities, idxPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	namePath := idxPath.Child("name")
+	cpuPath := idxPath.Child("cpu")
+	gpuPath := idxPath.Child("gpu")
+	memoryPath := idxPath.Child("memory")
+
+	if len(machineType.Name) == 0 {
+		allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+	} else if errs := validateUnprefixedQualifiedName(machineType.Name); len(errs) != 0 {
+		allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), machineType.Name, fmt.Sprintf("machine type name must be a qualified name: %v", errs)))
+	}
+
+	if names.Has(machineType.Name) {
+		return append(allErrs, field.Duplicate(namePath, machineType.Name))
+	}
+	names.Insert(machineType.Name)
+
+	allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
+	allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
+	allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+	allErrs = append(allErrs, validateMachineTypeCapabilities(machineType, capabilities, idxPath)...)
+
+	if machineType.Storage != nil {
+		allErrs = append(allErrs, validateMachineTypeStorage(*machineType.Storage, idxPath.Child("storage"))...)
+	}
 	return allErrs
 }
 
