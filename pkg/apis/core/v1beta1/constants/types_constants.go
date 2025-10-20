@@ -209,6 +209,8 @@ const (
 	GardenCreatedBy = "gardener.cloud/created-by"
 	// GardenerOperation is a constant for an annotation on a resource that describes a desired operation.
 	GardenerOperation = "gardener.cloud/operation"
+	// GardenerOperationsSeparator is the separator used to separate parallel operations in the GardenerOperation annotation.
+	GardenerOperationsSeparator = ";"
 	// GardenerMaintenanceOperation is a constant for an annotation on a Shoot that describes a desired operation which
 	// will be performed during maintenance.
 	GardenerMaintenanceOperation = "maintenance.gardener.cloud/operation"

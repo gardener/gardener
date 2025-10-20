@@ -729,7 +729,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		if len(patchOperations) == 0 {
 			delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 		} else {
-			shoot.Annotations[v1beta1constants.GardenerOperation] = strings.Join(patchOperations, ";")
+			shoot.Annotations[v1beta1constants.GardenerOperation] = strings.Join(patchOperations, v1beta1constants.GardenerOperationsSeparator)
 		}
 		return r.GardenClient.Patch(ctx, shoot, patch)
 	}
