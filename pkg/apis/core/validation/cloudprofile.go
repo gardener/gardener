@@ -184,20 +184,28 @@ func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, capabi
 
 		for index, machineVersion := range image.Versions {
 			versionsPath := idxPath.Child("versions").Index(index)
-			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
-			allErrs = append(allErrs, validateSupportedVersionsConfiguration(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
-
-			if len(capabilities) == 0 {
-				if len(machineVersion.Architectures) == 0 {
-					allErrs = append(allErrs, field.Required(versionsPath.Child("architectures"), "must provide at least one architecture"))
-				}
-				if len(machineVersion.CapabilityFlavors) > 0 {
-					allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilityFlavors"), "must not provide capabilities without global definition"))
-				}
-			}
+			allErrs = append(allErrs, ValidateMachineImageAdditionalConfig(machineVersion, versionsPath, image, capabilities)...)
 		}
 	}
 
+	return allErrs
+}
+
+// ValidateMachineImageAdditionalConfig validates RuntimeInterfaces and supported versions configuration of a MachineImageVersion.
+func ValidateMachineImageAdditionalConfig(machineVersion core.MachineImageVersion, versionsPath *field.Path, image core.MachineImage, capabilities core.Capabilities) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
+	allErrs = append(allErrs, validateSupportedVersionsConfiguration(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
+
+	if len(capabilities) == 0 {
+		if len(machineVersion.Architectures) == 0 {
+			allErrs = append(allErrs, field.Required(versionsPath.Child("architectures"), "must provide at least one architecture"))
+		}
+		if len(machineVersion.CapabilityFlavors) > 0 {
+			allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilityFlavors"), "must not provide capabilities without global definition"))
+		}
+	}
 	return allErrs
 }
 
