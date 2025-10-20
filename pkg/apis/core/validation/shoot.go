@@ -2959,10 +2959,10 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		return allErrs
 	}
 
-	if operationsLen > maxOperationsSize && !(len(operations) == 1 && strings.HasPrefix(operations[0], v1beta1constants.OperationRotateRolloutWorkers)) {
+	if operationsLen > maxOperationsSize && (len(operations) != 1 || !strings.HasPrefix(operations[0], v1beta1constants.OperationRotateRolloutWorkers)) {
 		return append(allErrs, field.TooLong(fldPathOp, operationsLen, maxOperationsSize))
 	}
-	if maintenanceOpLen > maxOperationsSize && !(len(maintenanceOperations) == 1 && strings.HasPrefix(maintenanceOperations[0], v1beta1constants.OperationRotateRolloutWorkers)) {
+	if maintenanceOpLen > maxOperationsSize && (len(maintenanceOperations) != 1 || !strings.HasPrefix(maintenanceOperations[0], v1beta1constants.OperationRotateRolloutWorkers)) {
 		return append(allErrs, field.TooLong(fldPathMaintOp, maintenanceOpLen, maxOperationsSize))
 	}
 

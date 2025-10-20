@@ -78,7 +78,7 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		newShoot.Annotations[v1beta1constants.GardenerOperation] = cleanUpOperation(op)
 	}
 	if mOp, ok := newShoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]; ok {
-		newShoot.Annotations[v1beta1constants.GardenerOperation] = cleanUpOperation(mOp)
+		newShoot.Annotations[v1beta1constants.GardenerMaintenanceOperation] = cleanUpOperation(mOp)
 	}
 
 	if mustIncreaseGeneration(oldShoot, newShoot) {
