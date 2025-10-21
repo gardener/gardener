@@ -55,9 +55,9 @@ rules:
   verbs:
   - create`
 
-	license = `# SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
-#
-# SPDX-License-Identifier: Apache-2.0`
+	license = `# This is a dummy multi-line comment.
+# It is used for verifying file parsing and validation logic if the file has a license header.
+# No actual functionality is implemented here.`
 )
 
 //go:embed testdata/alpine/*

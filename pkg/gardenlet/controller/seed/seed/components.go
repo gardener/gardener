@@ -319,9 +319,11 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 
 	servicePorts := []corev1.ServicePort{
 		{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
-		{Name: "http-proxy", Port: vpnseedserver.HTTPProxyGatewayPort, TargetPort: intstr.FromInt(vpnseedserver.HTTPProxyGatewayPort)},
 		// TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
 		{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt32(vpnseedserver.GatewayPort)},
+	}
+	if features.DefaultFeatureGate.Enabled(features.UseUnifiedHTTPProxyPort) {
+		servicePorts = append(servicePorts, corev1.ServicePort{Name: "http-proxy", Port: vpnseedserver.HTTPProxyGatewayPort, TargetPort: intstr.FromInt(vpnseedserver.HTTPProxyGatewayPort)})
 	}
 
 	istioDeployer, err := sharedcomponent.NewIstio(
