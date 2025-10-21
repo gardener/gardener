@@ -58,7 +58,7 @@ This includes 2 steps:
 - Deployment of a new [VictoriaOperator](https://github.com/VictoriaMetrics/operator) component during the `Garden` reconciliation flow in the `Garden` namespace.
 - Deployment of a new `VictoriaLogs` statefulset during the Garden reconciliation flow but *after* the `VictoriaOperator` deployment has finished. This component will include a `VLSingle` CustomResource that the operator will reconcile in the `garden` namespace.
 
-Both new components will strongly resemble the already existing pattern that already existing components implement (e.g. OpenTelemetry Operator, Prometheus Operator). That being an implementation of the `Deployer` interface as well as an additional step the the `Seed` reconciliation flow.
+Both new components will implement the already existing pattern that components implement (e.g. OpenTelemetry Operator, Prometheus Operator). That being an implementation of the `Deployer` interface as well as an additional step the the `Seed` reconciliation flow.
 
 #### Access to VictoriaLogs in the `Garden` cluster
 
