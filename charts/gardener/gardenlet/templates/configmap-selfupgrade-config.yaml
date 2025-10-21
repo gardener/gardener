@@ -52,5 +52,9 @@ data:
         {{- .Values.env | toYaml | nindent 8 }}
         {{- end }}
       config:
-{{ include "gardenlet.config" . | indent 8 }}
+{{- $config := include "gardenlet.config" . | fromYaml }}
+{{- if $config.seedConfig }}
+{{- $_ := unset $config.seedConfig.metadata "name" }}
+{{- end }}
+{{ $config | toYaml | indent 8 }}
 {{- end }}
