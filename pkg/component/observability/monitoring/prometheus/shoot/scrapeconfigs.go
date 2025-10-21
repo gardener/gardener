@@ -5,6 +5,7 @@
 package shoot
 
 import (
+	"fmt"
 	"strconv"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -15,8 +16,10 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	otelcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/features"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -387,6 +390,81 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				},
 			},
 		)
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		nodeMetricsURL := fmt.Sprintf("/api/v1/nodes/${1}:%d/proxy/metrics", otelcomponent.MetricsPort)
+		out = append(
+			out,
+			&monitoringv1alpha1.ScrapeConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "opentelemetry-collector-nodes",
+				},
+				Spec: monitoringv1alpha1.ScrapeConfigSpec{
+					HonorLabels: ptr.To(false),
+					Scheme:      ptr.To("HTTPS"),
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
+						Key:                  resourcesv1alpha1.DataKeyToken,
+					}},
+					TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+						Key:                  secretsutils.DataKeyCertificateBundle,
+					}}},
+					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+						Role:            monitoringv1alpha1.KubernetesRoleNode,
+						APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
+						FollowRedirects: ptr.To(true),
+						Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
+						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
+							Key:                  resourcesv1alpha1.DataKeyToken,
+						}},
+						TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+							Key:                  secretsutils.DataKeyCertificateBundle,
+						}}},
+					}},
+					RelabelConfigs: []monitoringv1.RelabelConfig{
+						{
+							Action:      "replace",
+							Replacement: ptr.To("opentelemetry-collector-nodes"),
+							TargetLabel: "job",
+						},
+						{
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
+							TargetLabel:  "instance",
+						},
+						{
+							Action: "labelmap",
+							Regex:  `__meta_kubernetes_node_label_(.+)`,
+						},
+						{
+							TargetLabel: "__address__",
+							Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+						},
+						{
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
+							Regex:        `(.+)`,
+							Replacement:  ptr.To(nodeMetricsURL),
+							TargetLabel:  "__metrics_path__",
+						},
+						{
+							TargetLabel: "type",
+							Replacement: ptr.To("shoot"),
+						},
+					},
+					MetricRelabelConfigs: append(monitoringutils.StandardMetricRelabelConfig(
+						"otelcol_exporter_.*",
+						"otelcol_process_.*",
+						"otelcol_receiver_.*",
+						"otelcol_scraper_.*",
+						"otelcol_processor_*",
+					), monitoringv1.RelabelConfig{
+						Action: "keep",
+					}),
+				},
+			})
 	}
 
 	return out

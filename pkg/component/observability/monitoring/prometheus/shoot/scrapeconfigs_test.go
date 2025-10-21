@@ -19,6 +19,8 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	"github.com/gardener/gardener/pkg/features"
+	testutils "github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("ScrapeConfigs", func() {
@@ -168,25 +170,30 @@ var _ = Describe("ScrapeConfigs", func() {
 					},
 				},
 			}
-		)
 
-		When("cluster is workerless", func() {
-			It("should return the expected objects", func() {
-				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, true)).To(HaveExactElements(workerlessScrapeConfigs))
-			})
-		})
-
-		When("cluster is not workerless", func() {
-			It("should return the expected objects", func() {
-				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, false)).To(HaveExactElements(append(workerlessScrapeConfigs,
-					&monitoringv1alpha1.ScrapeConfig{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "cadvisor",
-						},
-						Spec: monitoringv1alpha1.ScrapeConfigSpec{
-							HonorLabels:     ptr.To(false),
-							HonorTimestamps: ptr.To(false),
-							Scheme:          ptr.To("HTTPS"),
+			nonWorkerlessScrapeConfigs = append(
+				workerlessScrapeConfigs,
+				&monitoringv1alpha1.ScrapeConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cadvisor",
+					},
+					Spec: monitoringv1alpha1.ScrapeConfigSpec{
+						HonorLabels:     ptr.To(false),
+						HonorTimestamps: ptr.To(false),
+						Scheme:          ptr.To("HTTPS"),
+						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+							Key:                  "token",
+						}},
+						TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+							Key:                  "bundle.crt",
+						}}},
+						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+							Role:            "Node",
+							APIServer:       ptr.To("https://kube-apiserver:443"),
+							Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
+							FollowRedirects: ptr.To(false),
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 								Key:                  "token",
@@ -195,100 +202,181 @@ var _ = Describe("ScrapeConfigs", func() {
 								LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
 								Key:                  "bundle.crt",
 							}}},
-							KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-								Role:            "Node",
-								APIServer:       ptr.To("https://kube-apiserver:443"),
-								Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
-								FollowRedirects: ptr.To(false),
-								Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
-									Key:                  "token",
-								}},
-								TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
-									Key:                  "bundle.crt",
-								}}},
-							}},
-							RelabelConfigs: []monitoringv1.RelabelConfig{
-								{
-									Action:      "replace",
-									Replacement: ptr.To("cadvisor"),
-									TargetLabel: "job",
-								},
-								{
-									Action: "labelmap",
-									Regex:  `__meta_kubernetes_node_label_(.+)`,
-								},
-								{
-									TargetLabel: "__address__",
-									Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
-								},
-								{
-									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
-									Regex:        `(.+)`,
-									Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics/cadvisor`),
-									TargetLabel:  "__metrics_path__",
-								},
-								{
-									TargetLabel: "type",
-									Replacement: ptr.To("shoot"),
-								},
+						}},
+						RelabelConfigs: []monitoringv1.RelabelConfig{
+							{
+								Action:      "replace",
+								Replacement: ptr.To("cadvisor"),
+								TargetLabel: "job",
 							},
-							MetricRelabelConfigs: []monitoringv1.RelabelConfig{
-								{
-									SourceLabels: []monitoringv1.LabelName{"id"},
-									Action:       "replace",
-									Regex:        `^/system\.slice/(.+)\.service$`,
-									TargetLabel:  "systemd_service_name",
-								},
-								{
-									SourceLabels: []monitoringv1.LabelName{"id"},
-									Action:       "replace",
-									Regex:        `^/system\.slice/(.+)\.service$`,
-									Replacement:  ptr.To(`$1`),
-									TargetLabel:  "container",
-								},
-								{
-									SourceLabels: []monitoringv1.LabelName{"__name__"},
-									Action:       "keep",
-									Regex:        `^(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_fs_reads_total|container_fs_writes_total|container_last_seen|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$`,
-								},
-								{
-									SourceLabels: []monitoringv1.LabelName{"namespace"},
-									Action:       "keep",
-									Regex:        `(^$|^kube-system$)`,
-								},
-								{
-									SourceLabels: []monitoringv1.LabelName{"container", "__name__"},
-									Action:       "drop",
-									Regex:        `POD;(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes)`,
-								},
-								{
-									SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface", "id"},
-									Action:       "keep",
-									Regex:        `container_network.+;;(eth0;/.+|(en.+|tunl0|eth0);/)|.+;.+;.*;.*`,
-								},
-								{
-									SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface"},
-									Action:       "drop",
-									Regex:        `container_network.+;POD;(.{5,}|tun0|en.+)`,
-								},
-								{
-									SourceLabels: []monitoringv1.LabelName{"__name__", "id"},
-									Regex:        `container_network.+;/`,
-									Replacement:  ptr.To("true"),
-									TargetLabel:  "host_network",
-								},
-								{
-									Regex:  `^id$`,
-									Action: "labeldrop",
-								},
+							{
+								Action: "labelmap",
+								Regex:  `__meta_kubernetes_node_label_(.+)`,
+							},
+							{
+								TargetLabel: "__address__",
+								Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
+								Regex:        `(.+)`,
+								Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics/cadvisor`),
+								TargetLabel:  "__metrics_path__",
+							},
+							{
+								TargetLabel: "type",
+								Replacement: ptr.To("shoot"),
+							},
+						},
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{"id"},
+								Action:       "replace",
+								Regex:        `^/system\.slice/(.+)\.service$`,
+								TargetLabel:  "systemd_service_name",
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"id"},
+								Action:       "replace",
+								Regex:        `^/system\.slice/(.+)\.service$`,
+								Replacement:  ptr.To(`$1`),
+								TargetLabel:  "container",
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__name__"},
+								Action:       "keep",
+								Regex:        `^(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_fs_reads_total|container_fs_writes_total|container_last_seen|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$`,
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"namespace"},
+								Action:       "keep",
+								Regex:        `(^$|^kube-system$)`,
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"container", "__name__"},
+								Action:       "drop",
+								Regex:        `POD;(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes)`,
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface", "id"},
+								Action:       "keep",
+								Regex:        `container_network.+;;(eth0;/.+|(en.+|tunl0|eth0);/)|.+;.+;.*;.*`,
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface"},
+								Action:       "drop",
+								Regex:        `container_network.+;POD;(.{5,}|tun0|en.+)`,
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__name__", "id"},
+								Regex:        `container_network.+;/`,
+								Replacement:  ptr.To("true"),
+								TargetLabel:  "host_network",
+							},
+							{
+								Regex:  `^id$`,
+								Action: "labeldrop",
 							},
 						},
 					},
+				},
+				&monitoringv1alpha1.ScrapeConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kube-kubelet",
+					},
+					Spec: monitoringv1alpha1.ScrapeConfigSpec{
+						HonorLabels: ptr.To(false),
+						Scheme:      ptr.To("HTTPS"),
+						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+							Key:                  "token",
+						}},
+						TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+							Key:                  "bundle.crt",
+						}}},
+						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+							Role:            "Node",
+							APIServer:       ptr.To("https://kube-apiserver"),
+							FollowRedirects: ptr.To(true),
+							Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
+							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+								Key:                  "token",
+							}},
+							TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+								Key:                  "bundle.crt",
+							}}},
+						}},
+						RelabelConfigs: []monitoringv1.RelabelConfig{
+							{
+								Action:      "replace",
+								Replacement: ptr.To("kube-kubelet"),
+								TargetLabel: "job",
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_address_InternalIP"},
+								TargetLabel:  "instance",
+							},
+							{
+								Action: "labelmap",
+								Regex:  `__meta_kubernetes_node_label_(.+)`,
+							},
+							{
+								TargetLabel: "__address__",
+								Replacement: ptr.To("kube-apiserver:443"),
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
+								Regex:        `(.+)`,
+								Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics`),
+								TargetLabel:  "__metrics_path__",
+							},
+							{
+								TargetLabel: "type",
+								Replacement: ptr.To("shoot"),
+							},
+						},
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{"__name__"},
+								Action:       "keep",
+								Regex:        `^(kubelet_running_pods|process_max_fds|process_open_fds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_image_pull_duration_seconds_bucket|kubelet_image_pull_duration_seconds_sum|kubelet_image_pull_duration_seconds_count)$`,
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"namespace"},
+								Action:       "keep",
+								Regex:        `(^$|^kube-system$)`,
+							},
+						},
+					},
+				},
+			)
+		)
+
+		BeforeEach(func() {
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, false))
+		})
+
+		When("cluster is workerless", func() {
+			It("should return the expected objects", func() {
+				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, true)).To(HaveExactElements(workerlessScrapeConfigs))
+			})
+		})
+
+		When("cluster is not workerless", func() {
+			It("should return expected scrape configs with OTel feature disabled", func() {
+				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, false)).To(HaveExactElements(nonWorkerlessScrapeConfigs))
+			})
+
+			It("should return expected scrape configs with OTel feature enabled", func() {
+				DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, true))
+				items := append(
+					nonWorkerlessScrapeConfigs,
 					&monitoringv1alpha1.ScrapeConfig{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: "kube-kubelet",
+							Name: "opentelemetry-collector-nodes",
 						},
 						Spec: monitoringv1alpha1.ScrapeConfigSpec{
 							HonorLabels: ptr.To(false),
@@ -318,11 +406,11 @@ var _ = Describe("ScrapeConfigs", func() {
 							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
 									Action:      "replace",
-									Replacement: ptr.To("kube-kubelet"),
+									Replacement: ptr.To("opentelemetry-collector-nodes"),
 									TargetLabel: "job",
 								},
 								{
-									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_address_InternalIP"},
+									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 									TargetLabel:  "instance",
 								},
 								{
@@ -336,7 +424,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								{
 									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 									Regex:        `(.+)`,
-									Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics`),
+									Replacement:  ptr.To(`/api/v1/nodes/${1}:8888/proxy/metrics`),
 									TargetLabel:  "__metrics_path__",
 								},
 								{
@@ -348,17 +436,16 @@ var _ = Describe("ScrapeConfigs", func() {
 								{
 									SourceLabels: []monitoringv1.LabelName{"__name__"},
 									Action:       "keep",
-									Regex:        `^(kubelet_running_pods|process_max_fds|process_open_fds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_image_pull_duration_seconds_bucket|kubelet_image_pull_duration_seconds_sum|kubelet_image_pull_duration_seconds_count)$`,
+									Regex:        `^(otelcol_exporter_.*|otelcol_process_.*|otelcol_receiver_.*|otelcol_scraper_.*|otelcol_processor_*)$`,
 								},
 								{
-									SourceLabels: []monitoringv1.LabelName{"namespace"},
-									Action:       "keep",
-									Regex:        `(^$|^kube-system$)`,
+									Action: "keep",
 								},
 							},
 						},
 					},
-				)))
+				)
+				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, false)).To(HaveExactElements(items))
 			})
 		})
 	})
