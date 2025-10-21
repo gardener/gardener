@@ -318,6 +318,7 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 			coreKubeAPIServerConfig := &gardencore.KubeAPIServerConfig{}
 			if err := gardenCoreScheme.Convert(kubeAPIServer.KubeAPIServerConfig, coreKubeAPIServerConfig, nil); err != nil {
 				allErrs = append(allErrs, field.InternalError(path, err))
+				return allErrs
 			}
 
 			allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, gardenerutils.DefaultGroupResourcesForEncryption(), path)...)
@@ -342,6 +343,7 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 		coreKubeControllerManagerConfig := &gardencore.KubeControllerManagerConfig{}
 		if err := gardenCoreScheme.Convert(kubeControllerManager.KubeControllerManagerConfig, coreKubeControllerManagerConfig, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(path, err))
+			return allErrs
 		}
 
 		allErrs = append(allErrs, gardencorevalidation.ValidateKubeControllerManager(coreKubeControllerManagerConfig, nil, virtualCluster.Kubernetes.Version, true, path)...)
@@ -391,6 +393,7 @@ func validateETCDAutoscaling(autoscaling *gardencorev1beta1.ControlPlaneAutoscal
 		coreAutoscaling := &gardencore.ControlPlaneAutoscaling{}
 		if err := gardenCoreScheme.Convert(autoscaling, coreAutoscaling, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(fldPath, err))
+			return allErrs
 		}
 
 		allErrs = append(allErrs, gardencorevalidation.ValidateControlPlaneAutoscaling(coreAutoscaling, minRequired, fldPath)...)
@@ -475,6 +478,7 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 		watchCacheSizes := &gardencore.WatchCacheSizes{}
 		if err := gardenCoreScheme.Convert(config.WatchCacheSizes, watchCacheSizes, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(fldPath.Child("watchCacheSizes"), err))
+			return allErrs
 		}
 		allErrs = append(allErrs, gardencorevalidation.ValidateWatchCacheSizes(watchCacheSizes, fldPath.Child("watchCacheSizes"))...)
 	}
@@ -483,6 +487,7 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 		logging := &gardencore.APIServerLogging{}
 		if err := gardenCoreScheme.Convert(config.Logging, logging, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(fldPath.Child("logging"), err))
+			return allErrs
 		}
 		allErrs = append(allErrs, gardencorevalidation.ValidateAPIServerLogging(logging, fldPath.Child("logging"))...)
 	}
@@ -491,6 +496,7 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 		requests := &gardencore.APIServerRequests{}
 		if err := gardenCoreScheme.Convert(config.Requests, requests, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(fldPath.Child("requests"), err))
+			return allErrs
 		}
 		allErrs = append(allErrs, gardencorevalidation.ValidateAPIServerRequests(requests, fldPath.Child("requests"))...)
 	}
@@ -780,26 +786,31 @@ func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garde
 	if oldKubeAPIServer := oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; oldKubeAPIServer != nil && oldKubeAPIServer.KubeAPIServerConfig != nil && oldKubeAPIServer.EncryptionConfig != nil {
 		if err := gardenCoreScheme.Convert(oldKubeAPIServer.EncryptionConfig, oldKubeAPIServerEncryptionConfig, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(kubeAPIServerEncryptionConfigFldPath, err))
+			return allErrs
 		}
 	}
 	if newKubeAPIServer := newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; newKubeAPIServer != nil && newKubeAPIServer.KubeAPIServerConfig != nil && newKubeAPIServer.EncryptionConfig != nil {
 		if err := gardenCoreScheme.Convert(newKubeAPIServer.EncryptionConfig, newKubeAPIServerEncryptionConfig, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(kubeAPIServerEncryptionConfigFldPath, err))
+			return allErrs
 		}
 	}
 	if oldGardenerAPIServer := oldGarden.Spec.VirtualCluster.Gardener.APIServer; oldGardenerAPIServer != nil && oldGardenerAPIServer.EncryptionConfig != nil {
 		if err := gardenCoreScheme.Convert(oldGardenerAPIServer.EncryptionConfig, oldGAPIServerEncryptionConfig, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(gAPIServerEncryptionConfigFldPath, err))
+			return allErrs
 		}
 	}
 	if newGardenerAPIServer := newGarden.Spec.VirtualCluster.Gardener.APIServer; newGardenerAPIServer != nil && newGardenerAPIServer.EncryptionConfig != nil {
 		if err := gardenCoreScheme.Convert(newGardenerAPIServer.EncryptionConfig, newGAPIServerEncryptionConfig, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(gAPIServerEncryptionConfigFldPath, err))
+			return allErrs
 		}
 	}
 	if credentials := newGarden.Status.Credentials; credentials != nil && credentials.Rotation != nil && credentials.Rotation.ETCDEncryptionKey != nil {
 		if err := gardenCoreScheme.Convert(credentials.Rotation.ETCDEncryptionKey, etcdEncryptionKeyRotation, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(field.NewPath("status", "credentials", "rotation", "etcdEncryptionKey"), err))
+			return allErrs
 		}
 	}
 
