@@ -40,9 +40,6 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
-	defer cancel()
-
 	namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
 	if err := r.Client.Get(ctx, request.NamespacedName, namespacedCloudProfile); err != nil {
 		if apierrors.IsNotFound(err) {

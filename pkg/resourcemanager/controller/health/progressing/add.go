@@ -65,6 +65,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		)).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			ReconciliationTimeout:   r.Config.SyncPeriod.Duration,
 		}).
 		Build(r)
 	if err != nil {

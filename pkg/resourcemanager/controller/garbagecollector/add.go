@@ -33,6 +33,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
+			ReconciliationTimeout:   r.Config.SyncPeriod.Duration,
 		}).
 		WatchesRawSource(controllerutils.EnqueueOnce).
 		Complete(r)

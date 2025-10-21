@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
 
@@ -36,7 +37,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&corev1.Node{}, builder.WithPredicates(r.NodePredicate(), nodePredicate)).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 1,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
+		}).
 		Complete(r)
 }
 

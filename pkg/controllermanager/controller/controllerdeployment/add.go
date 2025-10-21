@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 const (
@@ -34,6 +35,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			RateLimiter:             r.RateLimiter,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Complete(r)
 }

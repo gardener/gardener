@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // ControllerName is the name of the controller.
@@ -46,6 +47,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		For(&corev1.Secret{}, builder.WithPredicates(r.SecretPredicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: r.ConcurrentSyncs,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Complete(r)
 }

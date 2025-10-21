@@ -151,15 +151,12 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		forceOverwriteAnnotations = *v
 	}
 
-	reconcileCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
-	defer cancel()
-
 	// Initialize condition based on the current status.
 	conditionResourcesApplied := v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 
 	for _, ref := range mr.Spec.SecretRefs {
 		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ref.Name, Namespace: mr.Namespace}}
-		if err := r.SourceClient.Get(reconcileCtx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		if err := r.SourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 			conditionResourcesApplied = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesApplied, gardencorev1beta1.ConditionFalse, "CannotReadSecret", err.Error())
 			if err := updateConditions(ctx, r.SourceClient, mr, conditionResourcesApplied); err != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
@@ -311,7 +308,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		}
 	}
 
-	if deletionPending, err := r.cleanOldResources(reconcileCtx, log, mr, existingResourcesIndex); err != nil {
+	if deletionPending, err := r.cleanOldResources(ctx, log, mr, existingResourcesIndex); err != nil {
 		var (
 			reason string
 			status gardencorev1beta1.ConditionStatus
@@ -348,7 +345,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 	}
 
 	injectLabels := mergeMaps(mr.Spec.InjectLabels, map[string]string{resourcesv1alpha1.ManagedBy: *r.Config.ManagedByLabelValue})
-	if err := r.applyNewResources(reconcileCtx, log, origin, newResourcesObjects, injectLabels, equivalences); err != nil {
+	if err := r.applyNewResources(ctx, log, origin, newResourcesObjects, injectLabels, equivalences); err != nil {
 		conditionResourcesApplied = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesApplied, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionApplyFailed, err.Error())
 		if err := updateConditions(ctx, r.SourceClient, mr, conditionResourcesApplied); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
@@ -374,9 +371,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 func (r *Reconciler) delete(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (reconcile.Result, error) {
 	log.Info("Started deleting resources created by ManagedResource")
 
-	deleteCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
-	defer cancel()
-
 	if err := r.updateConditionsForDeletion(ctx, mr); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 	}
@@ -397,7 +391,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, mr *resourcesv
 			return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 		}
 
-		if deletionPending, err := r.cleanOldResources(deleteCtx, log, mr, existingResourcesIndex); err != nil {
+		if deletionPending, err := r.cleanOldResources(ctx, log, mr, existingResourcesIndex); err != nil {
 			var (
 				reason string
 				status gardencorev1beta1.ConditionStatus

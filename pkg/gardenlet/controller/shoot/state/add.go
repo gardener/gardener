@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // ControllerName is the name of this controller.
@@ -38,7 +39,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		WithOptions(controller.Options{MaxConcurrentReconciles: *r.Config.ConcurrentSyncs}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: *r.Config.ConcurrentSyncs,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
+		}).
 		WatchesRawSource(
 			source.Kind[client.Object](gardenCluster.GetCache(),
 				&gardencorev1beta1.Shoot{},

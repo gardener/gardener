@@ -42,9 +42,6 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
-	defer cancel()
-
 	credentialsBinding := &securityv1alpha1.CredentialsBinding{}
 	if err := r.Client.Get(ctx, request.NamespacedName, credentialsBinding); err != nil {
 		if apierrors.IsNotFound(err) {
