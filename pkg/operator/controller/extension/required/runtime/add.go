@@ -80,6 +80,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Build(r)
 	if err != nil {

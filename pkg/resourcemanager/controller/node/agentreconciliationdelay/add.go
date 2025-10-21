@@ -29,7 +29,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 1,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
+		}).
 		WatchesRawSource(
 			source.Kind[client.Object](targetCluster.GetCache(),
 				&corev1.Node{},

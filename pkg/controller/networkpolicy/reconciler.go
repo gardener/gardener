@@ -86,9 +86,6 @@ func (r RuntimeNetworkConfig) getBlockedNetworkPeers(ipFamily gardencorev1beta1.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
-	defer cancel()
-
 	namespace := &corev1.Namespace{}
 	if err := r.RuntimeClient.Get(ctx, request.NamespacedName, namespace); err != nil {
 		if apierrors.IsNotFound(err) {

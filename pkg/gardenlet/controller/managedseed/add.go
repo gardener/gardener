@@ -68,6 +68,7 @@ func (r *Reconciler) AddToManager(
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
+			ReconciliationTimeout:   r.Config.Controllers.ManagedSeed.SyncPeriod.Duration,
 		}).
 		WatchesRawSource(source.Kind[client.Object](
 			gardenCluster.GetCache(),

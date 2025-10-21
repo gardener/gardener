@@ -49,12 +49,9 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, r.updateExtensionStatus(ctx, log, extension, conditions)
 	}
 
-	reconcileCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
-	defer cancel()
-
 	if !controllerutil.ContainsFinalizer(extension, operatorv1alpha1.FinalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(reconcileCtx, r.RuntimeClientSet.Client(), extension, operatorv1alpha1.FinalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.RuntimeClientSet.Client(), extension, operatorv1alpha1.FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
@@ -120,7 +117,7 @@ func (r *Reconciler) reconcile(
 		})
 	)
 
-	if err := g.Compile().Run(reconcileCtx, flow.Opts{
+	if err := g.Compile().Run(ctx, flow.Opts{
 		Log: log,
 	}); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ReasonReconcileFailed, err.Error())
