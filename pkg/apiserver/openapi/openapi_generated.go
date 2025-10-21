@@ -93,6 +93,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD":                                        schema_pkg_apis_core_v1beta1_ETCD(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig":                                  schema_pkg_apis_core_v1beta1_ETCDConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation":                   schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionAtRest":                            schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig":                            schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                            schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass":                               schema_pkg_apis_core_v1beta1_ExposureClass(ref),
