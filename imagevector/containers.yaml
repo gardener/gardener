@@ -188,7 +188,7 @@ images:
           - type: 'githubTeam'
             teamname: 'gardener/logging-maintainers'
   - name: opentelemetry-collector
-    sourceRepository: github.com/open-telemetry/opentelemetry-collector
+    sourceRepository: github.com/gardener/opentelemetry-collector
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/observability/opentelemetry-collector
     tag: "v0.0.1"
   # Monitoring
