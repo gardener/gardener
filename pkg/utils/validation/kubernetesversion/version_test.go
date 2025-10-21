@@ -30,7 +30,7 @@ var _ = Describe("Version", func() {
 	)
 	DescribeTable("#UnsupportedButCheckDisabledByEnvVariable",
 		func(env, gitVersion string, matcher gomegatypes.GomegaMatcher) {
-			os.Setenv(DISABLE_VERSION_CHECK_ENV, env)
+			os.Setenv(EXPERIMENTAL_DISABLE_VERSION_CHECK_ENV, env)
 			Expect(CheckIfSupported(gitVersion)).To(matcher)
 		},
 
