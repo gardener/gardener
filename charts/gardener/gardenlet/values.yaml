@@ -146,8 +146,8 @@ config:
     renewDeadline: 10s
     retryPeriod: 2s
     resourceLock: leases
-  # resourceName: gardenlet-leader-election
-  # resourceNamespace: garden
+    resourceName: gardenlet-leader-election
+    resourceNamespace: garden
   logLevel: info
   logFormat: json
   server:
