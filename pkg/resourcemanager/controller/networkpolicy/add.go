@@ -193,7 +193,8 @@ func (r *Reconciler) MapNetworkPolicyToService(_ context.Context, obj client.Obj
 	}}}
 }
 
-// EventHandlerForNamespace is event handler for mapping service to namespaces.
+// EventHandlerForNamespace returns an EventHandler that enqueues reconcile requests for Services
+// associated with the given Namespace object.
 func (r *Reconciler) EventHandlerForNamespace(log logr.Logger) handler.EventHandler {
 	return handler.Funcs{
 		CreateFunc: func(ctx context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
@@ -204,7 +205,7 @@ func (r *Reconciler) EventHandlerForNamespace(log logr.Logger) handler.EventHand
 				return
 			}
 
-			requests := sets.New(r.getServices(ctx, e.ObjectOld, log)...).Union(sets.New(r.getServices(ctx, e.ObjectNew, log)...))
+			requests := sets.New(r.getRelevantServiceForNamespace(ctx, e.ObjectOld, log)...).Union(sets.New(r.getRelevantServiceForNamespace(ctx, e.ObjectNew, log)...))
 			for req := range requests {
 				q.Add(req)
 			}
@@ -219,14 +220,14 @@ func (r *Reconciler) EventHandlerForNamespace(log logr.Logger) handler.EventHand
 }
 
 // requeueServicesForNamespace is a helper to find and enqueue services that select a given namespace.
-func (r *Reconciler) requeueServicesForNamespace(ctx context.Context, obj client.Object, q workqueue.TypedRateLimitingInterface[reconcile.Request], log logr.Logger) {
-	requests := r.getServices(ctx, obj, log)
+func (r *Reconciler) requeueServicesForNamespace(ctx context.Context, namespace client.Object, q workqueue.TypedRateLimitingInterface[reconcile.Request], log logr.Logger) {
+	requests := r.getRelevantServiceForNamespace(ctx, namespace, log)
 	for _, request := range requests {
 		q.Add(request)
 	}
 }
 
-func (r *Reconciler) getServices(ctx context.Context, obj client.Object, log logr.Logger) []reconcile.Request {
+func (r *Reconciler) getRelevantServiceForNamespace(ctx context.Context, namespace client.Object, log logr.Logger) []reconcile.Request {
 	serviceList := &metav1.PartialObjectMetadataList{}
 	serviceList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceList"))
 	if err := r.TargetClient.List(ctx, serviceList); err != nil {
@@ -238,7 +239,7 @@ func (r *Reconciler) getServices(ctx context.Context, obj client.Object, log log
 
 	for _, service := range serviceList.Items {
 		// enqueue all the services in the same namespace
-		if service.Namespace == obj.GetName() {
+		if service.Namespace == namespace.GetName() {
 			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: service.Name, Namespace: service.Namespace}})
 			continue
 		}
@@ -258,7 +259,7 @@ func (r *Reconciler) getServices(ctx context.Context, obj client.Object, log log
 				continue
 			}
 
-			if selector.Matches(labels.Set(obj.GetLabels())) {
+			if selector.Matches(labels.Set(namespace.GetLabels())) {
 				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: service.Name, Namespace: service.Namespace}})
 				break // no need to check other selectors
 			}
