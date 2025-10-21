@@ -436,7 +436,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								{
 									SourceLabels: []monitoringv1.LabelName{"__name__"},
 									Action:       "keep",
-									Regex:        `^(otelcol_exporter_.*|otelcol_process_.*|otelcol_receiver_.*|otelcol_scraper_.*)$`,
+									Regex:        `^(otelcol_exporter_.*|otelcol_process_.*|otelcol_receiver_.*|otelcol_scraper_.*|otelcol_processor_*)$`,
 								},
 								{
 									Action: "keep",

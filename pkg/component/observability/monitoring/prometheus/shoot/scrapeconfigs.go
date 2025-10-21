@@ -459,6 +459,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						"otelcol_process_.*",
 						"otelcol_receiver_.*",
 						"otelcol_scraper_.*",
+						"otelcol_processor_*",
 					), monitoringv1.RelabelConfig{
 						Action: "keep",
 					}),
