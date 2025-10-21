@@ -86,18 +86,17 @@ metadata:
   name: example
   namespace: shoot--local--local
 spec:
-  retentionPeriod: "12"
   storage:
     resources:
       requests:
-        storage: 50Gi
+        storage: 30Gi
   resources:
     requests:
-      memory: 500Mi
-      cpu: 500m
+      memory: 100Mi
+      cpu: 10m
     limits:
-      memory: 10Gi
-      cpu: 5
+      memory: 300Mi
+      cpu: 50m
 ```
 
 #### Access to VictoriaLogs in the `Shoot` Control-Plane
