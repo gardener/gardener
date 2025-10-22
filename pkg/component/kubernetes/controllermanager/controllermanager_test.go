@@ -1165,6 +1165,11 @@ func commandForKubernetesVersion(
 		"--v=2",
 	)
 
+	command = append(command,
+		"--kube-api-qps=100",
+		"--kube-api-burst=200",
+	)
+
 	return command
 }
 
