@@ -102,6 +102,9 @@ var _ = Describe("mutator", func() {
 				},
 				Spec: core.ShootSpec{
 					CloudProfileName: ptr.To("profile"),
+					Kubernetes: core.Kubernetes{
+						Version: "1.6.4",
+					},
 					Provider: core.Provider{
 						Workers: []core.Worker{
 							{
