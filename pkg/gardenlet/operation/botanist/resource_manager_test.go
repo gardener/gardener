@@ -151,7 +151,7 @@ var _ = Describe("ResourceManager", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VpaInPlaceOrRecreateUpdateMode, true))
 			})
 
-			Context("with Shoot Vertical Pod Autoscaler InPlaceOrRecreate featuer gate enabled", func() {
+			Context("with Shoot Vertical Pod Autoscaler InPlaceOrRecreate feature gate enabled", func() {
 				BeforeEach(func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
@@ -172,7 +172,7 @@ var _ = Describe("ResourceManager", func() {
 				})
 			})
 
-			Context("with Shoot Vertical Pod Autoscaler InPlaceOrRecreate featuer gate disabled", func() {
+			Context("with Shoot Vertical Pod Autoscaler InPlaceOrRecreate feature gate disabled", func() {
 				BeforeEach(func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
