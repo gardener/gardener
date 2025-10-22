@@ -621,7 +621,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
 			},
-			VpaInPlaceOrRecreateUpdateMode: resourcemanagerconfigv1alpha1.VpaInPlaceOrRecreateUpdateModeConfig{
+			VpaInPlaceOrRecreateUpdateMode: resourcemanagerconfigv1alpha1.VPAInPlaceOrRecreateUpdateModeConfig{
 				Enabled: r.values.VpaInPlaceOrRecreateUpdateModeEnabled,
 			},
 		},
