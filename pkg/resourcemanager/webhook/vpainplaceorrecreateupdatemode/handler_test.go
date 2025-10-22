@@ -67,5 +67,24 @@ var _ = Describe("Handler", func() {
 			Expect(handler.Default(ctx, vpa)).To(Succeed())
 			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
 		})
+
+		It("should not modify update mode when it is set to Initial", func() {
+			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeInitial),
+			}
+
+			Expect(handler.Default(ctx, vpa)).To(Succeed())
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInitial)))
+		})
+
+		It("should not modify update mode when it is set to Off", func() {
+			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeOff),
+			}
+
+			Expect(handler.Default(ctx, vpa)).To(Succeed())
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeOff)))
+		})
+
 	})
 })
