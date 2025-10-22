@@ -28,15 +28,12 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 
 	log := h.Logger.WithValues("vpa", vpa.GetName(), "namespace", vpa.GetNamespace())
 
-	// Set update mode if the update policy is not specified.
 	if vpa.Spec.UpdatePolicy == nil {
-		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
-		}
+		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{}
 	}
 
-	updateMode := vpa.Spec.UpdatePolicy.UpdateMode
-	if ptr.Equal(updateMode, ptr.To(vpaautoscalingv1.UpdateModeAuto)) || ptr.Equal(updateMode, ptr.To(vpaautoscalingv1.UpdateModeRecreate)) {
+	updateMode := ptr.Deref(vpa.Spec.UpdatePolicy.UpdateMode, vpaautoscalingv1.UpdateModeAuto)
+	if updateMode == vpaautoscalingv1.UpdateModeAuto || updateMode == vpaautoscalingv1.UpdateModeRecreate {
 		log.Info("Mutating VerticalPodAutoscaler with InPlaceOrRecreate update mode")
 		vpa.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)
 	}
