@@ -92,7 +92,7 @@ var _ = Describe("componentbaseconfig validation helpers", func() {
 
 			Expect(ValidateLeaderElectionConfiguration(config, fldPath)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
+					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fldPath.Child("resourceNamespace").String()),
 				})),
 			))

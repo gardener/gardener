@@ -286,7 +286,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
+						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("leaderElection.resourceNamespace"),
 					})),
 				))
