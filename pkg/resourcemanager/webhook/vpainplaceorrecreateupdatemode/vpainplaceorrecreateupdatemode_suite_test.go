@@ -13,5 +13,5 @@ import (
 
 func TestVPAInPlaceOrRecreateUpdateMode(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ResourceManager Webhook VpaInPlaceOrRecreateUpdateMode Suite")
+	RunSpecs(t, "ResourceManager Webhook VPAInPlaceOrRecreateUpdateMode Suite")
 }
