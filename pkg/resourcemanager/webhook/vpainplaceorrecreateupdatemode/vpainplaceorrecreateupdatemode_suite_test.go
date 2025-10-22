@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestVpaInPlaceOrRecreateUpdateMode(t *testing.T) {
+func TestVPAInPlaceOrRecreateUpdateMode(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ResourceManager Webhook VpaInPlaceOrRecreateUpdateMode Suite")
 }
