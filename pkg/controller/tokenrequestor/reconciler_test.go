@@ -545,7 +545,6 @@ contexts:
   name: shoot--foo--bar
 current-context: shoot--foo--bar
 kind: Config
-preferences: {}
 users:
 - name: shoot--foo--bar-token
   user:

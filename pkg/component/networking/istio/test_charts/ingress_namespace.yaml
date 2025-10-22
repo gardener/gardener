@@ -3,7 +3,6 @@ kind: Namespace
 metadata:
   annotations:
     high-availability-config.resources.gardener.cloud/zones: a,b,c
-  creationTimestamp: null
   labels:
     gardener.cloud/role: istio-ingress
     high-availability-config.resources.gardener.cloud/consider: "true"

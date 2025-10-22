@@ -1302,7 +1302,6 @@ var _ = Describe("ResourceManager", func() {
 			out := `apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  creationTimestamp: null
   labels:
     app: gardener-resource-manager
   name: gardener-resource-manager-shoot
@@ -1579,7 +1578,6 @@ kind: ClusterRoleBinding
 metadata:
   annotations:
     resources.gardener.cloud/keep-object: "true"
-  creationTimestamp: null
   name: gardener.cloud:target:resource-manager
 roleRef:
   apiGroup: rbac.authorization.k8s.io

@@ -117,7 +117,6 @@ var _ = Describe("BlackboxExporter", func() {
 automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
-  creationTimestamp: null
   labels:
     app: blackbox-exporter
     gardener.cloud/role: monitoring
@@ -134,7 +133,6 @@ data:
 immutable: true
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   labels:
     app: prometheus
     resources.gardener.cloud/garbage-collectable-reference: "true"
@@ -146,7 +144,6 @@ metadata:
 		pdbYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  creationTimestamp: null
   labels:
     app: blackbox-exporter
     gardener.cloud/role: monitoring
@@ -171,7 +168,6 @@ kind: Deployment
 metadata:
   annotations:
     ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
-  creationTimestamp: null
   labels:
     app: blackbox-exporter
     gardener.cloud/role: monitoring
@@ -190,7 +186,6 @@ spec:
     metadata:
       annotations:
         ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
-      creationTimestamp: null
       labels:
         app: blackbox-exporter
         bar: foo
@@ -309,7 +304,6 @@ metadata:`
 			}
 
 			out += `
-  creationTimestamp: null
   labels:
     app: blackbox-exporter
   name: blackbox-exporter
@@ -332,7 +326,6 @@ status:
 		vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  creationTimestamp: null
   name: blackbox-exporter
   namespace: ` + resourcesNamespace + `
 spec:
@@ -438,7 +431,6 @@ status: {}
 					scrapeConfigYAML = `apiVersion: monitoring.coreos.com/v1alpha1
 kind: ScrapeConfig
 metadata:
-  creationTimestamp: null
   name: foo
   namespace: ` + namespace + `
 spec: {}
@@ -447,7 +439,6 @@ spec: {}
 					prometheusRuleYAML = `apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  creationTimestamp: null
   name: bar
   namespace: ` + namespace + `
 spec: {}

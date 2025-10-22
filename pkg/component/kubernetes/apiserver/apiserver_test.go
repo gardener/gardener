@@ -109,7 +109,7 @@ var _ = Describe("KubeAPIServer", func() {
 		configMapNameAdmissionConfigs  = "kube-apiserver-admission-config-07c5248a"
 		secretNameAdmissionKubeconfigs = "kube-apiserver-admission-kubeconfigs-e3b0c442"
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-b2b49c90"
-		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
+		configMapNameAuditPolicy       = "audit-policy-config-1e270362"
 		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
 		configMapEnvoyConfig           = "kube-apiserver-envoy-config-a60282c1"
 		configMapEgressSelectorConfig  = "kube-apiserver-egress-selector-config-02bc784a"
@@ -1682,8 +1682,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						ObjectMeta: metav1.ObjectMeta{Name: "audit-policy-config", Namespace: namespace},
 						Data: map[string]string{"audit-policy.yaml": `apiVersion: audit.k8s.io/v1
 kind: Policy
-metadata:
-  creationTimestamp: null
+metadata: {}
 rules:
 - level: None
 `},
@@ -2764,7 +2763,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-0ddefe9e": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
-						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
+						"reference.resources.gardener.cloud/configmap-cc790102": configMapNameAuditPolicy,
 					}
 				})
 
@@ -2986,7 +2985,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-0ddefe9e": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
-						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
+						"reference.resources.gardener.cloud/configmap-cc790102": configMapNameAuditPolicy,
 					}
 				})
 

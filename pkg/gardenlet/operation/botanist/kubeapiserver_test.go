@@ -489,7 +489,6 @@ contexts:
   name: authorization-webhook
 current-context: authorization-webhook
 kind: Config
-preferences: {}
 users:
 - name: authorization-webhook
   user: {}

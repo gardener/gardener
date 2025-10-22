@@ -26,7 +26,6 @@ var _ = Describe("RBAC", func() {
 			clusterRoleBindingNodeBootstrapperYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  creationTimestamp: null
   name: system:node-bootstrapper
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -41,7 +40,6 @@ subjects:
 			clusterRoleBindingNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  creationTimestamp: null
   name: system:certificates.k8s.io:certificatesigningrequests:nodeclient
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -55,7 +53,6 @@ subjects:
 			clusterRoleBindingSelfNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  creationTimestamp: null
   name: system:certificates.k8s.io:certificatesigningrequests:selfnodeclient
 roleRef:
   apiGroup: rbac.authorization.k8s.io
