@@ -748,3 +748,12 @@ func IsOneWorkerPoolLowerKubernetes134(controlPlaneVersion *semver.Version, work
 	}
 	return atLeastOnePoolLowerKubernetes134, nil
 }
+
+// GetShootEncryptedResourcesInStatus returns the encrypted resources from the shoot status.
+func GetShootEncryptedResourcesInStatus(shootStatus gardencorev1beta1.ShootStatus) []string {
+	if shootStatus.Credentials != nil {
+		return shootStatus.Credentials.EncryptionAtRest.Resources
+	}
+
+	return nil
+}

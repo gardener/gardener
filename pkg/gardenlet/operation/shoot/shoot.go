@@ -288,8 +288,11 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 
 	shootStatus := shoot.GetInfo().Status
-	if shootStatus.Credentials != nil && len(shootStatus.Credentials.EncryptionAtRest.Resources) != 0 {
-		shoot.EncryptedResources = sharedcomponent.NormalizeResources(shootStatus.Credentials.EncryptionAtRest.Resources)
+	shoot.EncryptedResources = v1beta1helper.GetShootEncryptedResourcesInStatus(shootStatus)
+	// In case the reconciliation started before garden-apiserver/gardenlet update use the olf ResourcesToEncrypt field
+	// TODO(AleksandarSavchev): Remove this fallback logic in a future release
+	if len(shoot.EncryptedResources) == 0 && len(shoot.ResourcesToEncrypt) > 0 {
+		shoot.EncryptedResources = shoot.ResourcesToEncrypt
 	}
 
 	if b.seed != nil {
