@@ -31,7 +31,7 @@ func (b *Botanist) DefaultMachineControllerManager() (machinecontrollermanager.I
 		b.SecretsManager,
 		machinecontrollermanager.Values{
 			Image:           image.String(),
-			AutonomousShoot: b.Shoot.IsAutonomous(),
+			SelfHostedShoot: b.Shoot.IsSelfHosted(),
 		},
 	), nil
 }

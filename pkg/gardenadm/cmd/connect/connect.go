@@ -83,13 +83,13 @@ gardenadm connect`,
 func run(ctx context.Context, opts *Options) error {
 	opts.Log.Info("Using resources from directory", "configDir", opts.ConfigDir)
 
-	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
+	b, err := botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
 	if err != nil {
-		return fmt.Errorf("failed creating autonomous botanist: %w", err)
+		return fmt.Errorf("failed creating gardenadm botanist: %w", err)
 	}
 	b.SeedClientSet, err = b.CreateClientSet(ctx)
 	if err != nil {
-		return fmt.Errorf("failed creating client set for autonomous shoot: %w", err)
+		return fmt.Errorf("failed creating client set for self-hosted shoot: %w", err)
 	}
 
 	if alreadyConnected, err := isGardenletDeployed(ctx, b); err != nil {
@@ -118,7 +118,7 @@ func run(ctx context.Context, opts *Options) error {
 				Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
 			})
 			deployGardenlet = g.Add(flow.Task{
-				Name: "Deploying gardenlet into autonomous shoot cluster",
+				Name: "Deploying gardenlet into self-hosted shoot cluster",
 				Fn: func(ctx context.Context) error {
 					_, err := newGardenletDeployer(b, bootstrapClientSet).Reconcile(
 						ctx,
@@ -153,9 +153,9 @@ func run(ctx context.Context, opts *Options) error {
 	}
 
 	fmt.Fprintf(opts.Out, `
-Your autonomous shoot cluster has successfully been connected to Gardener!
+Your self-hosted shoot cluster has successfully been connected to Gardener!
 
-The gardenlet has been deployed in the %s namespace of your autonomous shoot
+The gardenlet has been deployed in the %s namespace of your self-hosted shoot
 cluster and is now taking over the management and lifecycle of it. All
 modifications to the Shoot specification should now be performed via the Gardener
 API, rather than by directly editing resources in the cluster.
@@ -178,7 +178,7 @@ Happy Gardening!
 	return nil
 }
 
-func isGardenletDeployed(ctx context.Context, b *botanist.AutonomousBotanist) (bool, error) {
+func isGardenletDeployed(ctx context.Context, b *botanist.GardenadmBotanist) (bool, error) {
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenlet}, &appsv1.Deployment{}); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, fmt.Errorf("failed checking if gardenlet deployment already exists: %w", err)
@@ -200,7 +200,7 @@ func cachedBootstrapKubeconfigPath(fs afero.Afero) string {
 	return filepath.Join(fs.GetTempDir(""), "gardenadm-connect-bootstrap-kubeconfig")
 }
 
-func initializeTemporaryGardenClient(ctx context.Context, b *botanist.AutonomousBotanist, bootstrapClientSet kubernetes.Interface) error {
+func initializeTemporaryGardenClient(ctx context.Context, b *botanist.GardenadmBotanist, bootstrapClientSet kubernetes.Interface) error {
 	bootstrapKubeconfig, cached, err := getCachedBootstrapKubeconfig(b)
 	if err != nil {
 		return fmt.Errorf("failed retrieving cached bootstrap kubeconfig: %w", err)
@@ -220,7 +220,7 @@ func initializeTemporaryGardenClient(ctx context.Context, b *botanist.Autonomous
 	return setGardenClientFromKubeconfig(b, bootstrapKubeconfig)
 }
 
-func getCachedBootstrapKubeconfig(b *botanist.AutonomousBotanist) ([]byte, bool, error) {
+func getCachedBootstrapKubeconfig(b *botanist.GardenadmBotanist) ([]byte, bool, error) {
 	fileInfo, err := b.FS.Stat(cachedBootstrapKubeconfigPath(b.FS))
 	if err != nil || time.Since(fileInfo.ModTime()) > bootstrapKubeconfigValidity-2*time.Minute {
 		// We deliberately ignore the error here - this is just a best-effort attempt to cache the bootstrap kubeconfig.
@@ -239,7 +239,7 @@ func getCachedBootstrapKubeconfig(b *botanist.AutonomousBotanist) ([]byte, bool,
 	return data, true, nil
 }
 
-func requestShortLivedBootstrapKubeconfig(ctx context.Context, b *botanist.AutonomousBotanist, bootstrapClientSet kubernetes.Interface) ([]byte, error) {
+func requestShortLivedBootstrapKubeconfig(ctx context.Context, b *botanist.GardenadmBotanist, bootstrapClientSet kubernetes.Interface) ([]byte, error) {
 	certificateSubject := &pkix.Name{
 		Organization: []string{v1beta1constants.ShootsGroup},
 		CommonName:   v1beta1constants.GardenadmUserNamePrefix + b.Shoot.GetInfo().Namespace + ":" + b.Shoot.GetInfo().Name,
@@ -253,7 +253,7 @@ func requestShortLivedBootstrapKubeconfig(ctx context.Context, b *botanist.Auton
 	return gardenletbootstraputil.CreateKubeconfigWithClientCertificate(bootstrapClientSet.RESTConfig(), privateKeyData, certData)
 }
 
-func setGardenClientFromKubeconfig(b *botanist.AutonomousBotanist, kubeconfig []byte) error {
+func setGardenClientFromKubeconfig(b *botanist.GardenadmBotanist, kubeconfig []byte) error {
 	gardenClientSet, err := kubernetes.NewClientFromBytes(
 		kubeconfig,
 		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
@@ -268,7 +268,7 @@ func setGardenClientFromKubeconfig(b *botanist.AutonomousBotanist, kubeconfig []
 	return nil
 }
 
-func prepareGardenerResources(ctx context.Context, b *botanist.AutonomousBotanist) error {
+func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist) error {
 	if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Resources.CloudProfile), &gardencorev1beta1.CloudProfile{}); err != nil {
 		return fmt.Errorf("failed checking for existence of CloudProfile %s (this is not created by 'gardenadm connect' and must exist in the garden cluster): %w", b.Resources.CloudProfile.Name, err)
 	}
@@ -290,7 +290,7 @@ func prepareGardenerResources(ctx context.Context, b *botanist.AutonomousBotanis
 
 	// We do not handle Project using 'garden' namespace because gardener-apiserver defaults .spec.tolerations for this
 	// Project. This requires special permissions for a custom verb that we do not want to grant to the gardenadm user
-	// for autonomous shoots. Since this is a special project anyway, it must have been created beforehand.
+	// for self-hosted shoots. Since this is a special project anyway, it must have been created beforehand.
 	if project := b.Resources.Project.DeepCopy(); ptr.Deref(project.Spec.Namespace, "") != v1beta1constants.GardenNamespace {
 		if err := b.GardenClient.Create(ctx, project); client.IgnoreAlreadyExists(err) != nil {
 			return fmt.Errorf("failed creating Project resource %s in garden cluster: %w", project.Name, err)
@@ -334,7 +334,7 @@ func prepareGardenerResources(ctx context.Context, b *botanist.AutonomousBotanis
 	return nil
 }
 
-func newGardenletDeployer(b *botanist.AutonomousBotanist, gardenClientSet kubernetes.Interface) gardenletdeployer.Interface {
+func newGardenletDeployer(b *botanist.GardenadmBotanist, gardenClientSet kubernetes.Interface) gardenletdeployer.Interface {
 	return &gardenletdeployer.Actuator{
 		GardenConfig:        gardenClientSet.RESTConfig(),
 		GardenClient:        gardenClientSet.Client(),

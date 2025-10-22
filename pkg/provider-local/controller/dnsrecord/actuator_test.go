@@ -199,7 +199,7 @@ var _ = Describe("Actuator", func() {
 			})
 		})
 
-		Context("autonomous shoots", func() {
+		Context("self-hosted shoots", func() {
 			BeforeEach(func() {
 				cluster.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
 					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
@@ -246,7 +246,7 @@ var _ = Describe("Actuator", func() {
 
 					apiDNSRecord.Spec.RecordType = "CNAME"
 					apiDNSRecord.Spec.Values = []string{"some.other.name.gardener.cloud"}
-					Expect(actuator.Reconcile(ctx, log, apiDNSRecord, cluster)).To(MatchError(ContainSubstring(`unsupported record type "CNAME" for autonomous shoot`)))
+					Expect(actuator.Reconcile(ctx, log, apiDNSRecord, cluster)).To(MatchError(ContainSubstring(`unsupported record type "CNAME" for self-hosted shoot`)))
 				})
 			})
 

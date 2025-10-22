@@ -23,7 +23,7 @@ policy/v1
 {{- end -}}
 
 {{- define "coredns.enabled" -}}
-{{- if or .Values.gardener.runtimeCluster.enabled .Values.gardener.autonomousShootCluster -}}
+{{- if or .Values.gardener.runtimeCluster.enabled .Values.gardener.selfHostedShootCluster -}}
 false
 {{- else -}}
 {{ .Values.coredns.enabled }}

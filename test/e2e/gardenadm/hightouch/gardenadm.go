@@ -260,7 +260,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
-		It("should generate a bootstrap token and connect the autonomous shoot to Gardener", func(ctx SpecContext) {
+		It("should generate a bootstrap token and connect the self-hosted shoot to Gardener", func(ctx SpecContext) {
 			stdOut, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s", gardenClusterKubeconfigPathOnMachine, shootNamespace, shootName))
 			Expect(err).NotTo(HaveOccurred())
 			connectCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
@@ -268,7 +268,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			stdOut, _, err = execute(ctx, 0, append(connectCommand, "--log-level=debug")...)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(ctx, stdOut).Should(gbytes.Say("Your autonomous shoot cluster has successfully been connected to Gardener!"))
+			Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
 
 			Eventually(ctx, func(g Gomega) {
 				csrList := &certificatesv1.CertificateSigningRequestList{}

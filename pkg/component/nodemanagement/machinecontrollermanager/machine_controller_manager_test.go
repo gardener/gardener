@@ -597,7 +597,7 @@ subjects:
 			Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 
 			actualManagedResource := &resourcesv1alpha1.ManagedResource{}
-			if values.AutonomousShoot && namespace != "kube-system" {
+			if values.SelfHostedShoot && namespace != "kube-system" {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), actualManagedResource)).To(BeNotFoundError())
 			} else {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), actualManagedResource)).To(Succeed())
@@ -624,7 +624,7 @@ subjects:
 			}
 		}
 
-		When("the shoot is not autonomous", func() {
+		When("the shoot is not self-hosted", func() {
 			JustBeforeEach(func() {
 				Expect(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", shootAccessSecret.Name)).To(Succeed())
 			})
@@ -639,9 +639,9 @@ subjects:
 			})
 		})
 
-		When("the shoot is autonomous", func() {
+		When("the shoot is self-hosted", func() {
 			BeforeEach(func() {
-				values.AutonomousShoot = true
+				values.SelfHostedShoot = true
 			})
 
 			JustBeforeEach(func() {

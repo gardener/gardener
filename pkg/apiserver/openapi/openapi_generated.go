@@ -10636,7 +10636,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					},
 					"controlPlane": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool. This is only relevant for autonomous shoot clusters.",
+							Description: "ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool. This is only relevant for self-hosted shoot clusters.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerControlPlane"),
 						},
 					},

@@ -25,7 +25,7 @@ rules:
   - modify-spec-kubernetes
   - modify-spec-machineimages
   - modify-spec-providerconfig
-  - mark-autonomous
+  - mark-self-hosted
 - apiGroups:
   - seedmanagement.gardener.cloud
   - dashboard.gardener.cloud

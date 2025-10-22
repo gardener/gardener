@@ -32,7 +32,7 @@ func (a *authorizer) authorizeGardenadmRequests(requestLog logr.Logger, shootNam
 			}
 
 		case shootResource:
-			if isGardenadmRequestAllowed(attrs, &shootNamespace, "create", "mark-autonomous") {
+			if isGardenadmRequestAllowed(attrs, &shootNamespace, "create", "mark-self-hosted") {
 				return auth.DecisionAllow, "", nil
 			}
 

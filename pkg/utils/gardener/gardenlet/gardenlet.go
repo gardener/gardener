@@ -67,12 +67,12 @@ func SetDefaultGardenClusterAddress(log logr.Logger, gardenletConfigRaw runtime.
 	return *newGardenletConfigRaw, nil
 }
 
-// ResourcePrefixAutonomousShoot is the prefix for resources related to Gardenlet created for autonomous shoots.
-const ResourcePrefixAutonomousShoot = "autonomous-shoot-"
+// ResourcePrefixSelfHostedShoot is the prefix for resources related to Gardenlet created for self-hosted shoots.
+const ResourcePrefixSelfHostedShoot = "self-hosted-shoot-"
 
-// IsResponsibleForAutonomousShoot checks if the current process is responsible for managing autonomous shoots. This is
+// IsResponsibleForSelfHostedShoot checks if the current process is responsible for managing self-hosted shoots. This is
 // determined by checking if the environment variable "NAMESPACE" is set to the kube-system namespace.
-func IsResponsibleForAutonomousShoot() bool {
+func IsResponsibleForSelfHostedShoot() bool {
 	return os.Getenv("NAMESPACE") == metav1.NamespaceSystem
 }
 
@@ -90,11 +90,11 @@ func ShootMetaFromBootstrapToken(ctx context.Context, reader client.Reader, boot
 
 func extractShootMetaFromBootstrapToken(bootstrapTokenSecret *corev1.Secret) (types.NamespacedName, error) {
 	description := string(bootstrapTokenSecret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey])
-	if !strings.HasPrefix(description, bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix) {
-		return types.NamespacedName{}, fmt.Errorf("bootstrap token description does not start with %q: %s", bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix, description)
+	if !strings.HasPrefix(description, bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix) {
+		return types.NamespacedName{}, fmt.Errorf("bootstrap token description does not start with %q: %s", bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix, description)
 	}
 
-	parts := strings.Fields(strings.TrimPrefix(description, bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix))
+	parts := strings.Fields(strings.TrimPrefix(description, bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix))
 	if len(parts) == 0 {
 		return types.NamespacedName{}, fmt.Errorf("could not extract shoot meta from bootstrap token description: %s", description)
 	}

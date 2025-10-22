@@ -30,7 +30,7 @@ var _ = Describe("Secrets", func() {
 		fakeClient1 client.Client
 		fakeClient2 client.Client
 
-		b *AutonomousBotanist
+		b *GardenadmBotanist
 	)
 
 	BeforeEach(func() {
@@ -39,7 +39,7 @@ var _ = Describe("Secrets", func() {
 		fakeClient1 = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeClient2 = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
-		b = &AutonomousBotanist{
+		b = &GardenadmBotanist{
 			Botanist: &botanistpkg.Botanist{
 				Operation: &operation.Operation{
 					SeedClientSet: fakekubernetes.

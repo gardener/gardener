@@ -316,7 +316,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		When("bootstrap token secret has invalid description", func() {
-			It("should lead to denial of the CSR when description does not have autonomous shoot prefix", func() {
+			It("should lead to denial of the CSR when description does not have self-hosted shoot prefix", func() {
 				bootstrapTokenSecret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      bootstrapTokenName,
@@ -362,7 +362,7 @@ var _ = Describe("Reconciler", func() {
 						Namespace: metav1.NamespaceSystem,
 					},
 					Data: map[string][]byte{
-						bootstraptokenapi.BootstrapTokenDescriptionKey: []byte(bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix + "invalid-format"),
+						bootstraptokenapi.BootstrapTokenDescriptionKey: []byte(bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix + "invalid-format"),
 					},
 				}
 
@@ -414,7 +414,7 @@ var _ = Describe("Reconciler", func() {
 						Namespace: metav1.NamespaceSystem,
 					},
 					Data: map[string][]byte{
-						bootstraptokenapi.BootstrapTokenDescriptionKey: []byte(bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix + shootNamespace + "/" + shootName),
+						bootstraptokenapi.BootstrapTokenDescriptionKey: []byte(bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix + shootNamespace + "/" + shootName),
 					},
 				}
 
@@ -453,7 +453,7 @@ var _ = Describe("Reconciler", func() {
 						Namespace: metav1.NamespaceSystem,
 					},
 					Data: map[string][]byte{
-						bootstraptokenapi.BootstrapTokenDescriptionKey: []byte(bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix + shootNamespace + "/" + shootName),
+						bootstraptokenapi.BootstrapTokenDescriptionKey: []byte(bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix + shootNamespace + "/" + shootName),
 					},
 				}
 
@@ -494,7 +494,7 @@ var _ = Describe("Reconciler", func() {
 						Namespace: metav1.NamespaceSystem,
 					},
 					Data: map[string][]byte{
-						bootstraptokenapi.BootstrapTokenDescriptionKey: []byte(bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix + shootNamespace + "/" + shootName),
+						bootstraptokenapi.BootstrapTokenDescriptionKey: []byte(bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix + shootNamespace + "/" + shootName),
 					},
 				}
 

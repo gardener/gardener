@@ -685,7 +685,7 @@ func PrepareGardenletChartValues(
 		}
 	}
 
-	// Ensure seed name is set if we are not deploying gardenlet into an autonomous shoot cluster
+	// Ensure seed name is set if we are not deploying gardenlet into a self-hosted shoot cluster
 	if gardenletConfig.SeedConfig != nil {
 		gardenletConfig.SeedConfig.Name = obj.GetName()
 	}
@@ -725,7 +725,7 @@ func PrepareGardenletChartValues(
 		return values, nil
 	}
 
-	// enable self-upgrades for autonomous shoots
+	// enable self-upgrades for self-hosted shoots
 	gardenletChartImage, err := imagevector.Charts().FindImage(imagevector.ChartImageNameGardenlet)
 	if err != nil {
 		return nil, fmt.Errorf("failed fetching gardenlet chart image: %w", err)
@@ -733,7 +733,7 @@ func PrepareGardenletChartValues(
 	gardenletChartImage.WithOptionalTag(version.Get().GitVersion)
 
 	return utils.SetToValuesMap(values, map[string]any{
-		"name":       gardenletutils.ResourcePrefixAutonomousShoot + shoot.Name,
+		"name":       gardenletutils.ResourcePrefixSelfHostedShoot + shoot.Name,
 		"namespace":  shoot.Namespace,
 		"deployment": map[string]any{"helm": map[string]any{"ociRepository": map[string]any{"ref": gardenletChartImage.String()}}},
 	}, "selfUpgrade")

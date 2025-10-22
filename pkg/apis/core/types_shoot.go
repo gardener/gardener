@@ -1319,7 +1319,7 @@ type Worker struct {
 	// UpdateStrategy specifies the machine update strategy for the worker pool.
 	UpdateStrategy *MachineUpdateStrategy
 	// ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
-	// This is only relevant for autonomous shoot clusters.
+	// This is only relevant for self-hosted shoot clusters.
 	ControlPlane *WorkerControlPlane
 }
 

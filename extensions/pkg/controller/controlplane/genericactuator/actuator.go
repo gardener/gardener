@@ -419,7 +419,7 @@ func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1
 }
 
 func (a *actuator) hasShootWebhooks(shoot *gardencorev1beta1.Shoot) bool {
-	return a.atomicShootWebhookConfig != nil && !v1beta1helper.IsShootAutonomous(shoot.Spec.Provider.Workers)
+	return a.atomicShootWebhookConfig != nil && !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers)
 }
 
 // computeChecksums computes and returns all needed checksums. This includes the checksums for the given deployed secrets,

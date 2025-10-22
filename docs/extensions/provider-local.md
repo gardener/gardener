@@ -85,7 +85,7 @@ data:
     rewrite stop name regex api.local.local.internal.local.gardener.cloud istio-ingressgateway.istio-ingress.svc.cluster.local answer auto
 ```
 
-For autonomous shoots, the controller configures the CoreDNS `template` plugin instead of using a `rewrite` rule for each `DNSRecord`:
+For self-hosted shoots, the controller configures the CoreDNS `template` plugin instead of using a `rewrite` rule for each `DNSRecord`:
 
 ```yaml
 data:

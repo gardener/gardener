@@ -32,7 +32,7 @@ var _ = Describe("CustomResourceDefinitions", func() {
 
 		fakeClient client.Client
 
-		b *AutonomousBotanist
+		b *GardenadmBotanist
 	)
 
 	BeforeEach(func() {
@@ -44,7 +44,7 @@ var _ = Describe("CustomResourceDefinitions", func() {
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 		applier := kubernetes.NewApplier(fakeClient, mapper)
 
-		b = &AutonomousBotanist{
+		b = &GardenadmBotanist{
 			Botanist: &botanistpkg.Botanist{
 				Operation: &operation.Operation{
 					SeedClientSet: fakekubernetes.

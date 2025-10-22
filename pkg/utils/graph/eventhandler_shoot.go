@@ -106,7 +106,7 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	g.deleteAllIncomingEdges(VertexTypeSecretBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeCredentialsBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeShootState, VertexTypeShoot, shoot.Namespace, shoot.Name)
-	if !g.forAutonomousShoots {
+	if !g.forSelfHostedShoots {
 		g.deleteAllOutgoingEdges(VertexTypeShoot, shoot.Namespace, shoot.Name, VertexTypeSeed)
 	}
 

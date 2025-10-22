@@ -15038,7 +15038,7 @@ WorkerControlPlane
 <td>
 <em>(Optional)</em>
 <p>ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
-This is only relevant for autonomous shoot clusters.</p>
+This is only relevant for self-hosted shoot clusters.</p>
 </td>
 </tr>
 </tbody>

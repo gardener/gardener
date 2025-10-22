@@ -22,8 +22,8 @@ The shoot's kube-apiserver must be allowed to talk to the provider extension.
 To achieve this, you need to make sure that the relevant `NetworkPolicy` get created for allowing the network traffic.
 Please refer to [this guide](../operations/network_policies.md#webhook-servers) for more information.
 
-## Autonomous Shoot Clusters
+## Self-Hosted Shoot Clusters
 
-If running in an autonomous shoot cluster, the shoot webhooks should be merged into the seed webhooks.
+If running in a self-hosted shoot cluster, the shoot webhooks should be merged into the seed webhooks.
 You can do so by setting the `mergeShootWebhooksIntoSeedWebhooks` to `true` in the `extensions/pkg/webhook/cmd.AddToManager` function.
-Take a look at [this document](registration.md#helm-values) in order to determine whether the extension runs in an autonomous shoot cluster.
+Take a look at [this document](registration.md#helm-values) in order to determine whether the extension runs in a self-hosted shoot cluster.

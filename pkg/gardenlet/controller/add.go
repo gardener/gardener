@@ -57,7 +57,7 @@ func AddToManager(
 	//  adapt the shoot authorizer (via the resource dependency graph) to allow 'read' access to this ConfigMap (similar
 	//  to how it's done for seeds).
 	gardenClusterIdentity := ""
-	if !gardenletutils.IsResponsibleForAutonomousShoot() {
+	if !gardenletutils.IsResponsibleForSelfHostedShoot() {
 		configMap := &corev1.ConfigMap{}
 		if err := gardenCluster.GetClient().Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: v1beta1constants.ClusterIdentity}, configMap); err != nil {
 			return fmt.Errorf("failed getting cluster-identity ConfigMap in garden cluster: %w", err)
@@ -79,8 +79,8 @@ func AddToManager(
 		return fmt.Errorf("failed creating seed clientset: %w", err)
 	}
 
-	if gardenletutils.IsResponsibleForAutonomousShoot() {
-		mgr.GetLogger().Info("Running in autonomous shoot, registering minimal set of controllers")
+	if gardenletutils.IsResponsibleForSelfHostedShoot() {
+		mgr.GetLogger().Info("Running in self-hosted shoot, registering minimal set of controllers")
 
 		if err := (&gardenlet.Reconciler{
 			Config: *cfg,

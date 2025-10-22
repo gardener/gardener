@@ -1,11 +1,11 @@
-# Deploying Autonomous Shoot Clusters Locally
+# Deploying Self-Hosted Shoot Clusters Locally
 
 > [!CAUTION]
 > The `gardenadm` tool is currently under development and considered highly experimental.
 > Do not use it in production environments.
-> Read more about it in [GEP-28](../proposals/28-autonomous-shoot-clusters.md).
+> Read more about it in [GEP-28](../proposals/28-self-hosted-shoot-clusters.md).
 
-This document walks you through deploying Autonomous Shoot Clusters using `gardenadm` on your local machine.
+This document walks you through deploying Self-Hosted Shoot Clusters using `gardenadm` on your local machine.
 This setup can be used for trying out and developing `gardenadm` locally without additional infrastructure.
 The setup is also used for running e2e tests for `gardenadm` in CI ([Prow](https://prow.gardener.cloud)).
 
@@ -13,9 +13,9 @@ If you encounter difficulties, please open an issue so that we can make this pro
 
 ## Overview
 
-`gardenadm` is a command line tool for bootstrapping Kubernetes clusters called "Autonomous Shoot Clusters". Read the [`gardenadm` documentation](../concepts/gardenadm.md) for more details on its concepts.
+`gardenadm` is a command line tool for bootstrapping Kubernetes clusters called "Self-Hosted Shoot Clusters". Read the [`gardenadm` documentation](../concepts/gardenadm.md) for more details on its concepts.
 
-In this guide, we will start a [KinD](https://kind.sigs.k8s.io/) cluster which hosts pods serving as machines for the autonomous shoot cluster – just as for shoot clusters of [provider-local](../extensions/provider-local.md).
+In this guide, we will start a [KinD](https://kind.sigs.k8s.io/) cluster which hosts pods serving as machines for the self-hosted shoot cluster – just as for shoot clusters of [provider-local](../extensions/provider-local.md).
 The setup supports both the high-touch and medium-touch scenario of `gardenadm`.
 
 Based on [Skaffold](https://skaffold.dev/), the container images for all required components will be built and deployed into the cluster.
@@ -61,7 +61,7 @@ Let's start with exec'ing into the `machine-0` pod:
 ```shell
 $ kubectl -n gardenadm-high-touch exec -it machine-0 -- bash
 root@machine-0:/# gardenadm -h
-gardenadm bootstraps and manages autonomous shoot clusters in the Gardener project.
+gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener project.
 ...
 
 root@machine-0:/# cat /gardenadm/resources/manifests.yaml
@@ -83,9 +83,9 @@ Your Shoot cluster control-plane has initialized successfully!
 ...
 ```
 
-### Connecting to the Autonomous Shoot Cluster
+### Connecting to the Self-Hosted Shoot Cluster
 
-The machine pod's shell environment is configured for easily connecting to the autonomous shoot cluster.
+The machine pod's shell environment is configured for easily connecting to the self-hosted shoot cluster.
 Just execute `kubectl` within a `bash` shell in the machine pod:
 
 ```shell
@@ -125,7 +125,7 @@ Your node has successfully been instructed to join the cluster as a worker!
 ...
 ```
 
-Using the kubeconfig as described in [this section](#connecting-to-the-autonomous-shoot-cluster), you should now be able to see the new node in the cluster:
+Using the kubeconfig as described in [this section](#connecting-to-the-self-hosted-shoot-cluster), you should now be able to see the new node in the cluster:
 
 ```shell
 $ kubectl get no
@@ -144,7 +144,7 @@ make gardenadm-up SCENARIO=medium-touch
 
 This will first build the needed images and then render the needed manifests for `gardenadm bootstrap` to the [`./dev-setup/gardenadm/resources/generated/medium-touch`](../../dev-setup/gardenadm/resources/generated/medium-touch) directory.
 
-### Bootstrapping the Autonomous Shoot Cluster
+### Bootstrapping the Self-Hosted Shoot Cluster
 
 Use `go run` to execute `gardenadm` commands on your machine:
 
@@ -156,10 +156,10 @@ $ go run ./cmd/gardenadm bootstrap -d ./dev-setup/gardenadm/resources/generated/
 ...
 ```
 
-### Connecting to the Autonomous Shoot Cluster
+### Connecting to the Self-Hosted Shoot Cluster
 
-`gardenadm init` stores the kubeconfig of the autonomous shoot cluster in the `/etc/kubernetes/admin.conf` file on the control plane machine.
-To connect to the autonomous shoot cluster, set the `KUBECONFIG` environment variable and execute `kubectl` within a `bash` shell in the machine pod:
+`gardenadm init` stores the kubeconfig of the self-hosted shoot cluster in the `/etc/kubernetes/admin.conf` file on the control plane machine.
+To connect to the self-hosted shoot cluster, set the `KUBECONFIG` environment variable and execute `kubectl` within a `bash` shell in the machine pod:
 
 ```shell
 $ machine="$(kubectl -n shoot--garden--root get po -l app=machine -oname | head -1 | cut -d/ -f2)"
@@ -185,9 +185,9 @@ NAME                                                    STATUS   ROLES    AGE   
 machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.33.0
 ```
 
-## Connecting the Autonomous Shoot Cluster to Gardener
+## Connecting the Self-Hosted Shoot Cluster to Gardener
 
-After you have successfully bootstrapped an autonomous shoot cluster (either via the [high touch](#high-touch-scenario) or the [medium touch](#medium-touch-scenario) scenario), you can connect it to an existing Gardener system.
+After you have successfully bootstrapped a self-hosted shoot cluster (either via the [high touch](#high-touch-scenario) or the [medium touch](#medium-touch-scenario) scenario), you can connect it to an existing Gardener system.
 For this, you need to have a Gardener running locally in your KinD cluster.
 In order to deploy it, you can run
 
@@ -199,7 +199,7 @@ This will deploy [`gardener-operator`](../concepts/operator.md) and create a `Ga
 Find all information about it [here](getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator).
 Note, that in this setup, no `Seed` will be registered in the Gardener - it's just a plain garden cluster without the ability to create regular shoot clusters.
 
-Once above command is finished, you can connect the autonomous shoot cluster to this Gardener instance:
+Once above command is finished, you can connect the self-hosted shoot cluster to this Gardener instance:
 
 ```shell
 $ kubectl -n gardenadm-high-touch exec -it machine-0 -- bash

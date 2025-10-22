@@ -52,9 +52,9 @@ const (
 	// `.spec.limits` limits in `NamespacedCloudProfile` resources above values defined in the parent `CloudProfile`.
 	CustomVerbNamespacedCloudProfileRaiseLimits = "raise-spec-limits"
 
-	// CustomVerbShootMarkAutonomous is a constant for the custom verb that allows setting the
-	// `.spec.provider.workers[].controlPlane` field in the `Shoot` spec which marks it as 'autonomous shoot cluster'.
-	CustomVerbShootMarkAutonomous = "mark-autonomous"
+	// CustomVerbShootMarkSelfHosted is a constant for the custom verb that allows setting the
+	// `.spec.provider.workers[].controlPlane` field in the `Shoot` spec which marks it as 'self-hosted shoot cluster'.
+	CustomVerbShootMarkSelfHosted = "mark-self-hosted"
 )
 
 // Register registers a plugin.
@@ -257,7 +257,7 @@ func (c *CustomVerbAuthorizer) admitShoots(ctx context.Context, a admission.Attr
 	}
 
 	if mustCheckShootAutonomy(oldObj, obj) {
-		return c.authorize(ctx, a, CustomVerbShootMarkAutonomous, "modify .spec.provider.workers[].controlPlane")
+		return c.authorize(ctx, a, CustomVerbShootMarkSelfHosted, "modify .spec.provider.workers[].controlPlane")
 	}
 
 	return nil

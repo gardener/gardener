@@ -16,7 +16,7 @@ import (
 
 // ListControlPlaneMachines stores all control plane machines in controlPlaneMachines for later retrieval.
 // Listing the machines only once ensures consistent ordering when accessing them by index.
-func (b *AutonomousBotanist) ListControlPlaneMachines(ctx context.Context) error {
+func (b *GardenadmBotanist) ListControlPlaneMachines(ctx context.Context) error {
 	machineList := &machinev1alpha1.MachineList{}
 	if err := b.SeedClientSet.Client().List(ctx, machineList, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
 		return fmt.Errorf("failed to list machines: %w", err)
@@ -26,7 +26,7 @@ func (b *AutonomousBotanist) ListControlPlaneMachines(ctx context.Context) error
 }
 
 // GetMachineByIndex returns the control plane machine with the given index or an error if the index is out of bounds.
-func (b *AutonomousBotanist) GetMachineByIndex(index int) (*machinev1alpha1.Machine, error) {
+func (b *GardenadmBotanist) GetMachineByIndex(index int) (*machinev1alpha1.Machine, error) {
 	if index < 0 {
 		return nil, fmt.Errorf("machine index must be non-negative, got %d", index)
 	}

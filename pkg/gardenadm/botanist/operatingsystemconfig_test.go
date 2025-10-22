@@ -34,7 +34,7 @@ import (
 var _ = Describe("OperatingSystemConfig", func() {
 	var (
 		ctx = context.Background()
-		b   *AutonomousBotanist
+		b   *GardenadmBotanist
 
 		fs         afero.Afero
 		fakeDBus   *fakedbus.DBus
@@ -48,7 +48,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
 		clientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 
-		b = &AutonomousBotanist{
+		b = &GardenadmBotanist{
 			FS:       fs,
 			DBus:     fakeDBus,
 			HostName: "foo-host",

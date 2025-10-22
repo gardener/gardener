@@ -1070,7 +1070,7 @@ var _ = Describe("Shoot", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("returns the unmanaged external domain for autonomous shoots", func(ctx SpecContext) {
+		It("returns the unmanaged external domain for self-hosted shoots", func(ctx SpecContext) {
 			shoot := &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
@@ -1446,7 +1446,7 @@ var _ = Describe("Shoot", func() {
 			)))
 		})
 
-		It("should compute the correct list of required extensions (autonomous shoot with backup)", func() {
+		It("should compute the correct list of required extensions (self-hosted shoot with backup)", func() {
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
 				ControlPlane: &gardencorev1beta1.WorkerControlPlane{Backup: &gardencorev1beta1.Backup{Provider: backupProvider}},
 			})

@@ -49,10 +49,10 @@ import (
 var PathKubeconfig = filepath.Join(string(filepath.Separator), "etc", "kubernetes", "admin.conf")
 
 // KubeconfigSecretName is the name of the secret in the shoot namespace of the bootstrap cluster containing the
-// kubeconfig of the autonomous shoot.
+// kubeconfig of the self-hosted shoot.
 const KubeconfigSecretName = "kubeconfig"
 
-func (b *AutonomousBotanist) deployETCD(role string) func(context.Context) error {
+func (b *GardenadmBotanist) deployETCD(role string) func(context.Context) error {
 	var portClient, portPeer, portMetrics int32 = 2379, 2380, 2381
 	if role == v1beta1constants.ETCDRoleEvents {
 		portClient, portPeer, portMetrics = etcdconstants.StaticPodPortEtcdEventsClient, 2383, 2384
@@ -74,7 +74,7 @@ func (b *AutonomousBotanist) deployETCD(role string) func(context.Context) error
 	}
 }
 
-func (b *AutonomousBotanist) deployKubeAPIServer(ctx context.Context) error {
+func (b *GardenadmBotanist) deployKubeAPIServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(ptr.To[int32](0))
 
@@ -102,7 +102,7 @@ type staticControlPlaneComponent struct {
 	mutate       func(*corev1.Pod)
 }
 
-func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlaneComponent {
+func (b *GardenadmBotanist) staticControlPlaneComponents() []staticControlPlaneComponent {
 	var (
 		components []staticControlPlaneComponent
 
@@ -147,7 +147,7 @@ func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlane
 // DeployControlPlaneDeployments deploys the deployments for the static control plane components. It also updates the
 // OperatingSystemConfig, waits for it to be reconciled by the OS extension, and deploys the ManagedResource containing
 // the Secret with OperatingSystemConfig for gardener-node-agent.
-func (b *AutonomousBotanist) DeployControlPlaneDeployments(ctx context.Context) error {
+func (b *GardenadmBotanist) DeployControlPlaneDeployments(ctx context.Context) error {
 	if err := b.deployControlPlaneDeployments(ctx); err != nil {
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
@@ -171,7 +171,7 @@ func (b *AutonomousBotanist) DeployControlPlaneDeployments(ctx context.Context) 
 // WaitUntilControlPlaneDeploymentsReady waits until the control plane deployments are ready. It checks that the
 // operating system config has been updated for all worker pools. In addition, it verifies that the static pod hashes
 // match the desired hashes.
-func (b *AutonomousBotanist) WaitUntilControlPlaneDeploymentsReady(ctx context.Context) error {
+func (b *GardenadmBotanist) WaitUntilControlPlaneDeploymentsReady(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, botanist.GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
 	defer cancel()
 
@@ -201,7 +201,7 @@ func (b *AutonomousBotanist) WaitUntilControlPlaneDeploymentsReady(ctx context.C
 	return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)
 }
 
-func (b *AutonomousBotanist) deployControlPlaneDeployments(ctx context.Context) error {
+func (b *GardenadmBotanist) deployControlPlaneDeployments(ctx context.Context) error {
 	for _, component := range b.staticControlPlaneComponents() {
 		if err := b.deployControlPlaneComponent(ctx, component.deploy, component.targetObject, component.name); err != nil {
 			return fmt.Errorf("failed deploying %q: %w", component.name, err)
@@ -211,7 +211,7 @@ func (b *AutonomousBotanist) deployControlPlaneDeployments(ctx context.Context) 
 	return nil
 }
 
-func (b *AutonomousBotanist) deployControlPlaneComponent(ctx context.Context, deploy func(context.Context) error, targetObject client.Object, componentName string) error {
+func (b *GardenadmBotanist) deployControlPlaneComponent(ctx context.Context, deploy func(context.Context) error, targetObject client.Object, componentName string) error {
 	if err := deploy(ctx); err != nil {
 		return fmt.Errorf("failed deploying component %q: %w", componentName, err)
 	}
@@ -225,7 +225,7 @@ func (b *AutonomousBotanist) deployControlPlaneComponent(ctx context.Context, de
 	return b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(targetObject), targetObject)
 }
 
-func (b *AutonomousBotanist) populateStaticAdminTokenToAccessTokenSecret(ctx context.Context, componentName string) error {
+func (b *GardenadmBotanist) populateStaticAdminTokenToAccessTokenSecret(ctx context.Context, componentName string) error {
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerutils.SecretNamePrefixShootAccess + componentName, Namespace: b.Shoot.ControlPlaneNamespace}}
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -281,7 +281,7 @@ func (s staticPods) nameToHashMap() map[string]string {
 	return m
 }
 
-func (b *AutonomousBotanist) staticControlPlanePods(ctx context.Context) (staticPods, error) {
+func (b *GardenadmBotanist) staticControlPlanePods(ctx context.Context) (staticPods, error) {
 	var pods staticPods
 
 	for _, component := range b.staticControlPlaneComponents() {
@@ -314,7 +314,7 @@ func NewClientSetFromFile(kubeconfigPath string, scheme *runtime.Scheme) (kubern
 }
 
 // CreateClientSet creates a client set for the control plane.
-func (b *AutonomousBotanist) CreateClientSet(ctx context.Context) (kubernetes.Interface, error) {
+func (b *GardenadmBotanist) CreateClientSet(ctx context.Context) (kubernetes.Interface, error) {
 	pathKubeconfig := PathKubeconfig
 	if path := os.Getenv("KUBECONFIG"); path != "" {
 		pathKubeconfig = path
@@ -354,7 +354,7 @@ func (b *AutonomousBotanist) CreateClientSet(ctx context.Context) (kubernetes.In
 var NewWithConfig = kubernetes.NewWithConfig
 
 // DiscoverKubernetesVersion discovers the Kubernetes version of the control plane.
-func (b *AutonomousBotanist) DiscoverKubernetesVersion(controlPlaneAddress string, caBundle []byte, token string) (*semver.Version, error) {
+func (b *GardenadmBotanist) DiscoverKubernetesVersion(controlPlaneAddress string, caBundle []byte, token string) (*semver.Version, error) {
 	clientSet, err := NewWithConfig(kubernetes.WithRESTConfig(&rest.Config{
 		Host:            controlPlaneAddress,
 		TLSClientConfig: rest.TLSClientConfig{CAData: caBundle},
@@ -372,10 +372,10 @@ func (b *AutonomousBotanist) DiscoverKubernetesVersion(controlPlaneAddress strin
 	return version, nil
 }
 
-// FetchKubeconfig fetches the kubeconfig of the autonomous shoot from the control plane machine via SSH and stores it
+// FetchKubeconfig fetches the kubeconfig of the self-hosted shoot from the control plane machine via SSH and stores it
 // in a secret in the shoot namespace of the bootstrap cluster for later retrieval. It also writes the kubeconfig to the
 // given output writer, if any.
-func (b *AutonomousBotanist) FetchKubeconfig(ctx context.Context, output io.Writer) error {
+func (b *GardenadmBotanist) FetchKubeconfig(ctx context.Context, output io.Writer) error {
 	kubeconfigBuffer := &bytes.Buffer{}
 	if err := b.sshConnection.SCP.CopyFromRemotePassThru(ctx, kubeconfigBuffer, PathKubeconfig, nil); err != nil {
 		return fmt.Errorf("error fetching kubeconfig: %w", err)
@@ -392,11 +392,11 @@ func (b *AutonomousBotanist) FetchKubeconfig(ctx context.Context, output io.Writ
 	if err != nil {
 		return fmt.Errorf("error writing kubeconfig secret: %w", err)
 	}
-	b.Logger.Info("Stored kubeconfig of the autonomous shoot in secret", "namespace", kubeconfigSecret.Namespace, "name", kubeconfigSecret.Name)
+	b.Logger.Info("Stored kubeconfig of the self-hosted shoot in secret", "namespace", kubeconfigSecret.Namespace, "name", kubeconfigSecret.Name)
 
 	if output != nil {
 		if outputFile, ok := output.(*os.File); ok {
-			b.Logger.Info("Writing kubeconfig of the autonomous shoot to file", "path", outputFile.Name())
+			b.Logger.Info("Writing kubeconfig of the self-hosted shoot to file", "path", outputFile.Name())
 		}
 		if _, err := output.Write(kubeconfigBytes); err != nil {
 			return fmt.Errorf("error writing kubeconfig to output: %w", err)

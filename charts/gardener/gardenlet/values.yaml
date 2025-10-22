@@ -221,5 +221,5 @@ nodeToleration:
 #    helm:
 #      ociRepository:
 #        ref: <url-to-oci-repository-containing-gardenlet-helm-chart>
-#  name: name-of-autonomous-shoot
-#  namespace: namespace-of-autonomous-shoot
+#  name: name-of-self-hosted-shoot
+#  namespace: namespace-of-self-hosted-shoot

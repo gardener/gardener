@@ -79,7 +79,7 @@ type Shoot struct {
 	ControlPlaneNamespace string
 	KubernetesVersion     *semver.Version
 
-	// InternalClusterDomain is empty for autonomous shoots, which only have an external domain (Shoot.spec.dns.domain).
+	// InternalClusterDomain is empty for self-hosted shoots, which only have an external domain (Shoot.spec.dns.domain).
 	InternalClusterDomain *string
 	// ExternalClusterDomain is nil if Shoot.Spec.DNS.Domain is unset.
 	ExternalClusterDomain *string

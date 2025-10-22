@@ -1428,12 +1428,12 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
-	Describe("#IsShootAutonomous", func() {
+	Describe("#IsShootSelfHosted", func() {
 		It("should return true (single worker pool with control plane configuration)", func() {
 			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
 				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}},
 			}}}}
-			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeTrue())
+			Expect(IsShootSelfHosted(shoot.Spec.Provider.Workers)).To(BeTrue())
 		})
 
 		It("should return true (multiple worker pools, one with control plane configuration)", func() {
@@ -1442,12 +1442,12 @@ var _ = Describe("Helper", func() {
 				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}},
 				{},
 			}}}}
-			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeTrue())
+			Expect(IsShootSelfHosted(shoot.Spec.Provider.Workers)).To(BeTrue())
 		})
 
 		It("should return false (no worker pools)", func() {
 			shoot := &gardencorev1beta1.Shoot{}
-			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeFalse())
+			Expect(IsShootSelfHosted(shoot.Spec.Provider.Workers)).To(BeFalse())
 		})
 
 		It("should return false (worker pools, but none with control plane configuration)", func() {
@@ -1456,7 +1456,7 @@ var _ = Describe("Helper", func() {
 				{},
 				{},
 			}}}}
-			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeFalse())
+			Expect(IsShootSelfHosted(shoot.Spec.Provider.Workers)).To(BeFalse())
 		})
 	})
 
@@ -1499,7 +1499,7 @@ var _ = Describe("Helper", func() {
 	})
 
 	Describe("#ControlPlaneNamespaceForShoot", func() {
-		It("should return kube-system for autonomous shoots", func() {
+		It("should return kube-system for self-hosted shoots", func() {
 			shoot := &gardencorev1beta1.Shoot{
 				Spec:   gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}}}},
 				Status: gardencorev1beta1.ShootStatus{TechnicalID: "shoot--foo--bar"},
@@ -1567,11 +1567,11 @@ var _ = Describe("Helper", func() {
 			shoot = &gardencorev1beta1.Shoot{}
 		})
 
-		It("should return the seed backup config because shoot is not autonomous", func() {
+		It("should return the seed backup config because shoot is not self-hosted", func() {
 			Expect(GetBackupConfigForShoot(shoot, seed)).To(Equal(seedBackup))
 		})
 
-		It("should return the shoot backup config because shoot is autonomous", func() {
+		It("should return the shoot backup config because shoot is self-hosted", func() {
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
 				ControlPlane: &gardencorev1beta1.WorkerControlPlane{Backup: shootBackup},
 			})

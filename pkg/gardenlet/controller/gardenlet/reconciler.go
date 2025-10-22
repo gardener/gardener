@@ -74,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	var seed *gardencorev1beta1.Seed
-	if !strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixAutonomousShoot) {
+	if !strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixSelfHostedShoot) {
 		seed, err = gardenletdeployer.GetSeed(ctx, r.GardenClient, gardenlet.Name)
 		if err != nil {
 			r.Recorder.Eventf(gardenlet, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())

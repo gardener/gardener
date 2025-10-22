@@ -74,7 +74,7 @@ var _ = Describe("Bootstrap", func() {
 			gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection
 			kubeconfigKey          client.ObjectKey
 			bootstrapKubeconfigKey client.ObjectKey
-			autonomousShootMeta    *types.NamespacedName
+			selfHostedShootMeta    *types.NamespacedName
 
 			approvedCSR = certificatesv1.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
@@ -194,7 +194,7 @@ var _ = Describe("Bootstrap", func() {
 					},
 				})
 
-				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, autonomousShootMeta, nil)
+				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, selfHostedShootMeta, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeconfig).ToNot(BeEmpty())
@@ -215,7 +215,7 @@ var _ = Describe("Bootstrap", func() {
 					WithKubernetes(kubeClient).
 					Build()
 
-				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, autonomousShootMeta, nil)
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, selfHostedShootMeta, nil)
 				Expect(err).To(MatchError(ContainSubstring("is denied")))
 			})
 
@@ -233,7 +233,7 @@ var _ = Describe("Bootstrap", func() {
 					WithKubernetes(kubeClient).
 					Build()
 
-				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, autonomousShootMeta, nil)
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, selfHostedShootMeta, nil)
 				Expect(err).To(MatchError(ContainSubstring("failed")))
 			})
 		})
@@ -243,7 +243,7 @@ var _ = Describe("Bootstrap", func() {
 				Expect(os.Setenv("NAMESPACE", "kube-system")).To(Succeed())
 				DeferCleanup(func() { Expect(os.Setenv("NAMESPACE", "")).To(Succeed()) })
 
-				autonomousShootMeta = &types.NamespacedName{Namespace: "shoot-namespace", Name: "shoot-name"}
+				selfHostedShootMeta = &types.NamespacedName{Namespace: "shoot-namespace", Name: "shoot-name"}
 			})
 
 			It("should not return an error", func() {
@@ -277,7 +277,7 @@ var _ = Describe("Bootstrap", func() {
 					},
 				})
 
-				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, autonomousShootMeta, nil)
+				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, selfHostedShootMeta, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeconfig).ToNot(BeEmpty())
@@ -298,7 +298,7 @@ var _ = Describe("Bootstrap", func() {
 					WithKubernetes(kubeClient).
 					Build()
 
-				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, autonomousShootMeta, nil)
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, selfHostedShootMeta, nil)
 				Expect(err).To(MatchError(ContainSubstring("is denied")))
 			})
 
@@ -316,7 +316,7 @@ var _ = Describe("Bootstrap", func() {
 					WithKubernetes(kubeClient).
 					Build()
 
-				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, autonomousShootMeta, nil)
+				_, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, selfHostedShootMeta, nil)
 				Expect(err).To(MatchError(ContainSubstring("failed")))
 			})
 		})

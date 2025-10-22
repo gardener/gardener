@@ -69,10 +69,10 @@ func (a *Actuator) ForceDelete(ctx context.Context, log logr.Logger, dnsRecord *
 	return a.Delete(ctx, log, dnsRecord, cluster)
 }
 
-// Migrate removes the DNS record from the CoreDNS config map if the shoot is not autonomous.
+// Migrate removes the DNS record from the CoreDNS config map if the shoot is not self-hosted.
 func (a *Actuator) Migrate(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
-	if v1beta1helper.IsShootAutonomous(cluster.Shoot.Spec.Provider.Workers) {
-		// Do nothing when migrating DNSRecord of autonomous shoot with managed infrastructure. The CoreDNS
+	if v1beta1helper.IsShootSelfHosted(cluster.Shoot.Spec.Provider.Workers) {
+		// Do nothing when migrating DNSRecord of self-hosted shoot with managed infrastructure. The CoreDNS
 		// rewrite rules are still needed for the control plane machines to resolve the kube-apiserver domain.
 		return nil
 	}
@@ -99,7 +99,7 @@ func keyForDNSRecord(dnsRecord *extensionsv1alpha1.DNSRecord) string {
 }
 
 func (a *Actuator) configForDNSRecord(ctx context.Context, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) (string, error) {
-	if v1beta1helper.IsShootAutonomous(cluster.Shoot.Spec.Provider.Workers) {
+	if v1beta1helper.IsShootSelfHosted(cluster.Shoot.Spec.Provider.Workers) {
 		switch dnsRecord.Spec.RecordType {
 		case extensionsv1alpha1.DNSRecordTypeA, extensionsv1alpha1.DNSRecordTypeAAAA:
 			// We need to use the `template` plugin because the `hosts` plugin can only be used once per server block.
@@ -112,7 +112,7 @@ func (a *Actuator) configForDNSRecord(ctx context.Context, dnsRecord *extensions
 
 			return config, nil
 		default:
-			return "", fmt.Errorf("unsupported record type %q for autonomous shoot, only A and AAAA are supported", dnsRecord.Spec.RecordType)
+			return "", fmt.Errorf("unsupported record type %q for self-hosted shoot, only A and AAAA are supported", dnsRecord.Spec.RecordType)
 		}
 	}
 

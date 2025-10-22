@@ -53,8 +53,8 @@ type AddArgs struct {
 	IgnoreOperationAnnotation bool
 	// ExtensionClass defines the extension class this extension is responsible for.
 	ExtensionClass extensionsv1alpha1.ExtensionClass
-	// AutonomousShootCluster indicates whether the extension runs in an autonomous shoot cluster.
-	AutonomousShootCluster bool
+	// SelfHostedShootCluster indicates whether the extension runs in a self-hosted shoot cluster.
+	SelfHostedShootCluster bool
 }
 
 // DefaultPredicates returns the default predicates for a Worker reconciler.
@@ -81,7 +81,7 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 		return err
 	}
 
-	if mustWatchMachines, err := wantMachineWatch(args.AutonomousShootCluster, mgr.GetRESTMapper()); err != nil {
+	if mustWatchMachines, err := wantMachineWatch(args.SelfHostedShootCluster, mgr.GetRESTMapper()); err != nil {
 		return fmt.Errorf("failed to determine if machine API exists: %w", err)
 	} else if mustWatchMachines {
 		if err := c.Watch(source.Kind[client.Object](
@@ -109,8 +109,8 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	return nil
 }
 
-func wantMachineWatch(isAutonomousShootCluster bool, restMapper meta.RESTMapper) (bool, error) {
-	if !isAutonomousShootCluster {
+func wantMachineWatch(isSelfHostedShootCluster bool, restMapper meta.RESTMapper) (bool, error) {
+	if !isSelfHostedShootCluster {
 		return true, nil
 	}
 	return machineAPIPresent(restMapper)

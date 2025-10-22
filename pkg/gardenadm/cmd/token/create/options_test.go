@@ -125,14 +125,14 @@ var _ = Describe("Options", func() {
 			options.Shoot.Namespace = "bar"
 
 			Expect(options.Complete()).To(Succeed())
-			Expect(options.Description).To(Equal("Used for connecting the autonomous Shoot bar/foo to Gardener via 'gardenadm connect'"))
+			Expect(options.Description).To(Equal("Used for connecting the self-hosted Shoot bar/foo to Gardener via 'gardenadm connect'"))
 		})
 
 		It("should default the description for 'gardenadm join' when no shoot info is provided", func() {
 			options.Token.Combined = "foo.bar"
 
 			Expect(options.Complete()).To(Succeed())
-			Expect(options.Description).To(Equal("Used for joining nodes to an autonomous shoot cluster via 'gardenadm join'"))
+			Expect(options.Description).To(Equal("Used for joining nodes to a self-hosted shoot cluster via 'gardenadm join'"))
 		})
 	})
 })

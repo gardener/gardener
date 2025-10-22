@@ -40,7 +40,7 @@ import (
 
 // DeployOperatingSystemConfigSecretForBootstrap deploys the OperatingSystemConfig resource and adds its content into
 // a Secret so that gardener-node-agent can read it and reconcile its content.
-func (b *AutonomousBotanist) DeployOperatingSystemConfigSecretForBootstrap(ctx context.Context) error {
+func (b *GardenadmBotanist) DeployOperatingSystemConfigSecretForBootstrap(ctx context.Context) error {
 	if err := b.deployControlPlaneDeployments(ctx); err != nil {
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
@@ -53,7 +53,7 @@ func (b *AutonomousBotanist) DeployOperatingSystemConfigSecretForBootstrap(ctx c
 	return b.createOperatingSystemConfigSecretForNodeAgent(ctx, oscData.Object, oscData.GardenerNodeAgentSecretName, controlPlaneWorkerPoolName)
 }
 
-func (b *AutonomousBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, secretName, poolName string) error {
+func (b *GardenadmBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, secretName, poolName string) error {
 	var err error
 
 	b.operatingSystemConfigSecret, err = nodeagentcomponent.OperatingSystemConfigSecret(ctx, b.SeedClientSet.Client(), osc, secretName, poolName)
@@ -64,7 +64,7 @@ func (b *AutonomousBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx c
 	return b.SeedClientSet.Client().Create(ctx, b.operatingSystemConfigSecret)
 }
 
-func (b *AutonomousBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
+func (b *GardenadmBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
 	userKubeconfigSecret, ok := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
 	if !ok {
 		return nil, fmt.Errorf("failed fetching secret %q", kubeapiserver.SecretNameUserKubeconfig)
@@ -77,7 +77,7 @@ func (b *AutonomousBotanist) appendAdminKubeconfigToFiles(files []extensionsv1al
 	}), nil
 }
 
-func (b *AutonomousBotanist) deployOperatingSystemConfig(ctx context.Context) (*operatingsystemconfig.Data, string, error) {
+func (b *GardenadmBotanist) deployOperatingSystemConfig(ctx context.Context) (*operatingsystemconfig.Data, string, error) {
 	pods, err := b.staticControlPlanePods(ctx)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
@@ -115,7 +115,7 @@ func (b *AutonomousBotanist) deployOperatingSystemConfig(ctx context.Context) (*
 
 // ApplyOperatingSystemConfig runs gardener-node-agent's reconciliation logic in order to apply the
 // OperatingSystemConfig.
-func (b *AutonomousBotanist) ApplyOperatingSystemConfig(ctx context.Context) error {
+func (b *GardenadmBotanist) ApplyOperatingSystemConfig(ctx context.Context) error {
 	if b.operatingSystemConfigSecret == nil {
 		return fmt.Errorf("operating system config secret is nil, make sure to call createOperatingSystemConfigSecretForNodeAgent() first")
 	}
@@ -152,7 +152,7 @@ func (b *AutonomousBotanist) ApplyOperatingSystemConfig(ctx context.Context) err
 	return err
 }
 
-func (b *AutonomousBotanist) ensureGardenerNodeAgentDirectories() error {
+func (b *GardenadmBotanist) ensureGardenerNodeAgentDirectories() error {
 	if err := b.FS.MkdirAll(nodeagentconfigv1alpha1.TempDir, os.ModeDir); err != nil {
 		return fmt.Errorf("failed creating temporary directory (%q): %w", nodeagentconfigv1alpha1.TempDir, err)
 	}
@@ -164,7 +164,7 @@ func (b *AutonomousBotanist) ensureGardenerNodeAgentDirectories() error {
 
 // PrepareGardenerNodeInitConfiguration creates a Secret containing an OperatingSystemConfig with the gardener-node-init
 // unit.
-func (b *AutonomousBotanist) PrepareGardenerNodeInitConfiguration(ctx context.Context, secretName, controlPlaneAddress string, caBundle []byte, bootstrapToken string) error {
+func (b *GardenadmBotanist) PrepareGardenerNodeInitConfiguration(ctx context.Context, secretName, controlPlaneAddress string, caBundle []byte, bootstrapToken string) error {
 	osc, err := b.generateGardenerNodeInitOperatingSystemConfig(secretName, controlPlaneAddress, bootstrapToken, caBundle)
 	if err != nil {
 		return fmt.Errorf("failed computing units and files for gardener-node-init: %w", err)
@@ -173,7 +173,7 @@ func (b *AutonomousBotanist) PrepareGardenerNodeInitConfiguration(ctx context.Co
 	return b.createOperatingSystemConfigSecretForNodeAgent(ctx, osc, secretName, "")
 }
 
-func (b *AutonomousBotanist) generateGardenerNodeInitOperatingSystemConfig(secretName, controlPlaneAddress, bootstrapToken string, caBundle []byte) (*extensionsv1alpha1.OperatingSystemConfig, error) {
+func (b *GardenadmBotanist) generateGardenerNodeInitOperatingSystemConfig(secretName, controlPlaneAddress, bootstrapToken string, caBundle []byte) (*extensionsv1alpha1.OperatingSystemConfig, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerNodeAgent)
 	if err != nil {
 		return nil, fmt.Errorf("failed finding image %q: %w", imagevector.ContainerImageNameGardenerNodeAgent, err)
@@ -207,7 +207,7 @@ func (b *AutonomousBotanist) generateGardenerNodeInitOperatingSystemConfig(secre
 }
 
 // IsGardenerNodeAgentInitialized returns true if the gardener-node-agent systemd unit exists.
-func (b *AutonomousBotanist) IsGardenerNodeAgentInitialized(ctx context.Context) (bool, error) {
+func (b *GardenadmBotanist) IsGardenerNodeAgentInitialized(ctx context.Context) (bool, error) {
 	unitStatuses, err := b.DBus.List(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed listing systemd units: %w", err)
@@ -229,7 +229,7 @@ func (b *AutonomousBotanist) IsGardenerNodeAgentInitialized(ctx context.Context)
 
 // ControlPlaneBootstrapOperatingSystemConfig creates the deployer for the OperatingSystemConfig custom resource that is
 // used for bootstrapping control plane nodes in `gardenadm bootstrap`.
-func (b *AutonomousBotanist) ControlPlaneBootstrapOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
+func (b *GardenadmBotanist) ControlPlaneBootstrapOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenadm)
 	if err != nil {
 		return nil, fmt.Errorf("failed finding image %q: %w", imagevector.ContainerImageNameGardenadm, err)

@@ -42,8 +42,8 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "bootstrap",
-		Short: "Bootstrap the infrastructure for an Autonomous Shoot Cluster",
-		Long:  "Bootstrap the infrastructure for an Autonomous Shoot Cluster (networks, machines, etc.)",
+		Short: "Bootstrap the infrastructure for a Self-Hosted Shoot Cluster",
+		Long:  "Bootstrap the infrastructure for a Self-Hosted Shoot Cluster (networks, machines, etc.)",
 
 		Example: `# Bootstrap the infrastructure
 gardenadm bootstrap --config-dir /path/to/manifests`,
@@ -84,7 +84,7 @@ func run(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, false)
+	b, err := botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, false)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 
 		// Scale down machine-controller-manager to prevent it from interfering with Machine objects that will be migrated
-		// to the autonomous shoot. Scaling down instead of deleting it, allows operators/developers to simply scale it up
+		// to the self-hosted shoot. Scaling down instead of deleting it, allows operators/developers to simply scale it up
 		// again in case they need to redeploy a control plane machine manually because of errors.
 		scaleDownMachineControllerManager = g.Add(flow.Task{
 			Name: "Scaling down machine-controller-manager",
@@ -245,7 +245,7 @@ func run(ctx context.Context, opts *Options) error {
 		// type "Migrate". Also, this makes it easier to allow re-running `gardenadm bootstrap` in case of failures
 		// down the line. If we deleted the extension objects, we would need to restore them when re-running the flow.
 		migrateExtensionResources = g.Add(flow.Task{
-			Name: "Preparing extension resources for migration to autonomous shoot",
+			Name: "Preparing extension resources for migration to self-hosted shoot",
 			Fn: flow.Parallel(
 				component.MigrateAndWait(b.Shoot.Components.Extensions.Infrastructure),
 				component.MigrateAndWait(b.Shoot.Components.Extensions.Worker),
@@ -327,7 +327,7 @@ func run(ctx context.Context, opts *Options) error {
 	fmt.Fprintf(opts.Out, `
 Warning: this command is work in progress.
 
-For now, you can connect to the autonomous Shoot cluster control-plane by
+For now, you can connect to the self-hosted Shoot cluster control-plane by
 fetching the kubeconfig from the secret "%[1]s/kubeconfig"
 on the bootstrap cluster:
 
@@ -335,7 +335,7 @@ on the bootstrap cluster:
   export KUBECONFIG=$PWD/%[1]s-kubeconfig.yaml
   kubectl get nodes
 
-Note that the API server of the autonomous Shoot cluster control-plane might
+Note that the API server of the self-hosted Shoot cluster control-plane might
 not be accessible from your current machine.
 `, b.Shoot.GetInfo().Status.TechnicalID)
 	return nil

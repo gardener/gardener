@@ -26,8 +26,8 @@ import (
 )
 
 // ConnectToControlPlaneMachine opens an SSH connection via the Bastion to the first control plane machine of the
-// autonomous shoot. The connection is stored in the sshConnection field.
-func (b *AutonomousBotanist) ConnectToControlPlaneMachine(ctx context.Context) error {
+// self-hosted shoot. The connection is stored in the sshConnection field.
+func (b *GardenadmBotanist) ConnectToControlPlaneMachine(ctx context.Context) error {
 	machine, err := b.GetMachineByIndex(0)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (b *AutonomousBotanist) ConnectToControlPlaneMachine(ctx context.Context) e
 }
 
 // SSHConnection returns the SSH connection to the control plane machine opened by ConnectToControlPlaneMachine.
-func (b *AutonomousBotanist) SSHConnection() *sshutils.Connection {
+func (b *GardenadmBotanist) SSHConnection() *sshutils.Connection {
 	return b.sshConnection
 }
 
@@ -78,7 +78,7 @@ var (
 )
 
 // CopyManifests copies all manifests needed for `gardenadm init` to the remote machine under GardenadmBaseDir.
-func (b *AutonomousBotanist) CopyManifests(ctx context.Context, configDir fs.FS) error {
+func (b *GardenadmBotanist) CopyManifests(ctx context.Context, configDir fs.FS) error {
 	if err := prepareRemoteDirs(ctx, b.sshConnection); err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func copyImageVectorOverride(ctx context.Context, conn *sshutils.Connection) (er
 	return nil
 }
 
-func (b *AutonomousBotanist) copyShootState(ctx context.Context) error {
+func (b *GardenadmBotanist) copyShootState(ctx context.Context) error {
 	shootState := &gardencorev1beta1.ShootState{}
 	if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shootState); err != nil {
 		return fmt.Errorf("error getting ShootState: %w", err)

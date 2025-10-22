@@ -25,7 +25,7 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Short: "Bootstrap worker nodes and join them to the cluster",
 		Long: `Bootstrap worker nodes and join them to the cluster.
 
-This command helps to initialize and configure a node to join an existing autonomous shoot cluster.
+This command helps to initialize and configure a node to join an existing self-hosted shoot cluster.
 It ensures that the necessary configurations are applied and the node is properly registered as a worker or control plane node.
 
 Note that further control plane nodes cannot be joined currently.`,
@@ -57,9 +57,9 @@ gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --gardener-n
 }
 
 func run(ctx context.Context, opts *Options) error {
-	b, err := botanist.NewAutonomousBotanistWithoutResources(opts.Log)
+	b, err := botanist.NewGardenadmBotanistWithoutResources(opts.Log)
 	if err != nil {
-		return fmt.Errorf("failed creating autonomous botanist: %w", err)
+		return fmt.Errorf("failed creating gardenadm botanist: %w", err)
 	}
 
 	version, err := b.DiscoverKubernetesVersion(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken)

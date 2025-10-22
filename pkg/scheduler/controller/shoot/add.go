@@ -42,7 +42,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(
 			r.ShootUnassignedPredicate(),
 			r.ShootSpecChangedPredicate(),
-			r.ShootIsNotAutonomous(),
+			r.ShootIsNotSelfHosted(),
 			predicate.Not(predicateutils.IsDeleting()),
 		)).
 		WithOptions(controller.Options{
@@ -82,12 +82,12 @@ func (r *Reconciler) ShootSpecChangedPredicate() predicate.Predicate {
 	}
 }
 
-// ShootIsNotAutonomous is a predicate that returns true if a shoot is not mark as 'autonomous shoot cluster' (meaning,
+// ShootIsNotSelfHosted is a predicate that returns true if a shoot is not mark as 'self-hosted shoot cluster' (meaning,
 // that the control plane components run in the same cluster, hence, no seed selection is required).
-func (r *Reconciler) ShootIsNotAutonomous() predicate.Predicate {
+func (r *Reconciler) ShootIsNotSelfHosted() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok {
-			return !helper.IsShootAutonomous(shoot.Spec.Provider.Workers)
+			return !helper.IsShootSelfHosted(shoot.Spec.Provider.Workers)
 		}
 		return false
 	})

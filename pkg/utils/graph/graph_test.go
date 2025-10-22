@@ -2580,7 +2580,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		}
 
 		gardenlet1 = &seedmanagementv1alpha1.Gardenlet{
-			ObjectMeta: metav1.ObjectMeta{Name: "autonomous-shoot-" + shootName, Namespace: shootNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "self-hosted-shoot-" + shootName, Namespace: shootNamespace},
 		}
 
 		namespace1 = &corev1.Namespace{

@@ -19,12 +19,12 @@ import (
 
 var _ = Describe("identity", func() {
 	DescribeTable("#FromUserInfoInterface",
-		func(u user.Info, expectedShootNamespace, expectedShootName string, expectedIsAutonomousShootValue bool, expectedUserType gardenletidentity.UserType) {
-			shootNamespace, shootName, isAutonomousShoot, userType := FromUserInfoInterface(u)
+		func(u user.Info, expectedShootNamespace, expectedShootName string, expectedIsSelfHostedShootValue bool, expectedUserType gardenletidentity.UserType) {
+			shootNamespace, shootName, isSelfHostedShoot, userType := FromUserInfoInterface(u)
 
 			Expect(shootNamespace).To(Equal(expectedShootNamespace))
 			Expect(shootName).To(Equal(expectedShootName))
-			Expect(isAutonomousShoot).To(Equal(expectedIsAutonomousShootValue))
+			Expect(isSelfHostedShoot).To(Equal(expectedIsSelfHostedShootValue))
 			Expect(userType).To(Equal(expectedUserType))
 		},
 
@@ -38,12 +38,12 @@ var _ = Describe("identity", func() {
 	)
 
 	DescribeTable("#FromAuthenticationV1UserInfo",
-		func(u authenticationv1.UserInfo, expectedShootNamespace, expectedShootName string, expectedIsAutonomousShootValue bool, expectedUserType gardenletidentity.UserType) {
-			shootNamespace, shootName, isAutonomousShoot, userType := FromAuthenticationV1UserInfo(u)
+		func(u authenticationv1.UserInfo, expectedShootNamespace, expectedShootName string, expectedIsSelfHostedShootValue bool, expectedUserType gardenletidentity.UserType) {
+			shootNamespace, shootName, isSelfHostedShoot, userType := FromAuthenticationV1UserInfo(u)
 
 			Expect(shootNamespace).To(Equal(expectedShootNamespace))
 			Expect(shootName).To(Equal(expectedShootName))
-			Expect(isAutonomousShoot).To(Equal(expectedIsAutonomousShootValue))
+			Expect(isSelfHostedShoot).To(Equal(expectedIsSelfHostedShootValue))
 			Expect(userType).To(Equal(expectedUserType))
 		},
 
@@ -56,12 +56,12 @@ var _ = Describe("identity", func() {
 	)
 
 	DescribeTable("#FromCertificateSigningRequest",
-		func(csr *x509.CertificateRequest, expectedShootNamespace, expectedShootName string, expectedIsAutonomousShootValue bool, expectedUserType gardenletidentity.UserType) {
-			shootNamespace, shootName, isAutonomousShoot, userType := FromCertificateSigningRequest(csr)
+		func(csr *x509.CertificateRequest, expectedShootNamespace, expectedShootName string, expectedIsSelfHostedShootValue bool, expectedUserType gardenletidentity.UserType) {
+			shootNamespace, shootName, isSelfHostedShoot, userType := FromCertificateSigningRequest(csr)
 
 			Expect(shootNamespace).To(Equal(expectedShootNamespace))
 			Expect(shootName).To(Equal(expectedShootName))
-			Expect(isAutonomousShoot).To(Equal(expectedIsAutonomousShootValue))
+			Expect(isSelfHostedShoot).To(Equal(expectedIsSelfHostedShootValue))
 			Expect(userType).To(Equal(expectedUserType))
 		},
 

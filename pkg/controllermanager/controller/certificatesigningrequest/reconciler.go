@@ -116,7 +116,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 	default:
-		log.Info("Ignoring CSR, as it does not match the requirements for a seed client or an autonomous shoot client", "reasonSeedCheck", reasonSeed, "reasonShootCheck", reasonShoot, "reasonGardenadmCheck", reasonGardenadm)
+		log.Info("Ignoring CSR, as it does not match the requirements for a seed client or a self-hosted shoot client", "reasonSeedCheck", reasonSeed, "reasonShootCheck", reasonShoot, "reasonGardenadmCheck", reasonGardenadm)
 		return reconcile.Result{}, nil
 	}
 

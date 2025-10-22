@@ -9,7 +9,7 @@ import (
 )
 
 // DefaultBastion creates the Bastion component for accessing the control plane machines in `gardenadm bootstrap`.
-func (b *AutonomousBotanist) DefaultBastion() *bastion.Bastion {
+func (b *GardenadmBotanist) DefaultBastion() *bastion.Bastion {
 	return bastion.New(b.Logger, b.SeedClientSet.Client(), b.SecretsManager, &bastion.Values{
 		Name:      "gardenadm-bootstrap",
 		Namespace: b.Shoot.ControlPlaneNamespace,

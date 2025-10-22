@@ -42,7 +42,7 @@ spec:
         - name: bashrc
           mountPath: /root/.bashrc
           subPath: bashrc
-      # we don't want components of the autonomous shoot cluster to communicate with the kind API server
+      # we don't want components of the self-hosted shoot cluster to communicate with the kind API server
       automountServiceAccountToken: false
       hostAliases:
         - hostnames:

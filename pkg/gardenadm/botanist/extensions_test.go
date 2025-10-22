@@ -305,7 +305,7 @@ var _ = Describe("Extensions", func() {
 			extension2            = "ext2"
 
 			fakeClient client.Client
-			b          *AutonomousBotanist
+			b          *GardenadmBotanist
 
 			managedResource1 *resourcesv1alpha1.ManagedResource
 			managedResource2 *resourcesv1alpha1.ManagedResource
@@ -313,7 +313,7 @@ var _ = Describe("Extensions", func() {
 
 		BeforeEach(func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithStatusSubresource(&resourcesv1alpha1.ManagedResource{}).Build()
-			b = &AutonomousBotanist{
+			b = &GardenadmBotanist{
 				Botanist: &botanistpkg.Botanist{
 					Operation: &operation.Operation{
 						SeedClientSet: fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build(),
