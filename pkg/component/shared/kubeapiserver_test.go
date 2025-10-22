@@ -929,7 +929,9 @@ authorizers:
 							Kubeconfig: []byte("webhook-kubeconfig"),
 							WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
 								AuthorizedTTL:                            metav1.Duration{Duration: 5 * time.Minute},
+								CacheAuthorizedRequests:                  ptr.To(true),
 								UnauthorizedTTL:                          metav1.Duration{Duration: 30 * time.Second},
+								CacheUnauthorizedRequests:                ptr.To(true),
 								Timeout:                                  metav1.Duration{Duration: 3 * time.Second},
 								SubjectAccessReviewVersion:               "v1",
 								MatchConditionSubjectAccessReviewVersion: "v1",
