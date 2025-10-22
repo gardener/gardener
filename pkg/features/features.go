@@ -74,6 +74,12 @@ const (
 	// owner: @hown3d
 	// alpha: v1.130.0
 	UseUnifiedHTTPProxyPort featuregate.Feature = "UseUnifiedHTTPProxyPort"
+
+	// VpaInPlaceOrRecreateUpdateMode enables the usage of in-place Pod resource updates in the Vertical Pod Autoscaler deployments.
+	// resources to perform in-place Pod resource updates.
+	// owner: @vitanovs
+	// alpha: v1.128.0
+	VpaInPlaceOrRecreateUpdateMode featuregate.Feature = "VpaInPlaceOrRecreateUpdateMode"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -101,15 +107,16 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	DefaultSeccompProfile:      {Default: false, PreRelease: featuregate.Alpha},
-	ShootCredentialsBinding:    {Default: true, PreRelease: featuregate.Beta},
-	NewWorkerPoolHash:          {Default: true, PreRelease: featuregate.Beta},
-	InPlaceNodeUpdates:         {Default: false, PreRelease: featuregate.Alpha},
-	IstioTLSTermination:        {Default: false, PreRelease: featuregate.Alpha},
-	CloudProfileCapabilities:   {Default: false, PreRelease: featuregate.Alpha},
-	DoNotCopyBackupCredentials: {Default: true, PreRelease: featuregate.Beta},
-	OpenTelemetryCollector:     {Default: false, PreRelease: featuregate.Alpha},
-	UseUnifiedHTTPProxyPort:    {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:          {Default: false, PreRelease: featuregate.Alpha},
+	ShootCredentialsBinding:        {Default: true, PreRelease: featuregate.Beta},
+	NewWorkerPoolHash:              {Default: true, PreRelease: featuregate.Beta},
+	InPlaceNodeUpdates:             {Default: false, PreRelease: featuregate.Alpha},
+	IstioTLSTermination:            {Default: false, PreRelease: featuregate.Alpha},
+	CloudProfileCapabilities:       {Default: false, PreRelease: featuregate.Alpha},
+	DoNotCopyBackupCredentials:     {Default: true, PreRelease: featuregate.Beta},
+	OpenTelemetryCollector:         {Default: false, PreRelease: featuregate.Alpha},
+	UseUnifiedHTTPProxyPort:        {Default: false, PreRelease: featuregate.Alpha},
+	VpaInPlaceOrRecreateUpdateMode: {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
