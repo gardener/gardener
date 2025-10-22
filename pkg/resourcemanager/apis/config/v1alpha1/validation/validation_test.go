@@ -140,7 +140,7 @@ var _ = Describe("Validation", func() {
 
 				Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
+						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("leaderElection.resourceNamespace"),
 					})),
 				))

@@ -88,7 +88,7 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 
 			Expect(ValidateControllerManagerConfiguration(conf)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
+					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("leaderElection.resourceNamespace"),
 				})),
 			))
