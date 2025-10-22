@@ -180,6 +180,7 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	mutationContext.addMetadataAnnotations(a)
 	mutationContext.defaultShootNetworks(helper.IsWorkerless(shoot))
 	allErrs = append(allErrs, mutationContext.defaultKubernetes()...)
+	allErrs = append(allErrs, mutationContext.defaultKubernetesVersionForWorkers()...)
 
 	if len(allErrs) > 0 {
 		return admission.NewForbidden(a, allErrs.ToAggregate())
@@ -407,4 +408,36 @@ func findLatestSupportedVersion(constraints []gardencorev1beta1.ExpirableVersion
 	}
 
 	return latestVersion
+}
+
+func (c *mutationContext) defaultKubernetesVersionForWorkers() field.ErrorList {
+	var path = field.NewPath("spec", "provider")
+
+	for i, worker := range c.shoot.Spec.Provider.Workers {
+		idxPath := path.Child("workers").Index(i)
+
+		if worker.Kubernetes != nil {
+			if errList := c.defaultKubernetesVersionForWorker(idxPath, worker); len(errList) > 0 {
+				return errList
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *mutationContext) defaultKubernetesVersionForWorker(idxPath *field.Path, worker core.Worker) field.ErrorList {
+	if worker.Kubernetes.Version == nil {
+		return nil
+	}
+
+	defaultVersion, errList := defaultKubernetesVersion(c.cloudProfileSpec.Kubernetes.Versions, *worker.Kubernetes.Version, idxPath.Child("kubernetes", "version"))
+	if len(errList) > 0 {
+		return errList
+	}
+
+	if defaultVersion != nil {
+		worker.Kubernetes.Version = defaultVersion
+	}
+	return nil
 }

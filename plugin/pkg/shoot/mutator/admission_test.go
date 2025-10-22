@@ -627,6 +627,30 @@ var _ = Describe("mutator", func() {
 
 				Expect(err).To(MatchError(ContainSubstring("couldn't find a suitable version for 1.2")))
 			})
+
+			Context("worker kubernetes version", func() {
+				It("should not choose the default kubernetes version if version is not specified", func() {
+					shoot.Spec.Kubernetes.Version = "1.26"
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(BeNil())
+				})
+
+				It("should choose the default kubernetes version if only major.minor is given in a worker group", func() {
+					shoot.Spec.Kubernetes.Version = "1.26"
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.26")}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(*shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal("1.26.7"))
+				})
+			})
 		})
 	})
 })
