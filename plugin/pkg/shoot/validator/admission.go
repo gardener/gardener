@@ -936,18 +936,7 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 		return nil
 	}
 
-	defaultVersion, errList := defaultKubernetesVersion(c.cloudProfileSpec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, path.Child("version"))
-	if len(errList) > 0 {
-		allErrs = append(allErrs, errList...)
-	}
-
-	if defaultVersion != nil {
-		c.shoot.Spec.Kubernetes.Version = *defaultVersion
-	} else {
-		// We assume that the 'defaultVersion' is already calculated correctly, so only run validation if the version was not defaulted.
-		allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, false, path.Child("version"))...)
-	}
-
+	allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, false, path.Child("version"))...)
 	allErrs = append(allErrs, c.validateKubeAPIServerOIDCConfig(a)...)
 
 	return allErrs
