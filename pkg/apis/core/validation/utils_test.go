@@ -160,6 +160,26 @@ var _ = Describe("Utils tests", func() {
 				})),
 			))
 		})
+
+		It("should deny a non-DNS1123 name", func() {
+			ref := corev1.ObjectReference{Name: "-name-"}
+			Expect(ValidateObjectReferenceNameAndNamespace(ref, fldPath, false)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fldPath.Child("name").String()),
+				})),
+			))
+		})
+
+		It("should deny a non-DNS1123 namespace", func() {
+			ref := corev1.ObjectReference{Name: "name", Namespace: "namespace-123-@"}
+			Expect(ValidateObjectReferenceNameAndNamespace(ref, fldPath, true)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fldPath.Child("namespace").String()),
+				})),
+			))
+		})
 	})
 
 	DescribeTable("#ValidateCredentialsRef",

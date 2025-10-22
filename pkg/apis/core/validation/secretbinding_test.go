@@ -104,6 +104,30 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			))
 		})
 
+		It("should forbid a SecretBinding with non-DNS1123 name and namespace", func() {
+			secretBinding.ObjectMeta = metav1.ObjectMeta{
+				Name:      "name",
+				Namespace: "namespace",
+			}
+			secretBinding.SecretRef = corev1.SecretReference{
+				Name:      "name-non-valid-@",
+				Namespace: "-namespace-non-valid123",
+			}
+			secretBinding.Provider = &core.SecretBindingProvider{}
+
+			errorList := ValidateSecretBinding(secretBinding)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secretRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secretRef.namespace"),
+				})),
+			))
+		})
+
 		It("should forbid empty stated Quota names", func() {
 			secretBinding.Quotas = []corev1.ObjectReference{
 				{},
