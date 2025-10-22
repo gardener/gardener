@@ -299,7 +299,6 @@ var _ = Describe("NodeLocalDNS", func() {
 automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
-  creationTimestamp: null
   name: node-local-dns
   namespace: kube-system
 `
@@ -362,7 +361,6 @@ data:
 immutable: true
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   labels:
     k8s-app: node-local-dns
     resources.gardener.cloud/garbage-collectable-reference: "true"
@@ -376,7 +374,6 @@ metadata:
 			serviceYAML = `apiVersion: v1
 kind: Service
 metadata:
-  creationTimestamp: null
   labels:
     k8s-app: kube-dns-upstream
   name: kube-dns-upstream
@@ -650,7 +647,6 @@ status:
 			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  creationTimestamp: null
   name: node-local-dns-worker-aaaa
   namespace: kube-system
 spec:

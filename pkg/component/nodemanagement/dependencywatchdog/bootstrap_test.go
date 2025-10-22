@@ -59,7 +59,6 @@ var _ = Describe("DependencyWatchdog", func() {
 automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
-  creationTimestamp: null
   name: ` + dwdName + `
   namespace: ` + namespace + `
 `
@@ -68,7 +67,6 @@ metadata:
 					out := `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:` + dwdName + `
 rules:`
 					if role == RoleWeeder {
@@ -140,7 +138,6 @@ rules:`
 				clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:` + dwdName + `
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -156,7 +153,6 @@ subjects:
 					out := `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:` + dwdName + `
   namespace: ` + namespace + `
 rules:`
@@ -225,7 +221,6 @@ rules:`
 				roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:` + dwdName + `
   namespace: ` + namespace + `
 roleRef:
@@ -259,7 +254,6 @@ data:
 					out += `immutable: true
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   labels:
     app: ` + dwdName + `
     resources.gardener.cloud/garbage-collectable-reference: "true"
@@ -276,7 +270,6 @@ kind: Deployment
 metadata:
   annotations:
     ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
-  creationTimestamp: null
   labels:
     app: ` + dwdName + `
     high-availability-config.resources.gardener.cloud/type: controller
@@ -293,7 +286,6 @@ spec:
     metadata:
       annotations:
         ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
-      creationTimestamp: null
       labels:
         app: ` + dwdName
 
@@ -375,7 +367,6 @@ status: {}
 					out := `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  creationTimestamp: null
   name: ` + dwdName + `
   namespace: ` + namespace + `
 spec:
@@ -409,7 +400,6 @@ status: {}
 				podDisruptionYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  creationTimestamp: null
   labels:
     app: ` + dwdName + `
   name: ` + dwdName + `

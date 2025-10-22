@@ -62,7 +62,6 @@ metadata:
     foo.bar/test-07679f5e: "5"
     foo.bar/test-d2718f1d: "6"
     foo.bar/test-ea8edc28: "7"
-  creationTimestamp: null
   labels:
     foo.bar/test-9dca243c: "1"
     foo.bar/test-47fc132b: "2"
@@ -84,7 +83,6 @@ metadata:
 		roleBindingSerialized = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  creationTimestamp: null
   name: ` + roleBinding.Name + `
   namespace: ` + roleBinding.Namespace + `
 roleRef:

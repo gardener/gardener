@@ -269,7 +269,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					"role": "apiserver",
 				},
 				Annotations: map[string]string{
-					"reference.resources.gardener.cloud/configmap-0e4e3fd5": "gardener-apiserver-audit-policy-config-f5b578b4",
+					"reference.resources.gardener.cloud/configmap-1b2d9b42": "gardener-apiserver-audit-policy-config-1e270362",
 					"reference.resources.gardener.cloud/configmap-6e5f123b": "gardener-apiserver-admission-config-07c5248a",
 					"reference.resources.gardener.cloud/secret-9dca243c":    "shoot-access-gardener-apiserver",
 					"reference.resources.gardener.cloud/secret-47fc132b":    "gardener-apiserver-admission-kubeconfigs-e3b0c442",
@@ -309,7 +309,7 @@ var _ = Describe("GardenerAPIServer", func() {
 							"networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443":    "allowed",
 						},
 						Annotations: map[string]string{
-							"reference.resources.gardener.cloud/configmap-0e4e3fd5": "gardener-apiserver-audit-policy-config-f5b578b4",
+							"reference.resources.gardener.cloud/configmap-1b2d9b42": "gardener-apiserver-audit-policy-config-1e270362",
 							"reference.resources.gardener.cloud/configmap-6e5f123b": "gardener-apiserver-admission-config-07c5248a",
 							"reference.resources.gardener.cloud/secret-9dca243c":    "shoot-access-gardener-apiserver",
 							"reference.resources.gardener.cloud/secret-47fc132b":    "gardener-apiserver-admission-kubeconfigs-e3b0c442",
@@ -481,7 +481,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "gardener-apiserver-audit-policy-config-f5b578b4",
+											Name: "gardener-apiserver-audit-policy-config-1e270362",
 										},
 									},
 								},
@@ -983,8 +983,7 @@ resources:
 							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-audit-policy-config", Namespace: namespace},
 							Data: map[string]string{"audit-policy.yaml": `apiVersion: audit.k8s.io/v1
 kind: Policy
-metadata:
-  creationTimestamp: null
+metadata: {}
 rules:
 - level: None
 `},

@@ -92,7 +92,7 @@ var _ = Describe("Accessor", func() {
 					)
 
 					Expect(acc.GetProviderConfig()).To(Equal(&runtime.RawExtension{
-						Raw: []byte(`{"metadata":{"creationTimestamp":null}}`),
+						Raw: []byte(`{"metadata":{}}`),
 					}))
 				})
 
@@ -115,7 +115,7 @@ var _ = Describe("Accessor", func() {
 					)
 
 					Expect(acc.GetProviderStatus()).To(Equal(&runtime.RawExtension{
-						Raw: []byte(`{"metadata":{"creationTimestamp":null}}`),
+						Raw: []byte(`{"metadata":{}}`),
 					}))
 				})
 

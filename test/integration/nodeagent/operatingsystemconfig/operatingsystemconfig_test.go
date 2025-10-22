@@ -500,7 +500,7 @@ inPlaceUpdates:
   operatingSystem: false
   serviceAccountKeyRotation: false
 mustRestartNodeAgent: false
-operatingSystemConfigChecksum: 9f99a06a84314322dfbe80920a71938f4ac301874fc0e21c8fa5ad0d09baa98c
+operatingSystemConfigChecksum: ddafef1ed407f75f5fc6a8a075ff430fb03b348a4c00474978e2650a22edd9ff
 units: {}
 `, 0600)
 
@@ -1238,7 +1238,6 @@ contexts:
   name: test-context
 current-context: test-context
 kind: Config
-preferences: {}
 users:
 - name: default-auth
   user:

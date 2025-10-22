@@ -166,7 +166,6 @@ data:
 immutable: true
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   labels:
     component: plutono
     resources.gardener.cloud/garbage-collectable-reference: "true"
@@ -254,7 +253,6 @@ data:
     ` + configMapData + `
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   labels:
     component: plutono
     datasource.monitoring.gardener.cloud/` + clusterLabelKey(values) + `: "true"
@@ -491,7 +489,6 @@ metadata:
 				out := `apiVersion: v1
 kind: Service
 metadata:
-  creationTimestamp: null
   labels:
     component: plutono
 `
@@ -542,7 +539,6 @@ metadata:
       location /api/admin/ {
         return 403;
       }
-  creationTimestamp: null
 `
 				if values.ClusterType == comp.ClusterTypeShoot {
 					out += `  labels:

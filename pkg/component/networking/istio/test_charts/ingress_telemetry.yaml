@@ -1,7 +1,6 @@
 apiVersion: telemetry.istio.io/v1
 kind: Telemetry
 metadata:
-  creationTimestamp: null
   labels:
     prometheus: aggregate
   name: aggregate-enable-upstream-address

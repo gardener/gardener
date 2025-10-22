@@ -107,7 +107,6 @@ contexts:
   name: test-context
 current-context: test-context
 kind: Config
-preferences: {}
 `
 
 		kubeletCertPath = filepath.Join(kubeletcomponent.PathKubeletDirectory, "pki", "kubelet-client-current.pem")
@@ -751,7 +750,6 @@ contexts:
   name: test-context
 current-context: test-context
 kind: Config
-preferences: {}
 users:
 - name: default-auth
   user:

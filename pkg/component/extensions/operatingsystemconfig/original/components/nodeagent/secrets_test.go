@@ -109,7 +109,7 @@ var _ = Describe("Secrets", func() {
 					Name:      secretName,
 					Namespace: "kube-system",
 					Annotations: map[string]string{
-						"checksum/data-script": "a3efca387130b4a0291595c1608d80cad758ca95f71901f1fc91b0d74847c0ff",
+						"checksum/data-script": "e92163ba634e290c2e13de35a778007114e201e168c0a27149d05ab5592e4d36",
 					},
 					Labels: map[string]string{
 						"gardener.cloud/role":        "operating-system-config",
@@ -118,8 +118,7 @@ var _ = Describe("Secrets", func() {
 				},
 				Data: map[string][]byte{"osc.yaml": []byte(`apiVersion: extensions.gardener.cloud/v1alpha1
 kind: OperatingSystemConfig
-metadata:
-  creationTimestamp: null
+metadata: {}
 spec:
   criConfig:
     containerd:

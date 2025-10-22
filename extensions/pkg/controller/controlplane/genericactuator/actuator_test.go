@@ -317,8 +317,7 @@ var _ = Describe("Actuator", func() {
 			if webhookConfig != nil {
 				compressedData, err := test.BrotliCompressionForManifests(`apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
-metadata:
-  creationTimestamp: null
+metadata: {}
 webhooks:
 - admissionReviewVersions: null
   clientConfig: {}
