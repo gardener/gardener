@@ -253,7 +253,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 				Endpoints: []monitoringv1.Endpoint{{
-					Port: "metrics",
+					Port: "monitoring",
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						// This service monitor is targeting the logging service. Without explicitly overriding the
 						// job label, prometheus-operator would choose job=logging (service name).
@@ -303,14 +303,6 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						},
 					},
 					ServiceAccount: "opentelemetry-collector",
-					Ports: []otelv1beta1.PortsSpec{
-						{
-							ServicePort: corev1.ServicePort{
-								Name: "metrics",
-								Port: 8888,
-							},
-						},
-					},
 				},
 				Config: otelv1beta1.Config{
 					Receivers: otelv1beta1.AnyConfig{

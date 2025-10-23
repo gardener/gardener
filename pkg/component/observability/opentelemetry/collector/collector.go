@@ -288,7 +288,9 @@ func (o *otelCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
-				Port: "metrics",
+				// Value must be "monitoring" since the OpenTelemetry operator creates a 'monitoring' service
+				// that exposes the port via the name 'monitoring'. This currently cannot be configured with a different name.
+				Port: "monitoring",
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					// This service monitor is targeting the logging service. Without explicitly overriding the
 					// job label, prometheus-operator would choose job=logging (service name).
@@ -338,14 +340,6 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					AllowPrivilegeEscalation: ptr.To(false),
 				},
 				ServiceAccount: collectorconstants.ServiceAccountName,
-				Ports: []otelv1beta1.PortsSpec{
-					{
-						ServicePort: corev1.ServicePort{
-							Name: metricsEndpointName,
-							Port: metricsPort,
-						},
-					},
-				},
 			},
 			Config: otelv1beta1.Config{
 				Receivers: otelv1beta1.AnyConfig{
