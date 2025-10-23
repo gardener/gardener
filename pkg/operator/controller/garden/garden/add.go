@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -18,6 +19,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 )
@@ -80,7 +82,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap
 // HasOperationAnnotation returns a predicate which returns true when the object has an operation annotation.
 func (r *Reconciler) HasOperationAnnotation() predicate.Predicate {
 	hasOperationAnnotation := func(annotations map[string]string) bool {
-		return operatorv1alpha1.AvailableOperationAnnotations.Has(annotations[v1beta1constants.GardenerOperation])
+		operations := helper.GetGardenerOperations(annotations)
+		return operatorv1alpha1.AvailableOperationAnnotations.HasAny(operations...)
 	}
 
 	return predicate.Funcs{
@@ -88,7 +91,9 @@ func (r *Reconciler) HasOperationAnnotation() predicate.Predicate {
 			return hasOperationAnnotation(e.Object.GetAnnotations())
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return !hasOperationAnnotation(e.ObjectOld.GetAnnotations()) && hasOperationAnnotation(e.ObjectNew.GetAnnotations())
+			return (!hasOperationAnnotation(e.ObjectOld.GetAnnotations()) && hasOperationAnnotation(e.ObjectNew.GetAnnotations())) ||
+				(hasOperationAnnotation(e.ObjectOld.GetAnnotations()) && hasOperationAnnotation(e.ObjectNew.GetAnnotations()) &&
+					!sets.New(helper.GetGardenerOperations(e.ObjectOld.GetAnnotations())...).Equal(sets.New(helper.GetGardenerOperations(e.ObjectNew.GetAnnotations())...)))
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },
