@@ -2426,6 +2426,9 @@ spec:
                   The default is 30s, which means that if a collector becomes not Ready, the target allocator will wait for 30 seconds before reassigning its targets. The assumption is that the state is temporary, and an expensive target reallocation should be avoided if possible.
                 format: duration
                 type: string
+              dnsPolicy:
+                description: DNSPolicy defines how a pod's DNS will be configured.
+                type: string
               env:
                 description: Environment variables to set on the generated pods.
                 items:
