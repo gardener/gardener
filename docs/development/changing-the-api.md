@@ -36,7 +36,7 @@ It must be ensured that the API is always backwards-compatible.
 
 If fields shall be removed permanently from the API, then a proper deprecation period must be adhered to so that end-users have enough time to adapt their clients.
 
-In the case of removing a defaulted field, the first step should be to deprecate the field and set it to nil. The field should be set to nil in `Canonicalize` in most cases, considering the following flow of actions: defaulting, then validation, after that `WarningsOnUpdate/Create` and in the end the `Canonicalize` function. The next step should be to forbid setting it explicitly and the final step - removing the field completely.
+In the case of removing a defaulted field, the first step should be to deprecate the field and set it to nil. The field should be set to nil in `Canonicalize`, considering `Canonicalize` is in the end of the following flow of actions: `PrepareFor{Update,Create}`, validation, then `WarningsOn{Update,Create}` and after that - the `Canonicalize` function. The next step should be to forbid setting it explicitly and the final step - removing the field completely.
 
 Once the deprecation period is over, the field should be dropped from the API in a two-step process, i.e., in two release cycles. In the first step, all the usages in the code base should be dropped. In the second step, the field should be dropped from API. We need to follow this two-step process cause there can be the case where `gardener-apiserver` is upgraded to a new version in which the field has been removed but other controllers are still on the old version of Gardener. This can lead to `nil` pointer exceptions or other unexpected behaviour.
 
@@ -57,7 +57,19 @@ The steps for removing a field from the code base is:
 
 Example of field removal can be found in the [Remove `seedTemplate` field from ManagedSeed API](https://github.com/gardener/gardener/pull/6972) PR.
 
-Example of defaulted field removal can be found in [this commit](https://github.com/gardener/gardener/pull/10664/commits/41c09fee18007315ae9177729ccb79920b9a7392) for deprecating `EnableStaticTokenKubeconfig` and the following [Add a warning when `spec.kubernetes.enableStaticTokenKubeconfig` is set in the Shoot](https://github.com/gardener/gardener/pull/11660) PR, since when we mutate this field to nil in `Canonicalize`, it could cause a generation increase in `PrepareForUpdate` and the reason isn't obvious to the user without the warning.
+Example of defaulted field removal can be found in [this commit](https://github.com/gardener/gardener/pull/10664/commits/41c09fee18007315ae9177729ccb79920b9a7392) for deprecating `EnableStaticTokenKubeconfig` and the following [Add a warning when `spec.kubernetes.enableStaticTokenKubeconfig` is set in the Shoot](https://github.com/gardener/gardener/pull/11660) PR, since when we mutate this field to nil in `Canonicalize`, it could cause a generation increase in `PrepareForUpdate` and the reason isn't obvious to the user without the warning. This problem could occur in the following case:
+
+1. User explicitly sets a defaulted field to some value in the Shoot API, even though the field is deprecated
+2. User uses some script that periodically patches the Shoot to ensure that it matches some expected configuration
+3. After the first patch, `Canonicalize` changes this field to be nil
+4. The script patches the Shoot again (user expects that there are no changes, hence no reconciliation should be triggered)
+5. This time in `PrepareForUpdate` the explicitly set field is compared to the now nil field in storage
+6. This causes the generation to be increased
+7. Field is set to nil in `Canonicalize` again
+8. Rinse and repeat
+
+Without any warnings, this could leave the user wondering why the generation keeps increasing when he hasn't done any changes to the configuration.
+
 
 ## Component Configuration APIs
 
