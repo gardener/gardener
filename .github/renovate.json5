@@ -123,6 +123,7 @@
         '/.*gardener/etcd-druid$/',
         '/.*gardener/machine-controller-manager$/',
         '/.*gardener/terminal-controller-manager$/',
+        '/.*open-telemetry/opentelemetry-operator$/',
       ],
     },
     {
