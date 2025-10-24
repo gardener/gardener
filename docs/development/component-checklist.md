@@ -101,23 +101,27 @@ This document provides a checklist for them that you can walk through.
    You should restrict both ingress and egress traffic to/from your component as much as possible to ensure that it only gets access to/from other components if really needed.
    Gardener provides a few default policies for typical usage scenarios. For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../operations/network_policies.md).
 
-5. **Do not run containers in privileged mode** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L324-L328), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L501))
+5. **Do not run containers in privileged mode** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L501))
 
-   Avoid running containers with `privileged=true`. Instead, define the needed [Linux capabilities](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container).
+   Avoid running containers with `privileged=true`.
 
-6. **Do not allow privilege escalation for containers** ([example](https://github.com/gardener/gardener/blob/84e7b436cc5d58efdefd768b8556abec0e3083b6/pkg/component/networking/coredns/coredns.go#L658))
+6. **Drop unutilised capabilities** ([example](https://github.com/gardener/gardener/blob/v1.129.1/pkg/component/networking/istio/charts/istio/istio-istiod/templates/deployment.yaml#L132-L134), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L324-L328))
+
+    Define the needed [Linux capabilities](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container). Configure `securityContext.capabilities` to `drop: ["ALL"]` and selectively add any capabilities if necessary (e.g. `add: ["NET_BIND_SERVICE"]`).
+
+7. **Do not allow privilege escalation for containers** ([example](https://github.com/gardener/gardener/blob/84e7b436cc5d58efdefd768b8556abec0e3083b6/pkg/component/networking/coredns/coredns.go#L658))
 
    Explicitly set `securityContext.allowPrivilegeEscalation=false`, in cases when possible. There is an [issue in Kubernetes](https://github.com/kubernetes/kubernetes/issues/118822) about this configuration being `true` by default.
 
-7. **Do not run containers as root** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/Dockerfile#L12))
+8. **Do not run containers as root** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/Dockerfile#L12))
 
    Avoid running containers as root. Usually, components such as Kubernetes controllers and admission webhook servers don't need root user capabilities to do their jobs.
 
    The problem with running as root, starts with how the container is first built. Unless a non-privileged user is configured in the `Dockerfile`, container build systems by default set up the container with the root user. Add a non-privileged user to your `Dockerfile` or use a base image with a non-root user (for example the `nonroot` images from [distroless](https://github.com/GoogleContainerTools/distroless) such as `gcr.io/distroless/static-debian12:nonroot`).
 
-   If the image is an upstream one, then consider configuring a securityContext for the container/Pod with a non-privileged user. For more information, see [Configure a Security Context for a Pod or Container](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+   If the image is an upstream one, then consider configuring a securityContext for the container/Pod with a non-privileged user. Explicitly set `securityContext.runAsNonRoot=true` as well as `securityContext.runAsUser=<UID>` and `securityContext.runAsGroup<GID>` if possible. For more information, see [Configure a Security Context for a Pod or Container](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
 
-8. **Choose the proper Seccomp profile** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L283-L287), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nginxingress/nginxingress.go#L447))
+9. **Choose the proper Seccomp profile** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L283-L287), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nginxingress/nginxingress.go#L447))
 
    For components deployed in the Seed cluster, the [Seccomp profile](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-seccomp-profile-for-a-container) will be defaulted to `RuntimeDefault` by `gardener-resource-manager`'s SeccompProfile webhook which works well for the majority of components. However, in some special cases you might need to overwrite it.
 
