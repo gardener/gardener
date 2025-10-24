@@ -6,8 +6,12 @@ package mutator
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
+	"net"
 	"reflect"
+	"slices"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -17,8 +21,14 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -32,13 +42,63 @@ func Register(plugins *admission.Plugins) {
 // MutateShoot is an implementation of admission.Interface.
 type MutateShoot struct {
 	*admission.Handler
+
+	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
+	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
+	seedLister                   gardencorev1beta1listers.SeedLister
+	readyFunc                    admission.ReadyFunc
 }
+
+var (
+	_ = admissioninitializer.WantsCoreInformerFactory(&MutateShoot{})
+
+	readyFuncs []admission.ReadyFunc
+)
 
 // New creates a new MutateShoot admission plugin.
 func New() (*MutateShoot, error) {
 	return &MutateShoot{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
 	}, nil
+}
+
+// AssignReadyFunc assigns the ready function to the admission handler.
+func (v *MutateShoot) AssignReadyFunc(f admission.ReadyFunc) {
+	v.readyFunc = f
+	v.SetReadyFunc(f)
+}
+
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (m *MutateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
+	m.cloudProfileLister = cloudProfileInformer.Lister()
+
+	namespacedCloudProfileInformer := f.Core().V1beta1().NamespacedCloudProfiles()
+	m.namespacedCloudProfileLister = namespacedCloudProfileInformer.Lister()
+
+	seedInformer := f.Core().V1beta1().Seeds()
+	m.seedLister = seedInformer.Lister()
+
+	readyFuncs = append(
+		readyFuncs,
+		cloudProfileInformer.Informer().HasSynced,
+		namespacedCloudProfileInformer.Informer().HasSynced,
+		seedInformer.Informer().HasSynced,
+	)
+}
+
+// ValidateInitialization checks whether the plugin was correctly initialized.
+func (m *MutateShoot) ValidateInitialization() error {
+	if m.cloudProfileLister == nil {
+		return errors.New("missing cloudProfile lister")
+	}
+	if m.namespacedCloudProfileLister == nil {
+		return errors.New("missing namespacedCloudProfile lister")
+	}
+	if m.seedLister == nil {
+		return errors.New("missing seed lister")
+	}
+	return nil
 }
 
 var _ admission.MutationInterface = (*MutateShoot)(nil)
@@ -67,9 +127,27 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 		}
 	}
 
+	cloudProfileSpec, err := gardenerutils.GetCloudProfileSpec(m.cloudProfileLister, m.namespacedCloudProfileLister, shoot)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %w", err))
+	}
+	if cloudProfileSpec == nil {
+		return nil
+	}
+
+	var seed *gardencorev1beta1.Seed
+	if shoot.Spec.SeedName != nil {
+		seed, err = m.seedLister.Get(*shoot.Spec.SeedName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed %q: %w", *shoot.Spec.SeedName, err))
+		}
+	}
+
 	mutationContext := &mutationContext{
-		shoot:    shoot,
-		oldShoot: oldShoot,
+		cloudProfileSpec: cloudProfileSpec,
+		seed:             seed,
+		shoot:            shoot,
+		oldShoot:         oldShoot,
 	}
 
 	if a.GetOperation() == admission.Create {
@@ -77,13 +155,16 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	}
 
 	mutationContext.addMetadataAnnotations(a)
+	mutationContext.defaultShootNetworks(helper.IsWorkerless(shoot))
 
 	return nil
 }
 
 type mutationContext struct {
-	shoot    *core.Shoot
-	oldShoot *core.Shoot
+	cloudProfileSpec *gardencorev1beta1.CloudProfileSpec
+	seed             *gardencorev1beta1.Seed
+	shoot            *core.Shoot
+	oldShoot         *core.Shoot
 }
 
 func addCreatedByAnnotation(shoot *core.Shoot, userName string) {
@@ -156,4 +237,29 @@ func addDeploymentTasks(shoot *core.Shoot, tasks ...string) {
 		shoot.Annotations = make(map[string]string)
 	}
 	controllerutils.AddTasks(shoot.Annotations, tasks...)
+}
+
+func (c *mutationContext) defaultShootNetworks(workerless bool) {
+	if c.seed != nil {
+		if c.shoot.Spec.Networking.Pods == nil && !workerless {
+			if c.seed.Spec.Networks.ShootDefaults != nil {
+				if cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Pods, c.shoot.Spec.Networking.IPFamilies) {
+					c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
+				}
+			}
+		}
+
+		if c.shoot.Spec.Networking.Services == nil {
+			if c.seed.Spec.Networks.ShootDefaults != nil {
+				if cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Services, c.shoot.Spec.Networking.IPFamilies) {
+					c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
+				}
+			}
+		}
+	}
+}
+
+func cidrMatchesIPFamily(cidr string, ipfamilies []core.IPFamily) bool {
+	ip, _, _ := net.ParseCIDR(cidr)
+	return ip != nil && (ip.To4() != nil && slices.Contains(ipfamilies, core.IPFamilyIPv4) || ip.To4() == nil && slices.Contains(ipfamilies, core.IPFamilyIPv6))
 }
