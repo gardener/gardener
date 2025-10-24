@@ -136,7 +136,7 @@ For scenarios where users want to retain the current nodes and avoid deletion du
 
 The existing workload is gracefully drained and evicted from the worker nodes, respecting the configured `PodDisruptionBudget`s (see [Specifying a Disruption Budget for your Application](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)).
 
-> ℹ️ Currently, `in-place` updates are controlled by the `InPlaceNodeUpdates` feature gate in the `gardener-apiserver`.
+> ℹ️ The `in-place` updates feature is controlled by the `InPlaceNodeUpdates` feature gate in the `gardener-apiserver`. This feature is currently in the `Alpha` stage and may introduce breaking changes in future releases. For more information, see [feature-usage](../../deployment/feature_gates.md).
 
 For in-place updates, the first requirement is that the operating system must support them. For a specific machine image version, the configuration for in-place updates must be defined in the `CloudProfile` under `spec.machineImages[].versions[].inPlaceUpdates`:
 - The `inPlaceUpdates.supported` field must be set to `true`.
@@ -200,15 +200,13 @@ The `inPlaceUpdates.pendingWorkerUpdates.autoInPlaceUpdate` field in the Shoot s
 #### Manual In-Place Updates
 
 The `ManualInPlaceUpdate` strategy allows users to control and orchestrate the update process manually.
-Set `.spec.provider.workers[].updateStrategy` field in the `Shoot` spec to `ManualInPlaceUpdate`.
+Set `.spec.provider.workers[].updateStrategy` field in the `Shoot` spec to `ManualInPlaceUpdate`. Also one should not set `maxSurge` and `maxUnavailable` fields as `maxSurge` defaults to `0` and `maxUnavailable` to `1`.
 
 ```yaml
 spec:
   provider:
     workers:
     - name: cpu-worker
-      maxSurge: 0
-      maxUnavailable: 2
       updateStrategy: ManualInPlaceUpdate
 ```
 
@@ -221,6 +219,17 @@ kubectl label node <node-name> node.machine.sapcloud.io/selected-for-update=true
 The `ManualInPlaceWorkersUpdated` [constraint](../shoot/shoot_status.md#constraints) in the shoot status indicates that at least one worker pool with the `ManualInPlaceUpdate` strategy is pending an update. Shoot reconciliation will still succeed even if there are worker pools pending updates.
 
 The `inPlaceUpdates.pendingWorkerUpdates.manualInPlaceUpdate` field in the `Shoot` status lists the names of worker pools that are pending updates with this strategy.
+
+#### Limitations when Configuring In-Place Updates via Gardener Dashboard
+
+As of now, the Gardener Dashboard's `Worker` panel does not provide an option to set the update strategy or automatically select it based on the chosen machine image. Historically, only the `AutoRollingUpdate` strategy was supported and set as the default for all worker pools. Future improvements, such as the introduction of [machine-image-capabilities](../../proposals/33-machine-image-capabilities.md), are expected to simplify update strategy configuration. Until then, consider the following when configuring in-place updates:
+
+- ##### Configuring In-Place Update for a New Shoot
+  When creating a new shoot, select a `Machine Image` that supports in-place updates in the `Worker` panel and set the desired min/max/surge values. Before saving, use the YAML editor to specify the `updateStrategy` as either `AutoInPlaceUpdate` or `ManualInPlaceUpdate`, following the recommendations outlined in the sections above.
+
+- ##### Configuring In-Place Update Strategy in an Existing Shoot
+  For existing shoots with already defined worker pools, update the relevant worker pool definitions directly in the YAML editor, adhering to the recommendations for each strategy type.  
+  > Note: When adding a new worker pool through the Worker Groups settings, the strategy defaults to `AutoRollingUpdate` and is saved automatically. This cannot be changed later to `[Auto|Manual]InPlaceUpdate` in the YAML editor, as transitioning from `AutoRollingUpdate` to an in-place update strategy is not allowed.
 
 ## Related Documentation
 
