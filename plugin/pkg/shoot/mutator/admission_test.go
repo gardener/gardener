@@ -18,7 +18,9 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/mutator"
@@ -47,13 +49,35 @@ var _ = Describe("mutator", func() {
 		})
 	})
 
+	Describe("#ValidateInitialization", func() {
+		It("should return error if a lister is missing", func() {
+			admissionHandler, err := New()
+			Expect(err).NotTo(HaveOccurred())
+
+			err = admissionHandler.ValidateInitialization()
+			Expect(err).To(MatchError("missing cloudProfile lister"))
+		})
+
+		It("should not return error if all listers are set", func() {
+			admissionHandler, err := New()
+			Expect(err).NotTo(HaveOccurred())
+			coreInformerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
+
+			Expect(admissionHandler.ValidateInitialization()).To(Succeed())
+		})
+	})
+
 	Describe("#Admit", func() {
 		var (
 			ctx context.Context
 
-			userInfo = &user.DefaultInfo{Name: "foo"}
+			userInfo     = &user.DefaultInfo{Name: "foo"}
+			cloudProfile gardencorev1beta1.CloudProfile
+			seed         gardencorev1beta1.Seed
+			shoot        core.Shoot
 
-			shoot core.Shoot
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
 
 			admissionHandler *MutateShoot
 		)
@@ -61,16 +85,42 @@ var _ = Describe("mutator", func() {
 		BeforeEach(func() {
 			ctx = context.Background()
 
+			cloudProfile = gardencorev1beta1.CloudProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "profile",
+				},
+			}
+			seed = gardencorev1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "seed",
+				},
+			}
 			shoot = core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot",
 					Namespace: "garden-my-project",
+				},
+				Spec: core.ShootSpec{
+					CloudProfileName: ptr.To("profile"),
+					Kubernetes: core.Kubernetes{
+						Version: "1.6.4",
+					},
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{
+								Name: "worker-name",
+							},
+						},
+					},
 				},
 			}
 
 			var err error
 			admissionHandler, err = New()
 			Expect(err).NotTo(HaveOccurred())
+			admissionHandler.AssignReadyFunc(func() bool { return true })
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 		})
 
 		It("should ignore a kind other than shoot", func() {
@@ -110,7 +160,40 @@ var _ = Describe("mutator", func() {
 			Expect(err).To(MatchError("could not convert old object to Shoot"))
 		})
 
+		Context("reference checks", func() {
+			It("should reject because the referenced cloud profile was not found", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeInternalServerError())
+			})
+
+			It("should exit early if CloudProfile is not set", func() {
+				shoot.Spec.CloudProfileName = nil
+				shoot.Spec.CloudProfile = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				err := admissionHandler.Admit(ctx, attrs, nil)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject because the referenced seed was not found", func() {
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+				shoot.Spec.SeedName = ptr.To("seed")
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				err := admissionHandler.Admit(ctx, attrs, nil)
+				Expect(err).To(BeInternalServerError())
+			})
+		})
+
 		Context("created-by annotation", func() {
+			BeforeEach(func() {
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+			})
+
 			It("should add the created-by annotation on shoot creation", func() {
 				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, userInfo.Name))
 
@@ -138,6 +221,8 @@ var _ = Describe("mutator", func() {
 
 			BeforeEach(func() {
 				oldShoot = shoot.DeepCopy()
+
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 			})
 
 			It("should add deploy tasks because shoot is being created", func() {
@@ -282,6 +367,8 @@ var _ = Describe("mutator", func() {
 			BeforeEach(func() {
 				shoot.Spec.Maintenance = &core.Maintenance{}
 				oldShoot = shoot.DeepCopy()
+
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 			})
 
 			DescribeTable("confine spec roll-out checks",
@@ -327,6 +414,152 @@ var _ = Describe("mutator", func() {
 					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
 				),
 			)
+		})
+
+		Context("networking settings", func() {
+			It("should default shoot networks if seed provides ShootDefaults", func() {
+				var (
+					podsCIDR     = "100.96.0.0/11"
+					servicesCIDR = "100.64.0.0/13"
+				)
+
+				seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{
+					Pods:     &podsCIDR,
+					Services: &servicesCIDR,
+				}
+				shoot.Spec.SeedName = ptr.To(seed.Name)
+				shoot.Spec.Networking = &core.Networking{
+					Pods:       nil,
+					Services:   nil,
+					IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
+				}
+
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(Equal(&podsCIDR))
+				Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
+			})
+		})
+
+		Context("kubernetes version", func() {
+			BeforeEach(func() {
+				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+					{Version: "1.28.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.27.3"},
+					{Version: "1.27.2"},
+					{Version: "1.26.8", Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated), ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}},
+					{Version: "1.26.7"},
+					{Version: "1.26.6"},
+					{Version: "1.25.11"},
+					{Version: "1.24.12", Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated), ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}},
+				}
+
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+			})
+
+			It("should throw an error because of an invalid major version", func() {
+				shoot.Spec.Kubernetes.Version = "foo"
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring("must be a semantic version")))
+			})
+
+			It("should throw an error because of an invalid minor version", func() {
+				shoot.Spec.Kubernetes.Version = "1.bar"
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring("must be a semantic version")))
+			})
+
+			It("should default a kubernetes version to latest major.minor.patch version", func() {
+				shoot.Spec.Kubernetes.Version = ""
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.27.3"))
+			})
+
+			It("should default a major kubernetes version to latest minor.patch version", func() {
+				shoot.Spec.Kubernetes.Version = "1"
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.27.3"))
+			})
+
+			It("should default a major.minor kubernetes version to latest patch version", func() {
+				shoot.Spec.Kubernetes.Version = "1.26"
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.26.7"))
+			})
+
+			It("should reject defaulting a major.minor kubernetes version if there is no higher non-preview version available for defaulting", func() {
+				shoot.Spec.Kubernetes.Version = "1.24"
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring("couldn't find a suitable version for 1.24")))
+			})
+
+			It("should be able to explicitly pick preview versions", func() {
+				shoot.Spec.Kubernetes.Version = "1.28.0"
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+			})
+
+			It("should reject: default only exactly matching minor kubernetes version", func() {
+				shoot.Spec.Kubernetes.Version = "1.2"
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring("couldn't find a suitable version for 1.2")))
+			})
+
+			Context("worker kubernetes version", func() {
+				It("should not choose the default kubernetes version if version is not specified", func() {
+					shoot.Spec.Kubernetes.Version = "1.26"
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(BeNil())
+				})
+
+				It("should choose the default kubernetes version if only major.minor is given in a worker group", func() {
+					shoot.Spec.Kubernetes.Version = "1.26"
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.26")}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(*shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal("1.26.7"))
+				})
+			})
 		})
 	})
 })

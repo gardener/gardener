@@ -49,7 +49,11 @@ var _ = Describe("ShootValidator tests", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"},
-				Networking: &gardencorev1beta1.Networking{Type: ptr.To("foo-networking")},
+				Networking: &gardencorev1beta1.Networking{
+					Type:     ptr.To("foo-networking"),
+					Pods:     ptr.To("100.128.0.0/11"),
+					Services: ptr.To("100.72.0.0/13"),
+				},
 			},
 		}
 	})
