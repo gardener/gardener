@@ -7,6 +7,7 @@ package validator_test
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -2320,6 +2321,30 @@ var _ = Describe("validator", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(ContainSubstring("services is required, spec.networking.services")))
 
+			})
+
+			It("should not reject because shoot services network is nil for IPv6 (workerless Shoot)", func() {
+				shoot.Spec.Provider.Workers = nil
+				shoot.Spec.Networking.Services = nil
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Services).NotTo(BeNil())
+
+				servicesCIDR := *shoot.Spec.Networking.Services
+				_, ipNet, parseErr := net.ParseCIDR(servicesCIDR)
+				Expect(parseErr).NotTo(HaveOccurred(), "Generated services CIDR should be valid")
+				Expect(ipNet.IP.To16()).NotTo(BeNil(), "Generated services CIDR should be IPv6")
+				Expect(ipNet.IP[0]).To(Equal(byte(0xfd)), "Generated services CIDR should be in ULA range (fd00::/8)")
 			})
 
 			It("should default shoot networks if seed provides ShootDefaults", func() {
