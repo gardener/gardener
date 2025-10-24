@@ -13,7 +13,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-var _ = Describe("VpaInPlaceOrRecreateUpdateMode tests", func() {
+var _ = Describe("VPAInPlaceUpdates tests", func() {
 	var (
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)

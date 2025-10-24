@@ -19,7 +19,7 @@ Gardener provides a dedicated [resource manager](../../concepts/resource-manager
 Available for deployment with both [gardenlet](../../concepts/gardenlet.md) and [gardener operator](../../concepts/operator.md), the _mutating_ webhook can be activated with the following feature gate, listed within the respective component manifest, refer to the Gardener [feature gates](../../deployment/feature_gates.md) page for additional details:
 
 ```
-VpaInPlaceOrRecreateUpdateMode
+VPAInPlaceUpdates
 ```
 
 To keep a [vertical pod autoscaler](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/deploy/vpa-crd.yaml) resource out of the _mutating_ webhook scope, add the following `skip` label indicating that the resource should preserve it's current configuration and __not__ get  updated:
@@ -30,11 +30,11 @@ vpa-in-place-or-recreate-update-mode.resources.gardener.cloud/skip
 
 ### Gardenlet
 
-To enable the _mutating_ [resource manager](../../concepts/resource-manager.md) webhook, the `VpaInPlaceOrRecreateUpdateMode` feature gate must be set to `true`:
+To enable the _mutating_ [resource manager](../../concepts/resource-manager.md) webhook, the `VPAInPlaceUpdates` feature gate must be set to `true`:
 
 ```yaml
 featureGates:
-  VpaInPlaceOrRecreateUpdateMode: true
+  VPAInPlaceUpdates: true
 ```
 
 Refer to the `gardenlet` component configuration [manifest](../../../example/20-componentconfig-gardenlet.yaml) for an overview.
@@ -53,11 +53,11 @@ To make use of the _mutating_ resource manager webhook, the `Seed`'s [Vertical P
 
 ### Gardener Operator
 
-To enable the _mutating_ [resource manager](../../concepts/resource-manager.md) webhook, the `VpaInPlaceOrRecreateUpdateMode` feature gate must be set to `true`:
+To enable the _mutating_ [resource manager](../../concepts/resource-manager.md) webhook, the `VPAInPlaceUpdates` feature gate must be set to `true`:
 
 ```yaml
 featureGates:
-  VpaInPlaceOrRecreateUpdateMode: true
+  VPAInPlaceUpdates: true
 ```
 
 Refer to the `operator` component configuration [manifest](../../../example/operator/10-componentconfig.yaml) for an overview.

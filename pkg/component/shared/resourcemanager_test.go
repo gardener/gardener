@@ -70,11 +70,11 @@ var _ = Describe("ResourceManager", func() {
 						"component": "controller",
 					}},
 				},
-				PodTopologySpreadConstraintsEnabled:   false,
-				VpaInPlaceOrRecreateUpdateModeEnabled: false,
-				Replicas:                              ptr.To[int32](2),
-				ResourceClass:                         ptr.To("seed"),
-				ResponsibilityMode:                    resourcemanager.ForSource,
+				PodTopologySpreadConstraintsEnabled: false,
+				VPAInPlaceUpdatesEnabled:            false,
+				Replicas:                            ptr.To[int32](2),
+				ResourceClass:                       ptr.To("seed"),
+				ResponsibilityMode:                  resourcemanager.ForSource,
 			}))
 		})
 

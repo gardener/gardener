@@ -146,9 +146,9 @@ var _ = Describe("ResourceManager", func() {
 			Expect(resourceManager.GetValues().NodeAgentAuthorizerAuthorizeWithSelectors).To(PointTo(Equal(true)))
 		})
 
-		When("VpaInPlaceOrRecreateUpdateMode feature gate is enabled", func() {
+		FWhen("VPAInPlaceUpdates feature gate is enabled", func() {
 			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VpaInPlaceOrRecreateUpdateMode, true))
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VPAInPlaceUpdates, true))
 			})
 
 			Context("with Shoot Vertical Pod Autoscaler InPlaceOrRecreate feature gate enabled", func() {
@@ -164,11 +164,11 @@ var _ = Describe("ResourceManager", func() {
 					})
 				})
 
-				It("should set VpaInPlaceOrRecreateUpdateModeEnabled=true", func() {
+				It("should set VPAInPlaceUpdatesEnabled=true", func() {
 					resourceManager, err := botanist.DefaultResourceManager()
 					Expect(resourceManager).NotTo(BeNil())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(resourceManager.GetValues().VpaInPlaceOrRecreateUpdateModeEnabled).To(BeTrue())
+					Expect(resourceManager.GetValues().VPAInPlaceUpdatesEnabled).To(BeTrue())
 				})
 			})
 
@@ -185,11 +185,11 @@ var _ = Describe("ResourceManager", func() {
 					})
 				})
 
-				It("should set VpaInPlaceOrRecreateUpdateModeEnabled=false", func() {
+				It("should set VPAInPlaceUpdatesEnabled=false", func() {
 					resourceManager, err := botanist.DefaultResourceManager()
 					Expect(resourceManager).NotTo(BeNil())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(resourceManager.GetValues().VpaInPlaceOrRecreateUpdateModeEnabled).To(BeFalse())
+					Expect(resourceManager.GetValues().VPAInPlaceUpdatesEnabled).To(BeFalse())
 				})
 			})
 		})

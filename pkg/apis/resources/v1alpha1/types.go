@@ -197,7 +197,7 @@ const (
 	PrometheusObsoleteFolderCleanedUp = "monitoring.resources.gardener.cloud/prometheus-obsolete-folder-cleaned-up"
 	// VPAInPlaceOrRecreateUpdateModeSkip is a constant for a label on a VerticalPodAutoscaler resource which indicates that
 	// it's updateMode field option should not be modified to "InPlaceOrRecreate"
-	// TODO(vitanovs): Remove the VPAInPlaceOrRecreateUpdateModeSkip label constant once the VpaInPlaceOrRecreateUpdateMode feature gates is deprecated.
+	// TODO(vitanovs): Remove the VPAInPlaceOrRecreateUpdateModeSkip label constant once the VPAInPlaceUpdates feature gates is deprecated.
 	VPAInPlaceOrRecreateUpdateModeSkip = "vpa-in-place-or-recreate-update-mode.resources.gardener.cloud/skip"
 )
 

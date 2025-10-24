@@ -332,8 +332,8 @@ type Values struct {
 	NodeAgentAuthorizerAuthorizeWithSelectors *bool
 	// PodKubeAPIServerLoadBalancingWebhook specifies the settings of pod-kube-apiserver-load-balancing webhook.
 	PodKubeAPIServerLoadBalancingWebhook PodKubeAPIServerLoadBalancingWebhook
-	// VpaInPlaceOrRecreateUpdateModeEnabled specifies if a vpa-in-place-pod-vertical-scaling webhook should be enabled.
-	VpaInPlaceOrRecreateUpdateModeEnabled bool
+	// VPAInPlaceUpdatesEnabled specifies if a vpa-in-place-pod-vertical-scaling webhook should be enabled.
+	VPAInPlaceUpdatesEnabled bool
 }
 
 // PodKubeAPIServerLoadBalancingWebhook specifies the settings of pod-kube-apiserver-load-balancing webhook.
@@ -619,8 +619,8 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
 			},
-			VpaInPlaceOrRecreateUpdateMode: resourcemanagerconfigv1alpha1.VPAInPlaceOrRecreateUpdateModeConfig{
-				Enabled: r.values.VpaInPlaceOrRecreateUpdateModeEnabled,
+			VPAInPlaceUpdates: resourcemanagerconfigv1alpha1.VPAInPlaceOrRecreateUpdateModeConfig{
+				Enabled: r.values.VPAInPlaceUpdatesEnabled,
 			},
 		},
 	}
@@ -1399,7 +1399,7 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, NewPodTopologySpreadConstraintsMutatingWebhook(r.values.NamePrefix, namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.VpaInPlaceOrRecreateUpdateModeEnabled {
+	if r.values.VPAInPlaceUpdatesEnabled {
 		webhooks = append(webhooks, NewInPlaceOrRecreateUpdateModeWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 

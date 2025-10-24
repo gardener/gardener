@@ -48,11 +48,11 @@ func runtimeGardenerResourceManagerDefaultValues() resourcemanager.Values {
 				nginxingress.LabelKeyComponent: nginxingress.LabelValueController,
 			}},
 		},
-		PodTopologySpreadConstraintsEnabled:   false,
-		VpaInPlaceOrRecreateUpdateModeEnabled: false,
-		Replicas:                              ptr.To[int32](2),
-		ResourceClass:                         ptr.To(v1beta1constants.SeedResourceManagerClass),
-		ResponsibilityMode:                    resourcemanager.ForSource,
+		PodTopologySpreadConstraintsEnabled: false,
+		VPAInPlaceUpdatesEnabled:            false,
+		Replicas:                            ptr.To[int32](2),
+		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
+		ResponsibilityMode:                  resourcemanager.ForSource,
 	}
 }
 
