@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -60,14 +61,30 @@ func ComparePersistedSecrets(secretsBefore, secretsAfter map[string]corev1.Secre
 	var errorMsg string
 	for name, secret := range secretsBefore {
 		if !reflect.DeepEqual(secret.Data, secretsAfter[name].Data) {
-			errorMsg += fmt.Sprintf("Secret %s/%s did not have it's data persisted.\n", secret.Namespace, secret.Name)
+			errorMsg += fmt.Sprintf("Secret %s/%s did not have its data persisted.\n", secret.Namespace, secret.Name)
 		}
 		if !maps.Equal(secret.Labels, secretsAfter[name].Labels) {
-			errorMsg += fmt.Sprintf("Secret %s/%s did not have it's labels persisted: labels before migration: %v, labels after migration: %v\n",
+			errorMsg += fmt.Sprintf("Secret %s/%s did not have its labels persisted: labels before migration: %v, labels after migration: %v\n",
 				secret.Namespace,
 				secret.Name,
 				secret.Labels,
 				secretsAfter[name].Labels,
+			)
+		}
+		if secret.Type != secretsAfter[name].Type {
+			errorMsg += fmt.Sprintf("Secret %s/%s did not have its type persisted: type before migration: %s, type after migration: %s\n",
+				secret.Namespace,
+				secret.Name,
+				secret.Type,
+				secretsAfter[name].Type,
+			)
+		}
+		if !ptr.Equal(secret.Immutable, secretsAfter[name].Immutable) {
+			errorMsg += fmt.Sprintf("Secret %s/%s did not have its immutability persisted: immutable before migration: %t, immutable after migration: %t\n",
+				secret.Namespace,
+				secret.Name,
+				ptr.Deref(secret.Immutable, false),
+				ptr.Deref(secretsAfter[name].Immutable, false),
 			)
 		}
 	}
