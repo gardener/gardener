@@ -73,8 +73,8 @@ const (
 	PluginNameBackupBucketValidator = "BackupBucketValidator"
 )
 
-// AllPluginNames returns the names of all plugins.
-func AllPluginNames() []string {
+// AllOrderedPluginNames returns the names of all plugins in order.
+func AllOrderedPluginNames() []string {
 	return []string{
 		lifecycle.PluginName,                        // NamespaceLifecycle
 		PluginNameResourceReferenceManager,          // ResourceReferenceManager

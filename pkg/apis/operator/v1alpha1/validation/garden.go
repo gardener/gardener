@@ -431,8 +431,8 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 			return allErrs
 		}
 
-		if !slices.Contains(plugin.AllPluginNames(), admissionPlugin.Name) {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), admissionPlugin.Name, plugin.AllPluginNames()))
+		if !slices.Contains(plugin.AllOrderedPluginNames(), admissionPlugin.Name) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), admissionPlugin.Name, plugin.AllOrderedPluginNames()))
 		}
 	}
 
