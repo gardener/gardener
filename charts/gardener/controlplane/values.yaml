@@ -313,6 +313,10 @@ global:
       #     apiVersions: ["*"]
       #     resources: ["shoots"]
       #     size: 100Ki
+      #   - apiGroups: ["core.gardener.cloud"]
+      #     apiVersions: ["*"]
+      #     resources: ["projects"]
+      #     count: 200
       #   unrestrictedSubjects:
       #   - kind: Group
       #     name: gardener.cloud:system:seeds
