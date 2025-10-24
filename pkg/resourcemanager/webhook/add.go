@@ -137,7 +137,7 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 		}
 	}
 
-	if cfg.Webhooks.VpaInPlaceOrRecreateUpdateMode.Enabled {
+	if cfg.Webhooks.VPAInPlaceUpdates.Enabled {
 		if err := (&vpainplaceorrecreateupdatemode.Handler{
 			Logger: mgr.GetLogger().WithName("webhook").WithName(vpainplaceorrecreateupdatemode.HandlerName),
 		}).AddToManager(mgr); err != nil {

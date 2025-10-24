@@ -56,9 +56,9 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 			SystemComponentTolerations:          gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
 			TargetNamespaces:                    []string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, corev1.NamespaceNodeLease},
 			TopologyAwareRoutingEnabled:         b.Shoot.TopologyAwareRoutingEnabled,
-			// TODO(vitanovs): Remove the VpaInPlaceOrRecreateUpdateMode webhook once the
-			// VpaInPlaceOrRecreateUpdateMode feature gates is deprecated.
-			VpaInPlaceOrRecreateUpdateModeEnabled: b.isVPAInPlaceOrRecreateUpdateModeEnabled(),
+			// TODO(vitanovs): Remove the VPAInPlaceUpdates webhook once the
+			// VPAInPlaceUpdates feature gates is deprecated.
+			VPAInPlaceUpdatesEnabled: b.isVPAInPlaceOrRecreateUpdateModeEnabled(),
 		}
 	)
 
@@ -99,7 +99,7 @@ func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error 
 
 func (b *Botanist) isVPAInPlaceOrRecreateUpdateModeEnabled() bool {
 	var (
-		isGardenletFeatureGateEnabled = features.DefaultFeatureGate.Enabled(features.VpaInPlaceOrRecreateUpdateMode)
+		isGardenletFeatureGateEnabled = features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates)
 		isShootVPAFeatureGateDisabled = false
 	)
 

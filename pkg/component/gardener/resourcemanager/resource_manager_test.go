@@ -338,7 +338,7 @@ var _ = Describe("ResourceManager", func() {
 			DefaultSeccompProfileEnabled:              false,
 			EndpointSliceHintsEnabled:                 false,
 			PodTopologySpreadConstraintsEnabled:       true,
-			VpaInPlaceOrRecreateUpdateModeEnabled:     false,
+			VPAInPlaceUpdatesEnabled:                  false,
 			LogLevel:                                  "info",
 			LogFormat:                                 "json",
 			Zones:                                     []string{"a", "b"},
@@ -505,7 +505,7 @@ var _ = Describe("ResourceManager", func() {
 				config.Webhooks.CRDDeletionProtection.Enabled = true
 				config.Webhooks.ExtensionValidation.Enabled = true
 				config.Webhooks.SeccompProfile.Enabled = true
-				config.Webhooks.VpaInPlaceOrRecreateUpdateMode.Enabled = true
+				config.Webhooks.VPAInPlaceUpdates.Enabled = true
 			}
 
 			if responsibilityMode == ForSource {
@@ -2547,7 +2547,7 @@ subjects:
 				cfg.SchedulingProfile = nil
 				cfg.ResponsibilityMode = ForSource
 				cfg.PodKubeAPIServerLoadBalancingWebhook.Enabled = true
-				cfg.VpaInPlaceOrRecreateUpdateModeEnabled = true
+				cfg.VPAInPlaceUpdatesEnabled = true
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -2647,7 +2647,7 @@ subjects:
 				utilruntime.Must(references.InjectAnnotations(deployment))
 
 				cfg.DefaultSeccompProfileEnabled = true
-				cfg.VpaInPlaceOrRecreateUpdateModeEnabled = true
+				cfg.VPAInPlaceUpdatesEnabled = true
 				cfg.SchedulingProfile = nil
 				cfg.ResponsibilityMode = ForSourceAndTarget
 				resourceManager = New(c, deployNamespace, sm, cfg)

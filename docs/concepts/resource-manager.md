@@ -1153,7 +1153,7 @@ could be appended to the resource's metadata. With the _label_ specified, the we
 Available for deployment with both [gardenlet](https://github.com/gardener/gardener/blob/master/docs/concepts/gardenlet.md) and [gardener-operator](https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md), enabling the webhook happens by activating a dedicated _feature gate_ within the respective component manifest:
 
 ```
-VpaInPlaceOrRecreateUpdateMode
+VPAInPlaceUpdates
 ```
 
 

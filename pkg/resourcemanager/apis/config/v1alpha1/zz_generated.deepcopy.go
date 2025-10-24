@@ -551,7 +551,7 @@ func (in *ResourceManagerWebhookConfiguration) DeepCopyInto(out *ResourceManager
 	in.ProjectedTokenMount.DeepCopyInto(&out.ProjectedTokenMount)
 	in.NodeAgentAuthorizer.DeepCopyInto(&out.NodeAgentAuthorizer)
 	out.SeccompProfile = in.SeccompProfile
-	out.VpaInPlaceOrRecreateUpdateMode = in.VpaInPlaceOrRecreateUpdateMode
+	out.VPAInPlaceUpdates = in.VPAInPlaceUpdates
 	return
 }
 

@@ -17,6 +17,6 @@ func RegisterFeatureGates() {
 		features.IstioTLSTermination,
 		features.DoNotCopyBackupCredentials,
 		features.UseUnifiedHTTPProxyPort,
-		features.VpaInPlaceOrRecreateUpdateMode,
+		features.VPAInPlaceUpdates,
 	)))
 }

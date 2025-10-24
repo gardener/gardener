@@ -312,9 +312,9 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 				},
 			},
 		},
-		// TODO(vitanovs): Remove the VpaInPlaceOrRecreateUpdateMode webhook once the
-		// VpaInPlaceOrRecreateUpdateMode feature gates is deprecated.
-		VpaInPlaceOrRecreateUpdateModeEnabled: features.DefaultFeatureGate.Enabled(features.VpaInPlaceOrRecreateUpdateMode),
+		// TODO(vitanovs): Remove the VPAInPlaceUpdates webhook once the
+		// VPAInPlaceUpdates feature gates is deprecated.
+		VPAInPlaceUpdatesEnabled: features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates),
 	})
 }
 

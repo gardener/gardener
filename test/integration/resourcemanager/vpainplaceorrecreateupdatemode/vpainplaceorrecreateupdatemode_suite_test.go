@@ -37,9 +37,9 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestVpaInPlaceOrRecreateUpdateModeProfile(t *testing.T) {
+func TestVPAInPlaceUpdatesProfile(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ResourceManager VpaInPlaceOrRecreateUpdateMode Suite")
+	RunSpecs(t, "Test Integration ResourceManager VPAInPlaceUpdates Suite")
 }
 
 const testID = "vpa-in-place-or-recreate-update-mode-webhook-test"
