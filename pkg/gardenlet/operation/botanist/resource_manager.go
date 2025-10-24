@@ -16,6 +16,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -54,6 +55,9 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 			SystemComponentTolerations:          gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
 			TargetNamespaces:                    []string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, corev1.NamespaceNodeLease},
 			TopologyAwareRoutingEnabled:         b.Shoot.TopologyAwareRoutingEnabled,
+			// TODO(vitanovs): Remove the VPAInPlaceUpdates webhook once the
+			// VPAInPlaceUpdates feature gates is deprecated.
+			VPAInPlaceUpdatesEnabled: b.isVPAInPlaceOrRecreateUpdateModeEnabled(),
 		}
 	)
 
@@ -90,4 +94,19 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 // ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
 func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error {
 	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}, 1)
+}
+
+func (b *Botanist) isVPAInPlaceOrRecreateUpdateModeEnabled() bool {
+	var (
+		isGardenletFeatureGateEnabled = features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates)
+		isShootVPAFeatureGateDisabled = false
+	)
+
+	shootVerticalPodAutoscaler := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler
+	if shootVerticalPodAutoscaler != nil {
+		shootVPAFeatureGate := shootVerticalPodAutoscaler.FeatureGates["InPlaceOrRecreate"]
+		isShootVPAFeatureGateDisabled = !shootVPAFeatureGate
+	}
+
+	return isGardenletFeatureGateEnabled && !isShootVPAFeatureGateDisabled
 }
