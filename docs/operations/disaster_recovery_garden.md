@@ -17,7 +17,7 @@ The following sections provides details for these components.
 ### ETCD backup
 
 The Garden cluster's ETCD is managed by `etcd-druid`, which can take care of performing continuous backups.
-This can be configured in the `garden` resource and is strongly recommended for any setup.
+This can be configured in the `Garden` resource and is strongly recommended for any setup.
 
 > [!IMPORTANT]
 > Without ETCD backups, a restore is not possible.
@@ -27,7 +27,7 @@ Reference:
 - [Garden ETCD](https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd)
 - [Example Backup Configuration](https://github.com/gardener/gardener/blob/1f9458b6eb73a8d1f489f003403e16d01bd014a9/example/operator/20-garden.yaml#L86-L93)
 
-### Garden Resource
+### `Garden` Resource
 
 The `Garden` resource should be backed up in its entirety including the `status` subresource.
 The `status` contains critical information like the current state of credentials rotation.
@@ -38,7 +38,7 @@ Finding a reasonable backup frequency depends on the frequency of changes applie
 ### Runtime Data
 
 To ensure a successful and less-disruptive restore, the following data containing state information must be backed up from the runtime cluster.
-These are stored as `secrets` in the **`garden` namespace** and their names are typically suffixed by content hashes and, if triggered, a hash indicating recent rotation (e.g., `ca-f6032ea0-5e58a`).
+These are stored as `Secrets` in the **`garden` namespace** and their names are typically suffixed by content hashes and, if triggered, a hash indicating recent rotation (e.g., `ca-f6032ea0-5e58a`).
 
 Preserving the encryption keys is absolutely critical, while the other secrets are necessary to avoid invalidating existing credentials.
 
@@ -106,7 +106,7 @@ Ensure that it is the same version as the one used in the previous cluster to av
 2.  **Delete Webhooks:** Delete the [mutating](../concepts/operator.md#defaulting) and [validating](../concepts/operator.md#validation) webhooks registered for the `Garden` resource to unblock later operations. Both webhooks are named `gardener-operator`. Once the operator is scaled up, it will recreate them.
 3.  **Deploy State Secrets:** Deploy the correct backed-up secrets for CAs, encryption, and signing keys into the new cluster.
 4.  **Deploy Infrastructure Secrets:** Deploy valid infrastructure credentials (e.g., for DNS and `etcd` backup) into the new cluster.
-5.  **Apply Garden Resource:** Apply the backed-up **`Garden` resource** to the new cluster.
+5.  **Apply `Garden` Resource:** Apply the backed-up **`Garden` resource** to the new cluster.
 
 ### Step 6: Configure Credential Rotation Status
 
@@ -193,7 +193,7 @@ See [Encryption At Rest](https://kubernetes.io/docs/tasks/administer-cluster/enc
 When performing a restore, ensure that the encryption keys and configurations deployed match the state that existed in the former runtime cluster.
 Mismatched keys or an incorrect rotation status can cause the `gardener-operator` to issue new encryption keys.
 This in turn will render existing data inaccessible.
-Depending on the conditions, it might also cause data in etcd to be encrypted with new keys, leading to permanent data loss.
+Depending on the conditions, it might also cause data in `etcd` to be encrypted with new keys, leading to permanent data loss.
 
 > [!TIP]
 > Therefore, it is strongly recommended to create a copy of the etcd backups before starting the restore procedure.
