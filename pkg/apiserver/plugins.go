@@ -39,6 +39,7 @@ import (
 )
 
 // RegisterAllAdmissionPlugins registers all admission plugins.
+// The order of registration is irrelevant, see github.com/gardener/gardener/plugin/pkg.AllOrderedPluginNames for execution order.
 func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	resourcereferencemanager.Register(plugins)
 	deletionconfirmation.Register(plugins)
