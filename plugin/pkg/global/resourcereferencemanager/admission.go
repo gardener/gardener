@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/client-go/dynamic"
 	kubeinformers "k8s.io/client-go/informers"
@@ -817,20 +818,22 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		}
 	}
 
-	readAttributes := authorizer.AttributesRecord{
-		User:            attributes.GetUserInfo(),
-		Verb:            "get",
-		APIGroup:        credentialsAPIGroup,
-		APIVersion:      credentialsAPIVersion,
-		Resource:        credentialsResource,
-		Namespace:       credentialsNamespace,
-		Name:            credentialsName,
-		ResourceRequest: true,
-	}
-	if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
-		return fmt.Errorf("could not authorize read request for credentials: %w", err)
-	} else if decision != authorizer.DecisionAllow {
-		return fmt.Errorf("%s cannot reference a %s you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind, credentialsKind)
+	if !isGardenadmUser(attributes.GetUserInfo()) || credentialsNamespace != attributes.GetNamespace() {
+		readAttributes := authorizer.AttributesRecord{
+			User:            attributes.GetUserInfo(),
+			Verb:            "get",
+			APIGroup:        credentialsAPIGroup,
+			APIVersion:      credentialsAPIVersion,
+			Resource:        credentialsResource,
+			Namespace:       credentialsNamespace,
+			Name:            credentialsName,
+			ResourceRequest: true,
+		}
+		if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
+			return fmt.Errorf("could not authorize read request for credentials: %w", err)
+		} else if decision != authorizer.DecisionAllow {
+			return fmt.Errorf("%s cannot reference a %s you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind, credentialsKind)
+		}
 	}
 
 	switch credentialsKind {
@@ -862,22 +865,24 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 	)
 
 	for _, quotaRef := range quotas {
-		readAttributes := authorizer.AttributesRecord{
-			User:            attributes.GetUserInfo(),
-			Verb:            "get",
-			APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
-			APIVersion:      gardencorev1beta1.SchemeGroupVersion.Version,
-			Resource:        "quotas",
-			Subresource:     "",
-			Namespace:       quotaRef.Namespace,
-			Name:            quotaRef.Name,
-			ResourceRequest: true,
-			Path:            "",
-		}
-		if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
-			return fmt.Errorf("could not authorize read request for quota: %w", err)
-		} else if decision != authorizer.DecisionAllow {
-			return fmt.Errorf("%s cannot reference a quota you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind)
+		if !isGardenadmUser(attributes.GetUserInfo()) || quotaRef.Namespace != attributes.GetNamespace() {
+			readAttributes := authorizer.AttributesRecord{
+				User:            attributes.GetUserInfo(),
+				Verb:            "get",
+				APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+				APIVersion:      gardencorev1beta1.SchemeGroupVersion.Version,
+				Resource:        "quotas",
+				Subresource:     "",
+				Namespace:       quotaRef.Namespace,
+				Name:            quotaRef.Name,
+				ResourceRequest: true,
+				Path:            "",
+			}
+			if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
+				return fmt.Errorf("could not authorize read request for quota: %w", err)
+			} else if decision != authorizer.DecisionAllow {
+				return fmt.Errorf("%s cannot reference a quota you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind)
+			}
 		}
 
 		quota, err := r.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
@@ -1389,4 +1394,8 @@ func (r *ReferenceManager) sanityCheckProviderSecret(ctx context.Context, namesp
 	}
 
 	return nil
+}
+
+func isGardenadmUser(userInfo user.Info) bool {
+	return slices.Contains(userInfo.GetGroups(), v1beta1constants.ShootsGroup) && strings.HasPrefix(userInfo.GetName(), v1beta1constants.GardenadmUserNamePrefix)
 }
