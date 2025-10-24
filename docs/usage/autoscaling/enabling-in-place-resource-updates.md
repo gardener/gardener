@@ -15,7 +15,7 @@ Refer to the [in-place resource updates](./in-place-resource-updates.md) guide f
 
 ## Configuration
 
-Gardener provides a dedicated [resource manager](../../concepts/resource-manager.md) [webhook](../../concepts/resource-manager.md#webhooks) capable of _mutating_ [vertical pod autoscaler](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/deploy/vpa-crd.yaml) resources, configured with [update mode](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/quickstart.md#contents) `Auto` or `Recreate`, with the `in-place` updates enabling `InPlaceOrRecreate`.
+Gardener provides a dedicated [resource manager](../../concepts/resource-manager.md) [webhook](../../concepts/resource-manager.md#webhooks) capable of _mutating_ VerticalPodAutoscaler resources, configured with [update mode](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/quickstart.md#contents) `Auto` or `Recreate`, with the `in-place` updates enabling `InPlaceOrRecreate`.
 Available for deployment with both [gardenlet](../../concepts/gardenlet.md) and [gardener operator](../../concepts/operator.md), the _mutating_ webhook can be activated with the following feature gate, listed within the respective component manifest, refer to the Gardener [feature gates](../../deployment/feature_gates.md) page for additional details:
 
 ```
