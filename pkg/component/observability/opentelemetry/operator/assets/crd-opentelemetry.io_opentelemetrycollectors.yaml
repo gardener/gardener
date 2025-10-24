@@ -2932,6 +2932,9 @@ spec:
                       Default is RollingUpdate.
                     type: string
                 type: object
+              dnsPolicy:
+                description: DNSPolicy defines how a pod's DNS will be configured.
+                type: string
               env:
                 description: Environment variables to set on the generated pods.
                 items:
@@ -5724,13 +5727,66 @@ spec:
                 type: string
               serviceName:
                 description: |-
-                  ServiceName is the name of the Service to be used.
+                  ServiceName sets the serviceName of the StatefulSet.
                   If not specified, it will default to "<name>-headless".
+                  Note that the custom service name is not created by the operator.
                 type: string
               shareProcessNamespace:
                 description: ShareProcessNamespace indicates if the pod's containers
                   should share process namespace.
                 type: boolean
+              startupProbe:
+                description: |-
+                  Startup config for the OpenTelemetry Collector except the probe handler which is auto generated from the health extension of the collector.
+                  It is only effective when healthcheckextension is configured in the OpenTelemetry Collector pipeline.
+                properties:
+                  failureThreshold:
+                    description: |-
+                      Minimum consecutive failures for the probe to be considered failed after having succeeded.
+                      Defaults to 3. Minimum value is 1.
+                    format: int32
+                    type: integer
+                  initialDelaySeconds:
+                    description: |-
+                      Number of seconds after the container has started before liveness probes are initiated.
+                      Defaults to 0 seconds. Minimum value is 0.
+                      More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+                    format: int32
+                    type: integer
+                  periodSeconds:
+                    description: |-
+                      How often (in seconds) to perform the probe.
+                      Default to 10 seconds. Minimum value is 1.
+                    format: int32
+                    type: integer
+                  successThreshold:
+                    description: |-
+                      Minimum consecutive successes for the probe to be considered successful after having failed.
+                      Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                    format: int32
+                    type: integer
+                  terminationGracePeriodSeconds:
+                    description: |-
+                      Optional duration in seconds the pod needs to terminate gracefully upon probe failure.
+                      The grace period is the duration in seconds after the processes running in the pod are sent
+                      a termination signal and the time when the processes are forcibly halted with a kill signal.
+                      Set this value longer than the expected cleanup time for your process.
+                      If this value is nil, the pod's terminationGracePeriodSeconds will be used. Otherwise, this
+                      value overrides the value provided by the pod spec.
+                      Value must be non-negative integer. The value zero indicates stop immediately via
+                      the kill signal (no opportunity to shut down).
+                      This is a beta field and requires enabling ProbeTerminationGracePeriod feature gate.
+                      Minimum value is 1. spec.terminationGracePeriodSeconds is used if unset.
+                    format: int64
+                    type: integer
+                  timeoutSeconds:
+                    description: |-
+                      Number of seconds after which the probe times out.
+                      Defaults to 1 second. Minimum value is 1.
+                      More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+                    format: int32
+                    type: integer
+                type: object
               targetAllocator:
                 description: TargetAllocator indicates a value which determines whether
                   to spawn a target allocation resource or not.
