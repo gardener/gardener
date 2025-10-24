@@ -222,6 +222,9 @@ type ShootStatus struct {
 	// InPlaceUpdates contains information about in-place updates for the Shoot workers.
 	// +optional
 	InPlaceUpdates *InPlaceUpdatesStatus `json:"inPlaceUpdates,omitempty" protobuf:"bytes,20,opt,name=inPlaceUpdates"`
+	// ManualWorkerPoolRollout contains information about the worker pool rollout progress.
+	// +optional
+	ManualWorkerPoolRollout *ManualWorkerPoolRollout `json:"manualWorkerPoolRollout,omitempty" protobuf:"bytes,21,opt,name=manualWorkerPoolRollout"`
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -325,6 +328,13 @@ type CARotation struct {
 	// credentials rotation.
 	// +optional
 	PendingWorkersRollouts []PendingWorkersRollout `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,6,rep,name=pendingWorkersRollouts"`
+}
+
+// ManualWorkerPoolRollout contains information about the worker pool rollout progress that has been initiated via the gardener.cloud/operation=rollout-workers annotation.
+type ManualWorkerPoolRollout struct {
+	// PendingWorkersRollouts contains the names of the worker pools that are still pending rollout.
+	// +optional
+	PendingWorkersRollouts []PendingWorkersRollout `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,1,rep,name=pendingWorkersRollouts"`
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -433,12 +443,11 @@ const (
 	RotationCompleted CredentialsRotationPhase = "Completed"
 )
 
-// PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
-// credentials rotation.
+// PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout.
 type PendingWorkersRollout struct {
 	// Name is the name of a worker pool.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// LastInitiationTime is the most recent time when the credential rotation was initiated.
+	// LastInitiationTime is the most recent time when the worker rollout was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,2,opt,name=lastInitiationTime"`
 }
