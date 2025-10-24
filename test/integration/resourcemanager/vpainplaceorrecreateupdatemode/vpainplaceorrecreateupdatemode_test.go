@@ -34,6 +34,22 @@ var _ = Describe("VpaInPlaceOrRecreateUpdateMode tests", func() {
 		}
 	})
 
+	Context("when skip label is specified", func() {
+		BeforeEach(func() {
+			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+			}
+		})
+
+		It("should not mutate vertical pod autoscaler", func() {
+			metav1.SetMetaDataLabel(&vpa.ObjectMeta, "vpa-in-place-or-recreate-update-mode.resources.gardener.cloud/skip", "")
+
+			Expect(testClient.Create(ctx, vpa)).To(Succeed())
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeRecreate)))
+		})
+
+	})
+
 	Context("when update mode is Auto", func() {
 		BeforeEach(func() {
 			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
@@ -41,16 +57,9 @@ var _ = Describe("VpaInPlaceOrRecreateUpdateMode tests", func() {
 			}
 		})
 
-		It("should mutate vertical pod autoscaler if skipping the webhook is not specified", func() {
+		It("should mutate vertical pod autoscaler", func() {
 			Expect(testClient.Create(ctx, vpa)).To(Succeed())
 			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
-		})
-
-		It("should not mutate vertical pod autoscaler if skipping the webhook is specified", func() {
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, "vpa-in-place-or-recreate-update-mode.resources.gardener.cloud/skip", "")
-
-			Expect(testClient.Create(ctx, vpa)).To(Succeed())
-			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeAuto)))
 		})
 	})
 
@@ -61,16 +70,42 @@ var _ = Describe("VpaInPlaceOrRecreateUpdateMode tests", func() {
 			}
 		})
 
-		It("should mutate vertical pod autoscaler if skipping the webhook is not specified", func() {
+		It("should mutate vertical pod autoscaler", func() {
 			Expect(testClient.Create(ctx, vpa)).To(Succeed())
 			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
 		})
+	})
 
-		It("should not mutate vertical pod autoscaler if skipping the webhook is specified", func() {
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, "vpa-in-place-or-recreate-update-mode.resources.gardener.cloud/skip", "")
+	Context("when update mode is Initial", func() {
+		BeforeEach(func() {
+			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeInitial),
+			}
+		})
 
+		It("should not mutate vertical pod autoscaler", func() {
 			Expect(testClient.Create(ctx, vpa)).To(Succeed())
-			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeRecreate)))
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInitial)))
+		})
+	})
+
+	Context("when update mode is Off", func() {
+		BeforeEach(func() {
+			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeOff),
+			}
+		})
+
+		It("should not mutate vertical pod autoscaler", func() {
+			Expect(testClient.Create(ctx, vpa)).To(Succeed())
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeOff)))
+		})
+	})
+
+	Context("when update mode is not specified", func() {
+		It("should mutate vertical pod autoscaler", func() {
+			Expect(testClient.Create(ctx, vpa)).To(Succeed())
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
 		})
 	})
 })
