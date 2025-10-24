@@ -818,7 +818,7 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		}
 	}
 
-	if !isGardenadmUser(attributes.GetUserInfo()) {
+	if !isGardenadmUser(attributes.GetUserInfo()) || credentialsNamespace != attributes.GetNamespace() {
 		readAttributes := authorizer.AttributesRecord{
 			User:            attributes.GetUserInfo(),
 			Verb:            "get",
@@ -865,7 +865,7 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 	)
 
 	for _, quotaRef := range quotas {
-		if !isGardenadmUser(attributes.GetUserInfo()) {
+		if !isGardenadmUser(attributes.GetUserInfo()) || quotaRef.Namespace != attributes.GetNamespace() {
 			readAttributes := authorizer.AttributesRecord{
 				User:            attributes.GetUserInfo(),
 				Verb:            "get",

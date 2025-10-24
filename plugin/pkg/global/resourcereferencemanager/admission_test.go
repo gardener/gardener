@@ -610,6 +610,19 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
+			It("should deny cross-namespace references even for the gardenadm-user", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				coreSecretBindingCopy := coreSecretBinding.DeepCopy()
+				coreSecretBindingCopy.Quotas[0].Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "gardener.cloud:gardenadm:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}
+				attrs := admission.NewAttributesRecord(coreSecretBindingCopy, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBindingCopy.Namespace, coreSecretBindingCopy.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("cannot reference a quota you are not allowed to read")))
+			})
+
 			It("should reject because one of the referenced quotas does not exist", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 
@@ -641,6 +654,19 @@ var _ = Describe("resourcereferencemanager", func() {
 				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should deny cross-namespace references even for the gardenadm-user", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				coreSecretBindingCopy := coreSecretBinding.DeepCopy()
+				coreSecretBindingCopy.Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "gardener.cloud:gardenadm:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}
+				attrs := admission.NewAttributesRecord(coreSecretBindingCopy, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBindingCopy.Namespace, coreSecretBindingCopy.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("cannot reference a Secret you are not allowed to read")))
 			})
 
 			It("should pass because exact one quota per scope is referenced", func() {
@@ -820,6 +846,19 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
+			It("should deny cross-namespace references even for the gardenadm-user", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				securityCredentialsBindingRefSecretCopy := securityCredentialsBindingRefSecret.DeepCopy()
+				securityCredentialsBindingRefSecretCopy.CredentialsRef.Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "gardener.cloud:gardenadm:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}
+				attrs := admission.NewAttributesRecord(securityCredentialsBindingRefSecretCopy, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecretCopy.Namespace, securityCredentialsBindingRefSecretCopy.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("cannot reference a Secret you are not allowed to read")))
+			})
+
 			It("should reject because one of the referenced quotas does not exist", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 
@@ -851,6 +890,19 @@ var _ = Describe("resourcereferencemanager", func() {
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should deny cross-namespace references even for the gardenadm-user", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				securityCredentialsBindingRefSecretCopy := securityCredentialsBindingRefSecret.DeepCopy()
+				securityCredentialsBindingRefSecretCopy.Quotas[0].Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "gardener.cloud:gardenadm:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}
+				attrs := admission.NewAttributesRecord(securityCredentialsBindingRefSecretCopy, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecretCopy.Namespace, securityCredentialsBindingRefSecretCopy.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("cannot reference a quota you are not allowed to read")))
 			})
 
 			It("should pass because exact one quota per scope is referenced", func() {
@@ -1013,6 +1065,19 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
+			It("should deny cross-namespace references even for the gardenadm-user", func() {
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				securityCredentialsBindingRefWorkloadIdentityCopy := securityCredentialsBindingRefWorkloadIdentity.DeepCopy()
+				securityCredentialsBindingRefWorkloadIdentityCopy.CredentialsRef.Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "gardener.cloud:gardenadm:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}
+				attrs := admission.NewAttributesRecord(securityCredentialsBindingRefWorkloadIdentityCopy, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentityCopy.Namespace, securityCredentialsBindingRefWorkloadIdentityCopy.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("cannot reference a WorkloadIdentity you are not allowed to read")))
+			})
+
 			It("should reject because one of the referenced quotas does not exist", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 
@@ -1044,6 +1109,19 @@ var _ = Describe("resourcereferencemanager", func() {
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should deny cross-namespace references even for the gardenadm-user", func() {
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				securityCredentialsBindingRefWorkloadIdentityCopy := securityCredentialsBindingRefWorkloadIdentity.DeepCopy()
+				securityCredentialsBindingRefWorkloadIdentityCopy.Quotas[0].Namespace = "other-namespace"
+
+				user := &user.DefaultInfo{Name: "gardener.cloud:gardenadm:shoot:foo:bar", Groups: []string{"gardener.cloud:system:shoots"}}
+				attrs := admission.NewAttributesRecord(securityCredentialsBindingRefWorkloadIdentityCopy, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentityCopy.Namespace, securityCredentialsBindingRefWorkloadIdentityCopy.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("cannot reference a quota you are not allowed to read")))
 			})
 
 			It("should pass because exact one quota per scope is referenced", func() {
