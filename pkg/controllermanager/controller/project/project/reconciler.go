@@ -43,12 +43,12 @@ type Reconciler struct {
 	Config   controllermanagerconfigv1alpha1.ProjectControllerConfiguration
 	Recorder record.EventRecorder
 
-	// RateLimiter allows limiting exponential backoff for testing purposes
-	RateLimiter workqueue.TypedRateLimiter[reconcile.Request]
+	// RateLimiterFunc allows limiting exponential backoff for testing purposes
+	RateLimiterFunc func() workqueue.TypedRateLimiter[reconcile.Request]
 }
 
 // Reconcile reconciles Projects.
-func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (bool, reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
@@ -58,9 +58,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if err := r.Client.Get(ctx, request.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
-			return reconcile.Result{}, nil
+			return false, reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
+		return false, reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if project.DeletionTimestamp != nil {
@@ -69,7 +69,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	log.Info("Reconciling project")
-	return reconcile.Result{}, r.reconcile(ctx, log, project)
+	return false, reconcile.Result{}, r.reconcile(ctx, log, project)
 }
 
 func patchProjectPhase(ctx context.Context, c client.Client, project *gardencorev1beta1.Project, phase gardencorev1beta1.ProjectPhase) error {
@@ -309,9 +309,9 @@ func namespaceAnnotationsFromProject(project *gardencorev1beta1.Project) map[str
 	}
 }
 
-func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project) (reconcile.Result, error) {
+func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project) (bool, reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(project, gardencorev1beta1.GardenerName) {
-		return reconcile.Result{}, nil
+		return false, reconcile.Result{}, nil
 	}
 
 	if namespace := project.Spec.Namespace; namespace != nil {
@@ -319,13 +319,13 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 
 		inUse, err := kubernetesutils.ResourcesExist(ctx, r.Client, &gardencorev1beta1.ShootList{}, r.Client.Scheme(), client.InNamespace(*namespace))
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
+			return false, reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
 		}
 
 		if inUse {
 			r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots", *namespace)
 			log.Info("Cannot release Project Namespace because it still contains Shoots")
-			return reconcile.Result{Requeue: true}, patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectTerminating)
+			return true, reconcile.Result{}, patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectTerminating)
 		}
 
 		released, err := r.releaseNamespace(ctx, log, project, *namespace)
@@ -334,22 +334,22 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 			if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 				log.Error(err, "Failed to update Project status")
 			}
-			return reconcile.Result{}, fmt.Errorf("failed to release project namespace: %w", err)
+			return false, reconcile.Result{}, fmt.Errorf("failed to release project namespace: %w", err)
 		}
 
 		if !released {
 			r.Recorder.Eventf(project, corev1.EventTypeNormal, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked project namespace %q for deletion", *namespace)
 			// Project will be enqueued again once project namespace is gone, but recheck every minute to be sure
-			return reconcile.Result{RequeueAfter: time.Minute}, patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectTerminating)
+			return false, reconcile.Result{RequeueAfter: time.Minute}, patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectTerminating)
 		}
 	}
 
 	log.Info("Removing finalizer")
 	if err := controllerutils.RemoveFinalizers(ctx, r.Client, project, gardencorev1beta1.GardenerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		return false, reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 	}
 
-	return reconcile.Result{}, nil
+	return false, reconcile.Result{}, nil
 }
 
 func (r *Reconciler) releaseNamespace(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
