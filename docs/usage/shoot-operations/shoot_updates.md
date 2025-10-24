@@ -136,7 +136,7 @@ For scenarios where users want to retain the current nodes and avoid deletion du
 
 The existing workload is gracefully drained and evicted from the worker nodes, respecting the configured `PodDisruptionBudget`s (see [Specifying a Disruption Budget for your Application](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)).
 
-> ℹ️ Currently, `in-place` updates are controlled by the `InPlaceNodeUpdates` feature gate in the `gardener-apiserver`.
+> ℹ️ The `in-place` updates feature is controlled by the `InPlaceNodeUpdates` feature gate in the `gardener-apiserver`. This feature is currently in the `Alpha` stage and may introduce breaking changes in future releases. For more information, see [feature-usage](../../deployment/feature_gates.md).
 
 For in-place updates, the first requirement is that the operating system must support them. For a specific machine image version, the configuration for in-place updates must be defined in the `CloudProfile` under `spec.machineImages[].versions[].inPlaceUpdates`:
 - The `inPlaceUpdates.supported` field must be set to `true`.
@@ -200,15 +200,13 @@ The `inPlaceUpdates.pendingWorkerUpdates.autoInPlaceUpdate` field in the Shoot s
 #### Manual In-Place Updates
 
 The `ManualInPlaceUpdate` strategy allows users to control and orchestrate the update process manually.
-Set `.spec.provider.workers[].updateStrategy` field in the `Shoot` spec to `ManualInPlaceUpdate`.
+Set `.spec.provider.workers[].updateStrategy` field in the `Shoot` spec to `ManualInPlaceUpdate`. When doing this, do not set the `maxSurge` or `maxUnavailable` fields, as they do not apply to this update strategy.
 
 ```yaml
 spec:
   provider:
     workers:
     - name: cpu-worker
-      maxSurge: 0
-      maxUnavailable: 2
       updateStrategy: ManualInPlaceUpdate
 ```
 
