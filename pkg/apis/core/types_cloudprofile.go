@@ -173,14 +173,6 @@ type MachineType struct {
 	Capabilities Capabilities
 }
 
-// GetArchitecture returns the architecture of the machine type.
-func (m *MachineType) GetArchitecture() string {
-	if len(m.Capabilities[constants.ArchitectureName]) == 1 {
-		return m.Capabilities[constants.ArchitectureName][0]
-	}
-	return ptr.Deref(m.Architecture, "")
-}
-
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
 type MachineTypeStorage struct {
 	// Class is the class of the storage type.
@@ -331,4 +323,26 @@ type Capabilities map[string]CapabilityValues
 // This is a workaround as the Protobuf generator can't handle a slice of maps.
 type MachineImageFlavor struct {
 	Capabilities
+}
+
+// GetArchitecture returns the architecture of the machine type.
+func (m *MachineType) GetArchitecture(capabilityDefinitions []CapabilityDefinition) string {
+	capabilityArchitecture := GetCapabilitiesWithAppliedDefaults(m.Capabilities, capabilityDefinitions)[constants.ArchitectureName]
+	if len(capabilityArchitecture) == 1 {
+		return capabilityArchitecture[0]
+	}
+	return ptr.Deref(m.Architecture, "")
+}
+
+// GetCapabilitiesWithAppliedDefaults returns new capabilities with applied defaults from the capability definitions.
+func GetCapabilitiesWithAppliedDefaults(capabilities Capabilities, capabilityDefinitions []CapabilityDefinition) Capabilities {
+	result := make(Capabilities, len(capabilityDefinitions))
+	for _, capabilityDefinition := range capabilityDefinitions {
+		if values, ok := capabilities[capabilityDefinition.Name]; ok {
+			result[capabilityDefinition.Name] = values
+		} else {
+			result[capabilityDefinition.Name] = capabilityDefinition.Values
+		}
+	}
+	return result
 }
