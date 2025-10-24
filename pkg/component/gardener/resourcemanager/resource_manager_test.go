@@ -1316,7 +1316,7 @@ var _ = Describe("ResourceManager", func() {
 					ObjectSelector: &metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{
 							{
-								Key:      resourcesv1alpha1.VpaInPlaceOrRecreateUpdateModeSkip,
+								Key:      resourcesv1alpha1.VPAInPlaceOrRecreateUpdateModeSkip,
 								Operator: metav1.LabelSelectorOpDoesNotExist,
 							},
 						},
