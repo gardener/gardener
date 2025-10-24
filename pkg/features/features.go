@@ -77,7 +77,7 @@ const (
 
 	// VpaInPlaceOrRecreateUpdateMode enables the usage of in-place Pod resource updates in the Vertical Pod Autoscaler deployments.
 	// resources to perform in-place Pod resource updates.
-	// owner: @vitanovs
+	// owner: @vitanovs @ialidzhikov
 	// alpha: v1.128.0
 	VpaInPlaceOrRecreateUpdateMode featuregate.Feature = "VpaInPlaceOrRecreateUpdateMode"
 )
