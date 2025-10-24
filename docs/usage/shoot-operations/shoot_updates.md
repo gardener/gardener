@@ -200,7 +200,7 @@ The `inPlaceUpdates.pendingWorkerUpdates.autoInPlaceUpdate` field in the Shoot s
 #### Manual In-Place Updates
 
 The `ManualInPlaceUpdate` strategy allows users to control and orchestrate the update process manually.
-Set `.spec.provider.workers[].updateStrategy` field in the `Shoot` spec to `ManualInPlaceUpdate`. Also one should not set `maxSurge` and `maxUnavailable` fields as `maxSurge` defaults to `0` and `maxUnavailable` to `1`.
+Set `.spec.provider.workers[].updateStrategy` field in the `Shoot` spec to `ManualInPlaceUpdate`. When doing this, do not set the `maxSurge` or `maxUnavailable` fields, as they do not apply to this update strategy.
 
 ```yaml
 spec:
@@ -219,17 +219,6 @@ kubectl label node <node-name> node.machine.sapcloud.io/selected-for-update=true
 The `ManualInPlaceWorkersUpdated` [constraint](../shoot/shoot_status.md#constraints) in the shoot status indicates that at least one worker pool with the `ManualInPlaceUpdate` strategy is pending an update. Shoot reconciliation will still succeed even if there are worker pools pending updates.
 
 The `inPlaceUpdates.pendingWorkerUpdates.manualInPlaceUpdate` field in the `Shoot` status lists the names of worker pools that are pending updates with this strategy.
-
-#### Limitations when Configuring In-Place Updates via Gardener Dashboard
-
-As of now, the Gardener Dashboard's `Worker` panel does not provide an option to set the update strategy or automatically select it based on the chosen machine image. Historically, only the `AutoRollingUpdate` strategy was supported and set as the default for all worker pools. Future improvements, such as the introduction of [machine-image-capabilities](../../proposals/33-machine-image-capabilities.md), are expected to simplify update strategy configuration. Until then, consider the following when configuring in-place updates:
-
-- ##### Configuring In-Place Update for a New Shoot
-  When creating a new shoot, select a `Machine Image` that supports in-place updates in the `Worker` panel and set the desired min/max/surge values. Before saving, use the YAML editor to specify the `updateStrategy` as either `AutoInPlaceUpdate` or `ManualInPlaceUpdate`, following the recommendations outlined in the sections above.
-
-- ##### Configuring In-Place Update Strategy in an Existing Shoot
-  For existing shoots with already defined worker pools, update the relevant worker pool definitions directly in the YAML editor, adhering to the recommendations for each strategy type.  
-  > Note: When adding a new worker pool through the Worker Groups settings, the strategy defaults to `AutoRollingUpdate` and is saved automatically. This cannot be changed later to `[Auto|Manual]InPlaceUpdate` in the YAML editor, as transitioning from `AutoRollingUpdate` to an in-place update strategy is not allowed.
 
 ## Related Documentation
 
