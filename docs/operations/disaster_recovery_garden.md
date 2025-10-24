@@ -6,7 +6,7 @@ The primary goal is to minimize the impact on stakeholders and other components,
 ## Disclaimer
 
 > [!IMPORTANT]
-> The restoration process described here assumes that no other actors (like `gardener-operator`, `etcd-druid`, DNS,  etc.) which also existed in the previous runtime cluster are active anymore.
+> The restoration process described here assumes that no other actors (like `gardener-operator`, `etcd-druid`, DNS controller,  etc.) which also existed in the previous runtime cluster are active anymore.
 > It is crucial to ensure that these components are scaled down or disabled, for example by invalidating their credentials to avoid conflicts.
 
 ## Required Backup Components (Building Blocks)
@@ -52,7 +52,7 @@ Without them, data stored in `etcd` cannot be decrypted, leading to complete dat
 * `gardener-apiserver-etcd-encryption-key`
 * `gardener-apiserver-etcd-encryption-configuration`
 
-#### 2\. Manually-Rotated Certificate Authorities (CAs)
+#### 2. Manually-Rotated Certificate Authorities (CAs)
 
 The following CAs must be preserved:
 
@@ -63,7 +63,7 @@ The following CAs must be preserved:
 * `ca-gardener`
 * `ca-client`
 
-#### 3\. Signing Keys
+#### 3. Signing Keys
 
 * `service-account-key`
 * `gardener-apiserver-workload-identity-signing-key`
@@ -82,25 +82,51 @@ For a restore to succeed, these credentials must be valid and available in the n
 
 The following steps detail the restoration process.
 
-### Step 1: Create a Copy of ETCD Backups
+### Step 1: Shut down Actors in the previous Runtime Cluster
+
+To avoid any conflicts caused by actors still running in the previous runtime cluster, ensure that all relevant components are scaled down or disabled.
+
+If it is still possible, scale down the following `Deplyoments` in the `garden` namespace:
+* `gardener-operator`
+* `etcd-druid`
+* `gardener-resource-manager`
+* `gardener-apiserver`
+* `virtual-garden-kube-apiserver`
+
+If it is still possible, scale down the following `StatefulSets` in the `garden` namespace:
+* `virtual-garden-etcd-main`
+* `virtual-garden-etcd-events`
+
+If it is still possible, scale down the following `Deployments` in the `runtime-extension-provider-<infrastructure>` namespace, where `<infrastructure>` is the provider extension used to manage the `DNSRecord` resource:
+* `gardener-extension-provider-<infrastructure>`
+
+There might be a case, where scaling down is not possible anymore. In this case, ensure that the credentials used by these components are invalidated before continuity with the restore procedure.
+
+Specifically, invalidate the credentials referenced in the `garden` resource at:
+* `.spec.dns.providers[].secretRef.name`
+* `.spec.virtualCluster.etcd.main.backup.secretRef.name`
+
+This will ensure that these components cannot update external resources anymore.
+
+### Step 2: Create a Copy of ETCD Backups
 
 In order to avoid data loss due to mistakes, it is strongly recommended to create a copy of the `etcd` backup.
 This ensures that the restore procedure can be tried again with a pristine `etcd` backup in case of failure.
 
-### Step 2: Create a new Runtime Cluster
+### Step 3: Create a new Runtime Cluster
 
 Provision a new runtime cluster where the Garden cluster will be restored into.
 
-### Step 3: Adjust CIDRs
+### Step 4: Adjust CIDRs
 
 In case the new runtime cluster has different CIDRs than the previous one, the `Garden` resource must be adjusted accordingly before applying it to the new cluster.
 
-### Step 4: Deploy the `gardener-operator`
+### Step 5: Deploy the `gardener-operator`
 
 Deploy the `gardener-operator` into the new runtime cluster as described [here](../concepts/operator.md#deployment).
 Ensure that it is the same version as the one used in the previous cluster to avoid compatibility issues.
 
-### Step 5: Apply Backed-up Resources
+### Step 6: Apply Backed-up Resources
 
 1.  **Scale Down `gardener-operator`:** Scale down the `gardener-operator` deployment to prevent it from immediately reconciling a new `Garden` resource.
 2.  **Delete Webhooks:** Delete the [mutating](../concepts/operator.md#defaulting) and [validating](../concepts/operator.md#validation) webhooks registered for the `Garden` resource to unblock later operations. Both webhooks are named `gardener-operator`. Once the operator is scaled up, it will recreate them.
@@ -108,7 +134,7 @@ Ensure that it is the same version as the one used in the previous cluster to av
 4.  **Deploy Infrastructure Secrets:** Deploy valid infrastructure credentials (e.g., for DNS and `etcd` backup) into the new cluster.
 5.  **Apply `Garden` Resource:** Apply the backed-up **`Garden` resource** to the new cluster.
 
-### Step 6: Configure Credential Rotation Status
+### Step 7: Configure Credential Rotation Status
 
 This step is critical for `Garden` resources where credential rotation was in the **`Prepared`** phase.
 This ensures the `gardener-operator` takes the correct code path and can complete the rotation later.
@@ -142,7 +168,7 @@ credentials:
       phase: Prepared # Must be set if rotation was in Prepared phase
 ```
 
-### Step 7: Configure Encrypted Resources
+### Step 8: Configure Encrypted Resources
 
 If the `Garden` specifies **additional resources for encryption** in the spec, this must be reflected in the status **before the first reconciliation**.
 Failure to do so will make the `gardener-operator` assume that these resources were not yet encrypted.
@@ -156,12 +182,12 @@ In case the information is not present, it can be derived from the following fie
 
 Patching can be done with `kubectl edit garden <garden-name> --subresource=status` or by applying a yaml file with `kubectl apply -f <file> --subresource=status`.
 
-### Step 8: Start Restoration
+### Step 9: Start Restoration
 
 **Scale up `gardener-operator`:** Scale the `gardener-operator` deployment back up.
 It will now reconcile the `Garden` resource with the correct initial status.
 
-### Step 9: Restoring multi-member ETCD clusters (HA configuration)
+### Step 10: Restoring multi-member ETCD clusters (HA configuration)
 
 * For a Garden running with an **HA configuration**, restoring **the etcd cluster requires manual steps**.
 * Follow the specific procedure documented in the `etcd-druid` repository:
@@ -172,11 +198,11 @@ It will now reconcile the `Garden` resource with the correct initial status.
 
 ## Edge Cases and Special Considerations
 
-#### 1\. Restoring from Credentials Rotation Phase `Prepared`
+#### 1. Restoring from Credentials Rotation Phase `Prepared`
 
 When restoring from the `Prepared` phase, the secrets deployed in Step 1 will have two suffixes: the content hash and a second suffix indicating a non-empty `last-rotation-initiation-time` label.
 
-#### 2\. Restoring from Credentials Rotation Phase `Preparing`
+#### 2. Restoring from Credentials Rotation Phase `Preparing`
 
 If the cluster is being restored from the `Preparing` phase (meaning rotation was actively in progress but not yet completed), be extra careful.
 The encryption state of resources in **etcd** might require both the new and the old encryption keys to be available to the encryption configurations.
@@ -188,7 +214,7 @@ Whether this is the case or not depends on the time of the last successful backu
 
 See [Encryption At Rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/) for more details.
 
-#### 3\. Encryption Keys
+#### 3. Encryption Keys
 
 When performing a restore, ensure that the encryption keys and configurations deployed match the state that existed in the former runtime cluster.
 Mismatched keys or an incorrect rotation status can cause the `gardener-operator` to issue new encryption keys.
