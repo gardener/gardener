@@ -1000,6 +1000,8 @@ func commandForKubernetesVersion(
 		"--authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		"--authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+		"--kube-api-qps=100",
+		"--kube-api-burst=200",
 	)
 
 	if !isWorkerless {
