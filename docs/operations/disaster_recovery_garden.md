@@ -5,8 +5,9 @@ The primary goal is to minimize the impact on stakeholders and other components,
 
 ## Disclaimer
 
-The restoration process described here assumes that no other actors (like `gardener-operator`, `etcd-druid`, DNS,  etc.) which also existed in the previous runtime cluster are active anymore.
-It is crucial to ensure that these components are scaled down or disabled, for example by invalidating their credentials to avoid conflicts.
+> [!IMPORTANT]
+> The restoration process described here assumes that no other actors (like `gardener-operator`, `etcd-druid`, DNS,  etc.) which also existed in the previous runtime cluster are active anymore.
+> It is crucial to ensure that these components are scaled down or disabled, for example by invalidating their credentials to avoid conflicts.
 
 ## Required Backup Components (Building Blocks)
 
@@ -17,7 +18,9 @@ The following sections provides details for these components.
 
 The Garden cluster's ETCD is managed by `etcd-druid`, which can take care of performing continuous backups.
 This can be configured in the `garden` resource and is strongly recommended for any setup.
-**Without ETCD backups, a restore is not possible.**
+
+> [!IMPORTANT]
+> Without ETCD backups, a restore is not possible.
 
 Reference:
 - [Backup and Restore Concept](https://github.com/gardener/gardener/blob/master/docs/concepts/backup-restore.md)
@@ -39,7 +42,7 @@ These are stored as `secrets` in the **`garden` namespace** and their names are 
 
 Preserving the encryption keys is absolutely critical, while the other secrets are necessary to avoid invalidating existing credentials.
 
-#### 1\. Encryption Keys and Configurations
+#### 1. Encryption Keys and Configurations
 
 These exist separately for both the `kube-apiserver` and the `gardener-apiserver`.
 Without them, data stored in `etcd` cannot be decrypted, leading to complete data loss.
@@ -49,7 +52,7 @@ Without them, data stored in `etcd` cannot be decrypted, leading to complete dat
 * `gardener-apiserver-etcd-encryption-key`
 * `gardener-apiserver-etcd-encryption-configuration`
 
-#### 2\. Non-Auto-Rotated Certificate Authorities (CAs)
+#### 2\. Manually-Rotated Certificate Authorities (CAs)
 
 The following CAs must be preserved:
 
@@ -65,7 +68,8 @@ The following CAs must be preserved:
 * `service-account-key`
 * `gardener-apiserver-workload-identity-signing-key`
 
-**Note:** It is **not** necessary to store or restore secrets that have "bundle" in their name.
+> [!NOTE]
+> It is **not** necessary to store or restore secrets that have "bundle" in their name.
 
 ### Infrastructure Credentials
 
@@ -104,9 +108,9 @@ Ensure that it is the same version as the one used in the previous cluster to av
 4.  **Deploy Infrastructure Secrets:** Deploy valid infrastructure credentials (e.g., for DNS and `etcd` backup) into the new cluster.
 5.  **Apply Garden Resource:** Apply the backed-up **`Garden` resource** to the new cluster.
 
-### Step 6: Configure Credentials Rotation Status
+### Step 6: Configure Credential Rotation Status
 
-This step is critical for `Garden` resources where credentials rotation was in the **`Prepared`** phase.
+This step is critical for `Garden` resources where credential rotation was in the **`Prepared`** phase.
 This ensures the `gardener-operator` takes the correct code path and can complete the rotation later.
 
 Patch the **status subresource** of the garden resource with content similar to the snippet below, reflecting the last completed rotation steps.
@@ -179,7 +183,8 @@ The encryption state of resources in **etcd** might require both the new and the
 
 Whether this is the case or not depends on the time of the last successful backup of etcd data.
 
-Please note, there are always two encryption configurations: one for the `kube-apiserver` and one for the `gardener-apiserver`.
+> [!NOTE]
+> There are always two encryption configurations: one for the `kube-apiserver` and one for the `gardener-apiserver`.
 
 See [Encryption At Rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/) for more details.
 
@@ -190,8 +195,9 @@ Mismatched keys or an incorrect rotation status can cause the `gardener-operator
 This in turn will render existing data inaccessible.
 Depending on the conditions, it might also cause data in etcd to be encrypted with new keys, leading to permanent data loss.
 
-Therefore, it is strongly recommended to create a copy of the etcd backups before starting the restore procedure.
-Having the ability to retry the restore procedure with a pristine etcd backup is crucial in case of mistakes.
+> [!TIP]
+> Therefore, it is strongly recommended to create a copy of the etcd backups before starting the restore procedure.
+> Having the ability to retry the restore procedure with a pristine etcd backup is crucial in case of mistakes.
 
 ## Testing Locally
 
@@ -214,7 +220,7 @@ Depending on the testcases which should be covered, trigger a credentials rotati
 Finally, create a `ServiceAccount` in the virtual Garden cluster and have the API server issue a token for it.
 
 ```console
-kubectl create token <service-account-name> -n <namespace> --duration=24h>
+kubectl create token <service-account-name> -n <namespace> --duration=24h
 ```
 
 Store the token into a [kubeconfig file](https://kubernetes.io/docs/reference/config-api/kubeconfig.v1/#AuthInfo) and test, that it can be used to access the virtual Garden cluster.
