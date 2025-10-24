@@ -48,7 +48,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.Config.SyncPeriod.Duration),
+			RateLimiter:           workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.Config.SyncPeriod.Duration),
+			ReconciliationTimeout: r.Config.SyncPeriod.Duration,
 		}).
 		WatchesRawSource(source.Kind[client.Object](
 			gardenCluster.GetCache(),

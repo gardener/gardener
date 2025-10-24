@@ -60,6 +60,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, virtualCluster cluster.Cl
 				workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](),
 				r.Config.Controllers.ExtensionCare.SyncPeriod.Duration,
 			),
+			ReconciliationTimeout: r.Config.Controllers.ExtensionCare.SyncPeriod.Duration,
 		}).
 		Watches(
 			&operatorv1alpha1.Extension{},

@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
@@ -66,7 +67,10 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 			handler.EnqueueRequestsFromMapFunc(r.NodeToSecretMapper()),
 			builder.WithPredicates(r.NodeReadyForUpdate()),
 		).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 1,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
+		}).
 		Complete(r)
 }
 

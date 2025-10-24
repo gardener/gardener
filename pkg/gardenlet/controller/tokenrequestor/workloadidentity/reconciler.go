@@ -23,7 +23,6 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
-	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 const (
@@ -42,11 +41,8 @@ type Reconciler struct {
 }
 
 // Reconcile requests and populates tokens.
-func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := logf.FromContext(reconcileCtx)
-
-	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, controllerutils.DefaultReconciliationTimeout)
-	defer cancel()
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
 
 	secret := &corev1.Secret{}
 	if err := r.SeedClient.Get(ctx, req.NamespacedName, secret); err != nil {

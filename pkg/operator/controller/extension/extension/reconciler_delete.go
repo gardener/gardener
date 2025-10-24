@@ -16,7 +16,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
@@ -29,9 +28,6 @@ func (r *Reconciler) delete(
 	reconcile.Result,
 	error,
 ) {
-	deleteCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
-	defer cancel()
-
 	var (
 		reconcileResult reconcile.Result
 		g               = flow.NewGraph("Extension deletion")
@@ -62,7 +58,7 @@ func (r *Reconciler) delete(
 
 	conditions := NewConditions(r.Clock, extension.Status)
 
-	if err := g.Compile().Run(deleteCtx, flow.Opts{
+	if err := g.Compile().Run(ctx, flow.Opts{
 		Log: log,
 	}); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ReasonDeleteFailed, err.Error())

@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -29,6 +30,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&certificatesv1.CertificateSigningRequest{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Complete(r)
 }

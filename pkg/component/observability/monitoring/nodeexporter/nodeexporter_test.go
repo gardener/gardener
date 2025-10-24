@@ -270,7 +270,6 @@ var _ = Describe("NodeExporter", func() {
 automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
-  creationTimestamp: null
   labels:
     component: node-exporter
   name: node-exporter
@@ -279,7 +278,6 @@ metadata:
 			serviceYAML = `apiVersion: v1
 kind: Service
 metadata:
-  creationTimestamp: null
   labels:
     component: node-exporter
   name: node-exporter
@@ -300,7 +298,6 @@ status:
 			daemonSetYAML = `apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  creationTimestamp: null
   labels:
     component: node-exporter
     gardener.cloud/role: monitoring
@@ -314,7 +311,6 @@ spec:
       component: node-exporter
   template:
     metadata:
-      creationTimestamp: null
       labels:
         component: node-exporter
         gardener.cloud/role: monitoring
@@ -411,7 +407,6 @@ status:
 			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  creationTimestamp: null
   name: node-exporter
   namespace: kube-system
 spec:

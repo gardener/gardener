@@ -33,6 +33,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			ReconciliationTimeout:   r.Config.SyncPeriod.Duration,
 		}).
 		Complete(r)
 }

@@ -406,7 +406,6 @@ var _ = Describe("MachineControllerManager", func() {
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:target:machine-controller-manager
 rules:
 - apiGroups:
@@ -485,7 +484,6 @@ rules:
 		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:target:machine-controller-manager
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -500,7 +498,6 @@ subjects:
 		roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:target:machine-controller-manager
   namespace: kube-system
 rules:
@@ -518,7 +515,6 @@ rules:
 		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:target:machine-controller-manager
   namespace: kube-system
 roleRef:

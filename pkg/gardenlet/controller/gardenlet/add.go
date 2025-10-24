@@ -70,6 +70,7 @@ func (r *Reconciler) AddToManager(
 			// There can only be one Gardenlet object relevant for an instance of gardenlet, so it's enough to have one
 			// worker only.
 			MaxConcurrentReconciles: 1,
+			ReconciliationTimeout:   r.Config.Controllers.Gardenlet.SyncPeriod.Duration,
 		}).
 		WatchesRawSource(source.Kind[client.Object](
 			gardenCluster.GetCache(),

@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 )
 
@@ -40,7 +41,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		WithOptions(controller.Options{MaxConcurrentReconciles: *r.Config.ConcurrentSyncs}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: *r.Config.ConcurrentSyncs,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
+		}).
 		WatchesRawSource(source.Kind[client.Object](
 			seedCluster.GetCache(),
 			&extensionsv1alpha1.Worker{},

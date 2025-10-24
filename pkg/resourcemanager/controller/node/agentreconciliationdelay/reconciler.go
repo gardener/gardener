@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -34,11 +33,8 @@ type Reconciler struct {
 // Reconcile computes a time.Duration that can be used to delay reconciliations by using a simple linear mapping
 // approach based on the indices of the nodes in the list of all nodes in the cluster. This way, the delays of all
 // instances of gardener-node-agent are distributed evenly.
-func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request) (reconcile.Result, error) {
-	log := logf.FromContext(reconcileCtx)
-
-	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, controllerutils.DefaultReconciliationTimeout)
-	defer cancel()
+func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
 
 	nodeList := &corev1.NodeList{}
 	if err := r.TargetClient.List(ctx, nodeList); err != nil {

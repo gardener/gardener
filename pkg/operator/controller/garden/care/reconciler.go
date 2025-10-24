@@ -46,11 +46,6 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(reconcileCtx)
 
-	// Timeout for all calls (e.g. status updates), give status updates a bit of headroom if health checks
-	// themselves run into timeouts, so that we will still update the status with that timeout error.
-	reconcileCtx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, r.Config.Controllers.GardenCare.SyncPeriod.Duration)
-	defer cancel()
-
 	garden := &operatorv1alpha1.Garden{}
 	if err := r.RuntimeClient.Get(reconcileCtx, req.NamespacedName, garden); err != nil {
 		if apierrors.IsNotFound(err) {

@@ -47,12 +47,6 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	// timeout for all calls (e.g. status updates), give status updates a bit of headroom if health checks
-	// themselves run into timeouts, so that we will still update the status with that timeout error
-	var cancel context.CancelFunc
-	ctx, cancel = controllerutils.GetMainReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
-	defer cancel()
-
 	mr := &resourcesv1alpha1.ManagedResource{}
 	if err := r.SourceClient.Get(ctx, req.NamespacedName, mr); err != nil {
 		if apierrors.IsNotFound(err) {

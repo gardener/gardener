@@ -692,7 +692,7 @@ var _ = Describe("ManagedSeed", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
-						"Detail": ContainSubstring("[]string{\"foo\", \"bar\"}: cannot use zone in seed provider that is not available in referenced shoot"),
+						"Detail": ContainSubstring("[\"foo\",\"bar\"]: cannot use zone in seed provider that is not available in referenced shoot"),
 					})),
 				))
 			})
@@ -911,7 +911,7 @@ var _ = Describe("ManagedSeed", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
-							"Detail": ContainSubstring("[]string{\"zone-foobar\"}: added zones must match zone names configured for workers in the referenced shoot cluster"),
+							"Detail": ContainSubstring("[\"zone-foobar\"]: added zones must match zone names configured for workers in the referenced shoot cluster"),
 						})),
 					))
 				})

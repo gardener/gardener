@@ -19,6 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // ControllerName is the name of this controller.
@@ -53,7 +55,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, channel <-chan event.Type
 		WatchesRawSource(
 			source.TypedChannel(channel, r.EventHandler()),
 		).
-		WithOptions(controller.Options{MaxConcurrentReconciles: len(r.Config.SyncConfigs)}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: len(r.Config.SyncConfigs),
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
+		}).
 		Complete(r)
 }
 
