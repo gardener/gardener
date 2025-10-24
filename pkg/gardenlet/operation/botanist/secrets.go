@@ -122,7 +122,23 @@ func (b *Botanist) restoreSecretsFromShootState(ctx context.Context) error {
 				return err
 			}
 
-			secret := secretsmanager.Secret(objectMeta, data)
+			var secret *corev1.Secret
+			if objectMeta.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager {
+				secret = secretsmanager.Secret(objectMeta, data)
+			} else {
+				// TODO(plkokanov): Add ability to also restore the secret's immutability and type from the `ShootState`.
+				// For secrets that have the `managed-by: secrets-manager` label this information is inferred from the
+				// secret data and handled by the `secretsmanager.Secret(objectMeta, data)` function above.
+				// Currently only opaque secrets that do not have the `managed-by: secrets-manager` are expected to be persisted and restored.
+				// For more details, see https://github.com/gardener/gardener/issues/13262.
+				// Note that the e2e and testmachinery tests, check that the restored type and immutability matches the original.
+				secret = &corev1.Secret{
+					ObjectMeta: objectMeta,
+					Data:       data,
+					Type:       corev1.SecretTypeOpaque,
+				}
+			}
+
 			return client.IgnoreAlreadyExists(b.SeedClientSet.Client().Create(ctx, secret))
 		})
 	}
