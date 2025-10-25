@@ -487,16 +487,22 @@ var _ = Describe("Secrets", func() {
 				By("Verify non-CA secrets got restored")
 				secret := &corev1.Secret{}
 				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "non-ca-secret"}, secret)).To(Succeed())
+				Expect(secret.Immutable).To(PointTo(BeTrue()))
+				Expect(secret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity}))
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
 				By("Verify external secrets got restored")
 				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "extension-foo-secret"}, secret)).To(Succeed())
+				Expect(secret.Immutable).To(PointTo(BeTrue()))
+				Expect(secret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager", "manager-identity": "extension-foo"}))
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
 				By("Verify secret without labels got restored")
 				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "secret-without-labels"}, secret)).To(Succeed())
+				Expect(secret.Immutable).To(BeNil())
+				Expect(secret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(secret.Labels).To(BeEmpty())
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
@@ -509,6 +515,7 @@ var _ = Describe("Secrets", func() {
 
 func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.GomegaMatcher) {
 	ExpectWithOffset(1, secret.Immutable).To(PointTo(BeTrue()))
+	ExpectWithOffset(1, secret.Type).To(Equal(corev1.SecretTypeOpaque))
 	ExpectWithOffset(1, secret.Labels).To(And(
 		HaveKeyWithValue("name", name),
 		HaveKeyWithValue("managed-by", "secrets-manager"),
