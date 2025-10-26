@@ -71,6 +71,7 @@ var _ = Describe("Access", func() {
 				Name: "gardener.cloud:system:viewers",
 				Annotations: map[string]string{
 					"resources.gardener.cloud/delete-on-invalid-update": "true",
+					"resources.gardener.cloud/keep-object":              "true",
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -90,6 +91,7 @@ var _ = Describe("Access", func() {
 				Name: "gardener.cloud:project:viewers",
 				Annotations: map[string]string{
 					"resources.gardener.cloud/delete-on-invalid-update": "true",
+					"resources.gardener.cloud/keep-object":              "true",
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -109,6 +111,7 @@ var _ = Describe("Access", func() {
 				Name: "gardener.cloud:system:admins",
 				Annotations: map[string]string{
 					"resources.gardener.cloud/delete-on-invalid-update": "true",
+					"resources.gardener.cloud/keep-object":              "true",
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -128,6 +131,7 @@ var _ = Describe("Access", func() {
 				Name: "gardener.cloud:project:admins",
 				Annotations: map[string]string{
 					"resources.gardener.cloud/delete-on-invalid-update": "true",
+					"resources.gardener.cloud/keep-object":              "true",
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
