@@ -168,8 +168,11 @@ func adminClusterRoleBindings() []client.Object {
 	return []client.Object{
 		&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.ShootSystemAdminsGroupName,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+				Name: v1beta1constants.ShootSystemAdminsGroupName,
+				Annotations: map[string]string{
+					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+					resourcesv1alpha1.KeepObject:            "true", // TODO(vpnachev): Remove the keep-object annotation after v1.132.0 is released.
+				},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -184,8 +187,11 @@ func adminClusterRoleBindings() []client.Object {
 		},
 		&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.ShootProjectAdminsGroupName,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+				Name: v1beta1constants.ShootProjectAdminsGroupName,
+				Annotations: map[string]string{
+					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+					resourcesv1alpha1.KeepObject:            "true", // TODO(vpnachev): Remove the keep-object annotation after v1.132.0 is released.
+				},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -206,8 +212,11 @@ func viewerClusterRoleBindings() []client.Object {
 	return []client.Object{
 		&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.ShootSystemViewersGroupName,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+				Name: v1beta1constants.ShootSystemViewersGroupName,
+				Annotations: map[string]string{
+					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+					resourcesv1alpha1.KeepObject:            "true", // TODO(vpnachev): Remove the keep-object annotation after v1.132.0 is released.
+				},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -222,8 +231,11 @@ func viewerClusterRoleBindings() []client.Object {
 		},
 		&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.ShootProjectViewersGroupName,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+				Name: v1beta1constants.ShootProjectViewersGroupName,
+				Annotations: map[string]string{
+					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+					resourcesv1alpha1.KeepObject:            "true", // TODO(vpnachev): Remove the keep-object annotation after v1.132.0 is released.
+				},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
