@@ -146,7 +146,7 @@ var _ = Describe("ResourceManager", func() {
 			Expect(resourceManager.GetValues().NodeAgentAuthorizerAuthorizeWithSelectors).To(PointTo(Equal(true)))
 		})
 
-		FWhen("VPAInPlaceUpdates feature gate is enabled", func() {
+		When("VPAInPlaceUpdates feature gate is enabled", func() {
 			BeforeEach(func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VPAInPlaceUpdates, true))
 			})
