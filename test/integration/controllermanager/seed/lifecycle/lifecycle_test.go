@@ -168,7 +168,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 			By("Add GardenletReady condition to Seed")
 			patch := client.MergeFrom(seed.DeepCopy())
 			seed.Status.Conditions = []gardencorev1beta1.Condition{{
-				Type:               gardencorev1beta1.SeedGardenletReady,
+				Type:               gardencorev1beta1.GardenletReady,
 				Status:             gardencorev1beta1.ConditionTrue,
 				LastTransitionTime: metav1.Time{Time: fakeClock.Now().Add(-24 * time.Hour)},
 			}}

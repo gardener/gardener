@@ -240,7 +240,7 @@ var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 		destinationSeed.Status.Gardener = sourceSeed.Status.Gardener
 		destinationSeed.Status.ObservedGeneration = destinationSeed.Generation
 		destinationSeed.Status.Conditions = []gardencorev1beta1.Condition{
-			{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+			{Type: gardencorev1beta1.GardenletReady, Status: gardencorev1beta1.ConditionTrue},
 			{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 		}
 		Expect(testClient.Status().Update(ctx, destinationSeed)).To(Succeed())

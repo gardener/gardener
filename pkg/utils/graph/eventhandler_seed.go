@@ -52,7 +52,7 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) err
 				g.handleSeedCreateOrUpdate(newSeed)
 			}
 
-			newGardenletReadyCondition := v1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
+			newGardenletReadyCondition := v1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.GardenletReady)
 
 			// When the GardenletReady condition transitions to 'Unknown' then the client certificate might be expired.
 			// Hence, check if seed belongs to a ManagedSeed and reconcile it to potentially allow re-bootstrapping it.

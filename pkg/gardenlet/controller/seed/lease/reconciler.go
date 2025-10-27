@@ -108,12 +108,12 @@ func (r *Reconciler) renewLeaseForSeed(ctx context.Context, seed *gardencorev1be
 }
 
 func (r *Reconciler) maintainGardenletReadyCondition(ctx context.Context, seed *gardencorev1beta1.Seed) error {
-	bldr, err := helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
+	bldr, err := helper.NewConditionBuilder(gardencorev1beta1.GardenletReady)
 	if err != nil {
 		return err
 	}
 
-	if oldCondition := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady); oldCondition != nil {
+	if oldCondition := helper.GetCondition(r.GetObjectConditions(obj), gardencorev1beta1.GardenletReady); oldCondition != nil {
 		bldr.WithOldCondition(*oldCondition)
 	}
 	bldr.WithStatus(gardencorev1beta1.ConditionTrue)

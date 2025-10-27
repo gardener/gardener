@@ -634,7 +634,7 @@ func verifySeedReadiness(seed *gardencorev1beta1.Seed) bool {
 		return false
 	}
 
-	if cond := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
+	if cond := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.GardenletReady); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
 		return false
 	}
 

@@ -75,12 +75,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	log.Info("Setting Seed status to 'Unknown' as gardenlet stopped reporting seed status")
 
-	bldr, err := v1beta1helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
+	bldr, err := v1beta1helper.NewConditionBuilder(gardencorev1beta1.GardenletReady)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	conditionGardenletReady := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
+	conditionGardenletReady := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.GardenletReady)
 	if conditionGardenletReady != nil {
 		bldr.WithOldCondition(*conditionGardenletReady)
 	}

@@ -160,7 +160,7 @@ var _ = Describe("Replica", func() {
 			var conditions []gardencorev1beta1.Condition
 			if gardenletReady {
 				conditions = append(conditions, gardencorev1beta1.Condition{
-					Type:   gardencorev1beta1.SeedGardenletReady,
+					Type:   gardencorev1beta1.GardenletReady,
 					Status: gardencorev1beta1.ConditionTrue,
 				})
 			}

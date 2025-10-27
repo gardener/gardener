@@ -81,7 +81,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Status: gardencorev1beta1.SeedStatus{
 				Conditions: []gardencorev1beta1.Condition{
 					{
-						Type:   gardencorev1beta1.SeedGardenletReady,
+						Type:   gardencorev1beta1.GardenletReady,
 						Status: gardencorev1beta1.ConditionTrue,
 					},
 				},
@@ -871,7 +871,7 @@ var _ = Describe("Scheduler_Control", func() {
 		It("should fail because it cannot find a seed cluster due to gardenlet not ready", func() {
 			seed.Status.Conditions = []gardencorev1beta1.Condition{
 				{
-					Type:   gardencorev1beta1.SeedGardenletReady,
+					Type:   gardencorev1beta1.GardenletReady,
 					Status: gardencorev1beta1.ConditionFalse,
 				},
 			}
@@ -1139,7 +1139,7 @@ var _ = DescribeTable("condition is false",
 			},
 			Status: gardencorev1beta1.SeedStatus{
 				Conditions: []gardencorev1beta1.Condition{
-					{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.GardenletReady, Status: gardencorev1beta1.ConditionTrue},
 					{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
 					{Type: gardencorev1beta1.SeedExtensionsReady, Status: gardencorev1beta1.ConditionTrue},
 				},
@@ -1161,8 +1161,8 @@ var _ = DescribeTable("condition is false",
 		Expect(verifySeedReadiness(seed)).To(expected)
 	},
 
-	Entry("SeedGardenletReady is missing", gardencorev1beta1.SeedGardenletReady, true, true, BeFalse()),
-	Entry("SeedGardenletReady is false", gardencorev1beta1.SeedGardenletReady, false, true, BeFalse()),
+	Entry("GardenletReady is missing", gardencorev1beta1.GardenletReady, true, true, BeFalse()),
+	Entry("GardenletReady is false", gardencorev1beta1.GardenletReady, false, true, BeFalse()),
 	Entry("SeedBackupBucketsReady is missing", gardencorev1beta1.SeedBackupBucketsReady, true, true, BeFalse()),
 	Entry("SeedBackupBucketsReady is missing but no backup specified", gardencorev1beta1.SeedBackupBucketsReady, true, false, BeTrue()),
 	Entry("SeedBackupBucketsReady is false", gardencorev1beta1.SeedBackupBucketsReady, false, true, BeFalse()),

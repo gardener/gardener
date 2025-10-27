@@ -46,7 +46,7 @@ var _ = Describe("Seed lease controller tests", func() {
 		By("Ensure GardenletReady condition was maintained")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-			g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady), WithStatus(gardencorev1beta1.ConditionTrue)))
+			g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.GardenletReady), WithStatus(gardencorev1beta1.ConditionTrue)))
 		}).Should(Succeed())
 
 		By("Step clock")
@@ -84,7 +84,7 @@ var _ = Describe("Seed lease controller tests", func() {
 		By("Ensure GardenletReady condition was maintained")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-			g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady), WithStatus(gardencorev1beta1.ConditionTrue)))
+			g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.GardenletReady), WithStatus(gardencorev1beta1.ConditionTrue)))
 		}).Should(Succeed())
 
 		By("Ensure seed connection fails")
