@@ -347,6 +347,10 @@ type SeedSettingLoadBalancerServices struct {
 	// Defaults to true.
 	// +optional
 	ZonalIngress *SeedSettingLoadBalancerServicesZonalIngress `json:"zonalIngress,omitempty" protobuf:"bytes,5,opt,name=zonalIngress"`
+	// Class configures the Service.spec.loadBalancerClass field for the load balancer services on the seed.
+	// Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.
+	// +optional
+	Class *string `json:"class,omitempty" protobuf:"bytes,6,opt,name=class"`
 }
 
 // SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
