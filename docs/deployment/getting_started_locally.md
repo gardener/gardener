@@ -252,6 +252,8 @@ cat <<EOF | sudo tee -a /etc/hosts
 # E2E tests
 172.18.255.1 api.e2e-managedseed.garden.external.local.gardener.cloud
 172.18.255.1 api.e2e-managedseed.garden.internal.local.gardener.cloud
+172.18.255.1 api.e2e-prom-ms.garden.external.local.gardener.cloud
+172.18.255.1 api.e2e-prom-ms.garden.internal.local.gardener.cloud
 172.18.255.1 api.e2e-hib.local.external.local.gardener.cloud
 172.18.255.1 api.e2e-hib.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-hib-wl.local.external.local.gardener.cloud

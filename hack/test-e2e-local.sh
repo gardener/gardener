@@ -67,6 +67,7 @@ case $TYPE in
     seed_name="local"
     shoot_names=(
       e2e-managedseed.garden
+      e2e-prom-ms.garden
       e2e-hib.local
       e2e-hib-wl.local
       e2e-unpriv.local
