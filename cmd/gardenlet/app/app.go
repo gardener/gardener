@@ -368,6 +368,10 @@ func (g *garden) Start(ctx context.Context) error {
 						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenlet.ResourcePrefixSelfHostedShoot + g.selfHostedShootMeta.Name}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootMeta.Namespace: {}},
 					},
+					&coordinationv1.Lease{}: {
+						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenlet.ResourcePrefixSelfHostedShoot + g.selfHostedShootMeta.Name}),
+						Namespaces: map[string]cache.Config{g.selfHostedShootMeta.Namespace: {}},
+					},
 				}
 
 				return kubernetes.AggregatorCacheFunc(

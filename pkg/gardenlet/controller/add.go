@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/lease"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/tokenrequestor/workloadidentity"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -86,6 +87,11 @@ func AddToManager(
 			Config: *cfg,
 		}).AddToManager(mgr, gardenCluster, seedClientSet); err != nil {
 			return fmt.Errorf("failed adding Gardenlet controller: %w", err)
+		}
+
+		// TODO(rfranzke): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
+		if err := lease.AddToManager(mgr, gardenCluster, seedClientSet.RESTClient(), healthManager, nil); err != nil {
+			return fmt.Errorf("failed adding shoot-lease reconciler: %w", err)
 		}
 
 		return nil
