@@ -36,3 +36,4 @@ gardenadm token generate
 ### SEE ALSO
 
 * [gardenadm token](gardenadm_token.md)	 - Manage bootstrap and discovery tokens for gardenadm join
+

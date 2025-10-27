@@ -41,3 +41,4 @@ gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --gardener-n
 ### SEE ALSO
 
 * [gardenadm](gardenadm.md)	 - gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener project.
+

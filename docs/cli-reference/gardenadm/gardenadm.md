@@ -19,3 +19,4 @@ gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener proj
 * [gardenadm join](gardenadm_join.md)	 - Bootstrap worker nodes and join them to the cluster
 * [gardenadm token](gardenadm_token.md)	 - Manage bootstrap and discovery tokens for gardenadm join
 * [gardenadm version](gardenadm_version.md)	 - Print the client version information
+

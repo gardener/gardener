@@ -26,3 +26,4 @@ Manage bootstrap and discovery tokens for gardenadm join
 * [gardenadm token delete](gardenadm_token_delete.md)	 - Delete one or more bootstrap tokens from the cluster
 * [gardenadm token generate](gardenadm_token_generate.md)	 - Generate a random bootstrap token for joining a node
 * [gardenadm token list](gardenadm_token_list.md)	 - Display a list of all bootstrap tokens available on the cluster.
+

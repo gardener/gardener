@@ -37,3 +37,4 @@ gardenadm bootstrap --config-dir /path/to/manifests
 ### SEE ALSO
 
 * [gardenadm](gardenadm.md)	 - gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener project.
+
