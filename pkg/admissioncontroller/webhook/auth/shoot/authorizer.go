@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-logr/logr"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,6 +63,7 @@ var (
 	eventCoreResource                 = corev1.Resource("events")
 	eventResource                     = eventsv1.Resource("events")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
+	leaseResource                     = coordinationv1.Resource("leases")
 	projectResource                   = gardencorev1beta1.Resource("projects")
 	secretResource                    = corev1.Resource("secrets")
 	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
@@ -119,6 +121,9 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 				authwebhook.WithFieldSelectors(map[string]string{metav1.ObjectNameField: gardenletutils.ResourcePrefixSelfHostedShoot + requestAuthorizer.ToName}),
 			)
 
+		case leaseResource:
+			return a.authorizeLease(requestAuthorizer, attrs)
+
 		case secretResource:
 			return a.authorizeSecret(ctx, requestAuthorizer, attrs)
 
@@ -131,7 +136,8 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			}
 
 			return requestAuthorizer.Check(graph.VertexTypeShoot, attrs,
-				authwebhook.WithAllowedVerbs("get", "list", "watch"),
+				authwebhook.WithAllowedVerbs("update", "patch"),
+				authwebhook.WithAllowedSubresources("status"),
 			)
 
 		default:
@@ -158,6 +164,21 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 	}
 
 	return auth.DecisionAllow, "", nil
+}
+
+func (a *authorizer) authorizeLease(requestAuthorizer *authwebhook.RequestAuthorizer, attrs auth.Attributes) (auth.Decision, string, error) {
+	// This is needed if the shoot cluster is a garden cluster at the same time.
+	if attrs.GetName() == "gardenlet-leader-election" && attrs.GetNamespace() == metav1.NamespaceSystem {
+		if ok, reason := authwebhook.CheckVerb(requestAuthorizer.Log, attrs, "create", "get", "list", "update", "watch"); !ok {
+			return auth.DecisionNoOpinion, reason, nil
+		}
+		return auth.DecisionAllow, "", nil
+	}
+
+	return requestAuthorizer.Check(graph.VertexTypeLease, attrs,
+		authwebhook.WithAllowedVerbs("get", "update", "patch", "list", "watch"),
+		authwebhook.WithAlwaysAllowedVerbs("create"),
+	)
 }
 
 func (a *authorizer) authorizeSecret(ctx context.Context, requestAuthorizer *authwebhook.RequestAuthorizer, attrs auth.Attributes) (auth.Decision, string, error) {

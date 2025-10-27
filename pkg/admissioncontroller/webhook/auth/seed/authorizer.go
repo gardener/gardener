@@ -295,8 +295,10 @@ func (a *authorizer) authorizeLease(requestAuthorizer *authwebhook.RequestAuthor
 	}
 
 	// This is needed if the seed cluster is a garden cluster at the same time.
-	if attrs.GetName() == "gardenlet-leader-election" &&
-		slices.Contains([]string{"create", "get", "list", "watch", "update"}, attrs.GetVerb()) {
+	if attrs.GetName() == "gardenlet-leader-election" {
+		if ok, reason := authwebhook.CheckVerb(requestAuthorizer.Log, attrs, "create", "get", "list", "update", "watch"); !ok {
+			return auth.DecisionNoOpinion, reason, nil
+		}
 		return auth.DecisionAllow, "", nil
 	}
 

@@ -2406,6 +2406,44 @@ var _ = Describe("Seed", func() {
 					}
 				})
 
+				When("resource is gardenlet's leader election lease", func() {
+					BeforeEach(func() {
+						attrs.Name = "gardenlet-leader-election"
+					})
+
+					DescribeTable("should allow without consulting the graph for allowed verbs",
+						func(verb string) {
+							attrs.Verb = verb
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						},
+
+						Entry("create", "create"),
+						Entry("get", "get"),
+						Entry("list", "list"),
+						Entry("watch", "watch"),
+						Entry("update", "update"),
+					)
+
+					DescribeTable("should deny without consulting the graph for disallowed verbs",
+						func(verb string) {
+							attrs.Verb = verb
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get list update watch]"))
+						},
+
+						Entry("patch", "patch"),
+						Entry("delete", "delete"),
+						Entry("deletecollection", "deletecollection"),
+					)
+				})
+
 				DescribeTable("should allow without consulting the graph because verb is create",
 					func(verb string) {
 						attrs.Verb = verb
