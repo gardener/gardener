@@ -11,6 +11,7 @@ import (
 	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -190,6 +191,15 @@ func (shootStrategy) Canonicalize(obj runtime.Object) {
 		shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete = nil
 	}
 	gardenerutils.MaintainSeedNameLabels(shoot, shoot.Spec.SeedName, shoot.Status.SeedName)
+	maintainIsSelfHostedLabel(shoot)
+}
+
+func maintainIsSelfHostedLabel(shoot *core.Shoot) {
+	if !gardencorehelper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		delete(shoot.Labels, v1beta1constants.ShootIsSelfHosted)
+	} else {
+		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootIsSelfHosted, "true")
+	}
 }
 
 func (shootStrategy) AllowCreateOnUpdate() bool {

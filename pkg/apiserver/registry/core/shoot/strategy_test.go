@@ -667,6 +667,26 @@ var _ = Describe("Strategy", func() {
 				Expect(shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(BeNil())
 			})
 		})
+
+		Context("self-hosted shoots", func() {
+			It("should correctly add the self-hosted label", func() {
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{ControlPlane: &core.WorkerControlPlane{}})
+
+				strategy.Canonicalize(shoot)
+
+				Expect(shoot.Labels).To(Equal(map[string]string{
+					"shoot.gardener.cloud/is-self-hosted": "true",
+				}))
+			})
+
+			It("should correctly remove the self-hosted label", func() {
+				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "shoot.gardener.cloud/is-self-hosted", "true")
+
+				strategy.Canonicalize(shoot)
+
+				Expect(shoot.Labels).To(BeEmpty())
+			})
+		})
 	})
 
 	Context("BindingStrategy", func() {

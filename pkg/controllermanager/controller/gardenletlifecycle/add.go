@@ -6,7 +6,9 @@ package gardenletlifecycle
 
 import (
 	"context"
+	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
@@ -17,9 +19,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -42,12 +46,16 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Clock = clock.RealClock{}
 	}
 
+	shootIsSelfHostedPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.ShootIsSelfHosted: "true"}})
+	if err != nil {
+		return fmt.Errorf("failed computing shoot-is-self-hosted predicate: %w", err)
+	}
+
 	return builder.
 		TypedControllerManagedBy[Request](mgr).
 		Named(ControllerName).
 		Watches(&gardencorev1beta1.Seed{}, r.EventHandler(), builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
-		// TODO(rfranzke): In the next commit, we add a predicate that filters for self-hosted shoots only.
-		Watches(&gardencorev1beta1.Shoot{}, r.EventHandler(), builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
+		Watches(&gardencorev1beta1.Shoot{}, r.EventHandler(), builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create), shootIsSelfHostedPredicate)).
 		WithOptions(controller.TypedOptions[Request]{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			ReconciliationTimeout:   r.Config.SyncPeriod.Duration,
