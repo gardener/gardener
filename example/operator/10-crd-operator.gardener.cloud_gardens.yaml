@@ -802,7 +802,8 @@ spec:
                                       type: array
                                     count:
                                       description: Count specifies the maximum number
-                                        of resources of the given kind.
+                                        of resources of the given kind. Only cluster-scoped
+                                        resources are considered.
                                       format: int64
                                       type: integer
                                     resources:

@@ -2943,7 +2943,7 @@ int64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Count specifies the maximum number of resources of the given kind.</p>
+<p>Count specifies the maximum number of resources of the given kind. Only cluster-scoped resources are considered.</p>
 </td>
 </tr>
 </tbody>
