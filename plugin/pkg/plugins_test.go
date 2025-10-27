@@ -13,9 +13,9 @@ import (
 	. "github.com/gardener/gardener/plugin/pkg"
 )
 
-var _ = Describe("AllPluginNames", func() {
+var _ = Describe("AllOrderedPluginNames", func() {
 	It("must end with specific plugins", func() {
 		// it's important for these admission plugins to be invoked at the end, ensure correct order here
-		Expect(strings.Join(AllPluginNames(), ",")).To(HaveSuffix(",MutatingAdmissionPolicy,MutatingAdmissionWebhook,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook,ResourceQuota"))
+		Expect(strings.Join(AllOrderedPluginNames(), ",")).To(HaveSuffix(",MutatingAdmissionPolicy,MutatingAdmissionWebhook,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook,ResourceQuota"))
 	})
 })

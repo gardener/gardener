@@ -12,7 +12,7 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 )
 
-var _ = Describe("AllPluginNames", func() {
+var _ = Describe("AllOrderedPluginNames", func() {
 	It("expects default plugins", func() {
 		// if this test breaks, the default admission plugins in the API server library have changed
 		admissionOpts := genericoptions.NewAdmissionOptions()

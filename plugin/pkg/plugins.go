@@ -73,8 +73,8 @@ const (
 	PluginNameBackupBucketValidator = "BackupBucketValidator"
 )
 
-// AllPluginNames returns the names of all plugins.
-func AllPluginNames() []string {
+// AllOrderedPluginNames returns the names of all plugins in order.
+func AllOrderedPluginNames() []string {
 	return []string{
 		lifecycle.PluginName,                        // NamespaceLifecycle
 		PluginNameResourceReferenceManager,          // ResourceReferenceManager
@@ -87,8 +87,8 @@ func AllPluginNames() []string {
 		PluginNameShootNodeLocalDNSEnabledByDefault, // ShootNodeLocalDNSEnabledByDefault
 		PluginNameShootDNSRewriting,                 // ShootDNSRewriting
 		PluginNameShootQuotaValidator,               // ShootQuotaValidator
-		PluginNameShootValidator,                    // ShootValidator
 		PluginNameShootMutator,                      // ShootMutator
+		PluginNameShootValidator,                    // ShootValidator
 		PluginNameSeedValidator,                     // SeedValidator
 		PluginNameSeedMutator,                       // SeedMutator
 		PluginNameControllerRegistrationResources,   // ControllerRegistrationResources
@@ -133,8 +133,8 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameShootManagedSeed,                // ShootManagedSeed
 		PluginNameShootResourceReservation,        // ShootResourceReservation
 		PluginNameShootQuotaValidator,             // ShootQuotaValidator
-		PluginNameShootValidator,                  // ShootValidator
 		PluginNameShootMutator,                    // ShootMutator
+		PluginNameShootValidator,                  // ShootValidator
 		PluginNameShootVPAEnabledByDefault,        // ShootVPAEnabledByDefault
 		PluginNameSeedValidator,                   // SeedValidator
 		PluginNameSeedMutator,                     // SeedMutator
