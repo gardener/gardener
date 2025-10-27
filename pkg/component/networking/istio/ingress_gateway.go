@@ -35,6 +35,7 @@ type IngressGatewayValues struct {
 	Annotations                        map[string]string
 	Labels                             map[string]string
 	NetworkPolicyLabels                map[string]string
+	LoadBalancerClass                  *string
 	ExternalTrafficPolicy              *corev1.ServiceExternalTrafficPolicy
 	Image                              string
 	IstiodNamespace                    string
@@ -104,6 +105,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"labels":                             istioIngressGateway.Labels,
 			"networkPolicyLabels":                istioIngressGateway.NetworkPolicyLabels,
 			"annotations":                        istioIngressGateway.Annotations,
+			"loadBalancerClass":                  istioIngressGateway.LoadBalancerClass,
 			"externalTrafficPolicy":              istioIngressGateway.ExternalTrafficPolicy,
 			"dualStack":                          istioIngressGateway.DualStack,
 			"deployNamespace":                    false,

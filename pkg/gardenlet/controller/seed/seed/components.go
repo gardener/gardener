@@ -337,6 +337,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 		labels,
 		gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port),
 		seed.GetLoadBalancerServiceAnnotations(),
+		seed.GetLoadBalancerServiceClass(),
 		seed.GetLoadBalancerServiceExternalTrafficPolicy(),
 		r.Config.SNI.Ingress.ServiceExternalIP,
 		servicePorts,
@@ -365,6 +366,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 				sharedcomponent.GetIstioNamespaceForZone(*r.Config.SNI.Ingress.Namespace, zone),
 				seed.GetZonalLoadBalancerServiceAnnotations(zone),
 				sharedcomponent.GetIstioZoneLabels(labels, &zone),
+				seed.GetLoadBalancerServiceClass(),
 				seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 				nil,
 				&zone,
@@ -387,6 +389,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 			// handler.LoadBalancerService.Annotations must put last to override non-exposure class related keys.
 			utils.MergeStringMaps(seed.GetLoadBalancerServiceAnnotations(), handler.LoadBalancerService.Annotations),
 			sharedcomponent.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
+			handler.LoadBalancerService.DeepCopy().Class,
 			seed.GetLoadBalancerServiceExternalTrafficPolicy(),
 			handler.SNI.Ingress.ServiceExternalIP,
 			nil,
@@ -409,6 +412,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 					// handler.LoadBalancerService.Annotations must put last to override non-exposure class related keys.
 					utils.MergeStringMaps(seed.GetZonalLoadBalancerServiceAnnotations(zone), handler.LoadBalancerService.Annotations),
 					sharedcomponent.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+					handler.LoadBalancerService.DeepCopy().Class,
 					seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 					nil,
 					&zone,

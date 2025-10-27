@@ -39,6 +39,7 @@ type istioTestValues struct {
 	labels                             map[string]string
 	kubeAPIServerPolicyLabel           string
 	lbAnnotations                      map[string]string
+	loadBalancerClass                  *string
 	externalTrafficPolicy              *corev1.ServiceExternalTrafficPolicy
 	serviceExternalIP                  *string
 	servicePorts                       []corev1.ServicePort
@@ -70,6 +71,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.labels,
 		testValues.kubeAPIServerPolicyLabel,
 		testValues.lbAnnotations,
+		testValues.loadBalancerClass,
 		testValues.externalTrafficPolicy,
 		testValues.serviceExternalIP,
 		testValues.servicePorts,
@@ -121,6 +123,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 				Image:                              testValues.ingressImageName,
 				IstiodNamespace:                    "istio-system",
 				Annotations:                        testValues.lbAnnotations,
+				LoadBalancerClass:                  testValues.loadBalancerClass,
 				ExternalTrafficPolicy:              testValues.externalTrafficPolicy,
 				MinReplicas:                        minReplicas,
 				MaxReplicas:                        maxReplicas,
@@ -145,6 +148,7 @@ func checkAdditionalIstioGateway(cl client.Client,
 	namespace string,
 	annotations map[string]string,
 	labels map[string]string,
+	loadBalancerClass *string,
 	externalTrafficPolicy *corev1.ServiceExternalTrafficPolicy,
 	serviceExternalIP *string,
 	zone *string,
@@ -174,6 +178,7 @@ func checkAdditionalIstioGateway(cl client.Client,
 		Image:                              ingressValues[0].Image,
 		IstiodNamespace:                    "istio-system",
 		Annotations:                        annotations,
+		LoadBalancerClass:                  loadBalancerClass,
 		ExternalTrafficPolicy:              externalTrafficPolicy,
 		MinReplicas:                        minReplicas,
 		MaxReplicas:                        maxReplicas,
@@ -219,6 +224,7 @@ var _ = Describe("Istio", func() {
 			labels:                             map[string]string{"some": "labelValue"},
 			kubeAPIServerPolicyLabel:           "to-all-test-kube-apiserver",
 			lbAnnotations:                      map[string]string{"some": "annotationValue"},
+			loadBalancerClass:                  ptr.To("non-default-load-balancer-class"),
 			externalTrafficPolicy:              &trafficPolicy,
 			serviceExternalIP:                  ptr.To("1.2.3.4"),
 			servicePorts:                       []corev1.ServicePort{{Port: 443}},
@@ -317,6 +323,7 @@ var _ = Describe("Istio", func() {
 			namespace             string
 			annotations           map[string]string
 			labels                map[string]string
+			loadBalancerClass     *string
 			externalTrafficPolicy corev1.ServiceExternalTrafficPolicy
 			serviceExternalIP     *string
 			zone                  *string
@@ -330,6 +337,7 @@ var _ = Describe("Istio", func() {
 			labels = map[string]string{
 				"additional": "istio-ingress-label",
 			}
+			loadBalancerClass = ptr.To("non-default-load-balancer-class")
 			externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
 			serviceExternalIP = ptr.To("1.1.1.1")
 		})
@@ -344,6 +352,7 @@ var _ = Describe("Istio", func() {
 				namespace,
 				annotations,
 				labels,
+				loadBalancerClass,
 				&externalTrafficPolicy,
 				serviceExternalIP,
 				zone,
@@ -365,6 +374,7 @@ var _ = Describe("Istio", func() {
 					namespace,
 					annotations,
 					labels,
+					loadBalancerClass,
 					&externalTrafficPolicy,
 					serviceExternalIP,
 					zone,
@@ -378,6 +388,7 @@ var _ = Describe("Istio", func() {
 					namespace,
 					annotations,
 					labels,
+					loadBalancerClass,
 					&externalTrafficPolicy,
 					serviceExternalIP,
 					zone,
@@ -399,6 +410,7 @@ var _ = Describe("Istio", func() {
 					namespace,
 					annotations,
 					labels,
+					loadBalancerClass,
 					&externalTrafficPolicy,
 					serviceExternalIP,
 					zone,
@@ -412,6 +424,7 @@ var _ = Describe("Istio", func() {
 					namespace,
 					annotations,
 					labels,
+					loadBalancerClass,
 					&externalTrafficPolicy,
 					serviceExternalIP,
 					zone,
@@ -436,6 +449,7 @@ var _ = Describe("Istio", func() {
 						namespace,
 						annotations,
 						labels,
+						loadBalancerClass,
 						&externalTrafficPolicy,
 						serviceExternalIP,
 						zone,
@@ -449,6 +463,7 @@ var _ = Describe("Istio", func() {
 						namespace,
 						annotations,
 						labels,
+						loadBalancerClass,
 						&externalTrafficPolicy,
 						serviceExternalIP,
 						zone,
@@ -471,6 +486,7 @@ var _ = Describe("Istio", func() {
 					namespace,
 					annotations,
 					labels,
+					loadBalancerClass,
 					&externalTrafficPolicy,
 					serviceExternalIP,
 					zone,
@@ -484,6 +500,7 @@ var _ = Describe("Istio", func() {
 					namespace,
 					annotations,
 					labels,
+					loadBalancerClass,
 					&externalTrafficPolicy,
 					serviceExternalIP,
 					zone,

@@ -191,6 +191,11 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
+		istioIngressServiceClass = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_service_class.yaml")
+			return string(data)
+		}
+
 		istioIngressServiceETPCluster = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_service_etp_cluster.yaml")
 			return string(data)
@@ -549,6 +554,36 @@ var _ = Describe("istiod", func() {
 
 			It("should successfully deploy correct autoscaling", func() {
 				checkSuccessfulDeployment(&expectedMinReplicas, &expectedMaxReplicas)
+			})
+		})
+
+		Context("LoadBalancer class", func() {
+			BeforeEach(func() {
+				igw[0].LoadBalancerClass = ptr.To("non-default-loadbalancer-class")
+				istiod = NewIstio(
+					c,
+					renderer,
+					Values{
+						Istiod: IstiodValues{
+							Enabled:     true,
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
+						IngressGateway: igw,
+					},
+				)
+			})
+
+			It("should successfully deploy correct loadBalancerClass", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+
+				var err error
+				istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(istioManifests).To(ContainElement(istioIngressServiceClass()))
 			})
 		})
 
