@@ -9,6 +9,13 @@ The primary goal is to minimize the impact on stakeholders and other components,
 > The restoration process described here assumes that no other actors (like `gardener-operator`, `etcd-druid`, DNS controller,  etc.) which also existed in the previous runtime cluster are active anymore.
 > It is crucial to ensure that these components are scaled down or disabled, for example by invalidating their credentials to avoid conflicts.
 
+## Table of Contents
+
+- [Required Backup Components (Building Blocks)](#required-backup-components-building-blocks)
+- [Restoration Procedure](#restoration-procedure)
+- [Edge Cases and Special Considerations](#edge-cases-and-special-considerations)
+- [Testing Locally](#testing-locally)
+
 ## Required Backup Components (Building Blocks)
 
 The restoration process requires specific building blocks — like `etcd` backup, credentials and configuration components — to be supplied, which necessitates their continuous backup.
@@ -224,6 +231,19 @@ Depending on the conditions, it might also cause data in `etcd` to be encrypted 
 > [!TIP]
 > Therefore, it is strongly recommended to create a copy of the etcd backups before starting the restore procedure.
 > Having the ability to retry the restore procedure with a pristine etcd backup is crucial in case of mistakes.
+
+#### 4. Using a Copy of ETCD Backups
+
+In case the restore procedure fails due to misconfiguration or mistakes, having a copy of the etcd backups allows retrying the restore without data loss.
+To use the copy, "simply" replace the contents of the backup bucket with the copied data before starting the restore procedure again.
+
+However, there might be cases where the [backup bucket is configured with immutability](immutable-backup-buckets.md).
+Overwriting data in the existing bucket will not be possible in this case. 
+Instead, a new bucket has to be created and referenced.
+
+Firstly, create a new backup bucket in the storage provider used. 
+Then, copy the contents of the preserved etcd backup copy into the new bucket.
+Finally, update the `Garden` resource to reference the new bucket at `.spec.virtualCluster.etcd.main.backup.bucketName` before applying it.
 
 ## Testing Locally
 
