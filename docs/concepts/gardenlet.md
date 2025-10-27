@@ -177,7 +177,8 @@ the gardenlet is using `Lease` objects for heart beats of the seed cluster.
 Every two seconds, the gardenlet checks that the seed cluster's `/healthz`
 endpoint returns HTTP status code 200.
 If that is the case, the gardenlet renews the lease in the Garden cluster in the `gardener-system-seed-lease` namespace and updates
-the `GardenletReady` condition in the `status.conditions` field of the `Seed` resource. For more information, see [this section](#lease-reconciler).
+the `GardenletReady` condition in the `status.conditions` field of the `Seed` resource.
+For more information, see [this section](#lease-reconciler).
 
 Similar to the `node-lifecycle-controller` inside the `kube-controller-manager`,
 the `gardener-controller-manager` features a `seed-lifecycle-controller` that sets
@@ -485,6 +486,20 @@ A pod is considered stale when:
 - it was terminated with reason starting with `OutOf` (e.g., `OutOfCpu`).
 - it was terminated with reason `NodeAffinity`.
 - it is stuck in termination (i.e., if its `deletionTimestamp` is more than `5m` ago).
+
+#### ["Lease" Reconciler](../../pkg/gardenlet/controller/shoot/lease)
+
+This reconciler is only enabled for self-hosted shoot clusters.
+It checks whether the connection to the shoot cluster's `/healthz` endpoint works.
+If this succeeds, then it renews a `Lease` resource in the garden cluster in the  same namespace as the `Shoot` the `gardenlet` is responsible for.
+This indicates a heartbeat to the external world, and internally the `gardenlet` sets its health status to `true`.
+In addition, the `GardenletReady` condition in the `status` of the `Shoot` is set to `True`.
+The whole process is similar to what the `kubelet` does to report heartbeats for its `Node` resource and its `KubeletReady` condition.
+For more information, see [this section](#heartbeats).
+
+If the connection to the `/healthz` endpoint or the update of the `Lease` fails, then the internal health status of `gardenlet` is set to `false`.
+Also, this internal health status is set to `false` automatically after some time, in case the controller gets stuck for whatever reason.
+This internal health status is available via the `gardenlet`'s `/healthz` endpoint and is used for the `livenessProbe` in the `gardenlet` pod.
 
 #### ["State" Reconciler](../../pkg/gardenlet/controller/shoot/state)
 

@@ -37,6 +37,7 @@ type Reconciler struct {
 	SetObjectConditions func(client.Object, []gardencorev1beta1.Condition)
 
 	LeaseResyncSeconds int32
+	LeaseNamePrefix    string
 	LeaseNamespace     *string
 	Clock              clock.Clock
 	HealthManager      healthz.Manager
@@ -90,7 +91,7 @@ var CheckConnection = func(ctx context.Context, client rest.Interface) error {
 func (r *Reconciler) renewLease(ctx context.Context, obj client.Object) error {
 	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      obj.GetName(),
+			Name:      r.LeaseNamePrefix + obj.GetName(),
 			Namespace: ptr.Deref(r.LeaseNamespace, obj.GetNamespace()),
 		},
 	}
