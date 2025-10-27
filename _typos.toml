@@ -42,5 +42,7 @@ extend-exclude = [
     "openapi_generated.go",
     "crd-all.gen.yaml",
     "crd-opentelemetry.io*.yaml",
+    "crd-operator.victoriametrics.com*.yaml",
+    "10-crd-operator.victoriametrics.com*.yaml",
     "example/gardener-local/controlplane/values.yaml",
 ]
