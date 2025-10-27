@@ -173,14 +173,8 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 	if err := mgr.AddReadyzCheck("runtime-informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
-
-	if !gardenlet.IsResponsibleForSelfHostedShoot() {
-		// TODO(rfranzke): This healthz check is currently not enabled for self-hosted shoots because it depends on the
-		//  seed-lease controller. This controller is currently not enabled, but it will be in the future. Once it is
-		//  enabled, we can also enable this healthz check for self-hosted shoots.
-		if err := mgr.AddHealthzCheck("periodic-health", gardenerhealthz.CheckerFunc(healthManager)); err != nil {
-			return err
-		}
+	if err := mgr.AddHealthzCheck("periodic-health", gardenerhealthz.CheckerFunc(healthManager)); err != nil {
+		return err
 	}
 
 	var selfHostedShootMeta *types.NamespacedName
