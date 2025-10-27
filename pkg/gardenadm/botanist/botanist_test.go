@@ -54,7 +54,7 @@ var _ = Describe("GardenadmBotanist", func() {
 		})
 
 		When("running the control plane (acting on the self-hosted shoot cluster)", func() {
-			Context("with unmanaged infrastructure (high-touch scenario)", func() {
+			Context("with unmanaged infrastructure", func() {
 				It("should create a new Self-Hosted Botanist", func() {
 					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
 					Expect(err).NotTo(HaveOccurred())
@@ -70,7 +70,7 @@ var _ = Describe("GardenadmBotanist", func() {
 				})
 			})
 
-			Context("with managed infrastructure (medium-touch scenario)", func() {
+			Context("with managed infrastructure", func() {
 				BeforeEach(func() {
 					shootFile := fsys[configDir+"/shoot.yaml"]
 					shootFile.Data = append(shootFile.Data, []byte("\n  credentialsBindingName: provider-account\n")...)

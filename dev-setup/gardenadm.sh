@@ -9,8 +9,8 @@ set -o pipefail
 COMMAND="${1:-up}"
 VALID_COMMANDS=("up" "down")
 
-SCENARIO="${SCENARIO:-high-touch}"
-VALID_SCENARIOS=("high-touch" "medium-touch" "connect")
+SCENARIO="${SCENARIO:-unmanaged-infra}"
+VALID_SCENARIOS=("unmanaged-infra" "managed-infra" "connect")
 
 valid_scenario=false
 for scenario in "${VALID_SCENARIOS[@]}"; do
@@ -28,7 +28,7 @@ case "$COMMAND" in
   up)
     if [[ "$SCENARIO" != "connect" ]]; then
       # Prepare resources and generate manifests.
-      # The manifests are copied to the high-touch machine pods or can be passed to the `--config-dir` flag of `gardenadm bootstrap`.
+      # The manifests are copied to the unmanaged-infra machine pods or can be passed to the `--config-dir` flag of `gardenadm bootstrap`.
       skaffold build \
         -p "$SCENARIO" \
         -m gardenadm,provider-local-node,provider-local \
@@ -42,9 +42,9 @@ case "$COMMAND" in
         --build-artifacts \
         -
 
-      if [[ "$SCENARIO" == "high-touch" ]]; then
+      if [[ "$SCENARIO" == "unmanaged-infra" ]]; then
         skaffold run \
-          -n gardenadm-high-touch \
+          -n gardenadm-unmanaged-infra \
           -m provider-local-node,machine
       fi
 

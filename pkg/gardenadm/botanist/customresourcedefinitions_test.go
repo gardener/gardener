@@ -119,7 +119,7 @@ var _ = Describe("CustomResourceDefinitions", func() {
 				b.Shoot.ControlPlaneNamespace = "shoot--foo--bar"
 			})
 
-			It("should deploy the additional CRDs for the medium-touch scenario", func() {
+			It("should deploy the additional CRDs for the managed infrastructure scenario", func() {
 				Expect(b.ReconcileCustomResourceDefinitions(ctx)).To(Succeed())
 
 				crdList := &apiextensionsv1.CustomResourceDefinitionList{}

@@ -35,8 +35,8 @@ authors:
       - [`gardenadm version`](#gardenadm-version)
     - [`Shoot` API](#shoot-api)
     - [Scenarios](#scenarios)
-      - [High Touch](#high-touch)
-      - [Medium Touch](#medium-touch)
+      - [Unmanaged Infrastructure](#unmanaged-infrastructure)
+      - [Managed Infrastructure](#managed-infrastructure)
         - [`gardenadm bootstrap`](#gardenadm-bootstrap)
     - [Disaster Recovery](#disaster-recovery)
       - [Single-Node Failure](#single-node-failure)
@@ -327,14 +327,14 @@ An alternative is to augment `.spec.controlPlane` with this information, however
 
 We distinguish between two different scenarios (for now):
 
-- [High Touch](#high-touch), meaning that there is no programmable infrastructure available.
+- [Unmanaged Infrastructure](#unmanaged-infrastructure), meaning that there is no programmable infrastructure available.
   We consider this the "bare metal" or "edge" use-case, where at first machines must be (often manually) prepared by human operators.
   In this case, network setup (e.g., VPCs, subnets, route tables, etc.) and machine management are out of scope.
-- [Medium Touch](#medium-touch), meaning that there is programmable infrastructure available where we can leverage [provider extensions](../../extensions/README.md#infrastructure-provider) and [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager) in order to manage the network setup and the machines.
+- [Managed Infrastructure](#managed-infrastructure), meaning that there is programmable infrastructure available where we can leverage [provider extensions](../../extensions/README.md#infrastructure-provider) and [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager) in order to manage the network setup and the machines.
 
 The general procedure of bootstrapping a self-hosted shoot cluster is similar in both scenarios.
 
-#### High Touch
+#### Unmanaged Infrastructure
 
 In this scenario, the starting point is right on the first machine that shall be transformed into a control plane node.
 It is assumed that the network was set up properly (see [Prerequisites](#prerequisites)).
@@ -342,7 +342,7 @@ Since machine management is out of scope, upgrades requiring to roll out the nod
 We will leverage the functionality that is to be developed in the scope of [#10219](https://github.com/gardener/gardener/issues/10219).
 This will also include operating system upgrades [planned for Garden Linux](https://github.com/gardener/gardener/issues/10219#issuecomment-2262299606).
 
-#### Medium Touch
+#### Managed Infrastructure
 
 In this scenario, we can leverage the existing [`extensions.gardener.cloud/v1alpha1.Infrastructure` API](../extensions/resources/infrastructure.md) in order to let the respective provider extension generate the necessary network resources (VPCs, subnets, etc., whatever is needed for the respective infrastructure).
 `machine-controller-manager` can be used to create the control plane nodes (and later also the worker nodes) of the self-hosted shoot cluster.
@@ -350,7 +350,7 @@ In this scenario, we can leverage the existing [`extensions.gardener.cloud/v1alp
 The challenge is that both Gardener provider extensions and `machine-controller-manager` depend on a pre-existing Kubernetes cluster or in general an API server.
 Hence, we propose to use a [KinD cluster](https://kind.sigs.k8s.io), deploy the needed components into it, and create the necessary `Infrastructure`, `MachineClass`, and `MachineDeployment` resources.
 This way, these components can be reused as-is, without big changes or re-wiring of these complex components to run in-process with a fake client (as we do during the `gardenadm init` flow for the simpler components).
-Once the controllers have reconciled successfully, we can export the created infrastructure state and the `Machine` resources, bootstrap the self-hosted shoot cluster similar to the [general flow](#commands) also needed for the [High Touch scenario](#high-touch), and import the state again into the created cluster.
+Once the controllers have reconciled successfully, we can export the created infrastructure state and the `Machine` resources, bootstrap the self-hosted shoot cluster similar to the [general flow](#commands) also needed for the [Unmanaged Infrastructure scenario](#unmanaged-infrastructure), and import the state again into the created cluster.
 
 There is no special assumption about the location of the KinD cluster.
 It should run somewhere where it can access the API of the target infrastructure.

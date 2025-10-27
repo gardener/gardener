@@ -670,13 +670,12 @@ func (s *Shoot) IsSelfHosted() bool {
 
 // RunsControlPlane returns true in case the Kubernetes control plane runs inside the cluster.
 // In contrast to IsSelfHosted, this function returns false when bootstrapping self-hosted shoot clusters using
-// `gardenadm bootstrap` (medium-touch scenario).
+// `gardenadm bootstrap` ("managed infrastructure" scenario).
 func (s *Shoot) RunsControlPlane() bool {
 	return s.ControlPlaneNamespace == metav1.NamespaceSystem
 }
 
 // HasManagedInfrastructure returns true if the shoot's infrastructure (network, machines, etc.) is managed by Gardener.
-// I.e., it returns false for high-touch self-hosted shoots, where the infrastructure is managed by the user.
 func (s *Shoot) HasManagedInfrastructure() bool {
 	return v1beta1helper.HasManagedInfrastructure(s.GetInfo())
 }

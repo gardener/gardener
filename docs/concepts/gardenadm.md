@@ -39,9 +39,9 @@ The setup is also used for running e2e tests for `gardenadm` in CI.
 
 We distinguish between two different scenarios for bootstrapping self-hosted shoot clusters:
 
-- High Touch, meaning that there is no programmable infrastructure available.
+- Unmanaged Infrastructure, meaning that there is no programmable infrastructure available.
   We consider this the "bare metal" or "edge" use-case, where at first machines must be (often manually) prepared by human operators.
   In this case, network setup (e.g., VPCs, subnets, route tables, etc.) and machine management are out of scope.
-- Medium Touch, meaning that there is programmable infrastructure available where we can leverage [provider extensions](../../extensions/README.md#infrastructure-provider) and [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager) in order to manage the network setup and the machines.
+- Managed Infrastructure, meaning that there is programmable infrastructure available where we can leverage [provider extensions](../../extensions/README.md#infrastructure-provider) and [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager) in order to manage the network setup and the machines.
 
 The general procedure of bootstrapping a self-hosted shoot cluster is similar in both scenarios.

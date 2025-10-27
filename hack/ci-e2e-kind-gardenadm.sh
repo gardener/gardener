@@ -21,26 +21,26 @@ trap "
   ( make kind-single-node-down )
 " EXIT
 
-# medium-touch tests cannot run when there is a gardener-operator deployment (i.e., high-touch/connect tests must run
-# separately). Hence, let's run the medium-touch tests first, then clean them up, and then run the high-touch/connect
+# managed-infra tests cannot run when there is a gardener-operator deployment (i.e., unmanaged-infra/connect tests must run
+# separately). Hence, let's run the managed-infra tests first, then clean them up, and then run the unmanaged-infra/connect
 # tests.
 
-# medium-touch
+# managed infrastructure
 make kind-single-node-up
-make gardenadm-up SCENARIO=medium-touch
+make gardenadm-up SCENARIO=managed-infra
 
-make test-e2e-local-gardenadm-medium-touch
+make test-e2e-local-gardenadm-managed-infra
 
-make gardenadm-down SCENARIO=medium-touch
+make gardenadm-down SCENARIO=managed-infra
 make kind-single-node-down
 
-# high touch
+# unmanaged infrastructure
 make kind-single-node-up
-make gardenadm-up SCENARIO=high-touch
+make gardenadm-up SCENARIO=unmanaged-infra
 make gardenadm-up SCENARIO=connect
 
-make test-e2e-local-gardenadm-high-touch
+make test-e2e-local-gardenadm-unmanaged-infra
 
 make gardenadm-down SCENARIO=connect
-make gardenadm-down SCENARIO=high-touch
+make gardenadm-down SCENARIO=unmanaged-infra
 make kind-single-node-down

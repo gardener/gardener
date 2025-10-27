@@ -15,7 +15,7 @@ spec:
       labels:
         app: machine
       annotations:
-        cni.projectcalico.org/ipv4pools: '["gardenadm-high-touch"]'
+        cni.projectcalico.org/ipv4pools: '["gardenadm-unmanaged-infra"]'
     spec:
       containers:
       - name: node
@@ -77,7 +77,7 @@ kind: ConfigMap
 metadata:
   name: machine-bashrc
   labels:
-    app: high-touch-machine
+    app: unmanaged-infra-machine
 data:
   bashrc: |
     export KUBECONFIG=/etc/kubernetes/admin.conf

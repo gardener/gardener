@@ -16,7 +16,7 @@ If you encounter difficulties, please open an issue so that we can make this pro
 `gardenadm` is a command line tool for bootstrapping Kubernetes clusters called "Self-Hosted Shoot Clusters". Read the [`gardenadm` documentation](../concepts/gardenadm.md) for more details on its concepts.
 
 In this guide, we will start a [KinD](https://kind.sigs.k8s.io/) cluster which hosts pods serving as machines for the self-hosted shoot cluster – just as for shoot clusters of [provider-local](../extensions/provider-local.md).
-The setup supports both the high-touch and medium-touch scenario of `gardenadm`.
+The setup supports both the "unmanaged infrastructure" and the "managed infrastructure" scenario of `gardenadm`.
 
 Based on [Skaffold](https://skaffold.dev/), the container images for all required components will be built and deployed into the cluster.
 This also includes the `gardenadm` CLI, which is installed on the machine pods by pulling the container image and extracting the binary.
@@ -44,9 +44,9 @@ All following steps assume that you are using the kubeconfig for this KinD clust
 export KUBECONFIG=$PWD/example/gardener-local/kind/multi-zone/kubeconfig
 ```
 
-## High-Touch Scenario
+## "Unmanaged Infrastructure" Scenario
 
-Use the following command to prepare the `gardenadm` high-touch scenario:
+Use the following command to prepare the `gardenadm` unmanaged infrastructure scenario:
 
 ```shell
 make gardenadm-up
@@ -59,7 +59,7 @@ Afterward, you can use `kubectl exec` to execute `gardenadm` commands on the mac
 Let's start with exec'ing into the `machine-0` pod:
 
 ```shell
-$ kubectl -n gardenadm-high-touch exec -it machine-0 -- bash
+$ kubectl -n gardenadm-managed-infra exec -it machine-0 -- bash
 root@machine-0:/# gardenadm -h
 gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener project.
 ...
@@ -89,7 +89,7 @@ The machine pod's shell environment is configured for easily connecting to the s
 Just execute `kubectl` within a `bash` shell in the machine pod:
 
 ```shell
-$ kubectl -n gardenadm-high-touch exec -it machine-0 -- bash
+$ kubectl -n gardenadm-managed-infra exec -it machine-0 -- bash
 root@machine-0:/# kubectl get node
 NAME        STATUS   ROLES    AGE     VERSION
 machine-0   Ready    <none>   4m11s   v1.32.0
@@ -98,8 +98,8 @@ machine-0   Ready    <none>   4m11s   v1.32.0
 You can also copy the kubeconfig to your local machine and use a port-forward to connect to the cluster's API server:
 
 ```shell
-$ kubectl -n gardenadm-high-touch exec -it machine-0 -- cat /etc/kubernetes/admin.conf | sed 's/api.root.garden.local.gardener.cloud/localhost:6443/' > /tmp/shoot--garden--root.conf
-$ kubectl -n gardenadm-high-touch port-forward pod/machine-0 6443:443
+$ kubectl -n gardenadm-managed-infra exec -it machine-0 -- cat /etc/kubernetes/admin.conf | sed 's/api.root.garden.local.gardener.cloud/localhost:6443/' > /tmp/shoot--garden--root.conf
+$ kubectl -n gardenadm-managed-infra port-forward pod/machine-0 6443:443
 
 # in a new terminal
 $ export KUBECONFIG=/tmp/shoot--garden--root.conf
@@ -117,7 +117,7 @@ Then exec into the `machine-1` pod to run the command:
 root@machine-0:/# gardenadm token create --print-join-command
 # now copy the output, terminate the exec session and start a new one for machine-1
 
-$ kubectl -n gardenadm-high-touch exec -it machine-1 -- bash
+$ kubectl -n gardenadm-managed-infra exec -it machine-1 -- bash
 # paste the copied 'gardenadm join' command here and execute it
 root@machine-1:/# gardenadm join ...
 ...
@@ -134,15 +134,15 @@ machine-0   Ready    <none>   10m   v1.32.0
 machine-1   Ready    <none>   37s   v1.32.0
 ```
 
-## Medium-Touch Scenario
+## "Managed Infrastructure" Scenario
 
-Use the following command to prepare the `gardenadm` medium-touch scenario:
+Use the following command to prepare the `gardenadm` managed infrastructure scenario:
 
 ```shell
-make gardenadm-up SCENARIO=medium-touch
+make gardenadm-up SCENARIO=managed-infra
 ```
 
-This will first build the needed images and then render the needed manifests for `gardenadm bootstrap` to the [`./dev-setup/gardenadm/resources/generated/medium-touch`](../../dev-setup/gardenadm/resources/generated/medium-touch) directory.
+This will first build the needed images and then render the needed manifests for `gardenadm bootstrap` to the [`./dev-setup/gardenadm/resources/generated/managed-infra`](../../dev-setup/gardenadm/resources/generated/managed-infra) directory.
 
 ### Bootstrapping the Self-Hosted Shoot Cluster
 
@@ -150,7 +150,7 @@ Use `go run` to execute `gardenadm` commands on your machine:
 
 ```shell
 $ export IMAGEVECTOR_OVERWRITE=$PWD/dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml
-$ go run ./cmd/gardenadm bootstrap -d ./dev-setup/gardenadm/resources/generated/medium-touch
+$ go run ./cmd/gardenadm bootstrap -d ./dev-setup/gardenadm/resources/generated/managed-infra
 ...
 [shoot--garden--root-control-plane-58ffc-2l6s7] Your Shoot cluster control-plane has initialized successfully!
 ...
@@ -187,7 +187,7 @@ machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s 
 
 ## Connecting the Self-Hosted Shoot Cluster to Gardener
 
-After you have successfully bootstrapped a self-hosted shoot cluster (either via the [high touch](#high-touch-scenario) or the [medium touch](#medium-touch-scenario) scenario), you can connect it to an existing Gardener system.
+After you have successfully bootstrapped a self-hosted shoot cluster (either via the [unmanaged infrastructure](#unmanaged-infrastructure-scenario) or the [managed infrastructure](#managed-infrastructure-scenario) scenario), you can connect it to an existing Gardener system.
 For this, you need to have a Gardener running locally in your KinD cluster.
 In order to deploy it, you can run
 
@@ -202,7 +202,7 @@ Note, that in this setup, no `Seed` will be registered in the Gardener - it's ju
 Once above command is finished, you can connect the self-hosted shoot cluster to this Gardener instance:
 
 ```shell
-$ kubectl -n gardenadm-high-touch exec -it machine-0 -- bash
+$ kubectl -n gardenadm-unmanaged-infra exec -it machine-0 -- bash
 root@machine-0:/# gardenadm connect
 2025-07-03T12:21:49.586Z	INFO	Command is work in progress
 ```
@@ -212,13 +212,13 @@ root@machine-0:/# gardenadm connect
 Based on the described setup, you can execute the e2e test suite for `gardenadm`:
 
 ```shell
-make gardenadm-up SCENARIO=high-touch
+make gardenadm-up SCENARIO=unmanaged-infra
 make gardenadm-up SCENARIO=connect
-make test-e2e-local-gardenadm-high-touch
+make test-e2e-local-gardenadm-unmanaged-infra
 
 # or
-make gardenadm-up SCENARIO=medium-touch
-make test-e2e-local-gardenadm-medium-touch
+make gardenadm-up SCENARIO=managed-infra
+make test-e2e-local-gardenadm-managed-infra
 ```
 
 ## Tear Down the KinD Cluster

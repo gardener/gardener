@@ -30,7 +30,7 @@ import (
 func (b *Botanist) DefaultWorker() worker.Interface {
 	workers := b.Shoot.GetInfo().Spec.Provider.Workers
 	// In `gardenadm bootstrap` we only deploy the control plane worker pool. When running `gardenadm init` on the
-	// medium-touch control plane, the full `Worker` with all pools will be deployed.
+	// created control plane nodes, the full `Worker` with all pools will be deployed.
 	if b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane() {
 		workers = []gardencorev1beta1.Worker{*v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().DeepCopy().Spec.Provider.Workers)}
 	}

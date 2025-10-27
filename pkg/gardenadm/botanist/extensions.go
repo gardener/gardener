@@ -87,8 +87,6 @@ func ComputeExtensions(resources gardenadm.Resources, runsControlPlane, managedI
 // wantedExtensionKinds returns the set of extension kinds that are needed and supported for self-hosted shoot clusters.
 // runsControlPlane indicates whether we are bootstrapping the control plane of the cluster (i.e., when executing
 // `gardenadm init`).
-// managedInfrastructure indicates whether the infrastructure of the shoot cluster is managed by Gardener (medium-touch
-// scenario) or not (high-touch scenario).
 func wantedExtensionKinds(runsControlPlane, managedInfrastructure bool) sets.Set[string] {
 	if !runsControlPlane {
 		// When running `gardenadm bootstrap` against the bootstrap cluster, we create Infrastructure, OSC, Worker, and
@@ -97,13 +95,13 @@ func wantedExtensionKinds(runsControlPlane, managedInfrastructure bool) sets.Set
 		return sets.New[string](extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.OperatingSystemConfigResource, extensionsv1alpha1.WorkerResource, extensionsv1alpha1.DNSRecordResource)
 	}
 
-	// In the high-touch scenario, we don't deploy Infrastructure, Worker, and DNSRecord extensions because they are
-	// managed outside of Gardener.
+	// In the "unmanaged infrastructure" scenario, we don't deploy Infrastructure, Worker, and DNSRecord extensions
+	// because they are managed outside of Gardener.
 	if !managedInfrastructure {
 		return extensionsv1alpha1.AllExtensionKinds.Clone().Delete(extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.WorkerResource, extensionsv1alpha1.DNSRecordResource)
 	}
 
-	// In `gardenadm init`, we deploy all extensions referenced by the shoot in the medium-touch scenario.
+	// In `gardenadm init`, we deploy all extensions referenced by the shoot in the "managed infrastructure" scenario.
 	return extensionsv1alpha1.AllExtensionKinds.Clone()
 }
 

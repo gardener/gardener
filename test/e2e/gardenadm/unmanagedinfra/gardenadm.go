@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package hightouch
+package unmanagedinfra
 
 import (
 	"context"
@@ -34,7 +34,7 @@ import (
 	. "github.com/gardener/gardener/test/e2e/gardenadm/common"
 )
 
-var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high-touch"), func() {
+var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gardenadm", "unmanaged-infra"), func() {
 	var (
 		shootNamespace = "garden"
 		shootName      = "root"
