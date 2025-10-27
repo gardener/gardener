@@ -653,6 +653,10 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying perses-operator",
 			Fn:   c.persesOperator.Deploy,
 		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying victoria-operator",
+			Fn:   c.victoriaOperator.Deploy,
+		})
 	)
 
 	gardenCopy := garden.DeepCopy()
@@ -692,6 +696,10 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		deployPersesCRDs = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for perses-operator",
 			Fn:   c.persesCRD.Deploy,
+		})
+		deployVictoriaCRDs = g.Add(flow.Task{
+			Name: "Deploying custom resource definitions for victoria-operator",
+			Fn:   c.victoriaCRD.Deploy,
 		})
 		deployExtensionCRDs = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for extensions",
@@ -754,6 +762,11 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 			Name:         "Waiting for custom resource definitions for perses-operator",
 			Fn:           c.persesCRD.Wait,
 			Dependencies: flow.NewTaskIDs(deployPersesCRDs),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for victoria-operator",
+			Fn:           c.victoriaCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployVictoriaCRDs),
 		})
 		waitForOpenTelemetryCRD = g.Add(flow.Task{
 			Name:         "Waiting for custom resource definitions for OpenTelemetry",
