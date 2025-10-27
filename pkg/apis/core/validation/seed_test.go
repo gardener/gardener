@@ -1320,6 +1320,37 @@ var _ = Describe("Seed Validation Tests", func() {
 						})),
 					))
 				})
+
+				Describe("LoadBalancer class", func() {
+					BeforeEach(func() {
+						seed.Spec.Settings = &core.SeedSettings{
+							LoadBalancerServices: &core.SeedSettingLoadBalancerServices{},
+						}
+					})
+
+					It("should allow omitting the class", func() {
+						seed.Spec.Settings.LoadBalancerServices.Class = nil
+
+						Expect(ValidateSeed(seed)).To(BeEmpty())
+					})
+
+					It("should allow specifying a non-empty class", func() {
+						seed.Spec.Settings.LoadBalancerServices.Class = ptr.To("non-default")
+
+						Expect(ValidateSeed(seed)).To(BeEmpty())
+					})
+
+					It("should deny specifying an empty class", func() {
+						seed.Spec.Settings.LoadBalancerServices.Class = ptr.To("")
+
+						Expect(ValidateSeed(seed)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("spec.settings.loadBalancerServices.class"),
+							})),
+						))
+					})
+				})
 			})
 
 			Context("vertical pod autoscaler", func() {

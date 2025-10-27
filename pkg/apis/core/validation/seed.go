@@ -158,6 +158,10 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		if seedSpec.Settings.LoadBalancerServices != nil {
 			allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedSpec.Settings.LoadBalancerServices.Annotations, fldPath.Child("settings", "loadBalancerServices", "annotations"))...)
 
+			if class := seedSpec.Settings.LoadBalancerServices.Class; class != nil && len(*class) == 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "loadBalancerServices", "class"), *class, "class must not be empty if provided"))
+			}
+
 			if policy := seedSpec.Settings.LoadBalancerServices.ExternalTrafficPolicy; policy != nil && !availableExternalTrafficPolicies.Has(string(*policy)) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("settings", "loadBalancerServices", "externalTrafficPolicy"), *policy, sets.List(availableExternalTrafficPolicies)))
 			}
