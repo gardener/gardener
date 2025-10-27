@@ -428,12 +428,11 @@ func (g *garden) Start(ctx context.Context) error {
 		if err := g.registerSeed(ctx, gardenCluster.GetClient()); err != nil {
 			return err
 		}
+	}
 
-		// TODO(rfranzke): Move this out of this 'if'-condition once the "shoot gardenlets" have the needed permissions.
-		log.Info("Updating last operation status of processing Shoots to 'Aborted'")
-		if err := g.updateProcessingShootStatusToAborted(ctx, gardenCluster.GetClient()); err != nil {
-			return err
-		}
+	log.Info("Updating last operation status of processing Shoots to 'Aborted'")
+	if err := g.updateProcessingShootStatusToAborted(ctx, gardenCluster.GetClient()); err != nil {
+		return err
 	}
 
 	log.Info("Attempt to create seedmanagement.gardener.cloud/v1alpha1.Gardenlet object in garden cluster for self-upgrades if necessary")
@@ -694,10 +693,6 @@ func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, garde
 	var taskFns []flow.TaskFn
 
 	for _, shoot := range shootList.Items {
-		if specSeedName, statusSeedName := gardenerutils.GetShootSeedNames(&shoot); gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) != g.config.SeedConfig.Name {
-			continue
-		}
-
 		// Check if the status indicates that an operation is processing and mark it as "aborted".
 		if shoot.Status.LastOperation == nil || shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateProcessing {
 			continue
