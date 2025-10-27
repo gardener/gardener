@@ -128,6 +128,7 @@ exposureClassHandlers:
       loadbalancer/network: internet
 - name: internal-config
   loadBalancerService:
+    class: internal-loadbalancer
     annotations:
       loadbalancer/network: internal
   sni:
@@ -145,6 +146,11 @@ All control planes on a `Seed` are exposed via a load balancer, either a dedicat
 The load balancer service needs to be configured in a way that it is reachable from the target network environment.
 Therefore, the configuration of load balancer service need to be specified, which can be done via the `.loadBalancerService` section.
 The common way to influence load balancer service behaviour is via annotations where the respective cloud-controller-manager will react on and configure the infrastructure load balancer accordingly.
+
+To select a non-default load balancer implementation, the `class` field can be set to configure the `spec.loadBalancerClass` on the created `Service` objects.
+If the `class` field is unset, `spec.loadBalancerClass` is not configured and the default load balancer implementation of the underlying cloud infrastructure is used (implemented by the `Service` controller of cloud-controller-manager).
+Note that changing the `loadBalancerClass` of existing load balancer services is denied by Kubernetes, i.e., this setting can only be applied automatically to newly created load balancer services.
+If an existing load balancer service should use a different load balancer class, the migration needs to be performed manually by the operator.
 
 The control planes on a `Seed` will be exposed via a central load balancer and with Envoy via TLS SNI passthrough proxy.
 In this case, the gardenlet will install a dedicated ingress gateway (Envoy + load balancer + respective configuration) for each handler on the `Seed`.
