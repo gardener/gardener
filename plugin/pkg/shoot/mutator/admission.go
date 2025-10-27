@@ -106,7 +106,7 @@ func (c *mutationContext) addMetadataAnnotations(a admission.Attributes) {
 		addDNSRecordDeploymentTasks(c.shoot)
 	}
 
-		if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) ||
+	if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) ||
 		c.oldShoot.Spec.Networking != nil && c.oldShoot.Spec.Networking.IPFamilies != nil && len(c.oldShoot.Spec.Networking.IPFamilies) < len(c.shoot.Spec.Networking.IPFamilies) {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
