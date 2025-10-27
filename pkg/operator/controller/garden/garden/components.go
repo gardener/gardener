@@ -907,6 +907,7 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		annotations,
 		nil,
 		nil,
+		nil,
 		[]corev1.ServicePort{
 			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
 		},

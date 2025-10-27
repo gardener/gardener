@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -119,6 +120,47 @@ var _ = Describe("seed", func() {
 			seed.SetInfo(&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{}})
 
 			Expect(seed.GetLoadBalancerServiceAnnotations()).To(BeNil())
+		})
+	})
+
+	Describe("#GetLoadBalancerServiceClass", func() {
+		var seed *Seed
+
+		BeforeEach(func() {
+			seed = &Seed{}
+		})
+
+		It("should return a copied class value if specified", func() {
+			class := ptr.To("my-load-balancer-class")
+
+			seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Settings: &gardencorev1beta1.SeedSettings{
+						LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
+							Class: class,
+						},
+					},
+				},
+			})
+
+			Expect(seed.GetLoadBalancerServiceClass()).To(And(
+				HaveValue(Equal("my-load-balancer-class")),
+				Not(BeIdenticalTo(class)),
+			))
+		})
+
+		It("should return nil if class is unspecified", func() {
+			seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Settings: &gardencorev1beta1.SeedSettings{
+						LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
+							Class: nil,
+						},
+					},
+				},
+			})
+
+			Expect(seed.GetLoadBalancerServiceClass()).To(BeNil())
 		})
 	})
 
