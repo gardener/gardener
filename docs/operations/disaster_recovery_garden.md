@@ -86,7 +86,7 @@ The following steps detail the restoration process.
 
 To avoid any conflicts caused by actors still running in the previous runtime cluster, ensure that all relevant components are scaled down or disabled.
 
-If it is still possible, scale down the following `Deplyoments` in the `garden` namespace:
+If it is still possible, scale down the following `Deployments` in the `garden` namespace:
 * `gardener-operator`
 * `etcd-druid`
 * `gardener-resource-manager`
