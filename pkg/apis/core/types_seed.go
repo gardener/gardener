@@ -267,6 +267,9 @@ type SeedSettingLoadBalancerServices struct {
 	// ZonalIngress controls whether ingress gateways are deployed per availability zone.
 	// Defaults to true.
 	ZonalIngress *SeedSettingLoadBalancerServicesZonalIngress
+	// Class configures the Service.spec.loadBalancerClass field for the load balancer services on the seed.
+	// Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.
+	Class *string
 }
 
 // SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a

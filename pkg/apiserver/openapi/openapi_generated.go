@@ -8440,6 +8440,13 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref common.Ref
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZonalIngress"),
 						},
 					},
+					"class": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Class configures the Service.spec.loadBalancerClass field for the load balancer services on the seed. Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
