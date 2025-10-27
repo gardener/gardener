@@ -29,28 +29,26 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/lease"
 	"github.com/gardener/gardener/pkg/healthz"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("LeaseReconciler", func() {
 	var (
-		ctx            context.Context
-		clock          clock.Clock
-		gardenClient   client.Client
-		seedRESTClient *fakerestclient.RESTClient
-		healthManager  healthz.Manager
+		ctx               context.Context
+		clock             clock.Clock
+		gardenClient      client.Client
+		runtimeRESTClient *fakerestclient.RESTClient
+		healthManager     healthz.Manager
 
 		seed              *gardencorev1beta1.Seed
 		expectedCondition *gardencorev1beta1.Condition
 		expectedLease     *coordinationv1.Lease
 		namespace         = "gardener-system-seed-lease"
 
-		request          reconcile.Request
-		reconciler       *Reconciler
-		controllerConfig gardenletconfigv1alpha1.SeedControllerConfiguration
+		request    reconcile.Request
+		reconciler *Reconciler
 	)
 
 	BeforeEach(func() {
@@ -71,8 +69,8 @@ var _ = Describe("LeaseReconciler", func() {
 				Namespace: "gardener-system-seed-lease",
 				Name:      seed.Name,
 				OwnerReferences: []metav1.OwnerReference{{
-					APIVersion: "core.gardener.cloud/v1beta1",
-					Kind:       "Seed",
+					APIVersion: "", // fake client doesn't preserve GVK information
+					Kind:       "", // fake client doesn't preserve GVK information
 					Name:       seed.Name,
 					UID:        seed.UID,
 				}},
@@ -85,17 +83,12 @@ var _ = Describe("LeaseReconciler", func() {
 		}
 
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).WithStatusSubresource(&gardencorev1beta1.Seed{}).Build()
-		seedRESTClient = &fakerestclient.RESTClient{
+		runtimeRESTClient = &fakerestclient.RESTClient{
 			NegotiatedSerializer: serializer.NewCodecFactory(kubernetes.GardenScheme).WithoutConversion(),
 			Resp: &http.Response{
 				StatusCode: http.StatusOK,
 				Body:       io.NopCloser(strings.NewReader("")),
 			},
-		}
-
-		controllerConfig = gardenletconfigv1alpha1.SeedControllerConfiguration{
-			LeaseResyncSeconds:       ptr.To[int32](2),
-			LeaseResyncMissThreshold: ptr.To[int32](10),
 		}
 	})
 
@@ -104,12 +97,19 @@ var _ = Describe("LeaseReconciler", func() {
 		Expect(healthManager.Start(ctx)).To(Succeed())
 
 		reconciler = &Reconciler{
-			GardenClient:   gardenClient,
-			SeedRESTClient: seedRESTClient,
-			Config:         controllerConfig,
-			Clock:          clock,
-			HealthManager:  healthManager,
-			LeaseNamespace: namespace,
+			GardenClient:      gardenClient,
+			RuntimeRESTClient: runtimeRESTClient,
+			NewObjectFunc:     func() client.Object { return &gardencorev1beta1.Seed{} },
+			GetObjectConditions: func(obj client.Object) []gardencorev1beta1.Condition {
+				return obj.(*gardencorev1beta1.Seed).Status.Conditions
+			},
+			SetObjectConditions: func(obj client.Object, conditions []gardencorev1beta1.Condition) {
+				obj.(*gardencorev1beta1.Seed).Status.Conditions = conditions
+			},
+			LeaseResyncSeconds: 2,
+			LeaseNamespace:     &namespace,
+			Clock:              clock,
+			HealthManager:      healthManager,
 		}
 	})
 
@@ -153,7 +153,7 @@ var _ = Describe("LeaseReconciler", func() {
 		expectedCondition = gardenletReadyCondition(clock)
 		expectedLease.Spec.LeaseDurationSeconds = ptr.To[int32](3)
 
-		reconciler.Config.LeaseResyncSeconds = ptr.To[int32](3)
+		reconciler.LeaseResyncSeconds = 3
 		request = reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)}
 
 		Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: 3 * time.Second}))
@@ -161,7 +161,7 @@ var _ = Describe("LeaseReconciler", func() {
 	})
 
 	It("should fail if connection to Seed fails", func() {
-		seedRESTClient.Resp.StatusCode = http.StatusInternalServerError
+		runtimeRESTClient.Resp.StatusCode = http.StatusInternalServerError
 		expectedLease = nil
 		expectedCondition = nil
 

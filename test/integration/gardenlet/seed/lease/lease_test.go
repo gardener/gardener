@@ -29,7 +29,7 @@ var _ = Describe("Seed lease controller tests", func() {
 	BeforeEach(func() {
 		fakeClock.SetTime(time.Now())
 
-		lease = &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Name: seed.Name, Namespace: testNamespace.Name}}
+		lease = &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Name: seed.Name, Namespace: testNamespaceName}}
 	})
 
 	It("should maintain the Lease object and set the internal health status to true", func() {
@@ -69,7 +69,7 @@ var _ = Describe("Seed lease controller tests", func() {
 
 	It("should not update the Lease object and set the internal health status to false", func() {
 		var fakeError error
-		DeferCleanup(test.WithVar(&leasecontroller.CheckSeedConnection, func(context.Context, rest.Interface) error { return fakeError }))
+		DeferCleanup(test.WithVar(&leasecontroller.CheckConnection, func(context.Context, rest.Interface) error { return fakeError }))
 
 		By("Ensure Lease got maintained")
 		Eventually(func(g Gomega) {

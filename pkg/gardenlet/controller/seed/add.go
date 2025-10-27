@@ -50,7 +50,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 
-	if err := lease.AddToManager(mgr, gardenCluster, seedClientSet.RESTClient(), *cfg.Controllers.Seed, healthManager, cfg.SeedConfig.Name); err != nil {
+	if err := lease.AddToManager(mgr, gardenCluster, seedClientSet.RESTClient(), *cfg.Controllers.Seed, healthManager, cfg.SeedConfig.Name, nil); err != nil {
 		return fmt.Errorf("failed adding lease reconciler: %w", err)
 	}
 
