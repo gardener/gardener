@@ -13,7 +13,7 @@ The primary goal is to minimize the impact on stakeholders and other components,
 
 - [Required Backup Components (Building Blocks)](#required-backup-components-building-blocks)
 - [Restoration Procedure](#restoration-procedure)
-- [Edge Cases and Special Considerations](#edge-cases-and-special-considerations)
+- [Additional Information and Considerations](#additional-information-and-considerations)
 - [Testing Locally](#testing-locally)
 
 ## Required Backup Components (Building Blocks)
@@ -203,7 +203,7 @@ It will now reconcile the `Garden` resource with the correct initial status.
 
 -----
 
-## Edge Cases and Special Considerations
+## Additional Information and Considerations
 
 #### 1. Restoring from Credentials Rotation Phase `Prepared`
 
