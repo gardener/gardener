@@ -171,7 +171,6 @@ func adminClusterRoleBindings() []client.Object {
 				Name: v1beta1constants.ShootSystemAdminsGroupName,
 				Annotations: map[string]string{
 					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
-					resourcesv1alpha1.KeepObject:            "true", // TODO(vpnachev): Remove the keep-object annotation after v1.132.0 is released.
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -190,7 +189,6 @@ func adminClusterRoleBindings() []client.Object {
 				Name: v1beta1constants.ShootProjectAdminsGroupName,
 				Annotations: map[string]string{
 					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
-					resourcesv1alpha1.KeepObject:            "true", // TODO(vpnachev): Remove the keep-object annotation after v1.132.0 is released.
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -215,7 +213,6 @@ func viewerClusterRoleBindings() []client.Object {
 				Name: v1beta1constants.ShootSystemViewersGroupName,
 				Annotations: map[string]string{
 					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
-					resourcesv1alpha1.KeepObject:            "true", // TODO(vpnachev): Remove the keep-object annotation after v1.132.0 is released.
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -234,7 +231,6 @@ func viewerClusterRoleBindings() []client.Object {
 				Name: v1beta1constants.ShootProjectViewersGroupName,
 				Annotations: map[string]string{
 					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
-					resourcesv1alpha1.KeepObject:            "true", // TODO(vpnachev): Remove the keep-object annotation after v1.132.0 is released.
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -249,4 +245,12 @@ func viewerClusterRoleBindings() []client.Object {
 			}},
 		},
 	}
+}
+
+// ShootAccessClusterRoleBindings returns all ClusterRoleBindings granting access to credentials obtained via the shoot/adminkubeconfig and shoot/viewerkubeconfig subresources.
+//
+// Deprecated: The function is just temporary exported for migration purposes. It will be removed after v1.132.0 is released.
+func ShootAccessClusterRoleBindings() []client.Object {
+	// TODO(vpnachev): Remove this function after v1.132.0 has been released.
+	return append(adminClusterRoleBindings(), viewerClusterRoleBindings()...)
 }
