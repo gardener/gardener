@@ -305,6 +305,7 @@ build:
             - pkg/controllermanager/controller/credentialsbinding
             - pkg/controllermanager/controller/event
             - pkg/controllermanager/controller/exposureclass
+            - pkg/controllermanager/controller/gardenletlifecycle
             - pkg/controllermanager/controller/managedseedset
             - pkg/controllermanager/controller/namespacedcloudprofile
             - pkg/controllermanager/controller/project
@@ -316,7 +317,6 @@ build:
             - pkg/controllermanager/controller/seed
             - pkg/controllermanager/controller/seed/backupbucketscheck
             - pkg/controllermanager/controller/seed/extensionscheck
-            - pkg/controllermanager/controller/seed/lifecycle
             - pkg/controllermanager/controller/seed/reference
             - pkg/controllermanager/controller/seed/secrets
             - pkg/controllermanager/controller/seed/utils

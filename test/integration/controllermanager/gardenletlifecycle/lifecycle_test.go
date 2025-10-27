@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package lifecycle_test
+package gardenletlifecycle_test
 
 import (
 	"time"
@@ -20,7 +20,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Seed Lifecycle controller tests", func() {
+var _ = Describe("Gardenlet Lifecycle controller tests", func() {
 	var (
 		seed            *gardencorev1beta1.Seed
 		lease           *coordinationv1.Lease
@@ -36,7 +36,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 		lease = &coordinationv1.Lease{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
-				Namespace:    testNamespace.Name,
+				Namespace:    testNamespaceName,
 				Labels:       map[string]string{testID: testRunID},
 			},
 		}

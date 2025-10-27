@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/gardenletlifecycle"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project"
@@ -90,6 +91,12 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *controllermanag
 		Config: *cfg.Controllers.ExposureClass,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding ExposureClass controller: %w", err)
+	}
+
+	if err := (&gardenletlifecycle.Reconciler{
+		Config: *cfg.Controllers.Seed,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding gardenlet lifecycle reconciler: %w", err)
 	}
 
 	if err := (&managedseedset.Reconciler{

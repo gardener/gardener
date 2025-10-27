@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package exposureclass_test
+package gardenletlifecycle_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestExposureClass(t *testing.T) {
+func TestGardenletLifecycle(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Controller ExposureClass Suite")
+	RunSpecs(t, "ControllerManager Controller GardenletLifecycle Suite")
 }
