@@ -121,7 +121,7 @@ This document provides a checklist for them that you can walk through.
 
    If the image is an upstream one, then consider configuring a securityContext for the container/Pod with a non-privileged user. Explicitly set `securityContext.runAsNonRoot=true` as well as `securityContext.runAsUser=<UID>` and `securityContext.runAsGroup=<GID>` if possible. For more information, see [Configure a Security Context for a Pod or Container](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
 
-9. **Choose the proper Seccomp profile** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L283-L287), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nginxingress/nginxingress.go#L447))
+9. **Choose the proper Seccomp profile** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L283-L287), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nginxingress/nginxingress.go#L447))
 
    For components deployed in the Seed cluster, the [Seccomp profile](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-seccomp-profile-for-a-container) will be defaulted to `RuntimeDefault` by `gardener-resource-manager`'s SeccompProfile webhook which works well for the majority of components. However, in some special cases you might need to overwrite it.
 
