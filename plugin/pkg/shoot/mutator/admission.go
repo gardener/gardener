@@ -88,6 +88,21 @@ var _ admission.MutationInterface = (*MutateShoot)(nil)
 
 // Admit mutates the Shoot.
 func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+	// Wait until the caches have been synced
+	if m.readyFunc == nil {
+		m.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !m.WaitForReady() {
+		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
+	}
+
 	// Ignore all kinds other than Shoot
 	if a.GetKind().GroupKind() != core.Kind("Shoot") {
 		return nil
