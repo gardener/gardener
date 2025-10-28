@@ -137,7 +137,7 @@ func GetMutatingWebhookConfiguration(mode, url string) *admissionregistrationv1.
 					Rule: admissionregistrationv1.Rule{
 						APIGroups:   []string{operatorv1alpha1.SchemeGroupVersion.Group},
 						APIVersions: []string{operatorv1alpha1.SchemeGroupVersion.Version},
-						Resources:   []string{"gardens"},
+						Resources:   []string{"gardens", "gardens/status"},
 					},
 					Operations: []admissionregistrationv1.OperationType{
 						admissionregistrationv1.Create,
