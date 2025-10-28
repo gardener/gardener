@@ -380,7 +380,26 @@ var _ = Describe("mutator", func() {
 		})
 
 		Context("networking settings", func() {
-			It("should default shoot networks if seed provides ShootDefaults", func() {
+			It("should not default shoot networks if seed .spec.networks.shootDefaults is empty", func() {
+				seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{}
+				shoot.Spec.SeedName = ptr.To(seed.Name)
+				shoot.Spec.Networking = &core.Networking{
+					Pods:       nil,
+					Services:   nil,
+					IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
+				}
+
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(BeNil())
+				Expect(shoot.Spec.Networking.Services).To(BeNil())
+			})
+
+			It("should default shoot networks if seed .spec.networks.shootDefaults is set", func() {
 				var (
 					podsCIDR     = "100.96.0.0/11"
 					servicesCIDR = "100.64.0.0/13"

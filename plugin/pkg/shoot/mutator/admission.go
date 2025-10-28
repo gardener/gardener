@@ -231,7 +231,7 @@ func addDeploymentTasks(shoot *core.Shoot, tasks ...string) {
 func (c *mutationContext) defaultShootNetworks(workerless bool) {
 	if c.seed != nil {
 		if c.shoot.Spec.Networking.Pods == nil && !workerless {
-			if c.seed.Spec.Networks.ShootDefaults != nil {
+			if c.seed.Spec.Networks.ShootDefaults != nil && c.seed.Spec.Networks.ShootDefaults.Pods != nil {
 				if cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Pods, c.shoot.Spec.Networking.IPFamilies) {
 					c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
 				}
@@ -239,7 +239,7 @@ func (c *mutationContext) defaultShootNetworks(workerless bool) {
 		}
 
 		if c.shoot.Spec.Networking.Services == nil {
-			if c.seed.Spec.Networks.ShootDefaults != nil {
+			if c.seed.Spec.Networks.ShootDefaults != nil && c.seed.Spec.Networks.ShootDefaults.Services != nil {
 				if cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Services, c.shoot.Spec.Networking.IPFamilies) {
 					c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
 				}
