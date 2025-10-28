@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -19,13 +18,11 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/webhook/configvalidator"
 )
 
@@ -33,7 +30,6 @@ var _ = Describe("Handler", func() {
 	var (
 		ctx = context.Background()
 
-		log        logr.Logger
 		fakeClient client.Client
 		encoder    runtime.Encoder
 		decoder    admission.Decoder
@@ -46,7 +42,6 @@ var _ = Describe("Handler", func() {
 	)
 
 	BeforeEach(func() {
-		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		encoder = &jsonserializer.Serializer{}
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
@@ -74,7 +69,6 @@ var _ = Describe("Handler", func() {
 		}
 
 		handler = &Handler{
-			Logger:    log,
 			APIReader: fakeClient,
 			Client:    fakeClient,
 			Decoder:   decoder,
