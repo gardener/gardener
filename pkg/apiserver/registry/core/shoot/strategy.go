@@ -82,15 +82,7 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	}
 
 	// Migrate encryptedResources status from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
-	// TODO(AleksandarSavchev): Remove this block with the removal of the `.status.encryptedResources` field.
-	if len(newShoot.Status.EncryptedResources) > 0 {
-		if newShoot.Status.Credentials == nil {
-			newShoot.Status.Credentials = &core.ShootCredentials{}
-		}
-		if len(newShoot.Status.Credentials.EncryptionAtRest.Resources) == 0 {
-			newShoot.Status.Credentials.EncryptionAtRest.Resources = newShoot.Status.EncryptedResources
-		}
-	}
+	syncEncryptedResourcesStatus(newShoot)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -263,6 +255,9 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 		gardencorehelper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(newShoot.Status.Credentials) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
+
+	// Migrate encryptedResources status from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
+	syncEncryptedResourcesStatus(newShoot)
 }
 
 func (shootStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
@@ -372,4 +367,15 @@ func getStatusSeedName(shoot *core.Shoot) string {
 		return ""
 	}
 	return *shoot.Status.SeedName
+}
+
+// TODO(AleksandarSavchev): Remove this function with the removal of the `.status.encryptedResources` field.
+func syncEncryptedResourcesStatus(shoot *core.Shoot) {
+	if len(shoot.Status.EncryptedResources) == 0 && shoot.Status.Credentials == nil {
+		return
+	} else if shoot.Status.Credentials == nil {
+		shoot.Status.Credentials = &core.ShootCredentials{}
+	}
+
+	shoot.Status.Credentials.EncryptionAtRest.Resources = shoot.Status.EncryptedResources
 }
