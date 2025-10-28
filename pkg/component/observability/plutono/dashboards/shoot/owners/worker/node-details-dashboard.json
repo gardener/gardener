@@ -1421,8 +1421,8 @@
         "allValue": ".*",
         "current": {
           "selected": false,
-          "text": "ip-10-254-18-110.eu-west-1.compute.internal",
-          "value": "ip-10-254-18-110.eu-west-1.compute.internal"
+          "text": "ip-10-250-12-170.eu-west-1.compute.internal",
+          "value": "ip-10-250-12-170.eu-west-1.compute.internal"
         },
         "datasource": "prometheus",
         "definition": "",
@@ -1452,6 +1452,7 @@
         "allValue": null,
         "current": {
           "selected": true,
+          "tags": [],
           "text": [
             "Ready"
           ],
