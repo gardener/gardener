@@ -82,7 +82,7 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	}
 
 	// Migrate encryptedResources status from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
-	syncEncryptedResourcesStatus(newShoot)
+	SyncEncryptedResourcesStatus(newShoot)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -257,7 +257,7 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 	}
 
 	// Migrate encryptedResources status from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
-	syncEncryptedResourcesStatus(newShoot)
+	SyncEncryptedResourcesStatus(newShoot)
 }
 
 func (shootStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
@@ -369,8 +369,10 @@ func getStatusSeedName(shoot *core.Shoot) string {
 	return *shoot.Status.SeedName
 }
 
+// SyncEncryptedResourcesStatus ensures the status fields shoot.status.encryptedResources and
+// shoot.status.credentials.encryptionAtRest.resources are in sync.
 // TODO(AleksandarSavchev): Remove this function with the removal of the `.status.encryptedResources` field.
-func syncEncryptedResourcesStatus(shoot *core.Shoot) {
+func SyncEncryptedResourcesStatus(shoot *core.Shoot) {
 	if len(shoot.Status.EncryptedResources) == 0 && shoot.Status.Credentials == nil {
 		return
 	} else if shoot.Status.Credentials == nil {
