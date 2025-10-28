@@ -16,6 +16,7 @@ func stringsToArgs(argName string, values []string) []string {
 	}
 	return values
 }
+
 func stringsToPathArgs(argName string, values []string) ([]string, error) {
 	for _, value := range values {
 		if !filepath.IsAbs(value) {
