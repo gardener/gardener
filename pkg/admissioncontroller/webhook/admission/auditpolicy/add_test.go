@@ -9,7 +9,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -22,20 +21,17 @@ import (
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("handler", func() {
 	var (
 		ctx = context.TODO()
-		log logr.Logger
 
 		request admission.Request
 		decoder admission.Decoder
@@ -130,7 +126,6 @@ rules:
 	)
 
 	BeforeEach(func() {
-		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		testEncoder = &jsonserializer.Serializer{}
 
 		ctrl = gomock.NewController(GinkgoT())
@@ -139,7 +134,7 @@ rules:
 
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 
-		handler = NewHandler(log, mockReader, fakeClient, decoder)
+		handler = NewHandler(mockReader, fakeClient, decoder)
 
 		request = admission.Request{}
 

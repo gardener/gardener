@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -36,7 +35,6 @@ const (
 func AddToManager(mgr manager.Manager) error {
 	webhook := &admission.Webhook{
 		Handler: NewHandler(
-			mgr.GetLogger().WithName("webhook").WithName(HandlerName),
 			mgr.GetAPIReader(),
 			mgr.GetClient(),
 			admission.NewDecoder(mgr.GetScheme()),
@@ -49,9 +47,8 @@ func AddToManager(mgr manager.Manager) error {
 }
 
 // NewHandler returns a new handler for validating audit policies.
-func NewHandler(log logr.Logger, apiReader, c client.Reader, decoder admission.Decoder) admission.Handler {
+func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission.Handler {
 	return &configvalidator.Handler{
-		Logger:    log,
 		APIReader: apiReader,
 		Client:    c,
 		Decoder:   decoder,
