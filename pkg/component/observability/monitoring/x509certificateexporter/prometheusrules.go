@@ -13,34 +13,29 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// TODO(mimiteto): Now with CM conf, we can make the intervals configurable
-func (x *x509CertificateExporter) prometheusRule(labelz labels.Set, renewalDays, expirationDays uint) *monitoringv1.PrometheusRule {
-	const (
-		readErrorsSeverity        = "info"
-		certificateErrorsSeverity = "info"
-		renewalSeverity           = "warning"
-		expirationSeverity        = "critical"
-		expiresTodaySeverity      = "blocker"
-		severityKey               = "severity"
-	)
+func (x *x509CertificateExporter) prometheusRule(labelz labels.Set) *monitoringv1.PrometheusRule {
 
 	var (
-		for15mins            = monitoringv1.Duration("15m")
-		certRenewalExpr      = intstr.FromString(fmt.Sprintf("(x509_cert_not_after - time()) < (%d * 86400)", renewalDays))
-		certExpirationExpr   = intstr.FromString(fmt.Sprintf("(x509_cert_not_after - time()) < (%d * 86400)", expirationDays))
+		alertDurationCalculation = x.conf.alerting.DurationForAlertEvaluation
+		certRenewalExpr          = intstr.FromString(fmt.Sprintf(
+			"(x509_cert_not_after - time()) < (%d * 86400)", x.conf.alerting.CertificateRenewalDays,
+		))
+		certExpirationExpr = intstr.FromString(fmt.Sprintf(
+			"(x509_cert_not_after - time()) < (%d * 86400)", x.conf.alerting.CertificateExpirationDays,
+		))
 		certExpiresTodayExpr = intstr.FromString("(x509_cert_not_after - time()) < 86400")
-		genAlertLabels       = func(sev string) map[string]string {
+		genAlertLabels       = func(sev prometheusRuleSeverity) map[string]string {
 			return map[string]string{
 				"service":  "x509-certificate-exporter",
 				"topology": x.values.PrometheusInstance,
-				"severity": sev,
+				"severity": string(sev),
 			}
 		}
-		readErrorsLabels       map[string]string = genAlertLabels(readErrorsSeverity)
-		certificateErrorLabels map[string]string = genAlertLabels(certificateErrorsSeverity)
-		renewalLabels          map[string]string = genAlertLabels(renewalSeverity)
-		expirationLabels       map[string]string = genAlertLabels(expirationSeverity)
-		expiresTodayLabels     map[string]string = genAlertLabels(expiresTodaySeverity)
+		readErrorsLabels       map[string]string = genAlertLabels(x.conf.alerting.ReadErrorsSeverity)
+		certificateErrorLabels map[string]string = genAlertLabels(x.conf.alerting.CertificateErrorsSeverity)
+		renewalLabels          map[string]string = genAlertLabels(x.conf.alerting.RenewalSeverity)
+		expirationLabels       map[string]string = genAlertLabels(x.conf.alerting.ExpirationSeverity)
+		expiresTodayLabels     map[string]string = genAlertLabels(x.conf.alerting.ExpiresTodaySeverity)
 	)
 
 	labelz["prometheus"] = x.values.PrometheusInstance
@@ -54,15 +49,15 @@ func (x *x509CertificateExporter) prometheusRule(labelz labels.Set, renewalDays,
 		Spec: monitoringv1.PrometheusRuleSpec{
 			Groups: []monitoringv1.RuleGroup{
 				{
-					Name: "x509-certificate-exporter.rules",
+					Name: x.conf.alerting.PrometheusRuleName,
 					Rules: []monitoringv1.Rule{
 						{
 							Alert: "X509ExporterReadErrors",
 							Annotations: map[string]string{
-								"description": "Over the last 15 minutes, this x509-certificate-exporter instance has experienced errors reading certificate files or querying the Kubernetes API. This could be caused by a misconfiguration if triggered when the exporter starts.",
+								"description": fmt.Sprintf("Over the last %s, this x509-certificate-exporter instance has experienced errors reading certificate files or querying the Kubernetes API. This could be caused by a misconfiguration if triggered when the exporter starts.", x.conf.alerting.DurationForAlertEvaluation),
 								"summary":     "Increasing read errors for x509-certificate-exporter on {{$externalLabels.landscape}} landscape",
 							},
-							Expr:   intstr.FromString("increase(x509_read_errors[15m]) > 0"),
+							Expr:   intstr.FromString(fmt.Sprintf("increase(x509_read_errors[%s]) > 0", x.conf.alerting.DurationForAlertEvaluation)),
 							Labels: readErrorsLabels,
 						},
 						{
@@ -72,7 +67,7 @@ func (x *x509CertificateExporter) prometheusRule(labelz labels.Set, renewalDays,
 								"summary":     "Certificate cannot be decoded on {{ $externalLabels.landscape }} landscape",
 							},
 							Expr:   intstr.FromString("x509_cert_error > 0"),
-							For:    &for15mins,
+							For:    &alertDurationCalculation,
 							Labels: certificateErrorLabels,
 						},
 						{

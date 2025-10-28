@@ -8,6 +8,7 @@ import (
 	"time"
 
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -93,12 +94,35 @@ type workerGroup struct {
 // which brings the configurations for different node pools
 type workerGroupsConfig []workerGroup
 
+type prometheusRuleSeverity string
+
+const (
+	infoSeverity     prometheusRuleSeverity = "info"
+	warningSeverity  prometheusRuleSeverity = "warning"
+	criticalSeverity prometheusRuleSeverity = "critical"
+	blockerSeverity  prometheusRuleSeverity = "blocker"
+)
+
 type alertingConfig struct {
 	// CertificateRenewalDays specifies days before certificate expires that we will get an alert
 	// specifying we need to renew
 	CertificateRenewalDays uint `yaml:"certificateRenewalDays,omitempty"`
 	// CertificateExpirationDays specifies days before certificate expires that we will get an alert
 	CertificateExpirationDays uint `yaml:"certificateExpirationDays,omitempty"`
+	// ReadErrorsSeverity is the severity level for read errors alerts
+	ReadErrorsSeverity prometheusRuleSeverity `yaml:"readErrorsSeverity,omitempty"`
+	// CertificateErrorsSeverity is the severity level for certificate errors alerts
+	CertificateErrorsSeverity prometheusRuleSeverity `yaml:"certificateErrorsSeverity,omitempty"`
+	// RenewalSeverity is the severity level for certificate renewal alerts
+	RenewalSeverity prometheusRuleSeverity `yaml:"renewalSeverity,omitempty"`
+	// ExpirationSeverity is the severity level for certificate expiration alerts
+	ExpirationSeverity prometheusRuleSeverity `yaml:"expirationSeverity,omitempty"`
+	// ExpiresTodaySeverity is the severity level for certificate expires today alerts
+	ExpiresTodaySeverity prometheusRuleSeverity `yaml:"expiresTodaySeverity,omitempty"`
+	// DurationForAlertEvaluation is the duration over which the alert is evaluated
+	DurationForAlertEvaluation monitoringv1.Duration `yaml:"durationForAlertEvaluation,omitempty"`
+	// PrometheusRuleName is the name of the PrometheusRule resource
+	PrometheusRuleName string `yaml:"prometheusRuleName,omitempty"`
 }
 
 type x509certificateExporterConfig struct {
@@ -126,4 +150,5 @@ type x509CertificateExporter struct {
 	secretsManager secretsmanager.Interface
 	namespace      string
 	values         Values
+	conf           x509certificateExporterConfig
 }

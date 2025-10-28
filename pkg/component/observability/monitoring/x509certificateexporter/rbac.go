@@ -23,8 +23,8 @@ func (x *x509CertificateExporter) inClusterClusterRole(resName string, vals Valu
 	var (
 		nsses = []string{}
 	)
-	if len(vals.IncludeNamespaces) > 0 {
-		nsses = vals.IncludeNamespaces
+	if len(x.conf.inCluster.IncludeNamespaces) > 0 {
+		nsses = x.conf.inCluster.IncludeNamespaces
 	}
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{

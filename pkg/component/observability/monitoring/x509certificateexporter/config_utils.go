@@ -157,6 +157,28 @@ func (a *alertingConfig) Default() {
 	if a.CertificateRenewalDays == 0 {
 		a.CertificateRenewalDays = defaultCertificateRenewalDays
 	}
+
+	if a.ReadErrorsSeverity == "" {
+		a.ReadErrorsSeverity = defaultReadErrorsSeverity
+	}
+	if a.CertificateErrorsSeverity == "" {
+		a.CertificateErrorsSeverity = defaultCertificateErrorsSeverity
+	}
+	if a.RenewalSeverity == "" {
+		a.RenewalSeverity = defaultRenewalSeverity
+	}
+	if a.ExpirationSeverity == "" {
+		a.ExpirationSeverity = defaultExpirationSeverity
+	}
+	if a.ExpiresTodaySeverity == "" {
+		a.ExpiresTodaySeverity = defaultExpiresTodaySeverity
+	}
+	if a.DurationForAlertEvaluation == "" {
+		a.DurationForAlertEvaluation = defaultDurationForAlertEvaluation
+	}
+	if a.PrometheusRuleName == "" {
+		a.PrometheusRuleName = defaultPrometheusRuleName
+	}
 }
 
 func (a *alertingConfig) Validate() error {
@@ -169,6 +191,14 @@ func (a *alertingConfig) Validate() error {
 	return nil
 }
 
+func (x *x509certificateExporterConfig) IsInclusterEnabled() bool {
+	return x.inCluster.Enabled
+}
+
+func (x *x509certificateExporterConfig) IsWorkerGroupsEnabled() bool {
+	return len(x.workerGroups) > 0
+}
+
 func (x *x509certificateExporterConfig) Validate() (errs []error) {
 	if err := x.inCluster.Validate(); err != nil {
 		errs = append(errs, fmt.Errorf("inCluster: %w", err))
@@ -179,7 +209,7 @@ func (x *x509certificateExporterConfig) Validate() (errs []error) {
 	if err := x.workerGroups.Validate(); err != nil {
 		errs = append(errs, fmt.Errorf("workerGroups: %w", err))
 	}
-	if x.inCluster.Enabled == false && len(x.workerGroups) == 0 {
+	if x.IsInclusterEnabled() && x.IsWorkerGroupsEnabled() {
 		errs = append(errs, fmt.Errorf("at least one of inCluster or workerGroups must be enabled"))
 	}
 	return nil
