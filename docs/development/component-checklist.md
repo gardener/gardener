@@ -101,9 +101,9 @@ This document provides a checklist for them that you can walk through.
    You should restrict both ingress and egress traffic to/from your component as much as possible to ensure that it only gets access to/from other components if really needed.
    Gardener provides a few default policies for typical usage scenarios. For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../operations/network_policies.md).
 
-5. **Do not run containers in privileged mode** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L501))
+5. **Do not run containers in privileged mode** ([example](https://github.com/gardener/gardener/blob/v1.130.1/pkg/component/networking/nodelocaldns/nodelocaldns.go#L493), [example 2](https://github.com/gardener/gardener/blob/v1.130.1/pkg/component/networking/istio/charts/istio/istio-ingress/templates/deployment.yaml#L54))
 
-   Avoid running containers with `privileged=true`.
+   [Avoid running containers with `privileged=true`.](https://kubernetes.io/docs/concepts/security/linux-kernel-security-constraints/#privileged-containers)
 
 6. **Drop unutilised capabilities** ([example](https://github.com/gardener/gardener/blob/v1.129.1/pkg/component/networking/istio/charts/istio/istio-istiod/templates/deployment.yaml#L132-L134), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L324-L328))
 
