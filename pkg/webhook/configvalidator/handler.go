@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -43,7 +42,6 @@ func init() {
 
 // Handler validates configuration part of ConfigMaps which are referenced in Shoot resources.
 type Handler struct {
-	Logger    logr.Logger
 	APIReader client.Reader
 	Client    client.Reader
 	Decoder   admission.Decoder
