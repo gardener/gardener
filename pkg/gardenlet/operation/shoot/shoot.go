@@ -289,10 +289,10 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 
 	shootStatus := shoot.GetInfo().Status
 	shoot.EncryptedResources = v1beta1helper.GetShootEncryptedResourcesInStatus(shootStatus)
-	// In case the reconciliation started before garden-apiserver/gardenlet update use the olf ResourcesToEncrypt field
+	// In case the reconciliation started before garden-apiserver/gardenlet update use the old ResourcesToEncrypt field
 	// TODO(AleksandarSavchev): Remove this fallback logic in a future release
-	if len(shoot.EncryptedResources) == 0 && len(shoot.ResourcesToEncrypt) > 0 {
-		shoot.EncryptedResources = shoot.ResourcesToEncrypt
+	if len(shoot.EncryptedResources) == 0 && len(shootStatus.EncryptedResources) > 0 {
+		shoot.EncryptedResources = shootStatus.EncryptedResources
 	}
 
 	if b.seed != nil {
