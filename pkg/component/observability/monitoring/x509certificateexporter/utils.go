@@ -17,6 +17,21 @@ func stringsToArgs(argName string, values []string) []string {
 	return values
 }
 
+func mappedStringsToArgs(argName string, values map[string]string) []string {
+	vals := make([]string, 0, len(values))
+	var value string = ""
+
+	for k, v := range values {
+		if v != "" {
+			value = fmt.Sprintf("--%s=%s=%s", argName, k, v)
+		} else {
+			value = fmt.Sprintf("--%s=%s", argName, k)
+		}
+		vals = append(vals, value)
+	}
+	return vals
+}
+
 func stringsToPathArgs(argName string, values []string) ([]string, error) {
 	for _, value := range values {
 		if !filepath.IsAbs(value) {
@@ -35,12 +50,12 @@ func configMapKeysAsArgs(configMapKeys []string) []string {
 	return stringsToArgs("configmap-key", configMapKeys)
 }
 
-func includedLabelsAsArgs(includedLabels []string) []string {
-	return stringsToArgs("include-label", includedLabels)
+func includedLabelsAsArgs(includedLabels map[string]string) []string {
+	return mappedStringsToArgs("include-label", includedLabels)
 }
 
-func excludedLabelsAsArgs(excludedLabels []string) []string {
-	return stringsToArgs("exclude-label", excludedLabels)
+func excludedLabelsAsArgs(excludedLabels map[string]string) []string {
+	return mappedStringsToArgs("exclude-label", excludedLabels)
 }
 
 func includedNamespacesAsArgs(includedNamespaces []string) []string {

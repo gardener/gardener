@@ -55,9 +55,7 @@ func (x *x509CertificateExporter) Deploy(ctx context.Context) error {
 		err                 error
 	)
 	if x.conf.IsInclusterEnabled() {
-		if res, err = x.getInClusterCertificateMonitoringResources(); err != nil {
-			return fmt.Errorf("failed to get in-cluster certificate monitoring resources: %w", err)
-		}
+		res = x.getInClusterCertificateMonitoringResources()
 	}
 	res = append(res, x.prometheusRule(x.getGenericLabels("any")))
 

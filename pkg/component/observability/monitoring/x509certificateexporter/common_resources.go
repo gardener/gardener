@@ -46,10 +46,10 @@ func (x *x509CertificateExporter) service(resName string, selector labels.Set) *
 	return service
 }
 
-func (x *x509CertificateExporter) getGenericLabels(source string) map[string]string {
+func (x *x509CertificateExporter) getGenericLabels(source podTypeLabelValues) map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelRole: labelComponent,
-		certificateSourceLabelName: source,
+		certificateSourceLabelName: string(source),
 	}
 }
 
