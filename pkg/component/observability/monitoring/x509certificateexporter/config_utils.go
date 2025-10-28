@@ -32,13 +32,13 @@ var configMapKeyRegexp = regexp.MustCompile(`^[-._a-zA-Z0-9]+$`)
 
 func validateConfigMapKey(key string) error {
 	if len(key) == 0 {
-		return fmt.Errorf("config map key cannot be empty")
+		return errors.New("config map key cannot be empty")
 	}
 	if key == "." {
-		return fmt.Errorf("config map key cannot be a single dot")
+		return errors.New("config map key cannot be a single dot")
 	}
 	if key == ".." {
-		return fmt.Errorf("config map key cannot be a double dot")
+		return errors.New("config map key cannot be a double dot")
 	}
 	if !configMapKeyRegexp.MatchString(key) {
 		return fmt.Errorf("invalid config map key %q", key)
@@ -52,10 +52,10 @@ func validateConfigMapKey(key string) error {
 func validateLabels(labelz map[string]string) error {
 	for k, v := range labelz {
 		if err := validation.IsQualifiedName(k); err != nil {
-			return fmt.Errorf("includeLabels has invalid key %q: %v", k, err)
+			return fmt.Errorf("includeLabels has invalid key %q: %w", k, err)
 		}
 		if err := validation.IsValidLabelValue(v); err != nil {
-			return fmt.Errorf("includeLabels[%q] has invalid value %q: %v", k, v, err)
+			return fmt.Errorf("includeLabels[%q] has invalid value %q: %w", k, v, err)
 		}
 	}
 	return nil
@@ -144,7 +144,7 @@ func (wgs *workerGroupsConfig) Validate() error {
 	}
 
 	if len(wgErrs) > 0 {
-		return fmt.Errorf("workerGroups validation errors: %v", wgErrs)
+		return fmt.Errorf("workerGroups validation errors: %w", wgErrs)
 	}
 
 	return nil
