@@ -373,7 +373,8 @@ func (r *Reconciler) reconcileBackupBucketExtensionSecret(ctx context.Context, e
 	switch credentials := backupCredentials.(type) {
 	case *corev1.Secret:
 		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
-			metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, now)
+			extensionSecret.Annotations = map[string]string{v1beta1constants.GardenerTimestamp: now}
+			extensionSecret.Labels = nil
 			extensionSecret.Data = credentials.Data
 			return nil
 		})
