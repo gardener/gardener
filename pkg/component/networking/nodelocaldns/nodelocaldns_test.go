@@ -35,7 +35,6 @@ import (
 	. "github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -270,17 +269,12 @@ var _ = Describe("NodeLocalDNS", func() {
 				},
 			},
 		}
-		shootYAML, err := kubernetesutils.Serialize(shoot, kubernetes.GardenScheme)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(shootYAML).ToNot(BeEmpty())
-
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: namespace,
 			},
 			Spec: extensionsv1alpha1.ClusterSpec{
 				Shoot: runtime.RawExtension{
-					Raw:    []byte(shootYAML),
 					Object: shoot,
 				},
 				Seed: runtime.RawExtension{
