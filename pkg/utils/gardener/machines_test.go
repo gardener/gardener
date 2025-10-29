@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -153,7 +155,10 @@ var _ = Describe("Machines", func() {
 
 		BeforeEach(func() {
 			fakeOps = &retryfake.Ops{MaxAttempts: 1}
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			// Starting with controller-runtime v0.22.0, the default object tracker does not work with resources which include
+			// structs directly as pointer, e.g. *MachineConfiguration in Machine resource. Hence, use the old one instead.
+			objectTracker := testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder())
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjectTracker(objectTracker).Build()
 
 			DeferCleanup(test.WithVars(
 				&retry.Until, fakeOps.Until,

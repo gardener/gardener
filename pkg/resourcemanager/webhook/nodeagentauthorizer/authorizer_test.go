@@ -19,6 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -55,7 +57,10 @@ var _ = Describe("Authorizer", func() {
 		ctx = context.Background()
 
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
-		sourceClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		// Starting with controller-runtime v0.22.0, the default object tracker does not work with resources which include
+		// structs directly as pointer, e.g. *MachineConfiguration in Machine resource. Hence, use the old one instead.
+		objectTracker := testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder())
+		sourceClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjectTracker(objectTracker).Build()
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 		machineNamespace = "shoot--foo"
 		authorizer = NewAuthorizer(log, sourceClient, targetClient, &machineNamespace, true)
