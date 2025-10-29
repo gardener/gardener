@@ -176,7 +176,7 @@
 * [Reversed Cluster VPN](development/reversed-vpn-tunnel.md)
 * [Adding New Cloud Providers](development/new-cloud-provider.md)
 * [Adding Support For A New Kubernetes Version](development/new-kubernetes-version.md)
-* [Removing Support For a Kubernetes Version](development/drop-support-kubernetes-version.md)
+* [Removing Support For a Kubernetes Version](development/remove-support-for-kubernetes-version.md)
 * [Extending the Monitoring Stack](development/monitoring-stack.md)
 * [Logging Stack](development/logging-stack.md)
 * [How to create log parser for container into fluent-bit](development/log_parsers.md)
