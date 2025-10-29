@@ -185,7 +185,9 @@ func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.Error
 
 func (shootStrategy) Canonicalize(obj runtime.Object) {
 	shoot := obj.(*core.Shoot)
-
+	if shoot.Spec.Kubernetes.ClusterAutoscaler != nil && shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete != nil {
+		shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete = nil
+	}
 	gardenerutils.MaintainSeedNameLabels(shoot, shoot.Spec.SeedName, shoot.Status.SeedName)
 }
 

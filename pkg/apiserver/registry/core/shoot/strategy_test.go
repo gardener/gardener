@@ -659,6 +659,14 @@ var _ = Describe("Strategy", func() {
 				}))
 			})
 		})
+
+		Context("maxEmptyBulkDelete", func() {
+			It("should set spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete to nil", func() {
+				shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{MaxEmptyBulkDelete: ptr.To[int32](10)}
+				strategy.Canonicalize(shoot)
+				Expect(shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(BeNil())
+			})
+		})
 	})
 
 	Context("BindingStrategy", func() {
