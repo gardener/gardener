@@ -5,11 +5,9 @@
 package nodeagentauthorizer_test
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/x509/pkix"
 	"fmt"
-	"net/http"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -23,17 +21,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	certutil "k8s.io/client-go/util/cert"
-	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentauthorizer"
 	"github.com/gardener/gardener/pkg/utils"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -58,54 +48,6 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 	)
 
 	runTests := func() {
-		BeforeEach(func() {
-			By("Setup manager")
-			mgr, err := manager.New(testRestConfig, manager.Options{
-				WebhookServer: webhook.NewServer(webhook.Options{
-					Port:    testEnv.WebhookInstallOptions.LocalServingPort,
-					Host:    testEnv.WebhookInstallOptions.LocalServingHost,
-					CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
-				}),
-				Metrics: metricsserver.Options{BindAddress: "0"},
-				Cache: cache.Options{
-					DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
-				},
-				Controller: controllerconfig.Controller{
-					SkipNameValidation: ptr.To(true),
-				},
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Register webhook")
-			nodeAgentAuthorizer := &nodeagentauthorizer.Webhook{
-				Logger: log,
-				Config: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
-					Enabled:          true,
-					MachineNamespace: machineNamespace,
-				},
-			}
-			Expect(nodeAgentAuthorizer.AddToManager(mgr, testClient, testClient)).To(Succeed())
-
-			By("Start manager")
-			mgrContext, mgrCancel := context.WithCancel(ctx)
-
-			go func() {
-				defer GinkgoRecover()
-				Expect(mgr.Start(mgrContext)).To(Succeed())
-			}()
-
-			// Wait for the webhook server to start
-			Eventually(func() error {
-				checker := mgr.GetWebhookServer().StartedChecker()
-				return checker(&http.Request{})
-			}).Should(Succeed())
-
-			DeferCleanup(func() {
-				By("Stop manager")
-				mgrCancel()
-			})
-		})
-
 		Describe("#CertificateSigningRequests", func() {
 			var (
 				csr *certificatesv1.CertificateSigningRequest
