@@ -356,7 +356,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 						Provider: gardencorev1beta1.SeedProvider{},
 					},
 				},
-			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-babc313f"}),
+			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-f3c6b5a9"}),
 		Entry("verify deployment with two replica and three zones", nil, nil, nil, nil, nil,
 			&gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -371,7 +371,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				},
 			}, &seedmanagement.GardenletDeployment{
 				ReplicaCount: ptr.To[int32](2),
-			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-39425435"}),
+			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-7ce49ea8"}),
 		Entry("verify deployment with only one replica", nil, nil, nil, nil, nil,
 			&gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -386,7 +386,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				},
 			}, &seedmanagement.GardenletDeployment{
 				ReplicaCount: ptr.To[int32](1),
-			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-39425435"}),
+			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-7ce49ea8"}),
 		Entry("verify deployment with only one zone", nil, nil, nil, nil, nil,
 			&gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -399,7 +399,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 						},
 					},
 				},
-			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-8e8038ec"}),
+			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3a4b364a"}),
 		Entry("verify deployment with image vector override", nil, nil, nil, nil, nil, nil, nil, ptr.To("dummy-override-content"), nil, nil, map[string]string{
 			"gardenlet-configmap":             "gardenlet-configmap-e03f6438",
 			"gardenlet-imagevector-overwrite": "gardenlet-imagevector-overwrite-32ecb769",
