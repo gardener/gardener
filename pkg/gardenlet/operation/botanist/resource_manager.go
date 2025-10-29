@@ -35,6 +35,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 
 		values = resourcemanager.Values{
 			ClusterIdentity:                           b.Seed.GetInfo().Status.ClusterIdentity,
+			HighAvailabilityConfigWebhookEnabled:      true,
 			DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
 			DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
 			IsWorkerless:                              b.Shoot.IsWorkerless,
@@ -65,7 +66,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 			values.TargetNamespaces = nil
 		} else {
 			newFunc = shared.NewRuntimeGardenerResourceManager
-			// TODO(timebertt): consider disabling the highavailabilityconfig webhook
+			values.HighAvailabilityConfigWebhookEnabled = false
 			values.PriorityClassName = v1beta1constants.PriorityClassNameSeedSystemCritical
 		}
 	}

@@ -294,6 +294,7 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 
 	return sharedcomponent.NewRuntimeGardenerResourceManager(r.SeedClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:              features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
+		HighAvailabilityConfigWebhookEnabled:      true,
 		DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
 		DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
 		EndpointSliceHintsEnabled:                 endpointSliceHintsEnabled,

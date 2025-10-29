@@ -304,6 +304,7 @@ var _ = Describe("ResourceManager", func() {
 			AlwaysUpdate:                                     &alwaysUpdate,
 			ClusterIdentity:                                  &clusterIdentity,
 			ConcurrentSyncs:                                  &concurrentSyncs,
+			HighAvailabilityConfigWebhookEnabled:             true,
 			DefaultNotReadyToleration:                        defaultNotReadyTolerationSeconds,
 			DefaultUnreachableToleration:                     defaultUnreachableTolerationSeconds,
 			NetworkPolicyAdditionalNamespaceSelectors:        additionalNetworkPolicyNamespaceSelectors,
@@ -2681,9 +2682,9 @@ subjects:
 					}))
 
 					configMap = configMapFor(&watchedNamespace, ForSourceAndTarget, false, true)
-					cfg.BootstrapControlPlaneNode = true
 					resourceManager = New(c, deployNamespace, sm, cfg)
 					resourceManager.SetSecrets(secrets)
+					resourceManager.SetBootstrapControlPlaneNode(true)
 
 					deployment = deploymentFor(configMap.Name, false, nil, true)
 
