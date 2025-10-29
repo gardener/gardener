@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -23,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
@@ -75,7 +77,11 @@ func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *security
 	if err != nil {
 		return err
 	}
-	kind := credential.GetObjectKind().GroupVersionKind().Kind
+	gvk, err := apiutil.GVKForObject(credential, kubernetes.GardenScheme)
+	if err != nil {
+		return err
+	}
+	kind := gvk.Kind
 
 	if !controllerutil.ContainsFinalizer(credential, finalizerName) {
 		log.Info("Adding finalizer", "finalizer", finalizerName, kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
@@ -97,8 +103,8 @@ func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *security
 
 	_, hasProviderKeyLabel := labels[providerTypeLabelKey]
 	_, hasCredentialsBindingRefLabel := labels[v1beta1constants.LabelCredentialsBindingReference]
-	secretNeedsLabel := !hasProviderKeyLabel && credential.GetObjectKind().GroupVersionKind().Kind == "Secret"
-	workloadIdentityNeedsLabelRemoval := hasProviderKeyLabel && credential.GetObjectKind().GroupVersionKind().Kind == "WorkloadIdentity"
+	secretNeedsLabel := !hasProviderKeyLabel && kind == "Secret"
+	workloadIdentityNeedsLabelRemoval := hasProviderKeyLabel && kind == "WorkloadIdentity"
 	if secretNeedsLabel || workloadIdentityNeedsLabelRemoval || !hasCredentialsBindingRefLabel {
 		patch := client.MergeFrom(credential.DeepCopyObject().(client.Object))
 		if secretNeedsLabel {
