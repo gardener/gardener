@@ -6,92 +6,138 @@ package x509certificateexporter
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
+
+	"go.yaml.in/yaml/v2"
 )
 
-func stringsToArgs(argName string, values []string) []string {
-	for _, value := range values {
-		value = "--" + argName + "=" + value
+func mapStrings(slice []string, fn func(string) string) []string {
+	result := make([]string, len(slice))
+	for i, v := range slice {
+		result[i] = fn(v)
 	}
-	return values
+	return result
+}
+
+func mapStringsWithVals(slice map[string]string, fn func(string, string) string) []string {
+	results := make([]string, 0)
+	for k, v := range slice {
+		results = append(results, fn(k, v))
+	}
+	return results
+}
+
+func stringsToArgs(argName string, values []string) []string {
+	return mapStrings(values, func(value string) string {
+		return "--" + argName + "=" + value
+	})
 }
 
 func mappedStringsToArgs(argName string, values map[string]string) []string {
-	vals := make([]string, 0, len(values))
-	var value string = ""
-
-	for k, v := range values {
+	return mapStringsWithVals(values, func(k, v string) string {
 		if v != "" {
-			value = fmt.Sprintf("--%s=%s=%s", argName, k, v)
-		} else {
-			value = fmt.Sprintf("--%s=%s", argName, k)
+			return fmt.Sprintf("--%s=%s=%s", argName, k, v)
 		}
-		vals = append(vals, value)
+		return fmt.Sprintf("--%s=%s", argName, k)
+	})
+}
+
+func boolToArg(flag string, enabled bool) []string {
+	if bool(enabled) {
+		return []string{flag}
 	}
-	return vals
+	return []string{}
 }
 
-func stringsToPathArgs(argName string, values []string) ([]string, error) {
-	for _, value := range values {
-		if !filepath.IsAbs(value) {
-			return nil, fmt.Errorf("value %s is not an absolute path", value)
-		}
-		value = "--" + argName + "=" + value
+func getExposeRelativeMetricsArg(expose bool) []string {
+	return boolToArg("--expose-relative-metrics", expose)
+}
+
+func getExposePerCertErrorMetricsArg(expose bool) []string {
+	return boolToArg("--expose-per-cert-error-metrics", expose)
+}
+
+func getExposeLabelsMetricsArg(expose bool) []string {
+	return boolToArg("--expose-labels-metrics", expose)
+}
+
+func (a *alertingConfig) Default() {
+	if a.CertificateExpirationDays == 0 {
+		a.CertificateExpirationDays = defaultCertificateExpirationDays
 	}
-	return values, nil
-}
-
-func secretTypesAsArgs(secretTypes []string) []string {
-	return stringsToArgs("secret-type", secretTypes)
-}
-
-func configMapKeysAsArgs(configMapKeys []string) []string {
-	return stringsToArgs("configmap-key", configMapKeys)
-}
-
-func includedLabelsAsArgs(includedLabels map[string]string) []string {
-	return mappedStringsToArgs("include-label", includedLabels)
-}
-
-func excludedLabelsAsArgs(excludedLabels map[string]string) []string {
-	return mappedStringsToArgs("exclude-label", excludedLabels)
-}
-
-func includedNamespacesAsArgs(includedNamespaces []string) []string {
-	return stringsToArgs("include-namespace", includedNamespaces)
-}
-
-func excludedNamespacesAsArgs(excludedNamespaces []string) []string {
-	return stringsToArgs("exclude-namespace", excludedNamespaces)
-}
-
-func getCertificateFileAsArg(filenames []string) ([]string, error) {
-	return stringsToPathArgs("watch-file", filenames)
-}
-
-func getCertificateDirAsArg(directories []string) ([]string, error) {
-	return stringsToPathArgs("watch-dir", directories)
-}
-
-func getPathArgs(paths []string) ([]string, []string, error) {
-	var (
-		certificateFileArgs []string
-		certificateDirArgs  []string
-		err                 error
-	)
-	for _, path := range paths {
-		if strings.HasSuffix(path, "/") {
-			certificateDirArgs = append(certificateDirArgs, path)
-			continue
-		}
-		certificateFileArgs = append(certificateFileArgs, path)
+	if a.CertificateRenewalDays == 0 {
+		a.CertificateRenewalDays = defaultCertificateRenewalDays
 	}
-	if certificateFileArgs, err = getCertificateFileAsArg(certificateFileArgs); err != nil {
-		return nil, nil, err
+
+	if a.ReadErrorsSeverity == "" {
+		a.ReadErrorsSeverity = defaultReadErrorsSeverity
 	}
-	if certificateDirArgs, err = getCertificateDirAsArg(certificateDirArgs); err != nil {
-		return nil, nil, err
+	if a.CertificateErrorsSeverity == "" {
+		a.CertificateErrorsSeverity = defaultCertificateErrorsSeverity
 	}
-	return certificateFileArgs, certificateDirArgs, nil
+	if a.RenewalSeverity == "" {
+		a.RenewalSeverity = defaultRenewalSeverity
+	}
+	if a.ExpirationSeverity == "" {
+		a.ExpirationSeverity = defaultExpirationSeverity
+	}
+	if a.ExpiresTodaySeverity == "" {
+		a.ExpiresTodaySeverity = defaultExpiresTodaySeverity
+	}
+	if a.DurationForAlertEvaluation == "" {
+		a.DurationForAlertEvaluation = defaultDurationForAlertEvaluation
+	}
+	if a.PrometheusRuleName == "" {
+		a.PrometheusRuleName = defaultPrometheusRuleName
+	}
+}
+
+func (a *alertingConfig) Validate() error {
+	if a.CertificateExpirationDays > a.CertificateRenewalDays {
+		return fmt.Errorf(
+			"certificateRenewalDays must be greater than or equal to certificateExpirationDays, got %d, %d",
+			a.CertificateRenewalDays, a.CertificateExpirationDays,
+		)
+	}
+	return nil
+}
+
+func (x *x509certificateExporterConfig) IsInclusterEnabled() bool {
+	return x.inCluster.Enabled
+}
+
+func (x *x509certificateExporterConfig) IsWorkerGroupsEnabled() bool {
+	return len(x.workerGroups) > 0
+}
+
+func (x *x509certificateExporterConfig) Validate() (errs []error) {
+	if err := x.inCluster.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("inCluster: %w", err))
+	}
+	if err := x.alerting.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("alerting: %w", err))
+	}
+	if err := x.workerGroups.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("workerGroups: %w", err))
+	}
+	if x.IsInclusterEnabled() && x.IsWorkerGroupsEnabled() {
+		errs = append(errs, fmt.Errorf("at least one of inCluster or workerGroups must be enabled"))
+	}
+	return
+}
+
+func (x *x509certificateExporterConfig) Default() {
+	x.inCluster.Default()
+	x.alerting.Default()
+}
+
+func parseConfig(data []byte, out *x509certificateExporterConfig) error {
+	if err := yaml.Unmarshal(data, out); err != nil {
+		return fmt.Errorf("failed to unmarshal x509certificateexporter config: %w", err)
+	}
+
+	out.Default()
+	if err := out.Validate(); err != nil {
+		return fmt.Errorf("x509certificateexporter config validation failed: %+v", err)
+	}
+	return nil
 }

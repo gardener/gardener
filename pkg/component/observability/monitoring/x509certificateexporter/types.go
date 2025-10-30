@@ -77,17 +77,26 @@ type inClusterConfig struct {
 	KubeApiBurst *uint32 `yaml:"kubeApiBurst,omitempty"`
 }
 
-// workerGroup holds configuration options for a single worker group x509 certificate monitoring
-type workerGroup struct {
-	commonExporterConfigs
-	// Selector is the label selector to identify the worker nodes
-	Selector *metav1.LabelSelector `yaml:"selectoroomitempty"`
+type monitorableMount struct {
+	// Path is the mount path within the pod
+	Path string `yaml:"path"`
 	// WatchKubeconfigs is a list of kubeconfigs passed to the exporter
 	WatchKubeconfigs []string `yaml:"watchKubeconfigs,omitempty"`
 	// WatchCertificates is a list of certificate paths passed to the exporter
 	WatchCertificates []string `yaml:"watchCertificates,omitempty"`
 	// WatchDirs is a list of directories to watch for certificates
 	WatchDirs []string `yaml:"watchDirs,omitempty"`
+}
+
+// workerGroup holds configuration options for a single worker group x509 certificate monitoring
+type workerGroup struct {
+	commonExporterConfigs
+	// NameSuffix is attached to the daemonset name and related resources
+	NameSuffix string `yaml:"nameSuffix,omitempty"`
+	// Selector is the label selector to identify the worker nodes
+	Selector *metav1.LabelSelector `yaml:"selectoroomitempty"`
+	// Mounts is a map of mounts and the monitored resources within
+	Mounts map[string]monitorableMount `yaml:"mounts"`
 }
 
 // workerGroupsConfig is a list of worker group configurations
@@ -150,5 +159,5 @@ type x509CertificateExporter struct {
 	secretsManager secretsmanager.Interface
 	namespace      string
 	values         Values
-	conf           x509certificateExporterConfig
+	conf           *x509certificateExporterConfig
 }

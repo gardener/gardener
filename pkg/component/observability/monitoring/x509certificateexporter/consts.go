@@ -1,7 +1,10 @@
 package x509certificateexporter
 
-import "time"
-import monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+import (
+	"time"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+)
 
 // Private consts
 // General
@@ -24,10 +27,10 @@ const (
 	defaultReplicas uint32 = 1
 	// defaultCertCacheDuration is the default duration for which certificates are cached
 	defaultCertCacheDuration = 24 * time.Hour
-	// defaultKubeApiBurst is the default burst for the kube api client
-	defaultKubeApiBurst uint32 = 30
-	// defaultKubeApiRateLimit is the default rate limit for the kube api client
-	defaultKubeApiRateLimit uint32 = 20
+	// defaultKubeAPIBurst is the default burst for the kube api client
+	defaultKubeAPIBurst uint32 = 30
+	// defaultKubeAPIRateLimit is the default rate limit for the kube api client
+	defaultKubeAPIRateLimit uint32 = 20
 )
 
 // Alerting consts

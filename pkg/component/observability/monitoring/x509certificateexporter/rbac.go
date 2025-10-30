@@ -19,7 +19,7 @@ func (x *x509CertificateExporter) serviceAccount(resName string) *corev1.Service
 	}
 }
 
-func (x *x509CertificateExporter) inClusterClusterRole(resName string, vals Values) *rbacv1.ClusterRole {
+func (x *x509CertificateExporter) inClusterClusterRole(resName string) *rbacv1.ClusterRole {
 	var (
 		nsses = []string{}
 	)

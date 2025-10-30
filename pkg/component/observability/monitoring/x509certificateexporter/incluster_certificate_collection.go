@@ -81,7 +81,7 @@ func (x *x509CertificateExporter) getInClusterCertificateMonitoringResources() [
 	var (
 		resName = inClusterManagedResourceName + x.values.NameSuffix
 		sa      = x.serviceAccount(resName)
-		cr      = x.inClusterClusterRole(clusterRoleName, x.values)
+		cr      = x.inClusterClusterRole(clusterRoleName)
 		crb     = x.inClusterClusterRoleBinding(clusterRoleBindingName, sa, cr)
 		service = x.service(resName, x.getGenericLabels(inClusterCertificateLabelValue))
 		sm      = x.serviceMonitor(resName, x.getGenericLabels(inClusterCertificateLabelValue))

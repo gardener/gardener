@@ -14,7 +14,6 @@ import (
 )
 
 func (x *x509CertificateExporter) prometheusRule(labelz labels.Set) *monitoringv1.PrometheusRule {
-
 	var (
 		alertDurationCalculation = x.conf.alerting.DurationForAlertEvaluation
 		certRenewalExpr          = intstr.FromString(fmt.Sprintf(
@@ -26,16 +25,16 @@ func (x *x509CertificateExporter) prometheusRule(labelz labels.Set) *monitoringv
 		certExpiresTodayExpr = intstr.FromString("(x509_cert_not_after - time()) < 86400")
 		genAlertLabels       = func(sev prometheusRuleSeverity) map[string]string {
 			return map[string]string{
-				"service":  "x509-certificate-exporter",
-				"topology": x.values.PrometheusInstance,
-				"severity": string(sev),
+				"service":          "x509-certificate-exporter",
+				"topology":         x.values.PrometheusInstance,
+				defaultSeverityKey: string(sev),
 			}
 		}
-		readErrorsLabels       map[string]string = genAlertLabels(x.conf.alerting.ReadErrorsSeverity)
-		certificateErrorLabels map[string]string = genAlertLabels(x.conf.alerting.CertificateErrorsSeverity)
-		renewalLabels          map[string]string = genAlertLabels(x.conf.alerting.RenewalSeverity)
-		expirationLabels       map[string]string = genAlertLabels(x.conf.alerting.ExpirationSeverity)
-		expiresTodayLabels     map[string]string = genAlertLabels(x.conf.alerting.ExpiresTodaySeverity)
+		readErrorsLabels       = genAlertLabels(x.conf.alerting.ReadErrorsSeverity)
+		certificateErrorLabels = genAlertLabels(x.conf.alerting.CertificateErrorsSeverity)
+		renewalLabels          = genAlertLabels(x.conf.alerting.RenewalSeverity)
+		expirationLabels       = genAlertLabels(x.conf.alerting.ExpirationSeverity)
+		expiresTodayLabels     = genAlertLabels(x.conf.alerting.ExpiresTodaySeverity)
 	)
 
 	labelz["prometheus"] = x.values.PrometheusInstance
