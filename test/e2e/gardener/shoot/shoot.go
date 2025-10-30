@@ -16,6 +16,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -351,6 +352,28 @@ func ItShouldWaitForPodsInShootToBeReady(s *ShootContext, namespace string, podL
 			}
 
 			return nil
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldCreatePrometheusRuleForShoot creates a PrometheusRule and makes sure it is created.
+func ItShouldCreatePrometheusRuleForShoot(s *ShootContext, rule *monitoringv1.PrometheusRule) {
+	GinkgoHelper()
+
+	It("Create PrometheusRule "+rule.Namespace+"/"+rule.Name, func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			g.Expect(s.ShootClient.Create(ctx, rule)).To(Succeed())
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldDeletePrometheusRuleForShoot deletes a PrometheusRule and makes sure it is deleted.
+func ItShouldDeletePrometheusRuleForShoot(s *ShootContext, rule *monitoringv1.PrometheusRule) {
+	GinkgoHelper()
+
+	It("Delete PrometheusRule "+rule.Namespace+"/"+rule.Name, func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			g.Expect(s.ShootClient.Delete(ctx, rule)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
