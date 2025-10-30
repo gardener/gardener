@@ -249,8 +249,8 @@ func viewerClusterRoleBindings() []client.Object {
 
 // ShootAccessClusterRoleBindings returns all ClusterRoleBindings granting access to credentials obtained via the shoot/adminkubeconfig and shoot/viewerkubeconfig subresources.
 //
-// Deprecated: The function is just temporary exported for migration purposes. It will be removed after v1.132.0 is released.
+// Deprecated: The function is just temporary exported for migration purposes. It will be removed after v1.133.0 is released.
 func ShootAccessClusterRoleBindings() []client.Object {
-	// TODO(vpnachev): Remove this function after v1.132.0 has been released.
+	// TODO(vpnachev): Remove this function after v1.133.0 has been released.
 	return append(adminClusterRoleBindings(), viewerClusterRoleBindings()...)
 }
