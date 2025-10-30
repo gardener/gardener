@@ -671,6 +671,11 @@ type ExposureClassHandler struct {
 type LoadBalancerServiceConfig struct {
 	// Annotations is a key value map to annotate the underlying load balancer services.
 	Annotations map[string]string `json:"annotations"`
+	// Class configures the Service.spec.loadBalancerClass field for the load balancer services of the exposure class
+	// handler. This setting in independent from Seed.spec.settings.loadBalancerServices.class.
+	// Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.
+	// +optional
+	Class *string `json:"class,omitempty"`
 }
 
 // MonitoringConfig contains settings for the monitoring stack.
