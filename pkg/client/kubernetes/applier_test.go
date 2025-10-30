@@ -204,6 +204,7 @@ spec:
 					newService.Spec.ClusterIP = ""
 					newService.Annotations = map[string]string{}
 					expected = oldService.DeepCopy()
+					expected.TypeMeta = metav1.TypeMeta{}
 					expected.ResourceVersion = "2"
 				})
 
@@ -627,6 +628,7 @@ spec:
 
 					newDeployment = oldDeployment.DeepCopy()
 					expected = oldDeployment.DeepCopy()
+					expected.TypeMeta = metav1.TypeMeta{}
 					expected.ResourceVersion = "2"
 				})
 

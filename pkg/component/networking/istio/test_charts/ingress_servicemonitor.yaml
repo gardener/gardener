@@ -1,7 +1,6 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  creationTimestamp: null
   labels:
     prometheus: aggregate
   name: aggregate-istio-ingressgateway

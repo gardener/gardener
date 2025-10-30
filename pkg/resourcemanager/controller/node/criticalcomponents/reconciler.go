@@ -25,7 +25,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents/helper"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -40,11 +39,8 @@ type Reconciler struct {
 }
 
 // Reconcile checks if the critical components not ready taint can be removed from the Node object.
-func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := logf.FromContext(reconcileCtx)
-
-	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, controllerutils.DefaultReconciliationTimeout)
-	defer cancel()
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
 
 	node := &corev1.Node{}
 	if err := r.TargetClient.Get(ctx, req.NamespacedName, node); err != nil {

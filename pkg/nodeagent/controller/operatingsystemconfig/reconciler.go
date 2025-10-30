@@ -46,7 +46,6 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
@@ -120,11 +119,8 @@ type Reconciler struct {
 
 // Reconcile decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
-func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := logf.FromContext(reconcileCtx)
-
-	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, controllerutils.DefaultReconciliationTimeout)
-	defer cancel()
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
 
 	secret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, request.NamespacedName, secret); err != nil {
@@ -186,7 +182,8 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 	if isInPlaceUpdate(oscChanges) {
 		// In case of in-place update, we use retries for certain cases like OS update with higher timeouts,
 		// so we need to overwrite the context to use a longer timeout.
-		ctx, cancel = context.WithTimeout(reconcileCtx, 10*time.Minute)
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 10*time.Minute)
 		defer cancel()
 
 		if !nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {

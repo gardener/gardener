@@ -65,14 +65,12 @@ var _ = Describe("CoreDNS", func() {
 automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
-  creationTimestamp: null
   name: coredns
   namespace: kube-system
 `
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: system:coredns
 rules:
 - apiGroups:
@@ -104,7 +102,6 @@ kind: ClusterRoleBinding
 metadata:
   annotations:
     resources.gardener.cloud/delete-on-invalid-update: "true"
-  creationTimestamp: null
   name: system:coredns
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -158,7 +155,6 @@ data:
     import custom/*.server
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   name: coredns
   namespace: kube-system
 `
@@ -172,7 +168,6 @@ kind: ConfigMap
 metadata:
   annotations:
     resources.gardener.cloud/ignore: "true"
-  creationTimestamp: null
   name: coredns-custom
   namespace: kube-system
 `
@@ -180,7 +175,6 @@ metadata:
 			out := `apiVersion: v1
 kind: Service
 metadata:
-  creationTimestamp: null
   labels:
     k8s-app: kube-dns
     kubernetes.io/cluster-service: "true"
@@ -217,7 +211,6 @@ kind: NetworkPolicy
 metadata:
   annotations:
     gardener.cloud/description: Allows CoreDNS to lookup DNS records, talk to the API Server. Also allows CoreDNS to be reachable via its service and its metrics endpoint.
-  creationTimestamp: null
   name: gardener.cloud--allow-dns
   namespace: kube-system
 spec:
@@ -262,7 +255,6 @@ spec:
 			out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     gardener.cloud/role: system-component
 `
@@ -304,8 +296,7 @@ spec:
 `
 			}
 
-			out += `      creationTimestamp: null
-      labels:
+			out += `      labels:
         gardener.cloud/role: system-component
         k8s-app: kube-dns
         origin: gardener
@@ -406,7 +397,6 @@ status: {}
 		pdbYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  creationTimestamp: null
   labels:
     k8s-app: kube-dns
   name: coredns
@@ -427,7 +417,6 @@ status:
 		hpaYAML = `apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  creationTimestamp: null
   labels:
     high-availability-config.resources.gardener.cloud/type: server
   name: coredns
@@ -455,14 +444,12 @@ status:
 automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
-  creationTimestamp: null
   name: coredns-autoscaler
   namespace: kube-system
 `
 		cpacrYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: system:coredns-autoscaler
 rules:
 - apiGroups:
@@ -498,7 +485,6 @@ rules:
 		cpacrbYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  creationTimestamp: null
   name: system:coredns-autoscaler
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -512,7 +498,6 @@ subjects:
 		cpaDeploymentYAML = `apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     gardener.cloud/role: system-component
     k8s-app: coredns-autoscaler
@@ -527,7 +512,6 @@ spec:
   strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
         gardener.cloud/role: system-component
         k8s-app: coredns-autoscaler
@@ -574,7 +558,6 @@ status: {}
 		cpaDeploymentVpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  creationTimestamp: null
   name: coredns-autoscaler
   namespace: kube-system
 spec:

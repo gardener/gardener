@@ -50,7 +50,6 @@ kind: Deployment
 metadata:
   annotations:
     resources.gardener.cloud/skip-health-check: "true"
-  creationTimestamp: null
   labels:
     app: kubernetes
     role: reserve-excess-capacity
@@ -66,7 +65,6 @@ spec:
   strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app: kubernetes
         role: reserve-excess-capacity
@@ -93,7 +91,6 @@ kind: Deployment
 metadata:
   annotations:
     resources.gardener.cloud/skip-health-check: "true"
-  creationTimestamp: null
   labels:
     app: kubernetes
     role: reserve-excess-capacity
@@ -109,7 +106,6 @@ spec:
   strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app: kubernetes
         role: reserve-excess-capacity
@@ -375,7 +371,6 @@ func expectedPriorityClasses() []string {
 description: `+pc.description+`
 kind: PriorityClass
 metadata:
-  creationTimestamp: null
   name: `+pc.name+`
 value: `+strconv.FormatInt(int64(pc.value), 10)+`
 `)

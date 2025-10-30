@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // controllerNameSuffix is the suffix added to the controller name.
@@ -31,6 +32,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, name string) error {
 		For(r.NewObjectFunc(), builder.WithPredicates(r.Predicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Complete(r)
 }

@@ -35,7 +35,6 @@ import (
 	. "github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -270,17 +269,12 @@ var _ = Describe("NodeLocalDNS", func() {
 				},
 			},
 		}
-		shootYAML, err := kubernetesutils.Serialize(shoot, kubernetes.GardenScheme)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(shootYAML).ToNot(BeEmpty())
-
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: namespace,
 			},
 			Spec: extensionsv1alpha1.ClusterSpec{
 				Shoot: runtime.RawExtension{
-					Raw:    []byte(shootYAML),
 					Object: shoot,
 				},
 				Seed: runtime.RawExtension{
@@ -299,7 +293,6 @@ var _ = Describe("NodeLocalDNS", func() {
 automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
-  creationTimestamp: null
   name: node-local-dns
   namespace: kube-system
 `
@@ -362,7 +355,6 @@ data:
 immutable: true
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   labels:
     k8s-app: node-local-dns
     resources.gardener.cloud/garbage-collectable-reference: "true"
@@ -376,7 +368,6 @@ metadata:
 			serviceYAML = `apiVersion: v1
 kind: Service
 metadata:
-  creationTimestamp: null
   labels:
     k8s-app: kube-dns-upstream
   name: kube-dns-upstream
@@ -650,7 +641,6 @@ status:
 			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  creationTimestamp: null
   name: node-local-dns-worker-aaaa
   namespace: kube-system
 spec:

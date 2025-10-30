@@ -78,7 +78,6 @@ var _ = Describe("NodeProblemDetector", func() {
 automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/instance: shoot-core
     app.kubernetes.io/name: node-problem-detector
@@ -88,7 +87,6 @@ metadata:
 			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/instance: shoot-core
     app.kubernetes.io/name: node-problem-detector
@@ -120,7 +118,6 @@ kind: ClusterRoleBinding
 metadata:
   annotations:
     resources.gardener.cloud/delete-on-invalid-update: "true"
-  creationTimestamp: null
   labels:
     app.kubernetes.io/instance: shoot-core
     app.kubernetes.io/name: node-problem-detector
@@ -138,7 +135,6 @@ subjects:
 			serviceYAML = `apiVersion: v1
 kind: Service
 metadata:
-  creationTimestamp: null
   labels:
     app: node-problem-detector
     app.kubernetes.io/instance: shoot-core
@@ -163,7 +159,6 @@ status:
 				out := `apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/instance: shoot-core
     app.kubernetes.io/name: node-problem-detector
@@ -180,7 +175,6 @@ spec:
       app.kubernetes.io/name: node-problem-detector
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app: node-problem-detector
         app.kubernetes.io/instance: shoot-core
@@ -265,7 +259,6 @@ status:
 			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  creationTimestamp: null
   name: node-problem-detector
   namespace: kube-system
 spec:

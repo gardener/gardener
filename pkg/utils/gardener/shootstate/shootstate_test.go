@@ -15,6 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/testing"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
@@ -45,7 +47,10 @@ var _ = Describe("ShootState", func() {
 
 	BeforeEach(func() {
 		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		// Starting with controller-runtime v0.22.0, the default object tracker does not work with resources which include
+		// structs directly as pointer, e.g. *MachineConfiguration in Machine resource. Hence, use the old one instead.
+		objectTracker := testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder())
+		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjectTracker(objectTracker).Build()
 		fakeClock = testclock.NewFakeClock(time.Now())
 
 		shoot = &gardencorev1beta1.Shoot{
@@ -128,7 +133,7 @@ var _ = Describe("ShootState", func() {
 						{
 							Name: "machine-state",
 							Type: "machine-state",
-							Data: runtime.RawExtension{Raw: []byte(`{"state":"H4sIAAAAAAAC/+yUvW7jMAzH34WzPNjJLV4vy003JDcdMrASgbjQFySmQBDo3QvJdpKiKJo6CRC08WKJpEj6R/m/B4Ny01lakNduZ8hyhHYPqmzrvAzkdScxQjsTY/SSctj/PRhiVMiYAy0agnY8WkXiGkSxRo8yu+LGOa4qs6t8cM8k+3WxggAZCLlzdtUZiozGQ2u3WgtAax0XV+ktulLnaIWUBERPMnuHDn9rjDk6CWAyXiNT8Z70+0G9k1zymMQ6RaupiVJ+BERG3pZP0Bj5r6fQtz8Y/nmFTDnJcD4l8Rnh5jqENT6Rju9LQPrJ9NeH+37OZW+qIfjeZnLC0Qf30ikKfxbQHjZVp+ByxF8HLEBuQyDLyzcHp/wG9ci+vjp7p3Ke/CplL4B/z4TXSQw8m+ma3+RRzB6afzvNL4TnN9WX5qH5Z2l+P4pRd37d2Uy+t+b3QjOynz80f6Lmp/QaAAD//31qkngADAAA"}`)},
+							Data: runtime.RawExtension{Raw: []byte(`{"state":"H4sIAAAAAAAC/+yUPWv7MBDGv8vN8mAn/8XrP0unDkmnkuEqHcRFb0iXQgj67kWynaS0kJcWUtJ4sXR6Tjz80D1bMChXnaUZee02hixHaLegyrbOy0BedxIjtBMxqueUZc9bMMSokDELLRqCdmytInENolSjR5mP4so5riqzqXxwryT7damCALTWMXLnbLEQXbluX4WUBERPMp8ORv5rjFmdBDAZr5GpnO5tHfTIvdg6RYtjDSl/AiIjr4sljZEfPYXezlB48gqZFl12a9da555jYJqzwGh8IR0/3wTplqAtd6/rlKfVVIP4SigPsPjg3jpF4WEG7W5TdQpOJ3Y+LwFyHQJZnn9ovOQx1iPK+lKUTmV5/pXbv8HyNwBbJjHgaS7PvyaTndzz72sw058Y2uaP5l9PcBzaf9dBeRv510/piHJ6z78+/1J6DwAA//+Ak3pfGAoAAA=="}`)},
 						},
 					},
 					Extensions: []gardencorev1beta1.ExtensionResourceState{

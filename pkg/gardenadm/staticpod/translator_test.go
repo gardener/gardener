@@ -72,7 +72,6 @@ metadata:
   annotations:
     bar: baz
     gardener.cloud/config.mirror: ` + hash + `
-  creationTimestamp: null
   labels:
     baz: foo
     static-pod: "true"
@@ -116,7 +115,6 @@ metadata:
     bar: baz
     foo: bar
     gardener.cloud/config.mirror: ` + hash + `
-  creationTimestamp: null
   labels:
     foo: bar
     static-pod: "true"
@@ -237,7 +235,6 @@ metadata:
   annotations:
     bar: baz
     gardener.cloud/config.mirror: ` + hash + `
-  creationTimestamp: null
   labels:
     baz: foo
     static-pod: "true"
@@ -364,7 +361,6 @@ metadata:
   annotations:
     bar: baz
     gardener.cloud/config.mirror: ` + hash + `
-  creationTimestamp: null
   labels:
     baz: foo
     static-pod: "true"
@@ -415,7 +411,6 @@ metadata:
     bar: baz
     foo: bar
     gardener.cloud/config.mirror: ` + hash + `
-  creationTimestamp: null
   labels:
     foo: bar
     static-pod: "true"
@@ -543,7 +538,6 @@ metadata:
   annotations:
     bar: baz
     gardener.cloud/config.mirror: ` + hash + `
-  creationTimestamp: null
   labels:
     baz: foo
     static-pod: "true"
@@ -665,7 +659,6 @@ metadata:
   annotations:
     bar: baz
     gardener.cloud/config.mirror: ` + hash + `
-  creationTimestamp: null
   labels:
     baz: foo
     static-pod: "true"
@@ -707,7 +700,6 @@ metadata:
     bar: baz
     foo: bar
     gardener.cloud/config.mirror: ` + hash + `
-  creationTimestamp: null
   labels:
     foo: bar
     static-pod: "true"
@@ -826,7 +818,6 @@ metadata:
   annotations:
     bar: baz
     gardener.cloud/config.mirror: ` + hash + `
-  creationTimestamp: null
   labels:
     baz: foo
     static-pod: "true"

@@ -69,7 +69,6 @@ var _ = Describe("chart applier", func() {
 		mapper.Add(corev1.SchemeGroupVersion.WithKind("ConfigMap"), meta.RESTScopeNamespace)
 
 		expectedCM = &corev1.ConfigMap{
-			TypeMeta: configMapTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            configMapName,
 				Namespace:       namespace,
@@ -105,7 +104,6 @@ var _ = Describe("chart applier", func() {
 				const newNS = "other-namespace"
 
 				existingCM := &corev1.ConfigMap{
-					TypeMeta: configMapTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      configMapName,
 						Namespace: newNS,
@@ -164,7 +162,6 @@ var _ = Describe("chart applier", func() {
 		test := func(chartPath string) {
 			It("deletes the chart with default values", func() {
 				existingCM := &corev1.ConfigMap{
-					TypeMeta: configMapTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      configMapName,
 						Namespace: namespace,
@@ -181,7 +178,6 @@ var _ = Describe("chart applier", func() {
 				const newNS = "other-namespace"
 
 				existingCM := &corev1.ConfigMap{
-					TypeMeta: configMapTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      configMapName,
 						Namespace: newNS,
@@ -267,7 +263,6 @@ var _ = Describe("chart applier", func() {
 				const newNS = "other-namespace"
 
 				existingCM := &corev1.ConfigMap{
-					TypeMeta: configMapTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      configMapName,
 						Namespace: newNS,
@@ -325,7 +320,6 @@ var _ = Describe("chart applier", func() {
 		test := func(archive []byte) {
 			It("deletes the chart with default values", func() {
 				existingCM := &corev1.ConfigMap{
-					TypeMeta: configMapTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      configMapName,
 						Namespace: namespace,
@@ -342,7 +336,6 @@ var _ = Describe("chart applier", func() {
 				const newNS = "other-namespace"
 
 				existingCM := &corev1.ConfigMap{
-					TypeMeta: configMapTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      configMapName,
 						Namespace: newNS,

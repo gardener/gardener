@@ -197,7 +197,6 @@ contexts:
   name: ` + namespace + `
 current-context: ` + namespace + `
 kind: Config
-preferences: {}
 users:
 - name: ` + namespace + `
   user: {}
@@ -231,7 +230,6 @@ contexts:
   name: ` + namespace + `
 current-context: ` + namespace + `
 kind: Config
-preferences: {}
 users:
 - name: ` + namespace + `
   user: {}

@@ -58,6 +58,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap
 				workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](),
 				r.Config.Controllers.GardenCare.SyncPeriod.Duration,
 			),
+			ReconciliationTimeout: r.Config.Controllers.GardenCare.SyncPeriod.Duration,
 		}).
 		Watches(
 			&operatorv1alpha1.Garden{},

@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -29,6 +30,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -61,8 +63,7 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	gardenCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
-	defer cancel()
+	gardenCtx := ctx
 
 	seedCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
@@ -379,12 +380,16 @@ func (r *Reconciler) reconcileBackupBucketExtensionSecret(ctx context.Context, e
 		})
 		return err
 	case *securityv1alpha1.WorkloadIdentity:
+		gvk, err := apiutil.GVKForObject(backupBucket, kubernetes.GardenScheme)
+		if err != nil {
+			return err
+		}
 		s, err := workloadidentity.NewSecret(
 			extensionSecret.Name,
 			extensionSecret.Namespace,
 			workloadidentity.For(credentials.GetName(), credentials.GetNamespace(), credentials.Spec.TargetSystem.Type),
 			workloadidentity.WithProviderConfig(credentials.Spec.TargetSystem.ProviderConfig),
-			workloadidentity.WithContextObject(securityv1alpha1.ContextObject{APIVersion: backupBucket.APIVersion, Kind: backupBucket.Kind, Name: backupBucket.GetName(), UID: backupBucket.GetUID()}),
+			workloadidentity.WithContextObject(securityv1alpha1.ContextObject{APIVersion: gvk.GroupVersion().String(), Kind: gvk.Kind, Name: backupBucket.GetName(), UID: backupBucket.GetUID()}),
 			workloadidentity.WithAnnotations(map[string]string{v1beta1constants.GardenerTimestamp: now}),
 		)
 		if err != nil {
@@ -534,10 +539,14 @@ func generateGeneratedBackupBucketSecretName(backupBucketName string) string {
 }
 
 func workloadIdentitySecretChanged(backupBucket *gardencorev1beta1.BackupBucket, secretToCompareTo *corev1.Secret, workloadIdentity *securityv1alpha1.WorkloadIdentity) (bool, error) {
+	gvk, err := apiutil.GVKForObject(backupBucket, kubernetes.GardenScheme)
+	if err != nil {
+		return false, err
+	}
 	opts := []workloadidentity.SecretOption{
 		workloadidentity.For(workloadIdentity.GetName(), workloadIdentity.GetNamespace(), workloadIdentity.Spec.TargetSystem.Type),
 		workloadidentity.WithProviderConfig(workloadIdentity.Spec.TargetSystem.ProviderConfig),
-		workloadidentity.WithContextObject(securityv1alpha1.ContextObject{APIVersion: backupBucket.APIVersion, Kind: backupBucket.Kind, Name: backupBucket.GetName(), UID: backupBucket.GetUID()}),
+		workloadidentity.WithContextObject(securityv1alpha1.ContextObject{APIVersion: gvk.GroupVersion().String(), Kind: gvk.Kind, Name: backupBucket.GetName(), UID: backupBucket.GetUID()}),
 	}
 	if val, ok := secretToCompareTo.Annotations[v1beta1constants.GardenerTimestamp]; ok {
 		opts = append(opts, workloadidentity.WithAnnotations(map[string]string{v1beta1constants.GardenerTimestamp: val}))

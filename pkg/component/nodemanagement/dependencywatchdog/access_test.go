@@ -45,7 +45,6 @@ var _ = Describe("Access", func() {
 		roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:target:dependency-watchdog
   namespace: kube-node-lease
 rules:
@@ -61,7 +60,6 @@ rules:
 		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:target:dependency-watchdog
   namespace: kube-node-lease
 roleRef:
@@ -77,7 +75,6 @@ subjects:
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:target:dependency-watchdog
 rules:
 - apiGroups:
@@ -92,7 +89,6 @@ rules:
 		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  creationTimestamp: null
   name: gardener.cloud:target:dependency-watchdog
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -143,7 +139,6 @@ contexts:
   name: ` + namespace + `
 current-context: ` + namespace + `
 kind: Config
-preferences: {}
 users:
 - name: ` + namespace + `
   user: {}
@@ -155,13 +150,13 @@ users:
 				Name:            "shoot-core-dependency-watchdog",
 				Namespace:       namespace,
 				Labels:          map[string]string{"origin": "gardener"},
-				Annotations:     map[string]string{"reference.resources.gardener.cloud/secret-dd60c006": "managedresource-shoot-core-dependency-watchdog-412f1efe"},
+				Annotations:     map[string]string{"reference.resources.gardener.cloud/secret-e3a35806": "managedresource-shoot-core-dependency-watchdog-3cb55785"},
 				ResourceVersion: "1",
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs: []corev1.LocalObjectReference{
 					{
-						Name: "managedresource-shoot-core-dependency-watchdog-412f1efe",
+						Name: "managedresource-shoot-core-dependency-watchdog-3cb55785",
 					},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
@@ -170,7 +165,7 @@ users:
 		}
 		expectedManagedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "managedresource-shoot-core-dependency-watchdog-412f1efe",
+				Name:      "managedresource-shoot-core-dependency-watchdog-3cb55785",
 				Namespace: namespace,
 				Labels: map[string]string{
 					"resources.gardener.cloud/garbage-collectable-reference": "true",
@@ -197,7 +192,7 @@ users:
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResource), reconciledManagedResource)).To(Succeed())
 			Expect(reconciledManagedResource).To(DeepEqual(expectedManagedResource))
 
-			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-412f1efe", Namespace: namespace}}
+			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-3cb55785", Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResourceSecret), reconciledManagedResourceSecret)).To(Succeed())
 			Expect(reconciledManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(reconciledManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))

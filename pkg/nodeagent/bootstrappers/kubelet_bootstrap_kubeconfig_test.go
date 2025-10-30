@@ -100,7 +100,6 @@ contexts:
   name: kubelet-bootstrap
 current-context: kubelet-bootstrap
 kind: Config
-preferences: {}
 users:
 - name: kubelet-bootstrap
   user:

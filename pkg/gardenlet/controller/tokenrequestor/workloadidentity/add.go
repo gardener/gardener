@@ -20,6 +20,7 @@ import (
 
 	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // ControllerName is the name of the controller.
@@ -55,6 +56,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		For(&corev1.Secret{}, builder.WithPredicates(r.SecretPredicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: r.ConcurrentSyncs,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Complete(r)
 }

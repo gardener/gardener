@@ -45,7 +45,7 @@ var _ = Describe("Handler", func() {
 
 			handler.ServeHTTP(respRecorder, req)
 
-			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"422 request body is empty"}}
+			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{},"spec":{},"status":{"allowed":false,"evaluationError":"422 request body is empty"}}
 `))
 		})
 
@@ -57,7 +57,7 @@ var _ = Describe("Handler", func() {
 
 			handler.ServeHTTP(respRecorder, req)
 
-			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"400 fake-err"}}
+			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{},"spec":{},"status":{"allowed":false,"evaluationError":"400 fake-err"}}
 `))
 		})
 
@@ -69,7 +69,7 @@ var _ = Describe("Handler", func() {
 
 			handler.ServeHTTP(respRecorder, req)
 
-			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"400 contentType=foo, expected application/json"}}
+			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{},"spec":{},"status":{"allowed":false,"evaluationError":"400 contentType=foo, expected application/json"}}
 `))
 		})
 
@@ -81,7 +81,7 @@ var _ = Describe("Handler", func() {
 
 			handler.ServeHTTP(respRecorder, req)
 
-			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"400 couldn't get version/kind; json parse error: unexpected end of JSON input"}}
+			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{},"spec":{},"status":{"allowed":false,"evaluationError":"400 couldn't get version/kind; json parse error: unexpected end of JSON input"}}
 `))
 		})
 
@@ -97,7 +97,7 @@ var _ = Describe("Handler", func() {
 				handler = &Handler{Logger: log, Authorizer: &fakeAuthorizer{fn: fn}}
 				handler.ServeHTTP(respRecorder, req)
 
-				Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{` + expectedStatus + `}}
+				Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{},"spec":{},"status":{` + expectedStatus + `}}
 `))
 			},
 
@@ -117,7 +117,7 @@ var _ = Describe("Handler", func() {
 
 			handler.ServeHTTP(respRecorder, req)
 
-			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1beta1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":true}}
+			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1beta1","metadata":{},"spec":{},"status":{"allowed":true}}
 `))
 		})
 	})

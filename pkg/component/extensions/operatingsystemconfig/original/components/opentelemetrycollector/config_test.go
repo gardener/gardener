@@ -250,7 +250,6 @@ contexts:
   name: shoot
 current-context: shoot
 kind: Config
-preferences: {}
 users:
 - name: shoot
   user:

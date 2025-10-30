@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -64,7 +65,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(clusterRole, builder.WithPredicates(labelSelectorPredicate)).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 5,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
+		}).
 		Watches(
 			serviceAccount,
 			handler.EnqueueRequestsFromMapFunc(r.MapToMatchingClusterRoles(mgr.GetLogger().WithValues("controller", ControllerName))),

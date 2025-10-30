@@ -5,7 +5,7 @@ metadata:
   labels:
     gardener.cloud/deletion-protected: "true"
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.19.0
   name: machinesets.machine.sapcloud.io
 spec:
   group: machine.sapcloud.io
@@ -281,9 +281,8 @@ spec:
                                         to a node.
                                       type: string
                                     timeAdded:
-                                      description: |-
-                                        TimeAdded represents the time at which the taint was added.
-                                        It is only written for NoExecute taints.
+                                      description: TimeAdded represents the time at
+                                        which the taint was added.
                                       format: date-time
                                       type: string
                                     value:

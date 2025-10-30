@@ -78,6 +78,17 @@ func SetObjectDefaults_Gardenlet(in *Gardenlet) {
 			}
 		}
 	}
+	for i := range in.Spec.Deployment.GardenletDeployment.Env {
+		a := &in.Spec.Deployment.GardenletDeployment.Env[i]
+		if a.ValueFrom != nil {
+			if a.ValueFrom.FileKeyRef != nil {
+				if a.ValueFrom.FileKeyRef.Optional == nil {
+					var ptrVar1 bool = false
+					a.ValueFrom.FileKeyRef.Optional = &ptrVar1
+				}
+			}
+		}
+	}
 }
 
 func SetObjectDefaults_GardenletList(in *GardenletList) {
@@ -136,6 +147,17 @@ func SetObjectDefaults_ManagedSeed(in *ManagedSeed) {
 				}
 				if a.VolumeSource.ScaleIO.FSType == "" {
 					a.VolumeSource.ScaleIO.FSType = "xfs"
+				}
+			}
+		}
+		for i := range in.Spec.Gardenlet.Deployment.Env {
+			a := &in.Spec.Gardenlet.Deployment.Env[i]
+			if a.ValueFrom != nil {
+				if a.ValueFrom.FileKeyRef != nil {
+					if a.ValueFrom.FileKeyRef.Optional == nil {
+						var ptrVar1 bool = false
+						a.ValueFrom.FileKeyRef.Optional = &ptrVar1
+					}
 				}
 			}
 		}
@@ -198,6 +220,17 @@ func SetObjectDefaults_ManagedSeedSet(in *ManagedSeedSet) {
 				}
 				if a.VolumeSource.ScaleIO.FSType == "" {
 					a.VolumeSource.ScaleIO.FSType = "xfs"
+				}
+			}
+		}
+		for i := range in.Spec.Template.Spec.Gardenlet.Deployment.Env {
+			a := &in.Spec.Template.Spec.Gardenlet.Deployment.Env[i]
+			if a.ValueFrom != nil {
+				if a.ValueFrom.FileKeyRef != nil {
+					if a.ValueFrom.FileKeyRef.Optional == nil {
+						var ptrVar1 bool = false
+						a.ValueFrom.FileKeyRef.Optional = &ptrVar1
+					}
 				}
 			}
 		}

@@ -120,7 +120,6 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 
 func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRole", APIVersion: rbacv1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "gardener.cloud:system:gardenlet",
 			Labels:          labels,
@@ -379,7 +378,6 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 
 func getAPIServerSNIClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRole", APIVersion: rbacv1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "gardener.cloud:system:gardenlet:apiserver-sni",
 			Labels:          labels,
@@ -409,7 +407,6 @@ func getAPIServerSNIClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 
 func getManagedIstioClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRole", APIVersion: rbacv1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "gardener.cloud:system:gardenlet:managed-istio",
 			Labels:          labels,
@@ -444,7 +441,6 @@ func getManagedIstioClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 
 func getGardenletClusterRoleBinding(labels map[string]string, serviceAccountName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: rbacv1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "gardener.cloud:system:gardenlet",
 			Labels:          labels,
@@ -467,7 +463,6 @@ func getGardenletClusterRoleBinding(labels map[string]string, serviceAccountName
 
 func getAPIServerSNIClusterRoleBinding(labels map[string]string, serviceAccountName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: rbacv1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "gardener.cloud:system:gardenlet:apiserver-sni",
 			Labels:          labels,
@@ -490,7 +485,6 @@ func getAPIServerSNIClusterRoleBinding(labels map[string]string, serviceAccountN
 
 func getManagedIstioClusterRoleBinding(labels map[string]string, serviceAccountName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: rbacv1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "gardener.cloud:system:gardenlet:managed-istio",
 			Labels:          labels,
@@ -513,7 +507,6 @@ func getManagedIstioClusterRoleBinding(labels map[string]string, serviceAccountN
 
 func getGardenGardenletRole(labels map[string]string) *rbacv1.Role {
 	return &rbacv1.Role{
-		TypeMeta: metav1.TypeMeta{Kind: "Role", APIVersion: rbacv1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "gardener.cloud:system:gardenlet",
 			Namespace:       "garden",
@@ -532,7 +525,6 @@ func getGardenGardenletRole(labels map[string]string) *rbacv1.Role {
 
 func getGardenGardenletRoleBinding(labels map[string]string, serviceAccountName string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "RoleBinding", APIVersion: rbacv1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "gardener.cloud:system:gardenlet",
 			Namespace:       "garden",
