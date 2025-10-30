@@ -6,7 +6,6 @@ package x509certificateexporter
 
 import (
 	"fmt"
-	"sort"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -48,17 +47,11 @@ func (x *x509CertificateExporter) daemonSet(
 		volumeMounts = append(volumeMounts, volmount)
 	}
 
-	args = append(args, []string{fmt.Sprintf("--listen-address=:%d", port)}...)
-	sort.Strings(args)
 	podSpec = x.defaultPodSpec(sa)
 	podSpec.Containers[0].Args = args
 	podSpec.Volumes = volumes
 	podSpec.Containers[0].VolumeMounts = volumeMounts
 	podSpec.Containers[0].SecurityContext.AllowPrivilegeEscalation = ptr.To(true)
-	// podSpec.NodeSelector = wg.NodeSelector
-	// podSpec.Tolerations = wg.Tolerations
-	// podSpec.TopologySpreadConstraints = wg.TopologySpreadConstraints
-	// podSpec.Affinity = wg.Affinity
 
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{

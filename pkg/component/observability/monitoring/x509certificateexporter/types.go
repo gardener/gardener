@@ -79,6 +79,7 @@ type workerGroup struct {
 	commonExporterConfigs
 	// NameSuffix is attached to the daemonset name and related resources
 	NameSuffix string `yaml:"nameSuffix,omitempty"`
+	// TODO: Nodelocaldns for ds
 	// Selector is the label selector to identify the worker nodes
 	Selector *metav1.LabelSelector `yaml:"selectoroomitempty"`
 	// Mounts is a map of mounts and the monitored resources within
@@ -126,7 +127,7 @@ type x509certificateExporterConfig struct {
 	alerting     alertingConfig     `yaml:"alertingConfig,omitempty"`
 }
 
-// Configurations for the x509 certificate exporter deploys
+// Values holds configurations for the x509 certificate exporter deploys
 type Values struct {
 	// Image sets container image.
 	Image string

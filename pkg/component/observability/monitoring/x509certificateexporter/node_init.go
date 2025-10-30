@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
@@ -121,19 +122,17 @@ func (wg *workerGroup) GetArgs() []string {
 			return append(mountArgs, getKubeconfigFileAsArg(mountName, mount.WatchDirs)...)
 		}
 		getArgs = func() []string {
-			args := make([]string, 0, countArgs())
+			args := make([]string, 0, countArgs()+1)
 			for mountName, mount := range wg.Mounts {
 				args = append(args, getArgsForMount(mountName, mount)...)
 			}
+			args = append(args, fmt.Sprintf("--listen-address=:%d", port))
 			return args
 		}
 		args = getArgs()
 	)
-	args = append(args, getExposeRelativeMetricsArg(wg.ExposeRelativeMetrics)...)
-	args = append(args, getTrimComponentsArg(wg.TrimComponents)...)
-	args = append(args, getExposePerCertErrorMetricsArg(wg.ExposePerCertErrorMetrics)...)
-	args = append(args, getExposeLabelsMetricsArg(wg.ExposeLabelsMetrics)...)
-
+	args = append(args, wg.GetCommonArgs()...)
+	sort.Strings(args)
 	return args
 }
 

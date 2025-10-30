@@ -42,7 +42,7 @@ func mappedStringsToArgs(argName string, values map[string]string) []string {
 }
 
 func boolToArg(flag string, enabled bool) []string {
-	if bool(enabled) {
+	if enabled {
 		return []string{flag}
 	}
 	return []string{}
@@ -58,6 +58,15 @@ func getExposePerCertErrorMetricsArg(expose bool) []string {
 
 func getExposeLabelsMetricsArg(expose bool) []string {
 	return boolToArg("--expose-labels-metrics", expose)
+}
+
+func (c *commonExporterConfigs) GetCommonArgs() []string {
+	args := []string{fmt.Sprintf("--listen-address=:%d", port)}
+	args = append(args, getExposeRelativeMetricsArg(c.ExposeRelativeMetrics)...)
+	args = append(args, getTrimComponentsArg(c.TrimComponents)...)
+	args = append(args, getExposePerCertErrorMetricsArg(c.ExposePerCertErrorMetrics)...)
+	args = append(args, getExposeLabelsMetricsArg(c.ExposeLabelsMetrics)...)
+	return args
 }
 
 func (a *alertingConfig) Default() {
