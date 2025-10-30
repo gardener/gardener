@@ -690,6 +690,11 @@ func (in *LoadBalancerServiceConfig) DeepCopyInto(out *LoadBalancerServiceConfig
 			(*out)[key] = val
 		}
 	}
+	if in.Class != nil {
+		in, out := &in.Class, &out.Class
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
