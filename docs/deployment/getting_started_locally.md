@@ -35,6 +35,8 @@ In these cases, you might want to check out one of the following options that ru
 
 ## Setting Up the KinD Cluster (Garden and Seed)
 
+> First, you will need to add `127.0.0.1 garden.local.gardener.cloud` to your /etc/hosts.
+
 ```bash
 make kind-up
 ```
@@ -50,8 +52,6 @@ All following steps assume that you are using this kubeconfig.
 
 Additionally, this command also deploys a local container registry to the cluster, as well as a few registry mirrors, that are set up as a pull-through cache for all upstream registries Gardener uses by default.
 This is done to speed up image pulls across local clusters.
-
-> You will need to add `127.0.0.1 garden.local.gardener.cloud` to your /etc/hosts.
 
 The local registry can now be accessed either via `localhost:5001` or `garden.local.gardener.cloud:5001` for pushing and pulling.
 The storage directories of the registries are mounted to the host machine under `dev/local-registry`.
