@@ -18,6 +18,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -126,7 +127,7 @@ func (c *mutationContext) addMetadataAnnotations(a admission.Attributes) {
 		v1beta1constants.ShootOperationRotateSSHKeypair,
 		v1beta1constants.OperationRotateCredentialsStart,
 		v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
-	).Has(c.shoot.Annotations[v1beta1constants.GardenerOperation]) {
+	).HasAny(v1beta1helper.GetShootGardenerOperations(c.shoot.Annotations)...) {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 
