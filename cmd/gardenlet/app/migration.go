@@ -35,10 +35,10 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 // migrateAdminViewerKubeconfigClusterRoleBindings moves the ClusterRoleBindings granting access to the
 // shoot/adminkubeconfig and shoot/viewerkubeconfig subresources from the shoot-core-system managed resource to the
 // shoot-core-gardeneraccess managed resource.
-// TODO(vpnachev): Remove this after v1.132.0 has been released.
+// TODO(vpnachev): Remove this after v1.133.0 has been released.
 func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log logr.Logger, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
-	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
+	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
 		return fmt.Errorf("failed listing namespaces: %w", err)
 	}
 
@@ -71,6 +71,7 @@ func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log lo
 			}
 
 			if shootSystemManagedResource.DeletionTimestamp != nil {
+				log.Info("Managed resource is in deletion, skipping migration", "managedResource", shootSystemKey)
 				return nil
 			}
 
@@ -89,7 +90,7 @@ func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log lo
 			})
 
 			if oldShootSystemObjectsCount == len(shootSystemObjects) {
-				log.Info("ClusterRoleBindings for shoot/adminkubeconfig and shoot/viewerkubeconfig have already been migrated, skipping", "managedResource", shootSystemKey)
+				log.Info("ClusterRoleBindings for shoot/adminkubeconfig and shoot/viewerkubeconfig have already been migrated, skipping migration", "managedResource", shootSystemKey)
 				return nil
 			}
 
@@ -103,6 +104,7 @@ func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log lo
 			}
 
 			if gardenerAccessManagedResource.DeletionTimestamp != nil {
+				log.Info("Managed resource is in deletion, skipping migration", "managedResource", gardenerAccessKey)
 				return nil
 			}
 
