@@ -869,16 +869,14 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 	}
 
 	if c.seed != nil {
-		if c.shoot.Spec.Networking.Pods == nil && !workerless {
-			if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
-				allErrs = append(allErrs, field.Required(path.Child("pods"), "pods is required"))
-			}
+		if c.shoot.Spec.Networking.Pods == nil && !workerless &&
+			slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
+			allErrs = append(allErrs, field.Required(path.Child("pods"), "pods is required"))
 		}
 
-		if c.shoot.Spec.Networking.Services == nil {
-			if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
-				allErrs = append(allErrs, field.Required(path.Child("services"), "services is required"))
-			}
+		if c.shoot.Spec.Networking.Services == nil &&
+			slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
+			allErrs = append(allErrs, field.Required(path.Child("services"), "services is required"))
 		}
 
 		if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {

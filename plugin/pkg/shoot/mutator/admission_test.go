@@ -380,14 +380,37 @@ var _ = Describe("mutator", func() {
 		})
 
 		Context("networking settings", func() {
-			It("should not default shoot networks if seed .spec.networks.shootDefaults is empty", func() {
-				seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{}
+			var (
+				podsCIDR     = "100.96.0.0/11"
+				servicesCIDR = "100.64.0.0/13"
+			)
+
+			BeforeEach(func() {
+				seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{
+					Pods:     &podsCIDR,
+					Services: &servicesCIDR,
+				}
 				shoot.Spec.SeedName = ptr.To(seed.Name)
 				shoot.Spec.Networking = &core.Networking{
 					Pods:       nil,
 					Services:   nil,
 					IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
 				}
+			})
+
+			It("should not default shoot networks if shoot .spec.seedName is nil", func() {
+				shoot.Spec.SeedName = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(BeNil())
+				Expect(shoot.Spec.Networking.Services).To(BeNil())
+			})
+
+			It("should not default shoot networks if seed .spec.networks.shootDefaults is empty", func() {
+				seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{}
 
 				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
@@ -399,23 +422,33 @@ var _ = Describe("mutator", func() {
 				Expect(shoot.Spec.Networking.Services).To(BeNil())
 			})
 
-			It("should default shoot networks if seed .spec.networks.shootDefaults is set", func() {
-				var (
-					podsCIDR     = "100.96.0.0/11"
-					servicesCIDR = "100.64.0.0/13"
-				)
+			It("should not default shoot pod network if shoot is workerless", func() {
+				shoot.Spec.Provider.Workers = nil
 
-				seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{
-					Pods:     &podsCIDR,
-					Services: &servicesCIDR,
-				}
-				shoot.Spec.SeedName = ptr.To(seed.Name)
-				shoot.Spec.Networking = &core.Networking{
-					Pods:       nil,
-					Services:   nil,
-					IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
-				}
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(BeNil())
+				Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
+			})
+
+			It("should not default shoot networks if shoot IP family does not match seed .spec.networks.shootDefaults", func() {
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(BeNil())
+				Expect(shoot.Spec.Networking.Services).To(BeNil())
+			})
+
+			It("should default shoot networks if all conditions are met", func() {
 				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
