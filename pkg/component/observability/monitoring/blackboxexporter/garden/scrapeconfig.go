@@ -14,7 +14,7 @@ import (
 )
 
 // ScrapeConfig returns the scrape configs related to the blackbox-exporter for the garden use-case.
-func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Target, gardenerDashboardTarget monitoringv1alpha1.Target) []*monitoringv1alpha1.ScrapeConfig {
+func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Target, gardenerDashboardTarget monitoringv1alpha1.Target, discoveryServerEnabled bool) []*monitoringv1alpha1.ScrapeConfig {
 	defaultScrapeConfig := func(name, module string, targets []monitoringv1alpha1.Target) *monitoringv1alpha1.ScrapeConfig {
 		return &monitoringv1alpha1.ScrapeConfig{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("blackbox-"+name, namespace, gardenprometheus.Label),
@@ -80,5 +80,10 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 		Action:       "replace",
 	}}, kubeAPIServerScrapeConfig.Spec.RelabelConfigs...)
 
-	return []*monitoringv1alpha1.ScrapeConfig{gardenerAPIServerScrapeConfig, kubeAPIServerScrapeConfig, gardenerDashboardScrapeConfig, gardenerDiscoveryServerScrapeConfig}
+	scrapeConfigs := []*monitoringv1alpha1.ScrapeConfig{gardenerAPIServerScrapeConfig, kubeAPIServerScrapeConfig, gardenerDashboardScrapeConfig}
+	if discoveryServerEnabled {
+		scrapeConfigs = append(scrapeConfigs, gardenerDiscoveryServerScrapeConfig)
+	}
+
+	return scrapeConfigs
 }
