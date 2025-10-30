@@ -6,8 +6,12 @@ package mutator
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
+	"net"
 	"reflect"
+	"slices"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -17,7 +21,12 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -32,7 +41,16 @@ func Register(plugins *admission.Plugins) {
 // MutateShoot is an implementation of admission.Interface.
 type MutateShoot struct {
 	*admission.Handler
+
+	seedLister gardencorev1beta1listers.SeedLister
+	readyFunc  admission.ReadyFunc
 }
+
+var (
+	_ = admissioninitializer.WantsCoreInformerFactory(&MutateShoot{})
+
+	readyFuncs []admission.ReadyFunc
+)
 
 // New creates a new MutateShoot admission plugin.
 func New() (*MutateShoot, error) {
@@ -41,10 +59,50 @@ func New() (*MutateShoot, error) {
 	}, nil
 }
 
+// AssignReadyFunc assigns the ready function to the admission handler.
+func (m *MutateShoot) AssignReadyFunc(f admission.ReadyFunc) {
+	m.readyFunc = f
+	m.SetReadyFunc(f)
+}
+
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (m *MutateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	seedInformer := f.Core().V1beta1().Seeds()
+	m.seedLister = seedInformer.Lister()
+
+	readyFuncs = append(
+		readyFuncs,
+		seedInformer.Informer().HasSynced,
+	)
+}
+
+// ValidateInitialization checks whether the plugin was correctly initialized.
+func (m *MutateShoot) ValidateInitialization() error {
+	if m.seedLister == nil {
+		return errors.New("missing seed lister")
+	}
+	return nil
+}
+
 var _ admission.MutationInterface = (*MutateShoot)(nil)
 
 // Admit mutates the Shoot.
 func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+	// Wait until the caches have been synced
+	if m.readyFunc == nil {
+		m.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !m.WaitForReady() {
+		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
+	}
+
 	// Ignore all kinds other than Shoot
 	if a.GetKind().GroupKind() != core.Kind("Shoot") {
 		return nil
@@ -67,7 +125,17 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 		}
 	}
 
+	var seed *gardencorev1beta1.Seed
+	if shoot.Spec.SeedName != nil {
+		var err error
+		seed, err = m.seedLister.Get(*shoot.Spec.SeedName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed %q: %w", *shoot.Spec.SeedName, err))
+		}
+	}
+
 	mutationContext := &mutationContext{
+		seed:     seed,
 		shoot:    shoot,
 		oldShoot: oldShoot,
 	}
@@ -77,11 +145,13 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	}
 
 	mutationContext.addMetadataAnnotations(a)
+	mutationContext.defaultShootNetworks(helper.IsWorkerless(shoot))
 
 	return nil
 }
 
 type mutationContext struct {
+	seed     *gardencorev1beta1.Seed
 	shoot    *core.Shoot
 	oldShoot *core.Shoot
 }
@@ -156,4 +226,25 @@ func addDeploymentTasks(shoot *core.Shoot, tasks ...string) {
 		shoot.Annotations = make(map[string]string)
 	}
 	controllerutils.AddTasks(shoot.Annotations, tasks...)
+}
+
+func (c *mutationContext) defaultShootNetworks(workerless bool) {
+	if c.seed != nil {
+		if c.shoot.Spec.Networking.Pods == nil && !workerless &&
+			c.seed.Spec.Networks.ShootDefaults != nil && c.seed.Spec.Networks.ShootDefaults.Pods != nil &&
+			cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Pods, c.shoot.Spec.Networking.IPFamilies) {
+			c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
+		}
+
+		if c.shoot.Spec.Networking.Services == nil &&
+			c.seed.Spec.Networks.ShootDefaults != nil && c.seed.Spec.Networks.ShootDefaults.Services != nil &&
+			cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Services, c.shoot.Spec.Networking.IPFamilies) {
+			c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
+		}
+	}
+}
+
+func cidrMatchesIPFamily(cidr string, ipfamilies []core.IPFamily) bool {
+	ip, _, _ := net.ParseCIDR(cidr)
+	return ip != nil && (ip.To4() != nil && slices.Contains(ipfamilies, core.IPFamilyIPv4) || ip.To4() == nil && slices.Contains(ipfamilies, core.IPFamilyIPv6))
 }

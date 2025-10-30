@@ -18,7 +18,9 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/mutator"
@@ -47,13 +49,34 @@ var _ = Describe("mutator", func() {
 		})
 	})
 
+	Describe("#ValidateInitialization", func() {
+		It("should return error if no SeedLister is set", func() {
+			admissionHandler, err := New()
+			Expect(err).NotTo(HaveOccurred())
+
+			err = admissionHandler.ValidateInitialization()
+			Expect(err).To(MatchError("missing seed lister"))
+		})
+
+		It("should not return error if all listers are set", func() {
+			admissionHandler, err := New()
+			Expect(err).NotTo(HaveOccurred())
+			coreInformerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
+
+			Expect(admissionHandler.ValidateInitialization()).To(Succeed())
+		})
+	})
+
 	Describe("#Admit", func() {
 		var (
 			ctx context.Context
 
 			userInfo = &user.DefaultInfo{Name: "foo"}
+			seed     gardencorev1beta1.Seed
+			shoot    core.Shoot
 
-			shoot core.Shoot
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
 
 			admissionHandler *MutateShoot
 		)
@@ -61,16 +84,33 @@ var _ = Describe("mutator", func() {
 		BeforeEach(func() {
 			ctx = context.Background()
 
+			seed = gardencorev1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "seed",
+				},
+			}
 			shoot = core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot",
 					Namespace: "garden-my-project",
+				},
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{
+								Name: "worker-name",
+							},
+						},
+					},
 				},
 			}
 
 			var err error
 			admissionHandler, err = New()
 			Expect(err).NotTo(HaveOccurred())
+			admissionHandler.AssignReadyFunc(func() bool { return true })
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 		})
 
 		It("should ignore a kind other than shoot", func() {
@@ -108,6 +148,16 @@ var _ = Describe("mutator", func() {
 			err := admissionHandler.Admit(ctx, attrs, nil)
 			Expect(err).To(BeBadRequestError())
 			Expect(err).To(MatchError("could not convert old object to Shoot"))
+		})
+
+		Context("reference checks", func() {
+			It("should reject because the referenced seed was not found", func() {
+				shoot.Spec.SeedName = ptr.To("seed")
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				err := admissionHandler.Admit(ctx, attrs, nil)
+				Expect(err).To(BeInternalServerError())
+			})
 		})
 
 		Context("created-by annotation", func() {
@@ -327,6 +377,87 @@ var _ = Describe("mutator", func() {
 					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
 				),
 			)
+		})
+
+		Context("networking settings", func() {
+			var (
+				podsCIDR     = "100.96.0.0/11"
+				servicesCIDR = "100.64.0.0/13"
+			)
+
+			BeforeEach(func() {
+				seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{
+					Pods:     &podsCIDR,
+					Services: &servicesCIDR,
+				}
+				shoot.Spec.SeedName = ptr.To(seed.Name)
+				shoot.Spec.Networking = &core.Networking{
+					Pods:       nil,
+					Services:   nil,
+					IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
+				}
+			})
+
+			It("should not default shoot networks if shoot .spec.seedName is nil", func() {
+				shoot.Spec.SeedName = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(BeNil())
+				Expect(shoot.Spec.Networking.Services).To(BeNil())
+			})
+
+			It("should not default shoot networks if seed .spec.networks.shootDefaults is empty", func() {
+				seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{}
+
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(BeNil())
+				Expect(shoot.Spec.Networking.Services).To(BeNil())
+			})
+
+			It("should not default shoot pod network if shoot is workerless", func() {
+				shoot.Spec.Provider.Workers = nil
+
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(BeNil())
+				Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
+			})
+
+			It("should not default shoot networks if shoot IP family does not match seed .spec.networks.shootDefaults", func() {
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(BeNil())
+				Expect(shoot.Spec.Networking.Services).To(BeNil())
+			})
+
+			It("should default shoot networks if all conditions are met", func() {
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(Equal(&podsCIDR))
+				Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
+			})
 		})
 	})
 })
