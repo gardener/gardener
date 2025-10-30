@@ -306,6 +306,12 @@ rules:
   - patch
   - update
 - apiGroups:
+  - resources.gardener.cloud
+  resources:
+  - managedresources/status # TODO(vpnachev): Remove patch managedresources/status permissions after v1.133.0 is released.
+  verbs:
+  - patch
+- apiGroups:
   - networking.k8s.io
   resources:
   - networkpolicies
