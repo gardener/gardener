@@ -709,6 +709,7 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 			Name:         "Waiting for custom resource definitions for VPA",
 			Fn:           c.vpaCRD.Wait,
 			Dependencies: flow.NewTaskIDs(deployVPACRD),
+			SkipIf:       !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 		})
 
 		waitForIstioCRD = g.Add(flow.Task{
