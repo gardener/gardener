@@ -5,14 +5,14 @@
 package shared
 
 import (
-	"time"
+	"context"
 
 	"github.com/Masterminds/semver/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	x "github.com/gardener/gardener/pkg/component/observability/monitoring/x509certificateexporter"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -20,38 +20,45 @@ import (
 
 // NewX509CertificateExporter instantiates a new `x509-certificate-exporter` component.
 func NewX509CertificateExporter(
+	ctx context.Context,
 	c client.Client,
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
 	priorityClassName string,
 	suffix string,
 	prometheusInstanceName string,
-	workerGroups map[string]operatorv1alpha1.WorkerGroup,
-	configmapkeys, secretkeys []string,
+	configMapName string,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
+	var cm corev1.ConfigMap
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameX509CertificateExporter, imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}
-	if len(workerGroups) == 0 && len(secretkeys) == 0 && len(configmapkeys) == 0 {
+	err = c.Get(ctx, types.NamespacedName{
+		Namespace: gardenNamespaceName,
+		Name:      configMapName,
+	}, &cm)
+
+	if err != nil {
+		// no cm found, no monitoring will be deployed
+		return nil, nil
+	}
+
+	configData := cm.Data["config.yaml"]
+
+	if len(configData) == 0 {
 		// no monitoring targets for x509 certifica exporter provided, nothing to deploy
 		return nil, nil
 	}
 
 	return x.New(c, nil, gardenNamespaceName, x.Values{
-		SecretTypes:               secretkeys,
-		ConfigMapKeys:             configmapkeys,
-		CacheDuration:             metav1.Duration{Duration: 24 * time.Hour},
-		Image:                     image.String(),
-		PriorityClassName:         priorityClassName,
-		Replicas:                  1,
-		NameSuffix:                suffix,
-		CertificateRenewalDays:    14,
-		CertificateExpirationDays: 7,
-		PrometheusInstance:        prometheusInstanceName,
-		WorkerGroups:              workerGroups,
-	}), nil
+		Image:              image.String(),
+		PriorityClassName:  priorityClassName,
+		NameSuffix:         suffix,
+		PrometheusInstance: prometheusInstanceName,
+		ConfigData:         []byte(configData),
+	})
 }

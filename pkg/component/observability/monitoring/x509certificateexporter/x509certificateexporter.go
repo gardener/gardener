@@ -20,16 +20,11 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-func New(
-	client client.Client,
-	secretsManager secretsmanager.Interface,
-	namespace string,
-	values Values,
-) (component.DeployWaiter, error) {
+// New Provides new x509CertificateExporter component set
+func New(client client.Client, secretsManager secretsmanager.Interface, namespace string, values Values) (component.DeployWaiter, error) {
+	var conf *x509certificateExporterConfig
 
-	var conf x509certificateExporterConfig
-
-	if err := parseConfig(values.ConfigData, &conf); err != nil {
+	if err := parseConfig(values.ConfigData, conf); err != nil {
 		return nil, fmt.Errorf("failed to parse x509CertificateExporter config: %w", err)
 	}
 
@@ -43,13 +38,13 @@ func New(
 }
 
 func (x *x509CertificateExporter) Deploy(ctx context.Context) error {
+	// TODO(mimiteto): Support Seed/Shoot cluster deployment as well
 	if x.values.NameSuffix != SuffixRuntime {
 		return errors.New("x509CertificateExporter is currently supported only on the runtime cluster")
 	}
 
 	var (
 		res                 []client.Object
-		hostResources       []client.Object
 		registry            *managedresources.Registry
 		serializedResources map[string][]byte
 		err                 error
@@ -60,10 +55,7 @@ func (x *x509CertificateExporter) Deploy(ctx context.Context) error {
 	res = append(res, x.prometheusRule(x.getGenericLabels("any")))
 
 	if x.conf.IsWorkerGroupsEnabled() {
-		if hostResources, err = x.getHostCertificateMonitoringResources(); err != nil {
-			return fmt.Errorf("failed to get host certificate monitoring resources: %w", err)
-		}
-		res = append(res, hostResources...)
+		res = append(res, x.getHostCertificateMonitoringResources()...)
 	}
 	if x.values.NameSuffix == SuffixSeed {
 		registry = managedresources.NewRegistry(kubernetes.GardenScheme, kubernetes.GardenCodec, kubernetes.GardenSerializer)
@@ -120,5 +112,4 @@ func (x *x509CertificateExporter) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, x.client, x.namespace, managedResourceName)
-
 }

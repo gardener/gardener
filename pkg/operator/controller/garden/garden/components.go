@@ -350,7 +350,7 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 
-	c.x509CertificateExporter, err = r.newx509CertificateExporter(garden)
+	c.x509CertificateExporter, err = r.newx509CertificateExporter(ctx)
 	if err != nil {
 		return
 	}
@@ -719,7 +719,6 @@ func (r *Reconciler) newKubeAPIServer(
 			return nil, fmt.Errorf("failed generating shoot authorization webhook kubeconfig: %w", err)
 		}
 
-<<<<<<< HEAD
 		authorizationWebhookConfigs = append(authorizationWebhookConfigs,
 			newAuthorizationWebhook("seed", kubeconfigSeedAuthz,
 				// only intercept request from seed gardenlets and service accounts from seed namespaces
@@ -731,29 +730,6 @@ func (r *Reconciler) newKubeAPIServer(
 				fmt.Sprintf("'%s' in request.groups", v1beta1constants.ShootsGroup),
 			),
 		)
-=======
-		authorizationWebhookConfigs = append(authorizationWebhookConfigs, kubeapiserver.AuthorizationWebhook{
-			Name:       "seed-authorizer",
-			Kubeconfig: kubeconfig,
-			WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
-				// Set TTL to a very low value since it cannot be set to 0 because of defaulting.
-				// See https://github.com/kubernetes/apiserver/blob/3658357fea9fa8b36173d072f2d548f135049e05/pkg/apis/apiserver/v1beta1/defaults.go#L29-L36
-				// TODO(rfranzke): Use `Cache{Una,A}uthorizedRequests` instead of `AuthorizedTTL` and
-				//  `UnauthorizedTTL` once Kubernetes 1.34 is the lowest supported version.
-				//  More info: https://github.com/kubernetes/kubernetes/pull/129237
-				AuthorizedTTL:                            metav1.Duration{Duration: 1 * time.Nanosecond},
-				UnauthorizedTTL:                          metav1.Duration{Duration: 1 * time.Nanosecond},
-				Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
-				FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
-				SubjectAccessReviewVersion:               "v1",
-				MatchConditionSubjectAccessReviewVersion: "v1",
-				MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
-					// only intercept request from gardenlets and service accounts from seed namespaces
-					Expression: fmt.Sprintf("'%s' in request.groups || request.groups.exists(e, e.startsWith('%s%s'))", v1beta1constants.SeedsGroup, serviceaccount.ServiceAccountGroupPrefix, gardenerutils.SeedNamespaceNamePrefix),
-				}},
-			},
-		})
->>>>>>> d388125683 (Deploying x509 certificate exporter on runtime cluster)
 	}
 
 	return sharedcomponent.NewKubeAPIServer(
@@ -1671,19 +1647,15 @@ func workloadIdentityTokenIssuerURL(garden *operatorv1alpha1.Garden) string {
 	return "https://" + discoveryServerDomain(garden) + "/garden/workload-identity/issuer"
 }
 
-// TODO(mimiteto): Move graden API to configmap
-// We don't want garden here, instead we need to optionally check cm
-// then we can go and get configurations from the env
-func (r *Reconciler) newx509CertificateExporter(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
+func (r *Reconciler) newx509CertificateExporter(ctx context.Context) (component.DeployWaiter, error) {
 	return sharedcomponent.NewX509CertificateExporter(
+		ctx,
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		r.RuntimeVersion,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		x509certificateexporter.SuffixRuntime,
 		"garden",
-		garden.Spec.RuntimeCluster.WorkerGroups,
-		garden.Spec.RuntimeCluster.CertificateConfigMapKeys,
-		garden.Spec.RuntimeCluster.CertificateSecretKeys,
+		"garden-runtime-x509-certificate-exporter-conf",
 	)
 }
