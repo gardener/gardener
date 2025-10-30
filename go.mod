@@ -1,6 +1,8 @@
 module github.com/gardener/gardener
 
-go 1.24.0
+go 1.24.5
+
+toolchain go1.24.9
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -12,7 +14,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.6.0
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/docker/cli v28.5.2+incompatible
-	github.com/fluent/fluent-operator/v3 v3.3.0
+	github.com/fluent/fluent-operator/v3 v3.5.0
 	github.com/gardener/cert-management v0.19.0
 	github.com/gardener/dependency-watchdog v1.6.0
 	github.com/gardener/etcd-druid/api v0.33.0
