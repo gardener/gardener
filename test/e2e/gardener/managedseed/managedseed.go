@@ -16,6 +16,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/utils/access"
 )
 
 // ItShouldCreateManagedSeed creates the ManagedSeed object
@@ -92,4 +93,21 @@ func ItShouldWaitForManagedSeedToBeDeleted(s *ManagedSeedContext) {
 
 		s.Log.Info("ManagedSeed has been deleted")
 	}, SpecTimeout(15*time.Minute))
+}
+
+// ItShouldInitializeManagedSeedClient requests a kubeconfig for the shoot and initializes the context's shoot clients as a managed seed.
+func ItShouldInitializeManagedSeedClient(s *ManagedSeedContext) {
+	GinkgoHelper()
+
+	It("Initialize ManagedSeed client", func(ctx SpecContext) {
+		Eventually(ctx, func() error {
+			clientSet, err := access.CreateManagedSeedClientFromAdminKubeconfig(ctx, s.GardenClientSet, s.ShootContext.Shoot)
+			if err != nil {
+				return err
+			}
+
+			s.ShootContext.WithShootClientSet(clientSet)
+			return nil
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
 }
