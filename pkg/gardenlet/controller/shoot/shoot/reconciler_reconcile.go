@@ -624,7 +624,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.CheckDNSServiceMigration(ctx)
 			}),
-			SkipIf:       o.Shoot.IsWorkerless,
+			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilNetworkIsReady),
 		})
 		_ = g.Add(flow.Task{
