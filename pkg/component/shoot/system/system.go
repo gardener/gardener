@@ -23,7 +23,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
@@ -315,13 +314,9 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 	}
 
 	if len(s.values.APIResourceList) > 0 {
-		if err := registry.Add(s.readOnlyRBACResources()...); err != nil {
+		if err := registry.Add(s.readOnlyClusterRole()); err != nil {
 			return nil, err
 		}
-	}
-
-	if err := registry.Add(adminClusterRoleBindings()...); err != nil {
-		return nil, err
 	}
 
 	return registry.SerializedObjects()
@@ -386,7 +381,7 @@ func (s *shootSystem) shootInfoData() map[string]string {
 	return data
 }
 
-func (s *shootSystem) readOnlyRBACResources() []client.Object {
+func (s *shootSystem) readOnlyClusterRole() client.Object {
 	allowedSubResources := map[string]map[string][]string{
 		corev1.GroupName: {
 			"pods": {"log"},
@@ -448,7 +443,7 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 		})
 	}
 
-	return append(viewerClusterRoleBindings(), clusterRole)
+	return clusterRole
 }
 
 func (s *shootSystem) isEncryptedResource(resource, group string) bool {
@@ -465,79 +460,5 @@ func addNetworkToMap(name string, cidrs []net.IPNet, data map[string]string) {
 	networks := netutils.JoinByComma(cidrs)
 	if networks != "" {
 		data[name] = networks
-	}
-}
-
-func adminClusterRoleBindings() []client.Object {
-	return []client.Object{
-		&rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.ShootSystemAdminsGroupName,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "cluster-admin",
-			},
-			Subjects: []rbacv1.Subject{{
-				APIGroup: rbacv1.GroupName,
-				Kind:     rbacv1.GroupKind,
-				Name:     v1beta1constants.ShootSystemAdminsGroupName,
-			}},
-		},
-		&rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.ShootProjectAdminsGroupName,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "cluster-admin",
-			},
-			Subjects: []rbacv1.Subject{{
-				APIGroup: rbacv1.GroupName,
-				Kind:     rbacv1.GroupKind,
-				Name:     v1beta1constants.ShootProjectAdminsGroupName,
-			}},
-		},
-	}
-}
-
-func viewerClusterRoleBindings() []client.Object {
-	return []client.Object{
-		&rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.ShootSystemViewersGroupName,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     v1beta1constants.ShootReadOnlyClusterRoleName,
-			},
-			Subjects: []rbacv1.Subject{{
-				APIGroup: rbacv1.GroupName,
-				Kind:     rbacv1.GroupKind,
-				Name:     v1beta1constants.ShootSystemViewersGroupName,
-			}},
-		},
-		&rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        v1beta1constants.ShootProjectViewersGroupName,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     v1beta1constants.ShootReadOnlyClusterRoleName,
-			},
-			Subjects: []rbacv1.Subject{{
-				APIGroup: rbacv1.GroupName,
-				Kind:     rbacv1.GroupKind,
-				Name:     v1beta1constants.ShootProjectViewersGroupName,
-			}},
-		},
 	}
 }
