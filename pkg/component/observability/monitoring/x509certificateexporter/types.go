@@ -9,7 +9,6 @@ import (
 
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -25,21 +24,8 @@ const (
 	certificateSourceLabelName string = "certificate-source"
 )
 
-// TODO(mimiteto): Do I need to cover resources
-type nodeSelector struct {
-	// Pod affinity definition
-	Affinity *v1.Affinity `yaml:"affinity,omitempty"`
-	// Node selector labels
-	NodeSelector map[string]string `yaml:"nodeSelector,omitempty"`
-	// Tolerations applied
-	Tolerations []v1.Toleration `yaml:"tolerations,omitempty"`
-	// TopologySpreadConstraints applied
-	TopologySpreadConstraints []v1.TopologySpreadConstraint `yaml:"topologySpreadConstraints,omitempty"`
-}
-
 // commonExporterConfigs holds common configuration options for both in-cluster and node exporters
 type commonExporterConfigs struct {
-	nodeSelector
 	// TrimComponents specifies how much of the len should be removed from the metrics
 	TrimComponents *uint32 `yaml:"trimComponents,omitempty"`
 	// ExposeRelativeMetrics flag for the exporter
@@ -61,7 +47,7 @@ type inClusterConfig struct {
 	ConfigMapKeys []string `yaml:"configMapKeys,omitempty"`
 	// IncludeLabels includes labels, similar to the namespaces vars.
 	IncludeLabels map[string]string `yaml:"includeLabels,omitempty"`
-	// ExcludeLabels exludes labels, similar to the namespaces vars.
+	// ExcludeLabels excludes labels, similar to the namespaces vars.
 	ExcludeLabels map[string]string `yaml:"excludeLabels,omitempty"`
 	// IncludeNamespaces are namespaces from which secrets are monitored.
 	IncludeNamespaces []string `yaml:"includeNamespaces,omitempty"`
@@ -71,10 +57,10 @@ type inClusterConfig struct {
 	Replicas *uint32 `yaml:"replicas,omitempty"`
 	// MaxCacheDuration is the maximum duration to cache certificate data
 	MaxCacheDuration time.Duration `yaml:"maxCacheDuration,omitempty"`
-	// KubeApiRateLimit is the rate limit for the kubernetes api calls
-	KubeApiRateLimit *uint32 `yaml:"kubeApiRateLimit,omitempty"`
-	// KubeApiBurst is the burst for the kubernetes api calls
-	KubeApiBurst *uint32 `yaml:"kubeApiBurst,omitempty"`
+	// KubeAPIRateLimit is the rate limit for the kubernetes api calls
+	KubeAPIRateLimit *uint32 `yaml:"kubeApiRateLimit,omitempty"`
+	// KubeAPIBurst is the burst for the kubernetes api calls
+	KubeAPIBurst *uint32 `yaml:"kubeApiBurst,omitempty"`
 }
 
 type monitorableMount struct {

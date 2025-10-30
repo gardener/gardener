@@ -55,10 +55,10 @@ func (x *x509CertificateExporter) daemonSet(
 	podSpec.Volumes = volumes
 	podSpec.Containers[0].VolumeMounts = volumeMounts
 	podSpec.Containers[0].SecurityContext.AllowPrivilegeEscalation = ptr.To(true)
-	podSpec.NodeSelector = wg.NodeSelector
-	podSpec.Tolerations = wg.Tolerations
-	podSpec.TopologySpreadConstraints = wg.TopologySpreadConstraints
-	podSpec.Affinity = wg.Affinity
+	// podSpec.NodeSelector = wg.NodeSelector
+	// podSpec.Tolerations = wg.Tolerations
+	// podSpec.TopologySpreadConstraints = wg.TopologySpreadConstraints
+	// podSpec.Affinity = wg.Affinity
 
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
