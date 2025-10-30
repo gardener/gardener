@@ -5,9 +5,6 @@
 package x509certificateexporter
 
 import (
-	"fmt"
-	"sort"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,38 +20,12 @@ func (x *x509CertificateExporter) deployment(
 
 	var (
 		podLabels = x.getGenericLabels(inClusterCertificateLabelValue)
-		args      []string
 		podSpec   corev1.PodSpec
 	)
 
 	podLabels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
-	args = func() []string {
-		defaultArgs := []string{
-			"--expose-relative-metrics",
-			"--expose-per-cert-error-metrics",
-			"--watch-kube-secrets",
-			"--max-cache-duration=" + x.conf.inCluster.MaxCacheDuration.String(),
-			fmt.Sprintf("--listen-address=:%d", port),
-		}
-		secretTypes := secretTypesAsArgs(x.conf.inCluster.SecretTypes)
-		configMapKeys := configMapKeysAsArgs(x.conf.inCluster.ConfigMapKeys)
-		includedLabels := includedLabelsAsArgs(x.conf.inCluster.IncludeLabels)
-		excludedLabels := excludedLabelsAsArgs(x.conf.inCluster.ExcludeLabels)
-		excludedNamespaces := excludedNamespacesAsArgs(x.conf.inCluster.ExcludeNamespaces)
-		includedNamespaces := includedNamespacesAsArgs(x.conf.inCluster.IncludeNamespaces)
-		args := make([]string, 0, len(secretTypes)+len(configMapKeys)+len(includedLabels)+len(excludedLabels)+len(excludedNamespaces)+len(includedNamespaces)+len(defaultArgs))
-		args = append(args, secretTypes...)
-		args = append(args, configMapKeys...)
-		args = append(args, includedLabels...)
-		args = append(args, excludedLabels...)
-		args = append(args, excludedNamespaces...)
-		args = append(args, includedNamespaces...)
-		args = append(args, defaultArgs...)
-		sort.Strings(args)
-		return args
-	}()
 	podSpec = x.defaultPodSpec(sa)
-	podSpec.Containers[0].Args = args
+	podSpec.Containers[0].Args = x.conf.inCluster.GetArgs()
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

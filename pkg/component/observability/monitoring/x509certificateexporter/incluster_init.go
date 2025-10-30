@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -32,6 +34,18 @@ func includedNamespacesAsArgs(includedNamespaces []string) []string {
 
 func excludedNamespacesAsArgs(excludedNamespaces []string) []string {
 	return stringsToArgs("exclude-namespace", excludedNamespaces)
+}
+
+func maxCacheDurationAsArgs(duration time.Duration) string {
+	return fmt.Sprintf("--max-cache-duration=%d", duration)
+}
+
+func kubeAPIBurstAsArgs(burst *uint32) string {
+	return fmt.Sprintf("--kube-api-rate-limit-burst=%d", burst)
+}
+
+func kubeAPIRateLimitAsArgs(rate *uint32) string {
+	return fmt.Sprintf("--kube-api-rate-limit-qps=%d", rate)
 }
 
 var configMapKeyRegexp = regexp.MustCompile(`^[-._a-zA-Z0-9]+$`)
@@ -94,11 +108,11 @@ func (i *inClusterConfig) Default() {
 	if *i.Replicas == 0 {
 		i.Replicas = ptr.To(defaultReplicas)
 	}
-	if *i.KubeApiBurst == 0 {
-		i.KubeApiBurst = ptr.To(defaultKubeAPIBurst)
+	if *i.KubeAPIBurst == 0 {
+		i.KubeAPIBurst = ptr.To(defaultKubeAPIBurst)
 	}
-	if *i.KubeApiRateLimit == 0 {
-		i.KubeApiRateLimit = ptr.To(defaultKubeAPIRateLimit)
+	if *i.KubeAPIRateLimit == 0 {
+		i.KubeAPIRateLimit = ptr.To(defaultKubeAPIRateLimit)
 	}
 	if i.MaxCacheDuration == 0 {
 		i.MaxCacheDuration = defaultCertCacheDuration
@@ -135,4 +149,25 @@ func (i *inClusterConfig) Validate() error {
 		return fmt.Errorf("excludeNamespaces is invalid: %w", err)
 	}
 	return nil
+}
+
+func (i *inClusterConfig) GetArgs() []string {
+	args := make(
+		[]string, 0,
+		len(i.SecretTypes)+len(i.ConfigMapKeys)+len(i.IncludeLabels)+
+			len(i.ExcludeLabels)+len(i.IncludeNamespaces)+len(i.ExcludeNamespaces)+
+			// MaxCacheDuration, KubeAPIBurst, KubeAPIRateLimit
+			3,
+	)
+	args = append(args, secretTypesAsArgs(i.SecretTypes)...)
+	args = append(args, configMapKeysAsArgs(i.ConfigMapKeys)...)
+	args = append(args, includedLabelsAsArgs(i.IncludeLabels)...)
+	args = append(args, excludedLabelsAsArgs(i.ExcludeLabels)...)
+	args = append(args, includedNamespacesAsArgs(i.IncludeNamespaces)...)
+	args = append(args, excludedNamespacesAsArgs(i.ExcludeNamespaces)...)
+	args = append(args, maxCacheDurationAsArgs(i.MaxCacheDuration), kubeAPIBurstAsArgs(i.KubeAPIBurst), kubeAPIRateLimitAsArgs(i.KubeAPIRateLimit))
+	args = append(args, i.GetCommonArgs()...)
+	sort.Strings(args)
+
+	return args
 }
