@@ -138,7 +138,9 @@ var _ = BeforeSuite(func() {
 			}},
 		},
 		// limit exponential backoff in tests
-		RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), 100*time.Millisecond),
+		RateLimiterFunc: func() workqueue.TypedRateLimiter[reconcile.Request] {
+			return workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), 100*time.Millisecond)
+		},
 	}).AddToManager(mgr)).To(Succeed())
 
 	// The registration of the CloudProfile and NamespacedCloudProfile controllers allows for the validation of

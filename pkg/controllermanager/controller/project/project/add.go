@@ -8,15 +8,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 )
 
 // ControllerName is the name of this controller.
@@ -31,6 +34,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
 	}
 
+	if r.RateLimiterFunc == nil {
+		r.RateLimiterFunc = func() workqueue.TypedRateLimiter[reconcile.Request] {
+			return workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]()
+		}
+	}
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -39,9 +48,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Owns(&rbacv1.RoleBinding{}, builder.WithPredicates(r.RoleBindingPredicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
-			RateLimiter:             r.RateLimiter,
+			RateLimiter:             r.RateLimiterFunc(),
 		}).
-		Complete(r)
+		Complete(reconcilerutils.RateLimitedRequeueReconcilerAdapter(r, r.RateLimiterFunc()))
 }
 
 // RoleBindingPredicate filters for events for RoleBindings that we might need to reconcile back.
