@@ -18,12 +18,13 @@ import (
 
 // CreateShootClientFromAdminKubeconfig requests an admin kubeconfig and creates a shoot client.
 func CreateShootClientFromAdminKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
-	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestAdminKubeconfigForShoot)
+	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestAdminKubeconfigForShoot, kubernetes.ShootScheme)
 }
 
 // CreateShootClientFromViewerKubeconfig requests a viewer kubeconfig and creates a shoot client.
 func CreateShootClientFromViewerKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
-	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestViewerKubeconfigForShoot)
+	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestViewerKubeconfigForShoot, kubernetes.ShootScheme)
+}
 }
 
 func createShootClientFromDynamicKubeconfig(
@@ -31,6 +32,7 @@ func createShootClientFromDynamicKubeconfig(
 	gardenClient kubernetes.Interface,
 	shoot *gardencorev1beta1.Shoot,
 	requestFn func(context.Context, kubernetes.Interface, *gardencorev1beta1.Shoot, *int64) ([]byte, error),
+	scheme *runtime.Scheme,
 ) (
 	kubernetes.Interface,
 	error,
@@ -42,7 +44,7 @@ func createShootClientFromDynamicKubeconfig(
 
 	return kubernetes.NewClientFromBytes(
 		kubeconfig,
-		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.ShootScheme}),
+		kubernetes.WithClientOptions(client.Options{Scheme: scheme}),
 		kubernetes.WithDisabledCachedClient(),
 	)
 }
