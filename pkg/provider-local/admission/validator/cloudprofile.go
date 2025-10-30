@@ -16,8 +16,6 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/provider-local/admission"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/validation"
@@ -56,23 +54,5 @@ func (cp *cloudProfileValidator) Validate(_ context.Context, newObj, _ client.Ob
 		return field.InternalError(field.NewPath("spec").Child("machineCapabilities"), err)
 	}
 
-	// TODO(Roncossek): Delete this function once the dedicated architecture fields on MachineType and MachineImageVersion have been removed.
-	if err := restrictToArchitectureCapability(capabilityDefinitions, field.NewPath("spec").Child("machineCapabilities")); err != nil {
-		return err
-	}
-
 	return validation.ValidateCloudProfileConfig(cpConfig, cloudProfile.Spec.MachineImages, capabilityDefinitions, providerConfigPath).ToAggregate()
-}
-
-// restrictToArchitectureCapability ensures that for the transition period from the deprecated architecture fields to the capabilities format only the `architecture` capability is used to support automatic transformation and migration.
-// TODO(Roncossek): Delete this function once the dedicated architecture fields on MachineType and MachineImageVersion have been removed.
-func restrictToArchitectureCapability(capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, child *field.Path) error {
-	allErrs := field.ErrorList{}
-	for i, def := range capabilityDefinitions {
-		idxPath := child.Index(i)
-		if def.Name != v1beta1constants.ArchitectureName {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), def.Name, []string{v1beta1constants.ArchitectureName}))
-		}
-	}
-	return allErrs.ToAggregate()
 }

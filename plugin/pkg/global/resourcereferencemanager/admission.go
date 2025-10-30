@@ -489,9 +489,12 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 			// getting Machine image versions that have been removed from or added to the CloudProfile
 			removedMachineImages, removedMachineImageVersions, addedMachineImages, addedMachineImageVersions := helper.GetMachineImageDiff(oldCloudProfile.Spec.MachineImages, cloudProfile.Spec.MachineImages)
 
+			// getting removed capabilities
+			removedCapabilities := getRemovedMachineCapabilities(oldCloudProfile.Spec.MachineCapabilities, cloudProfile.Spec.MachineCapabilities)
+
 			wasLimitAdded := !apiequality.Semantic.DeepEqual(cloudProfile.Spec.Limits, oldCloudProfile.Spec.Limits)
 
-			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || len(addedMachineImageVersions) > 0 || wasLimitAdded {
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || len(addedMachineImageVersions) > 0 || wasLimitAdded || len(removedCapabilities) > 0 {
 				shootList, err1 := r.shootLister.List(labels.Everything())
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
@@ -544,6 +547,30 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 								for _, imageVersion := range machineImage.Versions {
 									if removedVersions.Has(imageVersion.Version) {
 										channel <- fmt.Errorf("unable to delete MachineImage version '%s/%s' from CloudProfile %q - version is still in use by NamespacedCloudProfile '%s/%s'", machineImage.Name, imageVersion.Version, cloudProfile.Name, nscpfl.Namespace, nscpfl.Name)
+									}
+								}
+							}
+							for _, imageVersion := range machineImage.Versions {
+								for _, imageFlavor := range imageVersion.CapabilityFlavors {
+									for _, removedCapability := range removedCapabilities {
+										if capabilityValues, exist := imageFlavor.Capabilities[removedCapability.Name]; exist {
+											for _, capabilityValue := range capabilityValues {
+												if slices.Contains(removedCapability.Values, capabilityValue) {
+													channel <- fmt.Errorf("unable to delete MachineCapability %q with value %q from CloudProfile %q - capability value is still in use by NamespacedCloudProfile '%s/%s'", removedCapability.Name, capabilityValue, cloudProfile.Name, nscpfl.Namespace, nscpfl.Name)
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+						for _, machineType := range nscpfl.Spec.MachineTypes {
+							for _, removedCapability := range removedCapabilities {
+								if capabilityValues, exist := machineType.Capabilities[removedCapability.Name]; exist {
+									for _, capabilityValue := range capabilityValues {
+										if slices.Contains(removedCapability.Values, capabilityValue) {
+											channel <- fmt.Errorf("unable to delete MachineCapability %q with value %q from CloudProfile %q - capability value is still in use by NamespacedCloudProfile '%s/%s'", removedCapability.Name, capabilityValue, cloudProfile.Name, nscpfl.Namespace, nscpfl.Name)
+										}
 									}
 								}
 							}
@@ -1398,4 +1425,33 @@ func (r *ReferenceManager) sanityCheckProviderSecret(ctx context.Context, namesp
 
 func isGardenadmUser(userInfo user.Info) bool {
 	return slices.Contains(userInfo.GetGroups(), v1beta1constants.ShootsGroup) && strings.HasPrefix(userInfo.GetName(), v1beta1constants.GardenadmUserNamePrefix)
+}
+
+// getRemovedMachineCapabilities returns the removed capabilities and their removed values.
+func getRemovedMachineCapabilities(old, new []core.CapabilityDefinition) []core.CapabilityDefinition {
+	var removedCapabilities []core.CapabilityDefinition
+
+	oldCapabilitiesMap := utils.CreateMapFromSlice(old, func(capability core.CapabilityDefinition) string { return capability.Name })
+	newCapabilitiesMap := utils.CreateMapFromSlice(new, func(capability core.CapabilityDefinition) string { return capability.Name })
+
+	for capabilityName, oldCapability := range oldCapabilitiesMap {
+		newCapability, exists := newCapabilitiesMap[capabilityName]
+		if !exists {
+			// Completely removed capability.
+			removedCapabilities = append(removedCapabilities, oldCapability)
+		} else {
+			// Check for removed capability values.
+			oldValuesSet := sets.New[string](oldCapability.Values...)
+			newValuesSet := sets.New[string](newCapability.Values...)
+
+			removedValues := oldValuesSet.Difference(newValuesSet)
+			if removedValues.Len() > 0 {
+				removedCapabilities = append(removedCapabilities, core.CapabilityDefinition{
+					Name:   capabilityName,
+					Values: removedValues.UnsortedList(),
+				})
+			}
+		}
+	}
+	return removedCapabilities
 }
