@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,6 +27,13 @@ func CreateShootClientFromAdminKubeconfig(ctx context.Context, gardenClient kube
 func CreateShootClientFromViewerKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
 	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestViewerKubeconfigForShoot, kubernetes.ShootScheme)
 }
+
+// CreateManagedSeedClientFromAdminKubeconfig requests an admin kubeconfig and creates a shoot client for a managed seed.
+func CreateManagedSeedClientFromAdminKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(kubernetes.AddShootSchemeToScheme(scheme))
+	utilruntime.Must(kubernetes.AddSeedSchemeToScheme(scheme))
+	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestAdminKubeconfigForShoot, scheme)
 }
 
 func createShootClientFromDynamicKubeconfig(
