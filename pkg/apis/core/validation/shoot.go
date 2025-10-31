@@ -3085,17 +3085,23 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 func validateOperationRolloutWorkers(operation string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	// Normalise representation of pool names
 	poolNames := strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRolloutWorkers+"="), ",")
 	if len(poolNames) == 0 || sets.New(poolNames...).Has("") {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide either '*' or at least one pool name via "+v1beta1constants.OperationRolloutWorkers+"=<poolName1>[,<poolName2>,...]"))
 	}
 	if len(poolNames) == 1 && poolNames[0] == "*" {
-		return allErrs
+		poolNames = make([]string, 0, len(shoot.Spec.Provider.Workers))
+		for _, worker := range shoot.Spec.Provider.Workers {
+			poolNames = append(poolNames, worker.Name)
+		}
 	}
 	if sets.New(poolNames...).Has("*") {
 		allErrs = append(allErrs, field.Required(fldPath, "if '*' is provided, no other pool names are allowed"))
 	}
 
+	// Validate list of pool names. When a '*' was provided, there won't be any duplicates
+	// but we still want to check if any of them are using in-place update strategy.
 	names := sets.New[string]()
 	for _, poolName := range poolNames {
 		if names.Has(poolName) {
@@ -3103,10 +3109,13 @@ func validateOperationRolloutWorkers(operation string, shoot *core.Shoot, fldPat
 		}
 		names.Insert(poolName)
 
-		if !slices.ContainsFunc(shoot.Spec.Provider.Workers, func(worker core.Worker) bool {
+		workerIndex := slices.IndexFunc(shoot.Spec.Provider.Workers, func(worker core.Worker) bool {
 			return worker.Name == poolName
-		}) {
+		})
+		if workerIndex == -1 {
 			allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool name "+poolName+" does not exist in .spec.provider.workers[]"))
+		} else if worker := shoot.Spec.Provider.Workers[workerIndex]; helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+			allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool "+poolName+" is using in-place update strategy; manual worker pool rollout is not supported for such pools"))
 		}
 	}
 
