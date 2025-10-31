@@ -653,6 +653,8 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			"--authentication-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 			"--authorization-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 			"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+			"--kube-api-qps=100",
+			"--kube-api-burst=200",
 		}
 
 		controllersToEnable  = sets.New("*", "bootstrapsigner", "tokencleaner")
