@@ -117,6 +117,10 @@ func migrateAdminViewerKubeconfigClusterRoleBindings(ctx context.Context, log lo
 				return fmt.Errorf("failed to get objects for ManagedResource %q: %w", gardenerAccessKey, err)
 			}
 
+			gardenerAccessObjects = slices.DeleteFunc(gardenerAccessObjects, func(obj client.Object) bool {
+				return slices.Contains(crbs, obj.GetName())
+			})
+
 			gardenerAccessObjects = append(gardenerAccessObjects, gardeneraccess.ShootAccessClusterRoleBindings()...)
 			gardenerAccessRegistry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 			gardenerAccessResources, err := gardenerAccessRegistry.AddAllAndSerialize(gardenerAccessObjects...)
