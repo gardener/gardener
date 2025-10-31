@@ -254,35 +254,34 @@ var _ = Describe("TransformSpecToParentFormat", func() {
 		result := TransformSpecToParentFormat(spec, capabilityDefinitions)
 
 		// Verify all machine images have capability flavors
-		Expect(result.MachineImages).To(Equal([]gardencorev1beta1.MachineImage{
-			{
-				Name: "ubuntu",
-				Versions: []gardencorev1beta1.MachineImageVersion{
-					{
-						ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "20.04"},
-						Architectures:    []string{"amd64"},
-						CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
-							{
-								Capabilities: gardencorev1beta1.Capabilities{
-									"architecture": {"amd64"},
-								},
+		Expect(result.MachineImages).To(ConsistOf(gardencorev1beta1.MachineImage{
+			Name: "ubuntu",
+			Versions: []gardencorev1beta1.MachineImageVersion{
+				{
+					ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "20.04"},
+					Architectures:    []string{"amd64"},
+					CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+						{
+							Capabilities: gardencorev1beta1.Capabilities{
+								"architecture": {"amd64"},
 							},
 						},
 					},
-					{
-						ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "22.04"},
-						Architectures:    []string{"arm64"},
-						CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
-							{
-								Capabilities: gardencorev1beta1.Capabilities{
-									"architecture": {"arm64"},
-								},
+				},
+				{
+					ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "22.04"},
+					Architectures:    []string{"arm64"},
+					CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+						{
+							Capabilities: gardencorev1beta1.Capabilities{
+								"architecture": {"arm64"},
 							},
 						},
 					},
 				},
 			},
-			{
+		},
+			gardencorev1beta1.MachineImage{
 				Name: "debian",
 				Versions: []gardencorev1beta1.MachineImageVersion{
 					{
@@ -302,8 +301,7 @@ var _ = Describe("TransformSpecToParentFormat", func() {
 						},
 					},
 				},
-			},
-		}))
+			}))
 		// Verify all machine types have capabilities
 		Expect(result.MachineTypes).To(Equal([]gardencorev1beta1.MachineType{
 			{
