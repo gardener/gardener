@@ -66,8 +66,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.34.1
 	k8s.io/apimachinery v0.34.1
 	k8s.io/apiserver v0.34.1
-	// TODO(vitanovs): Update k8s.io/autoscaler/vertical-pod-autoscaler to v1.5.1 once https://github.com/gardener/gardener/issues/13162 is resolved.
-	k8s.io/autoscaler/vertical-pod-autoscaler v1.4.2
+	k8s.io/autoscaler/vertical-pod-autoscaler v1.5.1
 	k8s.io/cli-runtime v0.34.1
 	k8s.io/client-go v0.34.1
 	k8s.io/cluster-bootstrap v0.34.1
@@ -76,7 +75,7 @@ require (
 	k8s.io/component-helpers v0.34.1
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-aggregator v0.34.1
-	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b
+	k8s.io/kube-openapi v0.0.0-20250814151709-d7b6acb124c3
 	k8s.io/kube-proxy v0.34.1
 	k8s.io/kube-state-metrics/v2 v2.13.0
 	k8s.io/kubelet v0.34.1
@@ -130,7 +129,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.8.2 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
-	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
+	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -139,7 +138,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/errors v0.22.0 // indirect
-	github.com/go-openapi/jsonpointer v0.21.1 // indirect
+	github.com/go-openapi/jsonpointer v0.21.2 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
@@ -270,19 +269,19 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250825161204-c5933d9347a5 // indirect
 	google.golang.org/grpc v1.75.0 // indirect
-	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
+	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
-	k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f // indirect
+	k8s.io/gengo/v2 v2.0.0-20250820003526-c297c0c1eb9d // indirect
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kms v0.34.1 // indirect
 	k8s.io/sample-controller v0.30.3 // indirect
 	oras.land/oras-go/v2 v2.6.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 // indirect
-	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
+	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
