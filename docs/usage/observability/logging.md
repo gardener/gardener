@@ -66,7 +66,7 @@ If you are searching for logs for the past one hour, do not expect to see labels
 By clicking on a value, Plutono automatically eliminates all other labels and/or values with which no valid log stream can be made.
 After choosing the right labels and their values, click on the `Show logs` button.
 This will build `Log query` and execute it.
-This approach is convenient when you don't know the labels names or they values.
+This approach is convenient when you don't know the label names or their values.
 ![](./images/explore-button-usage.png)
 
 Once you feel comfortable, you can start to use the [LogQL](https://github.com/credativ/plutono) language to search for logs.
