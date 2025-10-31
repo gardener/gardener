@@ -316,6 +316,22 @@ var _ = Describe("Controller", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
 			Expect(extensionBackupBucket.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
 		})
+
+		It("should clean the unknown annotations and labels from the extension secret on reconciliation", func() {
+			testKeyValue := map[string]string{"key1": "value1", "key2:": "value2"}
+			extensionSecret.Annotations = testKeyValue // Do not set the timestamp annotation to trigger reconciliation
+			extensionSecret.Labels = testKeyValue
+			Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
+			Expect(seedClient.Create(ctx, extensionBackupBucket)).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(reconcile.Result{}))
+
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
+			Expect(extensionSecret.Annotations).To(Equal(map[string]string{v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().Format(time.RFC3339Nano)}))
+			Expect(extensionSecret.Labels).To(BeEmpty())
+		})
 	})
 
 	Describe("#WorkloadIdentity Credentials", func() {

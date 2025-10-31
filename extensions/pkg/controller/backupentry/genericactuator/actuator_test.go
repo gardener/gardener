@@ -153,6 +153,25 @@ var _ = Describe("Actuator", func() {
 				Expect(actual.Data).To(Equal(etcdBackupSecretData))
 			})
 
+			It("should remove all unknown annotations and labels from the etcd-backup secret", func() {
+				existingEtcdBackupSecret := etcdBackupSecret.DeepCopy()
+				testKeyValue := map[string]string{"key1": "value1", "key2:": "value2"}
+				existingEtcdBackupSecret.Annotations = testKeyValue
+				existingEtcdBackupSecret.Labels = testKeyValue
+
+				fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(seedNamespace, backupEntrySecret, existingEtcdBackupSecret).Build()
+				mgr.EXPECT().GetClient().Return(fakeClient)
+				backupEntryDelegate.EXPECT().GetETCDSecretData(ctx, gomock.AssignableToTypeOf(logr.Logger{}), backupEntry, backupProviderSecretData).Return(etcdBackupSecretData, nil)
+
+				a = genericactuator.NewActuator(mgr, backupEntryDelegate)
+				Expect(a.Reconcile(ctx, log, backupEntry)).To(Succeed())
+
+				actual := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, etcdBackupSecretKey, actual)).To(Succeed())
+				Expect(actual.Annotations).To(Equal(map[string]string{"backup.gardener.cloud/created-by": backupEntry.Name}))
+				Expect(actual.Labels).To(BeEmpty())
+			})
+
 			Context("#WorkloadIdentity", func() {
 				var existingEtcdBackupSecret *corev1.Secret
 

@@ -132,6 +132,10 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 			if token, ok := etcdSecret.Data[securityv1alpha1constants.DataKeyToken]; ok {
 				etcdSecretData[securityv1alpha1constants.DataKeyToken] = token
 			}
+		} else {
+			// Unset all annotations and labels when static credentials are used.
+			etcdSecret.Annotations = map[string]string{}
+			etcdSecret.Labels = nil
 		}
 
 		metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, AnnotationKeyCreatedByBackupEntry, be.Name)
