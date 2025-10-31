@@ -3001,6 +3001,238 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 		})
 
+		Context("CloudProfile - Remove MachineCapabilities", func() {
+			var (
+				ctx                           context.Context
+				cloudProfile, oldCloudProfile *core.CloudProfile
+				namespacedCloudProfile        *gardencorev1beta1.NamespacedCloudProfile
+			)
+
+			BeforeEach(func() {
+				ctx = context.Background()
+
+				// Base CloudProfile with MachineCapabilities
+				cloudProfile = &core.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: cloudProfileName,
+					},
+					Spec: core.CloudProfileSpec{
+						MachineCapabilities: []core.CapabilityDefinition{
+							{Name: "architecture", Values: []string{"amd64", "arm64"}},
+							{Name: "network", Values: []string{"public", "private"}},
+							{Name: "storage", Values: []string{"ssd", "hdd"}},
+						},
+						MachineImages: []core.MachineImage{
+							{
+								Name: "ubuntu",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{Version: "20.04"},
+										CapabilityFlavors: []core.MachineImageFlavor{
+											{Capabilities: core.Capabilities{
+												"architecture": []string{"amd64"},
+												"storage":      []string{"ssd"},
+											}},
+											{Capabilities: core.Capabilities{
+												"architecture": []string{"amd64"},
+												"storage":      []string{"ssd"},
+											}},
+										},
+									},
+								},
+							},
+						},
+						MachineTypes: []core.MachineType{
+							{
+								Name: "m5.large",
+								Capabilities: core.Capabilities{
+									"architecture": []string{"amd64"},
+									"network":      []string{"public"},
+								},
+							},
+						},
+					},
+				}
+				oldCloudProfile = cloudProfile.DeepCopy()
+
+				// NamespacedCloudProfile that uses capabilities from parent
+				namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "namespaced-profile",
+						Namespace: namespace,
+					},
+					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+						Parent: gardencorev1beta1.CloudProfileReference{
+							Kind: "CloudProfile",
+							Name: cloudProfileName,
+						},
+						MachineImages: []gardencorev1beta1.MachineImage{
+							{
+								Name: "debian",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "11"},
+										CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+											{Capabilities: gardencorev1beta1.Capabilities{
+												"architecture": []string{"arm64"},
+												"network":      []string{"private"},
+												"storage":      []string{"hdd"},
+											}},
+										},
+									},
+								},
+							},
+						},
+						MachineTypes: []gardencorev1beta1.MachineType{
+							{
+								Name: "t3.micro",
+								Capabilities: gardencorev1beta1.Capabilities{
+									"architecture": []string{"arm64"},
+									"storage":      []string{"ssd"},
+								},
+							},
+						},
+					},
+				}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+			})
+
+			It("should reject removing capability values still in use by NamespacedCloudProfile machine image flavors and machine types", func() {
+				// Remove arm64 architecture and private network capabilities that are used by NamespacedCloudProfile
+				cloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
+					{Name: "architecture", Values: []string{"amd64"}}, // removed arm64
+					{Name: "network", Values: []string{"public"}},     // removed private
+					{Name: "storage", Values: []string{"ssd"}},        // removed hdd
+				}
+
+				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("cloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Validate(ctx, attrs, nil)
+				Expect(err).To(HaveOccurred())
+
+				// Should get multiple errors for different capability values being removed
+				Expect(err.Error()).To(And(
+					ContainSubstring("unable to delete MachineCapability \"architecture\" with value \"arm64\" from CloudProfile"),
+					ContainSubstring("capability value is still in use by NamespacedCloudProfile 'default/namespaced-profile'"),
+					ContainSubstring("unable to delete MachineCapability \"network\" with value \"private\" from CloudProfile"),
+					ContainSubstring("unable to delete MachineCapability \"storage\" with value \"hdd\" from CloudProfile"),
+				))
+			})
+
+			It("should allow removing capability values not used by any NamespacedCloudProfile", func() {
+				// Create another NamespacedCloudProfile that doesn't use certain capabilities
+				anotherNamespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "another-profile",
+						Namespace: namespace,
+					},
+					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+						Parent: gardencorev1beta1.CloudProfileReference{
+							Kind: "CloudProfile",
+							Name: cloudProfileName,
+						},
+						MachineImages: []gardencorev1beta1.MachineImage{
+							{
+								Name: "centos",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "8"},
+										CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+											{Capabilities: gardencorev1beta1.Capabilities{
+												"architecture": []string{"amd64"},  // only uses amd64
+												"network":      []string{"public"}, // only uses public
+												"storage":      []string{"ssd"},    // only uses ssd
+											}},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(anotherNamespacedCloudProfile)).To(Succeed())
+
+				// This should succeed since the removed capabilities are not used by the additional NamespacedCloudProfile
+				// but will still fail due to the first NamespacedCloudProfile
+				cloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
+					{Name: "architecture", Values: []string{"amd64"}}, // removed arm64 - still used by first profile
+					{Name: "network", Values: []string{"public"}},     // removed private - still used by first profile
+					{Name: "storage", Values: []string{"ssd"}},        // removed hdd - still used by first profile
+				}
+
+				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("cloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Validate(ctx, attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("namespaced-profile")) // should reference the first profile that uses the removed capabilities
+				Expect(err.Error()).NotTo(ContainSubstring("another-profile")) // should not reference the second profile
+
+				// Now remove the deleted capabilities from the first NamespacedCloudProfile to allow the update
+				namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["architecture"] = []string{"amd64"}
+				namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["network"] = []string{"public"}
+				namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["storage"] = []string{"ssd"}
+				namespacedCloudProfile.Spec.MachineTypes[0].Capabilities["architecture"] = []string{"amd64"}
+				namespacedCloudProfile.Spec.MachineTypes[0].Capabilities["storage"] = []string{"ssd"}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Update(namespacedCloudProfile)).To(Succeed())
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should reject completely removing capability definitions still in use", func() {
+				// Completely remove the storage capability definition
+				cloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
+					{Name: "architecture", Values: []string{"amd64", "arm64"}},
+					{Name: "network", Values: []string{"public", "private"}},
+					// storage capability completely removed
+				}
+
+				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("cloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Validate(ctx, attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(And(
+					ContainSubstring("unable to delete MachineCapability \"storage\""),
+					ContainSubstring("capability value is still in use by NamespacedCloudProfile 'default/namespaced-profile'"),
+				))
+			})
+
+			It("should allow updates when NamespacedCloudProfile has deletion timestamp", func() {
+				// Mark NamespacedCloudProfile for deletion
+				deletionTime := metav1.Now()
+				namespacedCloudProfile.DeletionTimestamp = &deletionTime
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Update(namespacedCloudProfile)).To(Succeed())
+
+				// Now removing capabilities should succeed since the NamespacedCloudProfile is being deleted
+				cloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
+					// removed network and storage capabilities
+					{Name: "architecture", Values: []string{"amd64"}}, // removed arm64
+				}
+
+				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("cloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should allow updates when NamespacedCloudProfile references different parent", func() {
+				// Make NamespacedCloudProfile reference a different CloudProfile
+				namespacedCloudProfile.Spec.Parent.Name = "different-parent"
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Update(namespacedCloudProfile)).To(Succeed())
+
+				// Now removing capabilities should succeed since the NamespacedCloudProfile doesn't reference this CloudProfile
+				cloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
+					{Name: "architecture", Values: []string{"amd64"}}, // removed arm64
+				}
+
+				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("cloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+		})
+
 		Context("NamespacedCloudProfile - Extending Kubernetes versions", func() {
 			var (
 				expirationDateFuture2 metav1.Time

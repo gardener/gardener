@@ -4135,7 +4135,7 @@ var _ = Describe("validator", func() {
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
-						Expect(err).To(MatchError(ContainSubstring("machine image version is not supported")))
+						Expect(err).To(MatchError(ContainSubstring("Unsupported value: \"1.2.baz\": supported values:")))
 					})
 
 					It("should default a machine image version to latest major.minor.patch version", func() {
