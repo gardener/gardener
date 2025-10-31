@@ -104,8 +104,9 @@ func (b *Botanist) isVPAInPlaceOrRecreateUpdateModeEnabled() bool {
 
 	shootVerticalPodAutoscaler := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler
 	if shootVerticalPodAutoscaler != nil {
-		shootVPAFeatureGate := shootVerticalPodAutoscaler.FeatureGates["InPlaceOrRecreate"]
-		isShootVPAFeatureGateDisabled = !shootVPAFeatureGate
+		if enabled, ok := shootVerticalPodAutoscaler.FeatureGates["InPlaceOrRecreate"]; ok && !enabled {
+			isShootVPAFeatureGateDisabled = true
+		}
 	}
 
 	return isGardenletFeatureGateEnabled && !isShootVPAFeatureGateDisabled
