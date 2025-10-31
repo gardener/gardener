@@ -207,7 +207,6 @@ var _ = Describe("GardenerAPIServer", func() {
 				Labels: map[string]string{
 					"app":  "gardener",
 					"role": "apiserver",
-					"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -221,7 +220,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt32(8443),
 				}},
-				TrafficDistribution: ptr.To(corev1.ServiceTrafficDistributionPreferClose),
+				TrafficDistribution: ptr.To(corev1.ServiceTrafficDistributionPreferSameZone),
 			},
 		}
 
@@ -1366,9 +1365,9 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				})
 
-				Context("Kubernetes version >= 1.31", func() {
+				Context("Kubernetes version >= 1.34", func() {
 					BeforeEach(func() {
-						values.RuntimeVersion = semver.MustParse("1.31.0")
+						values.RuntimeVersion = semver.MustParse("1.34.0")
 						deployer = New(fakeClient, namespace, fakeSecretManager, values)
 					})
 
@@ -1383,6 +1382,31 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 				})
 
+				Context("Kubernetes version >= 1.31", func() {
+					BeforeEach(func() {
+						values.RuntimeVersion = semver.MustParse("1.31.0")
+						deployer = New(fakeClient, namespace, fakeSecretManager, values)
+					})
+
+					It("should successfully deploy all resources", func() {
+						serviceRuntime.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+						metav1.SetMetaDataLabel(&serviceRuntime.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
+
+						expectedRuntimeObjects = append(
+							expectedRuntimeObjects,
+							podDisruptionBudget,
+							serviceRuntime,
+						)
+
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					})
+
+					AfterEach(func() {
+						delete(serviceRuntime.Labels, "endpoint-slice-hints.resources.gardener.cloud/consider")
+						serviceRuntime.Spec.TrafficDistribution = nil
+					})
+				})
+
 				Context("Kubernetes version < 1.31", func() {
 					BeforeEach(func() {
 						values.RuntimeVersion = semver.MustParse("1.30.0")
@@ -1391,6 +1415,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 
 					It("should successfully deploy all resources", func() {
 						metav1.SetMetaDataAnnotation(&serviceRuntime.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
+						metav1.SetMetaDataLabel(&serviceRuntime.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
 						serviceRuntime.Spec.TrafficDistribution = nil
 
 						expectedRuntimeObjects = append(
@@ -1400,6 +1425,12 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						)
 
 						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					})
+
+					AfterEach(func() {
+						delete(serviceRuntime.Annotations, "service.kubernetes.io/topology-mode")
+						delete(serviceRuntime.Labels, "endpoint-slice-hints.resources.gardener.cloud/consider")
+						serviceRuntime.Spec.TrafficDistribution = nil
 					})
 				})
 			})
