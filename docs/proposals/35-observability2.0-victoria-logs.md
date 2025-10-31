@@ -8,6 +8,7 @@ authors:
 - "@rrhubenov"
 reviewers:
 - "@plkokanov"
+- "@ScheererJ"
 ---
 
 # GEP-35: Migrating from Vali to VictoriaLogs
@@ -27,20 +28,20 @@ This proposal introduces the deployment of [VictoriaLogs](https://github.com/Vic
 After the work that has been done on [GEP-34](https://github.com/gardener/gardener/pull/11861), we are in a favourable position to easily switch our storage layer for the clusters' log signals.
 
 A new operator is introduced that will be deployed to the `garden` namespace of seed & garden clusters.
-This operator will manage the deployment of the new `VictoriaLogs` instances to the `garden` namespace of seed & garden clusters, as well as to the Control Plane namespace of Shoot clusters via the `VLSingle` CustomResource.
+This operator will manage the deployment of the new `VictoriaLogs` instances to the `garden` namespace of seed & garden clusters, as well as to the Control Plane namespace of Shoot clusters via the [`VLSingle` CustomResource](https://github.com/VictoriaMetrics/operator/blob/master/docs/resources/vlsingle.md).
 
 Since we'd like to make the transition from `Vali` to `VictoriaLogs` as painless as possible, this proposal also introduces multiple ways to migrate in already running landscapes without losing data that has accumulated with the existing `Vali` instances.
 
 ## Motivation
 
-Since version v2.3.0, [Loki](https://github.com/grafana/loki) has switched from the Apache-2.0 license to a significantly more restrictive AGPLv3 licene.
+Since version v2.3.0, [Loki](https://github.com/grafana/loki) has switched from the Apache-2.0 license to a significantly more restrictive AGPLv3 license.
 Since then, the Observability stack of Gardener has been using [Vali](https://github.com/credativ/vali) -- a fork of Loki 2.2.1, which is the last official version that maintains the Apache-2.0 license.
 
 However, the fork maintains only security updates, thus leading to no new features or improvements getting integrated.
 As such, an upgrade is due so that we can benefit from new technologies and optimizations in the world of log databases.
 
 One such advancement is [OTLP](https://opentelemetry.io/docs/specs/otel/protocol/), discussed in more detail in [GEP-34](https://github.com/gardener/gardener/blob/master/docs/proposals/34-observability2.0-opentelemtry-operator-and-collectors.md).
- After careful consideration, we've converged to using [VictoriaLogs](https://github.com/VictoriaMetrics/VictoriaLogs) as the default backend for storing logs.
+After careful consideration, we've converged to using [VictoriaLogs](https://github.com/VictoriaMetrics/VictoriaLogs) as the default backend for storing logs. See the [Alternatives](#alternatives) section for more details on why this choice was made.
 
 ### Goals
 
@@ -51,7 +52,7 @@ One such advancement is [OTLP](https://opentelemetry.io/docs/specs/otel/protocol
 
 ### Non-Goals
 
-- Provide tooling around the migration from `Vali` to `VictoriaLogs`
+- Provide general-purpose tools for migration from `Vali` to `VictoriaLogs`
 
 ---
 
@@ -60,12 +61,12 @@ One such advancement is [OTLP](https://opentelemetry.io/docs/specs/otel/protocol
 ### 1. Deployment of VictoriaLogs on the Garden Cluster
 
 This includes 2 steps:
-- Deployment of a new [VictoriaOperator](https://github.com/VictoriaMetrics/operator) component during the `Garden` reconciliation flow in the `Garden` namespace.
+- Deployment of a new [VictoriaOperator](https://github.com/VictoriaMetrics/operator) component during the `Garden` reconciliation flow in the `garden` namespace.
 - Deployment of a new `VictoriaLogs` deployment during the Garden reconciliation flow but *after* the `VictoriaOperator` deployment has finished.
 This component will include a `VLSingle` CustomResource that the operator will reconcile in the `garden` namespace.
 
 Both new components will implement the already existing pattern that components implement (e.g. OpenTelemetry Operator, Prometheus Operator).
-That being an implementation of the `Deployer` interface as well as an additional step the the `Seed` reconciliation flow.
+That being an implementation of the `Deployer` interface as well as an additional step the the `Garden` reconciliation flow.
 
 #### Access to VictoriaLogs in the `Garden` cluster
 
@@ -75,13 +76,13 @@ This pattern will remain and log shippers will only be expected to use the `OTLP
 ### 2. Deployment of VictoriaLogs on Seed Clusters
 
 Analogously to the deployment in the `Garden` cluster, this includes 2 steps:
-- Deployment of a new [VictoriaOperator](https://github.com/VictoriaMetrics/operator) component during the `Seed` reconciliation flow in the `Garden` namespace.
+- Deployment of a new [VictoriaOperator](https://github.com/VictoriaMetrics/operator) component during the `Seed` reconciliation flow in the `garden` namespace.
 - Deployment of a new `VictoriaLogs` k8s deployment during the Seed reconciliation flow but *after* the `VictoriaOperator` deployment has finished.
 This component will include a `VLSingle` CustomResource that the operator will reconcile in the `garden` namespace.
 
 #### Access to VictoriaLogs in the `Seed` cluster
 
-Since the setup is the same as in the `Garden` cluster, see details in 'Access to VictoriaLogs in the `Garden` cluster'.
+Since the setup is the same as in the `Garden` cluster, see details in [Access to VictoriaLogs in the `Garden` cluster](#access-to-victorialogs-in-the-garden-cluster).
 
 ### 3. Deploy VictoriaLogs in Shoot control plane
 
@@ -123,27 +124,35 @@ For this reason, 3 strategies for migration have been considered:
 - "One-shot" migration.
 Reformat all the Vali data into the VictoriaLogs format (or OTLP).
 Could be done via the OpenTelemetry Collector since there is no tool that exists to do this OOTB.
+
     Pros:
     - Migration step is quick.
     - No friction during the migration period since there is only one source of logs after the migration.
+
     Cons:
     - Development of the necessary tooling to do the migration.
     - Risk of data loss if something goes wrong during the migration.
+
 - "Rolling" migration.
 Get the VictoriaLogs instances up and reroute the logs to them without removing Vali.
-This would require both of them to be accessible for the whole rotation period of the logs and it would introduce friction for the time being since there would be 2 sources of logs.
+This would require both of them to be accessible for the whole retention period of the logs and it would introduce friction for the time being since there would be 2 sources of logs.
+
     Pros:
     - No risk of data loss.
     - Easy to setup when using an OpenTelemetry Collector since it supports multiple backends.
+
     Cons:
-    - Operators would need to access 2 sources of logs until the rotation period is over.
+    - Operators would need to access 2 sources of logs until the retention period is over.
     Vali (Plutono) for the logs before the migration point and VictoriaLogs (VictoriaUI) for the logs after the migration point.
+
 - "Dual" migration.
 Same thing as the "rolling" strategy but logs are sent to both backends simultaneously.
 This would remove the friction but would incur a higher storage cost due to the replication of the logs on both backends.
+
     Pros:
     - No risk of data loss.
     - No friction during the migration period since all logs are visible in both backends.
+
     Cons:
     - Higher storage cost due to the replication of the logs on both backends.
 
@@ -156,12 +165,12 @@ When the feature gate matures, we'll remove `Vali`.
 #### UI Migration
 There are 2 main issues that we have with our current observability platform - Plutono:
 - Plutono is a fork of Grafana and as such it lags behind the new features in Grafana.
-Same as Vali, it only receives security updates.
+  Same as Vali, it only receives security updates.
 - Plutono does not support VictoriaLogs as a data source
 
 For this reason, our UI for logs will temporarily be replaced with the built-in web UI that VictoriaLogs ships with.
 Plutono will remain as the dashboard for visualising metrics & dashboards.
-There is a plan to migrate to [Perses](https://github.com/perses/perses) in the near future, but this is out of scope of this GEP.
+There is a plan to migrate to [Perses](https://github.com/perses/perses) in the near future, which will unify the interfaces again, but this is out of scope of this GEP.
 
 ---
 
@@ -173,7 +182,7 @@ Taking into account the work that would require maintaining such an operator and
 
 ### ClickHouse instead of VictoriaLogs
 
-When choosing a new log database, ClickHouse was one alternative that maintains its Apache-2.0 license, is performant and widely used.
+When choosing a new log database, [ClickHouse](https://github.com/ClickHouse/ClickHouse) was the only mainstream alternative that maintains its Apache-2.0 license, is performant and widely used.
 However after researching it as an option, it was found that ClickHouse:
 - Is more complicated for operating
 - Has an SQL-like query language for querying logs.
