@@ -65,6 +65,18 @@ spec:
                     - appendblob
                     - blockblob
                     type: string
+                  bufferingEnabled:
+                    description: Enable buffering into disk before ingesting into
+                      Azure Blob.
+                    type: boolean
+                  compressBlob:
+                    description: 'Optional: Enables GZIP compression in the final
+                      blockblob file. This option isn''t compatible when blob_type
+                      = appendblob.'
+                    enum:
+                    - "on"
+                    - "off"
+                    type: string
                   containerName:
                     description: Name of the container that will contain the blobs
                     type: string
@@ -240,6 +252,18 @@ spec:
                         description: Hostname to be used for TLS SNI extension
                         type: string
                     type: object
+                  uploadFileSize:
+                    default: 200M
+                    description: Specifies the size of files to be uploaded in MB.
+                      Defaults to 200M.
+                    type: string
+                  uploadTimeout:
+                    default: 30m
+                    description: Optional. Specify a timeout for uploads. Fluent Bit
+                      will start ingesting buffer files which have been created more
+                      than x minutes ago and haven't reached upload_file_size limit
+                      yet. Defaults to 30m.
+                    type: string
                 required:
                 - accountName
                 - containerName
@@ -1981,7 +2005,7 @@ spec:
                       192.168.1.4:9092.'
                     type: string
                   dynamicTopic:
-                    description: adds unknown topics (found in Topic_Key) to Topics.
+                    description: Adds unknown topics (found in Topic_Key) to Topics.
                       So in Topics only a default topic needs to be configured
                     type: boolean
                   format:
@@ -2067,6 +2091,7 @@ spec:
                     type: string
                   region:
                     description: The AWS region.
+                    minLength: 1
                     type: string
                   roleARN:
                     description: ARN of an IAM role to assume (for cross account access).
@@ -2320,6 +2345,21 @@ spec:
                     type: integer
                   removeKeys:
                     description: Optional list of keys to remove.
+                    items:
+                      type: string
+                    type: array
+                  structuredMetadata:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Stream structured metadata for API request. It can be multiple comma separated key=value pairs.
+                      This is used for high cardinality data that isn't suited for using labels.
+                      Only supported in Loki 3.0+ with schema v13 and TSDB storage.
+                    type: object
+                  structuredMetadataKeys:
+                    description: |-
+                      Optional list of record keys that will be placed as structured metadata.
+                      This allows using record accessor patterns (e.g. $kubernetes['pod_name']) to reference record keys.
                     items:
                       type: string
                     type: array
@@ -2682,7 +2722,7 @@ spec:
                     type: integer
                   replaceDots:
                     description: When enabled, replace field name dots with underscore,
-                      required by Elasticsearch 2.0-2.3.
+                      required by Opensearch 2.0-2.3.
                     type: boolean
                   suppressTypeName:
                     description: When enabled, mapping types is removed and Type option
@@ -2781,12 +2821,12 @@ spec:
                       for the current output logical destination.
                     type: string
                   traceError:
-                    description: When enabled print the elasticsearch API calls to
-                      stdout when elasticsearch returns an error
+                    description: When enabled print the Opensearch API calls to stdout
+                      when Opensearch returns an error
                     type: boolean
                   traceOutput:
-                    description: When enabled print the elasticsearch API calls to
-                      stdout (for diag only)
+                    description: When enabled print the Opensearch API calls to stdout
+                      (for diag only)
                     type: boolean
                   type:
                     description: Type name
@@ -3437,6 +3477,11 @@ spec:
                     description: Use the S3 PutObject API, instead of the multipart
                       upload API.
                     type: boolean
+                  Workers:
+                    description: Specify number of worker threads to use to output
+                      to S3
+                    format: int32
+                    type: integer
                   tls:
                     description: Fluent Bit provides integrated support for Transport
                       Layer Security (TLS) and it predecessor Secure Sockets Layer
@@ -3876,7 +3921,7 @@ spec:
                     description: Set resource types of data
                     type: string
                   resourceLabels:
-                    description: Optional list of comma seperated strings. Setting
+                    description: Optional list of comma separated strings. Setting
                       these fields overrides the Stackdriver monitored resource API
                       values
                     items:
@@ -3957,6 +4002,10 @@ spec:
                   taskID:
                     description: Identifier for a task within a namespace. Required
                       if Resource is generic_task
+                    type: string
+                  textPayloadKey:
+                    description: The key used to select the text payload from the
+                      record
                     type: string
                   workers:
                     description: Number of dedicated threads for the Stackdriver Output

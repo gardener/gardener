@@ -1502,6 +1502,10 @@ spec:
                   - verbs
                   type: object
                 type: array
+              replicas:
+                description: Replicas is the number of collector replicas to deploy
+                format: int32
+                type: integer
               resources:
                 description: Compute Resources required by container.
                 properties:
