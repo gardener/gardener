@@ -76,6 +76,19 @@ var _ = Describe("VPAInPlaceUpdates tests", func() {
 		})
 	})
 
+	Context("when update mode is InPlaceOrRecreate", func() {
+		BeforeEach(func() {
+			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
+			}
+		})
+
+		It("should keep vertical pod autoscaler as configured", func() {
+			Expect(testClient.Create(ctx, vpa)).To(Succeed())
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
+		})
+	})
+
 	Context("when update mode is Initial", func() {
 		BeforeEach(func() {
 			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
