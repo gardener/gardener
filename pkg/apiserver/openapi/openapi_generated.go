@@ -93,6 +93,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD":                                        schema_pkg_apis_core_v1beta1_ETCD(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig":                                  schema_pkg_apis_core_v1beta1_ETCDConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation":                   schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionAtRest":                            schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig":                            schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                            schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass":                               schema_pkg_apis_core_v1beta1_ExposureClass(ref),
@@ -3700,6 +3701,34 @@ func schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref common.Reference
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "EncryptionAtRest contains information about Shoot data encryption at rest.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources is the list of resources in the Shoot which are currently encrypted. Secrets are encrypted by default and are not part of the list. See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -9194,11 +9223,19 @@ func schema_pkg_apis_core_v1beta1_ShootCredentials(ref common.ReferenceCallback)
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation"),
 						},
 					},
+					"encryptionAtRest": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EncryptionAtRest contains information about Shoot data encryption at rest.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionAtRest"),
+						},
+					},
 				},
+				Required: []string{"encryptionAtRest"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionAtRest", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation"},
 	}
 }
 
@@ -9953,7 +9990,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					},
 					"encryptedResources": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EncryptedResources is the list of resources in the Shoot which are currently encrypted. Secrets are encrypted by default and are not part of the list. See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.",
+							Description: "EncryptedResources is the list of resources in the Shoot which are currently encrypted. Secrets are encrypted by default and are not part of the list. See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.\n\nDeprecated: This field is deprecated and will be removed in a future release. This field will be removed in favor of `shootStatus.credentials.encryptionAtRest.resources`.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

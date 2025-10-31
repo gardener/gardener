@@ -79,6 +79,9 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		newShoot.Spec.CredentialsBindingName = nil
 	}
+
+	// Migrate encryptedResources status from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
+	SyncEncryptedResourcesStatus(newShoot)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -241,6 +244,9 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 		gardencorehelper.ShouldETCDEncryptionKeyRotationBeAutoCompleteAfterPrepared(newShoot.Status.Credentials) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
+
+	// Migrate encryptedResources status from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
+	SyncEncryptedResourcesStatus(newShoot)
 }
 
 func (shootStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
@@ -350,4 +356,17 @@ func getStatusSeedName(shoot *core.Shoot) string {
 		return ""
 	}
 	return *shoot.Status.SeedName
+}
+
+// SyncEncryptedResourcesStatus ensures the status fields shoot.status.encryptedResources and
+// shoot.status.credentials.encryptionAtRest.resources are in sync.
+// TODO(AleksandarSavchev): Remove this function with the removal of the `.status.encryptedResources` field.
+func SyncEncryptedResourcesStatus(shoot *core.Shoot) {
+	if len(shoot.Status.EncryptedResources) == 0 && shoot.Status.Credentials == nil {
+		return
+	} else if shoot.Status.Credentials == nil {
+		shoot.Status.Credentials = &core.ShootCredentials{}
+	}
+
+	shoot.Status.Credentials.EncryptionAtRest.Resources = shoot.Status.EncryptedResources
 }
