@@ -1,0 +1,5 @@
+release-branch-template: release-v$major.$minor # e.g. release-v1.0
+branch-policy:
+  significant-part: minor # major, minor, patch
+  supported-versions-count: 3
+  release-cadence: 2w # d (days), w (weeks), y | yr (years)
