@@ -428,6 +428,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 				},
 			},
 		},
+		VPAInPlaceUpdatesEnabled: features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates),
 	})
 }
 

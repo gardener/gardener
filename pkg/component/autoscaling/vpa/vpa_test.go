@@ -103,7 +103,7 @@ var _ = Describe("VPA", func() {
 		valuesRecommender         ValuesRecommender
 		valuesUpdater             ValuesUpdater
 
-		vpaUpdateModeAuto   = vpaautoscalingv1.UpdateModeAuto
+		vpaUpdateMode       = vpaautoscalingv1.UpdateModeRecreate
 		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		maxUnavailable      = intstr.FromInt32(1)
 
@@ -577,7 +577,7 @@ var _ = Describe("VPA", func() {
 					Kind:       "Deployment",
 					Name:       "vpa-updater",
 				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateModeAuto},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateMode},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
@@ -961,7 +961,7 @@ var _ = Describe("VPA", func() {
 					Kind:       "Deployment",
 					Name:       "vpa-recommender",
 				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateModeAuto},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateMode},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
@@ -1312,7 +1312,7 @@ var _ = Describe("VPA", func() {
 					Kind:       "Deployment",
 					Name:       "vpa-admission-controller",
 				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateModeAuto},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateMode},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
