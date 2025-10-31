@@ -108,6 +108,10 @@
 * [Cleanup of Shoot clusters in deletion](usage/advanced/shoot_cleanup.md)
 * [Tolerations](usage/advanced/tolerations.md)
 
+### Reference
+
+* [Well-known labels and annotations](usage/reference/well-known-labels-annotations.md) 
+
 ## [API Reference](api-reference/README.md)
 
 * [`authentication.gardener.cloud` API Group](api-reference/authentication.md)
