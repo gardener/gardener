@@ -113,7 +113,7 @@ func (r *reloader) Reconcile(ctx context.Context, _ reconcile.Request) (reconcil
 		"certDir", r.certDir,
 	)
 
-	log.V(1).Info("Reloading server certificate from secret")
+	log.V(1).Info("Checking for updated webhook server certificate in secret")
 
 	secretName, serverCert, serverKey, err := r.getServerCert(ctx, log, r.reader)
 	if err != nil {
