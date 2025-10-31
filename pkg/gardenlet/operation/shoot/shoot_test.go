@@ -320,5 +320,49 @@ var _ = Describe("shoot", func() {
 				Expect(shoot.HasManagedInfrastructure()).To(BeTrue())
 			})
 		})
+
+		Describe("#SortByIPFamilies", func() {
+			var (
+				ipv4CIDR1 = net.IPNet{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(24, 32)}
+				ipv4CIDR2 = net.IPNet{IP: net.ParseIP("192.168.1.0"), Mask: net.CIDRMask(24, 32)}
+				ipv6CIDR1 = net.IPNet{IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(64, 128)}
+				ipv6CIDR2 = net.IPNet{IP: net.ParseIP("fd00::"), Mask: net.CIDRMask(48, 128)}
+			)
+
+			It("should sort CIDRs for single-stack IPv4 with IPv4 first", func() {
+				cidrs := []net.IPNet{ipv6CIDR1, ipv4CIDR1, ipv4CIDR2}
+				result := SortByIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}, cidrs)
+				expected := []net.IPNet{ipv4CIDR1, ipv4CIDR2, ipv6CIDR1}
+				Expect(result).To(Equal(expected))
+			})
+
+			It("should sort CIDRs for single-stack IPv6 with IPv6 first", func() {
+				cidrs := []net.IPNet{ipv4CIDR1, ipv6CIDR1, ipv6CIDR2}
+				result := SortByIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}, cidrs)
+				expected := []net.IPNet{ipv6CIDR1, ipv6CIDR2, ipv4CIDR1}
+				Expect(result).To(Equal(expected))
+			})
+
+			It("should sort CIDRs for dual-stack IPv4,IPv6", func() {
+				cidrs := []net.IPNet{ipv6CIDR1, ipv4CIDR1, ipv6CIDR2, ipv4CIDR2}
+				result := SortByIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}, cidrs)
+				expected := []net.IPNet{ipv4CIDR1, ipv4CIDR2, ipv6CIDR1, ipv6CIDR2}
+				Expect(result).To(Equal(expected))
+			})
+
+			It("should sort CIDRs for dual-stack IPv6,IPv4", func() {
+				cidrs := []net.IPNet{ipv4CIDR1, ipv6CIDR1, ipv4CIDR2, ipv6CIDR2}
+				result := SortByIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4}, cidrs)
+				expected := []net.IPNet{ipv6CIDR1, ipv6CIDR2, ipv4CIDR1, ipv4CIDR2}
+				Expect(result).To(Equal(expected))
+			})
+
+			It("should handle mixed CIDRs with single-stack IPv4", func() {
+				cidrs := []net.IPNet{ipv6CIDR1, ipv4CIDR1}
+				result := SortByIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}, cidrs)
+				expected := []net.IPNet{ipv4CIDR1, ipv6CIDR1}
+				Expect(result).To(Equal(expected))
+			})
+		})
 	})
 })
