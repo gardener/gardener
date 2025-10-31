@@ -15,9 +15,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -60,9 +62,9 @@ var _ = Describe("CustomResourceDefinitions", func() {
 	})
 
 	Describe("#ReconcileCustomResourceDefinitions", func() {
-		When("running the control plane", func() {
+		When("infrastructure is not managed by Gardener", func() {
 			BeforeEach(func() {
-				b.Shoot.ControlPlaneNamespace = metav1.NamespaceSystem
+				b.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 			})
 
 			It("should reconcile all expected CRDs", func() {
@@ -114,9 +116,13 @@ var _ = Describe("CustomResourceDefinitions", func() {
 			})
 		})
 
-		When("not running the control plane", func() {
+		When("infrastructure is managed by Gardener", func() {
 			BeforeEach(func() {
-				b.Shoot.ControlPlaneNamespace = "shoot--foo--bar"
+				b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						CredentialsBindingName: ptr.To("some-binding"),
+					},
+				})
 			})
 
 			It("should deploy the additional CRDs for the medium-touch scenario", func() {

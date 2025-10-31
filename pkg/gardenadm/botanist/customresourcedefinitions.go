@@ -55,10 +55,7 @@ func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Cont
 		"ETCD":       etcdCRDDeployer,
 	}
 
-	// For now, we only deploy the machine CRDs in `gardenadm bootstrap`.
-	// See https://github.com/gardener/gardener/pull/12152#discussion_r2101790385
-	// TODO(timebertt): distinguish between scenarios in `gardenadm init`
-	if !b.Shoot.RunsControlPlane() {
+	if b.Shoot.HasManagedInfrastructure() {
 		deployers["Machine"], err = machinecontrollermanager.NewCRD(b.SeedClientSet.Client())
 		if err != nil {
 			return fmt.Errorf("failed creating machine CRD deployer: %w", err)

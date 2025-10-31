@@ -249,6 +249,8 @@ type Values struct {
 	ClusterIdentity *string
 	// ConcurrentSyncs are the number of worker threads for concurrent reconciliation of resources
 	ConcurrentSyncs *int
+	// HighAvailabilityConfigWebhookEnabled controls whether the high availability config webhook is enabled.
+	HighAvailabilityConfigWebhookEnabled bool
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
 	DefaultNotReadyToleration *int64
 	// DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute
@@ -595,7 +597,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 				Enabled: r.values.EndpointSliceHintsEnabled,
 			},
 			HighAvailabilityConfig: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
-				Enabled:                             !r.values.BootstrapControlPlaneNode,
+				Enabled:                             r.values.HighAvailabilityConfigWebhookEnabled,
 				DefaultNotReadyTolerationSeconds:    r.values.DefaultNotReadyToleration,
 				DefaultUnreachableTolerationSeconds: r.values.DefaultUnreachableToleration,
 			},
@@ -1358,7 +1360,7 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		r.newProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 	}
 
-	if !r.values.BootstrapControlPlaneNode {
+	if r.values.HighAvailabilityConfigWebhookEnabled {
 		webhooks = append(webhooks, NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
@@ -2099,6 +2101,7 @@ func (r *resourceManager) GetValues() Values { return r.values }
 // SetBootstrapControlPlaneNode sets the BootstrapControlPlaneNode field in the Values.
 func (r *resourceManager) SetBootstrapControlPlaneNode(b bool) {
 	r.values.BootstrapControlPlaneNode = b
+	r.values.HighAvailabilityConfigWebhookEnabled = !b
 }
 
 func (r *resourceManager) skipStaticPods(webhooks []admissionregistrationv1.MutatingWebhook) {
