@@ -636,20 +636,19 @@ func LastInitiationTimeForWorkerPool(name string, pendingWorkersRollout []garden
 	return globalLastInitiationTime
 }
 
-// IsShootAutonomous returns true if the shoot has a worker pool dedicated for running the control plane components.
-func IsShootAutonomous(workers []gardencorev1beta1.Worker) bool {
+// IsShootSelfHosted returns true if the shoot has a worker pool dedicated for running the control plane components.
+func IsShootSelfHosted(workers []gardencorev1beta1.Worker) bool {
 	return slices.ContainsFunc(workers, func(worker gardencorev1beta1.Worker) bool {
 		return worker.ControlPlane != nil
 	})
 }
 
 // HasManagedInfrastructure returns true if the shoot's infrastructure (network, machines, etc.) is managed by Gardener.
-// I.e., it returns false for high-touch autonomous shoots, where the infrastructure is managed by the user.
 func HasManagedInfrastructure(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.CredentialsBindingName != nil || shoot.Spec.SecretBindingName != nil
 }
 
-// ControlPlaneWorkerPoolForShoot returns the worker pool running the control plane in case the shoot is autonomous.
+// ControlPlaneWorkerPoolForShoot returns the worker pool running the control plane in case the shoot is self-hosted.
 func ControlPlaneWorkerPoolForShoot(workers []gardencorev1beta1.Worker) *gardencorev1beta1.Worker {
 	idx := slices.IndexFunc(workers, func(worker gardencorev1beta1.Worker) bool {
 		return worker.ControlPlane != nil
@@ -661,10 +660,10 @@ func ControlPlaneWorkerPoolForShoot(workers []gardencorev1beta1.Worker) *gardenc
 	return &workers[idx]
 }
 
-// ControlPlaneNamespaceForShoot returns the control plane namespace for the shoot. If it is an autonomous shoot,
+// ControlPlaneNamespaceForShoot returns the control plane namespace for the shoot. If it is a self-hosted shoot,
 // kube-system is returned. Otherwise, it is the technical ID of the shoot.
 func ControlPlaneNamespaceForShoot(shoot *gardencorev1beta1.Shoot) string {
-	if IsShootAutonomous(shoot.Spec.Provider.Workers) {
+	if IsShootSelfHosted(shoot.Spec.Provider.Workers) {
 		return metav1.NamespaceSystem
 	}
 	return shoot.Status.TechnicalID
@@ -696,9 +695,9 @@ func IsShootIstioTLSTerminationEnabled(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 // GetBackupConfigForShoot returns the backup config from the Seed resource in case the shoot is a regular shoot.
-// For autonomous shoots, it is returned from the Shoot resource.
+// For self-hosted shoots, it is returned from the Shoot resource.
 func GetBackupConfigForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed) *gardencorev1beta1.Backup {
-	if !IsShootAutonomous(shoot.Spec.Provider.Workers) {
+	if !IsShootSelfHosted(shoot.Spec.Provider.Workers) {
 		if seed == nil {
 			return nil
 		}

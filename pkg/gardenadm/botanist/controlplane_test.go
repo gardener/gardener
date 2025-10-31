@@ -28,10 +28,10 @@ import (
 )
 
 var _ = Describe("ControlPlane", func() {
-	var b *AutonomousBotanist
+	var b *GardenadmBotanist
 
 	BeforeEach(func() {
-		b = &AutonomousBotanist{}
+		b = &GardenadmBotanist{}
 	})
 
 	Describe("#DiscoverKubernetesVersion", func() {

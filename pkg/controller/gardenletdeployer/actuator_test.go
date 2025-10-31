@@ -438,7 +438,7 @@ var _ = Describe("Interface", func() {
 			)
 		}
 
-		expectGetGardenletChartValues = func(withBootstrap, seedIsGarden, autonomousShoot bool) {
+		expectGetGardenletChartValues = func(withBootstrap, seedIsGarden, selfHostedShoot bool) {
 			gardenletChartValues = map[string]any{"foo": "bar"}
 
 			vh.EXPECT().GetGardenletChartValues(gomock.AssignableToTypeOf(&seedmanagementv1alpha1.GardenletDeployment{}), gomock.AssignableToTypeOf(&gardenletconfigv1alpha1.GardenletConfiguration{}), gomock.AssignableToTypeOf("")).DoAndReturn(
@@ -465,7 +465,7 @@ var _ = Describe("Interface", func() {
 						Expect(deployment.PodLabels).To(BeEmpty())
 					}
 
-					if !autonomousShoot {
+					if !selfHostedShoot {
 						Expect(gc.SeedConfig.SeedTemplate).To(Equal(gardencorev1beta1.SeedTemplate{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:        name,
@@ -737,7 +737,7 @@ var _ = Describe("Interface", func() {
 			})
 		})
 
-		Context("autonomous shoot", func() {
+		Context("self-hosted shoot", func() {
 			var (
 				deployment *seedmanagementv1alpha1.GardenletDeployment
 				config     *gardenletconfigv1alpha1.GardenletConfiguration

@@ -50,8 +50,8 @@ var _ = Describe("Add", func() {
 			test(gardenlet, BeTrue())
 		})
 
-		It("should return false because gardenlet name is prefixed with 'autonomous-shoot'", func() {
-			gardenlet.Name = "autonomous-shoot-" + gardenlet.Name
+		It("should return false because gardenlet name is prefixed with 'self-hosted-shoot'", func() {
+			gardenlet.Name = "self-hosted-shoot-" + gardenlet.Name
 			test(gardenlet, BeFalse())
 		})
 

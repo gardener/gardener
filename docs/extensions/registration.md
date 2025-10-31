@@ -275,7 +275,7 @@ In order to allow extension controller deployments to get information about the 
     gardenlet:
       featureGates: <gardenlet-feature-gates>
   ```
-- If the extension is deployed in an [autonomous shoot cluster](../proposals/28-autonomous-shoot-clusters.md), then the `.gardener.autonomousShootCluster` field is additionally propagated and set to `true`.
+- If the extension is deployed in an [self-hosted shoot cluster](../proposals/28-self-hosted-shoot-clusters.md), then the `.gardener.selfHostedShootCluster` field is additionally propagated and set to `true`.
 
 Extension controller deployments can use this information in their Helm chart in case they require knowledge about the garden and the seed environment.
 The list might be extended in the future.

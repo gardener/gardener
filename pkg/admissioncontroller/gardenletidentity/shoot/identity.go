@@ -18,8 +18,8 @@ import (
 )
 
 // FromUserInfoInterface returns the shoot namespace and name, a boolean indicating whether the provided user is an
-// autonomous shoot client, and the client's UserType.
-func FromUserInfoInterface(u user.Info) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
+// self-hosted shoot client, and the client's UserType.
+func FromUserInfoInterface(u user.Info) (namespace string, name string, isSelfHostedShoot bool, userType gardenletidentity.UserType) {
 	if u == nil {
 		return "", "", false, ""
 	}
@@ -37,7 +37,7 @@ func FromUserInfoInterface(u user.Info) (namespace string, name string, isAutono
 
 // FromAuthenticationV1UserInfo converts an authenticationv1.UserInfo structure to the user.Info interface and calls
 // FromUserInfoInterface to return the shoot namespace and name.
-func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
+func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (namespace string, name string, isSelfHostedShoot bool, userType gardenletidentity.UserType) {
 	return FromUserInfoInterface(&user.DefaultInfo{
 		Name:   userInfo.Username,
 		UID:    userInfo.UID,
@@ -48,7 +48,7 @@ func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (namespace
 
 // FromCertificateSigningRequest converts a *x509.CertificateRequest structure to the user.Info interface and calls
 // FromUserInfoInterface to return the shoot namespace and name.
-func FromCertificateSigningRequest(csr *x509.CertificateRequest) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
+func FromCertificateSigningRequest(csr *x509.CertificateRequest) (namespace string, name string, isSelfHostedShoot bool, userType gardenletidentity.UserType) {
 	return FromUserInfoInterface(&user.DefaultInfo{
 		Name:   csr.Subject.CommonName,
 		Groups: csr.Subject.Organization,
@@ -68,7 +68,7 @@ func convertAuthenticationV1ExtraValueToUserInfoExtra(extra map[string]authentic
 	return ret
 }
 
-func getIdentityForShootsGroup(u user.Info) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
+func getIdentityForShootsGroup(u user.Info) (namespace string, name string, isSelfHostedShoot bool, userType gardenletidentity.UserType) {
 	userName := u.GetName()
 
 	var prefix string
@@ -103,8 +103,8 @@ func userTypeFromPrefix(prefix string) gardenletidentity.UserType {
 	return ""
 }
 
-func getIdentityForServiceAccountsGroup(_ user.Info) (namespace string, name string, isAutonomousShoot bool, userType gardenletidentity.UserType) {
-	// TODO(rfranzke): Implement this function once the concept of how extensions running in autonomous shoots
+func getIdentityForServiceAccountsGroup(_ user.Info) (namespace string, name string, isSelfHostedShoot bool, userType gardenletidentity.UserType) {
+	// TODO(rfranzke): Implement this function once the concept of how extensions running in self-hosted shoots
 	//  authenticate with the garden cluster gets clear.
 	return "", "", false, gardenletidentity.UserTypeExtension
 }

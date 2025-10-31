@@ -124,16 +124,16 @@ var _ = Describe("Gardenlet", func() {
 		})
 	})
 
-	Describe("#IsResponsibleForAutonomousShoot", func() {
+	Describe("#IsResponsibleForSelfHostedShoot", func() {
 		It("should return true because the NAMESPACE environment variable is set to 'kube-system'", func() {
 			Expect(os.Setenv("NAMESPACE", "kube-system")).To(Succeed())
 			DeferCleanup(func() { Expect(os.Setenv("NAMESPACE", "")).To(Succeed()) })
 
-			Expect(IsResponsibleForAutonomousShoot()).To(BeTrue())
+			Expect(IsResponsibleForSelfHostedShoot()).To(BeTrue())
 		})
 
 		It("should return false because the NAMESPACE environment variable is not set to 'kube-system'", func() {
-			Expect(IsResponsibleForAutonomousShoot()).To(BeFalse())
+			Expect(IsResponsibleForSelfHostedShoot()).To(BeFalse())
 		})
 	})
 
@@ -167,7 +167,7 @@ var _ = Describe("Gardenlet", func() {
 					Namespace: "kube-system",
 				},
 				Data: map[string][]byte{
-					"description": []byte("Used for connecting the autonomous Shoot " + expectedShootNamespace + "/" + expectedShootName + " to Gardener via 'gardenadm connect'"),
+					"description": []byte("Used for connecting the self-hosted Shoot " + expectedShootNamespace + "/" + expectedShootName + " to Gardener via 'gardenadm connect'"),
 				},
 			}
 
@@ -211,7 +211,7 @@ var _ = Describe("Gardenlet", func() {
 					Namespace: "kube-system",
 				},
 				Data: map[string][]byte{
-					"description": []byte("Used for connecting the autonomous Shoot "),
+					"description": []byte("Used for connecting the self-hosted Shoot "),
 				},
 			}
 
@@ -230,7 +230,7 @@ var _ = Describe("Gardenlet", func() {
 					Namespace: "kube-system",
 				},
 				Data: map[string][]byte{
-					"description": []byte("Used for connecting the autonomous Shoot    "),
+					"description": []byte("Used for connecting the self-hosted Shoot    "),
 				},
 			}
 
@@ -249,7 +249,7 @@ var _ = Describe("Gardenlet", func() {
 					Namespace: "kube-system",
 				},
 				Data: map[string][]byte{
-					"description": []byte("Used for connecting the autonomous Shoot invalid-format-no-slash"),
+					"description": []byte("Used for connecting the self-hosted Shoot invalid-format-no-slash"),
 				},
 			}
 
@@ -268,7 +268,7 @@ var _ = Describe("Gardenlet", func() {
 					Namespace: "kube-system",
 				},
 				Data: map[string][]byte{
-					"description": []byte("Used for connecting the autonomous Shoot namespace/shoot/extra"),
+					"description": []byte("Used for connecting the self-hosted Shoot namespace/shoot/extra"),
 				},
 			}
 
@@ -287,7 +287,7 @@ var _ = Describe("Gardenlet", func() {
 					Namespace: "kube-system",
 				},
 				Data: map[string][]byte{
-					"description": []byte("Used for connecting the autonomous Shoot /my-shoot"),
+					"description": []byte("Used for connecting the self-hosted Shoot /my-shoot"),
 				},
 			}
 
@@ -305,7 +305,7 @@ var _ = Describe("Gardenlet", func() {
 					Namespace: "kube-system",
 				},
 				Data: map[string][]byte{
-					"description": []byte("Used for connecting the autonomous Shoot my-namespace/"),
+					"description": []byte("Used for connecting the self-hosted Shoot my-namespace/"),
 				},
 			}
 
@@ -323,7 +323,7 @@ var _ = Describe("Gardenlet", func() {
 					Namespace: "kube-system",
 				},
 				Data: map[string][]byte{
-					"description": []byte("Used for connecting the autonomous Shoot " + expectedShootNamespace + "/" + expectedShootName + " additional text here"),
+					"description": []byte("Used for connecting the self-hosted Shoot " + expectedShootNamespace + "/" + expectedShootName + " additional text here"),
 				},
 			}
 

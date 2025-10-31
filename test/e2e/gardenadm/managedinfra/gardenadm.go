@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package mediumtouch
+package managedinfra
 
 import (
 	"context"
@@ -35,7 +35,7 @@ import (
 	shootmigration "github.com/gardener/gardener/test/utils/shoots/migration"
 )
 
-var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "medium-touch"), func() {
+var _ = Describe("gardenadm managed infrastructure scenario tests", Label("gardenadm", "managed-infra"), func() {
 	BeforeEach(OncePerOrdered, func(SpecContext) {
 		PrepareBinary()
 	}, NodeTimeout(5*time.Minute))
@@ -72,7 +72,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		It("should start the bootstrap flow", func() {
 			// Start the gardenadm process but don't wait for it to complete so that we can asynchronously perform assertions
 			// on individual steps in the test specs below.
-			session = Run("bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/medium-touch", "--kubeconfig-output", kubeconfigOutputFile)
+			session = Run("bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/managed-infra", "--kubeconfig-output", kubeconfigOutputFile)
 		})
 
 		It("should auto-detect the system's public IPs", func(ctx SpecContext) {
@@ -186,7 +186,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		}, SpecTimeout(15*time.Minute))
 
 		It("should write the shoot kubeconfig to the specified file", func(ctx SpecContext) {
-			Eventually(ctx, session.Err).Should(gbytes.Say("Writing kubeconfig of the autonomous shoot to file"))
+			Eventually(ctx, session.Err).Should(gbytes.Say("Writing kubeconfig of the self-hosted shoot to file"))
 
 			// #nosec G304 -- kubeconfigOutputFile is controlled by the test
 			Expect(os.ReadFile(kubeconfigOutputFile)).To(ContainSubstring("server: https://api.root.garden.local.gardener.cloud"))
@@ -250,7 +250,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 		}, SpecTimeout(time.Minute))
 
 		It("should run successfully a second time (should be idempotent)", func(ctx SpecContext) {
-			RunAndWait(ctx, "bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/medium-touch")
+			RunAndWait(ctx, "bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/managed-infra")
 		}, SpecTimeout(2*time.Minute))
 	})
 })

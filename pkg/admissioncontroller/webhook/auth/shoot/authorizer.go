@@ -31,7 +31,7 @@ import (
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
 
-// NewAuthorizer returns a new authorizer for requests from gardenlets running in autonomous shoots.
+// NewAuthorizer returns a new authorizer for requests from gardenlets running in self-hosted shoots.
 func NewAuthorizer(logger logr.Logger, c client.Client, graph graph.Interface, authorizeWithSelectors authorizerwebhook.WithSelectorsChecker) *authorizer {
 	return &authorizer{
 		logger:                 logger,
@@ -69,8 +69,8 @@ var (
 )
 
 func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth.Decision, string, error) {
-	shootNamespace, shootName, isAutonomousShoot, userType := shootidentity.FromUserInfoInterface(attrs.GetUser())
-	if !isAutonomousShoot {
+	shootNamespace, shootName, isSelfHostedShoot, userType := shootidentity.FromUserInfoInterface(attrs.GetUser())
+	if !isSelfHostedShoot {
 		return auth.DecisionNoOpinion, "", nil
 	}
 
@@ -116,7 +116,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 				authwebhook.WithAlwaysAllowedVerbs("create"),
 				authwebhook.WithAllowedSubresources("status"),
 				authwebhook.WithAllowedNamespaces(requestAuthorizer.ToNamespace),
-				authwebhook.WithFieldSelectors(map[string]string{metav1.ObjectNameField: gardenletutils.ResourcePrefixAutonomousShoot + requestAuthorizer.ToName}),
+				authwebhook.WithFieldSelectors(map[string]string{metav1.ObjectNameField: gardenletutils.ResourcePrefixSelfHostedShoot + requestAuthorizer.ToName}),
 			)
 
 		case secretResource:

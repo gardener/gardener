@@ -622,9 +622,9 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 	)
 
 	switch {
-	case v1beta1helper.IsShootAutonomous(shoot.Spec.Provider.Workers) && !v1beta1helper.HasManagedInfrastructure(shoot):
-		// For high-touch autonomous shoots, the external domain is managed outside of Gardener, but must be specified
-		// in the Shoot resource. Therefore, we do not have to set any secret/zone data here.
+	case v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) && !v1beta1helper.HasManagedInfrastructure(shoot):
+		// For self-hosted shoots w/o managed infrastructure, the external domain is managed outside of Gardener, but
+		// must be specified in the Shoot resource. Therefore, we do not have to set any secret/zone data here.
 		// When removing the "unmanaged provider" (https://github.com/gardener/gardener/issues/12212), replace this value
 		// with a bool field on the Domain type that is considered by the NeedsExternalDNS func.
 		externalDomain.Provider = core.DNSUnmanaged

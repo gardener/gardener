@@ -21,7 +21,7 @@ Manage bootstrap and discovery tokens for gardenadm join
 
 ### SEE ALSO
 
-* [gardenadm](gardenadm.md)	 - gardenadm bootstraps and manages autonomous shoot clusters in the Gardener project.
+* [gardenadm](gardenadm.md)	 - gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener project.
 * [gardenadm token create](gardenadm_token_create.md)	 - Create a bootstrap token on the cluster for joining a node or connecting a Shoot to Gardener
 * [gardenadm token delete](gardenadm_token_delete.md)	 - Delete one or more bootstrap tokens from the cluster
 * [gardenadm token generate](gardenadm_token_generate.md)	 - Generate a random bootstrap token for joining a node

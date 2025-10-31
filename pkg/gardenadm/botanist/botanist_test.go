@@ -24,8 +24,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
-var _ = Describe("AutonomousBotanist", func() {
-	Describe("#NewAutonomousBotanistFromManifests", func() {
+var _ = Describe("GardenadmBotanist", func() {
+	Describe("#NewGardenadmBotanistFromManifests", func() {
 		const configDir = "manifests"
 
 		var (
@@ -50,13 +50,13 @@ var _ = Describe("AutonomousBotanist", func() {
 		})
 
 		It("should fail if the directory does not exist", func() {
-			Expect(NewAutonomousBotanistFromManifests(ctx, log, nil, "does/not/exist", false)).Error().To(MatchError(fs.ErrNotExist))
+			Expect(NewGardenadmBotanistFromManifests(ctx, log, nil, "does/not/exist", false)).Error().To(MatchError(fs.ErrNotExist))
 		})
 
-		When("running the control plane (acting on the autonomous shoot cluster)", func() {
-			Context("with unmanaged infrastructure (high-touch scenario)", func() {
-				It("should create a new Autonomous Botanist", func() {
-					b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+		When("running the control plane (acting on the self-hosted shoot cluster)", func() {
+			Context("with unmanaged infrastructure", func() {
+				It("should create a new Self-Hosted Botanist", func() {
+					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(b.Shoot.CloudProfile.Name).To(Equal("stackit"))
@@ -66,11 +66,11 @@ var _ = Describe("AutonomousBotanist", func() {
 						HaveField("ControllerRegistration.Name", "provider-stackit"),
 						HaveField("ControllerRegistration.Name", "networking-cilium"),
 					))
-					Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", HaveKeyWithValue("seed.gardener.cloud/autonomous-shoot-cluster", "true")))
+					Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", HaveKeyWithValue("seed.gardener.cloud/self-hosted-shoot-cluster", "true")))
 				})
 			})
 
-			Context("with managed infrastructure (medium-touch scenario)", func() {
+			Context("with managed infrastructure", func() {
 				BeforeEach(func() {
 					shootFile := fsys[configDir+"/shoot.yaml"]
 					shootFile.Data = append(shootFile.Data, []byte("\n  credentialsBindingName: provider-account\n")...)
@@ -84,11 +84,11 @@ metadata:
 
 				It("should fail if the ShootState is missing", func() {
 					delete(fsys, configDir+"/shootstate.yaml")
-					Expect(NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)).Error().To(MatchError(ContainSubstring("ShootState is missing")))
+					Expect(NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)).Error().To(MatchError(ContainSubstring("ShootState is missing")))
 				})
 
 				It("should set the LastOperation to Restore and fetch the ShootState", func() {
-					b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(b.Shoot.GetInfo().Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeRestore))
@@ -98,7 +98,7 @@ metadata:
 			})
 
 			It("should use kube-system as the control plane namespace", func() {
-				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+				b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(b.Shoot.ControlPlaneNamespace).To(Equal("kube-system"))
 			})
@@ -108,7 +108,7 @@ metadata:
 				DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
 
 				By("Generate new shoot UID and write it to the host")
-				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+				b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
 				Expect(err).NotTo(HaveOccurred())
 
 				uid := b.Shoot.GetInfo().Status.UID
@@ -121,7 +121,7 @@ metadata:
 				Expect(string(content)).To(Equal(string(uid)))
 
 				By("Do not regenerate shoot UID when file is present on host")
-				b, err = NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+				b, err = NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(b.Shoot.GetInfo().Status.UID).To(Equal(uid))
@@ -132,8 +132,8 @@ metadata:
 		})
 
 		When("not running the control plane (acting on the bootstrap cluster)", func() {
-			It("should create a new Autonomous Botanist", func() {
-				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
+			It("should create a new Self-Hosted Botanist", func() {
+				b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, false)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(b.Shoot.CloudProfile.Name).To(Equal("stackit"))
@@ -143,11 +143,11 @@ metadata:
 					HaveField("ControllerRegistration.Name", "provider-stackit"),
 					HaveField("ControllerRegistration.Name", "dns-local"),
 				))
-				Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", Not(HaveKeyWithValue("seed.gardener.cloud/autonomous-shoot-cluster", "true"))))
+				Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", Not(HaveKeyWithValue("seed.gardener.cloud/self-hosted-shoot-cluster", "true"))))
 			})
 
 			It("should use the technical ID as the control plane namespace", func() {
-				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
+				b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(b.Shoot.ControlPlaneNamespace).To(Equal("shoot--gardenadm--gardenadm"))
 			})
@@ -156,7 +156,7 @@ metadata:
 				fs := afero.NewMemMapFs()
 				DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
 
-				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
+				b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, false)
 				Expect(err).NotTo(HaveOccurred())
 
 				uid := b.Shoot.GetInfo().Status.UID
@@ -168,7 +168,7 @@ metadata:
 		})
 
 		It("should create the secrets with the fake garden client", func() {
-			b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
+			b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, false)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret1"}, &corev1.Secret{})).To(Succeed())
@@ -177,7 +177,7 @@ metadata:
 		})
 
 		It("should create the secret binding and credentials binding", func() {
-			b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+			b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "provider-account"}, &corev1.Secret{})).To(Succeed())

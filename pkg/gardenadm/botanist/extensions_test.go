@@ -230,7 +230,7 @@ var _ = Describe("Extensions", func() {
 		})
 
 		When("running the control plane (gardenadm init)", func() {
-			When("infrastructure is managed outside of Gardener (high-touch)", func() {
+			When("infrastructure is not managed by Gardener", func() {
 				It("should return all extensions referenced by shoot (except Infrastructure, Worker, and DNSRecord)", func() {
 					Expect(ComputeExtensions(resources, true, false)).To(ConsistOf(
 						And(
@@ -249,7 +249,7 @@ var _ = Describe("Extensions", func() {
 				})
 			})
 
-			When("infrastructure is managed by Gardener (medium-touch)", func() {
+			When("infrastructure is managed by Gardener", func() {
 				It("should return all extensions referenced by shoot", func() {
 					Expect(ComputeExtensions(resources, true, true)).To(ConsistOf(
 						And(
@@ -305,7 +305,7 @@ var _ = Describe("Extensions", func() {
 			extension2            = "ext2"
 
 			fakeClient client.Client
-			b          *AutonomousBotanist
+			b          *GardenadmBotanist
 
 			managedResource1 *resourcesv1alpha1.ManagedResource
 			managedResource2 *resourcesv1alpha1.ManagedResource
@@ -313,7 +313,7 @@ var _ = Describe("Extensions", func() {
 
 		BeforeEach(func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithStatusSubresource(&resourcesv1alpha1.ManagedResource{}).Build()
-			b = &AutonomousBotanist{
+			b = &GardenadmBotanist{
 				Botanist: &botanistpkg.Botanist{
 					Operation: &operation.Operation{
 						SeedClientSet: fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build(),

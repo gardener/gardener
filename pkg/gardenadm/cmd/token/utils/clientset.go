@@ -15,8 +15,8 @@ import (
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 )
 
-// CreateClientSet creates a new client set using the AutonomousBotanist to create the client set.
+// CreateClientSet creates a new client set using the GardenadmBotanist to create the client set.
 // Exposed for unit testing.
 var CreateClientSet = func(ctx context.Context, log logr.Logger) (kubernetes.Interface, error) {
-	return (&botanist.AutonomousBotanist{Botanist: &botanistpkg.Botanist{Operation: &operation.Operation{Logger: log}}}).CreateClientSet(ctx)
+	return (&botanist.GardenadmBotanist{Botanist: &botanistpkg.Botanist{Operation: &operation.Operation{Logger: log}}}).CreateClientSet(ctx)
 }

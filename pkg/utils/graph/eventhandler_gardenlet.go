@@ -64,7 +64,7 @@ func (g *graph) handleGardenletCreateOrUpdate(ctx context.Context, gardenlet *se
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	if g.forAutonomousShoots {
+	if g.forSelfHostedShoots {
 		g.handleGardenletCreateOrUpdateForShoots(gardenlet)
 	} else {
 		g.handleGardenletCreateOrUpdateForSeeds(ctx, gardenlet)
@@ -83,7 +83,7 @@ func (g *graph) handleGardenletDelete(name, namespace string) {
 }
 
 func (g *graph) handleGardenletCreateOrUpdateForSeeds(ctx context.Context, gardenlet *seedmanagementv1alpha1.Gardenlet) {
-	if strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixAutonomousShoot) {
+	if strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixSelfHostedShoot) {
 		return
 	}
 
@@ -141,7 +141,7 @@ func (g *graph) handleGardenletCreateOrUpdateForSeeds(ctx context.Context, garde
 }
 
 func (g *graph) handleGardenletCreateOrUpdateForShoots(gardenlet *seedmanagementv1alpha1.Gardenlet) {
-	if !strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixAutonomousShoot) {
+	if !strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixSelfHostedShoot) {
 		return
 	}
 
@@ -150,11 +150,11 @@ func (g *graph) handleGardenletCreateOrUpdateForShoots(gardenlet *seedmanagement
 
 	var (
 		gardenletVertex = g.getOrCreateVertex(VertexTypeGardenlet, gardenlet.Namespace, gardenlet.Name)
-		shootVertex     = g.getOrCreateVertex(VertexTypeShoot, gardenlet.Namespace, strings.TrimPrefix(gardenlet.Name, gardenletutils.ResourcePrefixAutonomousShoot))
+		shootVertex     = g.getOrCreateVertex(VertexTypeShoot, gardenlet.Namespace, strings.TrimPrefix(gardenlet.Name, gardenletutils.ResourcePrefixSelfHostedShoot))
 	)
 
 	g.addEdge(gardenletVertex, shootVertex)
 
-	// TODO(rfranzke): Check if we need to support the 'allowBootstrap' logic for autonomous shoots as well (see
+	// TODO(rfranzke): Check if we need to support the 'allowBootstrap' logic for self-hosted shoots as well (see
 	//  handling for seeds).
 }

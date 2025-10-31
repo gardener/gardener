@@ -1075,7 +1075,7 @@ func KeyV2(
 	)
 
 	if worker.Machine.Image != nil {
-		// worker.Machine.Image.Version is unset for autonomous shoots with unmanaged infrastructure
+		// worker.Machine.Image.Version is unset for self-hosted shoots with unmanaged infrastructure
 		data = append(data, worker.Machine.Image.Name+ptr.Deref(worker.Machine.Image.Version, ""))
 	}
 

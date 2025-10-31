@@ -28,7 +28,7 @@ const (
 // implementations when the standard sidecar container is required.
 // The shoot object can be read from the `Cluster` object, e.g., using the GardenContext.GetCluster method in webhooks.
 func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamespace, providerName, image string) corev1.Container {
-	autonomousShoot := v1beta1helper.IsShootAutonomous(shoot.Spec.Provider.Workers)
+	selfHostedShoot := v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers)
 
 	c := corev1.Container{
 		Name:            providerSidecarContainerName(providerName),
@@ -46,7 +46,7 @@ func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamesp
 			"--machine-safety-orphan-vms-period=30m",
 			"--namespace=" + controlPlaneNamespace,
 			"--port=" + strconv.Itoa(portProviderMetrics),
-			"--target-kubeconfig=" + targetKubeconfig(autonomousShoot, controlPlaneNamespace),
+			"--target-kubeconfig=" + targetKubeconfig(selfHostedShoot, controlPlaneNamespace),
 			"--v=3",
 		},
 		LivenessProbe: &corev1.Probe{
@@ -79,7 +79,7 @@ func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamesp
 		},
 	}
 
-	if !autonomousShoot {
+	if !selfHostedShoot {
 		c.VolumeMounts = append(c.VolumeMounts, corev1.VolumeMount{
 			Name:      "kubeconfig",
 			MountPath: gardenerutils.VolumeMountPathGenericKubeconfig,

@@ -485,7 +485,7 @@ var _ = Describe("Shoot", func() {
 						attrs.Verb = verb
 
 						if withSelector {
-							selector, err := fields.ParseSelector("metadata.name=autonomous-shoot-" + shootName)
+							selector, err := fields.ParseSelector("metadata.name=self-hosted-shoot-" + shootName)
 							Expect(err).NotTo(HaveOccurred())
 							attrs.FieldSelectorRequirements = selector.Requirements()
 						}
@@ -569,7 +569,7 @@ var _ = Describe("Shoot", func() {
 					})
 
 					It("should allow if shoot meta matches", func() {
-						bootstrapTokenSecret.Data = map[string][]byte{"description": []byte(fmt.Sprintf("Used for connecting the autonomous Shoot %s/%s to the Garden cluster", shootNamespace, shootName))}
+						bootstrapTokenSecret.Data = map[string][]byte{"description": []byte(fmt.Sprintf("Used for connecting the self-hosted Shoot %s/%s to the Garden cluster", shootNamespace, shootName))}
 						Expect(fakeClient.Create(ctx, bootstrapTokenSecret)).To(Succeed())
 
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
@@ -579,7 +579,7 @@ var _ = Describe("Shoot", func() {
 					})
 
 					It("should not have an opinion if shoot meta does not match", func() {
-						bootstrapTokenSecret.Data = map[string][]byte{"description": []byte("Used for connecting the autonomous Shoot not-the-namespace/not-the-name to the Garden cluster")}
+						bootstrapTokenSecret.Data = map[string][]byte{"description": []byte("Used for connecting the self-hosted Shoot not-the-namespace/not-the-name to the Garden cluster")}
 						Expect(fakeClient.Create(ctx, bootstrapTokenSecret)).To(Succeed())
 
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
@@ -592,7 +592,7 @@ var _ = Describe("Shoot", func() {
 						Expect(fakeClient.Create(ctx, bootstrapTokenSecret)).To(Succeed())
 
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).To(MatchError(ContainSubstring(`failed fetching shoot meta from bootstrap token description: bootstrap token description does not start with "Used for connecting the autonomous Shoot "`)))
+						Expect(err).To(MatchError(ContainSubstring(`failed fetching shoot meta from bootstrap token description: bootstrap token description does not start with "Used for connecting the self-hosted Shoot "`)))
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
 						Expect(reason).To(BeEmpty())
 					})
@@ -943,7 +943,7 @@ var _ = Describe("Shoot", func() {
 					},
 
 					Entry("create", "create"),
-					Entry("mark-autonomous", "mark-autonomous"),
+					Entry("mark-self-hosted", "mark-self-hosted"),
 				)
 
 				It("should have no opinion because verb is not allowed", func() {

@@ -50,7 +50,7 @@ func (r *Reconciler) AddToManager(
 		r.Clock = clock.RealClock{}
 	}
 	if r.GardenNamespace == "" {
-		if gardenlet.IsResponsibleForAutonomousShoot() {
+		if gardenlet.IsResponsibleForSelfHostedShoot() {
 			r.GardenNamespace = metav1.NamespaceSystem
 		} else {
 			r.GardenNamespace = v1beta1constants.GardenNamespace

@@ -280,7 +280,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			serviceCtrlOpts.Completed().Apply(&localservice.DefaultAddOptions)
 			workerCtrlOpts.Completed().Apply(&localworker.DefaultAddOptions.Controller)
 			localworker.DefaultAddOptions.GardenCluster = gardenCluster
-			localworker.DefaultAddOptions.AutonomousShootCluster = generalOpts.Completed().AutonomousShootCluster
+			localworker.DefaultAddOptions.SelfHostedShootCluster = generalOpts.Completed().SelfHostedShootCluster
 			localBackupBucketOptions.Completed().Apply(&localbackupbucket.DefaultAddOptions)
 			localBackupBucketOptions.Completed().Apply(&localbackupentry.DefaultAddOptions)
 			heartbeatCtrlOptions.Completed().Apply(&heartbeat.DefaultAddOptions)
@@ -309,7 +309,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not add readycheck of webhook to manager: %w", err)
 			}
 
-			atomicShootWebhookConfig, err := webhookOptions.Completed().AddToManager(ctx, mgr, nil, generalOpts.Completed().AutonomousShootCluster)
+			atomicShootWebhookConfig, err := webhookOptions.Completed().AddToManager(ctx, mgr, nil, generalOpts.Completed().SelfHostedShootCluster)
 			if err != nil {
 				return fmt.Errorf("could not add webhooks to manager: %w", err)
 			}

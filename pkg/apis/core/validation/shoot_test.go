@@ -1584,7 +1584,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
-			Context("autonomous shoots", func() {
+			Context("self-hosted shoots", func() {
 				It("should allow 'ControlPlane' field for worker pool", func() {
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
 
@@ -1609,7 +1609,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.seedName"),
-						"Detail": ContainSubstring("cannot set seedName for autonomous shoots"),
+						"Detail": ContainSubstring("cannot set seedName for self-hosted shoots"),
 					}))))
 				})
 
@@ -1621,18 +1621,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].minimum"),
-						"Detail": ContainSubstring("autonomous shoots only support minimum=maximum=1 for the control plane worker pool (might change in the future)"),
+						"Detail": ContainSubstring("self-hosted shoots only support minimum=maximum=1 for the control plane worker pool (might change in the future)"),
 					}))))
 				})
 
-				It("should prevent marking a shoot as 'autonomous' after creation", func() {
+				It("should prevent marking a shoot as 'self-hosted' after creation", func() {
 					newShoot := prepareShootForUpdate(shoot)
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.provider.workers"),
-						"Detail": ContainSubstring("cannot switch a Shoot between autonomous and non-autonomous mode"),
+						"Detail": ContainSubstring("cannot switch a Shoot between self-hosted and hosted mode"),
 					}))))
 				})
 
@@ -1644,7 +1644,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.provider.workers"),
-						"Detail": ContainSubstring("cannot switch a Shoot between autonomous and non-autonomous mode"),
+						"Detail": ContainSubstring("cannot switch a Shoot between self-hosted and hosted mode"),
 					}))))
 				})
 

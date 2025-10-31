@@ -21,7 +21,7 @@ import (
 const kubeletTokenFilePermission = 0o600
 
 // WriteKubeletBootstrapKubeconfig writes the kubelet bootstrap kubeconfig to the file system.
-func (b *AutonomousBotanist) WriteKubeletBootstrapKubeconfig(ctx context.Context) error {
+func (b *GardenadmBotanist) WriteKubeletBootstrapKubeconfig(ctx context.Context) error {
 	if err := b.ensureGardenerNodeAgentDirectories(); err != nil {
 		return fmt.Errorf("failed ensuring gardener-node-agent directories exist: %w", err)
 	}

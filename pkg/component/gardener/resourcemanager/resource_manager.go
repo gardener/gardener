@@ -360,7 +360,7 @@ const (
 	// the virtual garden cluster, or GRM in a seed cluster, being responsible for a shoot cluster).
 	ForTarget ResponsibilityMode = "target"
 	// ForSourceAndTarget is a deployment mode for a gardener-resource-manager deployed in a source cluster,
-	// taking over responsibilities for both the source and a target cluster (e.g., GRM in an autonomous shoot cluster
+	// taking over responsibilities for both the source and a target cluster (e.g., GRM in a self-hosted shoot cluster
 	// where the control plane is running in the cluster itself).
 	ForSourceAndTarget ResponsibilityMode = "both"
 )

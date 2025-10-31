@@ -16,12 +16,12 @@ import (
 
 // DeployPriorityClassCritical deploys the gardener-system-critical PriorityClass needed for running
 // gardener-resource-manager. This is usually deployed to seed clusters via the gardenlet helm chart. When bootstrapping
-// an autonomous shoot cluster with `gardenadm bootstrap` there is no gardenlet. Hence, we need to deploy the
+// a self-hosted shoot cluster with `gardenadm bootstrap` there is no gardenlet. Hence, we need to deploy the
 // PriorityClass for gardener-resource-manager manually, as it is not taken over by the seedsystem component (it uses a
 // ManagedResource for deploying the seed PriorityClasses).
 // Using system-cluster-critical for gardener-resource-manager could also be good enough, but it's very simple to deploy
 // the gardener-system-critical PriorityClass, so we can also choose the cleaner way.
-func (b *AutonomousBotanist) DeployPriorityClassCritical(ctx context.Context) error {
+func (b *GardenadmBotanist) DeployPriorityClassCritical(ctx context.Context) error {
 	priorityClass := &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.PriorityClassNameSeedSystemCritical}}
 	_, err := controllerutils.CreateOrGetAndMergePatch(ctx, b.SeedClientSet.Client(), priorityClass, func() error {
 		priorityClass.Value = int32(999998950)

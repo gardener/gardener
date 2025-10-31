@@ -857,9 +857,9 @@ var _ = Describe("customverbauthorizer", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			Context("mark autonomous", func() {
+			Context("mark self-hosted", func() {
 				BeforeEach(func() {
-					authorizeAttributes.Verb = "mark-autonomous"
+					authorizeAttributes.Verb = "mark-self-hosted"
 				})
 
 				It("should always allow creating a shoot without whitelist tolerations", func() {
@@ -872,14 +872,14 @@ var _ = Describe("customverbauthorizer", func() {
 						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
 					})
 
-					It("should allow creating an autonomous shoot", func() {
+					It("should allow creating a self-hosted shoot", func() {
 						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{ControlPlane: &core.WorkerControlPlane{}})
 
 						attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 					})
 
-					It("should allow marking an existing shoot as 'autonomous'", func() {
+					It("should allow marking an existing shoot as 'self-hosted'", func() {
 						// NB: This is already forbidden by validation, but this admission plugin does not know about it, so let's test it for completeness.
 						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{})
 						oldShoot := shoot.DeepCopy()
@@ -889,7 +889,7 @@ var _ = Describe("customverbauthorizer", func() {
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 					})
 
-					It("should allow removing the control plane field of autonomous shoots", func() {
+					It("should allow removing the control plane field of self-hosted shoots", func() {
 						// NB: This is already forbidden by validation, but this admission plugin does not know about it, so let's test it for completeness.
 						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{ControlPlane: &core.WorkerControlPlane{}})
 						oldShoot := shoot.DeepCopy()
@@ -905,14 +905,14 @@ var _ = Describe("customverbauthorizer", func() {
 						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
 					})
 
-					It("should forbid creating an autonomous shoot", func() {
+					It("should forbid creating a self-hosted shoot", func() {
 						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{ControlPlane: &core.WorkerControlPlane{}})
 
 						attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
 					})
 
-					It("should allow removing the control plane field of autonomous shoots", func() {
+					It("should allow removing the control plane field of self-hosted shoots", func() {
 						// NB: This is already forbidden by validation, but this admission plugin does not know about it, so let's test it for completeness.
 						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{ControlPlane: &core.WorkerControlPlane{}})
 						oldShoot := shoot.DeepCopy()

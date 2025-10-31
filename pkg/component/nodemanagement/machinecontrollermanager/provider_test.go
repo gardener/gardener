@@ -89,7 +89,7 @@ var _ = Describe("Provider", func() {
 		}
 	})
 
-	When("the shoot is not autonomous", func() {
+	When("the shoot is not self-hosted", func() {
 		JustBeforeEach(func() {
 			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
 				Name:      "kubeconfig",
@@ -103,7 +103,7 @@ var _ = Describe("Provider", func() {
 		})
 	})
 
-	When("the shoot is autonomous", func() {
+	When("the shoot is self-hosted", func() {
 		BeforeEach(func() {
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
 				ControlPlane: &gardencorev1beta1.WorkerControlPlane{},

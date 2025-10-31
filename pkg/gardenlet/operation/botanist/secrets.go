@@ -74,7 +74,7 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 
 	if shootStatus := b.Shoot.GetInfo().Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil {
 		if shootStatus.Credentials.Rotation.CertificateAuthorities != nil && shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
-			for _, config := range caCertConfigurations(b.Shoot.IsWorkerless, b.Shoot.IsAutonomous()) {
+			for _, config := range caCertConfigurations(b.Shoot.IsWorkerless, b.Shoot.IsSelfHosted()) {
 				rotation[config.GetName()] = shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
 			}
 			// The static token secret contains token for the health check of the kube-apiserver.
@@ -148,7 +148,7 @@ func (b *Botanist) restoreSecretsFromShootState(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
-func caCertConfigurations(isWorkerless, isAutonomous bool) []secretsutils.ConfigInterface {
+func caCertConfigurations(isWorkerless, isSelfHosted bool) []secretsutils.ConfigInterface {
 	certificateSecretConfigs := []secretsutils.ConfigInterface{
 		// The CommonNames for CA certificates will be overridden with the secret name by the secrets manager when
 		// generated to ensure that each CA has a unique common name. For backwards-compatibility, we still keep the
@@ -167,7 +167,7 @@ func caCertConfigurations(isWorkerless, isAutonomous bool) []secretsutils.Config
 			&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAMetricsServer, CommonName: "metrics-server", CertType: secretsutils.CACert},
 		)
 
-		if !isAutonomous {
+		if !isSelfHosted {
 			certificateSecretConfigs = append(certificateSecretConfigs,
 				&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAVPN, CommonName: "vpn", CertType: secretsutils.CACert},
 			)
@@ -209,7 +209,7 @@ func (b *Botanist) caCertGenerateOptionsFor(configName string) []secretsmanager.
 func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 	var caClientSecret *corev1.Secret
 
-	for _, config := range caCertConfigurations(b.Shoot.IsWorkerless, b.Shoot.IsAutonomous()) {
+	for _, config := range caCertConfigurations(b.Shoot.IsWorkerless, b.Shoot.IsSelfHosted()) {
 		caSecret, err := b.SecretsManager.Generate(ctx, config, b.caCertGenerateOptionsFor(config.GetName())...)
 		if err != nil {
 			return err

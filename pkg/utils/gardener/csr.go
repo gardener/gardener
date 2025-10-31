@@ -39,20 +39,20 @@ func IsSeedClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.K
 }
 
 // IsGardenadmClientCert returns true when the given CSR and usages match the requirements for a client
-// certificate for an autonomous shoot with the `gardenadm connect` prefix. If false is returned, a reason will be
+// certificate for a self-hosted shoot with the `gardenadm connect` prefix. If false is returned, a reason will be
 // returned explaining which requirement was not met.
 func IsGardenadmClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage) (bool, string) {
-	return isAutonomousShootClientCert(x509cr, usages, v1beta1constants.GardenadmUserNamePrefix)
+	return isSelfHostedShootClientCert(x509cr, usages, v1beta1constants.GardenadmUserNamePrefix)
 }
 
 // IsShootClientCert returns true when the given CSR and usages match the requirements for a client certificate for an
-// autonomous shoot with the gardenlet prefix. If false is returned, a reason will be returned explaining which
+// self-hosted shoot with the gardenlet prefix. If false is returned, a reason will be returned explaining which
 // requirement was not met.
 func IsShootClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage) (bool, string) {
-	return isAutonomousShootClientCert(x509cr, usages, v1beta1constants.ShootUserNamePrefix)
+	return isSelfHostedShootClientCert(x509cr, usages, v1beta1constants.ShootUserNamePrefix)
 }
 
-func isAutonomousShootClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage, prefix string) (bool, string) {
+func isSelfHostedShootClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage, prefix string) (bool, string) {
 	requiredOrganizations := []string{v1beta1constants.ShootsGroup}
 
 	if !reflect.DeepEqual(requiredOrganizations, x509cr.Subject.Organization) {

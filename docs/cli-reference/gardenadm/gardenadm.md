@@ -1,6 +1,6 @@
 ## gardenadm
 
-gardenadm bootstraps and manages autonomous shoot clusters in the Gardener project.
+gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener project.
 
 ### Options
 
@@ -12,7 +12,7 @@ gardenadm bootstraps and manages autonomous shoot clusters in the Gardener proje
 
 ### SEE ALSO
 
-* [gardenadm bootstrap](gardenadm_bootstrap.md)	 - Bootstrap the infrastructure for an Autonomous Shoot Cluster
+* [gardenadm bootstrap](gardenadm_bootstrap.md)	 - Bootstrap the infrastructure for a Self-Hosted Shoot Cluster
 * [gardenadm connect](gardenadm_connect.md)	 - Deploy a gardenlet for further cluster management
 * [gardenadm discover](gardenadm_discover.md)	 - Conveniently download Gardener configuration resources from an existing garden cluster
 * [gardenadm init](gardenadm_init.md)	 - Bootstrap the first control plane node

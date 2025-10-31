@@ -15,7 +15,7 @@ spec:
       labels:
         app: machine
       annotations:
-        cni.projectcalico.org/ipv4pools: '["gardenadm-high-touch"]'
+        cni.projectcalico.org/ipv4pools: '["gardenadm-unmanaged-infra"]'
     spec:
       containers:
       - name: node
@@ -42,7 +42,7 @@ spec:
         - name: bashrc
           mountPath: /root/.bashrc
           subPath: bashrc
-      # we don't want components of the autonomous shoot cluster to communicate with the kind API server
+      # we don't want components of the self-hosted shoot cluster to communicate with the kind API server
       automountServiceAccountToken: false
       hostAliases:
         - hostnames:
@@ -77,7 +77,7 @@ kind: ConfigMap
 metadata:
   name: machine-bashrc
   labels:
-    app: high-touch-machine
+    app: unmanaged-infra-machine
 data:
   bashrc: |
     export KUBECONFIG=/etc/kubernetes/admin.conf

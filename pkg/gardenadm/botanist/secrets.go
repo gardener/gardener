@@ -16,7 +16,7 @@ import (
 )
 
 // MigrateSecrets exports the secrets generated with the fake client and imports them with the real client.
-func (b *AutonomousBotanist) MigrateSecrets(ctx context.Context, fakeClient, realClient client.Client) error {
+func (b *GardenadmBotanist) MigrateSecrets(ctx context.Context, fakeClient, realClient client.Client) error {
 	secretList := &corev1.SecretList{}
 	if err := fakeClient.List(ctx, secretList, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
 		return fmt.Errorf("failed listing secrets with fake client: %w", err)

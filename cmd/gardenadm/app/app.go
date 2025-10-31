@@ -31,7 +31,7 @@ func NewCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   Name,
-		Short: Name + " bootstraps and manages autonomous shoot clusters in the Gardener project.",
+		Short: Name + " bootstraps and manages self-hosted shoot clusters in the Gardener project.",
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
@@ -60,7 +60,7 @@ func NewCommand() *cobra.Command {
 func prepareClusterBootstrapGroup(cmd *cobra.Command, opts *cmd.Options) {
 	group := &cobra.Group{
 		ID:    "cluster-bootstrap",
-		Title: "Autonomous Shoot Cluster Bootstrap Commands:",
+		Title: "Self-Hosted Shoot Cluster Bootstrap Commands:",
 	}
 	cmd.AddGroup(group)
 

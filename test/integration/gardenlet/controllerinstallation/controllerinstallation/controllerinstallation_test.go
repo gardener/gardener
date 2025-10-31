@@ -513,21 +513,21 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			})
 		})
 
-		When("seed is marked as autonomous shoot clusters", func() {
+		When("seed is marked as self-hosted shoot clusters", func() {
 			BeforeEach(func() {
-				By("Mark Seed as autonomous shoot cluster")
+				By("Mark Seed as self-hosted shoot cluster")
 				patch := client.MergeFrom(seed.DeepCopy())
-				metav1.SetMetaDataLabel(&seed.ObjectMeta, "seed.gardener.cloud/autonomous-shoot-cluster", "true")
+				metav1.SetMetaDataLabel(&seed.ObjectMeta, "seed.gardener.cloud/self-hosted-shoot-cluster", "true")
 				Expect(testClient.Patch(ctx, seed, patch)).To(Succeed())
 
 				DeferCleanup(func() {
 					patch := client.MergeFrom(seed.DeepCopy())
-					delete(seed.Labels, "seed.gardener.cloud/autonomous-shoot-cluster")
+					delete(seed.Labels, "seed.gardener.cloud/self-hosted-shoot-cluster")
 					Expect(testClient.Patch(ctx, seed, patch)).To(Succeed())
 				})
 			})
 
-			It("should set the autonomousShootCluster value in the chart", func() {
+			It("should set the selfHostedShootCluster value in the chart", func() {
 				values := make(map[string]any)
 				Eventually(func(g Gomega) {
 					managedResource := &resourcesv1alpha1.ManagedResource{}
@@ -544,7 +544,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				valuesBytes, err := yaml.Marshal(values)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(string(valuesBytes)).To(ContainSubstring("autonomousShootCluster: true"))
+				Expect(string(valuesBytes)).To(ContainSubstring("selfHostedShootCluster: true"))
 			})
 		})
 

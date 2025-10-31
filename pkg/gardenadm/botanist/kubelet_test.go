@@ -40,7 +40,7 @@ var _ = Describe("Kubelet", func() {
 		fakeSecretManager secretsmanager.Interface
 		fakeDBus          *fakedbus.DBus
 
-		b *AutonomousBotanist
+		b *GardenadmBotanist
 	)
 
 	BeforeEach(func() {
@@ -52,7 +52,7 @@ var _ = Describe("Kubelet", func() {
 		fakeSecretManager = fakesecretsmanager.New(fakeSeedClient, namespace)
 		fakeDBus = fakedbus.New()
 
-		b = &AutonomousBotanist{
+		b = &GardenadmBotanist{
 			Botanist: &botanistpkg.Botanist{
 				Operation: &operation.Operation{
 					Logger:         logr.Discard(),

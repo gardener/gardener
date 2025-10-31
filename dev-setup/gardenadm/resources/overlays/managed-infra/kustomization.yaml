@@ -11,7 +11,7 @@ components:
 - ../../../../gardenconfig/components/credentials/secret-project-garden
 
 patches:
-- path: patch-shoot-medium-touch.yaml
+- path: patch-shoot-managed-infra.yaml
 - target:
     kind: Shoot
   patch: |

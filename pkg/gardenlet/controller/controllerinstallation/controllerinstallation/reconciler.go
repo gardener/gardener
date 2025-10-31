@@ -62,7 +62,7 @@ const usablePortsRangeSize = 5
 // the process of being deleted when deleting a ControllerInstallation.
 var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 
-// Reconciler reconciles ControllerInstallations and deploys them into the seed cluster or the autonomous shoot cluster.
+// Reconciler reconciles ControllerInstallations and deploys them into the seed cluster or the self-hosted shoot cluster.
 type Reconciler struct {
 	GardenClient          client.Client
 	GardenConfig          *rest.Config
@@ -80,7 +80,7 @@ type Reconciler struct {
 	BootstrapControlPlaneNode bool
 }
 
-// Reconcile reconciles ControllerInstallations and deploys them into the seed cluster or the autonomous shoot cluster.
+// Reconcile reconciles ControllerInstallations and deploys them into the seed cluster or the self-hosted shoot cluster.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -262,8 +262,8 @@ func (r *Reconciler) reconcile(
 		},
 	}
 
-	if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelAutonomousShootCluster) {
-		gardenerValues["gardener"].(map[string]any)["autonomousShootCluster"] = true
+	if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster) {
+		gardenerValues["gardener"].(map[string]any)["selfHostedShootCluster"] = true
 	}
 
 	if genericGardenKubeconfigSecretName != "" {
@@ -582,7 +582,7 @@ func objectEnablesGardenKubeconfig(o runtime.Object) bool {
 }
 
 // MutateSpecForControlPlaneNodeBootstrapping adapts host network, replicas, tolerations and usable ports range for
-// autonomous shoot clusters if necessary.
+// self-hosted shoot clusters if necessary.
 func (r *Reconciler) MutateSpecForControlPlaneNodeBootstrapping(obj runtime.Object) error {
 	if !r.BootstrapControlPlaneNode {
 		return nil

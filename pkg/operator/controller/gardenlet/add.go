@@ -88,7 +88,7 @@ func (r *Reconciler) OperatorResponsiblePredicate(ctx context.Context) predicate
 		if !ok {
 			return false
 		}
-		return !strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixAutonomousShoot) &&
+		return !strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixSelfHostedShoot) &&
 			(hasForceRedeployOperationAnnotation(gardenlet) ||
 				r.seedDoesNotExist(ctx, gardenlet) ||
 				gardenlet.Spec.KubeconfigSecretRef != nil)

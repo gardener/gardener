@@ -997,7 +997,7 @@ build:
               - bash
               - -c
               - >
-                kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" -n garden patch gardenlet autonomous-shoot-root --type=merge -p "{\"spec\":{\"deployment\":{\"helm\":{\"ociRepository\":{\"ref\":\"$SKAFFOLD_IMAGE\"}}}}}" || true
+                kubectl --kubeconfig="$VIRTUAL_GARDEN_KUBECONFIG" -n garden patch gardenlet self-hosted-shoot-root --type=merge -p "{\"spec\":{\"deployment\":{\"helm\":{\"ociRepository\":{\"ref\":\"$SKAFFOLD_IMAGE\"}}}}}" || true
 
   insecureRegistries:
     - garden.local.gardener.cloud:5001
@@ -1277,16 +1277,16 @@ resourceSelector:
       image:
         - .*
 profiles:
-  - name: high-touch
+  - name: unmanaged-infra
     manifests:
       kustomize:
         paths:
-          - dev-setup/gardenadm/resources/overlays/high-touch
-  - name: medium-touch
+          - dev-setup/gardenadm/resources/overlays/unmanaged-infra
+  - name: managed-infra
     manifests:
       kustomize:
         paths:
-          - dev-setup/gardenadm/resources/overlays/medium-touch
+          - dev-setup/gardenadm/resources/overlays/managed-infra
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
@@ -1315,7 +1315,7 @@ deploy:
                   kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.skaffold-image                    "$pod:/tmp/.skaffold-image"
                   kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml        "$pod:/gardenadm/imagevector-overwrite.yaml"
                   kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.imagevector-overwrite-charts.yaml "$pod:/gardenadm/imagevector-overwrite-charts.yaml"
-                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/high-touch/manifests.yaml          "$pod:/gardenadm/resources/manifests.yaml"
+                  kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/unmanaged-infra/manifests.yaml     "$pod:/gardenadm/resources/manifests.yaml"
                 done
         - container:
             command:

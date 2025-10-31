@@ -47,8 +47,8 @@ type Handler struct {
 
 // Handle restricts requests made by gardenlets.
 func (h *Handler) Handle(_ context.Context, request admission.Request) admission.Response {
-	shootNamespace, shootName, isAutonomousShoot, userType := shootidentity.FromAuthenticationV1UserInfo(request.UserInfo)
-	if !isAutonomousShoot {
+	shootNamespace, shootName, isSelfHostedShoot, userType := shootidentity.FromAuthenticationV1UserInfo(request.UserInfo)
+	if !isSelfHostedShoot {
 		return admissionwebhook.Allowed("")
 	}
 
@@ -113,11 +113,11 @@ func (h *Handler) admitGardenlet(gardenletShootInfo types.NamespacedName, reques
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
-	if !strings.HasPrefix(request.Name, gardenletutils.ResourcePrefixAutonomousShoot) {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("the Gardenlet resources for autonomous shoots must be prefixed with %q", gardenletutils.ResourcePrefixAutonomousShoot))
+	if !strings.HasPrefix(request.Name, gardenletutils.ResourcePrefixSelfHostedShoot) {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("the Gardenlet resources for self-hosted shoots must be prefixed with %q", gardenletutils.ResourcePrefixSelfHostedShoot))
 	}
 
-	return h.admit(gardenletShootInfo, types.NamespacedName{Name: strings.TrimPrefix(request.Name, gardenletutils.ResourcePrefixAutonomousShoot), Namespace: request.Namespace})
+	return h.admit(gardenletShootInfo, types.NamespacedName{Name: strings.TrimPrefix(request.Name, gardenletutils.ResourcePrefixSelfHostedShoot), Namespace: request.Namespace})
 }
 
 func (h *Handler) admit(gardenletShootInfo, objectShootInfo types.NamespacedName) admission.Response {

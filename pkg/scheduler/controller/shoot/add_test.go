@@ -158,7 +158,7 @@ var _ = Describe("Add", func() {
 		})
 	})
 
-	Describe("#ShootIsNotAutonomous", func() {
+	Describe("#ShootIsNotSelfHosted", func() {
 		var (
 			predicate predicate.Predicate
 			shoot     *gardencorev1beta1.Shoot
@@ -170,7 +170,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			predicate = reconciler.ShootIsNotAutonomous()
+			predicate = reconciler.ShootIsNotSelfHosted()
 			shoot = &gardencorev1beta1.Shoot{}
 
 			createEvent = event.CreateEvent{Object: shoot}
@@ -179,7 +179,7 @@ var _ = Describe("Add", func() {
 			genericEvent = event.GenericEvent{Object: shoot}
 		})
 
-		Context("shoot is autonomous", func() {
+		Context("shoot is self-hosted", func() {
 			It("should be false", func() {
 				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}})
 				Expect(predicate.Create(createEvent)).To(BeFalse())
@@ -189,7 +189,7 @@ var _ = Describe("Add", func() {
 			})
 		})
 
-		Context("shoot is not autonomous", func() {
+		Context("shoot is not self-hosted", func() {
 			It("should be true", func() {
 				Expect(predicate.Create(createEvent)).To(BeTrue())
 				Expect(predicate.Update(updateEvent)).To(BeTrue())

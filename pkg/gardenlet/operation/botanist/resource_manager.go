@@ -58,7 +58,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		}
 	)
 
-	if b.Shoot.IsAutonomous() {
+	if b.Shoot.IsSelfHosted() {
 		values.KubernetesServiceHost = nil
 
 		if b.Shoot.RunsControlPlane() {

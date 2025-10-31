@@ -663,20 +663,19 @@ func copyUniqueCIDRs(src []string, dst []net.IPNet, networkType string) ([]net.I
 	return dst, nil
 }
 
-// IsAutonomous returns true in case of an autonomous shoot cluster.
-func (s *Shoot) IsAutonomous() bool {
-	return v1beta1helper.IsShootAutonomous(s.GetInfo().Spec.Provider.Workers)
+// IsSelfHosted returns true in case of a self-hosted shoot cluster.
+func (s *Shoot) IsSelfHosted() bool {
+	return v1beta1helper.IsShootSelfHosted(s.GetInfo().Spec.Provider.Workers)
 }
 
 // RunsControlPlane returns true in case the Kubernetes control plane runs inside the cluster.
-// In contrast to IsAutonomous, this function returns false when bootstrapping autonomous shoot clusters using
-// `gardenadm bootstrap` (medium-touch scenario).
+// In contrast to IsSelfHosted, this function returns false when bootstrapping self-hosted shoot clusters using
+// `gardenadm bootstrap` ("managed infrastructure" scenario).
 func (s *Shoot) RunsControlPlane() bool {
 	return s.ControlPlaneNamespace == metav1.NamespaceSystem
 }
 
 // HasManagedInfrastructure returns true if the shoot's infrastructure (network, machines, etc.) is managed by Gardener.
-// I.e., it returns false for high-touch autonomous shoots, where the infrastructure is managed by the user.
 func (s *Shoot) HasManagedInfrastructure() bool {
 	return v1beta1helper.HasManagedInfrastructure(s.GetInfo())
 }

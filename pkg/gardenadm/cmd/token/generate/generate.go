@@ -23,7 +23,7 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "generate",
 		Short: "Generate a random bootstrap token for joining a node",
-		Long: `Generate a random bootstrap token that can be used for joining a node to an autonomous shoot cluster.
+		Long: `Generate a random bootstrap token that can be used for joining a node to a self-hosted shoot cluster.
 Note that the token is not created on the server (use 'gardenadm token create' for it).
 The token is securely generated and follows the format "[a-z0-9]{6}.[a-z0-9]{16}".
 Read more about it here: https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/`,

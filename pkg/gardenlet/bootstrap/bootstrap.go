@@ -33,7 +33,7 @@ import (
 const (
 	// SeedCSRPrefix defines the prefix of seed CSR created by gardenlet.
 	SeedCSRPrefix = "seed-csr-"
-	// ShootCSRPrefix defines the prefix of autonomous shoot CSR created by gardenlet.
+	// ShootCSRPrefix defines the prefix of self-hosted shoot CSR created by gardenlet.
 	ShootCSRPrefix = "shoot-csr-"
 )
 
@@ -46,7 +46,7 @@ func RequestKubeconfigWithBootstrapClient(
 	bootstrapClientSet kubernetes.Interface,
 	kubeconfigKey, bootstrapKubeconfigKey client.ObjectKey,
 	seedConfig *gardenletconfigv1alpha1.SeedConfig,
-	autonomousShootMeta *types.NamespacedName,
+	selfHostedShootMeta *types.NamespacedName,
 	validityDuration *metav1.Duration,
 ) (
 	[]byte,
@@ -69,17 +69,17 @@ func RequestKubeconfigWithBootstrapClient(
 			CommonName:   v1beta1constants.SeedUserNamePrefix + seedName,
 		}
 
-	case gardenlet.IsResponsibleForAutonomousShoot():
-		log = log.WithValues("shoot", autonomousShootMeta)
+	case gardenlet.IsResponsibleForSelfHostedShoot():
+		log = log.WithValues("shoot", selfHostedShootMeta)
 
 		csrPrefix = ShootCSRPrefix
 		certificateSubject = &pkix.Name{
 			Organization: []string{v1beta1constants.ShootsGroup},
-			CommonName:   v1beta1constants.ShootUserNamePrefix + autonomousShootMeta.Namespace + ":" + autonomousShootMeta.Name,
+			CommonName:   v1beta1constants.ShootUserNamePrefix + selfHostedShootMeta.Namespace + ":" + selfHostedShootMeta.Name,
 		}
 
 	default:
-		return nil, "", fmt.Errorf("failed determining gardenlet bootstrap scenario (seed or autonomous shoot)")
+		return nil, "", fmt.Errorf("failed determining gardenlet bootstrap scenario (seed or self-hosted shoot)")
 	}
 
 	certData, privateKeyData, csrName, err := certificatesigningrequest.RequestCertificate(ctx, log, bootstrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, validityDuration, csrPrefix)

@@ -718,7 +718,7 @@ func (r *Reconciler) newKubeAPIServer(
 			),
 			newAuthorizationWebhook("shoot", kubeconfigShootAuthz,
 				// only intercept request from shoot gardenlets
-				// TODO(rfranzke): Also handle requests from ServiceAccounts of extensions running in the autonomous shoot.
+				// TODO(rfranzke): Also handle requests from ServiceAccounts of extensions running in the self-hosted shoot.
 				fmt.Sprintf("'%s' in request.groups", v1beta1constants.ShootsGroup),
 			),
 		)

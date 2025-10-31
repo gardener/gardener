@@ -22,15 +22,15 @@ import (
 
 // GardenKubeconfig implements manager.Runnable and can be used to fetch a kubeconfig for the garden cluster.
 type GardenKubeconfig struct {
-	// RuntimeClient is the runtime cluster client (seed or autonomous shoot).
+	// RuntimeClient is the runtime cluster client (seed or self-hosted shoot).
 	RuntimeClient client.Client
 	// Log is a logger.
 	Log logr.Logger
 	// Config is the gardenlet component configuration.
 	Config *gardenletconfigv1alpha1.GardenletConfiguration
-	// AutonomousShootMeta is the NamespacedName of the autonomous shoot the gardenlet is responsible for (if
+	// SelfHostedShootMeta is the NamespacedName of the self-hosted shoot the gardenlet is responsible for (if
 	// applicable).
-	AutonomousShootMeta *types.NamespacedName
+	SelfHostedShootMeta *types.NamespacedName
 	// Result is a structure that will be filled with information about the requested kubeconfig. Must be initialized
 	// by the caller.
 	Result *KubeconfigBootstrapResult
@@ -147,7 +147,7 @@ func (g *GardenKubeconfig) getOrBootstrapKubeconfig(ctx context.Context) ([]byte
 		kubeconfigKey,
 		bootstrapKubeconfigKey,
 		g.Config.SeedConfig,
-		g.AutonomousShootMeta,
+		g.SelfHostedShootMeta,
 		g.Config.GardenClientConnection.KubeconfigValidity.Validity,
 	)
 }

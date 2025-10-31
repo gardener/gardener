@@ -36,7 +36,7 @@ import (
 
 // WriteBootstrapToken creates a bootstrap token for the gardener-node-agent and kubelet, and writes it to the file
 // system.
-func (b *AutonomousBotanist) WriteBootstrapToken(ctx context.Context) error {
+func (b *GardenadmBotanist) WriteBootstrapToken(ctx context.Context) error {
 	bootstrapTokenSecret, err := bootstraptoken.ComputeBootstrapToken(
 		ctx,
 		b.SeedClientSet.Client(),
@@ -57,7 +57,7 @@ func emptyTemporaryClusterAdminBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "zzz-temporary-cluster-admin-access-for-bootstrapping"}}
 }
 
-func (b *AutonomousBotanist) reconcileTemporaryClusterAdminBindingForBootstrapping(ctx context.Context) error {
+func (b *GardenadmBotanist) reconcileTemporaryClusterAdminBindingForBootstrapping(ctx context.Context) error {
 	clusterRoleBinding := emptyTemporaryClusterAdminBinding()
 	_, err := controllerutil.CreateOrUpdate(ctx, b.SeedClientSet.Client(), clusterRoleBinding, func() error {
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
@@ -96,7 +96,7 @@ func (b *AutonomousBotanist) reconcileTemporaryClusterAdminBindingForBootstrappi
 // Finally, as the kubelet has already been started earlier such that it can run the static control plane pods, this
 // made it create the real kubeconfig file. We have to actively delete it in order to re-trigger its bootstrap process
 // w/ the bootstrap token (otherwise, it tries to use this real kubeconfig file and fails).
-func (b *AutonomousBotanist) ActivateGardenerNodeAgent(ctx context.Context) error {
+func (b *GardenadmBotanist) ActivateGardenerNodeAgent(ctx context.Context) error {
 	alreadyBootstrapped, err := b.FS.Exists(nodeagentconfigv1alpha1.KubeconfigFilePath)
 	if err != nil {
 		return fmt.Errorf("failed checking whether gardener-node-agent's kubeconfig %s exists: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
@@ -125,7 +125,7 @@ func (b *AutonomousBotanist) ActivateGardenerNodeAgent(ctx context.Context) erro
 }
 
 // ApproveNodeAgentCertificateSigningRequest approves the node agent certificate signing request.
-func (b *AutonomousBotanist) ApproveNodeAgentCertificateSigningRequest(ctx context.Context) error {
+func (b *GardenadmBotanist) ApproveNodeAgentCertificateSigningRequest(ctx context.Context) error {
 	bootstrapToken, err := b.FS.ReadFile(nodeagentconfigv1alpha1.BootstrapTokenFilePath)
 	if err != nil {
 		if !errors.Is(err, afero.ErrFileNotFound) {
@@ -178,7 +178,7 @@ func (b *AutonomousBotanist) ApproveNodeAgentCertificateSigningRequest(ctx conte
 
 // FinalizeGardenerNodeAgentBootstrapping deletes the temporary cluster-admin ClusterRoleBinding for
 // gardener-node-agent.
-func (b *AutonomousBotanist) FinalizeGardenerNodeAgentBootstrapping(ctx context.Context) error {
+func (b *GardenadmBotanist) FinalizeGardenerNodeAgentBootstrapping(ctx context.Context) error {
 	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), emptyTemporaryClusterAdminBinding())
 }
 
@@ -194,7 +194,7 @@ var (
 // WaitUntilGardenerNodeAgentLeaseIsRenewed waits until the gardener-node-agent lease is renewed, which indicates that
 // it is ready to be used (and that it still has the needed permissions, even though its cluster-admin binding has been
 // removed).
-func (b *AutonomousBotanist) WaitUntilGardenerNodeAgentLeaseIsRenewed(ctx context.Context) error {
+func (b *GardenadmBotanist) WaitUntilGardenerNodeAgentLeaseIsRenewed(ctx context.Context) error {
 	node, err := nodeagent.FetchNodeByHostName(ctx, b.SeedClientSet.Client(), b.HostName)
 	if err != nil {
 		return fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err)

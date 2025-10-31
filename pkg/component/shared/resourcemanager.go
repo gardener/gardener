@@ -133,7 +133,7 @@ func combinedGardenerResourceManagerDefaultValues() resourcemanager.Values {
 }
 
 // NewCombinedGardenerResourceManager instantiates a new `gardener-resource-manager` component configured to reconcile
-// objects in an autonomous shoot cluster.
+// objects in a self-hosted shoot cluster.
 func NewCombinedGardenerResourceManager(c client.Client,
 	namespaceName string,
 	secretsManager secretsmanager.Interface,

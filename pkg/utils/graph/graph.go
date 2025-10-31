@@ -45,19 +45,19 @@ type graph struct {
 	client              client.Client
 	graph               *simple.DirectedGraph
 	vertices            typeVertexMapping
-	forAutonomousShoots bool
+	forSelfHostedShoots bool
 }
 
 var _ Interface = &graph{}
 
 // New creates a new graph interface for tracking resource dependencies.
-func New(logger logr.Logger, client client.Client, forAutonomousShoots bool) *graph {
+func New(logger logr.Logger, client client.Client, forSelfHostedShoots bool) *graph {
 	return &graph{
 		logger:              logger,
 		client:              client,
 		graph:               simple.NewDirectedGraph(),
 		vertices:            make(typeVertexMapping),
-		forAutonomousShoots: forAutonomousShoots,
+		forSelfHostedShoots: forSelfHostedShoots,
 	}
 }
 
@@ -69,7 +69,7 @@ type resourceSetup struct {
 func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 	var setups []resourceSetup
 
-	if g.forAutonomousShoots {
+	if g.forSelfHostedShoots {
 		setups = append(setups,
 			resourceSetup{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
 			resourceSetup{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},

@@ -31,7 +31,7 @@ type Options struct {
 	// 'worker'.
 	WorkerPoolName string
 	// Shoot contains the namespace and the name of the Shoot which should be connected to Gardener. This is only
-	// relevant for bootstrap tokens that are used for connecting autonomous shoots via `gardenadm connect`.
+	// relevant for bootstrap tokens that are used for connecting self-hosted shoots via `gardenadm connect`.
 	Shoot types.NamespacedName
 
 	// PrintJoinCommand specifies whether to print the full `gardenadm join` command.
@@ -114,9 +114,9 @@ func (o *Options) Complete() error {
 	o.Token.ID, o.Token.Secret = split[0], split[1]
 
 	if o.Shoot.Namespace != "" && o.Shoot.Name != "" {
-		o.Description = fmt.Sprintf("%s%s to Gardener via 'gardenadm connect'", bootstraptoken.AutonomousShootBootstrapTokenSecretDescriptionPrefix, o.Shoot.String())
+		o.Description = fmt.Sprintf("%s%s to Gardener via 'gardenadm connect'", bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix, o.Shoot.String())
 	} else if len(o.Description) == 0 {
-		o.Description = "Used for joining nodes to an autonomous shoot cluster via 'gardenadm join'"
+		o.Description = "Used for joining nodes to a self-hosted shoot cluster via 'gardenadm join'"
 	}
 
 	return nil

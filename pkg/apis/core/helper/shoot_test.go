@@ -631,12 +631,12 @@ var _ = Describe("Helper", func() {
 		Entry("with KubeProxy in IPTables mode", &core.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(core.ProxyModeIPTables)}, false),
 	)
 
-	Describe("#IsShootAutonomous", func() {
+	Describe("#IsShootSelfHosted", func() {
 		It("should return true (single worker pool with control plane configuration)", func() {
 			shoot := &core.Shoot{Spec: core.ShootSpec{Provider: core.Provider{Workers: []core.Worker{
 				{ControlPlane: &core.WorkerControlPlane{}},
 			}}}}
-			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeTrue())
+			Expect(IsShootSelfHosted(shoot.Spec.Provider.Workers)).To(BeTrue())
 		})
 
 		It("should return true (multiple worker pools, one with control plane configuration)", func() {
@@ -645,12 +645,12 @@ var _ = Describe("Helper", func() {
 				{ControlPlane: &core.WorkerControlPlane{}},
 				{},
 			}}}}
-			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeTrue())
+			Expect(IsShootSelfHosted(shoot.Spec.Provider.Workers)).To(BeTrue())
 		})
 
 		It("should return false (no worker pools)", func() {
 			shoot := &core.Shoot{}
-			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeFalse())
+			Expect(IsShootSelfHosted(shoot.Spec.Provider.Workers)).To(BeFalse())
 		})
 
 		It("should return false (worker pools, but none with control plane configuration)", func() {
@@ -659,7 +659,7 @@ var _ = Describe("Helper", func() {
 				{},
 				{},
 			}}}}
-			Expect(IsShootAutonomous(shoot.Spec.Provider.Workers)).To(BeFalse())
+			Expect(IsShootSelfHosted(shoot.Spec.Provider.Workers)).To(BeFalse())
 		})
 	})
 

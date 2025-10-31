@@ -51,9 +51,9 @@ For regular gardenlets managing seed clusters, the controller auto-approves CSRs
 1. The CSR matches the requirements for a seed client certificate (correct organization, common name, and usages)
 2. The requesting client has permission to create the `certificatesigningrequests/seedclient` subresource
 
-#### Autonomous Shoot Client Certificates (`shootclient` subresource)
+#### Self-Hosted Shoot Client Certificates (`shootclient` subresource)
 
-For gardenlets responsible for autonomous shoots, the controller performs additional security validation:
+For gardenlets responsible for self-hosted shoots, the controller performs additional security validation:
 1. The CSR must match the requirements for a shoot client certificate (correct organization, common name, and usages)
 2. The requesting client must have permission to create the `certificatesigningrequests/shootclient` subresource
 3. **Bootstrap Token Validation**: The CSR must be requested via a bootstrap token with a specific description format containing the shoot's namespace and name
@@ -66,7 +66,7 @@ Both types of CSRs rely on the same RBAC setup:
 - This ClusterRole grants permission to create both `certificatesigningrequests/seedclient` and `certificatesigningrequests/shootclient` subresources
 - The gardenlet's bootstrap kubeconfig contains a bootstrap token that authenticates it as part of the `system:bootstrappers` group
 
-This dual approval mechanism ensures that both regular seed gardenlets and autonomous shoot gardenlets can obtain client certificates while maintaining appropriate security controls for each deployment model.
+This dual approval mechanism ensures that both regular seed gardenlets and self-hosted shoot gardenlets can obtain client certificates while maintaining appropriate security controls for each deployment model.
 
 ### [`CloudProfile` Controller](../../pkg/controllermanager/controller/cloudprofile)
 

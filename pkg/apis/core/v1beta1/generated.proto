@@ -3796,7 +3796,7 @@ message Worker {
   optional string updateStrategy = 23;
 
   // ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
-  // This is only relevant for autonomous shoot clusters.
+  // This is only relevant for self-hosted shoot clusters.
   // +optional
   optional WorkerControlPlane controlPlane = 24;
 }

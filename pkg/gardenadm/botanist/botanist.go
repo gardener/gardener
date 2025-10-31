@@ -48,8 +48,8 @@ import (
 // even when running `gardenadm bootstrap` on Windows.
 const GardenadmBaseDir = "/var/lib/gardenadm"
 
-// AutonomousBotanist is a struct which has methods that perform operations for an autonomous shoot cluster.
-type AutonomousBotanist struct {
+// GardenadmBotanist is a struct which has methods that perform operations for a self-hosted shoot cluster.
+type GardenadmBotanist struct {
 	*botanistpkg.Botanist
 
 	HostName   string
@@ -89,15 +89,15 @@ var (
 	NewFs = afero.NewOsFs
 )
 
-// NewAutonomousBotanistFromManifests reads the manifests from dir and initializes a new AutonomousBotanist with them.
-func NewAutonomousBotanistFromManifests(
+// NewGardenadmBotanistFromManifests reads the manifests from dir and initializes a new GardenadmBotanist with them.
+func NewGardenadmBotanistFromManifests(
 	ctx context.Context,
 	log logr.Logger,
 	clientSet kubernetes.Interface,
 	dir string,
 	runsControlPlane bool,
 ) (
-	*AutonomousBotanist,
+	*GardenadmBotanist,
 	error,
 ) {
 	resources, err := gardenadm.ReadManifests(log, DirFS(dir))
@@ -110,7 +110,7 @@ func NewAutonomousBotanistFromManifests(
 		return nil, fmt.Errorf("failed computing extensions: %w", err)
 	}
 
-	b, err := NewAutonomousBotanist(ctx, log, clientSet, resources, extensions, runsControlPlane)
+	b, err := NewGardenadmBotanist(ctx, log, clientSet, resources, extensions, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed constructing botanist: %w", err)
 	}
@@ -118,8 +118,8 @@ func NewAutonomousBotanistFromManifests(
 	return b, nil
 }
 
-// NewAutonomousBotanist creates a new botanist.AutonomousBotanist instance for the gardenadm command execution.
-func NewAutonomousBotanist(
+// NewGardenadmBotanist creates a new botanist.GardenadmBotanist instance for the gardenadm command execution.
+func NewGardenadmBotanist(
 	ctx context.Context,
 	log logr.Logger,
 	clientSet kubernetes.Interface,
@@ -127,15 +127,15 @@ func NewAutonomousBotanist(
 	extensions []Extension,
 	runsControlPlane bool,
 ) (
-	*AutonomousBotanist,
+	*GardenadmBotanist,
 	error,
 ) {
-	autonomousBotanist, err := NewAutonomousBotanistWithoutResources(log)
+	gardenadmBotanist, err := NewGardenadmBotanistWithoutResources(log)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating autonomous botanist: %w", err)
+		return nil, fmt.Errorf("failed creating gardenadm botanist: %w", err)
 	}
 
-	if err := initializeShootResource(resources, autonomousBotanist.FS, runsControlPlane); err != nil {
+	if err := initializeShootResource(resources, gardenadmBotanist.FS, runsControlPlane); err != nil {
 		return nil, fmt.Errorf("failed initializing shoot resource: %w", err)
 	}
 
@@ -146,36 +146,36 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed initializing resources in fake garden client: %w", err)
 	}
 
-	autonomousBotanist.Botanist, err = newBotanist(ctx, log, clientSet, gardenClient, resources, runsControlPlane)
+	gardenadmBotanist.Botanist, err = newBotanist(ctx, log, clientSet, gardenClient, resources, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
 
-	if !autonomousBotanist.Shoot.RunsControlPlane() {
-		autonomousBotanist.Bastion = autonomousBotanist.DefaultBastion()
+	if !gardenadmBotanist.Shoot.RunsControlPlane() {
+		gardenadmBotanist.Bastion = gardenadmBotanist.DefaultBastion()
 
 		// For `gardenadm bootstrap`, we don't initialize the control plane machines with a "full OSC".
 		// Instead, we provide a small alternative OSC, that only fetches the `gardenadm` binary from the registry.
-		autonomousBotanist.Shoot.Components.Extensions.OperatingSystemConfig, err = autonomousBotanist.ControlPlaneBootstrapOperatingSystemConfig()
+		gardenadmBotanist.Shoot.Components.Extensions.OperatingSystemConfig, err = gardenadmBotanist.ControlPlaneBootstrapOperatingSystemConfig()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	autonomousBotanist.Resources = resources
-	autonomousBotanist.Extensions = extensions
+	gardenadmBotanist.Resources = resources
+	gardenadmBotanist.Extensions = extensions
 
-	return autonomousBotanist, nil
+	return gardenadmBotanist, nil
 }
 
-// NewAutonomousBotanistWithoutResources creates a new AutonomousBotanist without instantiating a Botanist struct.
-func NewAutonomousBotanistWithoutResources(log logr.Logger) (*AutonomousBotanist, error) {
+// NewGardenadmBotanistWithoutResources creates a new GardenadmBotanist without instantiating a Botanist struct.
+func NewGardenadmBotanistWithoutResources(log logr.Logger) (*GardenadmBotanist, error) {
 	hostName, err := nodeagent.GetHostName()
 	if err != nil {
 		return nil, fmt.Errorf("failed fetching hostname: %w", err)
 	}
 
-	return &AutonomousBotanist{
+	return &GardenadmBotanist{
 		Botanist: &botanistpkg.Botanist{Operation: newOperation(log, newFakeGardenClient(), newFakeSeedClientSet(""))},
 
 		HostName: hostName,
@@ -223,9 +223,9 @@ func newBotanist(
 	keysAndValues := []any{"cloudProfile", resources.CloudProfile, "project", resources.Project, "shoot", resources.Shoot}
 	if clientSet == nil {
 		clientSet = newFakeSeedClientSet(seedObj.KubernetesVersion.String())
-		log.Info("Initializing autonomous botanist with fake client set", keysAndValues...) //nolint:logcheck
+		log.Info("Initializing gardenadm botanist with fake client set", keysAndValues...) //nolint:logcheck
 	} else {
-		log.Info("Initializing autonomous botanist with control plane client set", keysAndValues...) //nolint:logcheck
+		log.Info("Initializing gardenadm botanist with control plane client set", keysAndValues...) //nolint:logcheck
 	}
 
 	o := newOperation(log, gardenClient, clientSet)
@@ -330,11 +330,11 @@ func newShootObject(
 		return nil, fmt.Errorf("failed computing shoot networks: %w", err)
 	}
 
-	// In autonomous shoot clusters, kube-system is used as the control plane namespace.
-	// However, when bootstrapping an autonomous shoot cluster with `gardenadm bootstrap` using a temporary local cluster,
+	// In self-hosted shoot clusters, kube-system is used as the control plane namespace.
+	// However, when bootstrapping a self-hosted shoot cluster with `gardenadm bootstrap` using a temporary local cluster,
 	// we want to avoid conflicts with kube-system components of the bootstrap cluster by placing all shoot-related
 	// components in another namespace. In this case, we use the technical ID as the control plane namespace, as usual.
-	// TODO(timebertt): double-check if this causes problems when importing the state into the autonomous shoot cluster
+	// TODO(timebertt): double-check if this causes problems when importing the state into the self-hosted shoot cluster
 	if !runsControlPlane {
 		obj.ControlPlaneNamespace = resources.Shoot.Status.TechnicalID
 	}
@@ -388,7 +388,7 @@ func initializeShootResource(resources gardenadm.Resources, fs afero.Afero, runs
 			if resources.ShootState == nil {
 				return fmt.Errorf("shoot has managed infrastructure, but ShootState is missing " +
 					"(the ShootState is usually exported by `gardenadm bootstrap` and read by `gardenadm init`): " +
-					"you should either use `gardenadm bootstrap` to create the autonomous shoot cluster with managed infrastructure or " +
+					"you should either use `gardenadm bootstrap` to create the self-hosted shoot cluster with managed infrastructure or " +
 					"remove the `Shoot.spec.{secret,credentials}BindingName` field to mark the shoot as having unmanaged infrastructure")
 			}
 
@@ -412,11 +412,11 @@ func initializeSeedResource(resources gardenadm.Resources, runsControlPlane bool
 	seed.Status = gardencorev1beta1.SeedStatus{ClusterIdentity: ptr.To(resources.Shoot.Name)}
 
 	if runsControlPlane {
-		// When running the control plane (`gardenadm init`), mark the seed as an autonomous shoot cluster.
+		// When running the control plane (`gardenadm init`), mark the seed as a self-hosted shoot cluster.
 		// Otherwise (`gardenadm bootstrap`), the bootstrap cluster should behave like a standard seed cluster.
-		// If the seed is marked as an autonomous shoot cluster, extensions are configured differently, e.g., they merge the
+		// If the seed is marked as a self-hosted shoot cluster, extensions are configured differently, e.g., they merge the
 		// shoot webhooks into the seed webhooks.
-		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelAutonomousShootCluster, "true")
+		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster, "true")
 	}
 
 	kubernetes.GardenScheme.Default(seed)

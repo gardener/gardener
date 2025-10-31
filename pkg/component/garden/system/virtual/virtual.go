@@ -148,7 +148,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				{
 					APIGroups: []string{gardencorev1beta1.GroupName},
 					Resources: []string{"*"},
-					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update", "manage-members", "modify-spec-tolerations-whitelist", "modify-spec-kubernetes", "modify-spec-machineimages", "modify-spec-providerconfig", "mark-autonomous"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update", "manage-members", "modify-spec-tolerations-whitelist", "modify-spec-kubernetes", "modify-spec-machineimages", "modify-spec-providerconfig", "mark-self-hosted"},
 				},
 				{
 					APIGroups: []string{

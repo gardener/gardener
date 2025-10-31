@@ -191,7 +191,7 @@ var _ = Describe("shoot", func() {
 		})
 
 		Describe("#ComputeInClusterAPIServerAddress", func() {
-			When("shoot is not autonomous", func() {
+			When("shoot is not self-hosted", func() {
 				controlPlaneNamespace := "foo"
 				s := &Shoot{ControlPlaneNamespace: controlPlaneNamespace}
 
@@ -204,7 +204,7 @@ var _ = Describe("shoot", func() {
 				})
 			})
 
-			When("shoot is autonomous", func() {
+			When("shoot is self-hosted", func() {
 				s := &Shoot{ControlPlaneNamespace: "kube-system"}
 
 				It("should return kubernetes.default.svc", func() {
@@ -265,7 +265,7 @@ var _ = Describe("shoot", func() {
 			})
 		})
 
-		Describe("#IsAutonomous", func() {
+		Describe("#IsSelfHosted", func() {
 			It("should return true", func() {
 				shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
@@ -277,7 +277,7 @@ var _ = Describe("shoot", func() {
 						},
 					},
 				})
-				Expect(shoot.IsAutonomous()).To(BeTrue())
+				Expect(shoot.IsSelfHosted()).To(BeTrue())
 			})
 
 			It("should return false", func() {
@@ -290,7 +290,7 @@ var _ = Describe("shoot", func() {
 						},
 					},
 				})
-				Expect(shoot.IsAutonomous()).To(BeFalse())
+				Expect(shoot.IsSelfHosted()).To(BeFalse())
 			})
 		})
 

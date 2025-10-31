@@ -268,7 +268,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		if spec.CredentialsBindingName != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsBindingName"), workerlessErrorMsg))
 		}
-	} else if !helper.IsShootAutonomous(spec.Provider.Workers) {
+	} else if !helper.IsShootSelfHosted(spec.Provider.Workers) {
 		if len(ptr.Deref(spec.SecretBindingName, "")) == 0 && len(ptr.Deref(spec.CredentialsBindingName, "")) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("secretBindingName"), "must be set when credentialsBindingName is not"))
 		} else if len(ptr.Deref(spec.SecretBindingName, "")) != 0 && len(ptr.Deref(spec.CredentialsBindingName, "")) != 0 {
@@ -308,8 +308,8 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		}
 	}
 
-	if helper.IsShootAutonomous(spec.Provider.Workers) && spec.SeedName != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), *spec.SeedName, "cannot set seedName for autonomous shoots"))
+	if helper.IsShootSelfHosted(spec.Provider.Workers) && spec.SeedName != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), *spec.SeedName, "cannot set seedName for self-hosted shoots"))
 	}
 
 	if spec.SchedulerName != nil {
@@ -479,9 +479,9 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 		}
 	}
 
-	if helper.IsShootAutonomous(oldProvider.Workers) != helper.IsShootAutonomous(newProvider.Workers) {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("workers"), "cannot switch a Shoot between autonomous and non-autonomous mode"))
-	} else if helper.IsShootAutonomous(newProvider.Workers) {
+	if helper.IsShootSelfHosted(oldProvider.Workers) != helper.IsShootSelfHosted(newProvider.Workers) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("workers"), "cannot switch a Shoot between self-hosted and hosted mode"))
+	} else if helper.IsShootSelfHosted(newProvider.Workers) {
 		oldControlPlaneWorkerPool, newControlPlaneWorkerPool := helper.ControlPlaneWorkerPoolForShoot(oldProvider.Workers), helper.ControlPlaneWorkerPoolForShoot(newProvider.Workers)
 		if oldControlPlaneWorkerPool.Name != newControlPlaneWorkerPool.Name {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("workers"), "cannot change control plane worker pool"))
@@ -2122,7 +2122,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 
 	if worker.ControlPlane != nil {
 		if worker.Minimum != worker.Maximum || worker.Minimum != 1 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("minimum"), worker.Minimum, "autonomous shoots only support minimum=maximum=1 for the control plane worker pool (might change in the future)"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("minimum"), worker.Minimum, "self-hosted shoots only support minimum=maximum=1 for the control plane worker pool (might change in the future)"))
 		}
 
 		if backup := worker.ControlPlane.Backup; backup != nil {

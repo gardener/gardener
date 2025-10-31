@@ -1,5 +1,5 @@
 ---
-title: Autonomous Shoot Clusters
+title: Self-Hosted Shoot Clusters
 gep-number: 28
 creation-date: 2024-09-17
 status: implementable
@@ -9,11 +9,11 @@ authors:
 - "@vlerenc"
 ---
 
-# GEP-28: Autonomous Shoot Clusters
+# GEP-28: Self-Hosted Shoot Clusters
 
 ## Table of Contents
 
-- [GEP-28: Autonomous Shoot Clusters](#gep-28-autonomous-shoot-clusters)
+- [GEP-28: Self-Hosted Shoot Clusters](#gep-28-self-hosted-shoot-clusters)
   - [Table of Contents](#table-of-contents)
   - [Summary](#summary)
   - [Motivation](#motivation)
@@ -35,19 +35,19 @@ authors:
       - [`gardenadm version`](#gardenadm-version)
     - [`Shoot` API](#shoot-api)
     - [Scenarios](#scenarios)
-      - [High Touch](#high-touch)
-      - [Medium Touch](#medium-touch)
+      - [Unmanaged Infrastructure](#unmanaged-infrastructure)
+      - [Managed Infrastructure](#managed-infrastructure)
         - [`gardenadm bootstrap`](#gardenadm-bootstrap)
     - [Disaster Recovery](#disaster-recovery)
       - [Single-Node Failure](#single-node-failure)
       - [Multi-Node Failure](#multi-node-failure)
       - [Data Center Failure](#data-center-failure)
   - [Future Work](#future-work)
-    - [Autonomous Shoot Clusters for End-Users](#autonomous-shoot-clusters-for-end-users)
+    - [Self-Hosted Shoot Clusters for End-Users](#self-hosted-shoot-clusters-for-end-users)
     - [Network Connectivity to Garden Cluster](#network-connectivity-to-garden-cluster)
     - [Changes to Shoot Components](#changes-to-shoot-components)
     - [Air-Gapped Gardener Landscapes](#air-gapped-gardener-landscapes)
-    - [Scaling the Control Plane of Autonomous Shoot Clusters](#scaling-the-control-plane-of-autonomous-shoot-clusters)
+    - [Scaling the Control Plane of Self-Hosted Shoot Clusters](#scaling-the-control-plane-of-self-hosted-shoot-clusters)
   - [Alternatives](#alternatives)
     - [Using Existing Tools](#using-existing-tools)
     - [Using Existing Services](#using-existing-services)
@@ -55,34 +55,34 @@ authors:
 
 ## Summary
 
-Gardener ships with functionality that would allow the creation of "autonomous" shoot clusters.
-Such "autonomous" clusters would be regular shoot clusters with the main difference that their control plane runs on dedicated nodes within the cluster itself (instead of a seed cluster which typically resides in another infrastructure account and network domain).
+Gardener ships with functionality that would allow the creation of "self-hosted" shoot clusters.
+Such "self-hosted" clusters would be regular shoot clusters with the main difference that their control plane runs on dedicated nodes within the cluster itself (instead of a seed cluster which typically resides in another infrastructure account and network domain).
 This deployment model is known as the typical/standard Kubernetes deployment model, while Gardener's regular shoot clusters today follow the "Kubeception" deployment model.
 
 ![Overview](assets/28-overview.png)
 
 > [!IMPORTANT]
 > This shall not be a drop-in replacement for [`k3s`](https://k3s.io) or [`kubeadm`](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm) (that would be too far away from Gardener's mission statement, TCO goals, and current implementation), but we want to offer this new type of shoot clusters as a separate flavor to enable on-prem use-cases that cannot be served with Gardener today.
-> By allowing the remote management through Gardener, "autonomous" clusters will meet our mission statement (e.g., in regards to low TCO) while operating without the need of a seed cluster.
+> By allowing the remote management through Gardener, "self-hosted" clusters will meet our mission statement (e.g., in regard to low TCO) while operating without the need of a seed cluster.
 
-Such autonomous shoot clusters are meant to operate autonomously, but not to exist completely independently of Gardener.
+Such self-hosted shoot clusters are meant to operate autonomously, but not to exist completely independently of Gardener.
 Hence, after initial creation, they shall be connected to an existing Gardener system such that the established cluster management functionality via the `Shoot` API can be applied.
 
-Furthermore, autonomous shoot clusters are not considered a replacement or alternative for regular shoot clusters.
+Furthermore, self-hosted shoot clusters are not considered a replacement or alternative for regular shoot clusters.
 They should be only used for special use-cases or requirements as their creation time will be longer and their costs will be higher.
 In this light, a high cluster creation/deletion churn rate is neither expected nor in scope.
 
 Gardener's APIs and cluster topology are defined in a way such that seed clusters are a separate "security domain" and not accessible to end-users.
-With autonomous shoot clusters, seed clusters do not exist anymore, hence, running a `gardenlet` and certain seed system components (like extensions) within the end-user's infrastructure requires rework and adaptation of some of today's concepts.
-As operating autonomous shoot clusters is a challenge big enough on its own, we'll start with focusing only on how Gardener operators can create and connect autonomous shoot clusters.
-Allowing "untrusted" end-users to create such clusters is out of scope of this GEP and considered to be future work ([see below](#autonomous-shoot-clusters-for-end-users)).
+With self-hosted shoot clusters, seed clusters do not exist anymore, hence, running a `gardenlet` and certain seed system components (like extensions) within the end-user's infrastructure requires rework and adaptation of some of today's concepts.
+As operating self-hosted shoot clusters is a challenge big enough on its own, we'll start with focusing only on how Gardener operators can create and connect self-hosted shoot clusters.
+Allowing "untrusted" end-users to create such clusters is out of scope of this GEP and considered to be future work ([see below](#self-hosted-shoot-clusters-for-end-users)).
 
 ## Motivation
 
 Gardener is a great tool for creating and managing clusters with very low TCO.
 Part of this success is its architecture, i.e., running control planes in seed clusters under joint supervision by Gardener and Kubernetes (a.k.a. Kubeception deployment model).
 
-However, there is sufficient pull to also find a way to create autonomous shoot clusters using Gardener (e.g., for the edge or for temporarily air-gapped scenarios) where the control plane must run side-by-side and cannot run in seed clusters.
+However, there is sufficient pull to also find a way to create self-hosted shoot clusters using Gardener (e.g., for the edge or for temporarily air-gapped scenarios) where the control plane must run side-by-side and cannot run in seed clusters.
 We want to establish Gardener in (new) environments where clusters cannot run their control plane "somewhere else", but where it needs to be co-located with the worker nodes, e.g., to avoid costly or exposed network traffic, firewall the entire cluster off, rely on the control plane while the cluster is air-gapped/has no internet access, generally avoid runtime dependencies, fulfill compliance obligations, etc.
 
 In addition, Gardener itself requires to run in a conformant Kubernetes cluster satisfying the [minimum Kubernetes version requirements](../usage/shoot-operations/supported_k8s_versions.md#garden-clusters), but so far there was no way of setting up or managing this initial cluster via Gardener itself.
@@ -91,20 +91,20 @@ Augmenting Gardener's capability to also manage the initial cluster will help to
 
 ### Goals
 
-- Creation of autonomous shoot clusters running dedicated nodes for control plane components
+- Creation of self-hosted shoot clusters running dedicated nodes for control plane components
 - Maximize re-use of existing code/functionality to prevent re-inventing the wheel
 - Enable cluster management and upgrades via the `Shoot` API of an existing Gardener
 
 ### Non-Goals
 
-- Creation/deletion of autonomous shoot clusters with high churn rates and convenience compared to regular shoot clusters
-- Allow end-users to create autonomous shoot clusters and connect them to a Gardener system - this aspect will be covered in a future GEP after this one has been implemented
-- Provide functionality to create autonomous shoot clusters via the API of an existing Gardener system
+- Creation/deletion of self-hosted shoot clusters with high churn rates and convenience compared to regular shoot clusters
+- Allow end-users to create self-hosted shoot clusters and connect them to a Gardener system - this aspect will be covered in a future GEP after this one has been implemented
+- Provide functionality to create self-hosted shoot clusters via the API of an existing Gardener system
 - Support day-2 operations without connecting the cluster to an existing Gardener system
 
 ## Proposal
 
-In short, the basic idea is to develop a new command line tool that is going to be shipped with every Gardener release, `gardenadm`, which can be used to bootstrap an autonomous shoot cluster.
+In short, the basic idea is to develop a new command line tool that is going to be shipped with every Gardener release, `gardenadm`, which can be used to bootstrap a self-hosted shoot cluster.
 
 <img src="../../logo/gardenadm-large.png" alt="gardenadm" width="100"/>
 
@@ -129,17 +129,17 @@ Similar to [`kubeadm`'s prerequisites](https://kubernetes.io/docs/setup/producti
 
 `gardenadm` will have the following commands:
 
-- [`gardenadm discover`](#gardenadm-discover) to discover the configuration of the Gardener system the autonomous shoot cluster shall be connected to later.
+- [`gardenadm discover`](#gardenadm-discover) to discover the configuration of the Gardener system the self-hosted shoot cluster shall be connected to later.
 - [`gardenadm init`](#gardenadm-init) to bootstrap a first control plane node.
 - [`gardenadm token`](#gardenadm-token) to manage bootstrap and discovery tokens for `gardenadm join`.
 - [`gardenadm join`](#gardenadm-join) to bootstrap further control plane nodes, or to bootstrap worker nodes and join them to the cluster.
 - [`gardenadm connect`](#gardenadm-connect) to deploy a `gardenlet` for further cluster management.
 - [`gardenadm version`](#gardenadm-version) to print the `gardenadm` version.
 
-The general flow for bootstrapping an autonomous shoot cluster will be as follows:
+The general flow for bootstrapping a self-hosted shoot cluster will be as follows:
 
 1. The user installs `gardenadm` on the first control plane node and runs `gardenadm discover`.
-   This will download relevant configuration from the Gardener system the autonomous shoot cluster shall be later connected to (e.g., `Controller{Registration,Deployment}`s, `CloudProfile`s, etc.).
+   This will download relevant configuration from the Gardener system the self-hosted shoot cluster shall be later connected to (e.g., `Controller{Registration,Deployment}`s, `CloudProfile`s, etc.).
    If there is no existing Gardener system yet, the needed configuration must be provided manually.
 2. The downloaded configuration and a `Shoot` manifest are provided to the `gardenadm init` command.
    This will bootstrap the first control plane node.
@@ -156,11 +156,11 @@ A more detailed description of the commands is following.
 
 This command takes a kubeconfig to an existing Gardener system, and a `Shoot` manifest.
 It downloads the required `CloudProfile`, `ControllerRegistration` and `ControllerDeployment` resources and stores them locally for usage of other `gardenadm` commands.
-This simplifies the crafting of these documents, and it also ensures that the configuration and versions used for the bootstrapping of the autonomous shoot cluster fit to the configuration later found in the connected Gardener system.
+This simplifies the crafting of these documents, and it also ensures that the configuration and versions used for the bootstrapping of the self-hosted shoot cluster fit to the configuration later found in the connected Gardener system.
 
 #### `gardenadm init`
 
-This command bootstraps the first control plane node of the autonomous shoot cluster.
+This command bootstraps the first control plane node of the self-hosted shoot cluster.
 The configuration is specified via separate files.
 It needs a `Shoot` manifest and some additional configuration files, which usually reside in the garden cluster, e.g., a `CloudProfile` (best downloaded with `gardenadm discover`).
 For the initial cluster Gardener bootstrapping use-case however, these won't come from a pre-existing garden cluster as it doesn't exist yet.
@@ -244,7 +244,7 @@ The static pod manifest can then be exchanged on the host and replace the "boots
 
 > [!NOTE]
 > At the time of writing this GEP, it is not yet fully clear how/whether this approach fits into the design plans for `etcd-druid`.
-> An alternative idea is to make `etcd-druid` aware of the concept of autonomous shoot clusters and give it further control into the management of static `etcd` pods.
+> An alternative idea is to make `etcd-druid` aware of the concept of self-hosted shoot clusters and give it further control into the management of static `etcd` pods.
 > The details are still subject to discussion and will become clearer in the future.
 > Since we need a "bootstrap `etcd`" anyway to get the cluster up and running, we can proceed with this GEP and its implementation in parallel while the discussion around how `etcd-druid` can take over the management is ongoing.
 
@@ -290,16 +290,16 @@ Apart from this, `etcd` also needs to be re-configured to have the new node join
 
 #### `gardenadm connect`
 
-This command deploys a `gardenlet` into the autonomous shoot cluster and connects it to an existing garden cluster.
+This command deploys a `gardenlet` into the self-hosted shoot cluster and connects it to an existing garden cluster.
 As part of this operation, the corresponding `Shoot` resource will be created in the garden cluster.
-Afterwards, the `gardenlet` will reconcile the autonomous shoot cluster similarly to regular shoot clusters.
+Afterwards, the `gardenlet` will reconcile the self-hosted shoot cluster similarly to regular shoot clusters.
 
 > [!NOTE]
-> When there is no existing Gardener system yet (for example, because the created autonomous shoot cluster is the initial cluster), then [`gardener-operator`](../concepts/operator.md) must be deployed first, and the [`Garden`](../../example/operator/20-garden.yaml) must be created, before the `gardenlet` can be deployed.
+> When there is no existing Gardener system yet (for example, because the created self-hosted shoot cluster is the initial cluster), then [`gardener-operator`](../concepts/operator.md) must be deployed first, and the [`Garden`](../../example/operator/20-garden.yaml) must be created, before the `gardenlet` can be deployed.
 >
-> Also, it is not yet clear whether the existing `gardenlet` binary will be re-used, or whether we better create a dedicated, new binary with slimmed down functionality catered for only managing autonomous shoot clusters.
+> Also, it is not yet clear whether the existing `gardenlet` binary will be re-used, or whether we better create a dedicated, new binary with slimmed down functionality catered for only managing self-hosted shoot clusters.
 
-Depending on the scenario, an autonomous shoot cluster may be air-gapped for periods of time.
+Depending on the scenario, a self-hosted shoot cluster may be air-gapped for periods of time.
 Therefore, please note that the cluster should function also when air-gapped/when it has limited or no network connectivity.
 Updates can not be performed during that time, but ordinary operations with the cluster itself (e.g., creating pods or services) should still be possible.
 It is important that the [version skew](../deployment/version_skew_policy.md) is always respected.
@@ -310,7 +310,7 @@ This command prints the version of `gardenadm`.
 
 ### `Shoot` API
 
-We need some mechanism to distinguish regular shoot clusters from autonomous shoot clusters.
+We need some mechanism to distinguish regular shoot clusters from self-hosted shoot clusters.
 As the most prominent difference is that there are dedicated machines for the control plane components, we propose to notice the difference based on the existence of a worker pool for the control plane:
 
 ```yaml
@@ -327,14 +327,14 @@ An alternative is to augment `.spec.controlPlane` with this information, however
 
 We distinguish between two different scenarios (for now):
 
-- [High Touch](#high-touch), meaning that there is no programmable infrastructure available.
+- [Unmanaged Infrastructure](#unmanaged-infrastructure), meaning that there is no programmable infrastructure available.
   We consider this the "bare metal" or "edge" use-case, where at first machines must be (often manually) prepared by human operators.
   In this case, network setup (e.g., VPCs, subnets, route tables, etc.) and machine management are out of scope.
-- [Medium Touch](#medium-touch), meaning that there is programmable infrastructure available where we can leverage [provider extensions](../../extensions/README.md#infrastructure-provider) and [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager) in order to manage the network setup and the machines.
+- [Managed Infrastructure](#managed-infrastructure), meaning that there is programmable infrastructure available where we can leverage [provider extensions](../../extensions/README.md#infrastructure-provider) and [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager) in order to manage the network setup and the machines.
 
-The general procedure of bootstrapping an autonomous shoot cluster is similar in both scenarios.
+The general procedure of bootstrapping a self-hosted shoot cluster is similar in both scenarios.
 
-#### High Touch
+#### Unmanaged Infrastructure
 
 In this scenario, the starting point is right on the first machine that shall be transformed into a control plane node.
 It is assumed that the network was set up properly (see [Prerequisites](#prerequisites)).
@@ -342,15 +342,15 @@ Since machine management is out of scope, upgrades requiring to roll out the nod
 We will leverage the functionality that is to be developed in the scope of [#10219](https://github.com/gardener/gardener/issues/10219).
 This will also include operating system upgrades [planned for Garden Linux](https://github.com/gardener/gardener/issues/10219#issuecomment-2262299606).
 
-#### Medium Touch
+#### Managed Infrastructure
 
 In this scenario, we can leverage the existing [`extensions.gardener.cloud/v1alpha1.Infrastructure` API](../extensions/resources/infrastructure.md) in order to let the respective provider extension generate the necessary network resources (VPCs, subnets, etc., whatever is needed for the respective infrastructure).
-`machine-controller-manager` can be used to create the control plane nodes (and later also the worker nodes) of the autonomous shoot cluster.
+`machine-controller-manager` can be used to create the control plane nodes (and later also the worker nodes) of the self-hosted shoot cluster.
 
 The challenge is that both Gardener provider extensions and `machine-controller-manager` depend on a pre-existing Kubernetes cluster or in general an API server.
 Hence, we propose to use a [KinD cluster](https://kind.sigs.k8s.io), deploy the needed components into it, and create the necessary `Infrastructure`, `MachineClass`, and `MachineDeployment` resources.
 This way, these components can be reused as-is, without big changes or re-wiring of these complex components to run in-process with a fake client (as we do during the `gardenadm init` flow for the simpler components).
-Once the controllers have reconciled successfully, we can export the created infrastructure state and the `Machine` resources, bootstrap the autonomous shoot cluster similar to the [general flow](#commands) also needed for the [High Touch scenario](#high-touch), and import the state again into the created cluster.
+Once the controllers have reconciled successfully, we can export the created infrastructure state and the `Machine` resources, bootstrap the self-hosted shoot cluster similar to the [general flow](#commands) also needed for the [Unmanaged Infrastructure scenario](#unmanaged-infrastructure), and import the state again into the created cluster.
 
 There is no special assumption about the location of the KinD cluster.
 It should run somewhere where it can access the API of the target infrastructure.
@@ -368,8 +368,8 @@ Since we assume that this scenario will be the prominent one, we plan to add ano
 
 ##### `gardenadm bootstrap`
 
-This command creates the virtual network and machines to be used for the control plane of the autonomous shoot cluster.
-It uses an existing KinD cluster to temporarily deploy existing Gardener components (unaware of the autonomous shoot cluster use-case).
+This command creates the virtual network and machines to be used for the control plane of the self-hosted shoot cluster.
+It uses an existing KinD cluster to temporarily deploy existing Gardener components (unaware of the self-hosted shoot cluster use-case).
 These components, such as provider extensions and `machine-controller-manager`, are used to create the necessary infrastructure and machines.
 
 The high-level steps are as follows:
@@ -384,7 +384,7 @@ The high-level steps are as follows:
 8. Create a `Bastion` resource to be able to access the machines and execute `gardenadm init` (can be later optimized via `cloud-init` through a cloud config that invokes `gardenadm init` directly when creating the machines).
 
 The states of the `Infrastructure` and `Machine` resources need to be exported from the KinD cluster.
-Once the autonomous shoot cluster control plane is running, the state should be imported so that it can be managed by the provider extension and `machine-controller-manager` respectively.
+Once the self-hosted shoot cluster control plane is running, the state should be imported so that it can be managed by the provider extension and `machine-controller-manager` respectively.
 
 The KinD cluster can be deleted afterwards.
 
@@ -392,7 +392,7 @@ The KinD cluster can be deleted afterwards.
 
 Disasters can strike in many different ways.
 This section discusses disasters in ascending order of severity.
-Some scenarios can be handled by autonomous shoot clusters automatically, others require manual intervention.
+Some scenarios can be handled by self-hosted shoot clusters automatically, others require manual intervention.
 
 #### Single-Node Failure
 
@@ -433,59 +433,59 @@ The resolution/handling of data center failures is out of scope of this GEP.
 
 ## Future Work
 
-### Autonomous Shoot Clusters for End-Users
+### Self-Hosted Shoot Clusters for End-Users
 
-As implicitly mentioned in the [Non-Goals](#non-goals) section, the focus of this GEP is to allow Gardener operators to create autonomous shoot clusters.
+As implicitly mentioned in the [Non-Goals](#non-goals) section, the focus of this GEP is to allow Gardener operators to create self-hosted shoot clusters.
 However, the creation of such clusters by end-users is not covered by this GEP.
 This could become a future topic if we consider it relevant enough.
 
-Handling creation of autonomous shoot clusters by end-users requires refined access controls for the `gardenlet`.
+Handling creation of self-hosted shoot clusters by end-users requires refined access controls for the `gardenlet`.
 Currently, the `gardenlet` runs as part of a seed cluster and has access to some resources, which are not accessible to end-users but only to operators.
 An example resource is the `ControllerDeployment`, which may contain credentials, e.g., for certificate management or domain name services.
 In case this scenario is desired and the security boundary between Gardener operators and end-users should stay as is, the extension deployment needs to be adapted.
 
-While it may be appealing to have support for autonomous shoot cluster for end-users, it is important to understand that this feature may complicate the world for both operators and end-users.
-The benefits of autonomous shoot clusters for the garden runtime cluster and/or soil clusters, i.e., unmanaged seed clusters, is fairly obvious:
+While it may be appealing to have support for self-hosted shoot cluster for end-users, it is important to understand that this feature may complicate the world for both operators and end-users.
+The benefits of self-hosted shoot clusters for the garden runtime cluster and/or soil clusters, i.e., unmanaged seed clusters, is fairly obvious:
 It allows to create a Gardener landscape without external dependency to a Kubernetes service provider.
 However, the benefits for end-users are less clear (except for the mentioned edge/on-prem/air-gapped use cases).
-It needs to be carefully considered and documented for what scenarios autonomous shoot clusters are the right choice, and when ordinary shoot clusters with their control plane running on a seed cluster are the better way to go.
+It needs to be carefully considered and documented for what scenarios self-hosted shoot clusters are the right choice, and when ordinary shoot clusters with their control plane running on a seed cluster are the better way to go.
 Without this consideration, the feature may increase the operational complexity for Gardener operators, and the cognitive load for end-users.
 
 ### Network Connectivity to Garden Cluster
 
-Another aspect that was only barely touched in this GEP is the reliability of the network connectivity between the autonomous shoot cluster and Gardener.
+Another aspect that was only barely touched in this GEP is the reliability of the network connectivity between the self-hosted shoot cluster and Gardener.
 In the [`gardenadm connect` section](#gardenadm-connect), it was mentioned that the cluster should function also when air-gapped/when it has limited or no network connectivity.
 However, we are deliberately vague what "limited network connectivity" means.
 Detailing this aspect out can be considered future work.
-As mentioned in the corresponding section, the [version skew](../deployment/version_skew_policy.md) plays an important role in this context, determining the maximum time the autonomous shoot cluster can be disconnected from Gardener.
+As mentioned in the corresponding section, the [version skew](../deployment/version_skew_policy.md) plays an important role in this context, determining the maximum time the self-hosted shoot cluster can be disconnected from Gardener.
 Long term support of Gardener and associated components may also be considered future work.
 
 ### Changes to Shoot Components
 
-Due to the changed network layout of autonomous shoot clusters, the usage of some shoot components needs to be reconsidered.
+Due to the changed network layout of self-hosted shoot clusters, the usage of some shoot components needs to be reconsidered.
 Examples are the VPN connection between control plane and data plane, the `apiserver-proxy` and the way metrics are scraped.
 This GEP does not cover these changes in detail, but they are important to be considered when implementing it.
 The following examples are just used to illustrate the need for changes, but are not meant to be exhaustive:
 - The VPN connection between control plane and data plane is not needed anymore as the control plane runs on the same network as the data plane.
 Previously, the VPN connection was used to secure the communication between the control plane and the data plane.
 This was important as the control plane and the data plane were running in different networks with a potentially untrusted network in between.
-In the autonomous shoot cluster scenario, this is no longer the case.
+In the self-hosted shoot cluster scenario, this is no longer the case.
 The control plane can directly communicate with the data plane without the need for a VPN connection.
 
 - The `apiserver-proxy` (see [GEP-11](11-apiserver-network-proxy.md) for details) is used to forward requests from the data plane directed at `kubernetes.default.svc.cluster.local` to the control plane.
-  In the autonomous shoot cluster scenario, this can be simplified by directly pointing `kubernetes.default.svc.cluster.local` to the actual endpoints of the `kube-apiserver`.
+  In the self-hosted shoot cluster scenario, this can be simplified by directly pointing `kubernetes.default.svc.cluster.local` to the actual endpoints of the `kube-apiserver`.
   This way, the `apiserver-proxy` is no longer needed.
-  Another aspect is the [mutating webhook for injecting the `KUBERNETES_SERVICE_HOST` environment variable](../concepts/resource-manager.md#kubernetes-service-host-injection), which can be disabled in the autonomous shoot cluster scenario as well.
+  Another aspect is the [mutating webhook for injecting the `KUBERNETES_SERVICE_HOST` environment variable](../concepts/resource-manager.md#kubernetes-service-host-injection), which can be disabled in the self-hosted shoot cluster scenario as well.
 - In ordinary shoot clusters, the metrics of components running in the data plane are scraped indirectly via the `kube-apiserver`.
   This allows the observability stack to use the VPN connection without explicitly configuring it.
-  As stated above, the VPN connection is no longer needed in the autonomous shoot cluster scenario.
+  As stated above, the VPN connection is no longer needed in the self-hosted shoot cluster scenario.
   Therefore, the observability stack could also directly scrape metrics from the data plane components instead of going through the `kube-apiserver`.
 
 There may be other components, which are affected by the changed network layout and need to be adapted.
 
 ### Air-Gapped Gardener Landscapes
 
-While it is already possible today to run a Gardener landscape in an air-gapped environment, the autonomous shoot cluster feature will make it easier to set up such a landscape.
+While it is already possible today to run a Gardener landscape in an air-gapped environment, the self-hosted shoot cluster feature will make it easier to set up such a landscape.
 This is due to the fact that it removes the dependency on an external Kubernetes cluster to run the Garden and act as the initial seed cluster. 
 Therefore, it may be worthwhile to take a closer look at the requirements for air-gapped Gardener landscapes and document them properly.
 
@@ -498,12 +498,12 @@ Topics to consider (without any claim of completeness) are:
 The goal would be to provide a comprehensive guide on how to set up an air-gapped Gardener landscape, which can be applied on various infrastructures.
 It may also be useful for scenarios that are not fully air-gapped, but only desire selected parts of the sovereignty this provides.
 
-### Scaling the Control Plane of Autonomous Shoot Clusters
+### Scaling the Control Plane of Self-Hosted Shoot Clusters
 
 The control plane components of ordinary Gardener shoot clusters are scaled horizontally and vertically in various ways.
 Autoscaling is not covered in this GEP, but it is important in the long run to ensure efficient resource usage.
 
-As far as this GEP is concerned, the control plane of autonomous shoot clusters is scaled horizontally by adding more control plane nodes (see [`gardenadm join`](#gardenadm-join)).
+As far as this GEP is concerned, the control plane of self-hosted shoot clusters is scaled horizontally by adding more control plane nodes (see [`gardenadm join`](#gardenadm-join)).
 
 This approach can be problematic in various ways.
 As this GEP proposes to always deploy the full set of default control plane components on each control plane node, there may be more instances running for `kube-scheduler` and `kube-controller-manager` than practically necessary.
@@ -511,7 +511,7 @@ While this may be a good approach in scaling `kube-apiserver` horizontally, it m
 Furthermore, from `etcd`'s perspective the amount of control plane nodes should ideally be odd and no more than seven (see [etcd faq](https://etcd.io/docs/v3.4/faq/)).
 This further limits the scalability of the control plane.
 
-Therefore, it may be a good idea to investigate how node roles can help improve efficiency in a scale-out autonomous shoot cluster scenario.
+Therefore, it may be a good idea to investigate how node roles can help improve efficiency in a scale-out self-hosted shoot cluster scenario.
 Some control plane nodes could include the full set of default control plane components while others may use a reduced set of components.
 This could be achieved by having roles for either individual components or different set of components.
 
@@ -522,14 +522,14 @@ Yet another option in the contrary direction would be to allow non-control plane
 This would allow to use the control plane nodes to their full capacity, but it would also blur the separation between control and data plane nodes.
 While it may improve the resource utilisation of control plane nodes, it may also introduce security risks.
 
-In any case, revisiting the scaling problem is required to ensure efficient resource usage with growing control plane usage in the context of autonomous shoot clusters.
+In any case, revisiting the scaling problem is required to ensure efficient resource usage with growing control plane usage in the context of self-hosted shoot clusters.
 
 ## Alternatives
 
 ### Using Existing Tools
 
 Existing tools, e.g., [`k3s`](https://k3s.io) or [`kubeadm`](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm), could be used to create the initial Kubernetes cluster.
-This cluster could then be "adopted" by Gardener and managed by the `gardenlet` as described for the day-2 operations in the autonomous shoot cluster case.
+This cluster could then be "adopted" by Gardener and managed by the `gardenlet` as described for the day-2 operations in the self-hosted shoot cluster case.
 It was deemed much more complex to align a cluster created by a third-party tool with Gardener's expectations than to create the cluster directly with Gardener.
 The fact that these tools evolve independently from Gardener and may introduce breaking changes was another reason to prefer the direct creation with Gardener.
 
@@ -542,7 +542,7 @@ For example, it may be undesirable/impossible for an air-gapped environment to h
 
 ### Using Existing Gardener
 
-Using an existing Gardener to create an autonomous cluster is an option, yet it requires a more complex satisfaction of prerequisites to make this approach work.
+Using an existing Gardener to create a self-hosred cluster is an option, yet it requires a more complex satisfaction of prerequisites to make this approach work.
 For example, network connectivity from a seed cluster (where extensions and a `gardenlet` runs) to the target infrastructure must exist.
 When the initial cluster shall be created, pivoting from a local KinD cluster can be an option, but it also requires to solve the challenge of migrating the Gardener control plane.
 In summary, we considered this approach more complex to develop and use.

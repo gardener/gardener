@@ -126,7 +126,7 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 					Labels:    map[string]string{testID: testRunID},
 				},
 				Data: map[string][]byte{
-					"description": []byte(fmt.Sprintf("Used for connecting the autonomous Shoot %s/%s", shootNamespace, shootName)),
+					"description": []byte(fmt.Sprintf("Used for connecting the self-hosted Shoot %s/%s", shootNamespace, shootName)),
 				},
 			}
 
@@ -175,7 +175,7 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 					Labels:    map[string]string{testID: testRunID},
 				},
 				Data: map[string][]byte{
-					"description": []byte(fmt.Sprintf("Used for connecting the autonomous Shoot %s/%s", shootNamespace, shootName)),
+					"description": []byte(fmt.Sprintf("Used for connecting the self-hosted Shoot %s/%s", shootNamespace, shootName)),
 				},
 			}
 

@@ -170,7 +170,7 @@ var _ = Describe("Virtual", func() {
 				{
 					APIGroups: []string{"core.gardener.cloud"},
 					Resources: []string{"*"},
-					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update", "manage-members", "modify-spec-tolerations-whitelist", "modify-spec-kubernetes", "modify-spec-machineimages", "modify-spec-providerconfig", "mark-autonomous"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update", "manage-members", "modify-spec-tolerations-whitelist", "modify-spec-kubernetes", "modify-spec-machineimages", "modify-spec-providerconfig", "mark-self-hosted"},
 				},
 				{
 					APIGroups: []string{

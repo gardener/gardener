@@ -487,8 +487,8 @@ const (
 	// LabelKeyAggregateToProjectMember is a constant for a label on ClusterRoles that are aggregated to the project
 	// member ClusterRole.
 	LabelKeyAggregateToProjectMember = "rbac.gardener.cloud/aggregate-to-project-member"
-	// LabelAutonomousShootCluster is a constant for a label on a Seed indicating that it is an autonomous shoot cluster.
-	LabelAutonomousShootCluster = "seed.gardener.cloud/autonomous-shoot-cluster"
+	// LabelSelfHostedShootCluster is a constant for a label on a Seed indicating that it is a self-hosted shoot cluster.
+	LabelSelfHostedShootCluster = "seed.gardener.cloud/self-hosted-shoot-cluster"
 	// LabelSecretBindingReference is used to identify secrets which are referred by a SecretBinding (not necessarily in the same namespace).
 	LabelSecretBindingReference = "reference.gardener.cloud/secretbinding"
 	// LabelCredentialsBindingReference is used to identify credentials which are referred by a CredentialsBinding (not necessarily in the same namespace).
@@ -813,10 +813,10 @@ const (
 	SeedsGroup = "gardener.cloud:system:seeds"
 	// SeedUserNamePrefix is the identity username prefix for gardenlets when authenticating to the API server.
 	SeedUserNamePrefix = "gardener.cloud:system:seed:"
-	// ShootsGroup is the identity group for gardenlets running in autonomous shoot clusters when authenticating to the
+	// ShootsGroup is the identity group for gardenlets running in self-hosted shoot clusters when authenticating to the
 	// API server.
 	ShootsGroup = "gardener.cloud:system:shoots"
-	// ShootUserNamePrefix is the identity username prefix for gardenlets running in autonomous shoot clusters when
+	// ShootUserNamePrefix is the identity username prefix for gardenlets running in self-hosted shoot clusters when
 	// authenticating to the API server.
 	ShootUserNamePrefix = "gardener.cloud:system:shoot:"
 	// GardenadmUserNamePrefix is the identity username prefix for `gardenadm connect` when it bootstraps the

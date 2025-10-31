@@ -34,7 +34,7 @@ var _ = Describe("CustomResourceDefinitions", func() {
 
 		fakeClient client.Client
 
-		b *AutonomousBotanist
+		b *GardenadmBotanist
 	)
 
 	BeforeEach(func() {
@@ -46,7 +46,7 @@ var _ = Describe("CustomResourceDefinitions", func() {
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 		applier := kubernetes.NewApplier(fakeClient, mapper)
 
-		b = &AutonomousBotanist{
+		b = &GardenadmBotanist{
 			Botanist: &botanistpkg.Botanist{
 				Operation: &operation.Operation{
 					SeedClientSet: fakekubernetes.
@@ -125,7 +125,7 @@ var _ = Describe("CustomResourceDefinitions", func() {
 				})
 			})
 
-			It("should deploy the additional CRDs for the medium-touch scenario", func() {
+			It("should deploy the additional CRDs for the managed infrastructure scenario", func() {
 				Expect(b.ReconcileCustomResourceDefinitions(ctx)).To(Succeed())
 
 				crdList := &apiextensionsv1.CustomResourceDefinitionList{}

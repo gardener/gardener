@@ -174,23 +174,23 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 		return err
 	}
 
-	if !gardenlet.IsResponsibleForAutonomousShoot() {
-		// TODO(rfranzke): This healthz check is currently not enabled for autonomous shoots because it depends on the
+	if !gardenlet.IsResponsibleForSelfHostedShoot() {
+		// TODO(rfranzke): This healthz check is currently not enabled for self-hosted shoots because it depends on the
 		//  seed-lease controller. This controller is currently not enabled, but it will be in the future. Once it is
-		//  enabled, we can also enable this healthz check for autonomous shoots.
+		//  enabled, we can also enable this healthz check for self-hosted shoots.
 		if err := mgr.AddHealthzCheck("periodic-health", gardenerhealthz.CheckerFunc(healthManager)); err != nil {
 			return err
 		}
 	}
 
-	var autonomousShootMeta *types.NamespacedName
-	if gardenlet.IsResponsibleForAutonomousShoot() {
+	var selfHostedShootMeta *types.NamespacedName
+	if gardenlet.IsResponsibleForSelfHostedShoot() {
 		configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ConfigMapNameShootInfo, Namespace: metav1.NamespaceSystem}}
 		if err := mgr.GetAPIReader().Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
 			return fmt.Errorf("failed reading ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err)
 		}
-		autonomousShootMeta = &types.NamespacedName{Namespace: configMap.Data["shootNamespace"], Name: configMap.Data["shootName"]}
-		log.Info("Fetched information about autonomous shoot", "shootMeta", autonomousShootMeta)
+		selfHostedShootMeta = &types.NamespacedName{Namespace: configMap.Data["shootNamespace"], Name: configMap.Data["shootName"]}
+		log.Info("Fetched information about self-hosted shoot", "shootMeta", selfHostedShootMeta)
 	}
 
 	log.Info("Adding runnables to manager for bootstrapping")
@@ -203,7 +203,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 					RuntimeClient:       mgr.GetClient(),
 					Log:                 mgr.GetLogger().WithName("bootstrap"),
 					Config:              cfg,
-					AutonomousShootMeta: autonomousShootMeta,
+					SelfHostedShootMeta: selfHostedShootMeta,
 					Result:              kubeconfigBootstrapResult,
 				},
 			},
@@ -212,7 +212,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 					cancel:                    cancel,
 					mgr:                       mgr,
 					config:                    cfg,
-					autonomousShootMeta:       autonomousShootMeta,
+					selfHostedShootMeta:       selfHostedShootMeta,
 					healthManager:             healthManager,
 					kubeconfigBootstrapResult: kubeconfigBootstrapResult,
 				},
@@ -220,7 +220,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 		}
 	)
 
-	if !gardenlet.IsResponsibleForAutonomousShoot() {
+	if !gardenlet.IsResponsibleForSelfHostedShoot() {
 		runner.BootstrapRunnables = append([]manager.Runnable{
 			&bootstrappers.SeedConfigChecker{
 				SeedClient: mgr.GetClient(),
@@ -241,7 +241,7 @@ type garden struct {
 	cancel                    context.CancelFunc
 	mgr                       manager.Manager
 	config                    *gardenletconfigv1alpha1.GardenletConfiguration
-	autonomousShootMeta       *types.NamespacedName
+	selfHostedShootMeta       *types.NamespacedName
 	healthManager             gardenerhealthz.Manager
 	kubeconfigBootstrapResult *bootstrappers.KubeconfigBootstrapResult
 }
@@ -271,7 +271,7 @@ func (g *garden) Start(ctx context.Context) error {
 			},
 		}
 
-		if !gardenlet.IsResponsibleForAutonomousShoot() {
+		if !gardenlet.IsResponsibleForSelfHostedShoot() {
 			seedNamespace := gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name)
 
 			opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
@@ -361,12 +361,12 @@ func (g *garden) Start(ctx context.Context) error {
 				// gardenlet should watch only objects which are related to the shoot it is responsible for.
 				opts.ByObject = map[client.Object]cache.ByObject{
 					&gardencorev1beta1.Shoot{}: {
-						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.autonomousShootMeta.Name}),
-						Namespaces: map[string]cache.Config{g.autonomousShootMeta.Namespace: {}},
+						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.selfHostedShootMeta.Name}),
+						Namespaces: map[string]cache.Config{g.selfHostedShootMeta.Namespace: {}},
 					},
 					&seedmanagementv1alpha1.Gardenlet{}: {
-						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenlet.ResourcePrefixAutonomousShoot + g.autonomousShootMeta.Name}),
-						Namespaces: map[string]cache.Config{g.autonomousShootMeta.Namespace: {}},
+						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenlet.ResourcePrefixSelfHostedShoot + g.selfHostedShootMeta.Name}),
+						Namespaces: map[string]cache.Config{g.selfHostedShootMeta.Namespace: {}},
 					},
 				}
 
@@ -419,7 +419,7 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("failed waiting for cache to be synced")
 	}
 
-	if !gardenlet.IsResponsibleForAutonomousShoot() {
+	if !gardenlet.IsResponsibleForSelfHostedShoot() {
 		log.Info("Registering Seed object in garden cluster")
 		if err := g.registerSeed(ctx, gardenCluster.GetClient()); err != nil {
 			return err
@@ -459,7 +459,7 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	if g.config.GardenClientConnection.KubeconfigSecret != nil {
-		certificateManager, err := certificate.NewCertificateManager(log, gardenCluster, g.mgr.GetClient(), g.config, g.autonomousShootMeta)
+		certificateManager, err := certificate.NewCertificateManager(log, gardenCluster, g.mgr.GetClient(), g.config, g.selfHostedShootMeta)
 		if err != nil {
 			return fmt.Errorf("failed to create a new certificate manager: %w", err)
 		}
@@ -473,21 +473,21 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
-	if gardenlet.IsResponsibleForAutonomousShoot() {
+	if gardenlet.IsResponsibleForSelfHostedShoot() {
 		if err := retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: g.autonomousShootMeta.Name, Namespace: g.autonomousShootMeta.Namespace}}
+			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: g.selfHostedShootMeta.Name, Namespace: g.selfHostedShootMeta.Namespace}}
 			if err := gardenCluster.GetClient().Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return retry.SevereError(err)
 				}
-				log.Info("Shoot resource for autonomous shoot not found yet, waiting for it to be created in the Gardener API (usually, the 'gardenadm connect' command invocation creates it)", "shoot", g.autonomousShootMeta)
-				return retry.MinorError(fmt.Errorf("the Shoot resource %s for autonomous shoot was not found yet", g.autonomousShootMeta))
+				log.Info("Shoot resource for self-hosted shoot not found yet, waiting for it to be created in the Gardener API (usually, the 'gardenadm connect' command invocation creates it)", "shoot", g.selfHostedShootMeta)
+				return retry.MinorError(fmt.Errorf("the Shoot resource %s for self-hosted shoot was not found yet", g.selfHostedShootMeta))
 			}
 			return retry.Ok()
 		}); err != nil {
-			return fmt.Errorf("failed waiting for Shoot %s: %w", g.autonomousShootMeta, err)
+			return fmt.Errorf("failed waiting for Shoot %s: %w", g.selfHostedShootMeta, err)
 		}
-		log.Info("Successfully fetched Shoot resource for autonomous shoot", "shoot", g.autonomousShootMeta)
+		log.Info("Successfully fetched Shoot resource for self-hosted shoot", "shoot", g.selfHostedShootMeta)
 	}
 
 	log.Info("Adding controllers to manager")
@@ -761,7 +761,7 @@ func (g *garden) overwriteGardenHostWhenDeployedInRuntimeCluster(ctx context.Con
 func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 	// TODO(rfranzke): Revisit this once `gardenadm connect` progresses (currently, this causes informers to be started
 	//  against the API server, but gardenlet does not have the needed permissions).
-	if gardenlet.IsResponsibleForAutonomousShoot() {
+	if gardenlet.IsResponsibleForSelfHostedShoot() {
 		return nil
 	}
 

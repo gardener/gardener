@@ -2,14 +2,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package hightouch
+package unmanagedinfra
 
 import (
 	"strconv"
 )
 
 const (
-	namespace       = "gardenadm-high-touch"
+	namespace       = "gardenadm-unmanaged-infra"
 	statefulSetName = "machine"
 )
 

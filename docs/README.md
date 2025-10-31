@@ -154,7 +154,7 @@
 * [GEP-25: Namespaced Cloud Profiles](proposals/25-namespaced-cloud-profiles.md)
 * [GEP-26: Workload Identity - Trust Based Authentication](proposals/26-workload-identity.md)
 * [GEP-27: Add Optional Bastion Section To CloudProfile](proposals/27-cloudprofile-bastion-section.md)
-* [GEP-28: Autonomous Shoot Clusters](proposals/28-autonomous-shoot-clusters.md)
+* [GEP-28: Self-Hosted Shoot Clusters](proposals/28-self-hosted-shoot-clusters.md)
 * [GEP-30: Rework API Server Proxy to Drop Proxy Protocol](proposals/30-apiserver-proxy.md)
 * [GEP-31: In-Place Node Updates of Shoot Clusters](proposals/31-inplace-node-update.md)
 * [GEP-32: Cloud Profile Version Classification Lifecycles](proposals/32-version-classification-lifecycles.md)
@@ -235,7 +235,7 @@
 
 * [Getting started locally](deployment/getting_started_locally.md)
 * [Getting started locally with extensions](deployment/getting_started_locally_with_extensions.md)
-* [Getting started locally with Autonomous Shoot Clusters](deployment/getting_started_locally_with_gardenadm.md)
+* [Getting started locally with Self-Hosted Shoot Clusters](deployment/getting_started_locally_with_gardenadm.md)
 * [Setup Gardener on a Kubernetes cluster](deployment/setup_gardener.md)
 * [Version Skew Policy](deployment/version_skew_policy.md)
 * [Deploying Gardenlets](deployment/deploy_gardenlet.md)

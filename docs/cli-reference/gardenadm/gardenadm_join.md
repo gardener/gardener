@@ -6,7 +6,7 @@ Bootstrap worker nodes and join them to the cluster
 
 Bootstrap worker nodes and join them to the cluster.
 
-This command helps to initialize and configure a node to join an existing autonomous shoot cluster.
+This command helps to initialize and configure a node to join an existing self-hosted shoot cluster.
 It ensures that the necessary configurations are applied and the node is properly registered as a worker or control plane node.
 
 Note that further control plane nodes cannot be joined currently.
@@ -40,5 +40,5 @@ gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --gardener-n
 
 ### SEE ALSO
 
-* [gardenadm](gardenadm.md)	 - gardenadm bootstraps and manages autonomous shoot clusters in the Gardener project.
+* [gardenadm](gardenadm.md)	 - gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener project.
 

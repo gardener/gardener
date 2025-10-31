@@ -31,13 +31,13 @@ var _ = Describe("Network", func() {
 		ctx           context.Context
 		namespaceName = "kube-system"
 
-		b *AutonomousBotanist
+		b *GardenadmBotanist
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 
-		b = &AutonomousBotanist{
+		b = &GardenadmBotanist{
 			Botanist: &botanistpkg.Botanist{
 				Operation: &operation.Operation{
 					Shoot: &shoot.Shoot{

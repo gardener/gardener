@@ -84,31 +84,29 @@ func ComputeExtensions(resources gardenadm.Resources, runsControlPlane, managedI
 	return extensions, nil
 }
 
-// wantedExtensionKinds returns the set of extension kinds that are needed and supported for autonomous shoot clusters.
+// wantedExtensionKinds returns the set of extension kinds that are needed and supported for self-hosted shoot clusters.
 // runsControlPlane indicates whether we are bootstrapping the control plane of the cluster (i.e., when executing
 // `gardenadm init`).
-// managedInfrastructure indicates whether the infrastructure of the shoot cluster is managed by Gardener (medium-touch
-// scenario) or not (high-touch scenario).
 func wantedExtensionKinds(runsControlPlane, managedInfrastructure bool) sets.Set[string] {
 	if !runsControlPlane {
 		// When running `gardenadm bootstrap` against the bootstrap cluster, we create Infrastructure, OSC, Worker, and
-		// DNSRecord for the control plane of the autonomous shoot cluster, so we only need to deploy a subset of the
+		// DNSRecord for the control plane of the self-hosted shoot cluster, so we only need to deploy a subset of the
 		// extensions required for the shoot.
 		return sets.New[string](extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.OperatingSystemConfigResource, extensionsv1alpha1.WorkerResource, extensionsv1alpha1.DNSRecordResource)
 	}
 
-	// In the high-touch scenario, we don't deploy Infrastructure, Worker, and DNSRecord extensions because they are
-	// managed outside of Gardener.
+	// In the "unmanaged infrastructure" scenario, we don't deploy Infrastructure, Worker, and DNSRecord extensions
+	// because they are managed outside of Gardener.
 	if !managedInfrastructure {
 		return extensionsv1alpha1.AllExtensionKinds.Clone().Delete(extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.WorkerResource, extensionsv1alpha1.DNSRecordResource)
 	}
 
-	// In `gardenadm init`, we deploy all extensions referenced by the shoot in the medium-touch scenario.
+	// In `gardenadm init`, we deploy all extensions referenced by the shoot in the "managed infrastructure" scenario.
 	return extensionsv1alpha1.AllExtensionKinds.Clone()
 }
 
-// computeWantedControllerRegistrationNames returns the names of all ControllerRegistrations relevant for the autonomous
-// botanist based on the parsed manifests and the wanted extension kinds.
+// computeWantedControllerRegistrationNames returns the names of all ControllerRegistrations relevant for the
+// gardenadm botanist based on the parsed manifests and the wanted extension kinds.
 func computeWantedControllerRegistrationNames(resources gardenadm.Resources, wantedExtensionKinds sets.Set[string]) (sets.Set[string], error) {
 	var (
 		result                                   = sets.New[string]()
@@ -164,7 +162,7 @@ func controllerRegistrationSliceToList(controllerRegistrations []*gardencorev1be
 
 // ReconcileExtensionControllerInstallations reconciles the ControllerInstallation resources necessary to deploy the
 // extension controllers.
-func (b *AutonomousBotanist) ReconcileExtensionControllerInstallations(ctx context.Context, bootstrapMode bool) error {
+func (b *GardenadmBotanist) ReconcileExtensionControllerInstallations(ctx context.Context, bootstrapMode bool) error {
 	reconciler := controllerinstallation.Reconciler{
 		GardenClient:              b.GardenClient,
 		SeedClientSet:             b.SeedClientSet,
@@ -193,7 +191,7 @@ var TimeoutManagedResourceHealthCheck = 2 * time.Minute
 
 // WaitUntilExtensionControllerInstallationsHealthy waits until all ControllerInstallation resources used for
 // extension controller deployments are healthy.
-func (b *AutonomousBotanist) WaitUntilExtensionControllerInstallationsHealthy(ctx context.Context) error {
+func (b *GardenadmBotanist) WaitUntilExtensionControllerInstallationsHealthy(ctx context.Context) error {
 	var taskFns []flow.TaskFn
 
 	for _, extension := range b.Extensions {

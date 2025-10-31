@@ -27,7 +27,7 @@ import (
 
 // IsPodNetworkAvailable checks if the ManagedResource for CoreDNS is deployed and ready. If yes, pod network must be
 // available. Otherwise, CoreDNS which runs in this network wouldn't be available.
-func (b *AutonomousBotanist) IsPodNetworkAvailable(ctx context.Context) (bool, error) {
+func (b *GardenadmBotanist) IsPodNetworkAvailable(ctx context.Context) (bool, error) {
 	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: coredns.ManagedResourceName, Namespace: b.Shoot.ControlPlaneNamespace}}
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
 		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
@@ -39,7 +39,7 @@ func (b *AutonomousBotanist) IsPodNetworkAvailable(ctx context.Context) (bool, e
 }
 
 // ApplyNetworkPolicies reconciles all namespaces in the cluster in order to apply the network policies.
-func (b *AutonomousBotanist) ApplyNetworkPolicies(ctx context.Context) error {
+func (b *GardenadmBotanist) ApplyNetworkPolicies(ctx context.Context) error {
 	reconciler := &networkpolicy.Reconciler{
 		RuntimeClient: b.SeedClientSet.Client(),
 		Resolver:      hostnameresolver.NewNoOpProvider(),

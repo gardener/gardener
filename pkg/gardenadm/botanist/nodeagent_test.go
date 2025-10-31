@@ -56,7 +56,7 @@ var _ = Describe("NodeAgent", func() {
 		fakeFS            afero.Afero
 		fakeClock         *testclock.FakeClock
 
-		b *AutonomousBotanist
+		b *GardenadmBotanist
 	)
 
 	BeforeEach(func() {
@@ -75,7 +75,7 @@ var _ = Describe("NodeAgent", func() {
 		fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
 		fakeClock = testclock.NewFakeClock(time.Now())
 
-		b = &AutonomousBotanist{
+		b = &GardenadmBotanist{
 			Botanist: &botanistpkg.Botanist{
 				Operation: &operation.Operation{
 					Logger:         logr.Discard(),

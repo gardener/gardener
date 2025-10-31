@@ -337,7 +337,7 @@ cluster.
 Note that the mentioned kubeconfig file will be disabled once you deploy the
 gardenlet and connect this cluster to an existing Gardener installation. Run
 this while targeting the garden cluster to which you want to connect this
-autonomous shoot cluster:
+self-hosted shoot cluster:
 
   gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s
 
@@ -351,8 +351,8 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 	return nil
 }
 
-func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.AutonomousBotanist, error) {
-	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
+func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.GardenadmBotanist, error) {
+	b, err := botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
 	if err != nil {
 		return nil, err
 	}
@@ -417,5 +417,5 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Autono
 		return nil, flow.Errors(err)
 	}
 
-	return botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, true)
+	return botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, true)
 }
