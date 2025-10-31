@@ -7,7 +7,6 @@ package gardener_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
@@ -255,64 +254,77 @@ var _ = Describe("TransformSpecToParentFormat", func() {
 		result := TransformSpecToParentFormat(spec, capabilityDefinitions)
 
 		// Verify all machine images have capability flavors
-		Expect(result.MachineImages).To(ConsistOf(
-			MatchFields(IgnoreExtras, Fields{
-				"Name": Equal("ubuntu"),
-				"Versions": ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("20.04")}),
-						"Architectures":    Equal([]string{"amd64"}),
-						"CapabilityFlavors": ConsistOf(MatchFields(IgnoreExtras, Fields{
-							"Capabilities": MatchAllKeys(Keys{
-								"architecture": BeEquivalentTo([]string{"amd64"}),
-							}),
-						})),
-					}),
-					MatchFields(IgnoreExtras, Fields{
-						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("22.04")}),
-						"Architectures":    Equal([]string{"arm64"}),
-						"CapabilityFlavors": ConsistOf(MatchFields(IgnoreExtras, Fields{
-							"Capabilities": MatchAllKeys(Keys{
-								"architecture": BeEquivalentTo([]string{"arm64"}),
-							}),
-						})),
-					}),
-				),
-			}),
-			MatchFields(IgnoreExtras, Fields{
-				"Name": Equal("debian"),
-				"Versions": ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{"Version": Equal("11")}),
-						"Architectures":    Equal([]string{"amd64", "arm64"}),
-						"CapabilityFlavors": ConsistOf(MatchFields(IgnoreExtras, Fields{
-							"Capabilities": MatchAllKeys(Keys{
-								"architecture": BeEquivalentTo([]string{"amd64"}),
-							}),
-						}), MatchFields(IgnoreExtras, Fields{
-							"Capabilities": MatchAllKeys(Keys{
-								"architecture": BeEquivalentTo([]string{"arm64"}),
-							}),
-						})),
-					}),
-				),
-			}),
-		))
+		Expect(result.MachineImages).To(Equal([]gardencorev1beta1.MachineImage{
+			{
+				Name: "ubuntu",
+				Versions: []gardencorev1beta1.MachineImageVersion{
+					{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "20.04"},
+						Architectures:    []string{"amd64"},
+						CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+							{
+								Capabilities: gardencorev1beta1.Capabilities{
+									"architecture": {"amd64"},
+								},
+							},
+						},
+					},
+					{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "22.04"},
+						Architectures:    []string{"arm64"},
+						CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+							{
+								Capabilities: gardencorev1beta1.Capabilities{
+									"architecture": {"arm64"},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "debian",
+				Versions: []gardencorev1beta1.MachineImageVersion{
+					{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "11"},
+						Architectures:    []string{"amd64", "arm64"},
+						CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+							{
+								Capabilities: gardencorev1beta1.Capabilities{
+									"architecture": {"amd64"},
+								},
+							},
+							{
+								Capabilities: gardencorev1beta1.Capabilities{
+									"architecture": {"arm64"},
+								},
+							},
+						},
+					},
+				},
+			},
+		}))
 		// Verify all machine types have capabilities
-		Expect(result.MachineTypes).To(ConsistOf(
-			MatchFields(IgnoreExtras, Fields{
-				"Name": Equal("m5.large"),
-				"Capabilities": MatchAllKeys(Keys{
-					"architecture": BeEquivalentTo([]string{"amd64"}),
-				}),
-			}),
-			MatchFields(IgnoreExtras, Fields{
-				"Name": Equal("m6g.large"),
-				"Capabilities": MatchAllKeys(Keys{
-					"architecture": BeEquivalentTo([]string{"arm64"}),
-				}),
-			}),
-		))
+		Expect(result.MachineTypes).To(Equal([]gardencorev1beta1.MachineType{
+			{
+				Name:         "m5.large",
+				CPU:          resource.MustParse("2"),
+				Memory:       resource.MustParse("8Gi"),
+				Architecture: ptr.To("amd64"),
+				Capabilities: gardencorev1beta1.Capabilities{
+					"architecture": {"amd64"},
+				},
+			},
+			{
+				Name:         "m6g.large",
+				CPU:          resource.MustParse("2"),
+				Memory:       resource.MustParse("8Gi"),
+				Architecture: ptr.To("arm64"),
+				Capabilities: gardencorev1beta1.Capabilities{
+					"architecture": {"arm64"},
+				},
+			},
+		}))
 	})
 
 	It("should return empty spec for empty input", func() {

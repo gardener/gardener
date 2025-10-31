@@ -329,9 +329,9 @@ func syncMachineImageLegacyArchitecture(newMachineImages []core.MachineImage, ca
 			}
 			// Sync capability architectures to architectures field.
 			defaultedImageFlavors := gardencorehelper.GetImageFlavorsWithAppliedDefaults(imageVersion.CapabilityFlavors, capabilityDefinitions)
-			defaultedCapabilityArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(defaultedImageFlavors)
-			if len(defaultedCapabilityArchitectures) > 0 {
-				newMachineImages[imageIdx].Versions[versionIdx].Architectures = defaultedCapabilityArchitectures
+			defaultArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(defaultedImageFlavors)
+			if len(defaultArchitectures) > 0 {
+				newMachineImages[imageIdx].Versions[versionIdx].Architectures = defaultArchitectures
 			}
 		}
 	}

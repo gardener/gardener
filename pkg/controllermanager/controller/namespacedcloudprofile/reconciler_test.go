@@ -922,7 +922,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				})
 			})
 
-			Describe("Transform to parent CloudProfile capability/legacy format  functionality", func() {
+			Describe("Transform to parent CloudProfile capability/legacy format functionality", func() {
 				var (
 					cloudProfile           *gardencorev1beta1.CloudProfile
 					namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile

@@ -188,14 +188,14 @@ In this case it does not result in an error but in performance loss.
 
 ## Proposal
 
-Introduce a top level capabilities array in the CloudProfile `spec.capabilities`.
+Introduce a top level array in the CloudProfile `spec.machineCapabilities`.
 
 ```go
 type Spec struct {
-    Capabilities []Capability
+  MachineCapabilities []CapabilityDefinition
 }
 
-type Capability struct {
+type CapabilityDefinition struct {
   Name string
   Values []string
 }
@@ -205,7 +205,7 @@ Capabilities are very specific to the provider and the selected catalog offered 
 To minimize complexity and data size in the cloud profile, the capabilities are defined as a map with string keys and string arrays as values.
 The key is the capability name and the value is an array of possible values.
 
-For each cloud profile the capabilities are defined in the `spec.capabilities` array. 
+For each cloud profile the capabilities are defined in the `spec.machineCapabilities` array. 
 The full set of possibilities for each capability is defined here.
 As some capabilities can have multiple values at the same time an array of possible values is used instead of a single value.
 
@@ -215,7 +215,7 @@ If no further information is provided each machine type and machine image will b
 ```yaml
 # CloudProfile Example
 spec:
-  capabilities:
+  machineCapabilities:
     - name: architecture
       values: [amd64, arm64]
     - name: hypervisorType
@@ -255,7 +255,7 @@ The architecture is also added to the image version capability flavors. This is 
 ```yaml
 # CloudProfile
 spec:
-  capabilities: # <-- Full list of possible capabilities used as default
+  machineCapabilities: # <-- Full list of possible capabilities used as default
     - name: architecture
       values: [amd64]
     - name: hypervisorType
@@ -361,7 +361,7 @@ If multiple machine image versions are valid for a machine type, the selection i
 
 The following implications are to be considered in regards to `NamespacedCloudProfile`s:
  
-* `NamespacedCloudProfile`s won't have a global `capabilities` definition.
+* `NamespacedCloudProfile`s won't have a global `machineCapabilities` definition.
 * For overridden machine image versions, no `capabilities` must be defined, as they are inherited from the machine image versions of the parent `CloudProfile`.
 * For custom machine image versions, the `capabilities` need to be defined in the `NamespacedCloudProfile`, as they would be in the `CloudProfile` (as well as for the `providerConfig`).
    
