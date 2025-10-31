@@ -59,7 +59,7 @@ Afterward, you can use `kubectl exec` to execute `gardenadm` commands on the mac
 Let's start with exec'ing into the `machine-0` pod:
 
 ```shell
-$ kubectl -n gardenadm-managed-infra exec -it machine-0 -- bash
+$ kubectl -n gardenadm-unmanaged-infra exec -it machine-0 -- bash
 root@machine-0:/# gardenadm -h
 gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener project.
 ...
@@ -89,7 +89,7 @@ The machine pod's shell environment is configured for easily connecting to the s
 Just execute `kubectl` within a `bash` shell in the machine pod:
 
 ```shell
-$ kubectl -n gardenadm-managed-infra exec -it machine-0 -- bash
+$ kubectl -n gardenadm-unmanaged-infra exec -it machine-0 -- bash
 root@machine-0:/# kubectl get node
 NAME        STATUS   ROLES    AGE     VERSION
 machine-0   Ready    <none>   4m11s   v1.32.0
@@ -98,8 +98,8 @@ machine-0   Ready    <none>   4m11s   v1.32.0
 You can also copy the kubeconfig to your local machine and use a port-forward to connect to the cluster's API server:
 
 ```shell
-$ kubectl -n gardenadm-managed-infra exec -it machine-0 -- cat /etc/kubernetes/admin.conf | sed 's/api.root.garden.local.gardener.cloud/localhost:6443/' > /tmp/shoot--garden--root.conf
-$ kubectl -n gardenadm-managed-infra port-forward pod/machine-0 6443:443
+$ kubectl -n gardenadm-unmanaged-infra exec -it machine-0 -- cat /etc/kubernetes/admin.conf | sed 's/api.root.garden.local.gardener.cloud/localhost:6443/' > /tmp/shoot--garden--root.conf
+$ kubectl -n gardenadm-unmanaged-infra port-forward pod/machine-0 6443:443
 
 # in a new terminal
 $ export KUBECONFIG=/tmp/shoot--garden--root.conf
@@ -117,7 +117,7 @@ Then exec into the `machine-1` pod to run the command:
 root@machine-0:/# gardenadm token create --print-join-command
 # now copy the output, terminate the exec session and start a new one for machine-1
 
-$ kubectl -n gardenadm-managed-infra exec -it machine-1 -- bash
+$ kubectl -n gardenadm-unmanaged-infra exec -it machine-1 -- bash
 # paste the copied 'gardenadm join' command here and execute it
 root@machine-1:/# gardenadm join ...
 ...
