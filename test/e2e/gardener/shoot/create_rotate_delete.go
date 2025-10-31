@@ -273,7 +273,7 @@ func testManualWorkersRollout(s *ShootContext) {
 	})
 	ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Shoot)
 
-	It("Should fetch new machineset creation timestamp and it should be newer", func(ctx SpecContext) {
+	It("Should fetch new MachineSet creation timestamp and ensure it's newer", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
 			poolName := s.Shoot.Spec.Provider.Workers[0].Name
 
