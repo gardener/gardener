@@ -69,7 +69,7 @@ type ResourceAdmissionWebhookMode string
 // WildcardAll is a character which represents all elements in a set.
 const WildcardAll = "*"
 
-// ResourceLimit contains settings about a kind and the size each resource should have at most.
+// ResourceLimit contains settings about a kind and the size as well as count each resource should have at most.
 type ResourceLimit struct {
 	// APIGroups is the name of the APIGroup that contains the limited resource. WildcardAll represents all groups.
 	// +optional
@@ -80,7 +80,11 @@ type ResourceLimit struct {
 	// Resources is the name of the resource this rule applies to. WildcardAll represents all resources.
 	Resources []string `json:"resources"`
 	// Size specifies the imposed limit.
-	Size resource.Quantity `json:"size"`
+	// +optional
+	Size *resource.Quantity `json:"size,omitempty"`
+	// Count specifies the maximum number of resources of the given kind. Only cluster-scoped resources are considered.
+	// +optional
+	Count *int64 `json:"count,omitempty"`
 }
 
 // Server contains information for HTTP(S) server configuration.

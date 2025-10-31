@@ -2930,7 +2930,20 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Size specifies the imposed limit.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>count</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Count specifies the maximum number of resources of the given kind. Only cluster-scoped resources are considered.</p>
 </td>
 </tr>
 </tbody>
