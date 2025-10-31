@@ -12,11 +12,15 @@ import (
 	"net"
 	"reflect"
 	"slices"
+	"strconv"
+	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/ptr"
 
@@ -24,10 +28,12 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -42,8 +48,10 @@ func Register(plugins *admission.Plugins) {
 type MutateShoot struct {
 	*admission.Handler
 
-	seedLister gardencorev1beta1listers.SeedLister
-	readyFunc  admission.ReadyFunc
+	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
+	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
+	seedLister                   gardencorev1beta1listers.SeedLister
+	readyFunc                    admission.ReadyFunc
 }
 
 var (
@@ -67,17 +75,31 @@ func (m *MutateShoot) AssignReadyFunc(f admission.ReadyFunc) {
 
 // SetCoreInformerFactory gets Lister from SharedInformerFactory.
 func (m *MutateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
+	m.cloudProfileLister = cloudProfileInformer.Lister()
+
+	namespacedCloudProfileInformer := f.Core().V1beta1().NamespacedCloudProfiles()
+	m.namespacedCloudProfileLister = namespacedCloudProfileInformer.Lister()
+
 	seedInformer := f.Core().V1beta1().Seeds()
 	m.seedLister = seedInformer.Lister()
 
 	readyFuncs = append(
 		readyFuncs,
+		cloudProfileInformer.Informer().HasSynced,
+		namespacedCloudProfileInformer.Informer().HasSynced,
 		seedInformer.Informer().HasSynced,
 	)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (m *MutateShoot) ValidateInitialization() error {
+	if m.cloudProfileLister == nil {
+		return errors.New("missing cloudProfile lister")
+	}
+	if m.namespacedCloudProfileLister == nil {
+		return errors.New("missing namespacedCloudProfile lister")
+	}
 	if m.seedLister == nil {
 		return errors.New("missing seed lister")
 	}
@@ -111,6 +133,8 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	var (
 		shoot    *core.Shoot
 		oldShoot = &core.Shoot{}
+
+		allErrs field.ErrorList
 	)
 
 	shoot, ok := a.GetObject().(*core.Shoot)
@@ -125,9 +149,16 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 		}
 	}
 
+	cloudProfileSpec, err := gardenerutils.GetCloudProfileSpec(m.cloudProfileLister, m.namespacedCloudProfileLister, shoot)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %w", err))
+	}
+	if cloudProfileSpec == nil {
+		return nil
+	}
+
 	var seed *gardencorev1beta1.Seed
 	if shoot.Spec.SeedName != nil {
-		var err error
 		seed, err = m.seedLister.Get(*shoot.Spec.SeedName)
 		if err != nil {
 			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed %q: %w", *shoot.Spec.SeedName, err))
@@ -135,9 +166,10 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	}
 
 	mutationContext := &mutationContext{
-		seed:     seed,
-		shoot:    shoot,
-		oldShoot: oldShoot,
+		cloudProfileSpec: cloudProfileSpec,
+		seed:             seed,
+		shoot:            shoot,
+		oldShoot:         oldShoot,
 	}
 
 	if a.GetOperation() == admission.Create {
@@ -146,14 +178,21 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 
 	mutationContext.addMetadataAnnotations(a)
 	mutationContext.defaultShootNetworks(helper.IsWorkerless(shoot))
+	allErrs = append(allErrs, mutationContext.defaultKubernetes()...)
+	allErrs = append(allErrs, mutationContext.defaultKubernetesVersionForWorkers()...)
+
+	if len(allErrs) > 0 {
+		return admission.NewForbidden(a, allErrs.ToAggregate())
+	}
 
 	return nil
 }
 
 type mutationContext struct {
-	seed     *gardencorev1beta1.Seed
-	shoot    *core.Shoot
-	oldShoot *core.Shoot
+	cloudProfileSpec *gardencorev1beta1.CloudProfileSpec
+	seed             *gardencorev1beta1.Seed
+	shoot            *core.Shoot
+	oldShoot         *core.Shoot
 }
 
 func addCreatedByAnnotation(shoot *core.Shoot, userName string) {
@@ -247,4 +286,114 @@ func (c *mutationContext) defaultShootNetworks(workerless bool) {
 func cidrMatchesIPFamily(cidr string, ipfamilies []core.IPFamily) bool {
 	ip, _, _ := net.ParseCIDR(cidr)
 	return ip != nil && (ip.To4() != nil && slices.Contains(ipfamilies, core.IPFamilyIPv4) || ip.To4() == nil && slices.Contains(ipfamilies, core.IPFamilyIPv6))
+}
+
+func (c *mutationContext) defaultKubernetes() field.ErrorList {
+	var path = field.NewPath("spec", "kubernetes")
+
+	defaultVersion, errList := defaultKubernetesVersion(c.cloudProfileSpec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, path.Child("version"))
+	if len(errList) > 0 {
+		return errList
+	}
+
+	if defaultVersion != nil {
+		c.shoot.Spec.Kubernetes.Version = *defaultVersion
+	}
+
+	return nil
+}
+
+func defaultKubernetesVersion(constraints []gardencorev1beta1.ExpirableVersion, shootVersion string, fldPath *field.Path) (*string, field.ErrorList) {
+	var (
+		allErrs           = field.ErrorList{}
+		shootVersionMajor *uint64
+		shootVersionMinor *uint64
+		versionParts      = strings.Split(shootVersion, ".")
+	)
+
+	if len(versionParts) == 3 {
+		return nil, allErrs
+	}
+	if len(versionParts) == 2 && len(versionParts[1]) > 0 {
+		v, err := strconv.ParseUint(versionParts[1], 10, 0)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[1], "must be a semantic version"))
+			return nil, allErrs
+		}
+		shootVersionMinor = ptr.To(v)
+	}
+	if len(versionParts) >= 1 && len(versionParts[0]) > 0 {
+		v, err := strconv.ParseUint(versionParts[0], 10, 0)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[0], "must be a semantic version"))
+			return nil, allErrs
+		}
+		shootVersionMajor = ptr.To(v)
+	}
+
+	if latestVersion := findLatestSupportedVersion(constraints, shootVersionMajor, shootVersionMinor); latestVersion != nil {
+		return ptr.To(latestVersion.String()), nil
+	}
+
+	allErrs = append(allErrs, field.Invalid(fldPath, shootVersion, fmt.Sprintf("couldn't find a suitable version for %s. Suitable versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly", shootVersion)))
+	return nil, allErrs
+}
+
+func findLatestSupportedVersion(constraints []gardencorev1beta1.ExpirableVersion, major, minor *uint64) *semver.Version {
+	var latestVersion *semver.Version
+	for _, versionConstraint := range constraints {
+		if v1beta1helper.CurrentLifecycleClassification(versionConstraint) != gardencorev1beta1.ClassificationSupported {
+			continue
+		}
+
+		// CloudProfile cannot contain invalid semVer shootVersion
+		cpVersion := semver.MustParse(versionConstraint.Version)
+
+		// defaulting on patch level: version has to have the same major and minor kubernetes version
+		if major != nil && cpVersion.Major() != *major {
+			continue
+		}
+
+		if minor != nil && cpVersion.Minor() != *minor {
+			continue
+		}
+
+		if latestVersion == nil || cpVersion.GreaterThan(latestVersion) {
+			latestVersion = cpVersion
+		}
+	}
+
+	return latestVersion
+}
+
+func (c *mutationContext) defaultKubernetesVersionForWorkers() field.ErrorList {
+	var path = field.NewPath("spec", "provider")
+
+	for i, worker := range c.shoot.Spec.Provider.Workers {
+		idxPath := path.Child("workers").Index(i)
+
+		if worker.Kubernetes != nil {
+			if errList := c.defaultKubernetesVersionForWorker(idxPath, worker); len(errList) > 0 {
+				return errList
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *mutationContext) defaultKubernetesVersionForWorker(idxPath *field.Path, worker core.Worker) field.ErrorList {
+	if worker.Kubernetes.Version == nil {
+		return nil
+	}
+
+	defaultVersion, errList := defaultKubernetesVersion(c.cloudProfileSpec.Kubernetes.Versions, *worker.Kubernetes.Version, idxPath.Child("kubernetes", "version"))
+	if len(errList) > 0 {
+		return errList
+	}
+
+	if defaultVersion != nil {
+		worker.Kubernetes.Version = defaultVersion
+	}
+	return nil
 }

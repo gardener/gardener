@@ -236,6 +236,7 @@ It mutates the `Shoot` in the following way:
 - It sets the `gardener.cloud/created-by=<username>` annotation for newly created `Shoot` resources.
 - It maintains annotations used for Shoot lifecycle operations such as `shoot.gardener.cloud/tasks` and `maintenance.shoot.gardener.cloud/needs-retry-operation`.
 - It defaults Shoot `.spec.networking.pods` and `.spec.networking.services` fields in case they are not provided and the Seed specifies the `.spec.networks.shootDefaults` field.
+- It defaults Shoot Kubernetes version (`.spec.kubernetes.version` and `.spec.provider.workers[].kubernetes.version`).
 
 Over time, the `ShootMutator` admission plugin will take over all the mutations that are performed by `ShootValidator`.
 For more details, see https://github.com/gardener/gardener/issues/2158.
@@ -298,7 +299,7 @@ will not be affected by this admission plugin.
 This admission controller reacts on `CREATE`, `UPDATE` and `DELETE` operations for `Shoot`s.
 It validates certain configurations in the specification against the referred `CloudProfile` (e.g., machine images, machine types, used Kubernetes version, ...).
 Generally, it performs validations that cannot be handled by the static API validation due to their dynamic nature (e.g., when something needs to be checked against referred resources).
-Additionally, it takes over certain defaulting tasks (e.g., default machine image for worker pools, default Kubernetes version).
+Additionally, it takes over certain defaulting tasks (e.g., default machine image for worker pools).
 
 ## `ValidatingAdmissionPolicy`
 
