@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -621,13 +622,17 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		LastUpdateTime: now,
 	}
 
-	var mustRemoveOperationAnnotation bool
+	var (
+		operation                     = shoot.Annotations[v1beta1constants.GardenerOperation]
+		mustRemoveOperationAnnotation bool
+	)
+
 	k8sLess134, err := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.34")
 	if err != nil {
 		return fmt.Errorf("failed checking if Shoot k8s version is less than 1.34: %w", err)
 	}
 
-	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
+	switch operation {
 	case v1beta1constants.OperationRotateCredentialsStart:
 		mustRemoveOperationAnnotation = true
 		startRotationCA(shoot, &now)
@@ -695,7 +700,8 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		completeRotationETCDEncryptionKey(shoot, &now)
 	}
 
-	if operation := shoot.Annotations[v1beta1constants.GardenerOperation]; strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
+	switch {
+	case strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers):
 		mustRemoveOperationAnnotation = true
 		poolNames := sets.NewString(strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers+"="), ",")...)
 
@@ -714,6 +720,53 @@ func (r *Reconciler) updateShootStatusOperationStart(
 				})
 			})
 		}
+	case strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers):
+		mustRemoveOperationAnnotation = true
+		poolNames := sets.NewString(strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRolloutWorkers+"="), ",")...)
+
+		if poolNames.Has("*") {
+			poolNames = sets.NewString()
+			for _, pool := range shoot.Spec.Provider.Workers {
+				poolNames.Insert(pool.Name)
+			}
+		}
+
+		for poolName := range poolNames {
+			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+			if err := r.SeedClientSet.Client().List(ctx, machineDeploymentList, client.InNamespace(shoot.Status.TechnicalID), client.MatchingLabels{v1beta1constants.LabelWorkerPool: poolName}); err != nil {
+				return fmt.Errorf("failed to list MachineDeployments for pool %s in namespace %s: %w", poolName, shoot.Status.TechnicalID, err)
+			}
+
+			if len(machineDeploymentList.Items) == 0 {
+				return fmt.Errorf("no MachineDeployment found for worker pool %s in namespace %s", poolName, shoot.Status.TechnicalID)
+			}
+
+			if len(machineDeploymentList.Items) > 1 {
+				return fmt.Errorf("multiple MachineDeployments found for worker pool %s in namespace %s", poolName, shoot.Status.TechnicalID)
+			}
+
+			machineDeployment := &machineDeploymentList.Items[0]
+
+			patch := client.MergeFrom(machineDeployment.DeepCopy())
+			metav1.SetMetaDataAnnotation(&machineDeployment.Spec.Template.ObjectMeta, v1beta1constants.OperationRolloutWorkers, now.String())
+			if err := r.SeedClientSet.Client().Patch(ctx, machineDeployment, patch); err != nil {
+				return fmt.Errorf("failed to annotate MachineDeployment %s: %w", client.ObjectKeyFromObject(machineDeployment), err)
+			}
+		}
+
+		v1beta1helper.MutateShootWorkerPoolRollout(shoot, func(rollout *gardencorev1beta1.ManualWorkerPoolRollout) {
+			workerRolloutInitiationTime := &now
+
+			var pendingWorkersRollouts []gardencorev1beta1.PendingWorkersRollout
+			for worker := range poolNames {
+				pendingWorkersRollouts = append(pendingWorkersRollouts, gardencorev1beta1.PendingWorkersRollout{
+					Name:               worker,
+					LastInitiationTime: workerRolloutInitiationTime,
+				})
+			}
+
+			rollout.PendingWorkersRollouts = append(rollout.PendingWorkersRollouts, pendingWorkersRollouts...)
+		})
 	}
 
 	removeNonExistentPoolsFromPendingWorkersRollouts(shoot, v1beta1helper.HibernationIsEnabled(shoot))
@@ -847,6 +900,12 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 			rotation.LastCompletionTime = &now
 			rotation.LastInitiationFinishedTime = nil
 			rotation.LastCompletionTriggeredTime = nil
+		})
+	}
+
+	if shoot.Status.ManualWorkerPoolRollout != nil {
+		v1beta1helper.MutateShootWorkerPoolRollout(shoot, func(rollout *gardencorev1beta1.ManualWorkerPoolRollout) {
+			rollout.PendingWorkersRollouts = nil
 		})
 	}
 
@@ -998,6 +1057,12 @@ func removeNonExistentPoolsFromPendingWorkersRollouts(shoot *gardencorev1beta1.S
 		} else {
 			shoot.Status.InPlaceUpdates = nil
 		}
+	}
+
+	if shoot.Status.ManualWorkerPoolRollout != nil && shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts != nil {
+		shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts = slices.DeleteFunc(shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+			return !poolNames.Has(rollout.Name)
+		})
 	}
 }
 

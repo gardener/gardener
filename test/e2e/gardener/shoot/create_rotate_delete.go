@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -238,9 +239,70 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 	testCredentialRotationComplete(s, shootVerifiers, utilsverifiers, v1beta1constants.OperationRotateCredentialsComplete)
 }
 
+// Testing the annotation requires that we assert that a rollout has been triggered and finishes successfully.
+// Current check verifies that a new MachineSet gets created after the annotation is set by
+// checking the creation timestamp of the current MachineSet, annotating the Shoot, then checking that
+// the creation timestamp of the new MachineSet is newer than the old one.
+func testManualWorkersRollout(s *ShootContext) {
+	var oldMachineSetCreationTimestamp time.Time
+
+	It("Should fetch old machine set creation timestamp", func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			poolName := s.Shoot.Spec.Provider.Workers[0].Name
+
+			machineDeployments := &machinev1alpha1.MachineDeploymentList{}
+			g.Expect(s.SeedClient.List(ctx, machineDeployments, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{"worker.gardener.cloud/pool": poolName})).To(Succeed())
+			g.Expect(machineDeployments.Items).To(HaveLen(1), "expected exactly one MachineDeployment for worker pool %s", poolName)
+
+			machineDeployment := &machineDeployments.Items[0]
+
+			machineSetList := &machinev1alpha1.MachineSetList{}
+			g.Expect(s.SeedClient.List(ctx, machineSetList, client.InNamespace(s.Shoot.Status.TechnicalID))).To(Succeed())
+
+			ownerToMachineSets := gardenerutils.BuildOwnerToMachineSetsMap(machineSetList.Items)
+			machineSetListForDeployment := ownerToMachineSets[machineDeployment.Name]
+			g.Expect(machineSetListForDeployment).NotTo(BeEmpty(), "no MachineSets found for MachineDeployment %s", machineDeployment.Name)
+			g.Expect(machineSetListForDeployment).To(HaveLen(1), "expected exactly one MachineSet for MachineDeployment %s", machineDeployment.Name)
+
+			oldMachineSetCreationTimestamp = machineSetListForDeployment[0].CreationTimestamp.Time
+		}).Should(Succeed())
+	}, SpecTimeout(10*time.Second))
+
+	ItShouldAnnotateShoot(s, map[string]string{
+		v1beta1constants.GardenerOperation: "rollout-workers=" + s.Shoot.Spec.Provider.Workers[0].Name,
+	})
+	ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Shoot)
+
+	It("Should fetch new MachineSet creation timestamp and ensure it's newer", func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			poolName := s.Shoot.Spec.Provider.Workers[0].Name
+
+			machineDeployments := &machinev1alpha1.MachineDeploymentList{}
+			g.Expect(s.SeedClient.List(ctx, machineDeployments, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{"worker.gardener.cloud/pool": poolName})).To(Succeed())
+			g.Expect(machineDeployments.Items).To(HaveLen(1), "expected exactly one MachineDeployment for worker pool %s", poolName)
+
+			machineDeployment := &machineDeployments.Items[0]
+
+			machineSetList := &machinev1alpha1.MachineSetList{}
+			g.Expect(s.SeedClient.List(ctx, machineSetList, client.InNamespace(s.Shoot.Status.TechnicalID))).To(Succeed())
+
+			ownerToMachineSets := gardenerutils.BuildOwnerToMachineSetsMap(machineSetList.Items)
+			machineSetListForDeployment := ownerToMachineSets[machineDeployment.Name]
+			g.Expect(machineSetListForDeployment).NotTo(BeEmpty(), "no MachineSets found for MachineDeployment %s", machineDeployment.Name)
+			g.Expect(machineSetListForDeployment).To(HaveLen(1), "expected exactly one MachineSet for MachineDeployment %s", machineDeployment.Name)
+
+			newMachineSetCreationTimestamp := machineSetListForDeployment[0].CreationTimestamp.Time
+
+			g.Expect(oldMachineSetCreationTimestamp.Before(newMachineSetCreationTimestamp)).To(BeTrue(), "new MachineSet creation timestamp should be newer than the old one")
+		}).Should(Succeed())
+	}, SpecTimeout(5*time.Minute))
+
+	ItShouldWaitForShootToBeReconciledAndHealthy(s)
+}
+
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
-		test := func(s *ShootContext, withoutWorkersRollout, inPlaceUpdate bool) {
+		test := func(s *ShootContext, withoutWorkersRollout, inPlaceUpdate, workersRollout bool) {
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
@@ -360,6 +422,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				}
 			}
 
+			if workersRollout {
+				testManualWorkersRollout(s)
+			}
+
 			ItShouldDeleteShoot(s)
 			ItShouldWaitForShootToBeDeleted(s)
 		}
@@ -411,7 +477,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 		Context("Shoot with workers", Label("basic"), func() {
 			Context("with workers rollout", Label("with-workers-rollout"), Ordered, func() {
-				test(NewTestContext().ForShoot(DefaultShoot("e2e-rotate")), false, false)
+				test(NewTestContext().ForShoot(DefaultShoot("e2e-rotate")), false, false, false)
 			})
 
 			Context("with workers rollout, in-place update strategy", Label("with-workers-rollout", "in-place"), Ordered, func() {
@@ -440,7 +506,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					return
 				}
 
-				test(s, false, true)
+				test(s, false, true, false)
 			})
 
 			Context("without workers rollout", Label("without-workers-rollout"), Ordered, func() {
@@ -455,7 +521,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					s = NewTestContext().ForShoot(shoot)
 				})
 
-				test(s, true, false)
+				test(s, true, false, true)
 			})
 
 			Context("without workers rollout, in-place update strategy", Label("without-workers-rollout", "in-place"), Ordered, func() {
@@ -488,12 +554,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					return
 				}
 
-				test(s, true, true)
+				test(s, true, true, false)
 			})
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false)
+			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false, false)
 		})
 
 		// TODO(AleksandarSavchev): Remove this e2e test when the k8s version for the default shoots is >= 1.34.

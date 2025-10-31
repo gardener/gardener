@@ -4784,6 +4784,73 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("maintenance.gardener.cloud/operation=rotate-serviceaccount-key-start-without-workers-rollout", "maintenance.gardener.cloud/operation", "rotate-serviceaccount-key-start-without-workers-rollout"),
 			)
 
+			DescribeTable("validate specifying valid rollout worker operation annotations",
+				func(key, value string) {
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name: "worker-1",
+							Machine: core.Machine{
+								Type: "xlarge",
+							},
+							Maximum:  1,
+							Minimum:  0,
+							MaxSurge: &maxSurge,
+						},
+						{
+							Name: "worker-2",
+							Machine: core.Machine{
+								Type: "xlarge",
+							},
+							Maximum:  1,
+							Minimum:  0,
+							MaxSurge: &maxSurge,
+						},
+					}
+
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, key, value)
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				},
+
+				Entry("gardener.cloud/operation=rollout-workers=worker-1", "gardener.cloud/operation", "rollout-workers=worker-1"),
+				Entry("gardener.cloud/operation=rollout-workers=worker-2", "gardener.cloud/operation", "rollout-workers=worker-2"),
+				Entry("gardener.cloud/operation=rollout-workers=worker-1,worker-2", "gardener.cloud/operation", "rollout-workers=worker-1,worker-2"),
+				Entry("gardener.cloud/operation=rollout-workers=worker-2,worker-1", "gardener.cloud/operation", "rollout-workers=worker-2,worker-1"),
+			)
+
+			DescribeTable("validate specifying bad rollout worker operation annotations",
+				func(key, value string) {
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name: "worker-1",
+							Machine: core.Machine{
+								Type: "xlarge",
+							},
+							Maximum: 1,
+							Minimum: 0,
+						},
+						{
+							Name: "worker-2",
+							Machine: core.Machine{
+								Type: "xlarge",
+							},
+							Maximum: 1,
+							Minimum: 0,
+						},
+					}
+
+					matcher := ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("metadata.annotations[%s]", key)),
+						"Detail": ContainSubstring(("worker pool name unknown-worker does not exist")),
+					})))
+
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, key, value)
+					Expect(ValidateShoot(shoot)).To(matcher)
+				},
+
+				Entry("gardener.cloud/operation=rollout-workers=unknown-worker", "gardener.cloud/operation", "rollout-workers=unknown-worker"),
+			)
+
 			DescribeTable("starting rotation of all credentials",
 				func(allowed bool, status core.ShootStatus) {
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-start")
