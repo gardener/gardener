@@ -93,6 +93,7 @@ spec:
   # loadBalancerServices:
   #   annotations:
   #     foo: bar
+  #   class: non-default-load-balancer-class
   #   externalTrafficPolicy: Local
   #   proxyProtocol:
   #     allowed: true

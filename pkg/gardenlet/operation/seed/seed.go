@@ -168,6 +168,16 @@ func (s *Seed) GetLoadBalancerServiceAnnotations() map[string]string {
 	return nil
 }
 
+// GetLoadBalancerServiceClass returns the load balancer class set for the seed if any.
+func (s *Seed) GetLoadBalancerServiceClass() *string {
+	seed := s.GetInfo()
+	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil {
+		// return copy to prevent accidental mutation by components
+		return seed.Spec.Settings.LoadBalancerServices.DeepCopy().Class
+	}
+	return nil
+}
+
 // GetLoadBalancerServiceExternalTrafficPolicy indicates the external traffic policy for the seed if any.
 func (s *Seed) GetLoadBalancerServiceExternalTrafficPolicy() *corev1.ServiceExternalTrafficPolicy {
 	seed := s.GetInfo()

@@ -72,6 +72,13 @@ In most cases, the cloud-controller-manager (responsible for managing these load
 
 By setting the `.spec.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations, which will be injected into the `Service`s of type `LoadBalancer`.
 
+### Load Balancer Class
+
+By default, Gardener creates `Services` without the `spec.loadBalancerClass` field set, meaning that the default load balancer implementation of the underlying cloud infrastructure is used (implemented by the `Service` controller of cloud-controller-manager).
+If a non-default load balancer implementation should be used for load balancer services in the seed cluster, the `spec.settings.loadBalancerServices.loadBalancerClass` field can be configured accordingly to set the `spec.loadBalancerClass` on the created `Service` objects.
+Note that changing the `loadBalancerClass` of existing load balancer services is denied by Kubernetes, i.e., this setting can only be applied automatically to newly created load balancer services.
+If an existing load balancer service should use a different load balancer class, the migration needs to be performed manually by the operator.
+
 ### External Traffic Policy
 
 Setting the [external traffic policy](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip) to `Local` can be beneficial as it

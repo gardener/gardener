@@ -106,20 +106,7 @@ func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfig
 		}
 	}
 
-	exposureClassHandlersPath := fldPath.Child("exposureClassHandlers")
-	for i, handler := range cfg.ExposureClassHandlers {
-		handlerPath := exposureClassHandlersPath.Index(i)
-
-		for _, errorMessage := range validation.IsDNS1123Label(handler.Name) {
-			allErrs = append(allErrs, field.Invalid(handlerPath.Child("name"), handler.Name, errorMessage))
-		}
-
-		if handler.SNI != nil && handler.SNI.Ingress != nil && handler.SNI.Ingress.ServiceExternalIP != nil {
-			if ip := net.ParseIP(*handler.SNI.Ingress.ServiceExternalIP); ip == nil {
-				allErrs = append(allErrs, field.Invalid(handlerPath.Child("sni", "ingress", "serviceExternalIP"), handler.SNI.Ingress.ServiceExternalIP, "external service ip is invalid"))
-			}
-		}
-	}
+	allErrs = append(allErrs, validateExposureClassHandlers(cfg.ExposureClassHandlers, fldPath.Child("exposureClassHandlers"))...)
 
 	if nodeTolerationCfg := cfg.NodeToleration; nodeTolerationCfg != nil {
 		nodeTolerationConfigPath := fldPath.Child("nodeToleration")
@@ -327,6 +314,30 @@ func validateBastionControllerConfiguration(cfg *gardenletconfigv1alpha1.Bastion
 
 	if cfg.ConcurrentSyncs != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*cfg.ConcurrentSyncs), fldPath.Child("concurrentSyncs"))...)
+	}
+
+	return allErrs
+}
+
+func validateExposureClassHandlers(handlers []gardenletconfigv1alpha1.ExposureClassHandler, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, handler := range handlers {
+		handlerPath := fldPath.Index(i)
+
+		for _, errorMessage := range validation.IsDNS1123Label(handler.Name) {
+			allErrs = append(allErrs, field.Invalid(handlerPath.Child("name"), handler.Name, errorMessage))
+		}
+
+		if class := handler.LoadBalancerService.Class; class != nil && len(*class) == 0 {
+			allErrs = append(allErrs, field.Invalid(handlerPath.Child("loadBalancerService", "class"), *class, "class must not be empty if provided"))
+		}
+
+		if handler.SNI != nil && handler.SNI.Ingress != nil && handler.SNI.Ingress.ServiceExternalIP != nil {
+			if ip := net.ParseIP(*handler.SNI.Ingress.ServiceExternalIP); ip == nil {
+				allErrs = append(allErrs, field.Invalid(handlerPath.Child("sni", "ingress", "serviceExternalIP"), handler.SNI.Ingress.ServiceExternalIP, "external service ip is invalid"))
+			}
+		}
 	}
 
 	return allErrs

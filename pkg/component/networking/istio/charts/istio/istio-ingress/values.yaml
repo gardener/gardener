@@ -22,6 +22,7 @@ ports: []
 serviceName: istio-ingressgateway
 internalServiceName: istio-ingressgateway-internal
 ingressVersion: "1.27.1"
+#loadBalancerClass: non-default-loadbalancer-class
 #externalTrafficPolicy: Cluster
 replicas: 2
 cpuRequests: 300m

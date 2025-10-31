@@ -629,6 +629,31 @@ var _ = Describe("GardenletConfiguration", func() {
 				}))))
 			})
 
+			Describe("LoadBalancer class", func() {
+				It("should allow omitting the class", func() {
+					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = nil
+
+					Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+				})
+
+				It("should allow specifying a non-empty class", func() {
+					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = ptr.To("non-default")
+
+					Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+				})
+
+				It("should deny specifying an empty class", func() {
+					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = ptr.To("")
+
+					Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("exposureClassHandlers[0].loadBalancerService.class"),
+						})),
+					))
+				})
+			})
+
 			Context("serviceExternalIP", func() {
 				It("should allow to use an external service ip as loadbalancer ip is valid", func() {
 					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = ptr.To("1.1.1.1")

@@ -4902,6 +4902,11 @@ func (in *SeedSettingLoadBalancerServices) DeepCopyInto(out *SeedSettingLoadBala
 		*out = new(SeedSettingLoadBalancerServicesZonalIngress)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Class != nil {
+		in, out := &in.Class, &out.Class
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
