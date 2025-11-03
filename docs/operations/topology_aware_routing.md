@@ -82,9 +82,9 @@ spec:
   trafficDistribution: PreferClose
 ```
 
-### How to make a Service topology-aware in Kubernetes >= 1.32
+### How to make a Service topology-aware in Kubernetes 1.32 to 1.33
 
-In Kubernetes >= 1.32, `ServiceTrafficDistribution` is being used to make a Service topology-aware. The `.spec.trafficDistribution` field has to be set to `PreferClose`:
+In Kubernetes 1.32 to 1.33, `ServiceTrafficDistribution` is being used to make a Service topology-aware. The `.spec.trafficDistribution` field has to be set to `PreferClose`:
 
 ```yaml
 apiVersion: v1
@@ -93,10 +93,10 @@ spec:
   trafficDistribution: PreferClose
 ```
 
-### How to make a Service topology-aware in Kubernetes >= 1.34
+### How to make a Service topology-aware in Kubernetes 1.34 and later
 
 The value `PreferClose` has been deprecated in favor of `PreferSameZone` and `PreferSameNode`. `PreferSameZone` is an alias for the existing `PreferClose` to clarify its semantics. For more information, read the details in the [Kubernetes deprecation announcement](https://kubernetes.io/blog/2025/08/27/kubernetes-v1-34-release/#preferclose-traffic-distribution-is-deprecated).
-In Kubernetes >= 1.34, `ServiceTrafficDistribution` still is being used to make a Service topology-aware. The `.spec.trafficDistribution` field should to be set to `PreferSameZone`:
+In Kubernetes 1.34 and later, `ServiceTrafficDistribution` is still used to make a Service topology-aware. The `.spec.trafficDistribution` field should be set to `PreferSameZone`:
 
 ```yaml
 apiVersion: v1
