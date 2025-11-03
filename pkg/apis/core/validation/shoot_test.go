@@ -2891,8 +2891,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				It("should not allow to specify duplicates in accepted issuers", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
 						AcceptedIssuers: []string{
-							"foo",
-							"foo",
+							"https://issuer.example/auth",
+							"https://issuer.example/auth",
 						},
 					}
 
@@ -2906,8 +2906,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should not allow to duplicate the issuer in accepted issuers", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-						Issuer:          ptr.To("foo"),
-						AcceptedIssuers: []string{"foo"},
+						Issuer:          ptr.To("https://issuer.example/auth"),
+						AcceptedIssuers: []string{"https://issuer.example/auth"},
 					}
 
 					errorList := ValidateShoot(shoot)
@@ -2915,9 +2915,42 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[0]"),
-						"Detail": ContainSubstring("acceptedIssuers cannot contains the issuer field value: foo"),
+						"Detail": ContainSubstring("acceptedIssuers cannot contains the issuer field value: https://issuer.example/auth"),
 					}))))
 				})
+
+				It("should reject invalid issuer URL", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						Issuer: ptr.To("http://issuer.invalid"),
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.issuer"),
+					}))))
+				})
+
+				DescribeTable("should reject invalid accepted issuer URLs",
+					func(bad string) {
+						shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+							AcceptedIssuers: []string{bad},
+						}
+
+						errorList := ValidateShoot(shoot)
+
+						Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[0]"),
+						}))))
+					},
+					Entry("plain string", "foo"),
+					Entry("non-https scheme", "http://issuer.com"),
+					Entry("contains fragment", "https://issuer.com#fragment"),
+					Entry("contains userinfo", "https://user:pass@issuer.com"),
+					Entry("contains query", "https://issuer.com?x=1"),
+				)
 			})
 
 			Context("Autoscaling validation", func() {
