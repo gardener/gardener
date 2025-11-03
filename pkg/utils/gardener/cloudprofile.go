@@ -289,92 +289,111 @@ func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
 
 // SyncArchitectureCapabilityFields syncs the architecture capabilities and the architecture fields.
 func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec, oldCloudProfileSpec core.CloudProfileSpec) {
-	hasCapabilities := len(newCloudProfileSpec.MachineCapabilities) > 0
-	if !hasCapabilities || !gardencorehelper.HasCapability(newCloudProfileSpec.MachineCapabilities, v1beta1constants.ArchitectureName) {
-		return
+	hasNewCapabilities := len(newCloudProfileSpec.MachineCapabilities) > 0
+	hasOldCapabilities := len(oldCloudProfileSpec.MachineCapabilities) > 0
+	isInitialMigration := !hasOldCapabilities && hasNewCapabilities
+
+	if isInitialMigration {
+		machineCapabilities := gardencorehelper.CapabilityDefinitionsToCapabilities(newCloudProfileSpec.MachineCapabilities)
+		numberOfCloudProfileArchitectures := len(machineCapabilities[v1beta1constants.ArchitectureName])
+		// syncing is only required if there is more than 1 architecture in spec.machineCapabilities
+		// 0: means the MachineCapabilities are invalid and will be caught by validation
+		// 1: means we have only one architecture and no syncing is required
+		if numberOfCloudProfileArchitectures > 1 {
+			// During the initial migration to capabilities, synchronize the legacy architecture fields with the architecture capability values.
+			// Any mismatch between capabilities and architecture fields will result in a validation error.
+			syncMachineImageArchitectureCapabilities(newCloudProfileSpec.MachineImages)
+			syncMachineTypeArchitectureCapabilities(newCloudProfileSpec.MachineTypes)
+		}
 	}
-
-	isInitialMigration := hasCapabilities && len(oldCloudProfileSpec.MachineCapabilities) == 0
-
-	// During the initial migration to capabilities, synchronize the architecture fields with the capability definitions.
-	// After the migration, only sync architectures from the capability definitions back to the architecture fields.
-	// This approach ensures that capabilities are consistently used once defined.
-	// Any mismatch between capabilities and architecture fields will result in a validation error.
-	syncMachineImageArchitectureCapabilities(newCloudProfileSpec.MachineImages, oldCloudProfileSpec.MachineImages, isInitialMigration)
-	syncMachineTypeArchitectureCapabilities(newCloudProfileSpec.MachineTypes, oldCloudProfileSpec.MachineTypes, isInitialMigration)
+	if hasNewCapabilities || hasOldCapabilities {
+		// sync back the legacy architecture fields from the capabilities on every update
+		// or if only the old cloud profile has capabilities defined assign them to nil to allow switching back to legacy mode
+		syncMachineImageLegacyArchitecture(newCloudProfileSpec.MachineImages, newCloudProfileSpec.MachineCapabilities)
+		syncMachineTypeLegacyArchitecture(newCloudProfileSpec.MachineTypes, newCloudProfileSpec.MachineCapabilities)
+	}
 }
 
-func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages []core.MachineImage, isInitialMigration bool) {
-	oldMachineImagesMap := NewCoreImagesContext(oldMachineImages)
-
-	for imageIdx, image := range newMachineImages {
-		for versionIdx, version := range newMachineImages[imageIdx].Versions {
-			oldMachineImageVersion, oldVersionExists := oldMachineImagesMap.GetImageVersion(image.Name, version.Version)
-			capabilityArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(version.CapabilityFlavors)
-
-			// Skip any architecture field syncing if
-			// - architecture field has been modified and changed to any value other than empty.
-			architecturesFieldHasBeenChanged := oldVersionExists && len(version.Architectures) > 0 &&
-				!apiequality.Semantic.DeepEqual(oldMachineImageVersion.Architectures, version.Architectures)
-
-			// - both the architecture field and the architecture capability are empty or filled equally.
-			if architecturesFieldHasBeenChanged || slices.Equal(capabilityArchitectures, version.Architectures) {
+func syncMachineImageLegacyArchitecture(newMachineImages []core.MachineImage, capabilityDefinitions []core.CapabilityDefinition) {
+	for imageIdx := range newMachineImages {
+		for versionIdx, imageVersion := range newMachineImages[imageIdx].Versions {
+			// If there are no capability definitions, clear capability flavors.
+			if len(capabilityDefinitions) == 0 {
+				newMachineImages[imageIdx].Versions[versionIdx].CapabilityFlavors = nil
 				continue
 			}
 
-			// Sync architecture field to capabilities if filled on initial migration.
-			if isInitialMigration && len(version.Architectures) > 0 && len(version.CapabilityFlavors) == 0 {
-				for _, architecture := range version.Architectures {
-					newMachineImages[imageIdx].Versions[versionIdx].CapabilityFlavors = append(newMachineImages[imageIdx].Versions[versionIdx].CapabilityFlavors,
-						core.MachineImageFlavor{
-							Capabilities: core.Capabilities{
-								v1beta1constants.ArchitectureName: []string{architecture},
-							},
-						})
-				}
+			// don't sync if architectures are set by the user
+			if len(imageVersion.Architectures) > 0 {
 				continue
 			}
-
 			// Sync capability architectures to architectures field.
-			if len(capabilityArchitectures) > 0 {
-				newMachineImages[imageIdx].Versions[versionIdx].Architectures = capabilityArchitectures
+			defaultedImageFlavors := gardencorehelper.GetImageFlavorsWithAppliedDefaults(imageVersion.CapabilityFlavors, capabilityDefinitions)
+			defaultArchitectures := gardencorehelper.ExtractArchitecturesFromImageFlavors(defaultedImageFlavors)
+			if len(defaultArchitectures) > 0 {
+				newMachineImages[imageIdx].Versions[versionIdx].Architectures = defaultArchitectures
 			}
 		}
 	}
 }
 
-func syncMachineTypeArchitectureCapabilities(newMachineTypes, oldMachineTypes []core.MachineType, isInitialMigration bool) {
-	oldMachineTypesMap := utils.CreateMapFromSlice(oldMachineTypes, func(machineType core.MachineType) string { return machineType.Name })
-
+func syncMachineTypeLegacyArchitecture(newMachineTypes []core.MachineType, capabilityDefinitions []core.CapabilityDefinition) {
 	for i, machineType := range newMachineTypes {
-		oldMachineType, oldMachineTypeExists := oldMachineTypesMap[machineType.Name]
-		architectureValue := ptr.Deref(machineType.Architecture, "")
-		oldArchitectureValue := ptr.Deref(oldMachineType.Architecture, "")
-		capabilityArchitectures := machineType.Capabilities[v1beta1constants.ArchitectureName]
-
-		// Skip any architecture field syncing if
-		// - architecture field has been modified and changed to any value other than empty.
-		architectureFieldHasBeenChanged := oldMachineTypeExists && architectureValue != "" &&
-			(oldArchitectureValue == "" || oldArchitectureValue != architectureValue)
-		// - both the architecture field and the architecture capability are empty or filled equally.
-		architecturesInSync := len(capabilityArchitectures) == 0 && architectureValue == "" ||
-			len(capabilityArchitectures) == 1 && capabilityArchitectures[0] == architectureValue
-		if architectureFieldHasBeenChanged || architecturesInSync {
+		// If there are no capability definitions, clear capability flavors.
+		if len(capabilityDefinitions) == 0 {
+			newMachineTypes[i].Capabilities = nil
 			continue
 		}
 
-		// Sync architecture field to capabilities if filled on initial migration.
-		if isInitialMigration && architectureValue != "" && len(capabilityArchitectures) == 0 {
-			if newMachineTypes[i].Capabilities == nil {
-				newMachineTypes[i].Capabilities = make(core.Capabilities)
-			}
-			newMachineTypes[i].Capabilities[v1beta1constants.ArchitectureName] = []string{architectureValue}
+		// don't sync if architecture is set by the user
+		if machineType.Architecture != nil {
 			continue
 		}
 
 		// Sync capability architecture to architecture field.
-		if len(capabilityArchitectures) == 1 {
-			newMachineTypes[i].Architecture = ptr.To(capabilityArchitectures[0])
+		defaultedCapabilities := core.GetCapabilitiesWithAppliedDefaults(newMachineTypes[i].Capabilities, capabilityDefinitions)
+		if len(defaultedCapabilities[v1beta1constants.ArchitectureName]) == 1 {
+			newMachineTypes[i].Architecture = ptr.To(defaultedCapabilities[v1beta1constants.ArchitectureName][0])
+		}
+	}
+}
+
+func syncMachineImageArchitectureCapabilities(newMachineImages []core.MachineImage) {
+	for imageIdx := range newMachineImages {
+		for versionIdx, version := range newMachineImages[imageIdx].Versions {
+			// don't sync if capabilities are set by the user
+			if len(version.CapabilityFlavors) > 0 {
+				continue
+			}
+
+			legacyArchitectures := version.Architectures
+			if len(legacyArchitectures) == 0 {
+				// default to AMD64 if empty as this is the default for the architecture field
+				legacyArchitectures = []string{v1beta1constants.ArchitectureAMD64}
+			}
+			for _, architecture := range legacyArchitectures {
+				newMachineImages[imageIdx].Versions[versionIdx].CapabilityFlavors = append(newMachineImages[imageIdx].Versions[versionIdx].CapabilityFlavors,
+					core.MachineImageFlavor{Capabilities: core.Capabilities{
+						v1beta1constants.ArchitectureName: []string{architecture},
+					}},
+				)
+			}
+		}
+	}
+}
+
+func syncMachineTypeArchitectureCapabilities(newMachineTypes []core.MachineType) {
+	for i, machineType := range newMachineTypes {
+		// don't sync if capabilities are set by the user
+		if len(machineType.Capabilities) > 0 {
+			continue
+		}
+
+		// default to AMD64 if empty as this is the default for the architecture field
+		legacyArchitecture := ptr.Deref(machineType.Architecture, v1beta1constants.ArchitectureAMD64)
+
+		newMachineTypes[i].Capabilities = core.Capabilities{
+			v1beta1constants.ArchitectureName: []string{legacyArchitecture},
 		}
 	}
 }

@@ -1078,7 +1078,7 @@ func (c *validationContext) validateMachineImage(idxPath *field.Path, worker cor
 	isUpdateStrategyInPlace := helper.IsUpdateStrategyInPlace(worker.UpdateStrategy)
 	isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.MachineCapabilities)
 	if !isMachineImagePresentInCloudprofile {
-		return field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageVersions))
+		return field.NotSupported(idxPath.Child("machine", "image", "version"), worker.Machine.Image.Version, validMachineImageVersions)
 	}
 
 	if !architectureSupported || !activeMachineImageVersion || (isUpdateStrategyInPlace && !inPlaceUpdateSupported) {

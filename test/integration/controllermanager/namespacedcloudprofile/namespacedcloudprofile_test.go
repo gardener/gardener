@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -33,6 +32,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 
 		expirationDateFuture metav1.Time
 		imageFlavors         []gardencorev1beta1.MachineImageFlavor
+		capabilities         gardencorev1beta1.Capabilities
 	)
 
 	BeforeEach(func() {
@@ -40,14 +40,12 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 		var capabilityDefinitions []gardencorev1beta1.CapabilityDefinition
 		if isCapabilitiesCloudProfile {
 			capabilityDefinitions = []gardencorev1beta1.CapabilityDefinition{
-				{
-					Name:   "architecture",
-					Values: []string{v1beta1constants.ArchitectureAMD64},
-				},
+				{Name: "architecture", Values: []string{"amd64"}},
 			}
 			imageFlavors = []gardencorev1beta1.MachineImageFlavor{
-				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{"amd64"}}},
 			}
+			capabilities = gardencorev1beta1.Capabilities{"architecture": []string{"amd64"}}
 		}
 
 		dateNow, _ := time.Parse(time.DateOnly, time.Now().Format(time.DateOnly))
@@ -69,10 +67,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 					{
 						Name: "some-image",
 						Versions: []gardencorev1beta1.MachineImageVersion{
-							{
-								ExpirableVersion:  gardencorev1beta1.ExpirableVersion{Version: "4.5.6"},
-								CapabilityFlavors: imageFlavors,
-							},
+							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6"}},
 						},
 					},
 				},
@@ -103,13 +98,19 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 						Name: "some-image",
 						Versions: []gardencorev1beta1.MachineImageVersion{
 							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6", ExpirationDate: &expirationDateFuture}},
-							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}, CapabilityFlavors: imageFlavors},
+							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}}, // no capabilities defined, as spec.MachineCapabilities will be used
 						},
 					},
 					{
 						Name: "custom-image",
 						Versions: []gardencorev1beta1.MachineImageVersion{
-							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}, CapabilityFlavors: imageFlavors},
+							{
+								ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"},
+								CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
+								Architectures:    []string{"amd64"},
+								// explicitly define capabilities 1.1.2 is not in parent cloudprofile
+								CapabilityFlavors: imageFlavors,
+							},
 						},
 						UpdateStrategy: &updateStrategy,
 					},
@@ -142,15 +143,14 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 					Name: "some-image",
 					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
-							ExpirableVersion:  gardencorev1beta1.ExpirableVersion{Version: "7.8.9"},
-							CRI:               []gardencorev1beta1.CRI{{Name: "containerd"}},
-							Architectures:     []string{"amd64"},
-							CapabilityFlavors: imageFlavors,
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"},
+							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
+							Architectures:    []string{"amd64"},
 						},
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6", ExpirationDate: &expirationDateFuture},
-							CRI:              []gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}, Architectures: []string{"amd64"},
-							CapabilityFlavors: imageFlavors,
+							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
+							Architectures:    []string{"amd64"},
 						},
 					},
 					UpdateStrategy: &updateStrategy,
@@ -183,6 +183,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 					Memory:       resource.MustParse("2Gi"),
 					Usable:       &usable,
 					Architecture: &architecture,
+					Capabilities: capabilities,
 				}},
 			Regions: []gardencorev1beta1.Region{
 				{Name: "some-region"},
@@ -541,7 +542,11 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 				{
 					Name: "some-image",
 					Versions: []gardencorev1beta1.MachineImageVersion{
-						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6", ExpirationDate: &expirationDatePast}},
+						{
+							ExpirableVersion:  gardencorev1beta1.ExpirableVersion{Version: "4.5.6", ExpirationDate: &expirationDatePast},
+							Architectures:     []string{"amd64"},
+							CapabilityFlavors: imageFlavors,
+						},
 					},
 				},
 			}
@@ -556,10 +561,9 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 					Name: "some-image",
 					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
-							ExpirableVersion:  gardencorev1beta1.ExpirableVersion{Version: "4.5.6"},
-							CRI:               []gardencorev1beta1.CRI{{Name: "containerd"}},
-							Architectures:     []string{"amd64"},
-							CapabilityFlavors: imageFlavors,
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6"},
+							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
+							Architectures:    []string{"amd64"},
 						},
 					},
 					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),

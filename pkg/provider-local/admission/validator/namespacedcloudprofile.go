@@ -15,11 +15,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	gardencoreapi "github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/provider-local/admission"
+	"github.com/gardener/gardener/pkg/provider-local/admission/mutator"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
+	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
+	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/validation"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -63,6 +67,10 @@ func (p *namespacedCloudProfileValidator) Validate(ctx context.Context, new, _ c
 	}
 	parentProfile := &gardencorev1beta1.CloudProfile{}
 	if err := p.client.Get(ctx, client.ObjectKey{Name: parentCloudProfile.Name}, parentProfile); err != nil {
+		return err
+	}
+
+	if err := SimulateTransformToParentFormat(cloudProfileConfig, cloudProfile, parentProfile.Spec.MachineCapabilities); err != nil {
 		return err
 	}
 
@@ -129,4 +137,33 @@ func (p *namespacedCloudProfileValidator) validateNamespacedCloudProfileProvider
 	}
 
 	return allErrs
+}
+
+// SimulateTransformToParentFormat simulates the transformation of the given NamespacedCloudProfile and its providerConfig
+// to the parent CloudProfile format. This includes the transformation of both the providerConfig and the spec.
+func SimulateTransformToParentFormat(cloudProfileConfig *api.CloudProfileConfig, cloudProfile *core.NamespacedCloudProfile, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) error {
+	cloudProfileConfigV1alpha1 := &v1alpha1.CloudProfileConfig{}
+	path := field.NewPath("spec").Child("providerConfig")
+
+	if err := helper.Scheme.Convert(cloudProfileConfig, cloudProfileConfigV1alpha1, nil); err != nil {
+		return field.InternalError(path, err)
+	}
+	namespacedCloudProfileSpecV1beta1 := gardencorev1beta1.NamespacedCloudProfileSpec{}
+	if err := gardencoreapi.Scheme.Convert(&cloudProfile.Spec, &namespacedCloudProfileSpecV1beta1, nil); err != nil {
+		return field.InternalError(path, err)
+	}
+
+	// simulate transformation to parent spec format
+	// - performed in mutating extension webhook
+	transformedSpecConfig := mutator.TransformProviderConfigToParentFormat(cloudProfileConfigV1alpha1, capabilityDefinitions)
+	// - performed in namespaced cloud profile controller
+	transformedSpec := gardenerutils.TransformSpecToParentFormat(namespacedCloudProfileSpecV1beta1, capabilityDefinitions)
+
+	if err := helper.Scheme.Convert(transformedSpecConfig, cloudProfileConfig, nil); err != nil {
+		return field.InternalError(path, err)
+	}
+	if err := gardencoreapi.Scheme.Convert(&transformedSpec, &cloudProfile.Spec, nil); err != nil {
+		return field.InternalError(path, err)
+	}
+	return nil
 }
