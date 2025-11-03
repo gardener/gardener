@@ -98,11 +98,11 @@ receivers:
   journald/journal:
     start_at: beginning
     storage: file_storage
-    units:
-      - kernel
-      - kubelet.service
-      - containerd.service
-      - gardener-node-agent.service
+    matches:
+      - _TRANSPORT: kernel
+      - _SYSTEMD_UNIT: kubelet.service
+      - _SYSTEMD_UNIT: containerd.service
+      - _SYSTEMD_UNIT: gardener-node-agent.service
     operators:
       - type: move
         from: body._SYSTEMD_UNIT
