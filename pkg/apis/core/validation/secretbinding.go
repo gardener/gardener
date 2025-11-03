@@ -77,7 +77,7 @@ func validateSecretReferenceOptionalNamespace(ref corev1.SecretReference, fldPat
 	}
 
 	if len(ref.Namespace) > 0 {
-		for _, err := range validation.IsDNS1123Subdomain(ref.Namespace) {
+		for _, err := range apivalidation.ValidateNamespaceName(ref.Namespace, false) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), ref.Namespace, err))
 		}
 	}

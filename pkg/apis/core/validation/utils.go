@@ -576,7 +576,7 @@ func ValidateObjectReferenceNameAndNamespace(ref corev1.ObjectReference, fldPath
 		allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "must provide a namespace"))
 	}
 	if len(ref.Namespace) > 0 {
-		for _, err := range validation.IsDNS1123Subdomain(ref.Namespace) {
+		for _, err := range apivalidation.ValidateNamespaceName(ref.Namespace, false) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), ref.Namespace, err))
 		}
 	}
