@@ -107,7 +107,7 @@ This document provides a checklist for them that you can walk through.
 
 6. **Drop unutilised capabilities** ([example](https://github.com/gardener/gardener/blob/v1.130.1/pkg/component/networking/coredns/coredns.go#L510-L513), [example 2](https://github.com/gardener/gardener/blob/v1.130.1/charts/gardener/provider-local/templates/coredns/deployment.yaml#L74-L78))
 
-    Define the needed [Linux capabilities](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container). Configure `securityContext.capabilities` to `drop: ["ALL"]` and selectively add any capabilities if necessary (e.g. `add: ["NET_BIND_SERVICE"]`).
+   Define the needed [Linux capabilities](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container). Configure `securityContext.capabilities` to `drop: ["ALL"]` and selectively add any capabilities if necessary (e.g. `add: ["NET_BIND_SERVICE"]`).
 
 7. **Do not allow privilege escalation for containers** ([example](https://github.com/gardener/gardener/blob/v1.130.1/pkg/component/networking/coredns/coredns.go#L509), [example 2](https://github.com/gardener/gardener/blob/v1.130.1/pkg/component/networking/istio/charts/istio/istio-ingress/templates/deployment.yaml#L53))
 
