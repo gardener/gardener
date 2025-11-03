@@ -329,8 +329,8 @@ For convenience a [helper script](../../hack/usage/generate-admin-kubeconf.sh) i
 ./hack/usage/generate-admin-kubeconf.sh > admin-kubeconf.yaml
 ```
 
-Keep in mind that using a VPN could cause problems with the setup and the shoot kubeconfig will fail with connection issue.
-If you do have problems using the shoot kubeconfig try first to disable VPN.
+Keep in mind that using a VPN could cause problems with the setup and the shoot's kubeconfig will fail with connection issues.
+If you do have connection problems using the shoot kubeconfig try first disabling the VPN.
 
 If you want to change the default namespace or shoot name, you can do so by passing different values as arguments.
 
