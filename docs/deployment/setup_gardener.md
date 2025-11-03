@@ -281,7 +281,7 @@ NAME          K8S VERSION   GARDENER VERSION   LAST OPERATION   RUNTIME   VIRTUA
 crazy-botany   1.31.1        v1.110.0           Succeeded        True      True      True         True            1d
 ```
 
-In case the automatic DNS record creation is not supported, a record with the external address of the `virtual-garden-istio-ingress` (found in namespace `istio-ingressgateway`) service has to be created manually.
+In case the automatic DNS record creation is not supported, a record with the external address of the `istio-ingressgateway` (found in namespace `virtual-garden-istio-ingress`) service has to be created manually.
 
 To obtain credentials and interact with the virtual Garden cluster, please follow this [guide](../concepts/operator.md#virtual-garden-kubeconfig).
 
