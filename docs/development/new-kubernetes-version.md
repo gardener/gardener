@@ -104,7 +104,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - The list of supported versions is meanwhile maintained [here](../../pkg/utils/validation/kubernetesversion/version.go) in the `SupportedVersions` variable.
 - Maintain the Kubernetes feature gates used for validation of `Shoot` resources:
   - The feature gates are maintained in [this](../../pkg/utils/validation/features/featuregates.go) file.
-  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-feature-gates.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-feature-gates.sh v1.33 v1.34`).
+  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-feature-gates.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-feature-gates.sh 1.34 1.35`).
   - It will present 3 lists of feature gates: those added and those removed in `<new-version>` compared to `<old-version>` and feature gates that got locked to default in `<new-version>`.
   - Add all added feature gates to the map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
   - For any removed feature gates, add `<new-version>` as `RemovedInVersion` to the already existing feature gate in the map.

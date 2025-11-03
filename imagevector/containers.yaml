@@ -499,7 +499,26 @@ images:
   - name: node-problem-detector
     sourceRepository: github.com/kubernetes/node-problem-detector
     repository: registry.k8s.io/node-problem-detector/node-problem-detector
+    tag: "v1.34.0"
+    targetVersion: ">= 1.34"
+    labels:
+      - name: 'gardener.cloud/cve-categorisation'
+        value:
+          network_exposure: 'private'
+          authentication_enforced: false
+          user_interaction: 'end-user'
+          confidentiality_requirement: 'low'
+          integrity_requirement: 'high'
+          availability_requirement: 'low'
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/mcm-maintainers'
+  - name: node-problem-detector
+    sourceRepository: github.com/kubernetes/node-problem-detector
+    repository: registry.k8s.io/node-problem-detector/node-problem-detector
     tag: "v0.8.22"
+    targetVersion: "< 1.34"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:

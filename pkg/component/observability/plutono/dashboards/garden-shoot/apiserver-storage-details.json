@@ -74,7 +74,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(etcd_request_duration_seconds_bucket{job=~\"$apiserver\",type=~\"$type\",operation=~\"$operation\"}[$__rate_interval])) by (le)",
+              "expr": "sum(rate(etcd_request_duration_seconds_bucket{job=~\"$apiserver\",group=\"$group\",resource=\"$resource\",operation=~\"$operation\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "interval": "",
               "intervalFactor": 3,

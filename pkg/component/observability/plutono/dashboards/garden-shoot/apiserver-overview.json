@@ -2958,7 +2958,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.90,sum(rate(apiserver_watch_events_sizes_bucket{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(le,kind))",
+          "expr": "histogram_quantile(0.90,sum(rate(apiserver_watch_events_sizes_bucket{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(le,resource))",
           "interval": "",
           "legendFormat": "{{kind}}",
           "refId": "A"
@@ -3159,7 +3159,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(increase(watch_cache_capacity_increase_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by (resource)",
+          "expr": "sum(increase(watch_cache_capacity_increase_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by (group,resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"
@@ -3261,7 +3261,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(increase(watch_cache_capacity_decrease_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by (resource)",
+          "expr": "sum(increase(watch_cache_capacity_decrease_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by (group,resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"

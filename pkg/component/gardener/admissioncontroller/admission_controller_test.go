@@ -760,7 +760,9 @@ func service(namespace string, testValues Values) *corev1.Service {
 	}
 
 	if testValues.TopologyAwareRoutingEnabled {
-		if versionutils.ConstraintK8sGreaterEqual132.Check(testValues.RuntimeVersion) {
+		if versionutils.ConstraintK8sGreaterEqual134.Check(testValues.RuntimeVersion) {
+			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
+		} else if versionutils.ConstraintK8sGreaterEqual132.Check(testValues.RuntimeVersion) {
 			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
 		} else if versionutils.ConstraintK8sEqual131.Check(testValues.RuntimeVersion) {
 			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)

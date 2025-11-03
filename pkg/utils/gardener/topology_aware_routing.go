@@ -26,8 +26,11 @@ func ReconcileTopologyAwareRoutingSettings(service *corev1.Service, topologyAwar
 	if !topologyAwareRoutingEnabled {
 		return
 	}
-
-	if versionutils.ConstraintK8sGreaterEqual132.Check(k8sVersion) {
+	if versionutils.ConstraintK8sGreaterEqual134.Check(k8sVersion) {
+		// For Kubernetes >= 1.34, only use the PreferSameZone strategy of the ServiceTrafficDistribution feature.
+		// PreferClose is deprecated. PreferSameZone is a new alias for PreferClose (https://kubernetes.io/blog/2025/08/27/kubernetes-v1-34-release/#preferclose-traffic-distribution-is-deprecated).
+		service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
+	} else if versionutils.ConstraintK8sGreaterEqual132.Check(k8sVersion) {
 		// For Kubernetes >= 1.32, only use the PreferClose strategy of the ServiceTrafficDistribution feature.
 		service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
 	} else if versionutils.ConstraintK8sEqual131.Check(k8sVersion) {
