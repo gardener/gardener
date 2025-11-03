@@ -91,7 +91,7 @@ spec:
                     format: int32
                     type: integer
                   tag:
-                    description: Tag name associated to all records comming from this
+                    description: Tag name associated to all records coming from this
                       plugin.
                     type: string
                 type: object
@@ -156,7 +156,7 @@ spec:
                 properties:
                   bufferMaxSize:
                     description: |-
-                      Specify maximum buffer memory size used to recieve a forward message.
+                      Specify maximum buffer memory size used to receive a forward message.
                       The value must be according to the Unit Size specification.
                     pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
                     type: string
@@ -188,7 +188,7 @@ spec:
                       a separate thread which helps to desaturate the main pipeline.
                     type: string
                   unixPath:
-                    description: Specify the path to unix socket to recieve a forward
+                    description: Specify the path to unix socket to receive a forward
                       message. If set, Listen and port are ignnored.
                     type: string
                   unixPerm:
@@ -353,7 +353,7 @@ spec:
                     description: API Server end-point
                     type: string
                   tag:
-                    description: Tag name associated to all records comming from this
+                    description: Tag name associated to all records coming from this
                       plugin.
                     type: string
                   tlsDebug:
@@ -432,7 +432,7 @@ spec:
                       host operating system, default is 5 seconds.
                     type: string
                   tag:
-                    description: Tag name associated to all records comming from this
+                    description: Tag name associated to all records coming from this
                       plugin.
                     type: string
                 type: object
@@ -507,7 +507,7 @@ spec:
                     description: 'The interval to scrape metrics, default: 10s'
                     type: string
                   tag:
-                    description: Tag name associated to all records comming from this
+                    description: Tag name associated to all records coming from this
                       plugin
                     type: string
                 type: object
@@ -578,6 +578,74 @@ spec:
                     description: Specify the key where the source address will be
                       injected.
                     type: string
+                  tls:
+                    description: Specify TLS connector options.
+                    properties:
+                      caFile:
+                        description: Absolute path to CA certificate file
+                        type: string
+                      caPath:
+                        description: Absolute path to scan for certificate files
+                        type: string
+                      crtFile:
+                        description: Absolute path to Certificate file
+                        type: string
+                      debug:
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
+                        enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        format: int32
+                        type: integer
+                      keyFile:
+                        description: Absolute path to private Key file
+                        type: string
+                      keyPassword:
+                        description: Optional password for tls.key_file file
+                        properties:
+                          valueFrom:
+                            description: ValueSource defines how to find a value's
+                              key.
+                            properties:
+                              secretKeyRef:
+                                description: Selects a key of a secret in the pod's
+                                  namespace
+                                properties:
+                                  key:
+                                    description: The key of the secret to select from.  Must
+                                      be a valid secret key.
+                                    type: string
+                                  name:
+                                    default: ""
+                                    description: |-
+                                      Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    type: string
+                                  optional:
+                                    description: Specify whether the Secret or its
+                                      key must be defined
+                                    type: boolean
+                                required:
+                                - key
+                                type: object
+                                x-kubernetes-map-type: atomic
+                            type: object
+                        type: object
+                      verify:
+                        description: Force certificate validation
+                        type: boolean
+                      vhost:
+                        description: Hostname to be used for TLS SNI extension
+                        type: string
+                    type: object
                   unixPerm:
                     description: 'If Mode is set to unix_tcp or unix_udp, set the
                       permission of the Unix socket file, default: 0644'
@@ -692,6 +760,10 @@ spec:
                     description: Specify the database file to keep track of monitored
                       files and offsets.
                     type: string
+                  dbLocking:
+                    description: Specify that the database will be accessed only by
+                      Fluent Bit.
+                    type: boolean
                   dbSync:
                     description: 'Set a default synchronization (I/O) method. Values:
                       Extra, Full, Normal, Off.'
