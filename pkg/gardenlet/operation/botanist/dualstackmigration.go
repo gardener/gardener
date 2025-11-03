@@ -88,6 +88,10 @@ func (b *Botanist) CheckDNSServiceMigration(ctx context.Context) error {
 	}
 
 	service := &corev1.Service{}
+	if b.ShootClientSet == nil {
+		return fmt.Errorf("shoot client set is not initialized")
+	}
+
 	if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: corednsconstants.LabelValue}, service); err != nil {
 		return err
 	}
