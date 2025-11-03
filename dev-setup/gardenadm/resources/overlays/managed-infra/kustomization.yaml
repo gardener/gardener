@@ -8,7 +8,7 @@ resources:
 - ../../base
 
 components:
-- ../../../../gardenconfig/components/credentials/secret-project-garden
+- ../../../../gardenconfig/components/credentials/secret-project-garden/with-kind-kubeconfig
 
 patches:
 - path: patch-shoot-managed-infra.yaml

@@ -327,6 +327,13 @@ if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
   fi
 fi
 
+# Prepare a kubeconfig that can be used by provider-local as the provider credentials to talk to the kind cluster
+# from within the kind cluster and also from within a self-hosted shoot.
+# See docs/extensions/provider-local.md#credentials.
+if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]] ; then
+  sed "s/127\.0\.0\.1:[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$PATH_KUBECONFIG" > "$(dirname "$0")/../dev-setup/gardenconfig/components/credentials/secret-project-garden/with-kind-kubeconfig/kubeconfig"
+fi
+
 # Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster.
 # Historically, we used the docker container name for this, but this differs between clusters with different names
 # and doesn't work in IPv6 kind clusters: https://github.com/kubernetes-sigs/kind/issues/3114

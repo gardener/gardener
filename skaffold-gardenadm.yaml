@@ -1287,6 +1287,8 @@ profiles:
       kustomize:
         paths:
           - dev-setup/gardenadm/resources/overlays/managed-infra
+        buildArgs:
+          - --load-restrictor=LoadRestrictionsNone
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
