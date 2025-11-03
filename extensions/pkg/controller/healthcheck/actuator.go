@@ -115,8 +115,6 @@ type HealthCheck interface {
 	Check(context.Context, types.NamespacedName) (*SingleCheckResult, error)
 	// SetLoggerSuffix injects the logger
 	SetLoggerSuffix(string, string)
-	// DeepCopy clones the healthCheck
-	DeepCopy() HealthCheck
 }
 
 // SingleCheckResult is the result for a health check

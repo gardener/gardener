@@ -20,84 +20,80 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
-// StatefulSetHealthChecker contains all the information for the StatefulSet HealthCheck
-type StatefulSetHealthChecker struct {
-	logger      logr.Logger
-	seedClient  client.Client
-	shootClient client.Client
-	name        string
-	checkType   StatefulSetCheckType
+// statefulSetHealthChecker contains all the information for the StatefulSet HealthCheck
+type statefulSetHealthChecker struct {
+	logger logr.Logger
+	client client.Client
+	name   string
 }
 
-// StatefulSetCheckType in which cluster the check will be executed
-type StatefulSetCheckType string
+// SeedStatefulSetHealthChecker is a healthCheck for StatefulSets in the Seed cluster
+type SeedStatefulSetHealthChecker struct {
+	statefulSetHealthChecker
+}
 
-const (
-	statefulSetCheckTypeSeed  StatefulSetCheckType = "Seed"
-	statefulSetCheckTypeShoot StatefulSetCheckType = "Shoot"
+// ShootStatefulSetHealthChecker is a healthCheck for StatefulSets in the Shoot cluster
+type ShootStatefulSetHealthChecker struct {
+	statefulSetHealthChecker
+}
+
+var (
+	_ healthcheck.HealthCheck = (*SeedStatefulSetHealthChecker)(nil)
+	_ healthcheck.SeedClient  = (*SeedStatefulSetHealthChecker)(nil)
+	_ healthcheck.HealthCheck = (*ShootStatefulSetHealthChecker)(nil)
+	_ healthcheck.ShootClient = (*ShootStatefulSetHealthChecker)(nil)
 )
 
 // NewSeedStatefulSetChecker is a healthCheck function to check StatefulSets
-func NewSeedStatefulSetChecker(name string) healthcheck.HealthCheck {
-	return &StatefulSetHealthChecker{
-		name:      name,
-		checkType: statefulSetCheckTypeSeed,
+func NewSeedStatefulSetChecker(name string) *SeedStatefulSetHealthChecker {
+	return &SeedStatefulSetHealthChecker{
+		statefulSetHealthChecker: statefulSetHealthChecker{
+			name: name,
+		},
 	}
 }
 
 // NewShootStatefulSetChecker is a healthCheck function to check StatefulSets
-func NewShootStatefulSetChecker(name string) healthcheck.HealthCheck {
-	return &StatefulSetHealthChecker{
-		name:      name,
-		checkType: statefulSetCheckTypeShoot,
+func NewShootStatefulSetChecker(name string) *ShootStatefulSetHealthChecker {
+	return &ShootStatefulSetHealthChecker{
+		statefulSetHealthChecker: statefulSetHealthChecker{
+			name: name,
+		},
 	}
 }
 
 // InjectSeedClient injects the seed client
-func (healthChecker *StatefulSetHealthChecker) InjectSeedClient(seedClient client.Client) {
-	healthChecker.seedClient = seedClient
+func (h *SeedStatefulSetHealthChecker) InjectSeedClient(seedClient client.Client) {
+	h.client = seedClient
 }
 
 // InjectShootClient injects the shoot client
-func (healthChecker *StatefulSetHealthChecker) InjectShootClient(shootClient client.Client) {
-	healthChecker.shootClient = shootClient
+func (h *ShootStatefulSetHealthChecker) InjectShootClient(shootClient client.Client) {
+	h.client = shootClient
 }
 
 // SetLoggerSuffix injects the logger
-func (healthChecker *StatefulSetHealthChecker) SetLoggerSuffix(provider, extension string) {
-	healthChecker.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-deployment", provider, extension))
-}
-
-// DeepCopy clones the healthCheck struct by making a copy and returning the pointer to that new copy
-// Actually, it does not perform a *deep* copy.
-func (healthChecker *StatefulSetHealthChecker) DeepCopy() healthcheck.HealthCheck {
-	shallowCopy := *healthChecker
-	return &shallowCopy
+func (h *statefulSetHealthChecker) SetLoggerSuffix(provider, extension string) {
+	h.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-statefulset", provider, extension))
 }
 
 // Check executes the health check
-func (healthChecker *StatefulSetHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
+func (h *statefulSetHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
 	statefulSet := &appsv1.StatefulSet{}
 
-	var err error
-	if healthChecker.checkType == statefulSetCheckTypeSeed {
-		err = healthChecker.seedClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, statefulSet)
-	} else {
-		err = healthChecker.shootClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, statefulSet)
-	}
-	if err != nil {
+	if err := h.client.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: h.name}, statefulSet); err != nil {
 		if apierrors.IsNotFound(err) {
 			return &healthcheck.SingleCheckResult{
 				Status: gardencorev1beta1.ConditionFalse,
-				Detail: fmt.Sprintf("StatefulSet %q in namespace %q not found", healthChecker.name, request.Namespace),
+				Detail: fmt.Sprintf("StatefulSet %q in namespace %q not found", h.name, request.Namespace),
 			}, nil
 		}
-		err := fmt.Errorf("failed to retrieve StatefulSet %q in namespace %q: %w", healthChecker.name, request.Namespace, err)
-		healthChecker.logger.Error(err, "Health check failed")
+		err := fmt.Errorf("failed to retrieve StatefulSet %q in namespace %q: %w", h.name, request.Namespace, err)
+		h.logger.Error(err, "Health check failed")
 		return nil, err
 	}
 	if isHealthy, err := statefulSetIsHealthy(statefulSet); !isHealthy {
-		healthChecker.logger.Error(err, "Health check failed")
+		h.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),

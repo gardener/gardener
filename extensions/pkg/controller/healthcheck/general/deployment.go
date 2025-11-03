@@ -20,86 +20,82 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
-// DeploymentHealthChecker contains all the information for the Deployment HealthCheck
-type DeploymentHealthChecker struct {
-	logger      logr.Logger
-	seedClient  client.Client
-	shootClient client.Client
-	name        string
-	checkType   DeploymentCheckType
+// deploymentHealthChecker contains all the information for the Deployment HealthCheck
+type deploymentHealthChecker struct {
+	logger logr.Logger
+	client client.Client
+	name   string
 }
 
-// DeploymentCheckType in which cluster the check will be executed
-type DeploymentCheckType string
+// SeedDeploymentHealthChecker is a healthCheck for Deployments in the Seed cluster
+type SeedDeploymentHealthChecker struct {
+	deploymentHealthChecker
+}
 
-const (
-	deploymentCheckTypeSeed  DeploymentCheckType = "Seed"
-	deploymentCheckTypeShoot DeploymentCheckType = "Shoot"
+// ShootDeploymentHealthChecker is a healthCheck for Deployments in the Shoot cluster
+type ShootDeploymentHealthChecker struct {
+	deploymentHealthChecker
+}
+
+var (
+	_ healthcheck.HealthCheck = (*SeedDeploymentHealthChecker)(nil)
+	_ healthcheck.SeedClient  = (*SeedDeploymentHealthChecker)(nil)
+	_ healthcheck.HealthCheck = (*ShootDeploymentHealthChecker)(nil)
+	_ healthcheck.ShootClient = (*ShootDeploymentHealthChecker)(nil)
 )
 
 // NewSeedDeploymentHealthChecker is a healthCheck function to check Deployments in the Seed cluster
-func NewSeedDeploymentHealthChecker(deploymentName string) healthcheck.HealthCheck {
-	return &DeploymentHealthChecker{
-		name:      deploymentName,
-		checkType: deploymentCheckTypeSeed,
+func NewSeedDeploymentHealthChecker(deploymentName string) *SeedDeploymentHealthChecker {
+	return &SeedDeploymentHealthChecker{
+		deploymentHealthChecker: deploymentHealthChecker{
+			name: deploymentName,
+		},
 	}
 }
 
 // NewShootDeploymentHealthChecker is a healthCheck function to check Deployments in the Shoot cluster
-func NewShootDeploymentHealthChecker(deploymentName string) healthcheck.HealthCheck {
-	return &DeploymentHealthChecker{
-		name:      deploymentName,
-		checkType: deploymentCheckTypeShoot,
+func NewShootDeploymentHealthChecker(deploymentName string) *ShootDeploymentHealthChecker {
+	return &ShootDeploymentHealthChecker{
+		deploymentHealthChecker: deploymentHealthChecker{
+			name: deploymentName,
+		},
 	}
 }
 
 // InjectSeedClient injects the seed client
-func (healthChecker *DeploymentHealthChecker) InjectSeedClient(seedClient client.Client) {
-	healthChecker.seedClient = seedClient
+func (h *SeedDeploymentHealthChecker) InjectSeedClient(seedClient client.Client) {
+	h.client = seedClient
 }
 
 // InjectShootClient injects the shoot client
-func (healthChecker *DeploymentHealthChecker) InjectShootClient(shootClient client.Client) {
-	healthChecker.shootClient = shootClient
+func (h *ShootDeploymentHealthChecker) InjectShootClient(shootClient client.Client) {
+	h.client = shootClient
 }
 
 // SetLoggerSuffix injects the logger
-func (healthChecker *DeploymentHealthChecker) SetLoggerSuffix(provider, extension string) {
-	healthChecker.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-deployment", provider, extension))
-}
-
-// DeepCopy clones the healthCheck struct by making a copy and returning the pointer to that new copy
-// Actually, it does not perform a *deep* copy.
-func (healthChecker *DeploymentHealthChecker) DeepCopy() healthcheck.HealthCheck {
-	shallowCopy := *healthChecker
-	return &shallowCopy
+func (h *deploymentHealthChecker) SetLoggerSuffix(provider, extension string) {
+	h.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-deployment", provider, extension))
 }
 
 // Check executes the health check
-func (healthChecker *DeploymentHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
+func (h *deploymentHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
 	deployment := &appsv1.Deployment{}
 
-	var err error
-	if healthChecker.checkType == deploymentCheckTypeSeed {
-		err = healthChecker.seedClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, deployment)
-	} else {
-		err = healthChecker.shootClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, deployment)
-	}
-	if err != nil {
+	if err := h.client.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: h.name}, deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return &healthcheck.SingleCheckResult{
 				Status: gardencorev1beta1.ConditionFalse,
-				Detail: fmt.Sprintf("deployment %q in namespace %q not found", healthChecker.name, request.Namespace),
+				Detail: fmt.Sprintf("deployment %q in namespace %q not found", h.name, request.Namespace),
 			}, nil
 		}
 
-		err := fmt.Errorf("failed to retrieve deployment %q in namespace %q: %w", healthChecker.name, request.Namespace, err)
-		healthChecker.logger.Error(err, "Health check failed")
+		err := fmt.Errorf("failed to retrieve deployment %q in namespace %q: %w", h.name, request.Namespace, err)
+		h.logger.Error(err, "Health check failed")
 		return nil, err
 	}
 
 	if isHealthy, err := deploymentIsHealthy(deployment); !isHealthy {
-		healthChecker.logger.Error(err, "Health check failed")
+		h.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),

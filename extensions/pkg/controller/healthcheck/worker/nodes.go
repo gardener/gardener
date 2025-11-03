@@ -42,6 +42,12 @@ type DefaultHealthChecker struct {
 	scaleDownProgressingThreshold *time.Duration
 }
 
+var (
+	_ healthcheck.HealthCheck = (*DefaultHealthChecker)(nil)
+	_ healthcheck.SeedClient  = (*DefaultHealthChecker)(nil)
+	_ healthcheck.ShootClient = (*DefaultHealthChecker)(nil)
+)
+
 // NewNodesChecker is a health check function which performs certain checks about the nodes registered in the cluster.
 // It implements the healthcheck.HealthCheck interface.
 func NewNodesChecker() *DefaultHealthChecker {
@@ -79,13 +85,6 @@ func (h *DefaultHealthChecker) InjectShootClient(shootClient client.Client) {
 // SetLoggerSuffix injects the logger.
 func (h *DefaultHealthChecker) SetLoggerSuffix(provider, extension string) {
 	h.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-nodes", provider, extension))
-}
-
-// DeepCopy clones the healthCheck struct by making a copy and returning the pointer to that new copy.
-// Actually, it does not perform a *deep* copy.
-func (h *DefaultHealthChecker) DeepCopy() healthcheck.HealthCheck {
-	shallowCopy := *h
-	return &shallowCopy
 }
 
 // Check executes the health check.

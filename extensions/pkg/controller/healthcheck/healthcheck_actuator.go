@@ -83,8 +83,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 	)
 
 	for _, hc := range a.healthChecks {
-		// clone to avoid problems during parallel execution
-		check := hc.HealthCheck.DeepCopy()
+		check := hc.HealthCheck
 		SeedClientInto(a.seedClient, check)
 		if _, ok := check.(ShootClient); ok {
 			if shootClient == nil {
