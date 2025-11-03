@@ -90,6 +90,25 @@ var _ = Describe("mutator", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "profile",
 				},
+				Spec: gardencorev1beta1.CloudProfileSpec{
+					MachineImages: []gardencorev1beta1.MachineImage{
+						{
+							Name: "some-machine-image",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version: "0.0.1",
+									},
+									CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+										{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
+										{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
+									},
+									Architectures: []string{"amd64", "arm64"},
+								},
+							},
+						},
+					},
+				},
 			}
 			seed = gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -110,6 +129,14 @@ var _ = Describe("mutator", func() {
 						Workers: []core.Worker{
 							{
 								Name: "worker-name",
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "some-machine-image",
+										Version: "0.0.1",
+									},
+									Architecture: ptr.To("amd64"),
+								},
 							},
 						},
 					},
