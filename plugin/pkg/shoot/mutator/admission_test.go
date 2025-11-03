@@ -6,6 +6,7 @@ package mutator_test
 
 import (
 	"context"
+	"net"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -422,7 +423,7 @@ var _ = Describe("mutator", func() {
 				Expect(shoot.Spec.Networking.Services).To(BeNil())
 			})
 
-			It("should not default shoot pod network if shoot is workerless", func() {
+			It("should skip pod network defaulting but default service network for workerless shoots", func() {
 				shoot.Spec.Provider.Workers = nil
 
 				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -432,6 +433,43 @@ var _ = Describe("mutator", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(shoot.Spec.Networking.Pods).To(BeNil())
+				Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
+			})
+
+			It("should generate ULA services CIDR for workerless IPv6 shoots without seed defaults", func() {
+				shoot.Spec.Provider.Workers = nil
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(BeNil())
+
+				Expect(shoot.Spec.Networking.Services).NotTo(BeNil())
+				servicesCIDR := *shoot.Spec.Networking.Services
+				_, ipNet, parseErr := net.ParseCIDR(servicesCIDR)
+				Expect(parseErr).NotTo(HaveOccurred(), "Generated services CIDR should be valid")
+				Expect(ipNet.IP.To16()).NotTo(BeNil(), "Generated services CIDR should be IPv6")
+				Expect(ipNet.IP[0]).To(Equal(byte(0xfd)), "Generated services CIDR should be in ULA range (fd00::/8)")
+				Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
+			})
+
+			It("should use seed defaults for workerless IPv6 shoots when available", func() {
+				servicesCIDR := "2001:db8:10::/112"
+				seed.Spec.Networks.ShootDefaults.Services = ptr.To(servicesCIDR)
+				shoot.Spec.Provider.Workers = nil
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Networking.Pods).To(BeNil())
+
+				Expect(shoot.Spec.Networking.Services).NotTo(BeNil())
 				Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
 			})
 

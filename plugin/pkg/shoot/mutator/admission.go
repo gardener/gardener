@@ -6,6 +6,7 @@ package mutator
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -229,22 +230,65 @@ func addDeploymentTasks(shoot *core.Shoot, tasks ...string) {
 }
 
 func (c *mutationContext) defaultShootNetworks(workerless bool) {
-	if c.seed != nil {
-		if c.shoot.Spec.Networking.Pods == nil && !workerless &&
-			c.seed.Spec.Networks.ShootDefaults != nil && c.seed.Spec.Networks.ShootDefaults.Pods != nil &&
-			cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Pods, c.shoot.Spec.Networking.IPFamilies) {
-			c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
-		}
+	if c.seed == nil {
+		return
+	}
 
-		if c.shoot.Spec.Networking.Services == nil &&
-			c.seed.Spec.Networks.ShootDefaults != nil && c.seed.Spec.Networks.ShootDefaults.Services != nil &&
-			cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Services, c.shoot.Spec.Networking.IPFamilies) {
-			c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
-		}
+	c.defaultPodsNetwork(workerless)
+	c.defaultServicesNetwork(workerless)
+}
+
+func (c *mutationContext) defaultPodsNetwork(workerless bool) {
+	if c.shoot.Spec.Networking.Pods != nil || workerless {
+		return
+	}
+
+	defaults := c.seed.Spec.Networks.ShootDefaults
+	if defaults == nil || defaults.Pods == nil {
+		return
+	}
+
+	if cidrMatchesIPFamily(*defaults.Pods, c.shoot.Spec.Networking.IPFamilies) {
+		c.shoot.Spec.Networking.Pods = defaults.Pods
+	}
+}
+
+func (c *mutationContext) defaultServicesNetwork(workerless bool) {
+	if c.shoot.Spec.Networking.Services != nil {
+		return
+	}
+
+	defaults := c.seed.Spec.Networks.ShootDefaults
+	if defaults != nil && defaults.Services != nil &&
+		cidrMatchesIPFamily(*defaults.Services, c.shoot.Spec.Networking.IPFamilies) {
+		c.shoot.Spec.Networking.Services = defaults.Services
+		return
+	}
+
+	if workerless && slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv6) {
+		ulaCIDR := generateULAServicesCIDR()
+		c.shoot.Spec.Networking.Services = &ulaCIDR
 	}
 }
 
 func cidrMatchesIPFamily(cidr string, ipfamilies []core.IPFamily) bool {
 	ip, _, _ := net.ParseCIDR(cidr)
 	return ip != nil && (ip.To4() != nil && slices.Contains(ipfamilies, core.IPFamilyIPv4) || ip.To4() == nil && slices.Contains(ipfamilies, core.IPFamilyIPv6))
+}
+
+// generateULAServicesCIDR generates a /112 ULA (Unique Local Address) CIDR for IPv6 services.
+func generateULAServicesCIDR() string {
+	// Generate a random 40-bit Global ID (5 bytes) for the ULA
+	// ULA format: fd + 40-bit Global ID + 16-bit Subnet-ID + 64-bit Interface ID
+	// For services, we use a /112 which leaves 16 bits for service IPs
+
+	var globalID [5]byte
+	if _, err := rand.Read(globalID[:]); err != nil {
+		// Fallback to a deterministic value if random generation fails
+		return "fd00:10:2::/112"
+	}
+
+	// Format as fd + 5 bytes of Global ID + 2 bytes of Subnet ID (using 0000 for services)
+	return fmt.Sprintf("fd%02x:%02x%02x:%02x%02x::/112",
+		globalID[0], globalID[1], globalID[2], globalID[3], globalID[4])
 }
