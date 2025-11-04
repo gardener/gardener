@@ -288,7 +288,12 @@ To obtain credentials and interact with the virtual Garden cluster, please follo
 Reference documentation and examples:
 
 - [Garden configuration example](../../example/operator/20-garden.yaml)
-- [Backup secret examples](https://github.com/gardener/etcd-backup-restore/tree/master/example/storage-provider-secrets)
+- Backup secret examples
+  - [Alicloud](https://github.com/gardener/gardener-extension-provider-alicloud/blob/master/example/30-etcd-backup-secret.yaml)
+  - [AWS](https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/30-etcd-backup-secret.yaml)
+  - [Azure](https://github.com/gardener/gardener-extension-provider-azure/blob/master/example/30-etcd-backup-secret.yaml)
+  - [GCP](https://github.com/gardener/gardener-extension-provider-gcp/blob/master/example/30-etcd-backup-secret.yaml)
+  - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/example/30-etcd-backup-secret.yaml)
 - [Configuration options](../concepts/operator.md#garden-resources)
 - [Accessing the virtual Garden](../concepts/operator.md#virtual-garden-kubeconfig)
 
