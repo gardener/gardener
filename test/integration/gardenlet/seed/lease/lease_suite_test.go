@@ -172,16 +172,9 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 	healthManager = healthz.NewDefaultHealthz()
 
-	Expect((&lease.Reconciler{
-		SeedRESTClient: kubernetesClient.RESTClient(),
-		Config: gardenletconfigv1alpha1.SeedControllerConfiguration{
-			LeaseResyncSeconds: ptr.To[int32](1),
-		},
-		Clock:          fakeClock,
-		HealthManager:  healthManager,
-		LeaseNamespace: testNamespace.Name,
-		SeedName:       seed.Name,
-	}).AddToManager(mgr, mgr)).To(Succeed())
+	Expect(lease.AddToManager(mgr, mgr, kubernetesClient.RESTClient(), gardenletconfigv1alpha1.SeedControllerConfiguration{
+		LeaseResyncSeconds: ptr.To[int32](1),
+	}, healthManager, seed.Name)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
