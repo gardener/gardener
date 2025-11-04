@@ -27,17 +27,25 @@ import (
 )
 
 type actuator struct {
-	client client.Client
+	// seedClient uses provider-local's in-cluster config, e.g., for the seed cluster it runs in. It's used to interact
+	// with extension objects. By default, it's also used as the provider client to interact with infrastructure
+	// resources, unless a kubeconfig is specified in the cloudprovider secret.
+	seedClient client.Client
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled Infrastructure resources.
 func NewActuator(mgr manager.Manager) infrastructure.Actuator {
 	return &actuator{
-		client: mgr.GetClient(),
+		seedClient: mgr.GetClient(),
 	}
 }
 
-func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+	providerClient, err := local.GetProviderClient(ctx, log, a.seedClient, infrastructure.Spec.SecretRef)
+	if err != nil {
+		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
+	}
+
 	networkPolicyAllowMachinePods := emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace)
 	networkPolicyAllowMachinePods.Spec = networkingv1.NetworkPolicySpec{
 		Ingress: []networkingv1.NetworkPolicyIngressRule{{
@@ -101,7 +109,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 	}
 
 	for _, obj := range objects {
-		if err := a.client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+		if err := providerClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return err
 		}
 	}
@@ -122,11 +130,17 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 	if services := cluster.Shoot.Spec.Networking.Services; services != nil {
 		infrastructure.Status.Networking.Services = []string{*services}
 	}
-	return a.client.Status().Patch(ctx, infrastructure, patch)
+
+	return a.seedClient.Status().Patch(ctx, infrastructure, patch)
 }
 
-func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
-	return kubernetesutils.DeleteObjects(ctx, a.client,
+func (a *actuator) Delete(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
+	providerClient, err := local.GetProviderClient(ctx, log, a.seedClient, infrastructure.Spec.SecretRef)
+	if err != nil {
+		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, providerClient,
 		emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace),
 		emptyNetworkPolicy("allow-to-istio-ingress-gateway", infrastructure.Namespace),
 		emptyNetworkPolicy("allow-to-provider-local-coredns", infrastructure.Namespace),
