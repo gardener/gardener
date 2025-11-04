@@ -48,5 +48,5 @@ For more information about `node-local-dns`, please refer to the [KEP](https://g
 
 ## Known Issues
 
-Custom DNS configuration may not work as expected in conjunction with `NodeLocalDNS` prior to gardener v1.131.
+Custom DNS configuration may not work as expected in conjunction with `NodeLocalDNS` prior to gardener v1.128.
 Please refer to [Custom DNS Configuration](custom-dns-config.md#node-local-dns).
