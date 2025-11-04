@@ -774,7 +774,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "System Load Average",
+      "title": "System Load Average ($Node)",
       "tooltip": {
         "shared": true,
         "sort": 0,
