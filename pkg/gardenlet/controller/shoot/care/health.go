@@ -457,10 +457,8 @@ func CheckIfDependencyWatchdogProberScaledDownControllers(ctx context.Context, s
 			return nil, fmt.Errorf("failed reading Deployment %s for scale-down check: %w", deployment.Name, err)
 		}
 
-		if ptr.Deref(deployment.Spec.Replicas, 0) == 0 {
-			if _, ok := deployment.Annotations["dependency-watchdog.gardener.cloud/meltdown-protection-active"]; ok {
-				scaledDownDeploymentNames = append(scaledDownDeploymentNames, deployment.Name)
-			}
+		if _, ok := deployment.Annotations["dependency-watchdog.gardener.cloud/meltdown-protection-active"]; ok {
+			scaledDownDeploymentNames = append(scaledDownDeploymentNames, deployment.Name)
 		}
 	}
 
