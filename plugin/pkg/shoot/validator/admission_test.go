@@ -3944,54 +3944,28 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("machine image 'constraint-image-name@1.2.3' does not support kubelet version '1.25.0', supported kubelet versions by this machine image version: '>= 1.26'"))
 				})
 
-				Context("default machine image version", func() {
-					var (
-						suffixedVersion = "2.1.1-suffixed"
-					)
+				It("should throw an error because of an invalid patch version", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name:    imageName1,
+						Version: "1.2.baz",
+					}
 
-					BeforeEach(func() {
-						cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions,
-							gardencorev1beta1.MachineImageVersion{
-								ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: suffixedVersion},
-								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
-									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
-									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
-						)
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
 
-						if !isCapabilityCloudProfile {
-							cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions,
-								gardencorev1beta1.MachineImageVersion{
-									ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: suffixedVersion},
-									Architectures:    []string{"amd64", "arm64"},
-								},
-							)
-						}
-					})
+					Expect(err).To(MatchError(ContainSubstring("Unsupported value: \"1.2.baz\": supported values:")))
+				})
 
-					It("should throw an error because of an invalid patch version", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
-							Version: "1.2.baz",
-						}
+				It("should reject to create a worker group with an expired machine image version", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name:    imageName1,
+						Version: "1.1.1",
+					}
 
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
 
-						Expect(err).To(MatchError(ContainSubstring("Unsupported value: \"1.2.baz\": supported values:")))
-					})
-
-					It("should reject to create a worker group with an expired machine image version", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
-							Version: "1.1.1",
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machine-image:%s' is expired", expiredVersion)))
-					})
+					Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machine-image:%s' is expired", expiredVersion)))
 				})
 
 				It("should allow supported CRI and CRs", func() {
