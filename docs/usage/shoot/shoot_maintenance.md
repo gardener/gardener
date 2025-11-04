@@ -116,29 +116,13 @@ This will execute the specified `<operation>` during the next maintenance reconc
 Note that Gardener will remove this annotation after it has been performed in the maintenance reconciliation.
 
 
-Specific `Shoot` operations can also be run in parallel with 
+Specific `Shoot` operations can run in parallel with 
 
 ```
 maintenance.gardener.cloud/operation=<operation1>;<operation2>;..;<operationN>
 ```
 
-List of allowed operations, that can be run in parallel:
-- `reconcile`
-- `rotate-ca-start`
-- `rotate-ca-start-without-workers-rollout`
-- `rotate-ca-complete`
-- `rotate-observability-credentials`
-- `rotate-ssh-keypair`
-- `rotate-rollout-workers`
-- `rotate-credentials-start`
-- `rotate-credentials-start-without-workers-rollout`
-- `rotate-credentials-complete`
-- `rotate-etcd-encryption-key`
-- `rotate-etcd-encryption-key-start`
-- `rotate-etcd-encryption-key-complete`
-- `rotate-serviceaccount-key-start`
-- `rotate-serviceaccount-key-start-without-workers-rollout`
-- `rotate-serviceaccount-key-complete`
+A list of operations that can run in parallel can be found in the [Shoot Operations documentation](../shoot-operations/shoot_operations.md#running-operations-in-parallel).
 
 > ⚠️ This is skipped when the `Shoot`'s `.status.lastOperation.state=Failed`. Make sure to [retry](../shoot-operations/shoot_operations.md#retry-failed-reconciliation) your shoot reconciliation beforehand.
 

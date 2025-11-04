@@ -13,8 +13,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // GetCARotationPhase returns the specified garden CA rotation phase or an empty string
@@ -256,5 +256,5 @@ func GetEncryptedResourcesInStatus(gardenStatus operatorv1alpha1.GardenStatus) [
 
 // GetGardenerOperations returns the Garden's gardener operations specified in the operation annotation.
 func GetGardenerOperations(annotations map[string]string) []string {
-	return v1beta1helper.SplitAndTrimString(annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)
+	return utils.SplitAndTrimString(annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)
 }

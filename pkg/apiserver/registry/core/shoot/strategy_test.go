@@ -18,9 +18,9 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/pkg/apiserver/registry/core/shoot"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -538,7 +538,7 @@ var _ = Describe("Strategy", func() {
 
 					if mutatedAnnotation != nil {
 						Expect(newShoot.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
-						Expect(v1beta1helper.SplitAndTrimString(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)).To(ConsistOf(mutatedAnnotation))
+						Expect(utils.SplitAndTrimString(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)).To(ConsistOf(mutatedAnnotation))
 					} else {
 						Expect(newShoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 					}

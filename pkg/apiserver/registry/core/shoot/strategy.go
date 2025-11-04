@@ -32,6 +32,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -77,8 +78,8 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	if op, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok {
 		newShoot.Annotations[v1beta1constants.GardenerOperation] = cleanUpOperation(op)
 	}
-	if mOp, ok := newShoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]; ok {
-		newShoot.Annotations[v1beta1constants.GardenerMaintenanceOperation] = cleanUpOperation(mOp)
+	if op, ok := newShoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]; ok {
+		newShoot.Annotations[v1beta1constants.GardenerMaintenanceOperation] = cleanUpOperation(op)
 	}
 
 	if mustIncreaseGeneration(oldShoot, newShoot) {
@@ -117,7 +118,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			mustIncrease                  bool
 			mustRemoveOperationAnnotation bool
 			operations                    = v1beta1helper.GetShootGardenerOperations(newShoot.Annotations)
-			patchOperations               = slices.Clone(operations)
+			updatedOperations             = slices.Clone(operations)
 		)
 
 		switch lastOperation.State {
@@ -131,7 +132,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				switch operation {
 				case v1beta1constants.GardenerOperationReconcile:
 					mustIncrease = true
-					patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+					updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
 
 				case v1beta1constants.OperationRotateCAStart,
 					v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
@@ -149,7 +150,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				case v1beta1constants.OperationRotateCredentialsStart:
 					// We remove operations that are covered by rotate-credentials-start
 					mustIncrease = true
-					patchOperations = v1beta1helper.RemoveOperation(patchOperations, v1beta1constants.OperationRotateCAStart,
+					updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, v1beta1constants.OperationRotateCAStart,
 						v1beta1constants.OperationRotateServiceAccountKeyStart,
 						v1beta1constants.OperationRotateETCDEncryptionKey,
 						v1beta1constants.OperationRotateETCDEncryptionKeyStart,
@@ -159,7 +160,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				case v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
 					// We remove operations that are covered by rotate-credentials-start-without-workers-rollout
 					mustIncrease = true
-					patchOperations = v1beta1helper.RemoveOperation(patchOperations, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
+					updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
 						v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
 						v1beta1constants.OperationRotateETCDEncryptionKey,
 						v1beta1constants.OperationRotateETCDEncryptionKeyStart,
@@ -169,7 +170,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				case v1beta1constants.OperationRotateCredentialsComplete:
 					// We remove operations that are covered by rotate-credentials-complete
 					mustIncrease = true
-					patchOperations = v1beta1helper.RemoveOperation(patchOperations, v1beta1constants.OperationRotateCAComplete,
+					updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, v1beta1constants.OperationRotateCAComplete,
 						v1beta1constants.OperationRotateServiceAccountKeyComplete,
 						v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
 					)
@@ -177,7 +178,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				case v1beta1constants.ShootOperationRotateSSHKeypair:
 					if !gardencorehelper.ShootEnablesSSHAccess(newShoot) {
 						// If SSH is not enabled for the Shoot, don't increase generation, just remove the annotation
-						patchOperations = v1beta1helper.RemoveOperation(patchOperations, operation)
+						updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
 					} else {
 						mustIncrease = true
 					}
@@ -197,10 +198,10 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			}
 		}
 
-		if mustRemoveOperationAnnotation || len(patchOperations) == 0 {
+		if mustRemoveOperationAnnotation || len(updatedOperations) == 0 {
 			delete(newShoot.Annotations, v1beta1constants.GardenerOperation)
-		} else if len(operations) != len(patchOperations) {
-			newShoot.Annotations[v1beta1constants.GardenerOperation] = strings.Join(patchOperations, v1beta1constants.GardenerOperationsSeparator)
+		} else if len(operations) != len(updatedOperations) {
+			newShoot.Annotations[v1beta1constants.GardenerOperation] = strings.Join(updatedOperations, v1beta1constants.GardenerOperationsSeparator)
 		}
 		if mustIncrease {
 			return true
@@ -429,6 +430,6 @@ func SyncEncryptedResourcesStatus(shoot *core.Shoot) {
 }
 
 func cleanUpOperation(operation string) string {
-	operations := v1beta1helper.SplitAndTrimString(operation, v1beta1constants.GardenerOperationsSeparator)
+	operations := utils.SplitAndTrimString(operation, v1beta1constants.GardenerOperationsSeparator)
 	return strings.Join(sets.New(operations...).UnsortedList(), v1beta1constants.GardenerOperationsSeparator)
 }

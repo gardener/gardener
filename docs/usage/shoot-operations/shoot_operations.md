@@ -66,7 +66,7 @@ It will also be removed even if the restart of one or more services failed.
 
 > ℹ️ In the example mentioned above, you could additionally verify when/whether the kubelet restarted by using `kubectl describe node <node-name>` and looking for such a `Starting kubelet` event.
 
-## Running operations in parallel
+## Running Operations In Parallel
 
 Specific `Shoot` operations can also be run in parallel by using `;` as separator.
 
@@ -74,7 +74,7 @@ Specific `Shoot` operations can also be run in parallel by using `;` as separato
 kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation="rotate-ssh-keypair;rotate-ca-start"
 ```
 
-List of allowed operations, that can be run in parallel:
+List of operations that can run in parallel:
 - `reconcile`
 - `rotate-ca-start`
 - `rotate-ca-start-without-workers-rollout`

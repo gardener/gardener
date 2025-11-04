@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +18,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -761,12 +761,12 @@ func GetShootEncryptedResourcesInStatus(shootStatus gardencorev1beta1.ShootStatu
 
 // GetShootGardenerOperations returns the Shoot's gardener operations specified in the operation annotation.
 func GetShootGardenerOperations(annotations map[string]string) []string {
-	return SplitAndTrimString(annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)
+	return utils.SplitAndTrimString(annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)
 }
 
 // GetShootMaintenanceOperations returns the Shoot's maintenance operations specified in the operation annotation.
 func GetShootMaintenanceOperations(annotations map[string]string) []string {
-	return SplitAndTrimString(annotations[v1beta1constants.GardenerMaintenanceOperation], v1beta1constants.GardenerOperationsSeparator)
+	return utils.SplitAndTrimString(annotations[v1beta1constants.GardenerMaintenanceOperation], v1beta1constants.GardenerOperationsSeparator)
 }
 
 // RemoveOperation returns a new slice with the given operations removed from the original operations slice.
@@ -774,18 +774,4 @@ func RemoveOperation(operations []string, operationsToRemove ...string) []string
 	return slices.DeleteFunc(slices.Clone(operations), func(operation string) bool {
 		return slices.Contains(operationsToRemove, operation)
 	})
-}
-
-// SplitAndTrimString returns a new slice from a string separated by the given separator with all empty entries removed.
-func SplitAndTrimString(s, sep string) []string {
-	if len(s) == 0 {
-		return nil
-	}
-
-	result := strings.Split(s, sep)
-	for i := range result {
-		result[i] = strings.TrimSpace(result[i])
-	}
-
-	return result
 }

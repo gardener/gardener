@@ -341,4 +341,14 @@ baz`, spaces)).To(Equal(`foo
 			}))
 		})
 	})
+
+	DescribeTable("#SplitAndTrimString",
+		func(str, sep string, expectedResult []string) {
+			Expect(SplitAndTrimString(str, sep)).To(Equal(expectedResult))
+		},
+		Entry("string is empty", "", ";", nil),
+		Entry("string should be separated", "foo,bar", ",", []string{"foo", "bar"}),
+		Entry("string should not be separated", "foo,bar", ";", []string{"foo,bar"}),
+		Entry("string should be trimmed", " foo   ,bar  ", ",", []string{"foo", "bar"}),
+	)
 })

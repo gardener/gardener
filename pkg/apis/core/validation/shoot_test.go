@@ -27,9 +27,9 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -6358,7 +6358,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					if sets.New(v1beta1constants.OperationRotateCredentialsComplete,
 						v1beta1constants.OperationRotateCAComplete,
 						v1beta1constants.OperationRotateServiceAccountKeyComplete,
-						v1beta1constants.OperationRotateETCDEncryptionKeyComplete).HasAny(v1beta1helper.SplitAndTrimString(maintenanceOpAnnotation, v1beta1constants.GardenerOperationsSeparator)...) {
+						v1beta1constants.OperationRotateETCDEncryptionKeyComplete).HasAny(utils.SplitAndTrimString(maintenanceOpAnnotation, v1beta1constants.GardenerOperationsSeparator)...) {
 						shoot.Status.Credentials = &core.ShootCredentials{
 							Rotation: &core.ShootCredentialsRotation{
 								CertificateAuthorities: &core.CARotation{
