@@ -55,9 +55,6 @@ const (
 	containerName = "coredns"
 	serviceName   = "kube-dns" // this is due to legacy reasons
 
-	// CustomConfigMapName is the name of the custom CoreDNS ConfigMap.
-	CustomConfigMapName = "coredns-custom"
-
 	portNameMetrics = "metrics"
 	portMetrics     = 9153
 
@@ -322,7 +319,7 @@ import custom/*.server
 
 		configMapCustom = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        CustomConfigMapName,
+				Name:        "coredns-custom",
 				Namespace:   metav1.NamespaceSystem,
 				Annotations: map[string]string{resourcesv1alpha1.Ignore: "true"},
 			},
