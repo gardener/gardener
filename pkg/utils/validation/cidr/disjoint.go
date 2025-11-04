@@ -60,33 +60,51 @@ func validateOverlapWithSeed(fldPath *field.Path, shootNetwork []string, network
 				allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with seed node network", networkType)))
 			}
 		}
-
-		if NetworksIntersect(v1beta1constants.DefaultVPNRangeV6, network) {
-			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with default vpn network (%s)", networkType, v1beta1constants.DefaultVPNRangeV6)))
-		}
-
-		if NetworksIntersect(v1beta1constants.ReservedKubeApiServerMappingRange, network) {
-			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved kube-apiserver mapping range (%s)", networkType, v1beta1constants.ReservedKubeApiServerMappingRange)))
-		}
-
-		if NetworksIntersect(v1beta1constants.ReservedSeedPodNetworkMappedRange, network) {
-			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved seed pod network mapping range (%s)", networkType, v1beta1constants.ReservedSeedPodNetworkMappedRange)))
-		}
-
-		if NetworksIntersect(v1beta1constants.ReservedShootNodeNetworkMappedRange, network) {
-			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved shoot node network mapping range (%s)", networkType, v1beta1constants.ReservedShootNodeNetworkMappedRange)))
-		}
-
-		if NetworksIntersect(v1beta1constants.ReservedShootServiceNetworkMappedRange, network) {
-			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved shoot service network mapping range (%s)", networkType, v1beta1constants.ReservedShootServiceNetworkMappedRange)))
-		}
-
-		if NetworksIntersect(v1beta1constants.ReservedShootPodNetworkMappedRange, network) {
-			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved shoot pod network mapping range (%s)", networkType, v1beta1constants.ReservedShootPodNetworkMappedRange)))
-		}
+		allErrs = append(allErrs, validateOverlapWithReservedRanges(fldPath, network, networkType)...)
 	}
 	if len(shootNetwork) == 0 && networkRequired {
 		allErrs = append(allErrs, field.Required(fldPath, networkType+"s is required"))
+	}
+
+	return allErrs
+}
+
+// ValidateCIDROverlapWithReservedRanges validates that the given CIDR does not overlap with reserved ranges.
+func ValidateCIDROverlapWithReservedRanges(cidr CIDR, networkType string) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if cidr == nil {
+		return allErrs
+	}
+	allErrs = append(allErrs, validateOverlapWithReservedRanges(cidr.GetFieldPath(), cidr.GetCIDR(), networkType)...)
+	return allErrs
+}
+
+func validateOverlapWithReservedRanges(fldPath *field.Path, network, networkType string) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if NetworksIntersect(v1beta1constants.DefaultVPNRangeV6, network) {
+		allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("%s network intersects with default vpn network (%s)", networkType, v1beta1constants.DefaultVPNRangeV6)))
+	}
+
+	if NetworksIntersect(v1beta1constants.ReservedKubeApiServerMappingRange, network) {
+		allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("%s network intersects with reserved kube-apiserver mapping range (%s)", networkType, v1beta1constants.ReservedKubeApiServerMappingRange)))
+	}
+
+	if NetworksIntersect(v1beta1constants.ReservedSeedPodNetworkMappedRange, network) {
+		allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("%s network intersects with reserved seed pod network mapping range (%s)", networkType, v1beta1constants.ReservedSeedPodNetworkMappedRange)))
+	}
+
+	if NetworksIntersect(v1beta1constants.ReservedShootNodeNetworkMappedRange, network) {
+		allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("%s network intersects with reserved shoot node network mapping range (%s)", networkType, v1beta1constants.ReservedShootNodeNetworkMappedRange)))
+	}
+
+	if NetworksIntersect(v1beta1constants.ReservedShootServiceNetworkMappedRange, network) {
+		allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("%s network intersects with reserved shoot service network mapping range (%s)", networkType, v1beta1constants.ReservedShootServiceNetworkMappedRange)))
+	}
+
+	if NetworksIntersect(v1beta1constants.ReservedShootPodNetworkMappedRange, network) {
+		allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("%s network intersects with reserved shoot pod network mapping range (%s)", networkType, v1beta1constants.ReservedShootPodNetworkMappedRange)))
 	}
 
 	return allErrs
