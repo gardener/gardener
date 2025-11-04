@@ -7,6 +7,7 @@ package validation
 import (
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -69,6 +70,16 @@ func validateSecretReferenceOptionalNamespace(ref corev1.SecretReference, fldPat
 
 	if len(ref.Name) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
+	} else {
+		for _, err := range validation.IsDNS1123Subdomain(ref.Name) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("name"), ref.Name, err))
+		}
+	}
+
+	if len(ref.Namespace) > 0 {
+		for _, err := range apivalidation.ValidateNamespaceName(ref.Namespace, false) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), ref.Namespace, err))
+		}
 	}
 
 	return allErrs

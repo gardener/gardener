@@ -76,8 +76,9 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			Entry("should forbid SecretBinding with '_' in the name (not a DNS-1123 subdomain)",
 				metav1.ObjectMeta{Name: "binding_test", Namespace: "garden"},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("metadata.name"),
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("metadata.name"),
+					"BadValue": Equal("binding_test"),
 				}))),
 			),
 		)
@@ -100,6 +101,32 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("secretRef.name"),
+				})),
+			))
+		})
+
+		It("should forbid a SecretBinding with invalid secretRef name and namespace", func() {
+			secretBinding.ObjectMeta = metav1.ObjectMeta{
+				Name:      "name",
+				Namespace: "namespace",
+			}
+			secretBinding.SecretRef = corev1.SecretReference{
+				Name:      "name-non-valid-@",
+				Namespace: "-namespace-non-valid123",
+			}
+			secretBinding.Provider = &core.SecretBindingProvider{}
+
+			errorList := ValidateSecretBinding(secretBinding)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("secretRef.name"),
+					"BadValue": Equal("name-non-valid-@"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("secretRef.namespace"),
+					"BadValue": Equal("-namespace-non-valid123"),
 				})),
 			))
 		})

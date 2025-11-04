@@ -160,6 +160,28 @@ var _ = Describe("Utils tests", func() {
 				})),
 			))
 		})
+
+		It("should deny a non-DNS1123 name", func() {
+			ref := corev1.ObjectReference{Name: "-name-"}
+			Expect(ValidateObjectReferenceNameAndNamespace(ref, fldPath, false)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(fldPath.Child("name").String()),
+					"BadValue": Equal("-name-"),
+				})),
+			))
+		})
+
+		It("should deny an invalid namespace", func() {
+			ref := corev1.ObjectReference{Name: "name", Namespace: "namespace-123-@"}
+			Expect(ValidateObjectReferenceNameAndNamespace(ref, fldPath, true)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(fldPath.Child("namespace").String()),
+					"BadValue": Equal("namespace-123-@"),
+				})),
+			))
+		})
 	})
 
 	DescribeTable("#ValidateCredentialsRef",
@@ -180,8 +202,9 @@ var _ = Describe("Utils tests", func() {
 			corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "Foo", Namespace: "bar"},
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("credentialsRef.name"),
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("credentialsRef.name"),
+					"BadValue": Equal("Foo"),
 				})),
 			),
 		),
@@ -189,8 +212,9 @@ var _ = Describe("Utils tests", func() {
 			corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar?"},
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("credentialsRef.namespace"),
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("credentialsRef.namespace"),
+					"BadValue": Equal("bar?"),
 				})),
 			),
 		),
@@ -253,9 +277,10 @@ var _ = Describe("Utils tests", func() {
 					Expect(validationResult).
 						To(ConsistOf(
 							PointTo(MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(field.ErrorTypeInvalid),
-								"Field":  Equal("spec.machineImages[0].name"),
-								"Detail": ContainSubstring("machine image name must be a qualified name"),
+								"Type":     Equal(field.ErrorTypeInvalid),
+								"Field":    Equal("spec.machineImages[0].name"),
+								"BadValue": Equal(name),
+								"Detail":   ContainSubstring("machine image name must be a qualified name"),
 							})),
 						))
 				} else {
@@ -304,9 +329,10 @@ var _ = Describe("Utils tests", func() {
 					Expect(validationResult).
 						To(ConsistOf(
 							PointTo(MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(field.ErrorTypeInvalid),
-								"Field":  Equal("spec.machineTypes[0].name"),
-								"Detail": ContainSubstring("machine type name must be a qualified name"),
+								"Type":     Equal(field.ErrorTypeInvalid),
+								"Field":    Equal("spec.machineTypes[0].name"),
+								"BadValue": Equal(name),
+								"Detail":   ContainSubstring("machine type name must be a qualified name"),
 							})),
 						))
 				} else {
@@ -330,9 +356,10 @@ var _ = Describe("Utils tests", func() {
 					Expect(validationResult).
 						To(ConsistOf(
 							PointTo(MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(field.ErrorTypeInvalid),
-								"Field":  Equal("spec.volumeTypes[0].name"),
-								"Detail": ContainSubstring("volume type name must be a qualified name"),
+								"Type":     Equal(field.ErrorTypeInvalid),
+								"Field":    Equal("spec.volumeTypes[0].name"),
+								"BadValue": Equal(name),
+								"Detail":   ContainSubstring("volume type name must be a qualified name"),
 							})),
 						))
 				} else {
