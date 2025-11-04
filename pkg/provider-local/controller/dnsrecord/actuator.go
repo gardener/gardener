@@ -21,7 +21,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/networking/coredns"
 )
 
 // Actuator implements the DNSRecord actuator for the local DNS provider.
@@ -86,7 +85,7 @@ func (a *Actuator) Restore(ctx context.Context, log logr.Logger, dnsRecord *exte
 }
 
 func (a *Actuator) patchCoreDNSConfigMap(ctx context.Context, mutate func(configMap *corev1.ConfigMap)) error {
-	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: coredns.CustomConfigMapName, Namespace: "gardener-extension-provider-local-coredns"}}
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns-custom", Namespace: "gardener-extension-provider-local-coredns"}}
 	_, err := controllerutil.CreateOrPatch(ctx, a.Client, configMap, func() error {
 		mutate(configMap)
 		return nil
