@@ -142,8 +142,6 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, infrastructure *
 
 	return kubernetesutils.DeleteObjects(ctx, providerClient,
 		emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace),
-		emptyNetworkPolicy("allow-to-istio-ingress-gateway", infrastructure.Namespace),
-		emptyNetworkPolicy("allow-to-provider-local-coredns", infrastructure.Namespace),
 		emptyService(infrastructure.Namespace),
 		&metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: IPPoolName(infrastructure.Namespace, string(gardencorev1beta1.IPFamilyIPv4))}},
 		&metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: IPPoolName(infrastructure.Namespace, string(gardencorev1beta1.IPFamilyIPv6))}},
