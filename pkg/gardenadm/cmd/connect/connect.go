@@ -95,13 +95,9 @@ func run(ctx context.Context, opts *Options) error {
 	if alreadyConnected, err := isGardenletDeployed(ctx, b); err != nil {
 		return fmt.Errorf("failed checking if gardenlet is already deployed: %w", err)
 	} else if !alreadyConnected || opts.Force {
-		bootstrapClientSet, err := kubernetes.NewWithConfig(kubernetes.WithRESTConfig(&rest.Config{
-			Host:            opts.ControlPlaneAddress,
-			TLSClientConfig: rest.TLSClientConfig{CAData: opts.CertificateAuthority},
-			BearerToken:     opts.BootstrapToken,
-		}), kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}), kubernetes.WithDisabledCachedClient())
+		bootstrapClientSet, err := cmd.NewClientSetFromBootstrapToken(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken, kubernetes.GardenScheme)
 		if err != nil {
-			return fmt.Errorf("failed creating garden client set: %w", err)
+			return fmt.Errorf("failed creating a new bootstrap garden client set: %w", err)
 		}
 		var (
 			g = flow.NewGraph("connect")

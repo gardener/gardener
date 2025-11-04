@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -62,7 +63,11 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed creating gardenadm botanist: %w", err)
 	}
 
-	version, err := b.DiscoverKubernetesVersion(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken)
+	bootstrapClientSet, err := cmd.NewClientSetFromBootstrapToken(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken, kubernetes.SeedScheme)
+	if err != nil {
+		return fmt.Errorf("failed creating a new bootstrap garden client set: %w", err)
+	}
+	version, err := b.DiscoverKubernetesVersion(bootstrapClientSet)
 	if err != nil {
 		return fmt.Errorf("failed discovering Kubernetes version of cluster: %w", err)
 	}
