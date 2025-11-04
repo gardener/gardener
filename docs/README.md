@@ -159,6 +159,7 @@
 * [GEP-31: In-Place Node Updates of Shoot Clusters](proposals/31-inplace-node-update.md)
 * [GEP-32: Cloud Profile Version Classification Lifecycles](proposals/32-version-classification-lifecycles.md)
 * [GEP-33: Machine Image Capabilities](proposals/33-machine-image-capabilities.md)
+* [GEP-34: Introducing OpenTelemetry Operator and Collectors in Shoot Control Planes](proposals/34-observability2.0-opentelemetry-operator-and-collectors.md)
 
 ## Development
 
