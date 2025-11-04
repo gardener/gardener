@@ -672,6 +672,7 @@ spec:
                     description: |-
                       VolumeSizeLimit defines size limit for volume used for auto-instrumentation.
                       The default size is 200Mi.
+                      Deprecated: use spec.<lang>.volume.size instead. This field will be inactive in a future release.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                 type: object
@@ -1133,6 +1134,7 @@ spec:
                     description: |-
                       VolumeSizeLimit defines size limit for volume used for auto-instrumentation.
                       The default size is 200Mi.
+                      Deprecated: use spec.<lang>.volume.size instead. This field will be inactive in a future release.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                 type: object
@@ -1789,6 +1791,7 @@ spec:
                     description: |-
                       VolumeSizeLimit defines size limit for volume used for auto-instrumentation.
                       The default size is 200Mi.
+                      Deprecated: use spec.<lang>.volume.size instead. This field will be inactive in a future release.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                 type: object
@@ -2264,6 +2267,7 @@ spec:
                     description: |-
                       VolumeSizeLimit defines size limit for volume used for auto-instrumentation.
                       The default size is 200Mi.
+                      Deprecated: use spec.<lang>.volume.size instead. This field will be inactive in a future release.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                 type: object
@@ -2879,6 +2883,7 @@ spec:
                     description: |-
                       VolumeSizeLimit defines size limit for volume used for auto-instrumentation.
                       The default size is 200Mi.
+                      Deprecated: use spec.<lang>.volume.size instead. This field will be inactive in a future release.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                 type: object
@@ -3328,6 +3333,7 @@ spec:
                     description: |-
                       VolumeSizeLimit defines size limit for volume used for auto-instrumentation.
                       The default size is 200Mi.
+                      Deprecated: use spec.<lang>.volume.size instead. This field will be inactive in a future release.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                 type: object
@@ -3795,6 +3801,7 @@ spec:
                     description: |-
                       VolumeSizeLimit defines size limit for volume used for auto-instrumentation.
                       The default size is 200Mi.
+                      Deprecated: use spec.<lang>.volume.size instead. This field will be inactive in a future release.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                 type: object
