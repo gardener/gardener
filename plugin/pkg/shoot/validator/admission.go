@@ -1148,9 +1148,10 @@ func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList
 		if ok, gvk := usesInternalVersion(worker.ProviderConfig); ok {
 			allErrs = append(allErrs, field.Invalid(workerPath.Child("providerConfig"), gvk, internalVersionErrorMsg))
 		}
-
-		if ok, gvk := usesInternalVersion(worker.Machine.Image.ProviderConfig); ok {
-			allErrs = append(allErrs, field.Invalid(workerPath.Child("machine", "image", "providerConfig"), gvk, internalVersionErrorMsg))
+		if worker.Machine.Image != nil {
+			if ok, gvk := usesInternalVersion(worker.Machine.Image.ProviderConfig); ok {
+				allErrs = append(allErrs, field.Invalid(workerPath.Child("machine", "image", "providerConfig"), gvk, internalVersionErrorMsg))
+			}
 		}
 
 		if worker.CRI != nil && worker.CRI.ContainerRuntimes != nil {
