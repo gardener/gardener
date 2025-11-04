@@ -16,6 +16,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("bootstraptoken", func() {
@@ -30,6 +31,7 @@ var _ = Describe("bootstraptoken", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
+		DeferCleanup(test.WithVar(&Now, func() metav1.Time { return metav1.NewTime(time.Date(2050, 5, 5, 5, 5, 5, 0, time.UTC)) }))
 	})
 
 	Describe("#ComputeBootstrapToken", func() {
@@ -44,7 +46,7 @@ var _ = Describe("bootstraptoken", func() {
 				HaveKeyWithValue("token-id", Equal([]byte(tokenID))),
 				HaveKeyWithValue("token-secret", HaveLen(16)),
 				HaveKeyWithValue("description", Equal([]byte(description))),
-				HaveKeyWithValue("expiration", Equal([]byte(metav1.Now().Add(validity).Format(time.RFC3339)))),
+				HaveKeyWithValue("expiration", Equal([]byte(Now().Add(validity).Format(time.RFC3339)))),
 				HaveKeyWithValue("usage-bootstrap-authentication", Equal([]byte("true"))),
 				HaveKeyWithValue("usage-bootstrap-signing", Equal([]byte("true"))),
 			))
@@ -75,7 +77,7 @@ var _ = Describe("bootstraptoken", func() {
 				HaveKeyWithValue("token-id", Equal([]byte(tokenID))),
 				HaveKeyWithValue("token-secret", Equal([]byte(tokenSecret))),
 				HaveKeyWithValue("description", Equal([]byte(description))),
-				HaveKeyWithValue("expiration", Equal([]byte(metav1.Now().Add(validity).Format(time.RFC3339)))),
+				HaveKeyWithValue("expiration", Equal([]byte(Now().Add(validity).Format(time.RFC3339)))),
 				HaveKeyWithValue("usage-bootstrap-authentication", Equal([]byte("true"))),
 				HaveKeyWithValue("usage-bootstrap-signing", Equal([]byte("true"))),
 			))
