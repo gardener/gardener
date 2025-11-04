@@ -418,7 +418,7 @@ func (h *Health) checkControlPlane(
 		if scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, h.seedClient.Client(), h.shoot.ControlPlaneNamespace); err != nil {
 			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDownCheckError", err.Error())), nil
 		} else if len(scaledDownDeploymentNames) > 0 {
-			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDown", fmt.Sprintf("The following deployments have been scaled down to 0 replicas (perhaps by dependency-watchdog-prober): %s", strings.Join(scaledDownDeploymentNames, ", ")))), nil
+			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDown", fmt.Sprintf("The following deployments have been scaled down to 0 replicas by dependency-watchdog-prober: %s", strings.Join(scaledDownDeploymentNames, ", ")))), nil
 		}
 	}
 
@@ -458,7 +458,9 @@ func CheckIfDependencyWatchdogProberScaledDownControllers(ctx context.Context, s
 		}
 
 		if ptr.Deref(deployment.Spec.Replicas, 0) == 0 {
-			scaledDownDeploymentNames = append(scaledDownDeploymentNames, deployment.Name)
+			if _, ok := deployment.Annotations["dependency-watchdog.gardener.cloud/meltdown-protection-active"]; ok {
+				scaledDownDeploymentNames = append(scaledDownDeploymentNames, deployment.Name)
+			}
 		}
 	}
 
