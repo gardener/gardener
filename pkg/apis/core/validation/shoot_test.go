@@ -4842,7 +4842,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
 
-			DescribeTable("size limist",
+			DescribeTable("size limits",
 				func(key, prefix string, size int, matcher gomegatypes.GomegaMatcher) {
 					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeCreate, State: core.LastOperationStateSucceeded}
 					value := fmt.Sprintf("%s%s", prefix, strings.Repeat("a", size))
