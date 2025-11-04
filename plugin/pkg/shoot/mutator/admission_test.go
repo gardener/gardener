@@ -697,7 +697,7 @@ var _ = Describe("mutator", func() {
 			})
 		})
 
-		DescribeTableSubtree("machine image checks", func(isCapabilityCloudProfile bool) {
+		DescribeTableSubtree("machine image", func(isCapabilityCloudProfile bool) {
 			var (
 				classificationPreview = gardencorev1beta1.ClassificationPreview
 
