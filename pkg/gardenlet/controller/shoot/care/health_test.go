@@ -869,9 +869,15 @@ var _ = Describe("health check", func() {
 			Expect(scaledDownDeploymentNames).To(BeEmpty())
 		})
 
-		It("should report names because some relevant deployment have replicas == 0", func() {
+		It("should report names because some relevant deployment have replicas == 0 and meltdown annotation is set", func() {
 			deploymentKCM.Spec.Replicas = nil
 			deploymentMCM.Spec.Replicas = ptr.To[int32](0)
+
+			// Set meltdown annotation only on deploymentMCM
+			if deploymentMCM.Annotations == nil {
+				deploymentMCM.Annotations = map[string]string{}
+			}
+			deploymentMCM.Annotations["dependency-watchdog.gardener.cloud/meltdown-protection-active"] = ""
 
 			Expect(fakeClient.Create(ctx, deploymentCA)).To(Succeed())
 			Expect(fakeClient.Create(ctx, deploymentKCM)).To(Succeed())
@@ -879,7 +885,7 @@ var _ = Describe("health check", func() {
 
 			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, controlPlaneNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(scaledDownDeploymentNames).To(HaveExactElements(deploymentKCM.Name, deploymentMCM.Name))
+			Expect(scaledDownDeploymentNames).To(HaveExactElements(deploymentMCM.Name))
 		})
 	})
 
