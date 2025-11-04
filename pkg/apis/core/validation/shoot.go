@@ -3097,7 +3097,7 @@ func validateOperationRolloutWorkers(operation string, shoot *core.Shoot, fldPat
 		}
 	}
 	if sets.New(poolNames...).Has("*") {
-		allErrs = append(allErrs, field.Required(fldPath, "if '*' is provided, no other pool names are allowed"))
+		allErrs = append(allErrs, field.Forbidden(fldPath, "if '*' is provided, no other pool names are allowed"))
 	}
 
 	// Validate list of pool names. When a '*' was provided, there won't be any duplicates
