@@ -177,10 +177,10 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = (*ValidateShoot)(nil)
+var _ admission.ValidationInterface = (*ValidateShoot)(nil)
 
-// Admit validates the Shoot details against the referenced CloudProfile.
-func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+// Validate validates the Shoot details against the referenced CloudProfile and Seed.
+func (v *ValidateShoot) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
 		v.AssignReadyFunc(func() bool {
