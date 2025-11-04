@@ -293,7 +293,8 @@ var _ = Describe("validator", func() {
 								Machine: core.Machine{
 									Type: "machine-type-1",
 									Image: &core.ShootMachineImage{
-										Name: validMachineImageName,
+										Name:    validMachineImageName,
+										Version: "0.0.1",
 									},
 									Architecture: ptr.To("amd64"),
 								},
@@ -2936,7 +2937,8 @@ var _ = Describe("validator", func() {
 					Machine: core.Machine{
 						Type: "machine-type-kc",
 						Image: &core.ShootMachineImage{
-							Name: validMachineImageName,
+							Name:    validMachineImageName,
+							Version: "0.0.1",
 						},
 						Architecture: ptr.To("amd64"),
 					},
@@ -4985,7 +4987,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 					},
@@ -5144,7 +5150,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5191,7 +5201,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5239,7 +5253,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5274,7 +5292,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5311,7 +5333,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5321,7 +5347,11 @@ var _ = Describe("validator", func() {
 					},
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-2",
+							Type: "machine-type-2",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5331,7 +5361,11 @@ var _ = Describe("validator", func() {
 					},
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-2",
+							Type: "machine-type-2",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
