@@ -706,6 +706,19 @@ var _ = Describe("VPNShoot", func() {
 							},
 						},
 						ImagePullPolicy: corev1.PullIfNotPresent,
+						ReadinessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path: "/readyz",
+									Port: intstr.FromInt32(8080),
+								},
+							},
+							SuccessThreshold:    2,
+							FailureThreshold:    1,
+							InitialDelaySeconds: 5,
+							PeriodSeconds:       5,
+							TimeoutSeconds:      2,
+						},
 					})
 				}
 
