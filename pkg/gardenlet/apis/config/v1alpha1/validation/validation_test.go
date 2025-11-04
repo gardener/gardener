@@ -642,13 +642,32 @@ var _ = Describe("GardenletConfiguration", func() {
 					Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 				})
 
+				It("should allow specifying a qualified class", func() {
+					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = ptr.To("stackit.cloud/yawol")
+
+					Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+				})
+
 				It("should deny specifying an empty class", func() {
 					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = ptr.To("")
 
-					Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+					Expect(ValidateGardenletConfiguration(cfg, nil)).To(ContainElement(
 						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("exposureClassHandlers[0].loadBalancerService.class"),
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("exposureClassHandlers[0].loadBalancerService.class"),
+							"Origin": Equal("format=qualified-name"),
+						})),
+					))
+				})
+
+				It("should deny specifying a class that Kubernetes does not accept", func() {
+					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = ptr.To(".invalid-")
+
+					Expect(ValidateGardenletConfiguration(cfg, nil)).To(ContainElement(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("exposureClassHandlers[0].loadBalancerService.class"),
+							"Origin": Equal("format=qualified-name"),
 						})),
 					))
 				})

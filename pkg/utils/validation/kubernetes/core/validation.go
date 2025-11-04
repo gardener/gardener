@@ -132,3 +132,13 @@ func ValidateResourceQuantityValue(resource string, value resource.Quantity, fld
 
 	return allErrs
 }
+
+// ValidateQualifiedName validates if value is what Kubernetes calls a "qualified name".
+// See https://github.com/kubernetes/kubernetes/blob/v1.34.0/pkg/apis/core/validation/validation.go#L144-L151
+func ValidateQualifiedName(value string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	for _, msg := range validation.IsQualifiedName(value) {
+		allErrs = append(allErrs, field.Invalid(fldPath, value, msg).WithOrigin("format=qualified-name"))
+	}
+	return allErrs
+}

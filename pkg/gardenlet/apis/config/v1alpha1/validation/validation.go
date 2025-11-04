@@ -22,6 +22,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	validationutils "github.com/gardener/gardener/pkg/utils/validation"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 // ValidateGardenletConfiguration validates a GardenletConfiguration object.
@@ -329,8 +330,8 @@ func validateExposureClassHandlers(handlers []gardenletconfigv1alpha1.ExposureCl
 			allErrs = append(allErrs, field.Invalid(handlerPath.Child("name"), handler.Name, errorMessage))
 		}
 
-		if class := handler.LoadBalancerService.Class; class != nil && len(*class) == 0 {
-			allErrs = append(allErrs, field.Invalid(handlerPath.Child("loadBalancerService", "class"), *class, "class must not be empty if provided"))
+		if class := handler.LoadBalancerService.Class; class != nil {
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateQualifiedName(*class, handlerPath.Child("loadBalancerService", "class"))...)
 		}
 
 		if handler.SNI != nil && handler.SNI.Ingress != nil && handler.SNI.Ingress.ServiceExternalIP != nil {

@@ -1340,13 +1340,32 @@ var _ = Describe("Seed Validation Tests", func() {
 						Expect(ValidateSeed(seed)).To(BeEmpty())
 					})
 
+					It("should allow specifying a qualified class", func() {
+						seed.Spec.Settings.LoadBalancerServices.Class = ptr.To("stackit.cloud/yawol")
+
+						Expect(ValidateSeed(seed)).To(BeEmpty())
+					})
+
 					It("should deny specifying an empty class", func() {
 						seed.Spec.Settings.LoadBalancerServices.Class = ptr.To("")
 
-						Expect(ValidateSeed(seed)).To(ConsistOf(
+						Expect(ValidateSeed(seed)).To(ContainElement(
 							PointTo(MatchFields(IgnoreExtras, Fields{
-								"Type":  Equal(field.ErrorTypeInvalid),
-								"Field": Equal("spec.settings.loadBalancerServices.class"),
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.settings.loadBalancerServices.class"),
+								"Origin": Equal("format=qualified-name"),
+							})),
+						))
+					})
+
+					It("should deny specifying a class that Kubernetes does not accept", func() {
+						seed.Spec.Settings.LoadBalancerServices.Class = ptr.To(".invalid-")
+
+						Expect(ValidateSeed(seed)).To(ContainElement(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.settings.loadBalancerServices.class"),
+								"Origin": Equal("format=qualified-name"),
 							})),
 						))
 					})
