@@ -23,14 +23,14 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "join",
-		Short: "Bootstrap worker nodes and join them to the cluster",
-		Long: `Bootstrap worker nodes and join them to the cluster.
+		Short: "Bootstrap control plane or worker nodes and join them to the cluster",
+		Long: `Bootstrap control plane or worker nodes and join them to the cluster.
 
 This command helps to initialize and configure a node to join an existing self-hosted shoot cluster.
-It ensures that the necessary configurations are applied and the node is properly registered as a worker or control plane node.
+It ensures that the necessary configurations are applied and the node is properly registered as a control plane or worker node.`,
+		Example: `# Bootstrap a control plane node and join it to the cluster
+gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --control-plane <control-plane-address>
 
-Note that further control plane nodes cannot be joined currently.`,
-		Example: `# Bootstrap a worker node and join it to the cluster
 gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --gardener-node-agent-secret-name <secret-name> <control-plane-address>`,
 
 		Args: cobra.ExactArgs(1),
@@ -65,13 +65,14 @@ func run(ctx context.Context, opts *Options) error {
 
 	bootstrapClientSet, err := cmd.NewClientSetFromBootstrapToken(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken, kubernetes.SeedScheme)
 	if err != nil {
-		return fmt.Errorf("failed creating a new bootstrap garden client set: %w", err)
+		return fmt.Errorf("failed creating a new bootstrap client set: %w", err)
 	}
 	version, err := b.DiscoverKubernetesVersion(bootstrapClientSet)
 	if err != nil {
 		return fmt.Errorf("failed discovering Kubernetes version of cluster: %w", err)
 	}
 	b.Shoot = &shootpkg.Shoot{KubernetesVersion: version}
+	b.Shoot.SetInfo(nil)
 
 	alreadyJoined, err := b.IsGardenerNodeAgentInitialized(ctx)
 	if err != nil {
@@ -82,11 +83,33 @@ func run(ctx context.Context, opts *Options) error {
 		var (
 			g = flow.NewGraph("join")
 
+			retrieveShortLivedKubeconfig = g.Add(flow.Task{
+				Name: "Retrieving short-lived kubeconfig cluster to prepare control plane scale-up",
+				Fn: func(ctx context.Context) error {
+					shootClientSet, err := cmd.InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
+					if err != nil {
+						return fmt.Errorf("failed retrieving short-lived kubeconfig: %w", err)
+					}
+
+					b.Logger.Info("Successfully retrieved short-lived bootstrap kubeconfig")
+					b.ShootClientSet = shootClientSet
+					return nil
+				},
+				SkipIf: !opts.ControlPlane,
+			})
+
+			// TODO(rfranzke): This is a dummy tasks to simulate activities with the short-lived garden kubeconfig.
+			//  Replace this with business logic.
+			syncPointReadyForGardenerNodeInit = flow.NewTaskIDs(
+				retrieveShortLivedKubeconfig,
+			)
+
 			generateGardenerNodeInitConfig = g.Add(flow.Task{
 				Name: "Preparing gardener-node-init configuration",
 				Fn: func(ctx context.Context) error {
 					return b.PrepareGardenerNodeInitConfiguration(ctx, opts.GardenerNodeAgentSecretName, opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken)
 				},
+				Dependencies: flow.NewTaskIDs(syncPointReadyForGardenerNodeInit),
 			})
 			_ = g.Add(flow.Task{
 				Name:         "Applying OperatingSystemConfig using gardener-node-agent's reconciliation logic",
@@ -102,9 +125,17 @@ func run(ctx context.Context, opts *Options) error {
 		}
 	}
 
-	fmt.Fprintf(opts.Out, `
+	if opts.ControlPlane {
+		fmt.Fprintf(opts.Out, `
+Your node has successfully been instructed to join the cluster as a control-plane instance!
+`)
+	} else {
+		fmt.Fprintf(opts.Out, `
 Your node has successfully been instructed to join the cluster as a worker!
+`)
+	}
 
+	fmt.Fprintf(opts.Out, `
 The bootstrap token will be deleted automatically by kube-controller-manager
 after it has expired. If you want to delete it right away, run the following
 command on any control plane node:

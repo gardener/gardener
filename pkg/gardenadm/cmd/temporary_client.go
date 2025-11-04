@@ -89,9 +89,14 @@ func getCachedBootstrapKubeconfig(b *botanist.GardenadmBotanist) ([]byte, bool, 
 }
 
 func requestShortLivedBootstrapKubeconfig(ctx context.Context, b *botanist.GardenadmBotanist, bootstrapClientSet kubernetes.Interface) ([]byte, error) {
+	commonNameSuffix := b.HostName
+	if b.Shoot != nil && b.Shoot.GetInfo() != nil {
+		commonNameSuffix = b.Shoot.GetInfo().Namespace + ":" + b.Shoot.GetInfo().Name
+	}
+
 	certificateSubject := &pkix.Name{
 		Organization: []string{v1beta1constants.ShootsGroup},
-		CommonName:   v1beta1constants.GardenadmUserNamePrefix + b.Shoot.GetInfo().Namespace + ":" + b.Shoot.GetInfo().Name,
+		CommonName:   v1beta1constants.GardenadmUserNamePrefix + commonNameSuffix,
 	}
 
 	certData, privateKeyData, _, err := certificatesigningrequest.RequestCertificate(ctx, b.Logger, bootstrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, &metav1.Duration{Duration: bootstrapKubeconfigValidity}, "gardenadm-csr-")

@@ -271,6 +271,31 @@ users:
 			})
 		})
 
+		Context("when shoot info is nil", func() {
+			BeforeEach(func() {
+				b.Shoot.SetInfo(nil)
+				b.HostName = "test-hostname"
+			})
+
+			It("should use hostname as common name suffix when shoot info is not set", func() {
+				fakeKubernetesClientset.PrependReactor("create", "certificatesigningrequests", func(testing.Action) (bool, runtime.Object, error) {
+					return true, csr, nil
+				})
+				fakeKubernetesClientset.PrependReactor("get", "certificatesigningrequests", func(testing.Action) (bool, runtime.Object, error) {
+					return true, csr, nil
+				})
+
+				client, err := InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(client).NotTo(BeNil())
+
+				// Verify kubeconfig was cached
+				exists, err := fakeFS.Exists(cachedPath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(exists).To(BeTrue())
+			})
+		})
+
 		Context("certificate subject verification", func() {
 			It("should use correct certificate subject when requesting CSR", func() {
 				var capturedSubject *pkix.Name
