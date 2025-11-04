@@ -6,14 +6,11 @@ package shoot
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -154,11 +151,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	}
 
 	canEnableNodeAgentAuthorizerWebhook, err := botanist.CanEnableNodeAgentAuthorizerWebhook(ctx)
-	if err != nil {
-		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
-	}
-
-	isOverlayDisablementInProgress, err := isOverlayDisablementInProgress(ctx, o.Shoot.GetInfo(), botanist.SeedClientSet.Client(), botanist.Shoot.ControlPlaneNamespace)
 	if err != nil {
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
@@ -617,7 +609,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Deploying shoot network plugin",
 			Fn:           flow.TaskFn(botanist.DeployNetwork).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilGardenerResourceManagerReady, waitUntilOperatingSystemConfigReady, deployKubeScheduler, waitUntilShootNamespacesReady).InsertIf(isOverlayDisablementInProgress, waitUntilControlPlaneReady),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilGardenerResourceManagerReady, waitUntilOperatingSystemConfigReady, deployKubeScheduler, waitUntilShootNamespacesReady),
 		})
 		waitUntilNetworkIsReady = g.Add(flow.Task{
 			Name: "Waiting until shoot network plugin has been reconciled",
@@ -1089,65 +1081,4 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 func shootHasPendingInPlaceUpdateWorkers(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil &&
 		(len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) > 0 || len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) > 0)
-}
-
-func isOverlayDisablementInProgress(ctx context.Context, shoot *gardencorev1beta1.Shoot, seedClient client.Client, shootControlPlaneNamespace string) (bool, error) {
-	shootOverlayEnabled, err := getOverlayEnabledFromShootSpec(shoot)
-	if err != nil {
-		return false, fmt.Errorf("failed to get overlay enabled status from shoot spec: %w", err)
-	}
-
-	networkObj := &extensionsv1alpha1.Network{}
-	if err = seedClient.Get(ctx, client.ObjectKey{Name: shoot.Name, Namespace: shootControlPlaneNamespace}, networkObj); err != nil {
-		// If network doesn't exist yet, no switch in progress
-		if apierrors.IsNotFound(err) {
-			return false, nil
-		}
-
-		return false, fmt.Errorf("failed to get network object: %w", err)
-	}
-
-	networkOverlayEnabled, err := getOverlayEnabledFromProviderConfig(networkObj.Spec.ProviderConfig)
-	if err != nil {
-		return false, fmt.Errorf("failed to get overlay enabled status from provider config: %w", err)
-	}
-
-	// If settings differ, overlay switch is in progress - need to wait for control plane
-	return !shootOverlayEnabled && networkOverlayEnabled, nil
-}
-
-func getOverlayEnabledFromShootSpec(shoot *gardencorev1beta1.Shoot) (bool, error) {
-	if shoot.Spec.Networking == nil || shoot.Spec.Networking.ProviderConfig == nil {
-		return true, nil
-	}
-
-	return getOverlayEnabledFromProviderConfig(shoot.Spec.Networking.ProviderConfig)
-}
-
-func getOverlayEnabledFromProviderConfig(providerConfig *runtime.RawExtension) (bool, error) {
-	if providerConfig == nil {
-		return true, nil
-	}
-
-	var config map[string]interface{}
-	if err := json.Unmarshal(providerConfig.Raw, &config); err != nil {
-		return false, fmt.Errorf("failed to unmarshal provider config: %w", err)
-	}
-
-	if overlay, exists := config["overlay"]; exists {
-		if overlayMap, ok := overlay.(map[string]interface{}); ok {
-			if enabled, exists := overlayMap["enabled"]; exists {
-				if enabledStr, ok := enabled.(string); ok {
-					enabledBool, err := strconv.ParseBool(enabledStr)
-					if err != nil {
-						return false, fmt.Errorf("failed to get overlay enabled status from provider config: %w", err)
-					}
-
-					return enabledBool, nil
-				}
-			}
-		}
-	}
-
-	return true, nil
 }
