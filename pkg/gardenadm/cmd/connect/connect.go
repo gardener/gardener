@@ -6,20 +6,15 @@ package connect
 
 import (
 	"context"
-	"crypto/x509/pkix"
 	"fmt"
-	"net"
-	"path/filepath"
 	"time"
 
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
@@ -36,15 +31,11 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/oci"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
-
-const bootstrapKubeconfigValidity = 10 * time.Minute
 
 // NewCommand creates a new cobra.Command.
 func NewCommand(globalOpts *cmd.Options) *cobra.Command {
@@ -99,13 +90,21 @@ func run(ctx context.Context, opts *Options) error {
 		if err != nil {
 			return fmt.Errorf("failed creating a new bootstrap garden client set: %w", err)
 		}
+
 		var (
 			g = flow.NewGraph("connect")
 
 			retrieveShortLivedKubeconfig = g.Add(flow.Task{
 				Name: "Retrieving short-lived kubeconfig for garden cluster to prepare Gardener resources",
 				Fn: func(ctx context.Context) error {
-					return initializeTemporaryGardenClient(ctx, b, bootstrapClientSet)
+					gardenClientSet, err := cmd.InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
+					if err != nil {
+						return fmt.Errorf("failed retrieving short-lived kubeconfig for garden cluster: %w", err)
+					}
+
+					b.Logger.Info("Successfully retrieved short-lived bootstrap kubeconfig for garden cluster")
+					b.GardenClient = gardenClientSet.Client()
+					return nil
 				},
 			})
 			prepareResources = g.Add(flow.Task{
@@ -190,78 +189,6 @@ func isGardenletDeployed(ctx context.Context, b *botanist.GardenadmBotanist) (bo
 	}
 
 	return true, nil
-}
-
-func cachedBootstrapKubeconfigPath(fs afero.Afero) string {
-	return filepath.Join(fs.GetTempDir(""), "gardenadm-connect-bootstrap-kubeconfig")
-}
-
-func initializeTemporaryGardenClient(ctx context.Context, b *botanist.GardenadmBotanist, bootstrapClientSet kubernetes.Interface) error {
-	bootstrapKubeconfig, cached, err := getCachedBootstrapKubeconfig(b)
-	if err != nil {
-		return fmt.Errorf("failed retrieving cached bootstrap kubeconfig: %w", err)
-	}
-
-	if !cached {
-		bootstrapKubeconfig, err = requestShortLivedBootstrapKubeconfig(ctx, b, bootstrapClientSet)
-		if err != nil {
-			return fmt.Errorf("failed to request short-lived bootstrap kubeconfig via CertificateSigningRequest API: %w", err)
-		}
-
-		if err := b.FS.WriteFile(cachedBootstrapKubeconfigPath(b.FS), bootstrapKubeconfig, 0600); err != nil {
-			return fmt.Errorf("failed writing the retrieved bootstrap kubeconfig to a temporary file: %w", err)
-		}
-	}
-
-	return setGardenClientFromKubeconfig(b, bootstrapKubeconfig)
-}
-
-func getCachedBootstrapKubeconfig(b *botanist.GardenadmBotanist) ([]byte, bool, error) {
-	fileInfo, err := b.FS.Stat(cachedBootstrapKubeconfigPath(b.FS))
-	if err != nil || time.Since(fileInfo.ModTime()) > bootstrapKubeconfigValidity-2*time.Minute {
-		// We deliberately ignore the error here - this is just a best-effort attempt to cache the bootstrap kubeconfig.
-		// If the file doesn't exist, or we cannot read/find it for whatever reason, we just consider it as a cache
-		// miss.
-		// Otherwise, if the last modifications time of the file is older than the validity of the bootstrap kubeconfig,
-		// we consider it as expired and thus a cache miss.
-		return nil, false, nil //nolint:nilerr
-	}
-
-	data, err := b.FS.ReadFile(cachedBootstrapKubeconfigPath(b.FS))
-	if err != nil {
-		return nil, false, fmt.Errorf("failed reading the cached bootstrap kubeconfig: %w", err)
-	}
-
-	return data, true, nil
-}
-
-func requestShortLivedBootstrapKubeconfig(ctx context.Context, b *botanist.GardenadmBotanist, bootstrapClientSet kubernetes.Interface) ([]byte, error) {
-	certificateSubject := &pkix.Name{
-		Organization: []string{v1beta1constants.ShootsGroup},
-		CommonName:   v1beta1constants.GardenadmUserNamePrefix + b.Shoot.GetInfo().Namespace + ":" + b.Shoot.GetInfo().Name,
-	}
-
-	certData, privateKeyData, _, err := certificatesigningrequest.RequestCertificate(ctx, b.Logger, bootstrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, &metav1.Duration{Duration: bootstrapKubeconfigValidity}, "gardenadm-connect-csr-")
-	if err != nil {
-		return nil, fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
-	}
-
-	return gardenletbootstraputil.CreateKubeconfigWithClientCertificate(bootstrapClientSet.RESTConfig(), privateKeyData, certData)
-}
-
-func setGardenClientFromKubeconfig(b *botanist.GardenadmBotanist, kubeconfig []byte) error {
-	gardenClientSet, err := kubernetes.NewClientFromBytes(
-		kubeconfig,
-		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
-		kubernetes.WithDisabledCachedClient(),
-	)
-	if err != nil {
-		return fmt.Errorf("failed creating garden client set from short-lived kubeconfig: %w", err)
-	}
-
-	b.Logger.Info("Successfully retrieved short-lived bootstrap kubeconfig for garden cluster")
-	b.GardenClient = gardenClientSet.Client()
-	return nil
 }
 
 func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist) error {
