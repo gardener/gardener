@@ -84,7 +84,7 @@ func run(ctx context.Context, opts *Options) error {
 			Name: "Deploying control plane namespace",
 			Fn:   b.DeployControlPlaneNamespace,
 		})
-		_ = g.Add(flow.Task{
+		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
 			Fn:           b.DeployCloudProviderSecret,
 			SkipIf:       b.Shoot.Credentials == nil,
@@ -163,6 +163,18 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.ApplyNetworkPolicies,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, deployExtensionControllers),
 		})
+		deployInfrastructure = g.Add(flow.Task{
+			Name:         "Deploying Shoot infrastructure",
+			Fn:           b.DeployInfrastructure,
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilExtensionControllersReady),
+		})
+		waitUntilInfrastructureReady = g.Add(flow.Task{
+			Name:         "Waiting until Shoot infrastructure has been reconciled",
+			Fn:           b.WaitForInfrastructure,
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(deployInfrastructure),
+		})
 		deployShootNamespaces = g.Add(flow.Task{
 			Name:         "Deploying shoot namespaces system component",
 			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Deploy,
@@ -177,12 +189,12 @@ func run(ctx context.Context, opts *Options) error {
 			Name:         "Deploying kube-proxy system component",
 			Fn:           b.DeployKubeProxy,
 			SkipIf:       !kubeProxyEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, waitUntilExtensionControllersReady),
+			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, waitUntilInfrastructureReady),
 		})
 		deployNetwork = g.Add(flow.Task{
 			Name:         "Deploying shoot network plugin",
 			Fn:           b.DeployNetwork,
-			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, waitUntilExtensionControllersReady),
+			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, waitUntilInfrastructureReady),
 		})
 		waitUntilNetworkReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been reconciled",
