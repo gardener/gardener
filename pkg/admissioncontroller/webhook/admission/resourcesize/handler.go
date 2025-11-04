@@ -223,12 +223,10 @@ func isUnrestrictedUser(userInfo authenticationv1.UserInfo, subjects []rbacv1.Su
 
 func findRestrictionsForGVR(limits []admissioncontrollerconfigv1alpha1.ResourceLimit, gvr *metav1.GroupVersionResource) (*resource.Quantity, *int64) {
 	for _, limit := range limits {
-		size := limit.Size
-		count := limit.Count
 		if admissioncontrollerhelper.APIGroupMatches(limit, gvr.Group) &&
 			admissioncontrollerhelper.VersionMatches(limit, gvr.Version) &&
 			admissioncontrollerhelper.ResourceMatches(limit, gvr.Resource) {
-			return size, count
+			return limit.Size, limit.Count
 		}
 	}
 	return nil, nil
