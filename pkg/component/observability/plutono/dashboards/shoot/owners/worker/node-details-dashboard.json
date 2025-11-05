@@ -16,8 +16,7 @@
   "editable": true,
   "gnetId": 2115,
   "graphTooltip": 0,
-  "id": 32,
-  "iteration": 1622621007137,
+  "iteration": 1761637646458,
   "links": [],
   "panels": [
     {
@@ -107,7 +106,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.43",
       "targets": [
         {
           "expr": "sum(rate(node_cpu_seconds_total{mode=~\"system|user|irq|softirq\", node=~\"$Node\"}[$__rate_interval])) / sum(kube_node_status_capacity{resource=\"cpu\", unit=\"core\", node=~\"$Node\"}) * 100",
@@ -195,7 +194,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.43",
       "targets": [
         {
           "expr": "sum((node_memory_MemTotal_bytes{node=~\"$Node\"} - node_memory_MemAvailable_bytes{node=~\"$Node\"}) / node_memory_MemTotal_bytes{node=~\"$Node\"}) * 100",
@@ -253,7 +252,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.43",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -383,7 +382,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.43",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -517,7 +516,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -633,7 +632,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.43",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -708,6 +707,111 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Load average figure gives the number of jobs in the run queue (state R) or waiting for disk I/O (state D) averaged over 1 minute. See https://linux.die.net/man/5/proc",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "hiddenSeries": false,
+      "id": 84,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": false,
+        "rightSide": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.43",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "node_load1{node=\"$Node\"}",
+          "interval": "",
+          "legendFormat": "Load Average (1min)",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(kube_node_status_capacity{resource=\"cpu\", unit=\"core\", node=~\"$Node\"}) ",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "CPU count",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "System Load Average ($Node)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
       "collapsed": false,
       "datasource": null,
       "gridPos": {
@@ -759,7 +863,7 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.43",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -892,7 +996,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1016,7 +1120,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
