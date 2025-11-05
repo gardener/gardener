@@ -1292,16 +1292,65 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 			})
 
-			It("should forbid unsupported seed selectors", func() {
-				cloudProfile.Spec.SeedSelector.MatchLabels["foo"] = "no/slash/allowed"
+			// TODO(georgibaltiev): Remove all test cases except for the first after the ForbidProviderTypesField feature gate has been graduated.
+			Context("seed selector validations", func() {
+				It("should forbid unsupported seed selectors", func() {
+					cloudProfile.Spec.SeedSelector.MatchLabels["foo"] = "no/slash/allowed"
 
-				errorList := ValidateCloudProfile(cloudProfile)
+					errorList := ValidateCloudProfile(cloudProfile)
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.seedSelector.matchLabels"),
-				}))))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.seedSelector.matchLabels"),
+					}))))
+				})
+
+				It("should allow a non-empty providerTypes slice when the ForbidProviderTypesField feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, false))
+					cloudProfile.Spec.SeedSelector.ProviderTypes = []string{"foo", "bar"}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid a non-empty providerTypes slice when the ForbidProviderTypesField feature gate is enabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+					cloudProfile.Spec.SeedSelector.ProviderTypes = []string{"foo", "bar"}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.seedSelector.providerTypes"),
+						"Detail": Equal("the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "),
+					}))))
+				})
+
+				It("should allow a nil providerTypes slice when the ForbidProviderTypesField feature gate is enabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, false))
+					cloudProfile.Spec.SeedSelector.ProviderTypes = nil
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid an empty providerTypes slice when the ForbidProviderTypesField feature gate is enabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+					cloudProfile.Spec.SeedSelector.ProviderTypes = []string{}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.seedSelector.providerTypes"),
+						"Detail": Equal("the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "),
+					}))))
+				})
+
 			})
+
 		})
 
 		Context("architecture capabilities", func() {
@@ -2182,6 +2231,62 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						})),
 					))
 				})
+			})
+		})
+
+		Context("seed selector update validation", func() {
+			BeforeEach(func() {
+				cloudProfileOld.Spec.SeedSelector = &core.SeedSelector{
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{"foo": "bar"},
+					},
+				}
+				cloudProfileNew.Spec.SeedSelector = &core.SeedSelector{
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{"bar": "baz"},
+					},
+				}
+			})
+
+			It("should allow updating the providerTypes to a non-empty slice when the ForbidProviderTypesField feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, false))
+
+				cloudProfileNew.Spec.SeedSelector.ProviderTypes = []string{"foo", "bar"}
+
+				Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
+			})
+
+			It("should forbid updating the providerTypes to a non-empty slice when the ForbidProviderTypesField feature gate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+				cloudProfileNew.Spec.SeedSelector.ProviderTypes = []string{"foo", "bar"}
+
+				Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.seedSelector.providerTypes"),
+					"Detail": Equal("the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "),
+				}))))
+			})
+
+			It("should forbid updating the providerTypes to an empty slice when the ForbidProviderTypesField feature gate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+				cloudProfileNew.Spec.SeedSelector.ProviderTypes = []string{}
+
+				Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.seedSelector.providerTypes"),
+					"Detail": Equal("the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "),
+				}))))
+			})
+
+			It("should allow updating the providerTypes to a nil slice when the ForbidProviderTypesField feature gate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+				cloudProfileOld.Spec.SeedSelector.ProviderTypes = []string{"foo", "bar"}
+				cloudProfileNew.Spec.SeedSelector.ProviderTypes = nil
+
+				Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
 			})
 		})
 	})

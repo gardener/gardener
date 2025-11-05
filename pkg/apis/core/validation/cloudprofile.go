@@ -74,6 +74,11 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	allErrs = append(allErrs, validateCloudProfileLimits(spec.Limits, fldPath.Child("limits"))...)
 	if spec.SeedSelector != nil {
 		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, metav1validation.LabelSelectorValidationOptions{}, fldPath.Child("seedSelector"))...)
+		if features.DefaultFeatureGate.Enabled(features.ForbidProviderTypesField) {
+			if spec.SeedSelector.ProviderTypes != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedSelector", "providerTypes"), "the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "))
+			}
+		}
 	}
 
 	if spec.CABundle != nil {
