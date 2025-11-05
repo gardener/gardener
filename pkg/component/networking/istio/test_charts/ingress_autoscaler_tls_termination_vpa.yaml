@@ -1,0 +1,22 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: istio-ingressgateway
+  namespace: test-ingress
+  labels:
+    app.kubernetes.io/version: 1.27.1
+    app: istio-ingressgateway
+    foo: bar
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: istio-ingressgateway
+  updatePolicy:
+    updateMode: Initial
+  resourcePolicy:
+    containerPolicies:
+    - containerName: istio-proxy
+      controlledValues: RequestsOnly
+      controlledResources:
+      - memory

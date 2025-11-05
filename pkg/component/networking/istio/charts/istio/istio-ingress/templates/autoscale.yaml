@@ -41,3 +41,27 @@ spec:
       - type: Pods
         value: 1
         periodSeconds: 60
+{{- if eq .Values.terminateAPIServerTLS true }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: istio-ingressgateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/version: {{ .Values.ingressVersion }}
+{{ .Values.labels | toYaml | indent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: istio-ingressgateway
+  updatePolicy:
+    updateMode: Initial
+  resourcePolicy:
+    containerPolicies:
+    - containerName: istio-proxy
+      controlledValues: RequestsOnly
+      controlledResources:
+      - memory
+{{- end }}
