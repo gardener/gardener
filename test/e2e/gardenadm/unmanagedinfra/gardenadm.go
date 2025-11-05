@@ -200,7 +200,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 		It("should ensure that the config dir location has been stored in the well-known location", func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) string {
-				stdOut, _, err := execute(ctx, 0, "cat", "/etc/gardenadm/config-directory")
+				stdOut, _, err := execute(ctx, 0, "cat", "/var/lib/gardenadm/config-directory")
 				g.Expect(err).NotTo(HaveOccurred())
 				return string(stdOut.Contents())
 			}).Should(Equal(configDirectory))

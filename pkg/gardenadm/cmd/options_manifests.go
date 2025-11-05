@@ -8,6 +8,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/pflag"
+
+	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 )
 
 // ManifestOptions contains options related to handling the manifest files.
@@ -40,4 +42,4 @@ func (o *ManifestOptions) AddFlags(fs *pflag.FlagSet) {
 }
 
 // ConfigDirLocation is the location where `gardenadm init` stores the config directory path.
-const ConfigDirLocation = "/etc/gardenadm/config-directory"
+const ConfigDirLocation = botanist.GardenadmBaseDir + "/config-directory"
