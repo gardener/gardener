@@ -32,6 +32,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/testing"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,6 +41,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
@@ -141,7 +143,10 @@ var _ = Describe("ResourceManager", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		// The new default object tracker coming with controller-runtime v0.22 does not seem to be thread-safe causing
+		// test failures with concurrent access. Use the old object tracker for the time being.
+		objectTracker := testing.NewObjectTracker(kubernetes.SeedScheme, kubernetesscheme.Codecs.UniversalDecoder())
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).WithObjectTracker(objectTracker).Build()
 		sm = fakesecretsmanager.New(fakeClient, deployNamespace)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
