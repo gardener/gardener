@@ -75,6 +75,7 @@ var (
 		v1beta1constants.OperationRotateObservabilityCredentials,
 		v1beta1constants.ShootOperationRotateSSHKeypair,
 		v1beta1constants.OperationRotateRolloutWorkers,
+		v1beta1constants.OperationRolloutWorkers,
 	).Union(forbiddenShootOperationsWhenHibernated)
 	forbiddenShootOperationsWhenHibernated = sets.New(
 		v1beta1constants.OperationRotateCredentialsStart,
@@ -2920,11 +2921,11 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(operation) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", operation)))
 		}
-		if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
+		if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(availableShootOperations)))
 		}
 		if helper.IsShootInHibernation(shoot) &&
-			(forbiddenShootOperationsWhenHibernated.Has(operation) || strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers)) {
+			(forbiddenShootOperationsWhenHibernated.Has(operation) || strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers)) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
 		if !encryptedResources.Equal(sets.New(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer)...)) &&
@@ -2937,11 +2938,11 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(maintenanceOperation) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", maintenanceOperation)))
 		}
-		if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) {
+		if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, sets.List(availableShootMaintenanceOperations)))
 		}
 		if helper.IsShootInHibernation(shoot) &&
-			(forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers)) {
+			(forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRolloutWorkers)) {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
 		if !encryptedResources.Equal(sets.New(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer)...)) && forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(maintenanceOperation) {
@@ -3077,6 +3078,49 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 			}) {
 				allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool name "+poolName+" does not exist in .spec.provider.workers[]"))
 			}
+		}
+	}
+	if strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers) {
+		allErrs = append(allErrs, validateOperationRolloutWorkers(operation, shoot, fldPath)...)
+	}
+
+	return allErrs
+}
+
+func validateOperationRolloutWorkers(operation string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Normalise representation of pool names
+	poolNames := strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRolloutWorkers+"="), ",")
+	if len(poolNames) == 0 || sets.New(poolNames...).Has("") {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide either '*' or at least one pool name via "+v1beta1constants.OperationRolloutWorkers+"=<poolName1>[,<poolName2>,...]"))
+	}
+	if len(poolNames) == 1 && poolNames[0] == "*" {
+		poolNames = make([]string, 0, len(shoot.Spec.Provider.Workers))
+		for _, worker := range shoot.Spec.Provider.Workers {
+			poolNames = append(poolNames, worker.Name)
+		}
+	}
+	if sets.New(poolNames...).Has("*") {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "if '*' is provided, no other pool names are allowed"))
+	}
+
+	// Validate list of pool names. When a '*' was provided, there won't be any duplicates
+	// but we still want to check if any of them are using in-place update strategy.
+	names := sets.New[string]()
+	for _, poolName := range poolNames {
+		if names.Has(poolName) {
+			allErrs = append(allErrs, field.Duplicate(fldPath, "pool name "+poolName+" was specified multiple times"))
+		}
+		names.Insert(poolName)
+
+		workerIndex := slices.IndexFunc(shoot.Spec.Provider.Workers, func(worker core.Worker) bool {
+			return worker.Name == poolName
+		})
+		if workerIndex == -1 {
+			allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool name "+poolName+" does not exist in .spec.provider.workers[]"))
+		} else if worker := shoot.Spec.Provider.Workers[workerIndex]; helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+			allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool "+poolName+" is using in-place update strategy; manual worker pool rollout is not supported for such pools"))
 		}
 	}
 

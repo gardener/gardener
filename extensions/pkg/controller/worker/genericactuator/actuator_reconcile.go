@@ -281,6 +281,12 @@ func deployMachineDeployments(
 					},
 				},
 			}
+			if existingMachineDeployment != nil && existingMachineDeployment.Spec.Template.Annotations != nil {
+				for k, v := range existingMachineDeployment.Spec.Template.Annotations {
+					metav1.SetMetaDataAnnotation(&machineDeployment.Spec.Template.ObjectMeta, k, v)
+				}
+			}
+
 			log.Info("Deploying machine deployment", "machineDeploymentName", machineDeployment.Name, "replicas", machineDeployment.Spec.Replicas)
 			return nil
 		}); err != nil {

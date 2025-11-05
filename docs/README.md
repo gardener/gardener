@@ -62,6 +62,7 @@
 * [Supported Kubernetes versions](usage/shoot-operations/supported_k8s_versions.md)
 * [Controlling the Kubernetes versions for specific worker pools](usage/shoot-operations/worker_pool_k8s_versions.md)
 * [Migration from SecretBinding to CredentialsBinding](usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md)
+* [Manual Worker Pool Rollout](usage/shoot-operations/worker_pool_manual_rollout.md)
 
 ### High Availability
 
