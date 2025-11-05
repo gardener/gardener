@@ -6587,17 +6587,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("skip maintenance operation validation for hibernation when operation is forbidden to run in parallel", func() {
-				operation := "rotate-etcd-encryption-key-start;rotate-rollout-workers=foo"
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
-				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
-
-				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-				}))))
-			})
-
 			DescribeTable("forbid hibernating the shoot when certain rotation operations are in progress",
 				func(status core.ShootStatus) {
 					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}

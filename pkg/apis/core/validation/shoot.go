@@ -181,7 +181,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
 	allErrs = append(allErrs, validateShootOperation(v1beta1helper.GetShootGardenerOperations(shoot.Annotations), v1beta1helper.GetShootMaintenanceOperations(shoot.Annotations), shoot, field.NewPath("metadata", "annotations"))...)
-	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false, containsErrorType(allErrs, field.ErrorTypeNotSupported, "", field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerMaintenanceOperation)) || containsErrorType(allErrs, field.ErrorTypeForbidden, "is not permitted to be run in parallel with other operations", field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerMaintenanceOperation)))...)
+	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false)...)
 	allErrs = append(allErrs, ValidateShootHAConfig(shoot)...)
 
 	return allErrs
@@ -238,7 +238,7 @@ func ValidateShootTemplate(shootTemplate *core.ShootTemplate, fldPath *field.Pat
 
 	allErrs = append(allErrs, metav1validation.ValidateLabels(shootTemplate.Labels, fldPath.Child("metadata", "labels"))...)
 	allErrs = append(allErrs, apivalidation.ValidateAnnotations(shootTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
-	allErrs = append(allErrs, ValidateShootSpec(shootTemplate.ObjectMeta, &shootTemplate.Spec, fldPath.Child("spec"), true, false)...)
+	allErrs = append(allErrs, ValidateShootSpec(shootTemplate.ObjectMeta, &shootTemplate.Spec, fldPath.Child("spec"), true)...)
 
 	return allErrs
 }
@@ -263,7 +263,7 @@ func ValidateShootObjectMetaUpdate(_, _ metav1.ObjectMeta, _ *field.Path) field.
 }
 
 // ValidateShootSpec validates the specification of a Shoot object.
-func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *field.Path, inTemplate, skipMaintenanceOpCheck bool) field.ErrorList {
+func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	var (
 		allErrs       = field.ErrorList{}
 		workerless    = len(spec.Provider.Workers) == 0
@@ -280,7 +280,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
-	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"), skipMaintenanceOpCheck)...)
+	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"))...)
 
 	if len(spec.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
@@ -2645,21 +2645,29 @@ func ValidateSystemComponentWorkers(workers []core.Worker, fldPath *field.Path) 
 }
 
 // ValidateHibernation validates a Hibernation object.
-func ValidateHibernation(annotations map[string]string, hibernation *core.Hibernation, fldPath *field.Path, skipMaintenanceOpCheck bool) field.ErrorList {
+func ValidateHibernation(annotations map[string]string, hibernation *core.Hibernation, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if hibernation == nil {
 		return allErrs
 	}
 
-	if !skipMaintenanceOpCheck {
-		for _, op := range v1beta1helper.GetShootMaintenanceOperations(annotations) {
-			if forbiddenShootOperationsWhenHibernated.Has(op) && ptr.Deref(hibernation.Enabled, false) {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s annotation contains %s operation", v1beta1constants.GardenerMaintenanceOperation, op)))
-			}
+	var (
+		opErrs                = field.ErrorList{}
+		maintenanceOperations = v1beta1helper.GetShootMaintenanceOperations(annotations)
+	)
+
+	for _, op := range maintenanceOperations {
+		if !availableShootOperations.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) {
+			opErrs = field.ErrorList{}
+			break
+		}
+		if forbiddenShootOperationsWhenHibernated.Has(op) && ptr.Deref(hibernation.Enabled, false) {
+			opErrs = append(opErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s annotation contains %s operation", v1beta1constants.GardenerMaintenanceOperation, op)))
 		}
 	}
 
+	allErrs = append(allErrs, opErrs...)
 	allErrs = append(allErrs, ValidateHibernationSchedules(hibernation.Schedules, fldPath.Child("schedules"))...)
 
 	return allErrs
