@@ -2658,11 +2658,18 @@ func ValidateHibernation(annotations map[string]string, hibernation *core.Hibern
 	)
 
 	for _, op := range maintenanceOperations {
-		if (!availableShootMaintenanceOperations.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers)) ||
-			(len(maintenanceOperations) > 1 && !availableShootOperationsToRunInParallel.Has(op)) {
+		var (
+			isSupportedOperation = availableShootMaintenanceOperations.Has(op) || strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers)
+			canRunInParallel     = len(maintenanceOperations) == 1 || availableShootOperationsToRunInParallel.Has(op)
+		)
+
+		// Avoid iterating over all operations if one is not supported or cannot run in parallel when multiple operations are present.
+		// No validation errors will be reported for annotations here, as they will be reported in the annotation validation.
+		if !isSupportedOperation || !canRunInParallel {
 			opErrs = field.ErrorList{}
 			break
 		}
+
 		if forbiddenShootOperationsWhenHibernated.Has(op) && ptr.Deref(hibernation.Enabled, false) {
 			opErrs = append(opErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s annotation contains %s operation", v1beta1constants.GardenerMaintenanceOperation, op)))
 		}
