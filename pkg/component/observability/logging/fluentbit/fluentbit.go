@@ -367,7 +367,7 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 			Command: []string{
 				"/fluent-bit/bin/fluent-bit-watcher",
 				"-e",
-				"/fluent-bit/plugins/out_vali.so",
+				"/fluent-bit/plugins/output_plugin.so",
 				"-c",
 				"/fluent-bit/config/fluent-bit.conf",
 			},
