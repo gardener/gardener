@@ -577,7 +577,7 @@ images:
   - name: fluent-bit
     sourceRepository: github.com/fluent/fluent-operator
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-bit
-    tag: "v4.0.9"
+    tag: "v4.1.1"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
