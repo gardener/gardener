@@ -292,15 +292,15 @@ The reconciler checks `ResourceQuota`s in the `Project` namespace and increases 
 
 When the `ResourceQuota` contains a limit for `count/shoots.core.gardener.cloud` ("Shoot limit"), the reconciler increases the following limits based on that value:
 
-- `count/secrets`: set to at least `Shoot limit * 4`
-- `count/configmaps`: set to at least `Shoot limit * 2`
+- `count/secrets`: set to at least `Shoot limit * maximum Secrets per Shoot`
+- `count/configmaps`: set to at least `Shoot limit * maximum ConfigMaps per Shoot`
 
 ##### `count/shoots.core.gardener.cloud` limit absent
 
 When there is not `Shoot` limit specified, the controller sets the following limits to fit all current `Shoot`s:
 
-- `count/secrets`: set to at least `current number of Shoots * 4`
-- `count/configmaps`: set to at least `current number of Shoots * 2`
+- `count/secrets`: set to at least `current number of Shoots * maximum Secrets per Shoot`
+- `count/configmaps`: set to at least `current number of Shoots * maximum ConfigMaps per Shoot`
 
 When the `ResourceQuota` does not contain a limit for `count/shoots.core.gardener.cloud`, the reconciler increases the following limits to a default minimum value.
 ### [`SecretBinding` Controller](../../pkg/controllermanager/controller/secretbinding)
