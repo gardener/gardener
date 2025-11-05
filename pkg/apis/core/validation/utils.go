@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -29,6 +30,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
@@ -203,6 +205,10 @@ func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field
 // validateExpirableVersion validates the ExpirableVersions.
 func validateExpirableVersion(version core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if len(version.Lifecycle) > 0 && !utilfeature.DefaultFeatureGate.Enabled(features.CloudProfileVersionClassificationLifecycles) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "lifecycles are not allowed with disabled CloudProfileVersionClassificationLifecycles feature gate"))
+	}
 
 	if (version.Classification != nil || version.ExpirationDate != nil) && len(version.Lifecycle) > 0 {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "cannot specify `classification` or `expirationDate` in combination with `lifecycle`"))
