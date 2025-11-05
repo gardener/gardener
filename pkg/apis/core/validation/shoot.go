@@ -2658,7 +2658,8 @@ func ValidateHibernation(annotations map[string]string, hibernation *core.Hibern
 	)
 
 	for _, op := range maintenanceOperations {
-		if !availableShootOperations.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) {
+		if (!availableShootMaintenanceOperations.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers)) ||
+			(len(maintenanceOperations) > 1 && !availableShootOperationsToRunInParallel.Has(op)) {
 			opErrs = field.ErrorList{}
 			break
 		}
@@ -3419,15 +3420,6 @@ func getResourcesForEncryption(apiServerConfig *core.KubeAPIServerConfig) []sche
 	}
 
 	return resources
-}
-
-func containsErrorType(allErrs field.ErrorList, errorType field.ErrorType, detailSubstr string, fldPath *field.Path) bool {
-	for _, err := range allErrs {
-		if err.Type == errorType && err.Field == fldPath.String() && strings.Contains(err.Detail, detailSubstr) {
-			return true
-		}
-	}
-	return false
 }
 
 // ValidateControlPlaneAutoscaling validates the given auto-scaling configuration.
