@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -80,6 +81,10 @@ func NewIstio(
 		// replicas, which apparently works in all known Gardener scenarios. Reducing it to less
 		// per zone gives some room for autoscaling while it is assumed to never reach the maximum.
 		maxReplicas = ptr.To(len(zones) * 6)
+		if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+			// When IstioTLSTermination server is enabled, more resources might be required on seeds.
+			maxReplicas = ptr.To(len(zones) * 8)
+		}
 	}
 
 	policyLabels := commonIstioIngressNetworkPolicyLabels(vpnEnabled)
