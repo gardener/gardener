@@ -77,6 +77,13 @@ const (
 	// owner: @rrhubenov
 	// alpha: v1.124.0
 	OpenTelemetryCollector featuregate.Feature = "OpenTelemetryCollector"
+
+	// ForbidProviderTypesField disables the usage of the .seedSelector.providerTypes field in the Shoot API.
+	// Furthermore, the CloudProfile and ExposureClass specs also have this field deprecated.
+	// Operators are responsible for reconfiguring their seedSelectors to use the `seed.gardener.cloud/provider` and `seed.gardener.cloud/region` labels.
+	// owner: @georgibaltiev
+	// alpha: v1.131.0
+	ForbidProviderTypesField featuregate.Feature = "ForbidProviderTypesField"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -113,6 +120,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha},
 	DoNotCopyBackupCredentials:               {Default: true, PreRelease: featuregate.Beta},
 	OpenTelemetryCollector:                   {Default: false, PreRelease: featuregate.Alpha},
+	ForbidProviderTypesField:                 {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
