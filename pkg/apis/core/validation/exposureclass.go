@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // ValidateExposureClass validates a ExposureClass object.
@@ -35,6 +36,13 @@ func ValidateExposureClass(exposureClass *core.ExposureClass) field.ErrorList {
 	if exposureClass.Scheduling != nil {
 		if exposureClass.Scheduling.SeedSelector != nil {
 			allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&exposureClass.Scheduling.SeedSelector.LabelSelector, metav1validation.LabelSelectorValidationOptions{}, field.NewPath("scheduling", "seedSelector"))...)
+
+			// TODO(georgibaltiev): remove this if-block once the ForbidProviderTypesField feature gate has graduated.
+			if features.DefaultFeatureGate.Enabled(features.ForbidProviderTypesField) {
+				if exposureClass.Scheduling.SeedSelector.ProviderTypes != nil {
+					allErrs = append(allErrs, field.Forbidden(field.NewPath("scheduling", "seedSelector", "providerTypes"), "the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "))
+				}
+			}
 		}
 		allErrs = append(allErrs, ValidateTolerations(exposureClass.Scheduling.Tolerations, field.NewPath("scheduling", "tolerations"))...)
 	}

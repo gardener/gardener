@@ -15,6 +15,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("ExposureClass Validation Tests ", func() {
@@ -112,7 +114,8 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should fail as exposure class has an invalid seed selector", func() {
+		// TODO(georgibaltiev): rename this description back to "should fail as exposure class has an invalid seed selector" once the ForbidProviderTypesField feature gate has graduated.
+		It("should fail as exposure class has invalid seed selector labels", func() {
 			exposureClass.Scheduling.SeedSelector = &core.SeedSelector{
 				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
 			}
@@ -121,6 +124,51 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("scheduling.seedSelector.matchLabels"),
+			}))))
+		})
+
+		// TODO(georgibaltiev): remove the providerTypes test cases once the ForbidProviderTypesField feature gate has graduated.
+		It("should allow a non-empty providerTypes slice when the ForbidProviderTypesField feature gate is disabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, false))
+
+			exposureClass.Scheduling.SeedSelector.ProviderTypes = []string{"aws", "gcp"}
+			errorList := ValidateExposureClass(exposureClass)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid a non-empty providerTypes slice when the ForbidProviderTypesField feature gate is enabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+			exposureClass.Scheduling.SeedSelector.ProviderTypes = []string{"aws", "gcp"}
+			errorList := ValidateExposureClass(exposureClass)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("scheduling.seedSelector.providerTypes"),
+				"Detail": Equal("the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "),
+			}))))
+		})
+
+		It("should allow a nil providerTypes slice when the ForbidProviderTypesField feature gate is enabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+			exposureClass.Scheduling.SeedSelector.ProviderTypes = nil
+			errorList := ValidateExposureClass(exposureClass)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid an empty providerTypes slice when the ForbidProviderTypesField feature gate is enabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+			exposureClass.Scheduling.SeedSelector.ProviderTypes = []string{}
+			errorList := ValidateExposureClass(exposureClass)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("scheduling.seedSelector.providerTypes"),
+				"Detail": Equal("the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "),
 			}))))
 		})
 
@@ -184,7 +232,6 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 				"Field": Equal("scheduling"),
 			}))))
 		})
-
 	})
 })
 
