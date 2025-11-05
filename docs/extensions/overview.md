@@ -185,4 +185,4 @@ We are truly looking forward to your feedback!
 
 ## Known Extensions
 
-We track all extensions of Gardener in the [known Gardener Extensions List](../README.md#known-extension-implementations) repo.
+We track all extensions of Gardener in the [known Gardener Extensions List](../../extensions/README.md#known-extension-implementations) repo.
