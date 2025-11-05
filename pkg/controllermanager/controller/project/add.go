@@ -12,6 +12,7 @@ import (
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project/activity"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project/project"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/project/resourcequota"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project/stale"
 )
 
@@ -33,6 +34,12 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 		Config: *cfg.Controllers.Project,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding stale reconciler: %w", err)
+	}
+
+	if err := (&resourcequota.Reconciler{
+		Config: *cfg.Controllers.Project,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding resourcequota reconciler: %w", err)
 	}
 
 	return nil
