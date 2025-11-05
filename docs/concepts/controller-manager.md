@@ -302,7 +302,7 @@ When there is not `Shoot` limit specified, the controller sets the following lim
 - `count/secrets`: set to at least `(current number of Shoots + 1) * 4`
 - `count/configmaps`: set to at least `(current number of Shoots + 1) * 2`
 
-When the `ResourceQuota` does not contain a limit for `count/shoots.core.gardener.cloud`, the reconciler increases the following limits to a default minimum value:
+When the `ResourceQuota` does not contain a limit for `count/shoots.core.gardener.cloud`, the reconciler increases the following limits to a default minimum value.
 ### [`SecretBinding` Controller](../../pkg/controllermanager/controller/secretbinding)
 
 `SecretBinding`s reference `Secret`s and `Quota`s and are themselves referenced by `Shoot`s.

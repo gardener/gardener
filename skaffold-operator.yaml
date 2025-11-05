@@ -735,6 +735,7 @@ build:
             - pkg/controllermanager/controller/project
             - pkg/controllermanager/controller/project/activity
             - pkg/controllermanager/controller/project/project
+            - pkg/controllermanager/controller/project/resourcequota
             - pkg/controllermanager/controller/project/stale
             - pkg/controllermanager/controller/quota
             - pkg/controllermanager/controller/secretbinding

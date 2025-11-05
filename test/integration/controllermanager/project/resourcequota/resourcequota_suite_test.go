@@ -103,7 +103,7 @@ var _ = BeforeSuite(func() {
 			ConcurrentSyncs: ptr.To(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())
-	// The project controller waits for namespaces to be gone, so we need to finalize them as envtest doesn't run the
+	// The test creates and deletes namespaces, so we need to finalize them as envtest doesn't run the
 	// namespace controller.
 	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 

@@ -9,33 +9,24 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
 const ControllerName = "project-resourcequota"
-
-var (
-	createOnlyPredicate = predicate.Funcs{
-		CreateFunc:  func(_ event.CreateEvent) bool { return true },
-		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
-		UpdateFunc:  func(_ event.UpdateEvent) bool { return false },
-		GenericFunc: func(_ event.GenericEvent) bool { return false },
-	}
-)
 
 // AddToManager adds a controller with the given Options to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {
@@ -50,37 +41,27 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
-		For(&corev1.ResourceQuota{}, builder.WithPredicates(r.ObjectInProjectNamespace())).
+		For(&corev1.ResourceQuota{}, builder.WithPredicates(r.ObjectInProjectNamespace(
+			context.Background(),
+			mgr.GetLogger().WithValues("controller", ControllerName)))).
 		Watches(
-			&v1beta1.Shoot{},
+			&gardencorev1beta1.Shoot{},
 			handler.EnqueueRequestsFromMapFunc(r.MapShootToResourceQuotasInProject(mgr.GetLogger().WithValues("controller", ControllerName))),
-			builder.WithPredicates(createOnlyPredicate),
+			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create)),
 		).
 		Complete(r)
 }
 
 // ObjectInProjectNamespace returns a predicate that filters objects that are in Project namespaces.
-func (r *Reconciler) ObjectInProjectNamespace() predicate.Predicate {
-	objectInNamespaceFunc := func(namespace string) bool {
-		ctx := context.Background()
+func (r *Reconciler) ObjectInProjectNamespace(ctx context.Context, log logr.Logger) predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(object client.Object) bool {
+		namespace := object.GetNamespace()
 		project, err := gardenerutils.ProjectForNamespaceFromReader(ctx, r.Client, namespace)
+		if err != nil {
+			log.Error(err, "Unable to find gardener project", "namespace", namespace)
+		}
 		return err == nil && project != nil
-	}
-
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			return objectInNamespaceFunc(e.Object.GetNamespace())
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			return objectInNamespaceFunc(e.Object.GetNamespace())
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			return objectInNamespaceFunc(e.ObjectNew.GetNamespace())
-		},
-		GenericFunc: func(e event.GenericEvent) bool {
-			return objectInNamespaceFunc(e.Object.GetNamespace())
-		},
-	}
+	})
 }
 
 // MapShootToResourceQuotasInProject maps Shoots to ResourceQuotas in the corresponding Project namespace.
@@ -91,13 +72,6 @@ func (r *Reconciler) MapShootToResourceQuotasInProject(log logr.Logger) handler.
 			log.Error(err, "Unable to list resource quotas")
 		}
 
-		requests := make([]reconcile.Request, 0, len(resourceQuotaList.Items))
-		for _, rq := range resourceQuotaList.Items {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
-				Name:      rq.Name,
-				Namespace: rq.Namespace,
-			}})
-		}
-		return requests
+		return mapper.ObjectListToRequests(resourceQuotaList)
 	}
 }

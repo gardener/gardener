@@ -20,8 +20,10 @@ import (
 )
 
 var _ = Describe("Project ResourceQuota controller tests", func() {
-	var project *gardencorev1beta1.Project
-	var testNamespace *corev1.Namespace
+	var (
+		project       *gardencorev1beta1.Project
+		testNamespace *corev1.Namespace
+	)
 
 	BeforeEach(func() {
 		By("Create test Namespace")
@@ -69,7 +71,7 @@ var _ = Describe("Project ResourceQuota controller tests", func() {
 		})
 	})
 
-	It("should adapt the ResourceQuota if it's limits contradict the specified configmap and secret limits", func() {
+	It("should adapt the ResourceQuota if its limits contradict the specified configmap and secret limits", func() {
 		By("Create ResourceQuota that has contradicting limits")
 		resourceQuota := &corev1.ResourceQuota{
 			ObjectMeta: metav1.ObjectMeta{
@@ -91,17 +93,11 @@ var _ = Describe("Project ResourceQuota controller tests", func() {
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, resourceQuota))).To(Succeed())
 		})
 
-		expectedHard := corev1.ResourceList{
+		assertLimitsUpdated(ctx, resourceQuota, corev1.ResourceList{
 			"count/shoots.core.gardener.cloud": resource.MustParse("2"),
 			"count/secrets":                    resource.MustParse("8"),
 			"count/configmaps":                 resource.MustParse("4"),
-		}
-
-		Eventually(ctx, func(g Gomega) corev1.ResourceList {
-			current := &corev1.ResourceQuota{}
-			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(resourceQuota), current)).To(Succeed())
-			return current.Spec.Hard
-		}).Should(Equal(expectedHard))
+		})
 	})
 
 	It("should dynamically adapt ResourceQuota limits when no Shoot limit is present and Shoots get created", func() {
@@ -125,32 +121,8 @@ var _ = Describe("Project ResourceQuota controller tests", func() {
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, resourceQuota))).To(Succeed())
 		})
 
-		By("Confirming that ResourceQuota can at least fit one Shoot")
-		assertLimitsUpdated(ctx, resourceQuota, corev1.ResourceList{
-			"count/secrets":    resource.MustParse("4"),
-			"count/configmaps": resource.MustParse("2"),
-		})
-
 		By("Creating a Shoot in the Project namespace")
-		shoot := &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "test-shoot-",
-				Namespace:    testNamespace.Name,
-				Labels:       map[string]string{testID: testRunID},
-			},
-			Spec: gardencorev1beta1.ShootSpec{
-				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.33.0",
-				},
-				CloudProfile: &gardencorev1beta1.CloudProfileReference{
-					Name: "dummy-cloudprofile",
-				},
-				Provider: gardencorev1beta1.Provider{
-					Type: "dummy-provider",
-				},
-				Region: "dummy-region",
-			},
-		}
+		shoot := generateShootManifest(testNamespace.Name)
 
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 		DeferCleanup(func() {
@@ -159,30 +131,12 @@ var _ = Describe("Project ResourceQuota controller tests", func() {
 
 		By("Confirming that ResourceQuota limits have been adapted to fit the new Shoot")
 		assertLimitsUpdated(ctx, resourceQuota, corev1.ResourceList{
-			"count/secrets":    resource.MustParse("8"),
-			"count/configmaps": resource.MustParse("4"),
+			"count/secrets":    resource.MustParse("4"),
+			"count/configmaps": resource.MustParse("2"),
 		})
 
 		By("Creating another Shoot in the Project namespace")
-		shoot2 := &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "test-shoot-",
-				Namespace:    testNamespace.Name,
-				Labels:       map[string]string{testID: testRunID},
-			},
-			Spec: gardencorev1beta1.ShootSpec{
-				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.33.0",
-				},
-				CloudProfile: &gardencorev1beta1.CloudProfileReference{
-					Name: "dummy-cloudprofile",
-				},
-				Provider: gardencorev1beta1.Provider{
-					Type: "dummy-provider",
-				},
-				Region: "dummy-region",
-			},
-		}
+		shoot2 := generateShootManifest(testNamespace.Name)
 
 		Expect(testClient.Create(ctx, shoot2)).To(Succeed())
 		DeferCleanup(func() {
@@ -191,8 +145,8 @@ var _ = Describe("Project ResourceQuota controller tests", func() {
 
 		By("Confirming that ResourceQuota limits have been adapted to fit the new Shoot")
 		assertLimitsUpdated(ctx, resourceQuota, corev1.ResourceList{
-			"count/secrets":    resource.MustParse("12"),
-			"count/configmaps": resource.MustParse("6"),
+			"count/secrets":    resource.MustParse("8"),
+			"count/configmaps": resource.MustParse("4"),
 		})
 	})
 
@@ -238,5 +192,27 @@ func assertLimitsUnchanged(ctx context.Context, resourceQuota *corev1.ResourceQu
 		current := &corev1.ResourceQuota{}
 		g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(resourceQuota), current)).To(Succeed())
 		return current.Spec.Hard
-	}, "20s", "1s").Should(Equal(resourceQuota.Spec.Hard))
+	}).Should(Equal(resourceQuota.Spec.Hard))
+}
+
+func generateShootManifest(namespace string) *gardencorev1beta1.Shoot {
+	return &gardencorev1beta1.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "test-shoot-",
+			Namespace:    namespace,
+			Labels:       map[string]string{testID: testRunID},
+		},
+		Spec: gardencorev1beta1.ShootSpec{
+			Kubernetes: gardencorev1beta1.Kubernetes{
+				Version: "1.33.0",
+			},
+			CloudProfile: &gardencorev1beta1.CloudProfileReference{
+				Name: "dummy-cloudprofile",
+			},
+			Provider: gardencorev1beta1.Provider{
+				Type: "dummy-provider",
+			},
+			Region: "dummy-region",
+		},
+	}
 }

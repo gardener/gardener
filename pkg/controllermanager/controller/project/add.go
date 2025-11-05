@@ -30,16 +30,16 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 		return fmt.Errorf("failed adding main reconciler: %w", err)
 	}
 
-	if err := (&stale.Reconciler{
-		Config: *cfg.Controllers.Project,
-	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding stale reconciler: %w", err)
-	}
-
 	if err := (&resourcequota.Reconciler{
 		Config: *cfg.Controllers.Project,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding resourcequota reconciler: %w", err)
+	}
+
+	if err := (&stale.Reconciler{
+		Config: *cfg.Controllers.Project,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding stale reconciler: %w", err)
 	}
 
 	return nil

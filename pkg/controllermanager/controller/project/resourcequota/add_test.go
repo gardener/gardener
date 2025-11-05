@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package resourcequota
+package resourcequota_test
 
 import (
 	"context"
@@ -10,27 +10,29 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/project/resourcequota"
 )
 
 var _ = Describe("Add", func() {
 	var (
-		reconciler    *Reconciler
-		mockClient    *mockclient.MockClient
-		ctrl          *gomock.Controller
+		reconciler    *resourcequota.Reconciler
+		fakeClient    client.Client
+		ctx           context.Context
 		namespaceName = "garden-test"
 		resourceQuota = &corev1.ResourceQuota{
 			ObjectMeta: metav1.ObjectMeta{
@@ -60,33 +62,26 @@ var _ = Describe("Add", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		mockClient = mockclient.NewMockClient(ctrl)
-		reconciler = &Reconciler{
-			Client: mockClient,
+		ctx = context.Background()
+		fakeClient = fake.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithIndex(&gardencorev1beta1.Project{}, core.ProjectNamespace, indexer.ProjectNamespaceIndexerFunc).Build()
+
+		reconciler = &resourcequota.Reconciler{
+			Client: fakeClient,
 		}
 	})
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	Describe("ObjectInProjectNamespace", func() {
-		var (
-			p predicate.Predicate
-		)
+		var p predicate.Predicate
 
 		BeforeEach(func() {
-			p = reconciler.ObjectInProjectNamespace()
+			p = reconciler.ObjectInProjectNamespace(ctx, GinkgoLogr)
 		})
 
 		It("return true for objects that are in a project namespace", func() {
-			mockClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
-				list.Items = []gardencorev1beta1.Project{
-					*project,
-				}
-				return nil
-			}).AnyTimes()
+			By("Create the project")
+			Expect(fakeClient.Create(ctx, project)).To(Succeed())
+
+			Eventually(func() error { return fakeClient.Get(ctx, client.ObjectKeyFromObject(project), project) }).Should(Succeed())
 
 			Expect(p.Create(event.CreateEvent{Object: resourceQuota})).To(BeTrue())
 			Expect(p.Update(event.UpdateEvent{ObjectNew: resourceQuota})).To(BeTrue())
@@ -98,10 +93,11 @@ var _ = Describe("Add", func() {
 			nonProjectObject := resourceQuota.DeepCopy()
 			nonProjectObject.Namespace = namespaceName + "aaa"
 
-			mockClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName + "aaa"}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
-				list.Items = []gardencorev1beta1.Project{}
-				return nil
-			}).AnyTimes()
+			Expect(fakeClient.Create(context.Background(), nonProjectObject)).To(Succeed())
+
+			Eventually(func() error {
+				return fakeClient.Get(ctx, client.ObjectKeyFromObject(nonProjectObject), nonProjectObject)
+			}).Should(Succeed())
 
 			Expect(p.Create(event.CreateEvent{Object: nonProjectObject})).To(BeFalse())
 			Expect(p.Update(event.UpdateEvent{ObjectNew: nonProjectObject})).To(BeFalse())
@@ -111,23 +107,16 @@ var _ = Describe("Add", func() {
 	})
 
 	Describe("MapShootToResourceQuotasInProject", func() {
-		var (
-			mapFunc handler.MapFunc
-		)
+		var mapFunc handler.MapFunc
 
 		BeforeEach(func() {
 			mapFunc = reconciler.MapShootToResourceQuotasInProject(logr.Discard())
 		})
 
 		It("should enqueue requests for ResourceQuotas in the Shoot namespace", func() {
-			mockClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ResourceQuotaList{}), client.InNamespace(namespaceName)).DoAndReturn(func(_ context.Context, list *corev1.ResourceQuotaList, _ ...client.ListOption) error {
-				list.Items = []corev1.ResourceQuota{
-					*resourceQuota,
-				}
-				return nil
-			}).AnyTimes()
+			Expect(fakeClient.Create(ctx, resourceQuota)).To(Succeed())
 
-			Expect(mapFunc(context.Background(), shoot)).To(Equal([]reconcile.Request{
+			Expect(mapFunc(ctx, shoot)).To(Equal([]reconcile.Request{
 				{NamespacedName: types.NamespacedName{
 					Name:      resourceQuota.Name,
 					Namespace: resourceQuota.Namespace,
@@ -136,12 +125,8 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should not enqueue any requests if there are no ResourceQuotas in the Shoot namespace", func() {
-			mockClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ResourceQuotaList{}), client.InNamespace(namespaceName)).DoAndReturn(func(_ context.Context, list *corev1.ResourceQuotaList, _ ...client.ListOption) error {
-				list.Items = []corev1.ResourceQuota{}
-				return nil
-			}).AnyTimes()
-
-			Expect(mapFunc(context.Background(), shoot)).To(Equal([]reconcile.Request{}))
+			var requests []reconcile.Request
+			Expect(mapFunc(context.Background(), shoot)).To(Equal(requests))
 		})
 	})
 })
