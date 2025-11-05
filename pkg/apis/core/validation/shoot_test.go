@@ -4842,49 +4842,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
 
-			DescribeTable("size limits",
-				func(key, prefix string, size int, matcher gomegatypes.GomegaMatcher) {
-					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeCreate, State: core.LastOperationStateSucceeded}
-					value := fmt.Sprintf("%s%s", prefix, strings.Repeat("a", size))
-					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, key, value)
-					shoot.Status.Credentials = &core.ShootCredentials{
-						Rotation: &core.ShootCredentialsRotation{
-							CertificateAuthorities: &core.CARotation{
-								Phase: core.RotationWaitingForWorkersRollout,
-							},
-						},
-					}
-					Expect(ValidateShoot(shoot)).To(matcher)
-				},
-
-				Entry("operation size is over maxSize", "gardener.cloud/operation", "", 481, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeTooLong),
-					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-					"Detail": Equal("may not be more than 480 bytes"),
-				})))),
-				Entry("operation size is within maxSize", "gardener.cloud/operation", "", 480, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
-				})))),
-				Entry("allow over maxSize for rotate-rollout-workers", "gardener.cloud/operation", "rotate-rollout-workers=", 500, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
-				})))),
-				Entry("maintenance operation size is over maxSize", "maintenance.gardener.cloud/operation", "", 481, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeTooLong),
-					"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-					"Detail": Equal("may not be more than 480 bytes"),
-				})))),
-				Entry("maintenance  operation size is within maxSize", "maintenance.gardener.cloud/operation", "", 480, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-				})))),
-				Entry("allow over maxSize for rotate-rollout-workers", "maintenance.gardener.cloud/operation", "rotate-rollout-workers=", 500, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-				})))),
-			)
-
 			DescribeTable("allow specifying some operation annotations",
 				func(key, value string) {
 					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeCreate, State: core.LastOperationStateSucceeded}
@@ -6619,15 +6576,25 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
 			)
 
-			It("skip maintenance operation validation for hibernation when operation is too long", func() {
-				operation := strings.Repeat("rotate-etcd-encryption-key-start;", 500)
+			It("skip maintenance operation validation for hibernation when operation is not supported", func() {
+				operation := "rotate-etcd-encryption-key-start;foo"
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
 				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
-				Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeTooLong),
-					"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-					"Detail": Equal("may not be more than 480 bytes"),
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+				}))))
+			})
+
+			It("skip maintenance operation validation for hibernation when operation is forbidden to run in parallel", func() {
+				operation := "rotate-etcd-encryption-key-start;rotate-rollout-workers=foo"
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
 				}))))
 			})
 

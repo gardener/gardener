@@ -52,8 +52,6 @@ import (
 )
 
 var (
-	// maxOperationsSize is the maximum allowed length of the operations annotation in bytes.
-	maxOperationsSize   = len(strings.Join(availableShootOperationsToRunInParallel.UnsortedList(), ","))
 	availableProxyModes = sets.New(
 		string(core.ProxyModeIPTables),
 		string(core.ProxyModeIPVS),
@@ -183,7 +181,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
 	allErrs = append(allErrs, validateShootOperation(v1beta1helper.GetShootGardenerOperations(shoot.Annotations), v1beta1helper.GetShootMaintenanceOperations(shoot.Annotations), shoot, field.NewPath("metadata", "annotations"))...)
-	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false, containsErrorType(allErrs, field.ErrorTypeTooLong, field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerMaintenanceOperation)))...)
+	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false, containsErrorType(allErrs, field.ErrorTypeNotSupported, "", field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerMaintenanceOperation)) || containsErrorType(allErrs, field.ErrorTypeForbidden, "is not permitted to be run in parallel with other operations", field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerMaintenanceOperation)))...)
 	allErrs = append(allErrs, ValidateShootHAConfig(shoot)...)
 
 	return allErrs
@@ -2948,8 +2946,6 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 	var (
 		fldPathOp          = fldPath.Key(v1beta1constants.GardenerOperation)
 		fldPathMaintOp     = fldPath.Key(v1beta1constants.GardenerMaintenanceOperation)
-		operationsLen      = len(strings.Join(operations, ","))
-		maintenanceOpLen   = len(strings.Join(maintenanceOperations, ","))
 		allErrs            = field.ErrorList{}
 		encryptedResources = sets.New[schema.GroupResource]()
 		k8sLess134, _      = versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, "< 1.34")
@@ -2957,13 +2953,6 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 
 	if len(operations) == 0 && len(maintenanceOperations) == 0 {
 		return allErrs
-	}
-
-	if operationsLen > maxOperationsSize && (len(operations) != 1 || !strings.HasPrefix(operations[0], v1beta1constants.OperationRotateRolloutWorkers)) {
-		return append(allErrs, field.TooLong(fldPathOp, operationsLen, maxOperationsSize))
-	}
-	if maintenanceOpLen > maxOperationsSize && (len(maintenanceOperations) != 1 || !strings.HasPrefix(maintenanceOperations[0], v1beta1constants.OperationRotateRolloutWorkers)) {
-		return append(allErrs, field.TooLong(fldPathMaintOp, maintenanceOpLen, maxOperationsSize))
 	}
 
 	for _, op := range operations {
@@ -3424,9 +3413,9 @@ func getResourcesForEncryption(apiServerConfig *core.KubeAPIServerConfig) []sche
 	return resources
 }
 
-func containsErrorType(allErrs field.ErrorList, errorType field.ErrorType, fldPath *field.Path) bool {
+func containsErrorType(allErrs field.ErrorList, errorType field.ErrorType, detailSubstr string, fldPath *field.Path) bool {
 	for _, err := range allErrs {
-		if err.Type == errorType && err.Field == fldPath.String() {
+		if err.Type == errorType && err.Field == fldPath.String() && strings.Contains(err.Detail, detailSubstr) {
 			return true
 		}
 	}
