@@ -278,6 +278,31 @@ Since the other two reconcilers are unable to actively monitor the relevant obje
 
 The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any activity and then it will update the `status.lastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
 
+
+#### [`ResourceQuota` Reconciler](../../pkg/controllermanager/controller/project/resourcequota)
+
+The `ResourceQuota` reconciler only reconciles `ResourceQuota`s in `Project` namespaces and ensures that the specified quotas do not interfere with Gardener's operations.
+The reconciler gets also triggered when a `Shoot` in the respective `Project` namespace is created.
+
+In the lifecycle of a `Shoot`, Gardener also creates some resources (`Secret`s and `ConfigMap`s) in the `Project` namespace. This means that the `ResourceQuota` must allow for the creation of these resources, otherwise the `Shoot` reconciliation would fail due to quota violations.
+
+The reconciler checks `ResourceQuota`s in the `Project` namespace and increases the limits according to the following rules:
+
+##### `count/shoots.core.gardener.cloud` limit present
+
+When the `ResourceQuota` contains a limit for `count/shoots.core.gardener.cloud` ("Shoot limit"), the reconciler increases the following limits based on that value:
+
+- `count/secrets`: set to at least `Shoot limit * 4`
+- `count/configmaps`: set to at least `Shoot limit * 2`
+
+##### `count/shoots.core.gardener.cloud` limit absent
+
+When there is not `Shoot` limit specified, the controller sets the following limits to fit all current `Shoot`s plus one additional `Shoot`:
+
+- `count/secrets`: set to at least `(current number of Shoots + 1) * 4`
+- `count/configmaps`: set to at least `(current number of Shoots + 1) * 2`
+
+When the `ResourceQuota` does not contain a limit for `count/shoots.core.gardener.cloud`, the reconciler increases the following limits to a default minimum value:
 ### [`SecretBinding` Controller](../../pkg/controllermanager/controller/secretbinding)
 
 `SecretBinding`s reference `Secret`s and `Quota`s and are themselves referenced by `Shoot`s.
