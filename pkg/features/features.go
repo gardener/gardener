@@ -55,6 +55,11 @@ const (
 	// alpha: v1.117.0
 	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
 
+	// CloudProfileVersionClassificationLifecycles enables the usage of version classification lifecycles for Kubernetes and machine versions.
+	// owner: TODO:(rapsn)
+	// alpha: TODO:(rapsn)
+	CloudProfileVersionClassificationLifecycles featuregate.Feature = "CloudProfileVersionClassificationLifecycles"
+
 	// DoNotCopyBackupCredentials disables the copying of Shoot infrastructure credentials as backup credentials when the Shoot is used as a ManagedSeed.
 	// Operators are responsible for providing the credentials for backup explicitly.
 	// Credentials that were already copied will be labeled with "secret.backup.gardener.cloud/status=previously-managed" and would have to be cleaned up by operators.
@@ -107,16 +112,17 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	DefaultSeccompProfile:      {Default: false, PreRelease: featuregate.Alpha},
-	ShootCredentialsBinding:    {Default: true, PreRelease: featuregate.Beta},
-	NewWorkerPoolHash:          {Default: true, PreRelease: featuregate.Beta},
-	InPlaceNodeUpdates:         {Default: false, PreRelease: featuregate.Alpha},
-	IstioTLSTermination:        {Default: false, PreRelease: featuregate.Alpha},
-	CloudProfileCapabilities:   {Default: false, PreRelease: featuregate.Alpha},
-	DoNotCopyBackupCredentials: {Default: true, PreRelease: featuregate.Beta},
-	OpenTelemetryCollector:     {Default: false, PreRelease: featuregate.Alpha},
-	UseUnifiedHTTPProxyPort:    {Default: false, PreRelease: featuregate.Alpha},
-	VPAInPlaceUpdates:          {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:                       {Default: false, PreRelease: featuregate.Alpha},
+	ShootCredentialsBinding:                     {Default: true, PreRelease: featuregate.Beta},
+	NewWorkerPoolHash:                           {Default: true, PreRelease: featuregate.Beta},
+	InPlaceNodeUpdates:                          {Default: false, PreRelease: featuregate.Alpha},
+	IstioTLSTermination:                         {Default: false, PreRelease: featuregate.Alpha},
+	CloudProfileCapabilities:                    {Default: false, PreRelease: featuregate.Alpha},
+	DoNotCopyBackupCredentials:                  {Default: true, PreRelease: featuregate.Beta},
+	OpenTelemetryCollector:                      {Default: false, PreRelease: featuregate.Alpha},
+	UseUnifiedHTTPProxyPort:                     {Default: false, PreRelease: featuregate.Alpha},
+	VPAInPlaceUpdates:                           {Default: false, PreRelease: featuregate.Alpha},
+	CloudProfileVersionClassificationLifecycles: {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
