@@ -568,7 +568,11 @@ type ResourceLimit struct {
 	// Resources is the name of the resource this rule applies to. WildcardAll represents all resources.
 	Resources []string `json:"resources"`
 	// Size specifies the imposed limit.
-	Size resource.Quantity `json:"size"`
+	// +optional
+	Size *resource.Quantity `json:"size"`
+	// Count specifies the maximum number of resources of the given kind. Only cluster-scoped resources are considered.
+	// +optional
+	Count *int64 `json:"count,omitempty"`
 }
 
 // GardenerControllerManagerConfig contains configuration settings for the gardener-controller-manager.

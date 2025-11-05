@@ -95,10 +95,11 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 			versions  = []string{"v1beta1", "v1alpha1"}
 			resources = []string{"shoot"}
 			size      = "1Ki"
+			count     = int64(100)
 		)
 
 		DescribeTable("Limits validation",
-			func(apiGroups []string, versions []string, resources []string, size string, matcher gomegatypes.GomegaMatcher) {
+			func(apiGroups []string, versions []string, resources []string, size string, count int64, matcher gomegatypes.GomegaMatcher) {
 				s, err := resource.ParseQuantity(size)
 				utilruntime.Must(err)
 				config := &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
@@ -111,7 +112,8 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 									APIGroups:   apiGroups,
 									APIVersions: versions,
 									Resources:   resources,
-									Size:        s,
+									Size:        &s,
+									Count:       &count,
 								},
 							},
 						},
@@ -123,35 +125,38 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 				Expect(errs).To(matcher)
 
 			},
-			Entry("should allow request", apiGroups, versions, resources, size,
+			Entry("should allow request", apiGroups, versions, resources, size, count,
 				BeEmpty(),
 			),
-			Entry("should deny empty apiGroup", nil, versions, resources, size,
+			Entry("should deny empty apiGroup", nil, versions, resources, size, count,
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("server.resourceAdmissionConfiguration.limits[0].apiGroups")}))),
 			),
-			Entry("should allow apiGroup w/ zero length", []string{""}, versions, resources, size,
+			Entry("should allow apiGroup w/ zero length", []string{""}, versions, resources, size, count,
 				BeEmpty(),
 			),
-			Entry("should deny empty versions", apiGroups, nil, resources, size,
+			Entry("should deny empty versions", apiGroups, nil, resources, size, count,
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("server.resourceAdmissionConfiguration.limits[0].versions")}))),
 			),
-			Entry("should deny versions w/ zero length", apiGroups, []string{""}, resources, size,
+			Entry("should deny versions w/ zero length", apiGroups, []string{""}, resources, size, count,
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("server.resourceAdmissionConfiguration.limits[0].versions[0]")}))),
 			),
-			Entry("should deny empty resources", apiGroups, versions, nil, size,
+			Entry("should deny empty resources", apiGroups, versions, nil, size, count,
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("server.resourceAdmissionConfiguration.limits[0].resources")}))),
 			),
-			Entry("should deny resources w/ zero length", apiGroups, versions, []string{""}, size,
+			Entry("should deny resources w/ zero length", apiGroups, versions, []string{""}, size, count,
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("server.resourceAdmissionConfiguration.limits[0].resources[0]")}))),
 			),
-			Entry("should deny invalid size", apiGroups, versions, resources, "-1k",
+			Entry("should deny invalid size", apiGroups, versions, resources, "-1k", count,
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("server.resourceAdmissionConfiguration.limits[0].size")}))),
 			),
-			Entry("should deny invalid size and resources w/ zero length", apiGroups, versions, []string{resources[0], ""}, "-1k",
+			Entry("should deny invalid size and resources w/ zero length", apiGroups, versions, []string{resources[0], ""}, "-1k", count,
 				ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("server.resourceAdmissionConfiguration.limits[0].size")})),
 					PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("server.resourceAdmissionConfiguration.limits[0].resources[1]")})),
 				),
+			),
+			Entry("should deny invalid count", apiGroups, versions, resources, size, int64(-1),
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("server.resourceAdmissionConfiguration.limits[0].count")}))),
 			),
 		)
 

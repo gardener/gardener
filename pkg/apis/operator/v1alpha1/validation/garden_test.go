@@ -2130,7 +2130,7 @@ var _ = Describe("Validation Tests", func() {
 													APIGroups:   apiGroups,
 													APIVersions: versions,
 													Resources:   resources,
-													Size:        s,
+													Size:        ptr.To(s),
 												},
 											},
 										},

@@ -7,6 +7,7 @@ package validation
 import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -112,7 +113,15 @@ func ValidateResourceAdmissionConfiguration(config *admissioncontrollerconfigv1a
 			allErrs = append(allErrs, field.Invalid(fld.Child("versions"), limit.Resources, "must at least have one element"))
 		}
 
-		if limit.Size.Cmp(resource.Quantity{}) < 0 {
+		if limit.Count == nil && limit.Size == nil {
+			allErrs = append(allErrs, field.Invalid(fld, limit, "at least one of size or count must be specified"))
+		}
+
+		if limit.Count != nil && apivalidation.ValidateNonnegativeField(*limit.Count, fld.Child("count")).ToAggregate() != nil {
+			allErrs = append(allErrs, field.Invalid(fld.Child("count"), limit.Count, "value must not be negative"))
+		}
+
+		if limit.Size != nil && limit.Size.Cmp(resource.Quantity{}) < 0 {
 			allErrs = append(allErrs, field.Invalid(fld.Child("size"), limit.Size.String(), "value must not be negative"))
 		}
 	}

@@ -800,6 +800,12 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                    count:
+                                      description: Count specifies the maximum number
+                                        of resources of the given kind. Only cluster-scoped
+                                        resources are considered.
+                                      format: int64
+                                      type: integer
                                     resources:
                                       description: Resources is the name of the resource
                                         this rule applies to. WildcardAll represents
@@ -816,7 +822,6 @@ spec:
                                       x-kubernetes-int-or-string: true
                                   required:
                                   - resources
-                                  - size
                                   type: object
                                 type: array
                               operationMode:
