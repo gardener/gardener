@@ -9,6 +9,7 @@ authors:
 reviewers:
 - "@plkokanov"
 - "@ScheererJ"
+- "@vpnachev"
 ---
 
 # GEP-35: Migrating from Vali to VictoriaLogs
@@ -22,13 +23,24 @@ reviewers:
 - [Proposal](#proposal)
 - [Alternatives](#alternatives)
 
+## Terminology
+
+Since this document relies on work that has already been done in [GEP-34](./34-observability2.0-opentelemtry-operator-and-collectors.md), the same terminology applies here as well:
+- [OTLP](https://opentelemetry.io/docs/specs/otlp/): OpenTelemetry Protocol
+- [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/): A component that can receive, process, and export telemetry data (logs, metrics, traces).
+- [Vali](https://github.com/credativ/vali): A fork of Loki 2.2.1 that is used as the log database in the current Gardener observability stack.
+- [Loki](https://github.com/grafana/loki): A log database that is part of the Grafana ecosystem.
+
 ## Summary
 
 This proposal introduces the deployment of [VictoriaLogs](https://github.com/VictoriaMetrics/VictoriaLogs) which will act as the replacement for [Vali](https://github.com/credativ/vali) in the Control Plane of all Shoot clusters that have the observability stack enabled, as well as in Seed clusters and Garden clusters.
 After the work that has been done on [GEP-34](https://github.com/gardener/gardener/pull/11861), we are in a favourable position to easily switch our storage layer for the clusters' log signals.
 
+This document fully relies on [GEP-34](./34-observability2.0-opentelemtry-operator-and-collectors.md) having already been implemented. 
+For this reason, it's expected that the reader is familiar with the concepts and terminology introduced in that GEP.
+
 A new operator is introduced that will be deployed to the `garden` namespace of seed & garden clusters.
-This operator will manage the deployment of the new `VictoriaLogs` instances to the `garden` namespace of seed & garden clusters, as well as to the Control Plane namespace of Shoot clusters via the [`VLSingle` CustomResource](https://github.com/VictoriaMetrics/operator/blob/master/docs/resources/vlsingle.md).
+This operator will manage the k8s deployment of the new `VictoriaLogs` instances to the `garden` namespace of seed & garden clusters, as well as to the Control Plane namespace of Shoot clusters via the [`VLSingle` CustomResource](https://github.com/VictoriaMetrics/operator/blob/471ecf6e0ad8839e2e88a6668d962e52e8fd677a/docs/resources/vlsingle.md).
 
 Since we'd like to make the transition from `Vali` to `VictoriaLogs` as painless as possible, this proposal also introduces multiple ways to migrate in already running landscapes without losing data that has accumulated with the existing `Vali` instances.
 
@@ -45,10 +57,11 @@ After careful consideration, we've converged to using [VictoriaLogs](https://git
 
 ### Goals
 
-- Deploy the VictoriaOperator & VictoriaLogs deployment in seed clusters.
-- Deploy the VictoriaOperator & VictoriaLogs deployment in the garden cluster.
-- Deploy a VictoriaLogs deployment to the control plane of new & existing `Shoot` clusters.
-- Give an appropriate migration strategy from Vali to VictoriaLogs for existing clusters.
+- Deploy a `VictoriaOperator` instances in the `garden` namespace of the `Garden` cluster.
+- Deploy a `VictoriaLogs` instance in the `garden` namespace of the `Garden` cluster via the `VLSingle` CustomResource.
+- Deploy a `VictoriaOperator` instance to `garden` namespace of the `Seed` clusters.
+- Deploy a `VictoriaLogs` instance in the control-plane namespace of new and existing `Shoot` clusters via the `VLSingle` CustomResource.
+- Give an appropriate migration strategy from `Vali` to `VictoriaLogs` for existing clusters.
 
 ### Non-Goals
 
@@ -62,32 +75,35 @@ After careful consideration, we've converged to using [VictoriaLogs](https://git
 
 This includes 2 steps:
 - Deployment of a new [VictoriaOperator](https://github.com/VictoriaMetrics/operator) component during the `Garden` reconciliation flow in the `garden` namespace.
-- Deployment of a new `VictoriaLogs` deployment during the Garden reconciliation flow but *after* the `VictoriaOperator` deployment has finished.
-This component will include a `VLSingle` CustomResource that the operator will reconcile in the `garden` namespace.
+- Deployment of a `VLSingle` CustomResource during the Garden reconciliation flow but *after* the `VictoriaOperator` k8s deployment has finished.
+The `VLSingle` CustomResource will be managed by the operator and will create a `VictoriaLogs` k8s deployment in the `garden` namespace.
 
 Both new components will implement the already existing pattern that components implement (e.g. OpenTelemetry Operator, Prometheus Operator).
 That being an implementation of the `Deployer` interface as well as an additional step the the `Garden` reconciliation flow.
 
-#### Access to VictoriaLogs in the `Garden` cluster
+#### Sending Logs to VictoriaLogs in the `Garden` cluster
 
-Currently, Vali access is behind a service in the `garden` namespace.
+Currently, `Vali` access is behind a service in the `garden` namespace.
 This pattern will remain and log shippers will only be expected to use the `OTLP` protocol, instead of the `Loki` protocol, via HTTP when inserting logs to VictoriaLogs.
+In the `Garden` cluster, the only log shippers are the `FluentBit` instances. They will be configured to send logs via `OTLP`.
+
+In other words, the `VictoriaLogs` instance will be exposed via a service in the `garden` namespace.
 
 ### 2. Deployment of VictoriaLogs on Seed Clusters
 
 Analogously to the deployment in the `Garden` cluster, this includes 2 steps:
 - Deployment of a new [VictoriaOperator](https://github.com/VictoriaMetrics/operator) component during the `Seed` reconciliation flow in the `garden` namespace.
-- Deployment of a new `VictoriaLogs` k8s deployment during the Seed reconciliation flow but *after* the `VictoriaOperator` deployment has finished.
-This component will include a `VLSingle` CustomResource that the operator will reconcile in the `garden` namespace.
+- Creation of a `VLSingle` CustomResource in the `garden` namespace during the `Seed` reconciliation flow but *after* the `VictoriaOperator` k8s deployment has finished.
+The `VLSingle` CustomResource will be managed by the operator and will create a `VictoriaLogs` k8s deployment in the `garden` namespace.
 
-#### Access to VictoriaLogs in the `Seed` cluster
+#### Sending Logs to VictoriaLogs in the `Seed` cluster
 
-Since the setup is the same as in the `Garden` cluster, see details in [Access to VictoriaLogs in the `Garden` cluster](#access-to-victorialogs-in-the-garden-cluster).
+Since the setup is the same as in the `Garden` cluster, see details in [Sending Logs to VictoriaLogs in the `Garden` cluster](#sending-logs-to-victorialogs-in-the-garden-cluster).
 
-### 3. Deploy VictoriaLogs in Shoot control plane
+### 3. Deployment of VictoriaLogs in the Shoot Control Plane
 
-During the `Shoot` reconciliation flow, the new `VictoriaLogs` component will be deployed to the control plane namespace of `Shoot` clusters.
-The operator will manage the resulting `VLSingle` CustomResource and create a `VictoriaLogs` k8s deployment.
+During the `Shoot` reconciliation flow, a `VLSingle` CustomResource will be created in the control-plane namespace of the `Shoot` cluster.
+The operator will manage the `VLSingle` CustomResource and create a `VictoriaLogs` k8s deployment.
 
 Example `VLSingle` CR:
 ```
@@ -110,20 +126,22 @@ spec:
       cpu: 50m
 ```
 
-#### Access to VictoriaLogs in the `Shoot` control plane
+#### Sending Logs to VictoriaLogs in the `Shoot` control plane
 
-Access to Vali is exposed via an ingress in the shoot control-plane.
-This will continue with VictoriaLogs as well.
-Log shippers will need to be configured via OTLP.
+Currently, `Vali` access is behind a service in the namespace of the `Shoot` control plane.
+For external access, there exists an ingress in front of the `OpenTelemetry Collector` in the control-plane of `Shoot` clusters that is used to post logs to `Vali`.
+See [GEP-34](./34-observability2.0-opentelemtry-operator-and-collectors.md) for more details.
+
+The same setup will continue with `VictoriaLogs`, with the only difference being that the `OpenTelemetry Collector` will be configured to ship logs to `VictoriaLogs` via `OTLP` instead of via the `Loki` protocol.
 
 ### 4. Migration from Vali to VictoriaLogs
 
 #### Data Migration
 During all the replacements of `Vali` we want to ensure that existing clusters do not get disrupted.
-For this reason, 3 strategies for migration have been considered:
+For this reason, 2 strategies for migration have been considered:
 - "One-shot" migration.
 Reformat all the Vali data into the VictoriaLogs format (or OTLP).
-Could be done via the OpenTelemetry Collector since there is no tool that exists to do this OOTB.
+Could be done via the OpenTelemetry Collector since there is no tool that exists to do this out of the box.
 
     Pros:
     - Migration step is quick.
@@ -133,21 +151,8 @@ Could be done via the OpenTelemetry Collector since there is no tool that exists
     - Development of the necessary tooling to do the migration.
     - Risk of data loss if something goes wrong during the migration.
 
-- "Rolling" migration.
-Get the VictoriaLogs instances up and reroute the logs to them without removing Vali.
-This would require both of them to be accessible for the whole retention period of the logs and it would introduce friction for the time being since there would be 2 sources of logs.
-
-    Pros:
-    - No risk of data loss.
-    - Easy to setup when using an OpenTelemetry Collector since it supports multiple backends.
-
-    Cons:
-    - Operators would need to access 2 sources of logs until the retention period is over.
-    Vali (Plutono) for the logs before the migration point and VictoriaLogs (VictoriaUI) for the logs after the migration point.
-
 - "Dual" migration.
-Same thing as the "rolling" strategy but logs are sent to both backends simultaneously.
-This would remove the friction but would incur a higher storage cost due to the replication of the logs on both backends.
+`VictoriaLogs` get deployed alongside `Vali` and *both* backends receive logs.
 
     Pros:
     - No risk of data loss.
@@ -156,13 +161,42 @@ This would remove the friction but would incur a higher storage cost due to the 
     Cons:
     - Higher storage cost due to the replication of the logs on both backends.
 
-All migration strategies are viable but it's decided that the "Rollout" migration strategy will be implemented since it balances risk, cost and friction the best.
-This will be done via a feature gate that will deploy an instance of `VictoriaLogs`, reroute the logs to it via `OTLP` and leave the existing `Vali` instance intact.
-During this period, until all logs have rotated out of `Vali`, operators will need to access both backends to see the full log history.
+Due to the "dual" migration not requiring the development of new tooling and having a lower risk of data loss, it has been chosen as the migration strategy.
+Both `Garden` clusters and `Seed` clusters will rely on this strategy, as well as new and existing `Shoot` clusters.
+The deployment alongside `Vali` will be controlled using two feature gates.
 
-When the feature gate matures, we'll remove `Vali`.
+##### Dual Migration Implementation Details
+
+To facilitate the "dual" migration, a feature gate `VictoriaLogs` will be introduced.
+When this feature gate is enabled:
+- New  and existing clusters will have `VictoriaLogs` deployed *alongside* `Vali`.
+- The OpenTelemetry Collector will be reconfigured to ship logs to *both* `Vali` and `VictoriaLogs`.
+- `FluentBit` instances will be reconfigured to ship logs to *both* `Vali` and `VictoriaLogs`.
+
+##### Removing Vali after the migration period
+
+Removal of Vali will further rely on another feature gate called `SkipVali` that will rely on the `VictoriaLogs` already being enabled for the specific cluster.
+
+When this feature gate is enabled, based on whether the retention period has passed since `VictoriaLogs` has been introduced, `Vali` will be removed from the cluster. 
+Making the migration into 2 feature gates allows us more safety if any issue occurs, by allowing us to rollback only one of the feature gates.
+First the `VictoriaLogs` feature gate can mature, then the `SkipVali` feature gate, at which point both can simultaniously be removed.
+
+##### Resource utilization during the migration period
+
+During the migration period, `Vali` and `VictoriaLogs` will be running alongside each other.
+This introduces more resource usage on clusters in the form of:
+- CPU Utilization
+- Memory Utilization
+- Storage Utilization (in the form of k8s PersistentVolumes & PersistentVolumeClaims)
+
+However, since CPU Utilization and Memory Utilization have been seen to be negligant, the main concern is the Storage Utilization.
+More precisely, `Seed` and `Garden` clusters will see an increase in volume usage by exactly the number of already existing `Vali` volumes.
+This concern is primarily for `Seed` clusters that are hosting a large number of `Shoot` clusters.
+
+Thus, it is advised that the `VictoriaLogs` feature gate is enabled inteligently - starting with less critical clusters, batching the number of `Seed` clusters that have the feature gate enabled, distributing the feature gate equaly among zones so that no single zone gets overloaded, etc.
 
 #### UI Migration
+
 There are 2 main issues that we have with our current observability platform - Plutono:
 - Plutono is a fork of Grafana and as such it lags behind the new features in Grafana.
   Same as Vali, it only receives security updates.
@@ -170,7 +204,7 @@ There are 2 main issues that we have with our current observability platform - P
 
 For this reason, our UI for logs will temporarily be replaced with the built-in web UI that VictoriaLogs ships with.
 Plutono will remain as the dashboard for visualising metrics & dashboards.
-There is a plan to migrate to [Perses](https://github.com/perses/perses) in the near future, which will unify the interfaces again, but this is out of scope of this GEP.
+[There is a plan](https://github.com/gardener/monitoring/issues/52) to migrate to [Perses](https://github.com/perses/perses) in the near future, which will unify the interfaces again, but this is out of scope of this GEP.
 
 ---
 
