@@ -4915,6 +4915,8 @@ spec:
                       description: Allows defining which port to bind to the host
                         in the Container.
                       format: int32
+                      maximum: 65535
+                      minimum: 0
                       type: integer
                     name:
                       description: |-
