@@ -17,5 +17,6 @@ func RegisterFeatureGates() {
 		features.CredentialsRotationWithoutWorkersRollout,
 		features.InPlaceNodeUpdates,
 		features.CloudProfileCapabilities,
+		features.ForbidProviderTypesField,
 	)))
 }
