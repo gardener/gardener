@@ -14,7 +14,6 @@ import (
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
@@ -89,11 +88,7 @@ func run(ctx context.Context, opts *Options) error {
 
 	switch {
 	case opts.PrintJoinCommand:
-		output, err := printJoinCommand(ctx, opts, clientSet, secret)
-		if err != nil {
-			return fmt.Errorf("failed computing join command: %w", err)
-		}
-		fmt.Fprint(opts.Out, output)
+		fmt.Fprint(opts.Out, printJoinCommand(clientSet, secret))
 
 	case opts.PrintConnectCommand:
 		fmt.Fprint(opts.Out, printConnectCommand(clientSet, secret))
@@ -105,31 +100,13 @@ func run(ctx context.Context, opts *Options) error {
 	return nil
 }
 
-func printJoinCommand(ctx context.Context, opts *Options, clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret) (string, error) {
-	secretList := &corev1.SecretList{}
-	if err := clientSet.Client().List(ctx, secretList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{
-		v1beta1constants.GardenRole:      v1beta1constants.GardenRoleOperatingSystemConfig,
-		v1beta1constants.LabelWorkerPool: opts.WorkerPoolName,
-	}); err != nil {
-		return "", fmt.Errorf("failed listing gardener-node-agent secrets: %w", err)
-	}
-
-	if len(secretList.Items) == 0 {
-		return "", fmt.Errorf("no gardener-node-agent secrets found for worker pool %q", opts.WorkerPoolName)
-	}
-
-	gardenerNodeAgentSecret := secretList.Items[0]
-	if len(secretList.Items) > 1 {
-		opts.Log.V(1).Info("Multiple gardener-node-agent secrets found, using the first one", "secretName", gardenerNodeAgentSecret.Name)
-	}
-
-	return fmt.Sprintf(`gardenadm join --bootstrap-token %s --ca-certificate "%s" --gardener-node-agent-secret-name %s %s
+func printJoinCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret) string {
+	return fmt.Sprintf(`gardenadm join --bootstrap-token %s --ca-certificate "%s" %s
 `,
 		bootstraptoken.FromSecretData(bootstrapTokenSecret.Data),
 		utils.EncodeBase64(clientSet.RESTConfig().CAData),
-		gardenerNodeAgentSecret.Name,
 		clientSet.RESTConfig().Host,
-	), nil
+	)
 }
 
 func printConnectCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret) string {

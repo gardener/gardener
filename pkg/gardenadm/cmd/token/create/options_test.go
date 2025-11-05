@@ -41,7 +41,6 @@ var _ = Describe("Options", func() {
 			options.Token.Combined = "abcdef.abcdef1234567890"
 			options.Validity = time.Hour
 			options.PrintJoinCommand = true
-			options.WorkerPoolName = "worker-pool"
 			Expect(options.Validate()).To(Succeed())
 		})
 
@@ -64,18 +63,6 @@ var _ = Describe("Options", func() {
 			options.Token.Combined = "abcdef.abcdef1234567890"
 			options.Validity = 25 * time.Hour
 			Expect(options.Validate()).To(MatchError(ContainSubstring("maximum validity duration is 24h0m0s")))
-		})
-
-		When("the print-join-command flag is set", func() {
-			BeforeEach(func() {
-				options.PrintJoinCommand = true
-				options.Token.Combined = "abcdef.abcdef1234567890"
-			})
-
-			It("should an error when no worker pool name is provided", func() {
-				options.Validity = time.Hour
-				Expect(options.Validate()).To(MatchError(ContainSubstring("must specify a worker pool name when using --print-join-command")))
-			})
 		})
 
 		When("the print-connect-command flag is set", func() {
