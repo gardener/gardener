@@ -286,6 +286,12 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	}
 	if spec.SeedSelector != nil {
 		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, metav1validation.LabelSelectorValidationOptions{}, fldPath.Child("seedSelector"))...)
+		// TODO(georgibaltiev): remove this if-block once the ForbidProviderTypesField has graduated.
+		if features.DefaultFeatureGate.Enabled(features.ForbidProviderTypesField) {
+			if spec.SeedSelector.ProviderTypes != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedSelector", "providerTypes"), "the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "))
+			}
+		}
 	}
 	if purpose := spec.Purpose; purpose != nil {
 		allowedShootPurposes := availableShootPurposes
@@ -352,6 +358,13 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 		}
 		if oldSpec.SeedSelector != nil && newSpec.SeedSelector != nil {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SeedSelector, oldSpec.SeedSelector, fldPath.Child("seedSelector"))...)
+		}
+
+		// TODO(georgibaltiev): remove this if-block once the ForbidProviderTypesField feature gate has graduated.
+		if features.DefaultFeatureGate.Enabled(features.ForbidProviderTypesField) {
+			if newSpec.SeedSelector != nil && newSpec.SeedSelector.ProviderTypes != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedSelector", "providerTypes"), "the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "))
+			}
 		}
 	}
 

@@ -1135,6 +1135,116 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 				})
 			})
+
+			// TODO(georgibaltiev): Remove the remaining test cases from the seed selector context once the ForbidProviderTypesField feature gate has graduated.
+			It("should allow setting non-empty providerTypes slice when the DisableProviderTypes feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, false))
+
+				shoot.Spec.SeedSelector = seedSelector.DeepCopy()
+				shoot.Spec.SeedSelector.ProviderTypes = []string{"foo", "bar"}
+
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+
+			It("should forbid setting a non-empty providerTypes slice when the DisableProviderTypes feature gate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+				shoot.Spec.SeedSelector = seedSelector.DeepCopy()
+				shoot.Spec.SeedSelector.ProviderTypes = []string{"foo", "bar"}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.seedSelector.providerTypes"),
+					"Detail": Equal("the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "),
+				}))))
+			})
+
+			It("should allow setting a nil providerTypes slice when the DisableProviderTypes feature gate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+				shoot.Spec.SeedSelector = seedSelector.DeepCopy()
+				shoot.Spec.SeedSelector.ProviderTypes = nil
+
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+
+			It("should allow setting a nil providerTypes slice when the DisableProviderTypes feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, false))
+
+				shoot.Spec.SeedSelector = seedSelector.DeepCopy()
+				shoot.Spec.SeedSelector.ProviderTypes = nil
+
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+
+			It("should forbid setting an empty providerTypes slice when the DisableProviderTypes feature gate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+				shoot.Spec.SeedSelector = seedSelector.DeepCopy()
+				shoot.Spec.SeedSelector.ProviderTypes = []string{}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.seedSelector.providerTypes"),
+					"Detail": Equal("the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "),
+				}))))
+			})
+
+			It("should allow updating a seedSelector with a non-empty providerTypes slice when the DisableProviderTypes feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, false))
+
+				shoot.Spec.SeedSelector = seedSelector.DeepCopy()
+				shoot.Spec.SeedSelector.ProviderTypes = []string{}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.SeedSelector.ProviderTypes = []string{"foo", "bar"}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should forbid updating a seedSelector with a non-empty providerTypes slice when the DisableProviderTypes feature gate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+				shoot.Spec.SeedSelector = seedSelector.DeepCopy()
+				shoot.Spec.SeedSelector.ProviderTypes = []string{}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.SeedSelector.ProviderTypes = []string{"foo", "bar"}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.seedSelector.providerTypes"),
+					"Detail": Equal("the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "),
+				}))))
+			})
+
+			It("should allow updating a seedSelector with a nil providerTypes slice when the DisableProviderTypes feature gate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+				shoot.Spec.SeedSelector = seedSelector.DeepCopy()
+				shoot.Spec.SeedSelector.ProviderTypes = []string{"foo", "bar"}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.SeedSelector.ProviderTypes = nil
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should forbid updating a seedSelector with an empty providerTypes slice when the DisableProviderTypes feature gate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ForbidProviderTypesField, true))
+
+				shoot.Spec.SeedSelector = seedSelector
+				shoot.Spec.SeedSelector.ProviderTypes = []string{"foo", "bar"}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.SeedSelector.ProviderTypes = []string{}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.seedSelector.providerTypes"),
+					"Detail": Equal("the 'seedSelector.providerTypes' field is no longer supported. Please use the 'seed.gardener.cloud/provider' and/or the 'seed.gardener.cloud/region' labels instead. "),
+				}))))
+			})
 		})
 
 		Context("Extensions validation", func() {
