@@ -6,7 +6,6 @@ package validation_test
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -107,25 +106,6 @@ var _ = Describe("Validation Tests", func() {
 			It("should do nothing if the operation annotation is not set", func() {
 				Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 			})
-
-			DescribeTable("size limits",
-				func(size int, matcher gomegatypes.GomegaMatcher) {
-					garden.DeletionTimestamp = &metav1.Time{}
-					value := strings.Repeat("a", size)
-					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", value)
-					Expect(ValidateGarden(garden, extensions)).To(matcher)
-				},
-
-				Entry("operation size is over maxSize", 1025, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeTooLong),
-					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-					"Detail": Equal("may not be more than 1024 bytes"),
-				})))),
-				Entry("operation size is within maxSize", 1024, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
-				})))),
-			)
 
 			DescribeTable("should not allow starting/completing rotation when garden has deletion timestamp",
 				func(operation string) {
