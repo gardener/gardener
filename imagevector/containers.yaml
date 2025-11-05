@@ -494,6 +494,23 @@ images:
         value:
           - type: 'githubTeam'
             teamname: 'gardener/gardener-core-networking-maintainers'
+  - name: coredns-config-adapter
+    sourceRepository: github.com/gardener/coredns-config-adapter
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/coredns-config-adapter
+    tag: "v0.3.0"
+    labels:
+      - name: 'gardener.cloud/cve-categorisation'
+        value:
+          network_exposure: 'private'
+          authentication_enforced: false
+          user_interaction: 'end-user'
+          confidentiality_requirement: 'low'
+          integrity_requirement: 'high'
+          availability_requirement: 'high'
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/gardener-core-networking-maintainers'
   - name: node-problem-detector
     sourceRepository: github.com/kubernetes/node-problem-detector
     repository: registry.k8s.io/node-problem-detector/node-problem-detector

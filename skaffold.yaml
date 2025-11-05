@@ -740,6 +740,8 @@ build:
             - pkg/component/kubernetes/proxy
             - pkg/component/kubernetes/proxy/resources/cleanup.sh
             - pkg/component/kubernetes/proxy/resources/conntrack-fix.sh
+            - pkg/component/networking/coredns
+            - pkg/component/networking/coredns/constants
             - pkg/component/nodemanagement/machinecontrollermanager
             - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machineclasses.yaml
             - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machinedeployments.yaml
