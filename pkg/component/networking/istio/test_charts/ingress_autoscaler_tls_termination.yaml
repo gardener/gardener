@@ -2,17 +2,18 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: istio-ingressgateway
-  namespace: {{ .Release.Namespace }}
+  namespace: test-ingress
   labels:
-    app.kubernetes.io/version: {{ .Values.ingressVersion }}
-{{ .Values.labels | toYaml | indent 4 }}
+    app.kubernetes.io/version: 1.27.1
+    app: istio-ingressgateway
+    foo: bar
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: istio-ingressgateway
-  minReplicas: {{ .Values.minReplicas }}
-  maxReplicas: {{ .Values.maxReplicas }}
+  minReplicas: <MIN_REPLICAS>
+  maxReplicas: <MAX_REPLICAS>
   metrics:
   - type: Resource
     resource:
@@ -20,14 +21,6 @@ spec:
       target:
         averageUtilization: 80
         type: Utilization
-{{- if eq .Values.terminateAPIServerTLS false }}
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        averageUtilization: 80
-        type: Utilization
-{{- end }}
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 1800
