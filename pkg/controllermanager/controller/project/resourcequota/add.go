@@ -30,13 +30,14 @@ const ControllerName = "project-resourcequota"
 
 var (
 	createOnlyPredicate = predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return true },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
+		CreateFunc:  func(_ event.CreateEvent) bool { return true },
+		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+		UpdateFunc:  func(_ event.UpdateEvent) bool { return false },
+		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
 )
 
+// AddToManager adds a controller with the given Options to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
@@ -87,7 +88,7 @@ func (r *Reconciler) MapShootToResourceQuotasInProject(log logr.Logger) handler.
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		resourceQuotaList := &corev1.ResourceQuotaList{}
 		if err := r.Client.List(ctx, resourceQuotaList, client.InNamespace(obj.GetNamespace())); err != nil {
-			log.Error(err, "unable to list resource quotas")
+			log.Error(err, "Unable to list resource quotas")
 		}
 
 		requests := make([]reconcile.Request, 0, len(resourceQuotaList.Items))

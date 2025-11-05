@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	GardenerCreatedResourcesCounts = map[corev1.ResourceName]int{
+	gardenerCreatedResourcesCounts = map[corev1.ResourceName]int{
 		"count/configmaps": 2,
 		"count/secrets":    4,
 	}
@@ -39,9 +39,9 @@ type Reconciler struct {
 	Config controllermanagerconfigv1alpha1.ProjectControllerConfiguration
 }
 
+// Reconcile adjusts the ResourceQuota in a Project namespace to ensure that it can accommodate all Shoots, according to the Shoot limit.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
-	log.Info(fmt.Sprintf("Reconciling ResourceQuota %s/%s", request.Namespace, request.Name))
 
 	resourceQuota := &corev1.ResourceQuota{}
 	if err := r.Client.Get(ctx, request.NamespacedName, resourceQuota); err != nil {
@@ -87,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 // adjustResourceQuota adjusts the given ResourceQuota's limits for Gardener-created resources and returns true if any adjustments were made.
 func (r *Reconciler) adjustResourceQuota(resourceQuota *corev1.ResourceQuota, shootLimit int64) (modified bool) {
-	for resourceName, count := range GardenerCreatedResourcesCounts {
+	for resourceName, count := range gardenerCreatedResourcesCounts {
 		resourceLimit, specified := resourceQuota.Spec.Hard[resourceName]
 		if !specified {
 			continue

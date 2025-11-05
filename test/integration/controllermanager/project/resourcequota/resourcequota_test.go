@@ -218,7 +218,7 @@ var _ = Describe("Project ResourceQuota controller tests", func() {
 		})
 
 		By("Wait until the ResourceQuota is fetchable by the manager client")
-		Eventually(mgrClient.Get(ctx, client.ObjectKeyFromObject(resourceQuota), resourceQuota)).Should(Succeed())
+		Eventually(func() error { return mgrClient.Get(ctx, client.ObjectKeyFromObject(resourceQuota), resourceQuota) }).Should(Succeed())
 
 		By("Ensure that the ResourceQuota is not modified")
 		assertLimitsUnchanged(ctx, resourceQuota)

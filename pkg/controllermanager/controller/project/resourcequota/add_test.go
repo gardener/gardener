@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenercorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -43,15 +43,15 @@ var _ = Describe("Add", func() {
 				},
 			},
 		}
-		project = &corev1beta1.Project{
+		project = &gardenercorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test",
 			},
-			Spec: corev1beta1.ProjectSpec{
+			Spec: gardenercorev1beta1.ProjectSpec{
 				Namespace: &namespaceName,
 			},
 		}
-		shoot = &corev1beta1.Shoot{
+		shoot = &gardenercorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-shoot",
 				Namespace: namespaceName,
@@ -81,8 +81,8 @@ var _ = Describe("Add", func() {
 		})
 
 		It("return true for objects that are in a project namespace", func() {
-			mockClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName}).DoAndReturn(func(_ context.Context, list *corev1beta1.ProjectList, _ ...client.ListOption) error {
-				list.Items = []corev1beta1.Project{
+			mockClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardenercorev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName}).DoAndReturn(func(_ context.Context, list *gardenercorev1beta1.ProjectList, _ ...client.ListOption) error {
+				list.Items = []gardenercorev1beta1.Project{
 					*project,
 				}
 				return nil
@@ -98,8 +98,8 @@ var _ = Describe("Add", func() {
 			nonProjectObject := resourceQuota.DeepCopy()
 			nonProjectObject.Namespace = namespaceName + "aaa"
 
-			mockClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName + "aaa"}).DoAndReturn(func(_ context.Context, list *corev1beta1.ProjectList, _ ...client.ListOption) error {
-				list.Items = []corev1beta1.Project{}
+			mockClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardenercorev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName + "aaa"}).DoAndReturn(func(_ context.Context, list *gardenercorev1beta1.ProjectList, _ ...client.ListOption) error {
+				list.Items = []gardenercorev1beta1.Project{}
 				return nil
 			}).AnyTimes()
 
