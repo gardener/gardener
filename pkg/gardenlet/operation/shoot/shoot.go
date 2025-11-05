@@ -521,21 +521,35 @@ func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *gardenletconfigv1alpha1.Gar
 	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(c)
 }
 
-func sortByIPFamilies(ipfamilies []gardencorev1beta1.IPFamily, cidrs []net.IPNet) []net.IPNet {
+// SortByIPFamilies sorts a slice of CIDRs according to the specified IP family order.
+// For dual-stack configurations, CIDRs are ordered by the IP family preference.
+// For single-stack configurations, matching CIDRs are placed first, followed by non-matching CIDRs.
+func SortByIPFamilies(ipfamilies []gardencorev1beta1.IPFamily, cidrs []net.IPNet) []net.IPNet {
+	if len(ipfamilies) == 0 || len(cidrs) == 0 {
+		return cidrs
+	}
+
 	var result []net.IPNet
-	for _, ipfamily := range ipfamilies {
-		switch ipfamily {
-		case gardencorev1beta1.IPFamilyIPv4:
-			for _, cidr := range cidrs {
-				if cidr.IP.To4() != nil {
-					result = append(result, cidr)
-				}
+
+	// Process each IP family in order
+	for _, family := range ipfamilies {
+		for _, cidr := range cidrs {
+			isIPv4 := cidr.IP.To4() != nil
+			if (family == gardencorev1beta1.IPFamilyIPv4 && isIPv4) ||
+				(family == gardencorev1beta1.IPFamilyIPv6 && !isIPv4) {
+				result = append(result, cidr)
 			}
-		case gardencorev1beta1.IPFamilyIPv6:
-			for _, cidr := range cidrs {
-				if cidr.IP.To4() == nil {
-					result = append(result, cidr)
-				}
+		}
+	}
+
+	// For single-stack, append non-matching CIDRs at the end
+	if len(ipfamilies) == 1 {
+		primary := ipfamilies[0]
+		for _, cidr := range cidrs {
+			isIPv4 := cidr.IP.To4() != nil
+			if (primary == gardencorev1beta1.IPFamilyIPv4 && !isIPv4) ||
+				(primary == gardencorev1beta1.IPFamilyIPv6 && isIPv4) {
+				result = append(result, cidr)
 			}
 		}
 	}
@@ -595,28 +609,30 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Pods, pods, "pod"); err != nil {
 			return nil, err
 		} else {
-			pods = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
+			pods = SortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
 		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Services, services, "service"); err != nil {
 			return nil, err
 		} else {
-			services = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
+			services = SortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
 		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Nodes, nodes, "node"); err != nil {
 			return nil, err
 		} else {
-			nodes = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
+			nodes = SortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
 		if result, err := copyUniqueCIDRs(shoot.Status.Networking.EgressCIDRs, egressCIDRs, "egressCIDRs"); err != nil {
 			return nil, err
 		} else {
-			egressCIDRs = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
+			egressCIDRs = SortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
 	}
 
 	// During dual-stack migration, until nodes are migrated to  dual-stack, we only use the primary addresses.
 	condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
-	if condition != nil && condition.Status != gardencorev1beta1.ConditionTrue {
+	if condition != nil &&
+		((condition.Status != gardencorev1beta1.ConditionTrue && len(shoot.Spec.Networking.IPFamilies) == 2) ||
+			(condition.Status == gardencorev1beta1.ConditionTrue && len(shoot.Spec.Networking.IPFamilies) == 1)) {
 		nodes = getPrimaryCIDRs(nodes, shoot.Spec.Networking.IPFamilies)
 		services = getPrimaryCIDRs(services, shoot.Spec.Networking.IPFamilies)
 		pods = getPrimaryCIDRs(pods, shoot.Spec.Networking.IPFamilies)
