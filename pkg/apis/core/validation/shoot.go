@@ -2659,13 +2659,13 @@ func ValidateHibernation(annotations map[string]string, hibernation *core.Hibern
 
 	for _, op := range maintenanceOperations {
 		var (
-			isSupportedOperation = availableShootMaintenanceOperations.Has(op) || strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers)
-			canRunInParallel     = len(maintenanceOperations) == 1 || availableShootOperationsToRunInParallel.Has(op)
+			isSupportedOperation = availableShootMaintenanceOperations.Has(op) || strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers)
+			canRunInParallel     = availableShootOperationsToRunInParallel.Has(op) || strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers)
 		)
 
 		// Avoid iterating over all operations if one is not supported or cannot run in parallel when multiple operations are present.
 		// No validation errors will be reported for annotations here, as they will be reported in the annotation validation.
-		if !isSupportedOperation || !canRunInParallel {
+		if !isSupportedOperation || (len(maintenanceOperations) > 1 && !canRunInParallel) {
 			opErrs = field.ErrorList{}
 			break
 		}
