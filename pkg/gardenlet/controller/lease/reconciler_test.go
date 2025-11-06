@@ -69,8 +69,8 @@ var _ = Describe("LeaseReconciler", func() {
 				Namespace: "gardener-system-seed-lease",
 				Name:      seed.Name,
 				OwnerReferences: []metav1.OwnerReference{{
-					APIVersion: "", // fake client doesn't preserve GVK information
-					Kind:       "", // fake client doesn't preserve GVK information
+					APIVersion: "core.gardener.cloud/v1beta1",
+					Kind:       "Seed",
 					Name:       seed.Name,
 					UID:        seed.UID,
 				}},

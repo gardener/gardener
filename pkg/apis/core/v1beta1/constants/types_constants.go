@@ -323,7 +323,7 @@ const (
 	// for its kube-apiserver shall be disabled.
 	ShootDisableIstioTLSTermination = "shoot.gardener.cloud/disable-istio-tls-termination"
 	// ShootIsSelfHosted is a constant for a label on a Shoot indicating that it is self-hosted.
-	ShootIsSelfHosted = "shoot.gardener.cloud/is-self-hosted"
+	ShootIsSelfHosted = "shoot.gardener.cloud/self-hosted"
 
 	// ShootAlphaControlPlaneScaleDownDisabled is a constant for an annotation on the Shoot resource stating that the
 	// automatic scale-down shall be disabled for the etcd, kube-apiserver, kube-controller-manager.

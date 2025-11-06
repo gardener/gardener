@@ -12,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -32,9 +33,10 @@ import (
 // not send heartbeats and another grace period passed then also all (other) Shoot conditions and constraints are set to
 // Unknown.
 type Reconciler struct {
-	Client client.Client
-	Config controllermanagerconfigv1alpha1.SeedControllerConfiguration
-	Clock  clock.Clock
+	Client         client.Client
+	Config         controllermanagerconfigv1alpha1.SeedControllerConfiguration
+	Clock          clock.Clock
+	LeaseNamespace *string
 }
 
 // Reconcile reconciles Seeds or Shoots and checks whether the responsible gardenlet is regularly sending heartbeats.
@@ -60,7 +62,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req Request) (reconcile.Resu
 	}
 
 	lease := &coordinationv1.Lease{}
-	if err := r.Client.Get(ctx, leaseKey(req), lease); client.IgnoreNotFound(err) != nil {
+	if err := r.Client.Get(ctx, r.leaseKey(req), lease); client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -232,9 +234,9 @@ func setConditions(o client.Object, conditions []gardencorev1beta1.Condition) {
 	}
 }
 
-func leaseKey(req Request) client.ObjectKey {
+func (r *Reconciler) leaseKey(req Request) client.ObjectKey {
 	if req.IsSelfHostedShoot {
 		return client.ObjectKey{Namespace: req.Namespace, Name: gardenlet.ResourcePrefixSelfHostedShoot + req.Name}
 	}
-	return client.ObjectKey{Namespace: gardencorev1beta1.GardenerSeedLeaseNamespace, Name: req.Name}
+	return client.ObjectKey{Namespace: ptr.Deref(r.LeaseNamespace, ""), Name: req.Name}
 }

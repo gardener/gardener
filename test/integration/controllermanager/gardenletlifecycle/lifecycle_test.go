@@ -36,7 +36,7 @@ var _ = Describe("Gardenlet Lifecycle controller tests", func() {
 		lease = &coordinationv1.Lease{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
-				Namespace:    testNamespaceName,
+				Namespace:    testNamespace.Name,
 				Labels:       map[string]string{testID: testRunID},
 			},
 		}

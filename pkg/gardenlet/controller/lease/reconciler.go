@@ -17,6 +17,7 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -96,10 +97,15 @@ func (r *Reconciler) renewLease(ctx context.Context, obj client.Object) error {
 		},
 	}
 
-	_, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.GardenClient, lease, func() error {
+	gvk, err := apiutil.GVKForObject(obj, r.GardenClient.Scheme())
+	if err != nil {
+		return fmt.Errorf("failed determining group/version/kind for object: %w", err)
+	}
+
+	_, err = controllerutils.CreateOrGetAndMergePatch(ctx, r.GardenClient, lease, func() error {
 		lease.OwnerReferences = []metav1.OwnerReference{{
-			APIVersion: obj.GetObjectKind().GroupVersionKind().GroupVersion().String(),
-			Kind:       obj.GetObjectKind().GroupVersionKind().Kind,
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
 			Name:       obj.GetName(),
 			UID:        obj.GetUID(),
 		}}

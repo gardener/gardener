@@ -54,8 +54,8 @@ var (
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
 
-	testNamespaceName = "gardener-system-seed-lease"
-	testRunID         = testNamespaceName
+	testNamespace *corev1.Namespace
+	testRunID     string
 
 	seed          *gardencorev1beta1.Seed
 	fakeClock     *testclock.FakeClock
@@ -136,12 +136,27 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
+	By("Create test Namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "gardener-system-seed-lease-",
+		},
+	}
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+	testRunID = testNamespace.Name
+
+	DeferCleanup(func() {
+		By("Delete test Namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:  testScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
-			DefaultNamespaces: map[string]cache.Config{testNamespaceName: {}},
+			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
 			SkipNameValidation: ptr.To(true),
@@ -159,7 +174,7 @@ var _ = BeforeSuite(func() {
 
 	Expect(lease.AddToManager(mgr, mgr, kubernetesClient.RESTClient(), gardenletconfigv1alpha1.SeedControllerConfiguration{
 		LeaseResyncSeconds: ptr.To[int32](1),
-	}, healthManager, seed.Name, fakeClock)).To(Succeed())
+	}, healthManager, seed.Name, fakeClock, &testNamespace.Name)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

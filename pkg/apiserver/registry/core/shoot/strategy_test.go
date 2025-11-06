@@ -675,12 +675,12 @@ var _ = Describe("Strategy", func() {
 				strategy.Canonicalize(shoot)
 
 				Expect(shoot.Labels).To(Equal(map[string]string{
-					"shoot.gardener.cloud/is-self-hosted": "true",
+					"shoot.gardener.cloud/self-hosted": "true",
 				}))
 			})
 
 			It("should correctly remove the self-hosted label", func() {
-				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "shoot.gardener.cloud/is-self-hosted", "true")
+				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "shoot.gardener.cloud/self-hosted", "true")
 
 				strategy.Canonicalize(shoot)
 

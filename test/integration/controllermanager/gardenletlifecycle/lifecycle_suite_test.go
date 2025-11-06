@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
@@ -30,6 +31,7 @@ import (
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/gardenletlifecycle"
 	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
@@ -53,8 +55,8 @@ var (
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
 
-	testNamespaceName = "gardener-system-seed-lease"
-	testRunID         = testNamespaceName
+	testNamespace *corev1.Namespace
+	testRunID     string
 
 	fakeClock *testclock.FakeClock
 )
@@ -84,6 +86,21 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
+	By("Create test Namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "gardener-system-seed-lease-",
+		},
+	}
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+	testRunID = testNamespace.Name
+
+	DeferCleanup(func() {
+		By("Delete test Namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:  kubernetes.GardenScheme,
@@ -109,7 +126,8 @@ var _ = BeforeSuite(func() {
 			ShootMonitorPeriod: &metav1.Duration{Duration: shootMonitorPeriod},
 			SyncPeriod:         &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
-		Clock: fakeClock,
+		Clock:          fakeClock,
+		LeaseNamespace: &testNamespace.Name,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")

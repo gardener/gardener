@@ -122,7 +122,10 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			)
 
 		case leaseResource:
-			return a.authorizeLease(requestAuthorizer, attrs)
+			return requestAuthorizer.Check(graph.VertexTypeLease, attrs,
+				authwebhook.WithAllowedVerbs("get", "update", "patch", "list", "watch"),
+				authwebhook.WithAlwaysAllowedVerbs("create"),
+			)
 
 		case secretResource:
 			return a.authorizeSecret(ctx, requestAuthorizer, attrs)
@@ -164,21 +167,6 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 	}
 
 	return auth.DecisionAllow, "", nil
-}
-
-func (a *authorizer) authorizeLease(requestAuthorizer *authwebhook.RequestAuthorizer, attrs auth.Attributes) (auth.Decision, string, error) {
-	// This is needed if the shoot cluster is a garden cluster at the same time.
-	if attrs.GetName() == "gardenlet-leader-election" && attrs.GetNamespace() == metav1.NamespaceSystem {
-		if ok, reason := authwebhook.CheckVerb(requestAuthorizer.Log, attrs, "create", "get", "list", "update", "watch"); !ok {
-			return auth.DecisionNoOpinion, reason, nil
-		}
-		return auth.DecisionAllow, "", nil
-	}
-
-	return requestAuthorizer.Check(graph.VertexTypeLease, attrs,
-		authwebhook.WithAllowedVerbs("get", "update", "patch", "list", "watch"),
-		authwebhook.WithAlwaysAllowedVerbs("create"),
-	)
 }
 
 func (a *authorizer) authorizeSecret(ctx context.Context, requestAuthorizer *authwebhook.RequestAuthorizer, attrs auth.Attributes) (auth.Decision, string, error) {
