@@ -269,6 +269,14 @@ func RestoreExtensionObjectState(
 	extensionObj extensionsv1alpha1.Object,
 	kind string,
 ) error {
+	if extensionObj.GetExtensionStatus().GetLastOperation() != nil {
+		// Extension controller has already started restoration/reconciliation of this extension object.
+		// Don't overwrite its status anymore to avoid conflicts and potential state loss.
+		// This can happen if `gardenadm init` is re-run with a `ShootState` manifest because it always sets the operation
+		// of the in-memory Shoot object to `Restore` which triggers restoration of all extension objects.
+		return nil
+	}
+
 	var resourceRefs []autoscalingv1.CrossVersionObjectReference
 	if shootState.Spec.Extensions != nil {
 		resourceName := extensionObj.GetName()
