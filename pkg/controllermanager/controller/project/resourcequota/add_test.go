@@ -7,7 +7,6 @@ package resourcequota_test
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -17,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -70,7 +68,7 @@ var _ = Describe("Add", func() {
 		}
 	})
 
-	Describe("ObjectInProjectNamespace", func() {
+	Describe("#ObjectInProjectNamespace", func() {
 		var p predicate.Predicate
 
 		BeforeEach(func() {
@@ -78,10 +76,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("return true for objects that are in a project namespace", func() {
-			By("Create the project")
 			Expect(fakeClient.Create(ctx, project)).To(Succeed())
-
-			Eventually(func() error { return fakeClient.Get(ctx, client.ObjectKeyFromObject(project), project) }).Should(Succeed())
 
 			Expect(p.Create(event.CreateEvent{Object: resourceQuota})).To(BeTrue())
 			Expect(p.Update(event.UpdateEvent{ObjectNew: resourceQuota})).To(BeTrue())
@@ -93,11 +88,7 @@ var _ = Describe("Add", func() {
 			nonProjectObject := resourceQuota.DeepCopy()
 			nonProjectObject.Namespace = namespaceName + "aaa"
 
-			Expect(fakeClient.Create(context.Background(), nonProjectObject)).To(Succeed())
-
-			Eventually(func() error {
-				return fakeClient.Get(ctx, client.ObjectKeyFromObject(nonProjectObject), nonProjectObject)
-			}).Should(Succeed())
+			Expect(fakeClient.Create(ctx, nonProjectObject)).To(Succeed())
 
 			Expect(p.Create(event.CreateEvent{Object: nonProjectObject})).To(BeFalse())
 			Expect(p.Update(event.UpdateEvent{ObjectNew: nonProjectObject})).To(BeFalse())
@@ -106,17 +97,11 @@ var _ = Describe("Add", func() {
 		})
 	})
 
-	Describe("MapShootToResourceQuotasInProject", func() {
-		var mapFunc handler.MapFunc
-
-		BeforeEach(func() {
-			mapFunc = reconciler.MapShootToResourceQuotasInProject(logr.Discard())
-		})
-
+	Describe("#MapShootToResourceQuotasInProject", func() {
 		It("should enqueue requests for ResourceQuotas in the Shoot namespace", func() {
 			Expect(fakeClient.Create(ctx, resourceQuota)).To(Succeed())
 
-			Expect(mapFunc(ctx, shoot)).To(Equal([]reconcile.Request{
+			Expect(reconciler.MapShootToResourceQuotasInProject(GinkgoLogr)(ctx, shoot)).To(Equal([]reconcile.Request{
 				{NamespacedName: types.NamespacedName{
 					Name:      resourceQuota.Name,
 					Namespace: resourceQuota.Namespace,
@@ -125,8 +110,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should not enqueue any requests if there are no ResourceQuotas in the Shoot namespace", func() {
-			var requests []reconcile.Request
-			Expect(mapFunc(context.Background(), shoot)).To(Equal(requests))
+			Expect(reconciler.MapShootToResourceQuotasInProject(GinkgoLogr)(ctx, shoot)).To(BeEmpty())
 		})
 	})
 })

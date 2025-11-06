@@ -5,6 +5,7 @@
 package project
 
 import (
+	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -17,7 +18,7 @@ import (
 )
 
 // AddToManager adds all Project controllers to the given manager.
-func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.ControllerManagerConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, cfg controllermanagerconfigv1alpha1.ControllerManagerConfiguration) error {
 	if err := (&activity.Reconciler{
 		Config: *cfg.Controllers.Project,
 	}).AddToManager(mgr); err != nil {
@@ -32,7 +33,7 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 
 	if err := (&resourcequota.Reconciler{
 		Config: *cfg.Controllers.Project,
-	}).AddToManager(mgr); err != nil {
+	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding resourcequota reconciler: %w", err)
 	}
 

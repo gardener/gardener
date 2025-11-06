@@ -33,7 +33,7 @@ import (
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
-func TestProjectResourceQuota(t *testing.T) {
+func TestResourceQuota(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test Integration ControllerManager Project ResourceQuota Suite")
 }
@@ -102,7 +102,7 @@ var _ = BeforeSuite(func() {
 		Config: controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
-	}).AddToManager(mgr)).To(Succeed())
+	}).AddToManager(ctx, mgr)).To(Succeed())
 	// The test creates and deletes namespaces, so we need to finalize them as envtest doesn't run the
 	// namespace controller.
 	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())

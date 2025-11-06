@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestProjectResourceQuota(t *testing.T) {
+func TestResourceQuota(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ControllerManager Controller Project ResourceQuota Suite")
 }

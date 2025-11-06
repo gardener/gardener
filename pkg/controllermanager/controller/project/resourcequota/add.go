@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,10 +30,12 @@ import (
 const ControllerName = "project-resourcequota"
 
 // AddToManager adds a controller with the given Options to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
+
+	log := mgr.GetLogger().WithValues("controller", ControllerName)
 
 	return builder.
 		ControllerManagedBy(mgr).
@@ -41,12 +44,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
-		For(&corev1.ResourceQuota{}, builder.WithPredicates(r.ObjectInProjectNamespace(
-			context.Background(),
-			mgr.GetLogger().WithValues("controller", ControllerName)))).
+		For(&corev1.ResourceQuota{}, builder.WithPredicates(r.ObjectInProjectNamespace(ctx, log))).
 		Watches(
 			&gardencorev1beta1.Shoot{},
-			handler.EnqueueRequestsFromMapFunc(r.MapShootToResourceQuotasInProject(mgr.GetLogger().WithValues("controller", ControllerName))),
+			handler.EnqueueRequestsFromMapFunc(r.MapShootToResourceQuotasInProject(log)),
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create)),
 		).
 		Complete(r)
@@ -67,7 +68,8 @@ func (r *Reconciler) ObjectInProjectNamespace(ctx context.Context, log logr.Logg
 // MapShootToResourceQuotasInProject maps Shoots to ResourceQuotas in the corresponding Project namespace.
 func (r *Reconciler) MapShootToResourceQuotasInProject(log logr.Logger) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		resourceQuotaList := &corev1.ResourceQuotaList{}
+		resourceQuotaList := &metav1.PartialObjectMetadataList{}
+		resourceQuotaList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ResourceQuotaList"))
 		if err := r.Client.List(ctx, resourceQuotaList, client.InNamespace(obj.GetNamespace())); err != nil {
 			log.Error(err, "Unable to list resource quotas")
 		}
