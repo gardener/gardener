@@ -16,8 +16,8 @@ import (
 
 var _ = Describe("ServiceMonitors", func() {
 	Describe("#CentralServiceMonitors", func() {
-		It("should return the expected objects", func() {
-			Expect(cache.CentralServiceMonitors()).To(HaveExactElements(&monitoringv1.ServiceMonitor{
+		It("should return the service monitors for ManagedSeeds", func() {
+			Expect(cache.CentralServiceMonitors(true)).To(HaveExactElements(&monitoringv1.ServiceMonitor{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "node-exporter",
 					Namespace: "kube-system",
@@ -57,6 +57,10 @@ var _ = Describe("ServiceMonitors", func() {
 					}},
 				},
 			}))
+		})
+
+		It("should not return the service monitors for unmanaged Seeds", func() {
+			Expect(cache.CentralServiceMonitors(false)).To(BeEmpty())
 		})
 	})
 })
