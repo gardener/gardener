@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -198,10 +199,18 @@ func (b *Botanist) UpdateDualStackMigrationConditionIfNeeded(ctx context.Context
 	}
 
 	if constraint := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady); constraint == nil {
-		network, _ := b.Shoot.Components.Extensions.Network.Get(ctx)
-		if network == nil {
-			return nil // Network not yet created, nothing to do
+		network, err := b.Shoot.Components.Extensions.Network.Get(ctx)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil // Network not yet created, nothing to do
+			}
+			return fmt.Errorf("failed to get network resource: %w", err)
 		}
+
+		if network == nil || network.Status.IPFamilies == nil {
+			return nil
+		}
+
 		networkReadyForDualStackMigration := len(network.Status.IPFamilies) == len(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 		updateFunction := b.DetermineUpdateFunction(networkReadyForDualStackMigration, nodeList)
 		if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, updateFunction); err != nil {
