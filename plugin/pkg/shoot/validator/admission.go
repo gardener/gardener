@@ -936,18 +936,7 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 		return nil
 	}
 
-	defaultVersion, errList := defaultKubernetesVersion(c.cloudProfileSpec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, path.Child("version"))
-	if len(errList) > 0 {
-		allErrs = append(allErrs, errList...)
-	}
-
-	if defaultVersion != nil {
-		c.shoot.Spec.Kubernetes.Version = *defaultVersion
-	} else {
-		// We assume that the 'defaultVersion' is already calculated correctly, so only run validation if the version was not defaulted.
-		allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, false, path.Child("version"))...)
-	}
-
+	allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, false, path.Child("version"))...)
 	allErrs = append(allErrs, c.validateKubeAPIServerOIDCConfig(a)...)
 
 	return allErrs
@@ -1158,16 +1147,7 @@ func (c *validationContext) validateWorkerKubernetesVersion(idxPath *field.Path,
 		oldWorkerKubernetesVersion = *oldWorker.Kubernetes.Version
 	}
 
-	defaultVersion, errList := defaultKubernetesVersion(c.cloudProfileSpec.Kubernetes.Versions, *worker.Kubernetes.Version, idxPath.Child("kubernetes", "version"))
-	if len(errList) > 0 {
-		return errList
-	}
-
-	if defaultVersion == nil {
-		return validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, *worker.Kubernetes.Version, oldWorkerKubernetesVersion, isNewWorkerPool, idxPath.Child("kubernetes", "version"))
-	}
-	worker.Kubernetes.Version = defaultVersion
-	return nil
+	return validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, *worker.Kubernetes.Version, oldWorkerKubernetesVersion, isNewWorkerPool, idxPath.Child("kubernetes", "version"))
 }
 
 func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList {
@@ -1330,69 +1310,6 @@ func hasDomainIntersection(domainA, domainB string) bool {
 	}
 
 	return strings.HasSuffix(long, short)
-}
-
-func defaultKubernetesVersion(constraints []gardencorev1beta1.ExpirableVersion, shootVersion string, fldPath *field.Path) (*string, field.ErrorList) {
-	var (
-		allErrs           = field.ErrorList{}
-		shootVersionMajor *uint64
-		shootVersionMinor *uint64
-		versionParts      = strings.Split(shootVersion, ".")
-	)
-
-	if len(versionParts) == 3 {
-		return nil, allErrs
-	}
-	if len(versionParts) == 2 && len(versionParts[1]) > 0 {
-		v, err := strconv.ParseUint(versionParts[1], 10, 0)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[1], "must be a semantic version"))
-			return nil, allErrs
-		}
-		shootVersionMinor = ptr.To(v)
-	}
-	if len(versionParts) >= 1 && len(versionParts[0]) > 0 {
-		v, err := strconv.ParseUint(versionParts[0], 10, 0)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[0], "must be a semantic version"))
-			return nil, allErrs
-		}
-		shootVersionMajor = ptr.To(v)
-	}
-
-	if latestVersion := findLatestSupportedVersion(constraints, shootVersionMajor, shootVersionMinor); latestVersion != nil {
-		return ptr.To(latestVersion.String()), nil
-	}
-
-	allErrs = append(allErrs, field.Invalid(fldPath, shootVersion, fmt.Sprintf("couldn't find a suitable version for %s. Suitable versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly", shootVersion)))
-	return nil, allErrs
-}
-
-func findLatestSupportedVersion(constraints []gardencorev1beta1.ExpirableVersion, major, minor *uint64) *semver.Version {
-	var latestVersion *semver.Version
-	for _, versionConstraint := range constraints {
-		if v1beta1helper.CurrentLifecycleClassification(versionConstraint) != gardencorev1beta1.ClassificationSupported {
-			continue
-		}
-
-		// CloudProfile cannot contain invalid semVer shootVersion
-		cpVersion := semver.MustParse(versionConstraint.Version)
-
-		// defaulting on patch level: version has to have the same major and minor kubernetes version
-		if major != nil && cpVersion.Major() != *major {
-			continue
-		}
-
-		if minor != nil && cpVersion.Minor() != *minor {
-			continue
-		}
-
-		if latestVersion == nil || cpVersion.GreaterThan(latestVersion) {
-			latestVersion = cpVersion
-		}
-	}
-
-	return latestVersion
 }
 
 func validateKubernetesVersionConstraints(a admission.Attributes, constraints []gardencorev1beta1.ExpirableVersion, shootVersion, oldShootVersion string, isNewWorkerPool bool, fldPath *field.Path) field.ErrorList {

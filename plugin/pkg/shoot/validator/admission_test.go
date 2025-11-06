@@ -2753,81 +2753,6 @@ var _ = Describe("validator", func() {
 				Expect(err).To(MatchError(ContainSubstring("Unsupported value: \"1.2.3\"")))
 			})
 
-			It("should throw an error because of an invalid major version", func() {
-				shoot.Spec.Kubernetes.Version = "foo"
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).To(MatchError(ContainSubstring("must be a semantic version")))
-			})
-
-			It("should throw an error because of an invalid minor version", func() {
-				shoot.Spec.Kubernetes.Version = "1.bar"
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).To(MatchError(ContainSubstring("must be a semantic version")))
-			})
-
-			It("should default a kubernetes version to latest major.minor.patch version", func() {
-				shoot.Spec.Kubernetes.Version = ""
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).To(Not(HaveOccurred()))
-				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestSupportedVersion.Version))
-			})
-
-			It("should default a major kubernetes version to latest minor.patch version", func() {
-				shoot.Spec.Kubernetes.Version = "1"
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).To(Not(HaveOccurred()))
-				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestSupportedVersion.Version))
-			})
-
-			It("should default a major.minor kubernetes version to latest patch version", func() {
-				shoot.Spec.Kubernetes.Version = "1.26"
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).To(Not(HaveOccurred()))
-				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestSupported126Release.Version))
-			})
-
-			It("should reject defaulting a major.minor kubernetes version if there is no higher non-preview version available for defaulting", func() {
-				shoot.Spec.Kubernetes.Version = "1.24"
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).To(MatchError(ContainSubstring("couldn't find a suitable version for 1.24")))
-			})
-
-			It("should be able to explicitly pick preview versions", func() {
-				shoot.Spec.Kubernetes.Version = highestPreviewVersion.Version
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).To(Not(HaveOccurred()))
-			})
-
-			It("should reject: default only exactly matching minor kubernetes version", func() {
-				shoot.Spec.Kubernetes.Version = "1.2"
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).To(MatchError(ContainSubstring("couldn't find a suitable version for 1.2")))
-			})
-
 			It("should reject to create a cluster with an expired kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = expiredVersion.Version
 
@@ -2854,28 +2779,6 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(ctx, attrs, nil)
 
 				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("should not choose the default kubernetes version if version is not specified", func() {
-				shoot.Spec.Kubernetes.Version = "1.26"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{}
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(BeNil())
-			})
-
-			It("should choose the default kubernetes version if only major.minor is given in a worker group", func() {
-				shoot.Spec.Kubernetes.Version = "1.26"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.26")}
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(*shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(highestSupported126Release.Version))
 			})
 
 			It("should work to create a cluster with a worker group kubernetes version set smaller than control plane version", func() {
