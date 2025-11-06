@@ -2652,30 +2652,12 @@ func ValidateHibernation(annotations map[string]string, hibernation *core.Hibern
 		return allErrs
 	}
 
-	var (
-		opErrs                = field.ErrorList{}
-		maintenanceOperations = v1beta1helper.GetShootMaintenanceOperations(annotations)
-	)
-
-	for _, op := range maintenanceOperations {
-		var (
-			isSupportedOperation = availableShootMaintenanceOperations.Has(op) || strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers)
-			canRunInParallel     = availableShootOperationsToRunInParallel.Has(op) || strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers)
-		)
-
-		// Avoid iterating over all operations if one is not supported or cannot run in parallel when multiple operations are present.
-		// No validation errors will be reported for annotations here, as they will be reported in the annotation validation.
-		if !isSupportedOperation || (len(maintenanceOperations) > 1 && !canRunInParallel) {
-			opErrs = field.ErrorList{}
-			break
-		}
-
+	for _, op := range v1beta1helper.GetShootMaintenanceOperations(annotations) {
 		if forbiddenShootOperationsWhenHibernated.Has(op) && ptr.Deref(hibernation.Enabled, false) {
-			opErrs = append(opErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s annotation contains %s operation", v1beta1constants.GardenerMaintenanceOperation, op)))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s annotation contains %s operation", v1beta1constants.GardenerMaintenanceOperation, op)))
 		}
 	}
 
-	allErrs = append(allErrs, opErrs...)
 	allErrs = append(allErrs, ValidateHibernationSchedules(hibernation.Schedules, fldPath.Child("schedules"))...)
 
 	return allErrs
