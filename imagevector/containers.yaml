@@ -497,7 +497,7 @@ images:
   - name: coredns-config-adapter
     sourceRepository: github.com/gardener/coredns-config-adapter
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/coredns-config-adapter
-    tag: "v0.3.0"
+    tag: "v0.4.0"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
