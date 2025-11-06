@@ -22,11 +22,16 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
+	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
 // Actuator implements the DNSRecord actuator for the local DNS provider.
 type Actuator struct {
-	Client client.Client
+	// RuntimeClient uses provider-local's in-cluster config, e.g., for the seed/bootstrap cluster it runs in.
+	// It's used to interact with extension objects. By default, it's also used as the provider client to interact with
+	// DNS resources (the provider-local-coredns ConfigMap), unless a kubeconfig is specified in the secret referenced in
+	// the DNSRecord.
+	RuntimeClient client.Client
 }
 
 // shouldHandleDNSRecord returns true for DNSRecords that are implemented in provider-local by writing to the custom
@@ -38,30 +43,37 @@ func shouldHandleDNSRecord(dnsRecord *extensionsv1alpha1.DNSRecord) bool {
 }
 
 // Reconcile ensures that the DNS record is correctly represented in the CoreDNS config map.
-func (a *Actuator) Reconcile(ctx context.Context, _ logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
-	if !shouldHandleDNSRecord(dnsRecord) {
-		return nil
-	}
+func (a *Actuator) Reconcile(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
+	return a.reconcile(ctx, log, dnsRecord, func(configMap *corev1.ConfigMap) error {
+		config, err := a.configForDNSRecord(ctx, dnsRecord, cluster)
+		if err != nil {
+			return err
+		}
 
-	config, err := a.configForDNSRecord(ctx, dnsRecord, cluster)
-	if err != nil {
-		return err
-	}
-
-	return a.patchCoreDNSConfigMap(ctx, func(configMap *corev1.ConfigMap) {
 		configMap.Data[keyForDNSRecord(dnsRecord)] = config
+		return nil
 	})
 }
 
 // Delete removes the DNS record from the CoreDNS config map.
-func (a *Actuator) Delete(ctx context.Context, _ logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
+func (a *Actuator) Delete(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
+	return a.reconcile(ctx, log, dnsRecord, func(configMap *corev1.ConfigMap) error {
+		delete(configMap.Data, keyForDNSRecord(dnsRecord))
+		return nil
+	})
+}
+
+func (a *Actuator) reconcile(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, mutate func(configMap *corev1.ConfigMap) error) error {
 	if !shouldHandleDNSRecord(dnsRecord) {
 		return nil
 	}
 
-	return a.patchCoreDNSConfigMap(ctx, func(configMap *corev1.ConfigMap) {
-		delete(configMap.Data, keyForDNSRecord(dnsRecord))
-	})
+	providerClient, err := local.GetProviderClient(ctx, log, a.RuntimeClient, dnsRecord.Spec.SecretRef)
+	if err != nil {
+		return fmt.Errorf("could not create client for DNS resources: %w", err)
+	}
+
+	return patchCoreDNSConfigMap(ctx, providerClient, mutate)
 }
 
 // ForceDelete is the same as Delete for the local DNS provider.
@@ -85,11 +97,10 @@ func (a *Actuator) Restore(ctx context.Context, log logr.Logger, dnsRecord *exte
 	return a.Reconcile(ctx, log, dnsRecord, cluster)
 }
 
-func (a *Actuator) patchCoreDNSConfigMap(ctx context.Context, mutate func(configMap *corev1.ConfigMap)) error {
+func patchCoreDNSConfigMap(ctx context.Context, providerClient client.Client, mutate func(configMap *corev1.ConfigMap) error) error {
 	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: coredns.CustomConfigMapName, Namespace: "gardener-extension-provider-local-coredns"}}
-	_, err := controllerutil.CreateOrPatch(ctx, a.Client, configMap, func() error {
-		mutate(configMap)
-		return nil
+	_, err := controllerutil.CreateOrPatch(ctx, providerClient, configMap, func() error {
+		return mutate(configMap)
 	})
 	return err
 }
@@ -117,7 +128,7 @@ func (a *Actuator) configForDNSRecord(ctx context.Context, dnsRecord *extensions
 	}
 
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: dnsRecord.Namespace}}
-	if err := a.Client.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+	if err := a.RuntimeClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
 		return "", err
 	}
 

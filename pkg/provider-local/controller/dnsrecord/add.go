@@ -35,7 +35,7 @@ type AddOptions struct {
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
 	return dnsrecord.Add(mgr, dnsrecord.AddArgs{
 		Actuator: &Actuator{
-			Client: mgr.GetClient(),
+			RuntimeClient: mgr.GetClient(),
 		},
 		ControllerOptions: opts.Controller,
 		Predicates:        dnsrecord.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
