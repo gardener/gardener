@@ -17,7 +17,6 @@ import (
 func (x *x509CertificateExporter) deployment(
 	resName string, sa *corev1.ServiceAccount,
 ) *appsv1.Deployment {
-
 	var (
 		podLabels = x.getGenericLabels(inClusterCertificateLabelValue)
 		podSpec   corev1.PodSpec
@@ -25,7 +24,7 @@ func (x *x509CertificateExporter) deployment(
 
 	podLabels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
 	podSpec = x.defaultPodSpec(sa)
-	podSpec.Containers[0].Args = x.conf.inCluster.GetArgs()
+	podSpec.Containers[0].Args = x.conf.InCluster.GetArgs()
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -34,7 +33,7 @@ func (x *x509CertificateExporter) deployment(
 			Labels:    x.getGenericLabels(inClusterCertificateLabelValue),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: ptr.To(int32(*x.conf.inCluster.Replicas)),
+			Replicas: ptr.To(int32(*x.conf.InCluster.Replicas)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: podLabels,
 			},

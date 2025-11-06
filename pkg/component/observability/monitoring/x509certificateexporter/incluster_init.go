@@ -52,19 +52,14 @@ var configMapKeyRegexp = regexp.MustCompile(`^[-._a-zA-Z0-9]+$`)
 
 func validateConfigMapKey(key string) error {
 	if len(key) == 0 {
-		return errors.New("config map key cannot be empty")
+		return ErrEmptyConfigMapKey
 	}
-	if key == "." {
-		return errors.New("config map key cannot be a single dot")
-	}
-	if key == ".." {
-		return errors.New("config map key cannot be a double dot")
-	}
-	if !configMapKeyRegexp.MatchString(key) {
-		return fmt.Errorf("invalid config map key %q", key)
+
+	if key == "." || key == ".." || !configMapKeyRegexp.MatchString(key) {
+		return fmt.Errorf("%w: %q", ErrKeyIsIllegal, key)
 	}
 	if len(key) > 253 {
-		return fmt.Errorf("config map key %q exceeds maximum length of 253 characters", key)
+		return fmt.Errorf("%w: %q", ErrConfigMapMaxKeyLenght, key)
 	}
 	return nil
 }
@@ -72,19 +67,19 @@ func validateConfigMapKey(key string) error {
 func validateLabels(labelz map[string]string) error {
 	for k, v := range labelz {
 		if err := validation.IsQualifiedName(k); err != nil {
-			return fmt.Errorf("includeLabels has invalid key %q: %v", k, err)
+			return fmt.Errorf("%w: %q - %s", ErrIncludeLabelsInvalid, k, err)
 		}
 		if err := validation.IsValidLabelValue(v); err != nil {
-			return fmt.Errorf("includeLabels[%q] has invalid value %q: %v", k, v, err)
+			return fmt.Errorf("%w: %q:%q - %s", ErrIncludeLabelsInvalid, k, v, err)
 		}
 	}
 	return nil
 }
 
 func validateNamespaces(namespaces []string) error {
-	for idx, ns := range namespaces {
+	for _, ns := range namespaces {
 		if err := validation.IsDNS1123Label(ns); err != nil {
-			return fmt.Errorf("namespaces[%d] is invalid: %v", idx, err)
+			return fmt.Errorf("%w: %v", ErrInvalidNamespace, err)
 		}
 	}
 	return nil
@@ -96,15 +91,28 @@ func validateSecretType(secretType corev1.SecretType) error {
 		corev1.SecretTypeOpaque,
 		corev1.SecretTypeBasicAuth,
 		corev1.SecretTypeSSHAuth:
-		return errors.New("invalid secret type for x509certificateexporter")
+		return nil
 	}
-	return nil
+	return ErrInvalidSecretType
 }
 
 func (i *inClusterConfig) Default() {
 	if !i.Enabled {
 		return
 	}
+	if i.TrimComponents == nil {
+		i.TrimComponents = ptr.To(uint32(0))
+	}
+	if i.Replicas == nil {
+		i.Replicas = ptr.To(defaultReplicas)
+	}
+	if i.KubeAPIRateLimit == nil {
+		i.KubeAPIRateLimit = ptr.To(defaultKubeAPIRateLimit)
+	}
+	if i.KubeAPIBurst == nil {
+		i.KubeAPIBurst = ptr.To(defaultKubeAPIBurst)
+	}
+
 	if *i.Replicas == 0 {
 		i.Replicas = ptr.To(defaultReplicas)
 	}
@@ -124,31 +132,32 @@ func (i *inClusterConfig) Validate() error {
 		return nil
 	}
 	if len(i.SecretTypes) == 0 && len(i.ConfigMapKeys) == 0 {
-		return fmt.Errorf("at least one of secretTypes or configMapKeys must be specified when inCluster monitoring is enabled")
+		return ErrNoConfigMapKeyOrSecretTypes
 	}
+	errs := make([]error, 0)
 	for idx, stype := range i.SecretTypes {
 		if err := validateSecretType(corev1.SecretType(stype)); err != nil {
-			return fmt.Errorf("secretTypes[%d] is invalid: %w", idx, err)
+			errs = append(errs, fmt.Errorf("secretTypes[%d] is invalid: %w", idx, err))
 		}
 	}
 	for idx, cmkey := range i.ConfigMapKeys {
 		if err := validateConfigMapKey(cmkey); err != nil {
-			return fmt.Errorf("configMapKeys[%d] is invalid: %w", idx, err)
+			errs = append(errs, fmt.Errorf("configMapKeys[%d] is invalid: %w", idx, err))
 		}
 	}
 	if err := validateLabels(i.IncludeLabels); err != nil {
-		return fmt.Errorf("includeLabels is invalid: %w", err)
+		errs = append(errs, fmt.Errorf("includeLabels is invalid: %w", err))
 	}
 	if err := validateLabels(i.ExcludeLabels); err != nil {
-		return fmt.Errorf("excludeLabels is invalid: %w", err)
+		errs = append(errs, fmt.Errorf("excludeLabels is invalid: %w", err))
 	}
 	if err := validateNamespaces(i.IncludeNamespaces); err != nil {
-		return fmt.Errorf("includeNamespaces is invalid: %w", err)
+		errs = append(errs, fmt.Errorf("includeNamespaces is invalid: %w", err))
 	}
 	if err := validateNamespaces(i.ExcludeNamespaces); err != nil {
-		return fmt.Errorf("excludeNamespaces is invalid: %w", err)
+		errs = append(errs, fmt.Errorf("excludeNamespaces is invalid: %w", err))
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func (i *inClusterConfig) GetArgs() []string {

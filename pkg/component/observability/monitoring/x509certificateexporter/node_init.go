@@ -61,10 +61,10 @@ func (n noNodeSelectorOrNameForWorkerError) Error() string {
 
 func (m *monitorableMount) Validate() error {
 	if !filepath.IsAbs(m.Path) {
-		return fmt.Errorf("mount path %q is not an absolute path", m.Path)
+		return fmt.Errorf("%w: %v", ErrMountPathNotAbsolute, m.Path)
 	}
 	if len(m.WatchKubeconfigs) == 0 && len(m.WatchCertificates) == 0 && len(m.WatchDirs) == 0 {
-		return errors.New("at least one of watchKubeconfigs, watchCertificates, or watchDirs must be specified")
+		return ErrNoMonitorableFiles
 	}
 
 	var (
@@ -74,13 +74,14 @@ func (m *monitorableMount) Validate() error {
 
 	fps = append(fps, m.WatchKubeconfigs...)
 	fps = append(fps, m.WatchCertificates...)
+	fps = append(fps, m.WatchDirs...)
 	for _, path := range fps {
 		if !filepath.IsAbs(path) {
-			errs = append(errs, fmt.Errorf("filepath %q is not an absolute path", path))
+			errs = append(errs, fmt.Errorf("%w: %q", ErrWatchedFileNotAbsolutePath, path))
 		}
 	}
 	if len(errs) > 0 {
-		return fmt.Errorf("monitorableMount validation errors: %v", errs)
+		return fmt.Errorf("%w: %w", ErrMountValidationErrors, errors.Join(errs...))
 	}
 	return nil
 }
@@ -90,16 +91,16 @@ func (wg *workerGroup) Validate() error {
 		return noNodeSelectorOrNameForWorkerError(fmt.Sprintf("%+v", wg))
 	}
 	if len(wg.Mounts) == 0 {
-		return fmt.Errorf("worker group %+v must have at least one mount defined", wg)
+		return ErrWorkerGroupMissingMount
 	}
 	errs := make([]error, 0)
 	for k, v := range wg.Mounts {
 		if err := v.Validate(); err != nil {
-			errs = append(errs, fmt.Errorf("mount %q validation error: %w", k, err))
+			errs = append(errs, fmt.Errorf("%q %w: %w", k, ErrMountValidation, err))
 		}
 	}
 	if len(errs) > 0 {
-		return fmt.Errorf("worker group %+v validation errors: %+v", wg, errs)
+		return errors.Join(errs...)
 	}
 	return nil
 }
@@ -126,7 +127,7 @@ func (wg *workerGroup) GetArgs() []string {
 			for mountName, mount := range wg.Mounts {
 				args = append(args, getArgsForMount(mountName, mount)...)
 			}
-			args = append(args, fmt.Sprintf("--listen-address=:%d", port))
+			args = append(args, fmt.Sprintf("--listen-address=:%d", Port))
 			return args
 		}
 		args = getArgs()
@@ -148,11 +149,11 @@ func (wgs *workerGroupsConfig) Validate() error {
 		err := wg.Validate()
 		wgErrs = append(wgErrs, err)
 		if errors.As(err, &noNameOrSuffixErr) && len(*wgs) > 1 {
-			return fmt.Errorf("multiple worker groups defined, but at least one is missing a node selector: %w", err)
+			return fmt.Errorf("%w: %w: %w", ErrWorkerGroupInvalid, ErrMultipleGroupsNoSelectorOrSuffix, err)
 		}
 	}
 	if len(wgErrs) > 0 {
-		return fmt.Errorf("workerGroups validation errors: %+v", wgErrs)
+		return fmt.Errorf("%w: %w", ErrWorkerGroupInvalid, errors.Join(wgErrs...))
 	}
 
 	return nil

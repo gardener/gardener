@@ -6,7 +6,6 @@ package x509certificateexporter
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -20,10 +19,18 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
+// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+// or deleted.
+var TimeoutWaitForManagedResource = 2 * time.Minute
+
 // New Provides new x509CertificateExporter component set
 func New(client client.Client, secretsManager secretsmanager.Interface, namespace string, values Values) (component.DeployWaiter, error) {
-	var conf *x509certificateExporterConfig
+	var conf = &x509certificateExporterConfig{}
 
+	// TODO(mimiteto): Support Seed/Shoot cluster deployment as well
+	if values.NameSuffix != SuffixRuntime {
+		return nil, ErrUnsuportedClusterType
+	}
 	if err := parseConfig(values.ConfigData, conf); err != nil {
 		return nil, fmt.Errorf("failed to parse x509CertificateExporter config: %w", err)
 	}
@@ -38,11 +45,6 @@ func New(client client.Client, secretsManager secretsmanager.Interface, namespac
 }
 
 func (x *x509CertificateExporter) Deploy(ctx context.Context) error {
-	// TODO(mimiteto): Support Seed/Shoot cluster deployment as well
-	if x.values.NameSuffix != SuffixRuntime {
-		return errors.New("x509CertificateExporter is currently supported only on the runtime cluster")
-	}
-
 	var (
 		res                 []client.Object
 		registry            *managedresources.Registry
@@ -95,10 +97,6 @@ func (x *x509CertificateExporter) Destroy(ctx context.Context) error {
 	}
 	return nil
 }
-
-// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
-// or deleted.
-var TimeoutWaitForManagedResource = 2 * time.Minute
 
 func (x *x509CertificateExporter) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)

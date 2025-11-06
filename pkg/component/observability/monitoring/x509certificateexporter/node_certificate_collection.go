@@ -15,9 +15,9 @@ import (
 )
 
 func (x *x509CertificateExporter) daemonSetList(resNamePrefix string, sa *corev1.ServiceAccount) []client.Object {
-	daemonSets := make([]client.Object, 0, len(x.conf.workerGroups))
+	daemonSets := make([]client.Object, 0, len(x.conf.WorkerGroups))
 
-	for _, wg := range x.conf.workerGroups {
+	for _, wg := range x.conf.WorkerGroups {
 		var name string
 		if wg.NameSuffix == "" {
 			name = resNamePrefix

@@ -21,7 +21,7 @@ func (x *x509CertificateExporter) serviceMonitor(resName string, selector labels
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: selector},
 			Endpoints: []monitoringv1.Endpoint{{
-				TargetPort: ptr.To(intstr.FromInt32(port)),
+				TargetPort: ptr.To(intstr.FromInt32(Port)),
 				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
 					"x509_cert_not_before",
 					"x509_cert_not_after",

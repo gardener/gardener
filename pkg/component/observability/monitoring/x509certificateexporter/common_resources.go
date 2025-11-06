@@ -30,9 +30,9 @@ func (x *x509CertificateExporter) service(resName string, selector labels.Set) *
 			Ports: []corev1.ServicePort{
 				{
 					Name:       portName,
-					Port:       port,
+					Port:       Port,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(port),
+					TargetPort: intstr.FromInt(Port),
 				},
 			},
 			Type: corev1.ServiceType("ClusterIP"),
@@ -40,7 +40,7 @@ func (x *x509CertificateExporter) service(resName string, selector labels.Set) *
 	}
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt(port)),
+		Port:     ptr.To(intstr.FromInt(Port)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 	return service
@@ -68,7 +68,7 @@ func (x *x509CertificateExporter) defaultPodSpec(sa *corev1.ServiceAccount) core
 				Ports: []corev1.ContainerPort{
 					{
 						Name:          portName,
-						ContainerPort: port,
+						ContainerPort: Port,
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{

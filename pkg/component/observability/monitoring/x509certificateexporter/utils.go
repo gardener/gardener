@@ -5,6 +5,7 @@
 package x509certificateexporter
 
 import (
+	"errors"
 	"fmt"
 
 	"go.yaml.in/yaml/v2"
@@ -61,7 +62,7 @@ func getExposeLabelsMetricsArg(expose bool) []string {
 }
 
 func (c *commonExporterConfigs) GetCommonArgs() []string {
-	args := []string{fmt.Sprintf("--listen-address=:%d", port)}
+	args := []string{fmt.Sprintf("--listen-address=:%d", Port)}
 	args = append(args, getExposeRelativeMetricsArg(c.ExposeRelativeMetrics)...)
 	args = append(args, getTrimComponentsArg(c.TrimComponents)...)
 	args = append(args, getExposePerCertErrorMetricsArg(c.ExposePerCertErrorMetrics)...)
@@ -101,52 +102,68 @@ func (a *alertingConfig) Default() {
 }
 
 func (a *alertingConfig) Validate() error {
+	errs := []error{}
+	for _, sev := range []prometheusRuleSeverity{
+		a.ReadErrorsSeverity,
+		a.CertificateErrorsSeverity,
+		a.RenewalSeverity,
+		a.ExpirationSeverity,
+		a.ExpiresTodaySeverity,
+	} {
+		if err := sev.Validate(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	if a.CertificateExpirationDays > a.CertificateRenewalDays {
-		return fmt.Errorf(
-			"certificateRenewalDays must be greater than or equal to certificateExpirationDays, got %d, %d",
+		errs = append(errs, fmt.Errorf(
+			"%w, got %d, %d", ErrInvalidExpirationRenewalConf,
 			a.CertificateRenewalDays, a.CertificateExpirationDays,
-		)
+		))
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
-func (x *x509certificateExporterConfig) IsInclusterEnabled() bool {
-	return x.inCluster.Enabled
+func (xc *x509certificateExporterConfig) IsInclusterEnabled() bool {
+	return xc.InCluster.Enabled
 }
 
-func (x *x509certificateExporterConfig) IsWorkerGroupsEnabled() bool {
-	return len(x.workerGroups) > 0
+func (xc *x509certificateExporterConfig) IsWorkerGroupsEnabled() bool {
+	return len(xc.WorkerGroups) > 0
 }
 
-func (x *x509certificateExporterConfig) Validate() (errs []error) {
-	if err := x.inCluster.Validate(); err != nil {
-		errs = append(errs, fmt.Errorf("inCluster: %w", err))
+func (xc *x509certificateExporterConfig) Validate() error {
+	var errs []error
+	if !xc.IsInclusterEnabled() && !xc.IsWorkerGroupsEnabled() {
+		errs = append(errs, ErrEmptyExporterConfig)
 	}
-	if err := x.alerting.Validate(); err != nil {
-		errs = append(errs, fmt.Errorf("alerting: %w", err))
+
+	if err := xc.InCluster.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("%w: %v", ErrInClusterConfig, err))
 	}
-	if err := x.workerGroups.Validate(); err != nil {
-		errs = append(errs, fmt.Errorf("workerGroups: %w", err))
+	if err := xc.Alerting.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("%w, %v", ErrAlertingConfig, err))
 	}
-	if x.IsInclusterEnabled() && x.IsWorkerGroupsEnabled() {
-		errs = append(errs, fmt.Errorf("at least one of inCluster or workerGroups must be enabled"))
+	if err := xc.WorkerGroups.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("%w: %w", ErrWorkerGroupsConfig, err))
 	}
-	return
+
+	return errors.Join(errs...)
 }
 
-func (x *x509certificateExporterConfig) Default() {
-	x.inCluster.Default()
-	x.alerting.Default()
+func (xc *x509certificateExporterConfig) Default() {
+	xc.InCluster.Default()
+	xc.Alerting.Default()
 }
 
 func parseConfig(data []byte, out *x509certificateExporterConfig) error {
 	if err := yaml.Unmarshal(data, out); err != nil {
-		return fmt.Errorf("failed to unmarshal x509certificateexporter config: %w", err)
+		return fmt.Errorf("%w: %v", ErrInvalidExporterConfigFormat, err)
 	}
 
 	out.Default()
 	if err := out.Validate(); err != nil {
-		return fmt.Errorf("x509certificateexporter config validation failed: %+v", err)
+		return fmt.Errorf("%w: %v", ErrConfigValidationFailed, err)
 	}
 	return nil
 }

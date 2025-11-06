@@ -81,7 +81,7 @@ type workerGroup struct {
 	NameSuffix string `yaml:"nameSuffix,omitempty"`
 	// TODO: Nodelocaldns for ds
 	// Selector is the label selector to identify the worker nodes
-	Selector *metav1.LabelSelector `yaml:"selectoroomitempty"`
+	Selector *metav1.LabelSelector `yaml:"selector,omitempty"`
 	// Mounts is a map of mounts and the monitored resources within
 	Mounts map[string]monitorableMount `yaml:"mounts"`
 }
@@ -98,6 +98,20 @@ const (
 	criticalSeverity prometheusRuleSeverity = "critical"
 	blockerSeverity  prometheusRuleSeverity = "blocker"
 )
+
+var validSeverities = map[prometheusRuleSeverity]bool{
+	infoSeverity:     true,
+	warningSeverity:  true,
+	criticalSeverity: true,
+	blockerSeverity:  true,
+}
+
+func (prs prometheusRuleSeverity) Validate() error {
+	if validSeverities[prs] {
+		return nil
+	}
+	return ErrInvalidSeverity
+}
 
 type alertingConfig struct {
 	// CertificateRenewalDays specifies days before certificate expires that we will get an alert
@@ -122,9 +136,9 @@ type alertingConfig struct {
 }
 
 type x509certificateExporterConfig struct {
-	inCluster    inClusterConfig    `yaml:"inCluster,omitempty"`
-	workerGroups workerGroupsConfig `yaml:"workerGroups,omitempty"`
-	alerting     alertingConfig     `yaml:"alertingConfig,omitempty"`
+	InCluster    inClusterConfig    `yaml:"inCluster,omitempty"`
+	WorkerGroups workerGroupsConfig `yaml:"workerGroups,omitempty"`
+	Alerting     alertingConfig     `yaml:"alertingConfig,omitempty"`
 }
 
 // Values holds configurations for the x509 certificate exporter deploys
@@ -147,4 +161,11 @@ type x509CertificateExporter struct {
 	namespace      string
 	values         Values
 	conf           *x509certificateExporterConfig
+}
+
+// Error represents an error related to x509 certificate exporter
+type Error string
+
+func (e Error) Error() string {
+	return string(e)
 }

@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHpc(t *testing.T) {
+func TestX509CertificateExporter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Hpc Suite")
+	RunSpecs(t, "X509CertificateExporter Suite")
 }

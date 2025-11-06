@@ -15,12 +15,12 @@ import (
 
 func (x *x509CertificateExporter) prometheusRule(labelz labels.Set) *monitoringv1.PrometheusRule {
 	var (
-		alertDurationCalculation = x.conf.alerting.DurationForAlertEvaluation
+		alertDurationCalculation = x.conf.Alerting.DurationForAlertEvaluation
 		certRenewalExpr          = intstr.FromString(fmt.Sprintf(
-			"(x509_cert_not_after - time()) < (%d * 86400)", x.conf.alerting.CertificateRenewalDays,
+			"(x509_cert_not_after - time()) < (%d * 86400)", x.conf.Alerting.CertificateRenewalDays,
 		))
 		certExpirationExpr = intstr.FromString(fmt.Sprintf(
-			"(x509_cert_not_after - time()) < (%d * 86400)", x.conf.alerting.CertificateExpirationDays,
+			"(x509_cert_not_after - time()) < (%d * 86400)", x.conf.Alerting.CertificateExpirationDays,
 		))
 		certExpiresTodayExpr = intstr.FromString("(x509_cert_not_after - time()) < 86400")
 		genAlertLabels       = func(sev prometheusRuleSeverity) map[string]string {
@@ -30,11 +30,11 @@ func (x *x509CertificateExporter) prometheusRule(labelz labels.Set) *monitoringv
 				defaultSeverityKey: string(sev),
 			}
 		}
-		readErrorsLabels       = genAlertLabels(x.conf.alerting.ReadErrorsSeverity)
-		certificateErrorLabels = genAlertLabels(x.conf.alerting.CertificateErrorsSeverity)
-		renewalLabels          = genAlertLabels(x.conf.alerting.RenewalSeverity)
-		expirationLabels       = genAlertLabels(x.conf.alerting.ExpirationSeverity)
-		expiresTodayLabels     = genAlertLabels(x.conf.alerting.ExpiresTodaySeverity)
+		readErrorsLabels       = genAlertLabels(x.conf.Alerting.ReadErrorsSeverity)
+		certificateErrorLabels = genAlertLabels(x.conf.Alerting.CertificateErrorsSeverity)
+		renewalLabels          = genAlertLabels(x.conf.Alerting.RenewalSeverity)
+		expirationLabels       = genAlertLabels(x.conf.Alerting.ExpirationSeverity)
+		expiresTodayLabels     = genAlertLabels(x.conf.Alerting.ExpiresTodaySeverity)
 	)
 
 	labelz["prometheus"] = x.values.PrometheusInstance
@@ -48,15 +48,15 @@ func (x *x509CertificateExporter) prometheusRule(labelz labels.Set) *monitoringv
 		Spec: monitoringv1.PrometheusRuleSpec{
 			Groups: []monitoringv1.RuleGroup{
 				{
-					Name: x.conf.alerting.PrometheusRuleName,
+					Name: x.conf.Alerting.PrometheusRuleName,
 					Rules: []monitoringv1.Rule{
 						{
 							Alert: "X509ExporterReadErrors",
 							Annotations: map[string]string{
-								"description": fmt.Sprintf("Over the last %s, this x509-certificate-exporter instance has experienced errors reading certificate files or querying the Kubernetes API. This could be caused by a misconfiguration if triggered when the exporter starts.", x.conf.alerting.DurationForAlertEvaluation),
+								"description": fmt.Sprintf("Over the last %s, this x509-certificate-exporter instance has experienced errors reading certificate files or querying the Kubernetes API. This could be caused by a misconfiguration if triggered when the exporter starts.", x.conf.Alerting.DurationForAlertEvaluation),
 								"summary":     "Increasing read errors for x509-certificate-exporter on {{$externalLabels.landscape}} landscape",
 							},
-							Expr:   intstr.FromString(fmt.Sprintf("increase(x509_read_errors[%s]) > 0", x.conf.alerting.DurationForAlertEvaluation)),
+							Expr:   intstr.FromString(fmt.Sprintf("increase(x509_read_errors[%s]) > 0", x.conf.Alerting.DurationForAlertEvaluation)),
 							Labels: readErrorsLabels,
 						},
 						{
