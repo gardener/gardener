@@ -225,7 +225,7 @@ of `SecretBinding`, but on top of that will be extended to refer to
 
 In a nutshell, the changes introduced compared to `SecretBinding` are:
 
-- `CredentialsBinding.credentialsRef` field will be mutable. It will refer to a
+- `CredentialsBinding.credentialsRef` field will be immutable. It will refer to a
   `WorkloadIdentity` or `Secret` resource by its name and namespace. If the
   namespace is unset, the namespace of the `CredentialsBinding` will be used.
 - `quotas` and `provider` fields have the semantic as their respective
@@ -271,38 +271,57 @@ cover clusters using WorkloadIdentity for authentication.
 
 While the infrastructure credentials for the shoot cluster are the main driver
 behind this GEP, various extensions can benefit of this feature as well. For
-this purpose, a new optional field named `workloadIdentity` will be introduced
-in `shoot.spec.extensions`, it will refer to workload identity by name assuming
-the workloadIdentity resource is in the namespace of the shoot. The seed CRD
-`extensions.extensions.gardener.cloud` will be also extended to reflect that the
-extension is using workload identity letting extension controllers know when a
-JWT or other kind of credentials are used.
-
-Similar approach can be taken to provide alternative to
-`shoot.spec.dns.providers.secretName`, e.g. a new field `workloadIdentity` will
-extended the `shoot.spec.dns.providers`.
+this purpose, `shoot.spec.resources` will be extended to allow `WorkloadIdentity`
+references next to the currently supported `Secret` and `ConfigMap`. Extensions,
+via their own `shoot.spec.extensions.providerConfig`, will specify which
+referenced resources they are using. This way, multiple extensions can reuse the
+same `WorkloadIdentity` and it will not need to be mount multiple times. For
+every `WorkloadIdentity` referenced by the shoot, gardenlet will create a secret
+in the control plane namespace bearing the workload identity features - the token
+and the config. It will be up to the extension controller to make use of the
+workload identity credentials available in the secret. Similar approach will be
+taken to provide alternative to `shoot.spec.dns.providers.secretName`, e.g. a
+new field `credentialsRef` will extended the `shoot.spec.dns.providers`.
+Extension controllers are expected to implement admission validation for the
+`WorkloadIdentity` resources of the types that they support instead of relying
+on other extensions, i.e. infrastructure providers, to do the validation.
 
 ```yaml
 spec:
   extensions:
     - type: some-extension
-      workloadIdentity:
-        name: foo
+      providerConfig:
+        apiVersion: some-extension.extensions.gardener.cloud/v1alpha1
+        kind: SomeExtensionConfig
+        resourcesRefs:
+        - name: resource-ref-1
   dns:
     providers:
     - type: some-dns-provider
-      workloadIdentity:
+      credentialsRef:
+        apiVersion: security.gardener.cloud/v1alpha1 # or "v1", when secret is being used
+        kind: WorkloadIdentity # or "Secret", when secret is being used
         name: bar
+  resources:
+  - resourceName: resource-ref-1
+    apiVersion: security.gardener.cloud/v1alpha1 # or "v1", when secret is being used
+    kind: WorkloadIdentity # or "Secret", when secret is being used
+    name: bar
 ```
 
 #### Seed API Related Changes
 
 Wherever the Seed API is referring to secrets, it will be extended to refer to
 workload identities, as of now these are the fields `spec.backup.` and
-`spec.dns.provider` and they will have new field `workloadIdentityRef` holding
-the name and the namespace of a workload identity resource. The respective
-`secretRef` fields will be made optional and validation will ensure only one of
-`secretRef` and `workloadIdentityRef` is used at a time.
+`spec.dns.provider` and they will have new field `credentialsRef` holding
+the object reference to a credentials resource - `v1.Secret` or
+`security.gardener.cloud/v1alpha1.WorkloadIdentity`. The respective
+`secretRef` fields will be deprecated and removed in favour of `credentialsRef`.
+During the migration phase, both fields will be allowed when the credential is
+of type `v1.Secret` and validation will ensure both refer to the same secret.
+
+The workload identity credentials will be made available to the controllers in
+the seed cluster via `Secret` containing the config and the token.
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -311,13 +330,34 @@ metadata:
   name: seed
 spec:
   backup:
-    workloadIdentityRef:
+    credentialsRef:
+      apiVersion: security.gardener.cloud/v1alpha1 # or "v1", when secret is being used
+      kind: WorkloadIdentity # or "Secret", when secret is being used
       name: backup-workloadidentity
       namespace: garden
   dns:
     provider:
-      workloadIdentityRef:
+      credentialsRef:
+        apiVersion: security.gardener.cloud/v1alpha1 # or "v1", when secret is being used
+        kind: WorkloadIdentity # or "Secret", when secret is being used
         name: ingress-workloadidentity
+        namespace: garden
+    internal:
+      credentialsRef:
+        apiVersion: security.gardener.cloud/v1alpha1 # or "v1", when secret is being used
+        kind: WorkloadIdentity # or "Secret", when secret is being used
+        name: internal-workloadidentity
+        namespace: garden
+    defaults:
+    - credentialsRef:
+        apiVersion: security.gardener.cloud/v1alpha1 # or "v1", when secret is being used
+        kind: WorkloadIdentity # or "Secret", when secret is being used
+        name: default1-workloadidentity
+        namespace: garden
+    - credentialsRef:
+        apiVersion: security.gardener.cloud/v1alpha1 # or "v1", when secret is being used
+        kind: WorkloadIdentity # or "Secret", when secret is being used
+        name: default2-workloadidentity
         namespace: garden
 ```
 
@@ -482,9 +522,8 @@ type: Opaque
 The secret `cloudprovider` that now holds the static credentials will be reused
 to store the token and the provider config when the shoot is using workload
 identity as infrastructure credentials. For each extension using workload
-identity, the secret will be named
-`workloadidentity-extension-<extension-type>`, and for dns providers
-`workloadidentity-dns-<dns-provider-type>`.
+identity, the secret will be named as per the naming convention for referenced
+resources or other already established convention to name a secret in the seed.
 
 The reconciliation flow for a component using workload identity tokens will look
 like this:
