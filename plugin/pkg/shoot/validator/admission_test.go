@@ -752,18 +752,6 @@ var _ = Describe("validator", func() {
 					shoot.Spec.CloudProfileName = nil
 				})
 
-				It("should fail when both cloudProfileName and cloudProfile are provided for a new shoot", func() {
-					shoot.Spec.CloudProfileName = ptr.To("profile")
-					shoot.Spec.CloudProfile = &core.CloudProfileReference{
-						Kind: "CloudProfile",
-						Name: "profile",
-					}
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Validate(ctx, attrs, nil)
-
-					Expect(err).To(MatchError(ContainSubstring("either cloudProfileName or cloudProfile reference")))
-				})
-
 				It("should pass on update for a unchanged CloudProfile reference with CloudProfileName set accordingly", func() {
 					shoot.Spec.CloudProfileName = ptr.To("profile")
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{

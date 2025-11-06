@@ -152,6 +152,18 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 		}
 	}
 
+	// Conceptually, the below validation belongs to the `ShootValidator` admission plugin.
+	// However it cannot be put there because:
+	// - `shootStrategy.PrepareForCreate` syncs the `.spec.cloudProfileName` and `.spec.cloudProfile` fields.
+	// - `PrepareForCreate` of a strategy implementation is executed before the validating admission plugins.
+	// Hence, a validating admission plugin such as `ShootValidator` always receives an object with both of the fields populated
+	// and the validation always fails. That's why the validation is moved to the `ShootMutator`.
+	if a.GetOperation() == admission.Create {
+		if len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 && shoot.Spec.CloudProfile != nil {
+			return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
+		}
+	}
+
 	cloudProfileSpec, err := gardenerutils.GetCloudProfileSpec(m.cloudProfileLister, m.namespacedCloudProfileLister, shoot)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %w", err))

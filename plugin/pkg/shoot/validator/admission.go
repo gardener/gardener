@@ -250,12 +250,6 @@ func (v *ValidateShoot) Validate(ctx context.Context, a admission.Attributes, _ 
 		}
 	}
 
-	if a.GetOperation() == admission.Create {
-		if len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 && shoot.Spec.CloudProfile != nil {
-			return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
-		}
-	}
-
 	cloudProfileSpec, err := gardenerutils.GetCloudProfileSpec(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
