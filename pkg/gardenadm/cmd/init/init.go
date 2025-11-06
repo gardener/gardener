@@ -249,6 +249,14 @@ func run(ctx context.Context, opts *Options) error {
 			waitUntilExtensionControllersInPodNetworkReady,
 		)
 
+		// Later on, we will expose the control plane via a LoadBalancer and point the DNSRecord to it.
+		// TODO(timebertt): skip this step if the external LoadBalancer is already available
+		_ = g.Add(flow.Task{
+			Name:         "Restoring DNSRecord pointing to the first control plane machine",
+			Fn:           b.RestoreBootstrapDNSRecord,
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+		})
 		reconcileBackupBucket = g.Add(flow.Task{
 			Name:         "Deploying BackupBucket for ETCD data",
 			Fn:           b.ReconcileBackupBucket,

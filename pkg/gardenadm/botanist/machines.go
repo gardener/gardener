@@ -48,14 +48,14 @@ var addressTypePreference = map[corev1.NodeAddressType]int{
 	corev1.NodeHostName: 1,
 }
 
-// PreferredAddressForMachine returns the preferred address of the given machine based on addressTypePreference.
+// PreferredAddress returns the preferred address of the given machine based on addressTypePreference.
 // If the machine has no addresses, an error is returned.
-func PreferredAddressForMachine(machine *machinev1alpha1.Machine) (string, error) {
-	if len(machine.Status.Addresses) == 0 {
-		return "", fmt.Errorf("no addresses found in status of machine %s", machine.Name)
+func PreferredAddress(addresses []corev1.NodeAddress) (string, error) {
+	if len(addresses) == 0 {
+		return "", fmt.Errorf("no addresses found in status of machine")
 	}
 
-	address := slices.MaxFunc(machine.Status.Addresses, func(a, b corev1.NodeAddress) int {
+	address := slices.MaxFunc(addresses, func(a, b corev1.NodeAddress) int {
 		return addressTypePreference[a.Type] - addressTypePreference[b.Type]
 	})
 
