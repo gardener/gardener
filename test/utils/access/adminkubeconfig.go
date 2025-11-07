@@ -20,20 +20,12 @@ import (
 
 // CreateShootClientFromAdminKubeconfig requests an admin kubeconfig and creates a shoot client.
 func CreateShootClientFromAdminKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
-	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestAdminKubeconfigForShoot, kubernetes.ShootScheme)
+	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestAdminKubeconfigForShoot)
 }
 
 // CreateShootClientFromViewerKubeconfig requests a viewer kubeconfig and creates a shoot client.
 func CreateShootClientFromViewerKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
-	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestViewerKubeconfigForShoot, kubernetes.ShootScheme)
-}
-
-// CreateManagedSeedClientFromAdminKubeconfig requests an admin kubeconfig and creates a shoot client for a managed seed.
-func CreateManagedSeedClientFromAdminKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(kubernetes.AddShootSchemeToScheme(scheme))
-	utilruntime.Must(kubernetes.AddSeedSchemeToScheme(scheme))
-	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestAdminKubeconfigForShoot, scheme)
+	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestViewerKubeconfigForShoot)
 }
 
 func createShootClientFromDynamicKubeconfig(
@@ -41,7 +33,6 @@ func createShootClientFromDynamicKubeconfig(
 	gardenClient kubernetes.Interface,
 	shoot *gardencorev1beta1.Shoot,
 	requestFn func(context.Context, kubernetes.Interface, *gardencorev1beta1.Shoot, *int64) ([]byte, error),
-	scheme *runtime.Scheme,
 ) (
 	kubernetes.Interface,
 	error,
@@ -50,6 +41,11 @@ func createShootClientFromDynamicKubeconfig(
 	if err != nil {
 		return nil, err
 	}
+
+	// create shoot client with both shoot and seed schemes to be used for managed seeds as well
+	scheme := runtime.NewScheme()
+	utilruntime.Must(kubernetes.AddShootSchemeToScheme(scheme))
+	utilruntime.Must(kubernetes.AddSeedSchemeToScheme(scheme))
 
 	return kubernetes.NewClientFromBytes(
 		kubeconfig,
