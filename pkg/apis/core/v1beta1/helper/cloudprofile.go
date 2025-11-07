@@ -99,7 +99,7 @@ func VersionIsPreview(version gardencorev1beta1.ExpirableVersion) bool {
 // DurationUntilNextVersionLifecycleStage returns the duration until the earliest upcoming lifecycle start time
 // of any Kubernetes version or MachineImageVersion in the given <cloudProfile>.
 // If no future lifecyle start is found, it returns 0.
-// TODO:(RAPSNX): Consider inject time.Now() instead of define it in the body to easier test it
+// TODO:(RAPSNX): Consider injecting time.Now() for better testability.
 func DurationUntilNextVersionLifecycleStage(cloudProfile *gardencorev1beta1.CloudProfileSpec) time.Duration {
 	if cloudProfile == nil {
 		return 0
