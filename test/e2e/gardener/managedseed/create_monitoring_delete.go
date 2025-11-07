@@ -78,10 +78,10 @@ var _ = Describe("(Managed)Seed Monitoring Tests", Label("Seed", "default"), fun
 
 		ItShouldCreateShoot(s.ShootContext)
 		ItShouldWaitForShootToBeReconciledAndHealthy(s.ShootContext)
+		ItShouldInitializeShootClient(s.ShootContext)
 		ItShouldCreateManagedSeed(s)
 		ItShouldWaitForManagedSeedToBeReady(s)
 		ItShouldWaitForSeedToBeReady(s.SeedContext)
-		ItShouldInitializeManagedSeedClient(s)
 
 		Context("Failing health checks in aggregate Prometheus", Ordered, func() {
 			test("aggregate")
