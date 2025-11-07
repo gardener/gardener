@@ -12,9 +12,12 @@ import (
 )
 
 // CentralServiceMonitors returns the central ServiceMonitor resources for the cache prometheus.
-func CentralServiceMonitors() []*monitoringv1.ServiceMonitor {
-	return []*monitoringv1.ServiceMonitor{
-		{
+func CentralServiceMonitors(seedIsShoot bool) []*monitoringv1.ServiceMonitor {
+	var serviceMonitors []*monitoringv1.ServiceMonitor
+
+	if seedIsShoot {
+		// add cache-node-exporter ServiceMonitor only to ManagedSeeds.
+		serviceMonitors = append(serviceMonitors, &monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-exporter",
 				Namespace: metav1.NamespaceSystem,
@@ -53,6 +56,8 @@ func CentralServiceMonitors() []*monitoringv1.ServiceMonitor {
 					),
 				}},
 			},
-		},
+		})
 	}
+
+	return serviceMonitors
 }

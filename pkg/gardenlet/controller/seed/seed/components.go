@@ -601,7 +601,7 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 		},
 		CentralConfigs: prometheus.CentralConfigs{
 			AdditionalScrapeConfigs: additionalScrapeConfigs,
-			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(),
+			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(seedIsShoot),
 			PrometheusRules:         cacheprometheus.CentralPrometheusRules(),
 		},
 		AdditionalResources: []client.Object{
