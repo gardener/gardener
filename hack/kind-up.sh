@@ -331,7 +331,7 @@ fi
 # from within the kind cluster and also from within a self-hosted shoot.
 # See docs/extensions/provider-local.md#credentials.
 if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]] ; then
-  sed "s/127\.0\.0\.1:[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$PATH_KUBECONFIG" > "$(dirname "$0")/../dev-setup/gardenconfig/components/credentials/secret-project-garden/with-kind-kubeconfig/kubeconfig"
+  sed "s/127\.0\.0\.1:[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$PATH_KUBECONFIG" > "$(dirname "$0")/../dev-setup/gardenconfig/components/credentials/secret-project-garden-with-kind-kubeconfig/kubeconfig"
 fi
 
 # Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster.
