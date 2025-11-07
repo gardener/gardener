@@ -588,7 +588,10 @@ func (h *HealthChecker) CheckManagedPrometheuses(
 		})
 	}
 
-	_ = flow.Parallel(tasks...)(ctx)
+	if err := flow.Parallel(tasks...)(ctx); err != nil {
+		return ptr.To(v1beta1helper.NewConditionOrError(h.clock, condition, nil, fmt.Errorf("failed checking Prometheuses: %w", err)))
+	}
+
 	return firstNotNil(conditions)
 }
 
@@ -607,7 +610,10 @@ func (h *HealthChecker) CheckPrometheus(ctx context.Context, condition gardencor
 		}
 	}
 
-	_ = flow.Parallel(tasks...)(ctx)
+	if err := flow.Parallel(tasks...)(ctx); err != nil {
+		return ptr.To(v1beta1helper.NewConditionOrError(h.clock, condition, nil, fmt.Errorf(`failed checking Prometheus "%s/%s" replicas: %w`, prometheus.Namespace, prometheus.Name, err)))
+	}
+
 	return firstNotNil(conditions)
 }
 
