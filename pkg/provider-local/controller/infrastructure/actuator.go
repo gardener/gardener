@@ -27,21 +27,21 @@ import (
 )
 
 type actuator struct {
-	// seedClient uses provider-local's in-cluster config, e.g., for the seed cluster it runs in. It's used to interact
-	// with extension objects. By default, it's also used as the provider client to interact with infrastructure
-	// resources, unless a kubeconfig is specified in the cloudprovider secret.
-	seedClient client.Client
+	// runtimeClient uses provider-local's in-cluster config, e.g., for the seed/bootstrap cluster it runs in.
+	// It's used to interact with extension objects. By default, it's also used as the provider client to interact with
+	// infrastructure resources, unless a kubeconfig is specified in the cloudprovider secret.
+	runtimeClient client.Client
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled Infrastructure resources.
 func NewActuator(mgr manager.Manager) infrastructure.Actuator {
 	return &actuator{
-		seedClient: mgr.GetClient(),
+		runtimeClient: mgr.GetClient(),
 	}
 }
 
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	providerClient, err := local.GetProviderClient(ctx, log, a.seedClient, infrastructure.Spec.SecretRef)
+	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, infrastructure.Spec.SecretRef)
 	if err != nil {
 		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
 	}
@@ -131,11 +131,11 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, infrastructur
 		infrastructure.Status.Networking.Services = []string{*services}
 	}
 
-	return a.seedClient.Status().Patch(ctx, infrastructure, patch)
+	return a.runtimeClient.Status().Patch(ctx, infrastructure, patch)
 }
 
 func (a *actuator) Delete(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
-	providerClient, err := local.GetProviderClient(ctx, log, a.seedClient, infrastructure.Spec.SecretRef)
+	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, infrastructure.Spec.SecretRef)
 	if err != nil {
 		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
 	}
