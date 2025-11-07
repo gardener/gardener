@@ -2850,6 +2850,11 @@ message SeedSettingLoadBalancerServices {
   // Defaults to true.
   // +optional
   optional SeedSettingLoadBalancerServicesZonalIngress zonalIngress = 5;
+
+  // Class configures the Service.spec.loadBalancerClass field for the load balancer services on the seed.
+  // Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.
+  // +optional
+  optional string class = 6;
 }
 
 // SeedSettingLoadBalancerServicesZonalIngress controls the deployment of ingress gateways per availability zone.

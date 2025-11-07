@@ -20,6 +20,8 @@ limitations under the License.
 package core_test
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -153,4 +155,20 @@ var _ = Describe("Validation", func() {
 			"Field":  Equal("resourceQuantity"),
 			"Detail": Equal("must be an integer"),
 		})))))
+
+	DescribeTable("#ValidateQualifiedName",
+		func(name string, errMatcher types.GomegaMatcher) {
+			Expect(ValidateQualifiedName(name, field.NewPath("qualifiedName"))).To(errMatcher)
+		},
+
+		Entry("valid qualified name (simple)", "my-name", BeEmpty()),
+		Entry("valid qualified name (with dot)", "my.name", BeEmpty()),
+		Entry("valid qualified name (with dash)", "my-name.test", BeEmpty()),
+		Entry("valid qualified name (max length)", strings.Repeat("a", 63), BeEmpty()),
+		Entry("invalid qualified name (too long)", strings.Repeat("a", 64), Not(BeEmpty())),
+		Entry("invalid qualified name (invalid char)", "my-name[0]", Not(BeEmpty())),
+		Entry("invalid qualified name (starts with dot)", ".myname", Not(BeEmpty())),
+		Entry("invalid qualified name (ends with dash)", "myname-", Not(BeEmpty())),
+		Entry("invalid qualified name (empty)", "", Not(BeEmpty())),
+	)
 })

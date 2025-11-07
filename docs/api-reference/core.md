@@ -11454,6 +11454,19 @@ SeedSettingLoadBalancerServicesZonalIngress
 Defaults to true.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>class</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Class configures the Service.spec.loadBalancerClass field for the load balancer services on the seed.
+Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingLoadBalancerServicesZonalIngress">SeedSettingLoadBalancerServicesZonalIngress
