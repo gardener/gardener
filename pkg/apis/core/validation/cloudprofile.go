@@ -145,17 +145,6 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	return allErrs
 }
 
-func validateCloudProfileKubernetesClassificationLifecycleStartTimesOrder(kubernetes *core.KubernetesSettings, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	if kubernetes == nil {
-		return allErrs
-	}
-	for i, version := range kubernetes.Versions {
-		allErrs = append(allErrs, validateLifecycleStartTimes(version.Lifecycle, fldPath.Child("versions").Index(i))...)
-	}
-	return allErrs
-}
-
 func validateCloudProfileKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(kubernetes.Versions) == 0 {
