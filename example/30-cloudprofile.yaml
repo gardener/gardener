@@ -4,104 +4,112 @@ metadata:
   name: cloudprofile1
 spec:
   type: <some-provider-name> # {aws,azure,gcp,...}
-  providerConfig:
-    <some-provider-specific-cloudprofile-config>
-    # Please checkout the documentation and example manifests of your provider to find out which provider config
-    # is needed here.
-# Optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
-# An empty list means that all seeds of the same provider type are supported.
-# This is useful for environments that are of the same type (like openstack) but may have different "instances"/landscapes.
-# seedSelector:
-#   matchLabels:
-#     foo: bar
-# ---
-# Optional bastion section defining bastions machine type and image properties.
-# If not provided, these properties depend on the implicit ordering of the CloudProfile.
-# In this case, the provider extension will use the first found supported image, and the first usable machine type.
-# bastion:
-#   machineImage: # optional -> will use the newest supported version for the first found image
-#     name: gardenlinux
-#     version: 1443.3.0 # optional -> will use the newest supported version for the specified image name
-#   machineType: # optional -> will use the machine with the lowest amount of CPUs
-#     name: n1-standard-2
-# ---
-# machineCapabilities: # CloudProfileCapabilities feature gate enabled
-# - name: architecture
-#   values: [amd64,arm64]
+  providerConfig: <some-provider-specific-cloudprofile-config>
+  # Please checkout the documentation and example manifests of your provider to find out which provider config
+  # is needed here.
+
+  # Optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
+  # An empty list means that all seeds of the same provider type are supported.
+  # This is useful for environments that are of the same type (like openstack) but may have different "instances"/landscapes.
+  # seedSelector:
+  #   matchLabels:
+  #     foo: bar
+  # ---
+  # Optional bastion section defining bastions machine type and image properties.
+  # If not provided, these properties depend on the implicit ordering of the CloudProfile.
+  # In this case, the provider extension will use the first found supported image, and the first usable machine type.
+  # bastion:
+  #   machineImage: # optional -> will use the newest supported version for the first found image
+  #     name: gardenlinux
+  #     version: 1443.3.0 # optional -> will use the newest supported version for the specified image name
+  #   machineType: # optional -> will use the machine with the lowest amount of CPUs
+  #     name: n1-standard-2
+  # ---
+  # machineCapabilities: # CloudProfileCapabilities feature gate enabled
+  # - name: architecture
+  #   values: [amd64,arm64]
   kubernetes:
     versions:
-    - version: 1.34.3
-    - version: 1.33.7
-    - version: 1.32.11
-    - version: 1.31.14
-    - version: 1.30.14
-      expirationDate: 2025-11-30T01:02:03Z # optional
+      - version: 1.34.3
+      - version: 1.32.11
+      - version: 1.31.14
+      - version: 1.30.14
+        # - version: 1.33.7 # CloudProfileVersionClassificationLifecycles feature gate enabled
+        #   lifecycle:
+        #   - classification: preview
+        #   - classification: supported
+        #     startTime: "2024-12-01T00:00:00Z"
+        expirationDate: 2025-11-30T01:02:03Z # optional
   machineImages:
-  - name: gardenlinux
-  # updateStrategy: "major" # optional, either {patch,minor,major}
-    versions:
-    - version: 15.4.20220818
-    - version: 15.4.20220620
-      expirationDate: "2023-02-28T23:59:59Z"
-    # classification: deprecated
-    # architectures: # optional
-    # - amd64
-    # - arm64
-    # capabilityFlavors: # CloudProfileCapabilities feature gate enabled
-    # - architecture: [amd64]
-    # - architecture: [arm64]
-    # cri: # Even though gardener doesn't support docker CRI, gardener requires machine images to have the docker daemon installed. See https://github.com/gardener/gardener/issues/4673 for more information.
-    # - name: containerd    
-    #   containerRuntimes:
-    #   - type: gvisor
-    # kubeletVersionConstraint: "< 1.26" # optional
-    # inPlaceUpdates: # optional
-    #   supported: true 
-    #   minVersionForUpdate: 820.3.0 # optional
-  - name: ubuntu
-    versions:
-    - version: 18.04.201906170
-    # cri:
-    # - name: containerd
-    #   containerRuntimes:
-    #   - type: gvisor
-    #   - type: kata-containers
+    - name: gardenlinux
+      # updateStrategy: "major" # optional, either {patch,minor,major}
+      versions:
+        - version: 15.4.20220818
+        - version: 15.4.20220620
+          expirationDate: "2023-02-28T23:59:59Z"
+          # classification: deprecated
+          # architectures: # optional
+          # - amd64
+          # - arm64
+          # capabilityFlavors: # CloudProfileCapabilities feature gate enabled
+          # - architecture: [amd64]
+          # - architecture: [arm64]
+          # cri: # Even though gardener doesn't support docker CRI, gardener requires machine images to have the docker daemon installed. See https://github.com/gardener/gardener/issues/4673 for more information.
+          # - name: containerd    
+          #   containerRuntimes:
+          #   - type: gvisor
+          # kubeletVersionConstraint: "< 1.26" # optional
+          # inPlaceUpdates: # optional
+          #   supported: true 
+          #   minVersionForUpdate: 820.3.0 # optional
+    - name: ubuntu
+      versions:
+        - version: 18.04.201906170
+          # lifecycle: # CloudProfileVersionClassificationLifecycles feature gate enabled
+          # - classification: preview
+          # - classification: supported
+          #   startTime: "2024-12-01T00:00:00Z"
+          # cri:
+          # - name: containerd
+          #   containerRuntimes:
+          #   - type: gvisor
+          #   - type: kata-containers
   machineTypes:
-  - name: m5.large
-    cpu: "2"
-    gpu: "0"
-    memory: 8Gi
-  # storage: # optional (not needed in every environment, may only be specified if no volumeTypes have been specified)
-  #   class: standard
-  #   type: default
-  #   size: 20Gi     # optional, either size or minSize must be configured
-  #   minSize: 10Gi  # optional, either size or minSize must be configured
-    usable: true
-    # architecture: amd64 # optional
-    # capabilities: # CloudProfileCapabilities feature gate enabled
-    #   architecture: [amd64]
+    - name: m5.large
+      cpu: "2"
+      gpu: "0"
+      memory: 8Gi
+      # storage: # optional (not needed in every environment, may only be specified if no volumeTypes have been specified)
+      #   class: standard
+      #   type: default
+      #   size: 20Gi     # optional, either size or minSize must be configured
+      #   minSize: 10Gi  # optional, either size or minSize must be configured
+      usable: true
+      # architecture: amd64 # optional
+      # capabilities: # CloudProfileCapabilities feature gate enabled
+      #   architecture: [amd64]
   volumeTypes: # optional (not needed in every environment, may only be specified if no machineType has a `storage` field)
-  - name: gp3
-    class: standard
-    usable: true
-  # minSize: # optional
-  - name: io1
-    class: premium
-    usable: true
+    - name: gp3
+      class: standard
+      usable: true
+    # minSize: # optional
+    - name: io1
+      class: premium
+      usable: true
   regions:
-  - name: europe-central-1
-    zones: # optional (not needed in every environment)
-    - name: europe-central-1a
-    - name: europe-central-1b
-    - name: europe-central-1c
-  #   unavailableMachineTypes: # optional, list of machine types defined above that are not available in this zone
-  #   - m5.large
-  #   unavailableVolumeTypes: # optional, list of volume types defined above that are not available in this zone
-  #   - io1
-  # labels: # optional, arbitrary key-value pairs to provide additional (meta) information about this region
-  #   seed.gardener.cloud/reliability: high
-  # accessRestrictions:
-  # - name: eu-access-only
+    - name: europe-central-1
+      zones: # optional (not needed in every environment)
+        - name: europe-central-1a
+        - name: europe-central-1b
+        - name: europe-central-1c
+          #   unavailableMachineTypes: # optional, list of machine types defined above that are not available in this zone
+          #   - m5.large
+          #   unavailableVolumeTypes: # optional, list of volume types defined above that are not available in this zone
+          #   - io1
+          # labels: # optional, arbitrary key-value pairs to provide additional (meta) information about this region
+          #   seed.gardener.cloud/reliability: high
+          # accessRestrictions:
+          # - name: eu-access-only
 # CA bundle that will be installed onto every shoot machine that is using this provider profile.
 # caBundle: |
 #   -----BEGIN CERTIFICATE-----

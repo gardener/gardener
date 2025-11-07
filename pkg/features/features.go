@@ -49,9 +49,10 @@ const (
 	// alpha: v1.117.0
 	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
 
-	// CloudProfileVersionClassificationLifecycles enables the usage of version classification lifecycles for Kubernetes and machine versions.
-	// owner: TODO:(rapsn)
-	// alpha: TODO:(rapsn)
+	// CloudProfileVersionClassificationLifecycles enables the features introduced by GEP-32,
+	// including lifecycle-based classification for Kubernetes and machine image versions.
+	// owner: @rapsnx
+	// alpha: v1.133.0
 	CloudProfileVersionClassificationLifecycles featuregate.Feature = "CloudProfileVersionClassificationLifecycles"
 
 	// DoNotCopyBackupCredentials disables the copying of Shoot infrastructure credentials as backup credentials when the Shoot is used as a ManagedSeed.
