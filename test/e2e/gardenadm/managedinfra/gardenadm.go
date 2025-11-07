@@ -204,6 +204,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			shootClientSet kubernetes.Interface
 			shootKomega    Komega
 		)
+
 		It("should connect to the shoot", func(ctx SpecContext) {
 			By("Forward port to control plane machine pod")
 			fw, err := kubernetes.SetupPortForwarder(portForwardCtx, RuntimeClient.RESTConfig(), technicalID, machinePodName(ctx, technicalID, 0), localPort, 443)
