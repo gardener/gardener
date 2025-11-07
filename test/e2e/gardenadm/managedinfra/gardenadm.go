@@ -265,6 +265,11 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, Get(service)).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
+		It("should deploy/restore the DNSRecord in the shoot", func(ctx SpecContext) {
+			dnsRecord := &extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-external", Namespace: "kube-system"}}
+			Eventually(ctx, shootKomega.Object(dnsRecord)).Should(BeHealthy(health.CheckExtensionObject))
+		}, SpecTimeout(time.Minute))
+
 		It("should finish successfully", func(ctx SpecContext) {
 			Wait(ctx, session)
 			Eventually(ctx, session.Out).Should(gbytes.Say("work in progress"))
