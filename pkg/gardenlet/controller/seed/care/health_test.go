@@ -145,7 +145,7 @@ var _ = Describe("Seed health", func() {
 						gardencorev1beta1.SeedSystemComponentsHealthy,
 						gardencorev1beta1.ConditionFalse,
 						"PrometheusHealthCheckDown",
-						"There are health issues in Prometheus pod \"garden/prometheus-foo-0\". Access Prometheus UI and query for \"healthcheck:alert\" for more details."))
+						`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck:alert" for more details.`))
 				})
 
 				It("should set SeedSystemComponentsHealthy condition to false if Prometheus health check is erroring", func() {
@@ -163,7 +163,7 @@ var _ = Describe("Seed health", func() {
 						gardencorev1beta1.SeedSystemComponentsHealthy,
 						gardencorev1beta1.ConditionFalse,
 						"PrometheusHealthCheckError",
-						"Querying Prometheus pod \"garden/prometheus-foo-0\" for health checking returned an error: test error"))
+						`Querying Prometheus pod "garden/prometheus-foo-0" for health checking returned an error: test error`))
 				})
 
 				It("should set SeedSystemComponentsHealthy condition to true if Prometheus is healthy", func() {
@@ -200,7 +200,7 @@ var _ = Describe("Seed health", func() {
 							gardencorev1beta1.SeedSystemComponentsHealthy,
 							gardencorev1beta1.ConditionFalse,
 							"PrometheusHealthCheckDown",
-							"There are health issues in Prometheus pod \"garden/prometheus-foo-0\". Access Prometheus UI and query for \"healthcheck:alert\" for more details."))
+							`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck:alert" for more details.`))
 					})
 
 					It("should ignore the Prometheus resource if the care label is missing", func() {

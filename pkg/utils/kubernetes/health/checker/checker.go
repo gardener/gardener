@@ -576,10 +576,10 @@ func (h *HealthChecker) CheckManagedPrometheuses(
 			conditions[i] = func() *gardencorev1beta1.Condition {
 				if err := h.reader.Get(ctx, client.ObjectKeyFromObject(prometheus), prometheus); err != nil {
 					if apierrors.IsNotFound(err) {
-						return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckError", fmt.Sprintf("Prometheus \"%s/%s\" not found", prometheus.Namespace, prometheus.Name)))
+						return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckError", fmt.Sprintf(`Prometheus "%s/%s" not found`, prometheus.Namespace, prometheus.Name)))
 					}
 
-					return ptr.To(v1beta1helper.NewConditionOrError(h.clock, condition, nil, fmt.Errorf("failed checking Prometheus \"%s/%s\": %w", prometheus.Namespace, prometheus.Name, err)))
+					return ptr.To(v1beta1helper.NewConditionOrError(h.clock, condition, nil, fmt.Errorf(`failed checking Prometheus "%s/%s": %w`, prometheus.Namespace, prometheus.Name, err)))
 				}
 
 				return h.CheckPrometheus(ctx, condition, prometheus)
@@ -613,18 +613,18 @@ func (h *HealthChecker) CheckPrometheus(ctx context.Context, condition gardencor
 
 func (h *HealthChecker) checkPrometheusReplicaHealth(ctx context.Context, condition gardencorev1beta1.Condition, prometheus *monitoringv1.Prometheus, replica int) *gardencorev1beta1.Condition {
 	var (
-		serviceName              = ptr.Deref(prometheus.Spec.ServiceName, "prometheus-operated")
-		endpoint                 = fmt.Sprintf("prometheus-%s-%d.%s.%s.svc.cluster.local", prometheus.Name, replica, serviceName, prometheus.Namespace)
-		isPrometheusHealthy, err = h.prometheusHealthChecker(ctx, endpoint, 9090)
+		serviceName = ptr.Deref(prometheus.Spec.ServiceName, "prometheus-operated")
+		endpoint    = fmt.Sprintf("prometheus-%s-%d.%s.%s.svc.cluster.local", prometheus.Name, replica, serviceName, prometheus.Namespace)
 	)
 
+	isPrometheusHealthy, err := h.prometheusHealthChecker(ctx, endpoint, 9090)
 	if err != nil {
-		msg := fmt.Sprintf("Querying Prometheus pod \"%s/prometheus-%s-%d\" for health checking returned an error: %v", prometheus.Namespace, prometheus.Name, replica, err)
+		msg := fmt.Sprintf(`Querying Prometheus pod "%s/prometheus-%s-%d" for health checking returned an error: %v`, prometheus.Namespace, prometheus.Name, replica, err)
 		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckError", msg))
 	}
 
 	if !isPrometheusHealthy {
-		msg := fmt.Sprintf("There are health issues in Prometheus pod \"%s/prometheus-%s-%d\". Access Prometheus UI and query for \"healthcheck:alert\" for more details.", prometheus.Namespace, prometheus.Name, replica)
+		msg := fmt.Sprintf(`There are health issues in Prometheus pod "%s/prometheus-%s-%d". Access Prometheus UI and query for "healthcheck:alert" for more details.`, prometheus.Namespace, prometheus.Name, replica)
 		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckDown", msg))
 	}
 

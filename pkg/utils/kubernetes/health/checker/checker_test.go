@@ -833,7 +833,7 @@ var _ = Describe("HealthChecker", func() {
 				Expect(result).NotTo(BeNil())
 				Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 				Expect(result.Reason).To(Equal("PrometheusHealthCheckError"))
-				Expect(result.Message).To(Equal("Prometheus \"shoot--foo--bar/testprom\" not found"))
+				Expect(result.Message).To(Equal(`Prometheus "shoot--foo--bar/testprom" not found`))
 			})
 
 			It("should return error condition when client returns error", func() {
@@ -857,7 +857,7 @@ var _ = Describe("HealthChecker", func() {
 				Expect(result).NotTo(BeNil())
 				Expect(result.Status).To(Equal(gardencorev1beta1.ConditionUnknown))
 				Expect(result.Reason).To(Equal("ConditionCheckError"))
-				Expect(result.Message).To(Equal("failed checking Prometheus \"shoot--foo--bar/testprom\": test error"))
+				Expect(result.Message).To(Equal(`failed checking Prometheus "shoot--foo--bar/testprom": test error`))
 			})
 
 			It("should return error condition when health check returns error in at least a replica", func() {
@@ -882,7 +882,7 @@ var _ = Describe("HealthChecker", func() {
 				Expect(result).NotTo(BeNil())
 				Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 				Expect(result.Reason).To(Equal("PrometheusHealthCheckError"))
-				Expect(result.Message).To(Equal("Querying Prometheus pod \"shoot--foo--bar/prometheus-testprom-1\" for health checking returned an error: test error"))
+				Expect(result.Message).To(Equal(`Querying Prometheus pod "shoot--foo--bar/prometheus-testprom-1" for health checking returned an error: test error`))
 			})
 
 			It("should return failing condition when there are health issues in at least a replica", func() {
@@ -907,8 +907,8 @@ var _ = Describe("HealthChecker", func() {
 				Expect(result).NotTo(BeNil())
 				Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 				Expect(result.Reason).To(Equal("PrometheusHealthCheckDown"))
-				Expect(result.Message).To(Equal("There are health issues in Prometheus pod \"shoot--foo--bar/prometheus-testprom-2\". " +
-					"Access Prometheus UI and query for \"healthcheck:alert\" for more details."))
+				Expect(result.Message).To(Equal(`There are health issues in Prometheus pod "shoot--foo--bar/prometheus-testprom-2". ` +
+					`Access Prometheus UI and query for "healthcheck:alert" for more details.`))
 			})
 
 			It("should return nil when there are no health issues", func() {
@@ -1054,8 +1054,8 @@ var _ = Describe("HealthChecker", func() {
 					Expect(result).NotTo(BeNil())
 					Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 					Expect(result.Reason).To(Equal("PrometheusHealthCheckDown"))
-					Expect(result.Message).To(Equal("There are health issues in Prometheus pod \"shoot--foo--bar/prometheus-testprom-2\". " +
-						"Access Prometheus UI and query for \"healthcheck:alert\" for more details."))
+					Expect(result.Message).To(Equal(`There are health issues in Prometheus pod "shoot--foo--bar/prometheus-testprom-2". ` +
+						`Access Prometheus UI and query for "healthcheck:alert" for more details.`))
 
 					// Change the order of managed resources and expect the same result
 					managedResources = []resourcesv1alpha1.ManagedResource{managedResources[1], managedResources[0]}

@@ -66,8 +66,8 @@ var _ = Describe("Shoot Monitoring Tests", Label("Shoot", "default"), func() {
 						"Type":   Equal(gardencorev1beta1.ShootObservabilityComponentsHealthy),
 						"Status": Equal(gardencorev1beta1.ConditionFalse),
 						"Reason": Equal("PrometheusHealthCheckDown"),
-						"Message": Equal("There are health issues in Prometheus pod \"shoot--local--e2e-prom/prometheus-shoot-0\". " +
-							"Access Prometheus UI and query for \"healthcheck:alert\" for more details."),
+						"Message": Equal(`There are health issues in Prometheus pod "shoot--local--e2e-prom/prometheus-shoot-0". ` +
+							`Access Prometheus UI and query for "healthcheck:alert" for more details.`),
 					}))),
 				)
 			}, SpecTimeout(10*time.Minute))

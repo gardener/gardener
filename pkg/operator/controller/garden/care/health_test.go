@@ -411,7 +411,7 @@ var _ = Describe("Garden health", func() {
 
 					Expect(updatedConditions).ToNot(BeEmpty())
 					Expect(updatedConditions).To(ContainElements(
-						beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, gardencorev1beta1.ConditionFalse, "DeploymentUnhealthy", "is unhealthy: condition \"Available\" is missing"),
+						beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, gardencorev1beta1.ConditionFalse, "DeploymentUnhealthy", `is unhealthy: condition "Available" is missing`),
 					))
 				})
 			})
@@ -465,7 +465,7 @@ var _ = Describe("Garden health", func() {
 							operatorv1alpha1.VirtualComponentsHealthy,
 							gardencorev1beta1.ConditionFalse,
 							"EtcdUnhealthy",
-							"Etcd extension resource \"virtual-garden-etcd-events\" is unhealthy: etcd \"virtual-garden-etcd-events\" is not ready yet"),
+							`Etcd extension resource "virtual-garden-etcd-events" is unhealthy: etcd "virtual-garden-etcd-events" is not ready yet`),
 					))
 				})
 			})
@@ -597,7 +597,7 @@ var _ = Describe("Garden health", func() {
 						operatorv1alpha1.ObservabilityComponentsHealthy,
 						gardencorev1beta1.ConditionFalse,
 						"PrometheusHealthCheckDown",
-						"There are health issues in Prometheus pod \"garden/prometheus-foo-0\". Access Prometheus UI and query for \"healthcheck:alert\" for more details.")))
+						`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck:alert" for more details.`)))
 			})
 
 			It("should set ObservabilityComponentsHealthy condition to false if Prometheus health check is erroring", func() {
@@ -616,7 +616,7 @@ var _ = Describe("Garden health", func() {
 						operatorv1alpha1.ObservabilityComponentsHealthy,
 						gardencorev1beta1.ConditionFalse,
 						"PrometheusHealthCheckError",
-						"Querying Prometheus pod \"garden/prometheus-foo-0\" for health checking returned an error: test error")))
+						`Querying Prometheus pod "garden/prometheus-foo-0" for health checking returned an error: test error`)))
 			})
 
 			It("should set ObservabilityComponentsHealthy condition to true if Prometheus is healthy", func() {
@@ -658,7 +658,7 @@ var _ = Describe("Garden health", func() {
 							operatorv1alpha1.ObservabilityComponentsHealthy,
 							gardencorev1beta1.ConditionFalse,
 							"PrometheusHealthCheckDown",
-							"There are health issues in Prometheus pod \"garden/prometheus-foo-0\". Access Prometheus UI and query for \"healthcheck:alert\" for more details.")))
+							`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "healthcheck:alert" for more details.`)))
 				})
 
 				It("should ignore the Prometheus resource if the care label is missing", func() {

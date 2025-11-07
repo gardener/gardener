@@ -58,8 +58,8 @@ var _ = Describe("Garden Monitoring Tests", Label("Garden", "default"), func() {
 							"Type":   Equal(gardencorev1beta1.ConditionType(v1beta1constants.ObservabilityComponentsHealthy)),
 							"Status": Equal(gardencorev1beta1.ConditionFalse),
 							"Reason": Equal("PrometheusHealthCheckDown"),
-							"Message": Equal("There are health issues in Prometheus pod \"garden/prometheus-" + prometheusName + "-0\". " +
-								"Access Prometheus UI and query for \"healthcheck:alert\" for more details."),
+							"Message": Equal(`There are health issues in Prometheus pod "garden/prometheus-` + prometheusName + `-0". ` +
+								`Access Prometheus UI and query for "healthcheck:alert" for more details.`),
 						}))),
 					)
 				}, SpecTimeout(10*time.Minute))

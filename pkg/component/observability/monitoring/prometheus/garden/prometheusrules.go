@@ -7,6 +7,7 @@ package garden
 import (
 	"bytes"
 	_ "embed"
+	"fmt"
 	"text/template"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -74,17 +75,17 @@ func init() {
 func CentralPrometheusRules(isGardenerDiscoveryServerEnabled bool, prometheusAggregateTargetNames []string) ([]*monitoringv1.PrometheusRule, error) {
 	tpl, err := template.New("PrometheusGarden:CentralPrometheusRules").Parse(string(healthYAML))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse Prometheus health rules template: %w", err)
 	}
 
 	var buf bytes.Buffer
 	if err = tpl.Execute(&buf, map[string]any{"Seeds": prometheusAggregateTargetNames}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate Prometheus health rules: %w", err)
 	}
 
 	health = &monitoringv1.PrometheusRule{}
 	if err = runtime.DecodeInto(monitoringutils.Decoder, buf.Bytes(), health); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode Prometheus health rules: %w", err)
 	}
 
 	return []*monitoringv1.PrometheusRule{
