@@ -28,6 +28,7 @@ func (b *Botanist) DefaultShootSystem() shootsystem.Interface {
 		Extensions:            extensions,
 		ExternalClusterDomain: b.Shoot.ExternalClusterDomain,
 		IsWorkerless:          b.Shoot.IsWorkerless,
+		IsSelfHosted:          b.Shoot.IsSelfHosted(),
 		KubernetesVersion:     b.Shoot.KubernetesVersion,
 		Object:                b.Shoot.GetInfo(),
 		ProjectName:           b.Garden.Project.Name,
