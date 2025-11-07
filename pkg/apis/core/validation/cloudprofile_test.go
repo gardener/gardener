@@ -979,11 +979,8 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							"Detail":   Equal(`supported values: "deprecated", "expired", "preview", "supported"`),
 						}))))
 					})
-
-					// NOTE:(rapsn): GEP-32 machine
 				})
 
-				// TODO:(rapsn): consider also for GEP-32 tests
 				It("should forbid duplicated machineImage versions", func() {
 					cloudProfile.Spec.MachineImages = duplicatedMachineImage
 
