@@ -127,7 +127,7 @@ unmount() {
 trap unmount EXIT
 
 echo "> Pull gardener-node-agent image and mount it to the temporary directory"
-CTR_MAJOR=$(ctr version | grep Version | tail -n1 | awk '{print $2}' | cut -d '.' -f 1)
+CTR_MAJOR=$(ctr version | grep Version | tail -n1 | awk '{print $2}' | cut -d '.' -f 1 | sed 's/[a-zA-Z]//g')
 CTR_EXTRA_ARGS=""
 if [ "$CTR_MAJOR" -gt 1 ]; then
     CTR_EXTRA_ARGS="--skip-metadata"

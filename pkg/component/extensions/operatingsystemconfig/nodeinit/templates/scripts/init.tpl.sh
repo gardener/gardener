@@ -17,7 +17,7 @@ ctr v2 pulls manifests for all platforms of a multi-arch image by default. Mirro
 might not copy manifests for unused architectures, which causes the default pull command to fail.
 Ref: https://github.com/containerd/containerd/pull/9029#issuecomment-1706963854
 */}}
-CTR_MAJOR=$(ctr version | grep Version | tail -n1 | awk '{print $2}' | cut -d '.' -f 1)
+CTR_MAJOR=$(ctr version | grep Version | tail -n1 | awk '{print $2}' | cut -d '.' -f 1 | sed 's/[a-zA-Z]//g')
 CTR_EXTRA_ARGS=""
 if [ "$CTR_MAJOR" -gt 1 ]; then
     CTR_EXTRA_ARGS="--skip-metadata"
