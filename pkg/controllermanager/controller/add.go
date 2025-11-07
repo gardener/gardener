@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	kubernetesclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -97,7 +96,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *controllermanag
 
 	if err := (&gardenletlifecycle.Reconciler{
 		Config:         *cfg.Controllers.Seed,
-		LeaseNamespace: ptr.To(gardencorev1beta1.GardenerSeedLeaseNamespace),
+		LeaseNamespace: gardencorev1beta1.GardenerSeedLeaseNamespace,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding gardenlet lifecycle reconciler: %w", err)
 	}

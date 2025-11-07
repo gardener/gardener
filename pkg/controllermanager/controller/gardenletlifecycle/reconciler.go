@@ -12,7 +12,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -36,7 +35,7 @@ type Reconciler struct {
 	Client         client.Client
 	Config         controllermanagerconfigv1alpha1.SeedControllerConfiguration
 	Clock          clock.Clock
-	LeaseNamespace *string
+	LeaseNamespace string
 }
 
 // Reconcile reconciles Seeds or Shoots and checks whether the responsible gardenlet is regularly sending heartbeats.
@@ -238,5 +237,5 @@ func (r *Reconciler) leaseKey(req Request) client.ObjectKey {
 	if req.IsSelfHostedShoot {
 		return client.ObjectKey{Namespace: req.Namespace, Name: gardenlet.ResourcePrefixSelfHostedShoot + req.Name}
 	}
-	return client.ObjectKey{Namespace: ptr.Deref(r.LeaseNamespace, ""), Name: req.Name}
+	return client.ObjectKey{Namespace: r.LeaseNamespace, Name: req.Name}
 }

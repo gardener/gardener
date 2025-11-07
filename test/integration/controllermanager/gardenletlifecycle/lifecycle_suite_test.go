@@ -127,7 +127,7 @@ var _ = BeforeSuite(func() {
 			SyncPeriod:         &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
 		Clock:          fakeClock,
-		LeaseNamespace: &testNamespace.Name,
+		LeaseNamespace: testNamespace.Name,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
