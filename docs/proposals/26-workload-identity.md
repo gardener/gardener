@@ -274,8 +274,8 @@ behind this GEP, various extensions can benefit of this feature as well. For
 this purpose, `shoot.spec.resources` will be extended to allow `WorkloadIdentity`
 references next to the currently supported `Secret` and `ConfigMap`. Extensions,
 via their own `shoot.spec.extensions.providerConfig`, will specify which
-referenced resources they are using. This way, multiple extensions can reuse the
-same `WorkloadIdentity` and it will not need to be mount multiple times. For
+referenced resources they are using. This would allow extensions to reuse the
+same `WorkloadIdentity` without the need for multiple resource references. For
 every `WorkloadIdentity` referenced by the shoot, gardenlet will create a secret
 in the control plane namespace bearing the workload identity features - the token
 and the config. It will be up to the extension controller to make use of the
