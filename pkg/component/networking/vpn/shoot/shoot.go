@@ -667,6 +667,19 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
 		},
+		ReadinessProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/readyz",
+					Port: intstr.FromInt32(8080),
+				},
+			},
+			SuccessThreshold:    2, // Check twice to buy enough time to establish more than one kube apiserver route.
+			FailureThreshold:    1,
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       5,
+			TimeoutSeconds:      2,
+		},
 	}
 }
 
