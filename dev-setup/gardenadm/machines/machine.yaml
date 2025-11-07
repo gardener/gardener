@@ -5,7 +5,7 @@ metadata:
   labels:
     app: machine
 spec:
-  replicas: 2
+  replicas: 4
   serviceName: "machine"
   selector:
     matchLabels:

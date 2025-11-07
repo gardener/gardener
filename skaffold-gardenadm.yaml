@@ -1311,7 +1311,7 @@ deploy:
               - bash
               - -ec
               - |
-                for i in 0 1; do
+                for i in 0 1 2 3; do
                   pod="machine-$i"
                   kubectl -n "$SKAFFOLD_NAMESPACES" exec "$pod" -- sh -c 'rm -rf /gardenadm/resources && mkdir -p /gardenadm/resources'
                   kubectl -n "$SKAFFOLD_NAMESPACES" cp dev-setup/gardenadm/resources/generated/.skaffold-image                    "$pod:/tmp/.skaffold-image"
