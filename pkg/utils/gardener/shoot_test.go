@@ -1502,6 +1502,62 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
+	Describe("#IsShootNamespace", func() {
+		var (
+			client client.Client
+
+			namespace *corev1.Namespace
+		)
+
+		JustBeforeEach(func() {
+			namespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot--foo--bar",
+					Labels: map[string]string{
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+					},
+				},
+			}
+
+			client = fakeclient.NewClientBuilder().
+				WithScheme(kubernetesscheme.Scheme).
+				WithObjects(namespace).
+				Build()
+		})
+
+		It("returns true if the namespace has the shoot role label", func(ctx SpecContext) {
+			Expect(IsShootNamespace(ctx, client, namespace.Name)).To(BeTrue())
+		})
+
+		It("returns false if the namespace does not have the shoot role label", func(ctx SpecContext) {
+			namespace.Labels["gardener.cloud/role"] = "some-other-role"
+			Expect(client.Update(ctx, namespace)).To(Succeed())
+
+			Expect(IsShootNamespace(ctx, client, namespace.Name)).To(BeFalse())
+		})
+
+		Context("kube-system (used in self-hosted shoots)", func() {
+			BeforeEach(func() {
+				namespace.Name = "kube-system"
+			})
+
+			It("returns true if the namespace has the shoot role label", func(ctx SpecContext) {
+				Expect(IsShootNamespace(ctx, client, namespace.Name)).To(BeTrue())
+			})
+
+			It("returns false if the namespace does not have the shoot role label", func(ctx SpecContext) {
+				namespace.Labels["gardener.cloud/role"] = "kube-system"
+				Expect(client.Update(ctx, namespace)).To(Succeed())
+
+				Expect(IsShootNamespace(ctx, client, namespace.Name)).To(BeFalse())
+			})
+		})
+
+		It("returns error if the namespace does not exist", func(ctx SpecContext) {
+			Expect(IsShootNamespace(ctx, client, "missing")).Error().To(BeNotFoundError())
+		})
+	})
+
 	Describe("#GetShootConditionTypes", func() {
 		It("should return all shoot condition types", func() {
 			Expect(GetShootConditionTypes(false)).To(HaveExactElements(

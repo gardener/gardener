@@ -6,6 +6,7 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -82,7 +83,9 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, ex *extensionsv
 		return err
 	}
 
-	if gardenerutils.IsShootNamespace(ex.Namespace) {
+	if isShootNamespace, err := gardenerutils.IsShootNamespace(ctx, a.client, ex.Namespace); err != nil {
+		return fmt.Errorf("error checking if Extension is in a shoot namespace: %w", err)
+	} else if isShootNamespace {
 		cluster, err := extensionscontroller.GetCluster(ctx, a.client, ex.Namespace)
 		if err != nil {
 			return err

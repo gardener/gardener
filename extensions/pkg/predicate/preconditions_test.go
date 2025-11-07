@@ -82,6 +82,14 @@ var _ = Describe("Preconditions", func() {
 
 			fakeClient = fakeclient.NewClientBuilder().
 				WithScheme(kubernetes.SeedScheme).
+				WithObjects(&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: namespace,
+						Labels: map[string]string{
+							v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+						},
+					},
+				}).
 				Build()
 
 			// Create fake manager
@@ -140,19 +148,6 @@ var _ = Describe("Preconditions", func() {
 				})
 
 				It("should return false if it is a shoot namespace, but cluster is not existing", func() {
-					ns := &corev1.Namespace{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: namespace,
-							Labels: map[string]string{
-								v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
-							},
-						},
-					}
-					Expect(fakeClient.Create(ctx, ns)).To(Succeed())
-					DeferCleanup(func() {
-						Expect(fakeClient.Delete(ctx, ns)).To(Succeed())
-					})
-
 					Expect(run()).To(BeFalse())
 				})
 			}

@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -20,7 +21,7 @@ var _ = Describe("Add", func() {
 		p         predicate.Predicate
 	)
 
-	Describe("#IsShootNamespacePredicate", func() {
+	Describe("#IsShootNamespace", func() {
 		BeforeEach(func() {
 			p = IsShootNamespace()
 			namespace = &corev1.Namespace{}
@@ -28,6 +29,7 @@ var _ = Describe("Add", func() {
 
 		It("should return true because the namespace is a shoot namespace", func() {
 			namespace.Name = "shoot-garden-local"
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, "gardener.cloud/role", "shoot")
 
 			Expect(p.Create(event.CreateEvent{Object: namespace})).To(BeTrue())
 			Expect(p.Update(event.UpdateEvent{ObjectNew: namespace})).To(BeTrue())
@@ -37,6 +39,7 @@ var _ = Describe("Add", func() {
 
 		It("should return true because the namespace is a shoot namespace", func() {
 			namespace.Name = "shoot--local-local"
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, "gardener.cloud/role", "shoot")
 
 			Expect(p.Create(event.CreateEvent{Object: namespace})).To(BeTrue())
 			Expect(p.Update(event.UpdateEvent{ObjectNew: namespace})).To(BeTrue())
@@ -44,7 +47,7 @@ var _ = Describe("Add", func() {
 			Expect(p.Generic(event.GenericEvent{Object: namespace})).To(BeTrue())
 		})
 
-		It("should return true because the namespace is not a shoot namespace", func() {
+		It("should return false because the namespace is not a shoot namespace", func() {
 			namespace.Name = "foo"
 
 			Expect(p.Create(event.CreateEvent{Object: namespace})).To(BeFalse())
