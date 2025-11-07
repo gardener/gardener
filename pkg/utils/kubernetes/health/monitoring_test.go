@@ -338,7 +338,7 @@ var _ = Describe("Monitoring", func() {
 
 			_, err := health.IsPrometheusHealthy(ctx, endpoint, port)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal(fmt.Sprintf("Post \"http://%s:%d/api/v1/query\": context deadline exceeded", endpoint, port)))
+			Expect(err.Error()).To(Equal(fmt.Sprintf(`query failed: Post "http://%s:%d/api/v1/query": context deadline exceeded`, endpoint, port)))
 		})
 	})
 })

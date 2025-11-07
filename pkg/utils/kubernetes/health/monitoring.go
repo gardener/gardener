@@ -24,7 +24,7 @@ type PrometheusHealthChecker func(ctx context.Context, endpoint string, port int
 func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (bool, error) {
 	client, err := prom.NewClient(prom.Config{Address: fmt.Sprintf("http://%s:%d", endpoint, port)})
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to create Prometheus client: %w", err)
 	}
 
 	v1api := promv1.NewAPI(client)
@@ -36,7 +36,7 @@ func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (bool, 
 	query := `count({type="health"}) or vector(0)`
 	result, warnings, err := v1api.Query(ctx, query, time.Now())
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("query failed: %w", err)
 	}
 
 	if len(warnings) > 0 {
