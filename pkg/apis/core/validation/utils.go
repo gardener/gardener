@@ -17,7 +17,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -298,7 +298,7 @@ func validateLifecycleStartTimes(lifecycle []core.LifecycleStage, fldPath *field
 	for i, l := range lifecycle {
 		if previousStartTime == nil {
 			if l.StartTime == nil {
-				l.StartTime = &v1.Time{}
+				l.StartTime = &metav1.Time{}
 			} else {
 				previousStartTime = &l.StartTime.Time
 			}
