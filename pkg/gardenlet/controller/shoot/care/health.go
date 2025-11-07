@@ -46,7 +46,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 var (
@@ -517,8 +516,7 @@ func (h *Health) checkObservabilityComponents(
 	}
 
 	filterFunc := func(managedResource resourcesv1alpha1.ManagedResource) bool {
-		return managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(gardencorev1beta1.ShootObservabilityComponentsHealthy) &&
-			managedResource.Labels[managedresources.LabelKeyManagedBy] == managedresources.LabelValueGardenlet
+		return managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(gardencorev1beta1.ShootObservabilityComponentsHealthy)
 	}
 
 	if exitCondition := h.healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterFunc); exitCondition != nil {
