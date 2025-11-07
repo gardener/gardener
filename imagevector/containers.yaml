@@ -352,7 +352,7 @@ images:
   - name: plutono-data-refresher
     sourceRepository: github.com/kiwigrid/k8s-sidecar
     repository: quay.io/kiwigrid/k8s-sidecar
-    tag: "2.1.1"
+    tag: "2.1.2"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
