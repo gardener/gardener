@@ -9,6 +9,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -43,14 +44,16 @@ func NewX509CertificateExporter(
 	}, &cm)
 
 	if err != nil {
-		// no cm found, no monitoring will be deployed
-		return nil, nil
+		if errors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
 	}
 
 	configData := cm.Data["config.yaml"]
 
 	if len(configData) == 0 {
-		// no monitoring targets for x509 certifica exporter provided, nothing to deploy
+		// no monitoring targets for x509 certificate exporter provided, nothing to deploy
 		return nil, nil
 	}
 
