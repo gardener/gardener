@@ -63,6 +63,15 @@ This CoreDNS instance is responsible for enabling the components running in the 
 
 It contains a static configuration to resolve the DNS names based on `local.gardener.cloud` to `istio-ingressgateway.istio-ingress.svc`.
 
+### Credentials
+
+By default, provider-local doesn't require any cloud provider credentials in the shoot's `{Secret,Credentials}Binding` as all infrastructure resources are deployed in the cluster where it runs.
+For this, provider-local uses its in-cluster config to connect to the Kubernetes API server of the seed/bootstrap cluster.
+However, provider-local also supports overwriting the credentials by specifying a `kubeconfig` in the shoot credentials secret.
+This is used in the local setup for [self-hosted shoots with managed infrastructure](../proposals/28-self-hosted-shoot-clusters.md#managed-infrastructure).
+Here, provider-local initially creates the infrastructure resources (e.g., Service, NetworkPolicies, machine Pods, etc.) in the kind cluster (during `gardenadm bootstrap`).
+Later on, `gardenadm init` restores the extension resources within the self-hosted shoot cluster itself, and provider-local – running in the shoot cluster now – needs credentials to access the kind cluster API server to keep managing those resources.
+
 ### Controllers
 
 There are controllers for all resources in the `extensions.gardener.cloud/v1alpha1` API group except for `BackupBucket` and `BackupEntry`s.

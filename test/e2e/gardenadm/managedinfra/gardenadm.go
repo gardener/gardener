@@ -200,7 +200,11 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			kubeconfig = strings.ReplaceAll(string(kubeconfigSecret.Data["kubeconfig"]), "api.root.garden.local.gardener.cloud", fmt.Sprintf("localhost:%d", localPort))
 		}, SpecTimeout(time.Minute))
 
-		var shootClientSet kubernetes.Interface
+		var (
+			shootClientSet kubernetes.Interface
+			shootKomega    Komega
+		)
+
 		It("should connect to the shoot", func(ctx SpecContext) {
 			By("Forward port to control plane machine pod")
 			fw, err := kubernetes.SetupPortForwarder(portForwardCtx, RuntimeClient.RESTConfig(), technicalID, machinePodName(ctx, technicalID, 0), localPort, 443)
@@ -222,6 +226,8 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 				)
 				return err
 			}).Should(Succeed())
+
+			shootKomega = New(shootClientSet.Client())
 		}, SpecTimeout(time.Minute))
 
 		It("should restore all persisted secrets in the shoot", func(ctx SpecContext) {
@@ -242,6 +248,21 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			}).Should(Succeed())
 
 			Expect(shootmigration.ComparePersistedSecrets(persistedSecrets, shootSecrets)).To(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		It("should deploy/restore the infrastructure in the shoot", func(ctx SpecContext) {
+			infra := &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: "kube-system"}}
+			Eventually(ctx, shootKomega.Object(infra)).Should(BeHealthy(health.CheckExtensionObject))
+		}, SpecTimeout(time.Minute))
+
+		It("should create infrastructure resources in the bootstrap cluster", func(ctx SpecContext) {
+			// Verify that the infrastructure created in the shoot has corresponding resources in the bootstrap cluster, but
+			// not in the shoot itself. This is specific to provider-local as the infrastructure resources are managed in the
+			// bootstrap cluster. This check is unrelated to gardenadm functionality, but serves as an additional verification
+			// that the functionality of using a non-default provider client in provider-local works as expected.
+			service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "machines", Namespace: technicalID}}
+			Consistently(ctx, shootKomega.Get(service)).Should(BeNotFoundError())
+			Eventually(ctx, Get(service)).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("should finish successfully", func(ctx SpecContext) {
