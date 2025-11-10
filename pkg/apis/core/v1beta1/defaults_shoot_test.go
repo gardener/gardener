@@ -944,25 +944,31 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NewPodScaleUpDelay).To(PointTo(Equal(metav1.Duration{Duration: 0})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxScaleDownParallelism).To(PointTo(Equal(int32(10))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxDrainParallelism).To(PointTo(Equal(int32(1))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.InitialNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Minute})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NodeGroupBackoffResetTimeout).To(PointTo(Equal(metav1.Duration{Duration: 3 * time.Hour})))
 		})
 
 		It("should not overwrite the already set values for ClusterAutoscaler field", func() {
 			obj.Spec.Kubernetes.ClusterAutoscaler = &ClusterAutoscaler{
-				ScaleDownDelayAfterAdd:        &metav1.Duration{Duration: 1 * time.Hour},
-				ScaleDownDelayAfterDelete:     &metav1.Duration{Duration: 2 * time.Hour},
-				ScaleDownDelayAfterFailure:    &metav1.Duration{Duration: 3 * time.Hour},
-				ScaleDownUnneededTime:         &metav1.Duration{Duration: 4 * time.Hour},
-				ScaleDownUtilizationThreshold: ptr.To(0.8),
-				ScanInterval:                  &metav1.Duration{Duration: 5 * time.Hour},
-				Expander:                      &expanderRandom,
-				MaxNodeProvisionTime:          &metav1.Duration{Duration: 6 * time.Hour},
-				MaxGracefulTerminationSeconds: ptr.To(int32(60 * 60 * 24)),
-				IgnoreDaemonsetsUtilization:   ptr.To(true),
-				Verbosity:                     ptr.To[int32](4),
-				NewPodScaleUpDelay:            &metav1.Duration{Duration: 1},
-				MaxEmptyBulkDelete:            ptr.To[int32](20),
-				MaxScaleDownParallelism:       ptr.To[int32](15),
-				MaxDrainParallelism:           ptr.To[int32](5),
+				ScaleDownDelayAfterAdd:          &metav1.Duration{Duration: 1 * time.Hour},
+				ScaleDownDelayAfterDelete:       &metav1.Duration{Duration: 2 * time.Hour},
+				ScaleDownDelayAfterFailure:      &metav1.Duration{Duration: 3 * time.Hour},
+				ScaleDownUnneededTime:           &metav1.Duration{Duration: 4 * time.Hour},
+				ScaleDownUtilizationThreshold:   ptr.To(0.8),
+				ScanInterval:                    &metav1.Duration{Duration: 5 * time.Hour},
+				Expander:                        &expanderRandom,
+				MaxNodeProvisionTime:            &metav1.Duration{Duration: 6 * time.Hour},
+				MaxGracefulTerminationSeconds:   ptr.To(int32(60 * 60 * 24)),
+				IgnoreDaemonsetsUtilization:     ptr.To(true),
+				Verbosity:                       ptr.To[int32](4),
+				NewPodScaleUpDelay:              &metav1.Duration{Duration: 1},
+				MaxEmptyBulkDelete:              ptr.To[int32](20),
+				MaxScaleDownParallelism:         ptr.To[int32](15),
+				MaxDrainParallelism:             ptr.To[int32](5),
+				InitialNodeGroupBackoffDuration: &metav1.Duration{Duration: 10 * time.Minute},
+				MaxNodeGroupBackoffDuration:     &metav1.Duration{Duration: 20 * time.Minute},
+				NodeGroupBackoffResetTimeout:    &metav1.Duration{Duration: 1 * time.Hour},
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -982,24 +988,30 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(PointTo(Equal(int32(20))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxScaleDownParallelism).To(PointTo(Equal(int32(15))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxDrainParallelism).To(PointTo(Equal(int32(5))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.InitialNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NodeGroupBackoffResetTimeout).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
 		})
 
 		It("should sync MaxScaleDownParallelism value with MaxEmptyBulkDelete when the latter is set and the former is not", func() {
 			obj.Spec.Kubernetes.ClusterAutoscaler = &ClusterAutoscaler{
-				ScaleDownDelayAfterAdd:        &metav1.Duration{Duration: 1 * time.Hour},
-				ScaleDownDelayAfterDelete:     &metav1.Duration{Duration: 2 * time.Hour},
-				ScaleDownDelayAfterFailure:    &metav1.Duration{Duration: 3 * time.Hour},
-				ScaleDownUnneededTime:         &metav1.Duration{Duration: 4 * time.Hour},
-				ScaleDownUtilizationThreshold: ptr.To(0.8),
-				ScanInterval:                  &metav1.Duration{Duration: 5 * time.Hour},
-				Expander:                      &expanderRandom,
-				MaxNodeProvisionTime:          &metav1.Duration{Duration: 6 * time.Hour},
-				MaxGracefulTerminationSeconds: ptr.To(int32(60 * 60 * 24)),
-				IgnoreDaemonsetsUtilization:   ptr.To(true),
-				Verbosity:                     ptr.To[int32](4),
-				NewPodScaleUpDelay:            &metav1.Duration{Duration: 1},
-				MaxEmptyBulkDelete:            ptr.To[int32](17),
-				MaxDrainParallelism:           ptr.To[int32](5),
+				ScaleDownDelayAfterAdd:          &metav1.Duration{Duration: 1 * time.Hour},
+				ScaleDownDelayAfterDelete:       &metav1.Duration{Duration: 2 * time.Hour},
+				ScaleDownDelayAfterFailure:      &metav1.Duration{Duration: 3 * time.Hour},
+				ScaleDownUnneededTime:           &metav1.Duration{Duration: 4 * time.Hour},
+				ScaleDownUtilizationThreshold:   ptr.To(0.8),
+				ScanInterval:                    &metav1.Duration{Duration: 5 * time.Hour},
+				Expander:                        &expanderRandom,
+				MaxNodeProvisionTime:            &metav1.Duration{Duration: 6 * time.Hour},
+				MaxGracefulTerminationSeconds:   ptr.To(int32(60 * 60 * 24)),
+				IgnoreDaemonsetsUtilization:     ptr.To(true),
+				Verbosity:                       ptr.To[int32](4),
+				NewPodScaleUpDelay:              &metav1.Duration{Duration: 1},
+				MaxEmptyBulkDelete:              ptr.To[int32](17),
+				MaxDrainParallelism:             ptr.To[int32](5),
+				InitialNodeGroupBackoffDuration: &metav1.Duration{Duration: 10 * time.Minute},
+				MaxNodeGroupBackoffDuration:     &metav1.Duration{Duration: 20 * time.Minute},
+				NodeGroupBackoffResetTimeout:    &metav1.Duration{Duration: 1 * time.Hour},
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -1019,6 +1031,9 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(PointTo(Equal(int32(17))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxScaleDownParallelism).To(PointTo(Equal(int32(17))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxDrainParallelism).To(PointTo(Equal(int32(5))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.InitialNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NodeGroupBackoffResetTimeout).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
 		})
 	})
 

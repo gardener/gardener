@@ -560,6 +560,18 @@ message ClusterAutoscaler {
   // Default: 1
   // +optional
   optional int32 maxDrainParallelism = 18;
+
+  // InitialNodeGroupBackoffDuration is the duration of first backoff after a new node failed to start (default: 5m).
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration initialNodeGroupBackoffDuration = 19;
+
+  // MaxNodeGroupBackoffDuration is the maximum backoff duration for a NodeGroup after new nodes failed to start (default: 30m).
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxNodeGroupBackoffDuration = 20;
+
+  // NodeGroupBackoffResetTimeout is the time after last failed scale-up when the backoff duration is reset (default: 3h).
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration nodeGroupBackoffResetTimeout = 21;
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.

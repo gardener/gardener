@@ -734,6 +734,15 @@ type ClusterAutoscaler struct {
 	// Default: 1
 	// +optional
 	MaxDrainParallelism *int32 `json:"maxDrainParallelism,omitempty" protobuf:"varint,18,opt,name=maxDrainParallelism"`
+	// InitialNodeGroupBackoffDuration is the duration of first backoff after a new node failed to start (default: 5m).
+	// +optional
+	InitialNodeGroupBackoffDuration *metav1.Duration `json:"initialNodeGroupBackoffDuration,omitempty" protobuf:"bytes,19,opt,name=initialNodeGroupBackoffDuration"`
+	// MaxNodeGroupBackoffDuration is the maximum backoff duration for a NodeGroup after new nodes failed to start (default: 30m).
+	// +optional
+	MaxNodeGroupBackoffDuration *metav1.Duration `json:"maxNodeGroupBackoffDuration,omitempty" protobuf:"bytes,20,opt,name=maxNodeGroupBackoffDuration"`
+	// NodeGroupBackoffResetTimeout is the time after last failed scale-up when the backoff duration is reset (default: 3h).
+	// +optional
+	NodeGroupBackoffResetTimeout *metav1.Duration `json:"nodeGroupBackoffResetTimeout,omitempty" protobuf:"bytes,21,opt,name=nodeGroupBackoffResetTimeout"`
 }
 
 // ExpanderMode is type used for Expander values

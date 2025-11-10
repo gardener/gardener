@@ -1023,6 +1023,21 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.InitialNodeGroupBackoffDuration != nil {
+		in, out := &in.InitialNodeGroupBackoffDuration, &out.InitialNodeGroupBackoffDuration
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.MaxNodeGroupBackoffDuration != nil {
+		in, out := &in.MaxNodeGroupBackoffDuration, &out.MaxNodeGroupBackoffDuration
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.NodeGroupBackoffResetTimeout != nil {
+		in, out := &in.NodeGroupBackoffResetTimeout, &out.NodeGroupBackoffResetTimeout
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 

@@ -2496,6 +2496,24 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Format:      "int32",
 						},
 					},
+					"initialNodeGroupBackoffDuration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "InitialNodeGroupBackoffDuration is the duration of first backoff after a new node failed to start (default: 5m).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"maxNodeGroupBackoffDuration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxNodeGroupBackoffDuration is the maximum backoff duration for a NodeGroup after new nodes failed to start (default: 30m).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"nodeGroupBackoffResetTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NodeGroupBackoffResetTimeout is the time after last failed scale-up when the backoff duration is reset (default: 3h).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},

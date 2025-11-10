@@ -1367,6 +1367,10 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*autoScaler.Verbosity), fldPath.Child("verbosity"))...)
 	}
 
+	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.InitialNodeGroupBackoffDuration, fldPath.Child("initialNodeGroupBackoffDuration"))...)
+	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.MaxNodeGroupBackoffDuration, fldPath.Child("maxNodeGroupBackoffDuration"))...)
+	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.NodeGroupBackoffResetTimeout, fldPath.Child("nodeGroupBackoffResetTimeout"))...)
+
 	return allErrs
 }
 
