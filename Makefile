@@ -428,7 +428,7 @@ operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL) seed-down garden-down
 
 # gardenadm
 gardenadm:
-	go build -o ./bin/gardenadm ./cmd/gardenadm
+	BUILD_OUTPUT_FILE=./bin/ BUILD_PACKAGES=./cmd/gardenadm $(MAKE) build
 # gardenadm-{up,down}
 gardenadm-%: export SKAFFOLD_FILENAME = skaffold-gardenadm.yaml
 gardenadm-up: $(SKAFFOLD) $(KUBECTL)

@@ -199,8 +199,8 @@ This will deploy [`gardener-operator`](../concepts/operator.md) and create a `Ga
 Find all information about it [here](getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator).
 Note, that in this setup, no `Seed` will be registered in the Gardener - it's just a plain garden cluster without the ability to create regular shoot clusters.
 
-Once above command is finished, you can generate a command, using `gardenadm` to connect shoot cluster to this Gardener instance.
-For this, you will need the `gardenadm` binary locally installed. You can build it via:
+Once above command is finished, you can generate a bootstrap token using `gardenadm` to connect the shoot cluster to this Gardener instance.
+For this, you must have installed the `gardenadm` binary locally. You can build it via:
 
 ```shell
 make gardenadm
@@ -208,16 +208,18 @@ make gardenadm
 
 This will install it to `./bin/gardenadm`, from where you can call it.
 
-After you have this completed, you need to [target the Gardener instance](../concepts/operator.md#accessing-the-virtual-garden-cluster) from your local machine.
-Using the `gardenadm` binary you just built, you can generate the `gardenadm connect`, like this:
+After you have completed this, you need to get a kubeconfig for [the Gardener instance](../concepts/operator.md#accessing-the-virtual-garden-cluster) you want to connect the self-hosted shoot to.
+We will refer to the path of this kubeconfig as `<path-to-garden-kubeconfig>` in the following.
+
+Now you can generate the bootstrap token and the full `gardenadm connect` command like this:
 
 ```shell
-$ `./bin/gardenadm token create --print-connect-command --shoot-namespace=garden --shoot-name=root`
+$ KUBECONFIG=<path-to-garden-kubeconfig> ./bin/gardenadm token create --print-connect-command --shoot-namespace=garden --shoot-name=root
 # This will output a command similar to:
 gardenadm connect --bootstrap-token ... --ca-certificate ... https://api.virtual-garden.local.gardener.cloud
 ```
 
-Now, exec once again into one of the control-plane machines of your self-hosted shoot cluster, and run the generated `gardenadm connect` command there:
+Copy the full output, exec once again into one of the control-plane machines of your self-hosted shoot cluster, and paste and run the generated `gardenadm connect` command there:
 
 ```shell
 root@machine-0:/# gardenadm connect --bootstrap-token ... --ca-certificate ... https://api.virtual-garden.local.gardener.cloud
@@ -237,10 +239,10 @@ gardenlet-6cbcb676f5-prh8f                           1/1     Running   0        
 gardenlet-6cbcb676f5-wwn8w                           1/1     Running   0             40m
 ````
 
-Looking back into the Gardener instance, you can see that the self-hosted shoot cluster is now registered as a shoot cluster in Gardener:
+You can also observe that the self-hosted shoot cluster is now registered as a shoot cluster in Gardener:
 
 ```shell
-kubectl get Shoots -A
+kubectl --kubeconfig=<path-to-garden-kubeconfig> get Shoots -A
 NAMESPACE   NAME   CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPERATION   STATUS    AGE
 garden      root   local          local      local    1.33.0        Awake         <pending>        healthy   42m
 ```
