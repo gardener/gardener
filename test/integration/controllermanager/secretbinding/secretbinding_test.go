@@ -85,7 +85,13 @@ var _ = Describe("SecretBinding controller test", func() {
 							Name:    "cpu-worker",
 							Minimum: 2,
 							Maximum: 2,
-							Machine: gardencorev1beta1.Machine{Type: "large"},
+							Machine: gardencorev1beta1.Machine{
+								Type: "large",
+								Image: &gardencorev1beta1.ShootMachineImage{
+									Name:    "some-image",
+									Version: ptr.To("1.0.0"),
+								},
+							},
 						},
 					},
 				},

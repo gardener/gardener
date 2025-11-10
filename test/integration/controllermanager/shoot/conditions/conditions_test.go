@@ -45,6 +45,10 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 							Maximum: 3,
 							Machine: gardencorev1beta1.Machine{
 								Type: "large",
+								Image: &gardencorev1beta1.ShootMachineImage{
+									Name:    "some-image",
+									Version: ptr.To("1.0.0"),
+								},
 							},
 						},
 					},
