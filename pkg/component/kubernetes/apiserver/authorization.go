@@ -56,6 +56,12 @@ func (k *kubeAPIServer) reconcileConfigMapAuthorizationConfig(ctx context.Contex
 	}
 
 	for _, webhook := range k.values.AuthorizationWebhooks {
+		// For Kubernetes versions < 1.34 the Cache{Una,A}uthorizedRequests fields do not exist.
+		if versionutils.ConstraintK8sLess134.Check(k.values.Version) {
+			webhook.CacheAuthorizedRequests = nil
+			webhook.CacheUnauthorizedRequests = nil
+		}
+
 		config := apiserverv1beta1.AuthorizerConfiguration{
 			Type:    "Webhook",
 			Name:    webhook.Name,
