@@ -15,8 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 23,
-  "iteration": 1679041083994,
+  "iteration": 1762761234731,
   "links": [],
   "panels": [
     {
@@ -58,15 +57,23 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": true,
+      "stack": false,
       "steppedLine": false,
       "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"$istio_proxy_pod\"}[$__rate_interval]))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "_total",
+          "refId": "B"
+        },
         {
           "exemplar": true,
           "expr": "rate(container_cpu_usage_seconds_total{pod=~\"$istio_proxy_pod\"}[$__rate_interval])",
@@ -161,15 +168,23 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": true,
+      "stack": false,
       "steppedLine": false,
       "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(container_memory_working_set_bytes{pod=~\"istio-ingress.*\"})",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "_total",
+          "refId": "A"
+        },
         {
           "exemplar": true,
           "expr": "container_memory_working_set_bytes{pod=~\"$istio_proxy_pod\"}",
@@ -264,7 +279,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -367,7 +382,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -470,7 +485,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -573,7 +588,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -676,7 +691,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -780,7 +795,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -869,9 +884,13 @@
       {
         "allValue": null,
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "${datasource}",
         "definition": "container_cpu_usage_seconds_total{container=\"istio-proxy\"}",
@@ -901,7 +920,6 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
