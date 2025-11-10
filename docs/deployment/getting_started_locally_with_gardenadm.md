@@ -199,12 +199,50 @@ This will deploy [`gardener-operator`](../concepts/operator.md) and create a `Ga
 Find all information about it [here](getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator).
 Note, that in this setup, no `Seed` will be registered in the Gardener - it's just a plain garden cluster without the ability to create regular shoot clusters.
 
-Once above command is finished, you can connect the self-hosted shoot cluster to this Gardener instance:
+Once above command is finished, you can generate a command, using `gardenadm` to connect shoot cluster to this Gardener instance.
+For this, you will need the `gardenadm` binary locally installed. You can build it via:
 
 ```shell
-$ kubectl -n gardenadm-unmanaged-infra exec -it machine-0 -- bash
-root@machine-0:/# gardenadm connect
-2025-07-03T12:21:49.586Z	INFO	Command is work in progress
+make gardenadm
+```
+
+This will install it to `./bin/gardenadm`, from where you can call it.
+
+After you have this completed, you need to [target the Gardener instance](../concepts/operator.md#accessing-the-virtual-garden-cluster) from your local machine.
+Using the `gardenadm` binary you just built, you can generate the `gardenadm connect`, like this:
+
+```shell
+$ `./bin/gardenadm token create --print-connect-command --shoot-namespace=garden --shoot-name=root`
+# This will output a command similar to:
+gardenadm connect --bootstrap-token ... --ca-certificate ... https://api.virtual-garden.local.gardener.cloud
+```
+
+Now, exec once again into one of the control-plane machines of your self-hosted shoot cluster, and run the generated `gardenadm connect` command there:
+
+```shell
+root@machine-0:/# gardenadm connect --bootstrap-token ... --ca-certificate ... https://api.virtual-garden.local.gardener.cloud
+2025-11-10T08:12:32.287Z	INFO	Using resources from directory	{"configDir": "/gardenadm/resources/"}
+2025-11-10T08:12:32.334Z	INFO	Initializing gardenadm botanist with fake client set	{"cloudProfile": {"apiVersion": "core.gardener.cloud/v1beta1", "kind": "CloudProfile", "name": "local"}, "project": {"apiVersion": "core.gardener.cloud/v1beta1", "kind": "Project", "name": "garden"}, "shoot": {"apiVersion": "core.gardener.cloud/v1beta1", "kind": "Shoot", "namespace": "garden", "name": "root"}}
+2025-11-10T08:12:32.345Z	INFO	Starting	{"flow": "connect"}
+...
+2025-11-10T08:13:04.571Z	INFO	Succeeded	{"flow": "connect", "task": "Waiting until gardenlet is ready"}
+2025-11-10T08:13:04.571Z	INFO	Finished	{"flow": "connect"}
+```
+
+Once this is done, you can observe that there is now a `gardenlet` running in the self-hosted shoot cluster, which connects it to the Gardener instance:
+
+```shell
+root@machine-0:/# kubectl get pods -n kube-system | grep gardenlet
+gardenlet-6cbcb676f5-prh8f                           1/1     Running   0             40m
+gardenlet-6cbcb676f5-wwn8w                           1/1     Running   0             40m
+````
+
+Looking back into the Gardener instance, you can see that the self-hosted shoot cluster is now registered as a shoot cluster in Gardener:
+
+```shell
+kubectl get Shoots -A
+NAMESPACE   NAME   CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPERATION   STATUS    AGE
+garden      root   local          local      local    1.33.0        Awake         <pending>        healthy   42m
 ```
 
 ## Running E2E Tests for `gardenadm`
