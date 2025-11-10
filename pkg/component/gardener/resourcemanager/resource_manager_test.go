@@ -925,13 +925,13 @@ var _ = Describe("ResourceManager", func() {
 			switch responsibilityMode {
 			case ForSource:
 				namespaceSelectorMatchExpressions = []metav1.LabelSelectorRequirement{{
-					Key:      "gardener.cloud/purpose",
+					Key:      "kubernetes.io/metadata.name",
 					Operator: metav1.LabelSelectorOpNotIn,
 					Values:   []string{"kube-system", "kubernetes-dashboard"},
 				}}
 			case ForTarget:
 				namespaceSelectorMatchExpressions = []metav1.LabelSelectorRequirement{{
-					Key:      "gardener.cloud/purpose",
+					Key:      "kubernetes.io/metadata.name",
 					Operator: metav1.LabelSelectorOpIn,
 					Values:   []string{"kube-system", "kubernetes-dashboard"},
 				}}
@@ -1323,7 +1323,7 @@ webhooks:
   name: projected-token-mount.resources.gardener.cloud
   namespaceSelector:
     matchExpressions:
-    - key: gardener.cloud/purpose
+    - key: kubernetes.io/metadata.name
       operator: In
       values:
       - kube-system
@@ -1357,7 +1357,7 @@ webhooks:
   name: high-availability-config.resources.gardener.cloud
   namespaceSelector:
     matchExpressions:
-    - key: gardener.cloud/purpose
+    - key: kubernetes.io/metadata.name
       operator: In
       values:
       - kube-system
@@ -1513,7 +1513,7 @@ webhooks:
   name: system-components-config.resources.gardener.cloud
   namespaceSelector:
     matchExpressions:
-    - key: gardener.cloud/purpose
+    - key: kubernetes.io/metadata.name
       operator: In
       values:
       - kube-system
@@ -1547,7 +1547,7 @@ webhooks:
   name: pod-topology-spread-constraints.resources.gardener.cloud
   namespaceSelector:
     matchExpressions:
-    - key: gardener.cloud/purpose
+    - key: kubernetes.io/metadata.name
       operator: In
       values:
       - kube-system
