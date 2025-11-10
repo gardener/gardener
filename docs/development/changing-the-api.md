@@ -57,7 +57,7 @@ Example of field removal can be found in the [Remove `seedTemplate` field from M
 
 #### Additional Steps When Removing a Field From the Shoot API
 
-Removing fields from the Shoot API requires special handling because the removal is tied to specific Kubernetes versions and backwards compatibility must be maintained.
+Removing fields from the `Shoot` API requires special handling because the removal is tied to specific Kubernetes versions and backwards compatibility must be maintained.
 When removing defaulted fields, extra care is needed because these fields already exist in storage even when users never explicitly set them.
 
 The deprecation and removal process takes two release cycles (three for defaulted fields):
@@ -65,7 +65,7 @@ The deprecation and removal process takes two release cycles (three for defaulte
     - Mark the field as deprecated.
     - Remove all code that uses the field (or ensure controllers can handle `nil` values for defaulted fields).
     - Forbid the field from being set for Kubernetes versions starting from the next minor version that will be supported by Gardener in a future release.
-    - Show a warning to users that the field is deprecated and will be forbidden after a specific Kubernetes versions. Use the [`WarningsOnCreate`](https://github.com/gardener/gardener/blob/0bd160008f123cb268100f3316ef01d09c7fe84e/pkg/apiserver/registry/core/shoot/strategy.go#L207-L209) and [`WarningsOnUpdate`](https://github.com/gardener/gardener/blob/0bd160008f123cb268100f3316ef01d09c7fe84e/pkg/apiserver/registry/core/shoot/strategy.go#L211-L214) functions for this.
+    - Show a warning to users that the field is deprecated and will be forbidden after a specific Kubernetes version. Use the [`WarningsOnCreate`](https://github.com/gardener/gardener/blob/0bd160008f123cb268100f3316ef01d09c7fe84e/pkg/apiserver/registry/core/shoot/strategy.go#L207-L209) and [`WarningsOnUpdate`](https://github.com/gardener/gardener/blob/0bd160008f123cb268100f3316ef01d09c7fe84e/pkg/apiserver/registry/core/shoot/strategy.go#L211-L214) functions for this.
     - Update the [maintenance reconciler](https://github.com/gardener/gardener/blob/0bd160008f123cb268100f3316ef01d09c7fe84e/pkg/controllermanager/controller/shoot/maintenance/reconciler.go) to set the field to `nil` during forced upgrades to Kubernetes versions where the field is forbidden.
 2. *For defaulted fields only, in a subsequent release:*
     - Force the field to `nil` in the [`Canonicalize`](https://github.com/gardener/gardener/blob/0bd160008f123cb268100f3316ef01d09c7fe84e/pkg/apiserver/registry/core/shoot/strategy.go#L186-L190) function.
@@ -75,7 +75,7 @@ The deprecation and removal process takes two release cycles (three for defaulte
 This approach prevents several problems:
   - Avoids issues when `gardener-apiserver` is upgraded to a version that sets fields to `nil` while other controllers are still running older versions.
   - Allows users to update `Shoot`s using `Get` and `{Update,Patch}` requests without manually setting deprecated fields to `nil`, even when those fields were automatically defaulted in previous releases.
-  - Shows warnings when users explicitly set deprecated fields that will be automatically changed to `nil` by the [`Canonicalize`](https://github.com/gardener/gardener/blob/0bd160008f123cb268100f3316ef01d09c7fe84e/pkg/apiserver/registry/core/shoot/strategy.go#L186-L190) function. This warning is important because the update will increase the `Shoot`'s generation since the user's request (with the deprecated field set) differs from what is present in storage (where the field as `nil`).
+  - Shows warnings when users explicitly set deprecated fields that will be automatically changed to `nil` by the [`Canonicalize`](https://github.com/gardener/gardener/blob/0bd160008f123cb268100f3316ef01d09c7fe84e/pkg/apiserver/registry/core/shoot/strategy.go#L186-L190) function. This warning is important because the update will increase the `Shoot`'s generation since the user's request (with the deprecated field set) differs from what is present in storage (where the field is `nil`).
 
 Examples for the above can be seen in the following PRs: [Deprecate CA flag `maxEmptyBulkDelete`](https://github.com/gardener/gardener/pull/12115), [Forbid setting the `Shoot`'s `.spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete` field for Kubernetes versions >= 1.33](https://github.com/gardener/gardener/pull/12413), and [Explicitly set `maxEmptyBulkDelete` to nil in `Canonicalize`](https://github.com/gardener/gardener/pull/13054)
 
