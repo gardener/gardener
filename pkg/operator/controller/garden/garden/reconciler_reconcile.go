@@ -641,10 +641,10 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying perses-operator",
 			Fn:   c.persesOperator.Deploy,
 		})
-		// TODO(mimiteto): Check if we need to depend on prometheus CRDs
 		_ = g.Add(flow.Task{
-			Name: "Deploying x509 certificate exporter",
-			Fn:   c.x509CertificateExporter.Deploy,
+			Name:         "Deploying x509 certificate exporter",
+			Fn:           c.x509CertificateExporter.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
 		})
 	)
 
