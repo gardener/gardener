@@ -1,107 +1,80 @@
 # Gardener Upgrade Guide
 
-Upgrading Gardener affects the operator, the control plane, `gardenlet`s, managed seeds, shoots, and node operating system configurations.
-A safe upgrade follows a predictable sequence and respects Gardener's reconciliation and rollout behavior.
+Upgrading Gardener is a multi-step process that updates its core components, including the operator, control plane, `gardenlet`s, and the clusters it manages (seeds and shoots). To ensure a smooth and safe upgrade, you should follow a specific sequence of steps. This process works with Gardener's built-in reconciliation and rollout mechanisms, which automatically apply changes across your landscape.
 
 ## 1. Prepare Before Touching Anything
 
-Familiarize yourself with the [version skew policy](../deployment/version_skew_policy.md).
+First, understand Gardener's [version skew policy](../deployment/version_skew_policy.md), which defines which component versions are compatible with each other.
 
-Start by reading the [release notes](https://github.com/gardener/gardener/releases) of the target version you would like to deploy.
-They describe breaking changes, new features, bug fixes and version increments.
+Next, carefully read the [release notes](https://github.com/gardener/gardener/releases) for your target version. The notes will detail any breaking changes, new features, and bug fixes.
 
-Make sure to apply the breaking changes (if there are any) to your deployment manifests before increasing any version fields.
-This prevents the Gardener components from starting with incompatible configuration.
+If there are breaking changes, you must apply them to your configuration files (manifests) *before* you update the version numbers. This prevents components from starting with an incompatible configuration.
 
 ### Deprecations and Backwards-Compatibility
 
-Gardener's breaking change policy is conservative.
-You can read all about it [here](../development/process.md#deprecations-and-backwards-compatibility).
-Release notes clearly signal when manual migrations are required.
+Gardener introduces breaking changes cautiously to ensure stability. You can read the full policy [here](../development/process.md#deprecations-and-backwards-compatibility). The release notes will always highlight when you need to perform manual steps.
 
-- Changes that affect the `Shoot` API surface are usually bundled with a Kubernetes minor version upgrade.
-  For example, if a field may no longer be set, this usually takes only effect with a new Kubernetes minor version.
-- Changes that affect operator-related APIs (those, end-users cannot write, like `Garden` or `Seed`) are usually deprecated first and only removed after three Gardener minor releases.
-- Changes that affect extensions or their related APIs are usually deprecated first and only removed after nine Gardener minor versions.
+- Changes affecting `Shoot` clusters are typically tied to a Kubernetes minor version upgrade.
+- Changes to operator-level APIs (like `Garden` or `Seed`) are deprecated for at least three minor releases before being removed.
+- For extensions, the deprecation period is even longer, typically nine minor releases.
 
 ## 2. Upgrade `gardener-operator` and Gardener Control Plane
 
-Once your manifests match the target release, deploy the new `gardener-operator` [Helm chart](../../charts/gardener/operator).
-After it comes up, it starts reconciling the `Garden` resource.
-This also rolls out new versions of the Gardener control plane components (`gardener-apiserver`, `gardener-controller-manager`, etc.).
+After updating your configuration files, you can deploy the new `gardener-operator` using its [Helm chart](../../charts/gardener/operator). Once the new operator is running, it will automatically begin updating the `Garden` resource. This process rolls out the new versions of the Gardener control plane components, such as `gardener-apiserver` and `gardener-controller-manager`.
 
 ### Verify Readiness
 
-Before continuing, wait for the `Garden` reconciliation to be successful and ensure that
+Before moving to the next step, you must verify that the `Garden` resource has been successfully updated. Check the following:
 
-- the `gardener.cloud/operation` annotation is no longer set.
-- `.status.gardener.version` matches your target version.
-- `.status.observedGeneration` matches `.metadata.generation`.
-- `.status.lastOperation.state` is `Succeeded`
+- The `gardener.cloud/operation` annotation is removed, indicating the operation is complete.
+- The `.status.gardener.version` field shows your target version.
+- The `.status.observedGeneration` matches the `.metadata.generation`, meaning the latest configuration has been processed.
+- The `.status.lastOperation.state` is `Succeeded`.
 
-At this point, the `gardenlet`s still run the old version.
-This is normal and expected/supported (similar to Kubernetes where the control plane is updated before the `kubelet`s).
+At this stage, it's normal for the `gardenlet`s to still be running the old version. This is similar to how Kubernetes upgrades its control plane before the `kubelet`s on worker nodes.
 
-Verify that the `.status.conditions[]` in the `Garden` resource (health checks) report status `True`.
+Finally, check the health conditions (`.status.conditions[]`) in the `Garden` resource to ensure they all report `True`.
 
 ## 3. Upgrade Your `gardenlet`s and Extensions
 
+Next, upgrade the `gardenlet`s (and optionally your Gardener extensions).
+
 ### Unmanaged Seeds
 
-We start by upgrading the `gardenlet`s responsible for unmanaged seed clusters (i.e., `Seed`s which are not backed by a `Shoot`).
-Unmanaged seed clusters should be represented by `Gardenlet` resources in the `garden` namespace (see [this](../deployment/deploy_gardenlet_manually.md#self-upgrades) for more information).
+Start with `gardenlet`s that manage "unmanaged" seeds - seed clusters that are not created via `Shoot`s. These should be configured using `Gardenlet` resources in the `garden` namespace.
 
-After a successful `Garden` reconciliation, `gardener-operator` automatically updates the `.spec.deployment.helm.ociRepository.ref` to its own version in all `Gardenlet` resources labeled with `operator.gardener.cloud/auto-update-gardenlet-helm-chart-ref=true`.
-`gardenlet`s then update themselves via their "self-upgrade" functionality.
+If you've enabled auto-updates (by adding the `operator.gardener.cloud/auto-update-gardenlet-helm-chart-ref=true` label to your `Gardenlet` resources), the `gardener-operator` will automatically trigger the upgrade. The `gardenlet`s will then perform a self-upgrade.
 
-If you prefer to manage the `Gardenlet` resources via GitOps, Flux, or similar tools, then you should better manage the `.spec.deployment.helm.ociRepository.ref` field yourself and not label the resources as mentioned above (to prevent `gardener-operator` from interfering with your desired state).
-In this case, make sure to now apply your `Gardenlet` resources (potentially containing a new version).
+Alternatively, if you manage your `Gardenlet` resources with a GitOps tool like Flux, you should not use the auto-update label. Instead, update the Helm chart reference (`.spec.deployment.helm.ociRepository.ref`) in your configuration and apply the changes yourself.
 
 ### Managed Seeds
 
-When a `gardenlet` comes up, it starts reconciling `ManagedSeed` resources automatically.
-No manual action from your side is required.
-If the backing `Shoot` is currently reconciled, this must be finished first before the `ManagedSeed` reconciliation can be started.
+Once a `gardenlet` is upgraded, it automatically begins upgrading any "managed" seeds it controls. No manual action is needed for this step. Note that a `ManagedSeed` upgrade will wait until any ongoing reconciliation of its underlying `Shoot` cluster is complete.
 
-Note that such reconciliations are jittered, so they will not converge instantly.
-This protects the system from bursts of control-plane load.
-The jitter period is `5m` by default and can be changed in `gardenlet`'s [component configuration](../../example/20-componentconfig-gardenlet.yaml) by setting `.controllers.managedSeed.syncJitterPeriod`.
-You can set it to `0` if you don't want to have this behaviour (thus, speed up the rollouts of `gardenlet`s in `ManagedSeed`s), or increase this if you have a lot of seed clusters in your installation.
+To prevent overloading the system, these upgrades are staggered using a "jitter" period, so they won't all start at once. By default, this period is 5 minutes. You can adjust it in the `gardenlet`'s [component configuration](../../example/20-componentconfig-gardenlet.yaml) by setting `.controllers.managedSeed.syncJitterPeriod`. Set it to `0` to start all upgrades immediately, or increase it if you have many seed clusters to manage the load.
 
 ### Extensions
 
-Extensions might be updated by bumping the version in their respective `ControllerDeployment` resource.
-You can do this in parallel or after the `gardenlet` deployment — just make sure that compatibility is ensured by being aware of the extension's release notes.
+You can upgrade extensions by updating the version in their `ControllerDeployment` resource. This can be done at the same time as the `gardenlet` upgrade, but always check the extension's release notes to ensure compatibility.
 
 ### Verify Readiness
 
-To ensure your seed clusters are updated (i.e., `gardenlet`s got rolled out everywhere), check your `Seed` resources and ensure that
-
-- `.status.gardener.version` matches your target version. 
-
-Verify that the `.status.conditions[]` in the `Seed` resource (health checks) report status `True`.
+To confirm that all your seed clusters are updated, check each `Seed` resource and verify that its `.status.gardener.version` matches your target version. Also, ensure all health checks in the `Seed`'s status conditions report `True`.
 
 ## 4. Shoot Reconciliations
 
-By default, `Shoot`s are reconciled immediately after `gardenlet` comes up.
-This might be fine for small Gardener installations, but usually, end-users don't expect such behaviour and rather want their clusters getting reconciled within a maintenance time window they specified.
-You can read more about this [here](../usage/shoot/shoot_maintenance.md#cluster-reconciliation).
-Change the behaviour by setting `.controllers.shoot.reconcileInMaintenanceOnly=true` in the `gardenlet` [component configuration](../../example/20-componentconfig-gardenlet.yaml).
+By default, after a `gardenlet` is upgraded, it immediately starts reconciling the `Shoot` clusters it manages. While this is suitable for small setups, it's often better to perform these reconciliations only during a predefined maintenance window.
 
-If this is turned on, all `Shoot`s will be reconciled within the next 24 hours.
+To enable this, set `.controllers.shoot.reconcileInMaintenanceOnly=true` in the `gardenlet`'s [component configuration](../../example/20-componentconfig-gardenlet.yaml). When this setting is enabled, all `Shoot`s will be reconciled during their next scheduled maintenance window, which typically occurs within 24 hours. You can learn more about shoot maintenance [here](../usage/shoot/shoot_maintenance.md#cluster-reconciliation).
 
 ### Operating System Config Updates
 
-Similar to how `ManagedSeed` reconciliations are jittered, the updates of the operating system config on worker nodes of shoot clusters is also jittered.
-Such changes might involve `kubelet` restarts or other things, and in order to spread the load, nodes are not all updated in parallel.
-By default, all nodes are updated within `5m`.
-If you want to lower or increase this (minimum is `0` meaning all nodes are updated in parallel, maximum is `1800`) you can annotate your `Shoot`s with `shoot.gardener.cloud/cloud-config-execution-max-delay-seconds`.
+Similar to seed upgrades, updates to the operating system on `Shoot` cluster worker nodes are also staggered. This prevents all nodes from being updated simultaneously, which could cause disruptions like `kubelet` restarts across the entire cluster.
+
+By default, the rollout across all nodes completes within 5 minutes. You can customize this timeframe by adding the `shoot.gardener.cloud/cloud-config-execution-max-delay-seconds` annotation to your `Shoot`s. A value of `0` updates all nodes in parallel, while a higher value spreads the update over a longer period (up to 1800 seconds).
 
 ## Image Vector and Overwrites
 
-`gardener-operator`, `gardenlet`, and extensions have [image vectors](../../imagevector/containers.yaml) that describe the list of container images they deploy.
-If you prefer to not use the images from the open-source repositories but rather replicate them into your own registry, please follow the instructions described [here](../deployment/image_vector.md).
+Gardener components and extensions use an "image vector" to define the specific container images they deploy. If your organization requires using a private container registry, you can replicate the official images and configure Gardener to use them. Follow the instructions [here](../deployment/image_vector.md) to create an image vector overwrite.
 
-Generally, each Gardener (and extension) release contains a GitHub release asset called `component-descriptor.yaml`.
-You can look it up to examine the complete list of container images deployed by this component.
-Use it to replicate them to your own registry and generate the overwrite as described in the document linked above.
+Each Gardener release includes a `component-descriptor.yaml` file as a release asset. This file lists all container images for that version. You can use this list to pull the images, push them to your private registry, and generate the necessary configuration overwrite.
