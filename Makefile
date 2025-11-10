@@ -426,6 +426,9 @@ operator-seed-up operator-seed-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up g
 	TIMEOUT=900 ./hack/usage/wait-for.sh garden local VirtualGardenAPIServerAvailable RuntimeComponentsHealthy VirtualComponentsHealthy
 operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL) seed-down garden-down
 
+# gardenadm
+gardenadm:
+	go build -o ./bin/gardenadm ./cmd/gardenadm
 # gardenadm-{up,down}
 gardenadm-%: export SKAFFOLD_FILENAME = skaffold-gardenadm.yaml
 gardenadm-up: $(SKAFFOLD) $(KUBECTL)
