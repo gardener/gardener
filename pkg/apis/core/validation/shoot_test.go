@@ -1396,6 +1396,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Detail": ContainSubstring("must specify a machine type"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.provider.workers[0].machine.image"),
+						"Detail": ContainSubstring("must specify a machine image"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].minimum"),
 						"Detail": ContainSubstring("minimum value must not be negative"),
@@ -4864,6 +4869,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Name: "worker-1",
 							Machine: core.Machine{
 								Type: "xlarge",
+								Image: &core.ShootMachineImage{
+									Name:    "image-name",
+									Version: "1.0.0",
+								},
 							},
 							Maximum:  1,
 							Minimum:  0,
@@ -4873,6 +4882,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Name: "worker-2",
 							Machine: core.Machine{
 								Type: "xlarge",
+								Image: &core.ShootMachineImage{
+									Name:    "image-name",
+									Version: "1.0.0",
+								},
 							},
 							Maximum:  1,
 							Minimum:  0,
@@ -7416,8 +7429,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Architecture: ptr.To("amd64"),
 				},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("machine.type"),
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("machine.type"),
+					"Detail": Equal("must specify a machine type"),
+				}))),
+			),
+			Entry("nil machine image",
+				core.Machine{
+					Type:         "large",
+					Image:        nil,
+					Architecture: ptr.To("amd64"),
+				},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("machine.image"),
+					"Detail": Equal("must specify a machine image"),
 				}))),
 			),
 			Entry("empty machine image name",
@@ -7430,8 +7456,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Architecture: ptr.To("amd64"),
 				},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("machine.image.name"),
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("machine.image.name"),
+					"Detail": Equal("must specify a machine image name"),
 				}))),
 			),
 			Entry("empty machine image version",
@@ -7444,8 +7471,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Architecture: ptr.To("amd64"),
 				},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("machine.image.version"),
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("machine.image.version"),
+					"Detail": Equal("must specify a machine image version"),
 				}))),
 			),
 			Entry("nil machine architecture",
@@ -7982,6 +8010,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 					Machine: core.Machine{
 						Type: "xlarge",
+						Image: &core.ShootMachineImage{
+							Name:    "image-name",
+							Version: "1.0.0",
+						},
 					},
 				}
 				fldPath = field.NewPath("workers").Index(0)
@@ -8155,6 +8187,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 					Machine: core.Machine{
 						Type: "xlarge",
+						Image: &core.ShootMachineImage{
+							Name:    "image-name",
+							Version: "1.0.0",
+						},
 					},
 				}
 
@@ -8242,6 +8278,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 					Machine: core.Machine{
 						Type: "xlarge",
+						Image: &core.ShootMachineImage{
+							Name:    "image-name",
+							Version: "1.0.0",
+						},
 					},
 				}
 
@@ -8389,6 +8429,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "worker",
 				Machine: core.Machine{
 					Type: "xlarge",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				MaxUnavailable: ptr.To(intstr.FromInt(1)),
 				Priority:       ptr.To(int32(-2)),

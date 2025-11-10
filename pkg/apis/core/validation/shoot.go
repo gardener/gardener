@@ -2038,12 +2038,22 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 	if len(worker.Machine.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("machine", "type"), "must specify a machine type"))
 	}
-	if worker.Machine.Image != nil {
-		if len(worker.Machine.Image.Name) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "name"), "must specify a machine image name"))
+	if inTemplate {
+		if worker.Machine.Image != nil {
+			if len(worker.Machine.Image.Name) == 0 {
+				allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "name"), "must specify a machine image name"))
+			}
 		}
-		if !inTemplate && len(worker.Machine.Image.Version) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "version"), "must specify a machine image version"))
+	} else {
+		if worker.Machine.Image == nil {
+			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image"), "must specify a machine image"))
+		} else {
+			if len(worker.Machine.Image.Name) == 0 {
+				allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "name"), "must specify a machine image name"))
+			}
+			if len(worker.Machine.Image.Version) == 0 {
+				allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "version"), "must specify a machine image version"))
+			}
 		}
 	}
 	if worker.Minimum < 0 {
