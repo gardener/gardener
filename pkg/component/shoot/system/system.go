@@ -174,14 +174,6 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 
 	if !s.values.IsWorkerless {
 		var (
-			shootInfoConfigMap = &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      v1beta1constants.ConfigMapNameShootInfo,
-					Namespace: metav1.NamespaceSystem,
-				},
-				Data: s.shootInfoData(),
-			}
-
 			port53      = intstr.FromInt32(53)
 			port443     = intstr.FromInt32(kubeapiserverconstants.Port)
 			port8053    = intstr.FromInt32(corednsconstants.PortServer)
@@ -299,7 +291,6 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		)
 
 		if err := registry.Add(
-			shootInfoConfigMap,
 			networkPolicyAllowToShootAPIServer,
 			networkPolicyAllowToDNS,
 			networkPolicyAllowToKubelet,
@@ -311,6 +302,20 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		if err := registry.Add(priorityClassResources()...); err != nil {
 			return nil, err
 		}
+	}
+
+	shootInfoConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v1beta1constants.ConfigMapNameShootInfo,
+			Namespace: metav1.NamespaceSystem,
+		},
+		Data: s.shootInfoData(),
+	}
+
+	if err := registry.Add(
+		shootInfoConfigMap,
+	); err != nil {
+		return nil, err
 	}
 
 	if len(s.values.APIResourceList) > 0 {
@@ -360,7 +365,6 @@ func (s *shootSystem) shootInfoData() map[string]string {
 		"provider":          s.values.Object.Spec.Provider.Type,
 		"region":            s.values.Object.Spec.Region,
 		"kubernetesVersion": s.values.Object.Spec.Kubernetes.Version,
-		"podNetwork":        s.values.PodNetworkCIDRs[0].String(),
 		"serviceNetwork":    s.values.ServiceNetworkCIDRs[0].String(),
 		"maintenanceBegin":  s.values.Object.Spec.Maintenance.TimeWindow.Begin,
 		"maintenanceEnd":    s.values.Object.Spec.Maintenance.TimeWindow.End,
@@ -368,6 +372,10 @@ func (s *shootSystem) shootInfoData() map[string]string {
 
 	if domain := s.values.ExternalClusterDomain; domain != nil {
 		data["domain"] = *domain
+	}
+
+	if len(s.values.PodNetworkCIDRs) > 0 {
+		data["podNetwork"] = s.values.PodNetworkCIDRs[0].String()
 	}
 
 	if len(s.values.NodeNetworkCIDRs) > 0 {

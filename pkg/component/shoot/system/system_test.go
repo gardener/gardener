@@ -151,48 +151,57 @@ var _ = Describe("ShootSystem", func() {
 		})
 
 		Context("shoot-info ConfigMap", func() {
+			var configMap *corev1.ConfigMap
+
+			BeforeEach(func() {
+				configMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "shoot-info",
+						Namespace: "kube-system",
+					},
+					Data: map[string]string{
+						"domain":            domain,
+						"extensions":        extension1 + `,` + extension2,
+						"kubernetesVersion": kubernetesVersion,
+						"maintenanceBegin":  maintenanceBegin,
+						"maintenanceEnd":    maintenanceEnd,
+						"nodeNetwork":       nodeCIDRs[0].String(),
+						"nodeNetworks":      nodeCIDRs[0].String() + "," + nodeCIDRs[1].String(),
+
+						"projectName":     projectName,
+						"provider":        providerType,
+						"region":          region,
+						"serviceNetwork":  serviceCIDRs[0].String(),
+						"serviceNetworks": serviceCIDRs[0].String() + "," + serviceCIDRs[1].String(),
+						"shootNamespace":  projectNamespace,
+						"shootName":       shootName,
+					},
+				}
+			})
+
+			It("should successfully deploy all resources", func() {
+				configMap.Data["podNetwork"] = podCIDRs[0].String()
+				configMap.Data["podNetworks"] = podCIDRs[0].String() + "," + podCIDRs[1].String()
+
+				Expect(managedResource).To(contain(configMap))
+			})
+
 			When("shoot is workerless", func() {
 				BeforeEach(func() {
 					values.IsWorkerless = true
+					values.PodNetworkCIDRs = nil
 				})
 
-				It("should not deploy any ConfigMap", func() {
+				It("should successfully deploy all resources", func() {
 					manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
 					Expect(err).NotTo(HaveOccurred())
 
 					for _, manifest := range manifests {
-						Expect(manifest).NotTo(And(ContainSubstring("name: shoot-info"), ContainSubstring("kind: ConfigMap")))
+						Expect(manifest).NotTo(ContainSubstring("podNetworks"))
 					}
+
+					Expect(managedResource).To(contain(configMap))
 				})
-			})
-
-			configMap := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "shoot-info",
-					Namespace: "kube-system",
-				},
-				Data: map[string]string{
-					"domain":            domain,
-					"extensions":        extension1 + `,` + extension2,
-					"kubernetesVersion": kubernetesVersion,
-					"maintenanceBegin":  maintenanceBegin,
-					"maintenanceEnd":    maintenanceEnd,
-					"nodeNetwork":       nodeCIDRs[0].String(),
-					"nodeNetworks":      nodeCIDRs[0].String() + "," + nodeCIDRs[1].String(),
-					"podNetwork":        podCIDRs[0].String(),
-					"podNetworks":       podCIDRs[0].String() + "," + podCIDRs[1].String(),
-					"projectName":       projectName,
-					"provider":          providerType,
-					"region":            region,
-					"serviceNetwork":    serviceCIDRs[0].String(),
-					"serviceNetworks":   serviceCIDRs[0].String() + "," + serviceCIDRs[1].String(),
-					"shootNamespace":    projectNamespace,
-					"shootName":         shootName,
-				},
-			}
-
-			It("should successfully deploy all resources", func() {
-				Expect(managedResource).To(contain(configMap))
 			})
 		})
 
