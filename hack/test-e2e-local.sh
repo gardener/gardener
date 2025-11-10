@@ -67,7 +67,6 @@ case $TYPE in
     seed_name="local"
     shoot_names=(
       e2e-managedseed.garden
-      e2e-prom-ms.garden
       e2e-hib.local
       e2e-hib-wl.local
       e2e-unpriv.local
@@ -100,7 +99,6 @@ case $TYPE in
       e2e-auth-one.local
       e2e-auth-two.local
       e2e-layer4-lb.local
-      e2e-prom.local
     )
 
     ingress_names=(
