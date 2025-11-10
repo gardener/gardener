@@ -10,14 +10,14 @@ import (
 	"os"
 	"path"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/defaults"
-	"github.com/containerd/containerd/errdefs"
-	"github.com/containerd/containerd/mount"
-	"github.com/containerd/containerd/namespaces"
-	"github.com/containerd/containerd/remotes/docker"
-	"github.com/containerd/containerd/remotes/docker/config"
-	"github.com/containerd/containerd/snapshots"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/mount"
+	"github.com/containerd/containerd/v2/core/remotes/docker"
+	"github.com/containerd/containerd/v2/core/remotes/docker/config"
+	"github.com/containerd/containerd/v2/core/snapshots"
+	"github.com/containerd/containerd/v2/defaults"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
+	"github.com/containerd/errdefs"
 	"github.com/opencontainers/image-spec/identity"
 	"github.com/spf13/afero"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -61,12 +61,12 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 		Hosts: config.ConfigureHosts(ctx, config.HostOptions{HostDir: config.HostDirFromRoot("/etc/containerd/certs.d")}),
 	})
 
-	image, err := client.Pull(ctx, imageRef, containerd.WithPullSnapshotter(containerd.DefaultSnapshotter), containerd.WithResolver(resolver), containerd.WithPullUnpack)
+	image, err := client.Pull(ctx, imageRef, containerd.WithPullSnapshotter(defaults.DefaultSnapshotter), containerd.WithResolver(resolver), containerd.WithPullUnpack)
 	if err != nil {
 		return fmt.Errorf("error pulling image: %w", err)
 	}
 
-	snapshotter := client.SnapshotService(containerd.DefaultSnapshotter)
+	snapshotter := client.SnapshotService(defaults.DefaultSnapshotter)
 
 	imageMountDirectory, err := fs.TempDir(nodeagentconfigv1alpha1.TempDir, "mount-image-")
 	if err != nil {
