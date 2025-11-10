@@ -27,10 +27,10 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// Reconciler reconciles Seeds or Shoots and checks whether the responsible gardenlet is regularly sending heartbeats.
-// If not, it sets the GardenletReady condition to Unknown after some grace period passed. If the gardenlet still did
-// not send heartbeats and another grace period passed then also all (other) Shoot conditions and constraints are set to
-// Unknown.
+// Reconciler reconciles Seeds or self-hosted Shoots and checks whether the responsible gardenlet is regularly sending
+// heartbeats. If not, it sets the GardenletReady condition to Unknown after some grace period passed. If the gardenlet
+// still did not send heartbeats and another grace period passed then also all (other) Shoot conditions and constraints
+// are set to Unknown.
 type Reconciler struct {
 	Client         client.Client
 	Config         controllermanagerconfigv1alpha1.SeedControllerConfiguration
@@ -38,10 +38,10 @@ type Reconciler struct {
 	LeaseNamespace string
 }
 
-// Reconcile reconciles Seeds or Shoots and checks whether the responsible gardenlet is regularly sending heartbeats.
-// If not, it sets the GardenletReady condition to Unknown after some grace period passed. If the gardenlet still did
-// not send heartbeats and another grace period passed then also all (other) Shoot conditions and constraints are set to
-// Unknown.
+// Reconcile reconciles Seeds or self-hosted Shoots and checks whether the responsible gardenlet is regularly sending
+// heartbeats. If not, it sets the GardenletReady condition to Unknown after some grace period passed. If the gardenlet
+// still did not send heartbeats and another grace period passed then also all (other) Shoot conditions and constraints
+// are set to Unknown.
 func (r *Reconciler) Reconcile(ctx context.Context, req Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 

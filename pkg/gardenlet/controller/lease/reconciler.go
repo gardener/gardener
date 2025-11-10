@@ -45,7 +45,7 @@ type Reconciler struct {
 }
 
 // Reconcile reconciles resources and updates a corresponding heartbeat Lease object in the garden cluster when the
-// // connection to the runtime cluster succeeds.
+// connection to the runtime cluster succeeds.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 

@@ -195,10 +195,10 @@ func (shootStrategy) Canonicalize(obj runtime.Object) {
 }
 
 func maintainIsSelfHostedLabel(shoot *core.Shoot) {
-	if !gardencorehelper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
-		delete(shoot.Labels, v1beta1constants.ShootIsSelfHosted)
-	} else {
+	if gardencorehelper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
 		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootIsSelfHosted, "true")
+	} else {
+		delete(shoot.Labels, v1beta1constants.ShootIsSelfHosted)
 	}
 }
 
