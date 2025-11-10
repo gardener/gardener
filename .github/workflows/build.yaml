@@ -97,6 +97,9 @@ jobs:
           - name: controller-manager
             target: controller-manager
             oci-repository: gardener/controller-manager
+          - name: gardenadm
+            target: gardenadm
+            oci-repository: gardener/gardenadm
           - name: gardenlet
             target: gardenlet
             oci-repository: gardener/gardenlet
