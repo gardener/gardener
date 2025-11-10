@@ -40,6 +40,7 @@ v1.143  | Week 19-20 | May 4, 2026            | May 17, 2026       | [@shafeeqes
 v1.144  | Week 21-22 | May 18, 2026           | May 31, 2026       | [@Kostov6](https://github.com/Kostov6)                       |
 v1.145  | Week 23-24 | June 1, 2026           | June 14, 2026      | [@vitanovs](https://github.com/vitanovs)                     |
 v1.146  | Week 25-26 | June 15, 2026          | June 28, 2026      | [@dimitar-kostadinov](https://github.com/dimitar-kostadinov) |
+v1.147  | Week 27-28 | June 29, 2026          | July 12, 2026      | [@RadaBDimitrova](https://github.com/RadaBDimitrova) |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
