@@ -15,8 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 23,
-  "iteration": 1679041083994,
+  "iteration": 1762761234731,
   "links": [],
   "panels": [
     {
@@ -58,7 +57,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -169,7 +168,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -280,7 +279,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -383,7 +382,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -486,7 +485,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -589,7 +588,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -692,7 +691,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -796,7 +795,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.43",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -885,9 +884,13 @@
       {
         "allValue": null,
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "${datasource}",
         "definition": "container_cpu_usage_seconds_total{container=\"istio-proxy\"}",
@@ -917,7 +920,6 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
