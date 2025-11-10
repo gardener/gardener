@@ -299,6 +299,10 @@ spec:
                     type: string
                   emitterStorageType:
                     type: string
+                  enableChunkTrace:
+                    description: Enable input/output tracing on debug images, controlled
+                      more granualry via the http API
+                    type: boolean
                   flushSeconds:
                     description: Interval to flush output
                     type: number
@@ -341,7 +345,7 @@ spec:
                     type: boolean
                   httpListen:
                     description: Address to listen
-                    pattern: ^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}$
+                    pattern: ^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|(([A-Fa-f0-9:]+:+)+[A-Fa-f0-9]*)$
                     type: string
                   httpPort:
                     description: Port to listen

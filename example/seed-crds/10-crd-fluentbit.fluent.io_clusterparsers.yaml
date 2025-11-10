@@ -74,7 +74,20 @@ spec:
                 type: object
               logfmt:
                 description: Logfmt defines logfmt parser configuration.
+                properties:
+                  timeFormat:
+                    description: Time_Format, eg. %Y-%m-%dT%H:%M:%S %z
+                    type: string
+                  timeKeep:
+                    description: Time_Keep
+                    type: boolean
+                  timeKey:
+                    description: Time_Key
+                    type: string
                 type: object
+                x-kubernetes-validations:
+                - message: logfmt must not be null
+                  rule: self != null
               ltsv:
                 description: LTSV defines ltsv parser configuration.
                 properties:
