@@ -22,24 +22,6 @@ var _ = Describe("Strategy", func() {
 		strategy = Strategy{}
 	)
 
-	Describe("#Canonicalize", func() {
-		var seed *core.Seed
-
-		BeforeEach(func() {
-			seed = &core.Seed{}
-		})
-
-		It("should add the labels for the seed provider and region", func() {
-			seed.Spec = core.SeedSpec{Provider: core.SeedProvider{Type: "provider-type", Region: "provider-region"}}
-			strategy.Canonicalize(seed)
-
-			Expect(seed.Labels).To(And(
-				HaveKeyWithValue("seed.gardener.cloud/provider", "provider-type"),
-				HaveKeyWithValue("seed.gardener.cloud/region", "provider-region"),
-			))
-		})
-	})
-
 	Describe("#PrepareForUpdate", func() {
 		var oldSeed, newSeed *core.Seed
 
@@ -129,6 +111,24 @@ var _ = Describe("Strategy", func() {
 
 				Expect(newSeed.Generation).To(Equal(oldSeed.Generation))
 			})
+		})
+	})
+
+	Describe("#Canonicalize", func() {
+		var seed *core.Seed
+
+		BeforeEach(func() {
+			seed = &core.Seed{}
+		})
+
+		It("should add the labels for the seed provider and region", func() {
+			seed.Spec = core.SeedSpec{Provider: core.SeedProvider{Type: "provider-type", Region: "provider-region"}}
+			strategy.Canonicalize(seed)
+
+			Expect(seed.Labels).To(And(
+				HaveKeyWithValue("seed.gardener.cloud/provider", "provider-type"),
+				HaveKeyWithValue("seed.gardener.cloud/region", "provider-region"),
+			))
 		})
 	})
 })
