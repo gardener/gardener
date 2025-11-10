@@ -642,8 +642,13 @@ func (r *Reconciler) reconcile(
 			Fn:   c.persesOperator.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying x509 certificate exporter",
-			Fn:           c.x509CertificateExporter.Deploy,
+			Name: "Deploying x509 certificate exporter",
+			Fn: func(ctx context.Context) error {
+				if c.x509CertificateExporter == nil {
+					return nil
+				}
+				return c.x509CertificateExporter.Deploy(ctx)
+			},
 			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
 		})
 	)

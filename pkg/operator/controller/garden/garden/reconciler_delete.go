@@ -94,7 +94,12 @@ func (r *Reconciler) delete(
 		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying x509 certificate exporter",
-			Fn:   component.OpDestroyAndWait(c.x509CertificateExporter).Destroy,
+			Fn: func(ctx context.Context) error {
+				if c.x509CertificateExporter == nil {
+					return nil
+				}
+				return component.OpDestroyAndWait(c.x509CertificateExporter).Destroy(ctx)
+			},
 		})
 		destroyAlertmanager = g.Add(flow.Task{
 			Name: "Destroying Alertmanager",
