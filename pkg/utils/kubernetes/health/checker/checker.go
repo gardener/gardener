@@ -17,7 +17,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -537,52 +536,33 @@ func (h *HealthChecker) checkControllerInstallationConditions(
 	return nil, nil
 }
 
-// CheckManagedPrometheuses checks the health of Prometheus resources from a list of managed resources in case the provided filter func returns true.
-func (h *HealthChecker) CheckManagedPrometheuses(
+// CheckPrometheuses checks the health of Prometheus resources from a list in case the provided filter func returns true.
+func (h *HealthChecker) CheckPrometheuses(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
-	managedResources []resourcesv1alpha1.ManagedResource,
-	filterFunc func(resourcesv1alpha1.ManagedResource) bool,
+	prometheuses []monitoringv1.Prometheus,
+	filterFunc func(*monitoringv1.Prometheus) bool,
 ) *gardencorev1beta1.Condition {
-	var (
-		prometheuses []*monitoringv1.Prometheus
-		tasks        []flow.TaskFn
-	)
-
-	for _, managedResource := range managedResources {
-		if !filterFunc(managedResource) || managedResource.Annotations[resourcesv1alpha1.Ignore] == "true" {
-			continue
-		}
-
-		for _, resource := range managedResource.Status.Resources {
-			if resource.Kind == monitoringv1.PrometheusesKind {
-				prometheus := &monitoringv1.Prometheus{ObjectMeta: metav1.ObjectMeta{Namespace: resource.Namespace, Name: resource.Name}}
-				prometheuses = append(prometheuses, prometheus)
-			}
-		}
-	}
+	var tasks []flow.TaskFn
 
 	// Guarantee failed conditions are returned in a stable order to avoid too many writes to condition statuses.
-	slices.SortFunc(prometheuses, func(i, j *monitoringv1.Prometheus) int {
+	prometheusesSorted := make([]monitoringv1.Prometheus, len(prometheuses))
+	copy(prometheusesSorted, prometheuses)
+	slices.SortFunc(prometheusesSorted, func(i, j monitoringv1.Prometheus) int {
 		if i.Namespace == j.Namespace {
 			return strings.Compare(i.Name, j.Name)
 		}
 		return strings.Compare(i.Namespace, j.Namespace)
 	})
 
-	conditions := make([]*gardencorev1beta1.Condition, len(prometheuses))
-	for i, prometheus := range prometheuses {
+	conditions := make([]*gardencorev1beta1.Condition, len(prometheusesSorted))
+	for i, prometheus := range prometheusesSorted {
 		tasks = append(tasks, func(ctx context.Context) error {
 			conditions[i] = func() *gardencorev1beta1.Condition {
-				if err := h.reader.Get(ctx, client.ObjectKeyFromObject(prometheus), prometheus); err != nil {
-					if apierrors.IsNotFound(err) {
-						return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckError", fmt.Sprintf(`Prometheus "%s/%s" not found`, prometheus.Namespace, prometheus.Name)))
-					}
-
-					return ptr.To(v1beta1helper.NewConditionOrError(h.clock, condition, nil, fmt.Errorf(`failed checking Prometheus "%s/%s": %w`, prometheus.Namespace, prometheus.Name, err)))
+				if !filterFunc(&prometheus) {
+					return nil
 				}
-
-				return h.CheckPrometheus(ctx, condition, prometheus)
+				return h.CheckPrometheus(ctx, condition, &prometheus)
 			}()
 			return nil
 		})
