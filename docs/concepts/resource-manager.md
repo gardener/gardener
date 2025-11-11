@@ -1142,7 +1142,7 @@ configured with `Auto` or `Recreate` to switch to update mode `InPlaceOrRecreate
 - _mutates_ all `vpa` resources __inside__ `kube-system` and `kubernetes-dashboards` namespaces on `Shoot` clusters
 - _mutates_ all `vpa` resources __outside__ `kube-system` and `kubernetes-dashboards` namespaces on `Seed` clusters
 
-In addition, to prevent the _mutation_ of certain `VerticalPodAutoscaler` [resources](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/deploy/vpa-crd.yaml), falling within the webhook's scope, the following _label_
+In addition, to prevent the _mutation_ of certain `VerticalPodAutoscaler` [resources](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/deploy/vpa-crd.yaml) falling within the webhook's scope, the following _label_
 
 ```
 vpa-in-place-updates.resources.gardener.cloud/skip
