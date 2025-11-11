@@ -784,7 +784,7 @@ func (e *etcd) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutosca
 }
 
 func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowedETCD corev1.ResourceList) error {
-	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+	vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
 	containerPolicyOff := vpaautoscalingv1.ContainerScalingModeOff
 	containerPolicyAuto := vpaautoscalingv1.ContainerScalingModeAuto
 	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
