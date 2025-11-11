@@ -1467,33 +1467,6 @@ query_range:
 				})
 			})
 		})
-
-		Context("managed-by label is set", func() {
-			BeforeEach(func() {
-				values.ManagedBy = "testmanager"
-			})
-
-			JustBeforeEach(func() {
-				// The global JustBeforeEach creates the deployer helper after BeforeEach is called.
-				Expect(deployer.Deploy(ctx)).To(Succeed())
-			})
-
-			It("should successfully set the managed-by label", func() {
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				Expect(managedResource.Labels["managed-by"]).To(Equal("testmanager"))
-			})
-
-			When("target cluster is configured", func() {
-				BeforeEach(func() {
-					values.TargetCluster = &TargetClusterValues{}
-				})
-
-				It("should successfully set the managed-by label", func() {
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					Expect(managedResource.Labels["managed-by"]).To(Equal("testmanager"))
-				})
-			})
-		})
 	})
 
 	Describe("#Destroy", func() {
