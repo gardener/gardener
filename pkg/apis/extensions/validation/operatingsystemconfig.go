@@ -341,6 +341,12 @@ func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.E
 				allErrs = append(allErrs, field.Required(idxPath.Child("content", "imageRef", "filePathInImage"), "field is required"))
 			}
 		}
+
+		if len(file.NodeName) > 0 {
+			for _, msg := range apivalidation.NameIsDNSSubdomain(file.NodeName, false) {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("nodeName"), file.NodeName, msg))
+			}
+		}
 	}
 
 	return allErrs

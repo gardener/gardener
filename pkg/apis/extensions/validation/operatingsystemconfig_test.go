@@ -222,6 +222,11 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 					Path:    "path6",
 					Content: osc.Spec.Files[0].Content,
 				},
+				{
+					Path:     "path7",
+					Content:  osc.Spec.Files[0].Content,
+					NodeName: "-&#39;invalid&#39;",
+				},
 			}
 
 			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(
@@ -274,6 +279,9 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("status.extensionFiles[4].path"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("status.extensionFiles[5].nodeName"),
 				})),
 			))
 		})
