@@ -288,12 +288,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	managedResourceLabels := map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}
-	if p.values.ManagedBy != "" {
-		managedResourceLabels[managedresources.LabelKeyManagedBy] = p.values.ManagedBy
-	}
-
-	if err := managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, p.name(), false, managedResourceLabels, resources); err != nil {
+	if err := managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, p.name(), false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resources); err != nil {
 		return err
 	}
 
@@ -308,7 +303,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		if err := managedresources.CreateForShootWithLabels(ctx, p.client, p.namespace, p.name()+"-target", managedresources.LabelValueGardener, false, managedResourceLabels, resourcesTarget); err != nil {
+		if err := managedresources.CreateForShootWithLabels(ctx, p.client, p.namespace, p.name()+"-target", managedresources.LabelValueGardener, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resourcesTarget); err != nil {
 			return err
 		}
 	} else {
