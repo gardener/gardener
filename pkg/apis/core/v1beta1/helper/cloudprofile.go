@@ -14,6 +14,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/clock"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -99,14 +100,13 @@ func VersionIsPreview(version gardencorev1beta1.ExpirableVersion) bool {
 // DurationUntilNextVersionLifecycleStage returns the duration until the earliest upcoming lifecycle start time
 // of any Kubernetes version or MachineImageVersion in the given <cloudProfile>.
 // If no future lifecycle start is found, it returns 0.
-// TODO:(RAPSNX): Consider injecting time.Now() for better testability.
-func DurationUntilNextVersionLifecycleStage(cloudProfile *gardencorev1beta1.CloudProfileSpec) time.Duration {
+func DurationUntilNextVersionLifecycleStage(cloudProfile *gardencorev1beta1.CloudProfileSpec, clock clock.Clock) time.Duration {
 	if cloudProfile == nil {
 		return 0
 	}
 
 	var next time.Time
-	now := time.Now()
+	now := clock.Now()
 
 	evaluate := func(t *metav1.Time) {
 		if t == nil {
