@@ -493,7 +493,6 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 			removedKubernetesVersions := sets.StringKeySet(helper.GetRemovedVersions(oldCloudProfile.Spec.Kubernetes.Versions, cloudProfile.Spec.Kubernetes.Versions))
 
 			// getting Machine image versions that have been removed from or added to the CloudProfile
-			// removedMachineImages, removedMachineImageVersions, addedMachineImages, addedMachineImageVersions := helper.GetMachineImageDiff(oldCloudProfile.Spec.MachineImages, cloudProfile.Spec.MachineImages)
 			machineImageDiff := helper.GetMachineImageDiff(oldCloudProfile.Spec.MachineImages, cloudProfile.Spec.MachineImages)
 
 			// getting removed capabilities
@@ -501,7 +500,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 
 			wasLimitAdded := !apiequality.Semantic.DeepEqual(cloudProfile.Spec.Limits, oldCloudProfile.Spec.Limits)
 
-			if len(removedKubernetesVersions) > 0 || len(machineImageDiff.RemovedVersions) > 0 || len(machineImageDiff.AddedVersions) > 0 || wasLimitAdded {
+			if len(removedKubernetesVersions) > 0 || len(machineImageDiff.RemovedVersions) > 0 || len(machineImageDiff.AddedVersions) > 0 || wasLimitAdded || len(removedCapabilities) > 0 {
 				shootList, err1 := r.shootLister.List(labels.Everything())
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
