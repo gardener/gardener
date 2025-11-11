@@ -22,7 +22,7 @@ Available for deployment with both [gardenlet](../../concepts/gardenlet.md) and 
 VPAInPlaceUpdates
 ```
 
-To keep a VerticalPodAutoscaler resource out of the _mutating_ webhook scope, add the following `skip` label indicating that the resource should preserve it's current configuration and __not__ get  updated:
+To keep a VerticalPodAutoscaler resource out of the _mutating_ webhook scope, add the following `skip` label, indicating that the resource should preserve its current configuration and __not__ get  updated:
 
 ```
 vpa-in-place-updates.resources.gardener.cloud/skip
