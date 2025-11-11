@@ -28,7 +28,7 @@ To keep a VerticalPodAutoscaler resource out of the _mutating_ webhook scope, ad
 vpa-in-place-updates.resources.gardener.cloud/skip
 ```
 
-### Gardenlet
+### gardenlet
 
 To enable the _mutating_ [resource manager](../../concepts/resource-manager.md) webhook, the `VPAInPlaceUpdates` feature gate must be set to `true`:
 
