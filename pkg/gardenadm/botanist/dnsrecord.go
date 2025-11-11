@@ -7,13 +7,13 @@ package botanist
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component"
 )
@@ -39,17 +39,13 @@ func (b *GardenadmBotanist) DeployBootstrapDNSRecord(ctx context.Context) error 
 	return component.OpWait(b.Shoot.Components.Extensions.ExternalDNSRecord).Deploy(ctx)
 }
 
-// RestoreBootstrapDNSRecord restores the external DNSRecord pointing to the first control plane node for bootstrapping
-// the self-hosted shoot cluster.
-func (b *GardenadmBotanist) RestoreBootstrapDNSRecord(ctx context.Context) error {
-	// The DNSRecord values are not persisted in the ShootState, so we need to recalculate them from the Node objects.
+// RestoreExternalDNSRecord restores the external DNSRecord pointing to the control plane nodes based on the extension
+// state from the bootstrap cluster stored by `gardenadm bootstrap` in the ShootState.
+func (b *GardenadmBotanist) RestoreExternalDNSRecord(ctx context.Context) error {
+	// The DNSRecord values are not persisted in the ShootState, so we recalculate them from the Node objects.
 	// This is the same logic as in DeployBootstrapDNSRecord, but we fetch the control plane Node objects using a label
 	// selector instead of fetching the Machine objects.
-	// Also, there might be more than one control plane node, so we just pick the oldest one, which should be the one
-	// provisioned by `gardenadm bootstrap`. We expect that any bootstrapped control plane node accepts traffic on its
-	// internal address, so picking one should be sufficient during the bootstrap procedure.
-	// Putting all control plane nodes in the DNSRecord would require consistent address types across all nodes, so we
-	// avoid that handling for now. After all, the DNSRecord is only temporary until the LoadBalancer is ready.
+	// We expect that any bootstrapped control plane node accepts traffic on its preferred address.
 	controlPlaneWorkerPool := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers)
 	if controlPlaneWorkerPool == nil {
 		return fmt.Errorf("failed fetching the control plane worker pool for the shoot")
@@ -63,19 +59,29 @@ func (b *GardenadmBotanist) RestoreBootstrapDNSRecord(ctx context.Context) error
 		return fmt.Errorf("no control plane nodes founds")
 	}
 
-	// pick the oldest node
-	slices.SortStableFunc(nodeList.Items, func(a, b corev1.Node) int {
-		return a.CreationTimestamp.Compare(b.CreationTimestamp.Time)
-	})
-	node := &nodeList.Items[0]
+	// Collect preferred addresses of all control plane nodes and ensure they are of the same type.
+	var (
+		values     []string
+		recordType extensionsv1alpha1.DNSRecordType
+	)
 
-	nodeAddr, err := PreferredAddress(node.Status.Addresses)
-	if err != nil {
-		return fmt.Errorf("failed getting preferred address for node %q: %w", node.Name, err)
+	for _, node := range nodeList.Items {
+		nodeAddr, err := PreferredAddress(node.Status.Addresses)
+		if err != nil {
+			return fmt.Errorf("failed getting preferred address for node %q: %w", node.Name, err)
+		}
+		values = append(values, nodeAddr)
+
+		currentRecordType := extensionsv1alpha1helper.GetDNSRecordType(nodeAddr)
+		if recordType == "" {
+			recordType = currentRecordType
+		} else if recordType != currentRecordType {
+			return fmt.Errorf("inconsistent address types for control plane nodes: found both %q and %q: %v", recordType, currentRecordType, values)
+		}
 	}
 
-	b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(nodeAddr))
-	b.Shoot.Components.Extensions.ExternalDNSRecord.SetValues([]string{nodeAddr})
+	b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(recordType)
+	b.Shoot.Components.Extensions.ExternalDNSRecord.SetValues(values)
 
 	if err := b.Shoot.Components.Extensions.ExternalDNSRecord.Restore(ctx, b.Shoot.GetShootState()); err != nil {
 		return err

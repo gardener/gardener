@@ -250,10 +250,10 @@ func run(ctx context.Context, opts *Options) error {
 		)
 
 		// Later on, we will expose the control plane via a LoadBalancer and point the DNSRecord to it.
-		// TODO(timebertt): skip this step if the external LoadBalancer is already available
+		// TODO(timebertt): adapt this step to consider the external LoadBalancer if it is already available
 		_ = g.Add(flow.Task{
-			Name:         "Restoring DNSRecord pointing to the first control plane machine",
-			Fn:           b.RestoreBootstrapDNSRecord,
+			Name:         "Restoring external DNSRecord",
+			Fn:           b.RestoreExternalDNSRecord,
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
