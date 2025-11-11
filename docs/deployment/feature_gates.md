@@ -32,7 +32,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | DoNotCopyBackupCredentials               | `true`  | `Beta`  | `1.123` |         |
 | OpenTelemetryCollector                   | `false` | `Alpha` | `1.124` |         |
 | UseUnifiedHTTPProxyPort                  | `false` | `Alpha` | `1.130` |         |
-| VPAInPlaceUpdates                        | `false` | `Alpha` | `1.131` |         |
+| VPAInPlaceUpdates                        | `false` | `Alpha` | `1.132` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
