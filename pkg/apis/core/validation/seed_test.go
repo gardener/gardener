@@ -420,10 +420,10 @@ var _ = Describe("Seed Validation Tests", func() {
 						Namespace:  "garden",
 					},
 				}
-				new := seed.DeepCopy()
-				new.Spec.DNS.Internal = nil
+				newSeed := seed.DeepCopy()
+				newSeed.Spec.DNS.Internal = nil
 
-				errorList := ValidateSeedUpdate(new, seed)
+				errorList := ValidateSeedUpdate(newSeed, seed)
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.dns.internal"),
@@ -652,10 +652,10 @@ var _ = Describe("Seed Validation Tests", func() {
 						},
 					},
 				}
-				new := seed.DeepCopy()
-				new.Spec.DNS.Defaults = nil
+				newSeed := seed.DeepCopy()
+				newSeed.Spec.DNS.Defaults = nil
 
-				errorList := ValidateSeedUpdate(new, seed)
+				errorList := ValidateSeedUpdate(newSeed, seed)
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.dns.defaults"),
@@ -819,26 +819,27 @@ var _ = Describe("Seed Validation Tests", func() {
 					}))
 				})
 
-				It("should forbid Seed with overlapping networks", func() {
-					shootDefaultPodCIDR := "10.0.1.128/28"     // 10.0.1.128 -> 10.0.1.13
-					shootDefaultServiceCIDR := "10.0.1.144/30" // 10.0.1.144 -> 10.0.1.17
+				It("should forbid Seed with overlapping networks but allow overlap with shoot defaults", func() {
+					shootDefaultPodCIDR := "10.0.1.128/28"     // 10.0.1.128 -> 10.0.1.143
+					shootDefaultServiceCIDR := "10.0.1.144/30" // 10.0.1.144 -> 10.0.1.147
 
-					nodesCIDR := "10.0.0.0/8" // 10.0.0.0 -> 10.255.255.25
+					nodesCIDR := "10.0.0.0/8" // 10.0.0.0 -> 10.255.255.255
 					// Pods CIDR overlaps with Nodes network
 					// Services CIDR overlaps with Nodes and Pods
 					// Shoot default pod CIDR overlaps with services
 					// Shoot default pod CIDR overlaps with shoot default pod CIDR
 					seed.Spec.Networks = core.SeedNetworks{
 						Nodes:    &nodesCIDR,     // 10.0.0.0 -> 10.255.255.25
-						Pods:     "10.0.1.0/24",  // 10.0.1.0 -> 10.0.1.25
-						Services: "10.0.1.64/26", // 10.0.1.64 -> 10.0.1.17
+						Pods:     "10.0.1.0/24",  // 10.0.1.0 -> 10.0.1.255
+						Services: "10.0.1.64/26", // 10.0.1.64 -> 10.0.1.127
 						ShootDefaults: &core.ShootNetworks{
 							Pods:     &shootDefaultPodCIDR,
 							Services: &shootDefaultServiceCIDR,
 						},
 					}
 
-					Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
+					errorList := ValidateSeed(seed)
+					Expect(errorList).To(ConsistOfFields(Fields{
 						"Type":     Equal(field.ErrorTypeInvalid),
 						"Field":    Equal("spec.networks.nodes"),
 						"BadValue": Equal("10.0.0.0/8"),
@@ -850,35 +851,63 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Detail":   Equal("must not overlap with \"spec.networks.services\" (\"10.0.1.64/26\")"),
 					}, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.shootDefaults.pods"),
-						"Detail": Equal(`must not overlap with "spec.networks.nodes" ("10.0.0.0/8")`),
-					}, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.shootDefaults.services"),
-						"Detail": Equal(`must not overlap with "spec.networks.nodes" ("10.0.0.0/8")`),
-					}, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.services"),
 						"Detail": Equal(`must not overlap with "spec.networks.pods" ("10.0.1.0/24")`),
-					}, Fields{
+					}))
+
+					Expect(errorList).To(Not(ContainElement(HaveFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.shootDefaults.pods"),
+						"Detail": Equal(`must not overlap with "spec.networks.nodes" ("10.0.0.0/8")`),
+					}))))
+
+					Expect(errorList).To(Not(ContainElement(HaveFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.shootDefaults.services"),
+						"Detail": Equal(`must not overlap with "spec.networks.nodes" ("10.0.0.0/8")`),
+					}))))
+
+					Expect(errorList).To(Not(ContainElement(HaveFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.shootDefaults.pods"),
 						"Detail": Equal(`must not overlap with "spec.networks.pods" ("10.0.1.0/24")`),
-					}, Fields{
+					}))))
+
+					Expect(errorList).To(Not(ContainElement(HaveFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.shootDefaults.services"),
 						"Detail": Equal(`must not overlap with "spec.networks.pods" ("10.0.1.0/24")`),
-					}))
+					}))))
 				})
 
-				It("should forbid Seed with overlap to reserved range", func() {
+				It("should forbid Seed with overlap to reserved ranges", func() {
 					// Service CIDR overlaps with reserved range
 					seed.Spec.Networks.Pods = "240.0.0.0/16" // 240.0.0.0 -> 240.0.255.255
+					seed.Spec.Networks.Services = "243.1.0.0/16"
+					seed.Spec.Networks.Nodes = ptr.To("242.2.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("244.3.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Services = ptr.To("244.4.0.0/16")
 
 					Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.pods"),
-						"Detail": Equal(`must not overlap with "[]" ("240.0.0.0/8")`),
+						"Detail": Equal(`pod network intersects with reserved kube-apiserver mapping range (240.0.0.0/8)`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.services"),
+						"Detail": Equal(`service network intersects with reserved shoot service network mapping range (243.0.0.0/8)`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.nodes"),
+						"Detail": Equal(`node network intersects with reserved shoot node network mapping range (242.0.0.0/8)`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.shootDefaults.pods"),
+						"Detail": Equal(`pod network intersects with reserved shoot pod network mapping range (244.0.0.0/8)`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.shootDefaults.services"),
+						"Detail": Equal(`service network intersects with reserved shoot pod network mapping range (244.0.0.0/8)`),
 					}))
 				})
 
@@ -938,6 +967,56 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.shootDefaults.pods"),
 						"Detail": ContainSubstring("invalid CIDR address"),
+					}))
+				})
+
+				It("should forbid Seed with overlapping networks", func() {
+					seed.Spec.Networks.Nodes = ptr.To("2001:db8:11::/48")
+					seed.Spec.Networks.Pods = "2001:db8:11:1::/49"
+					seed.Spec.Networks.Services = "2001:db8:11:2::/49"
+					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:11:a::/64")
+					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:11:b::/64")
+
+					errorList := ValidateSeed(seed)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("spec.networks.nodes"),
+						"BadValue": Equal("2001:db8:11::/48"),
+						"Detail":   Equal(`must not overlap with "spec.networks.pods" ("2001:db8:11:1::/49")`),
+					}, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("spec.networks.nodes"),
+						"BadValue": Equal("2001:db8:11::/48"),
+						"Detail":   Equal(`must not overlap with "spec.networks.services" ("2001:db8:11:2::/49")`),
+					}, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("spec.networks.services"),
+						"BadValue": Equal("2001:db8:11:2::/49"),
+						"Detail":   Equal(`must not overlap with "spec.networks.pods" ("2001:db8:11:1::/49")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.shootDefaults.pods"),
+						"Detail": Equal(`must not overlap with "spec.networks.pods" ("2001:db8:11:1::/49")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.shootDefaults.pods"),
+						"Detail": Equal(`must not overlap with "spec.networks.nodes" ("2001:db8:11::/48")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.shootDefaults.pods"),
+						"Detail": Equal(`must not overlap with "spec.networks.services" ("2001:db8:11:2::/49")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.shootDefaults.services"),
+						"Detail": Equal(`must not overlap with "spec.networks.nodes" ("2001:db8:11::/48")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.shootDefaults.services"),
+						"Detail": Equal(`must not overlap with "spec.networks.pods" ("2001:db8:11:1::/49")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.shootDefaults.services"),
+						"Detail": Equal(`must not overlap with "spec.networks.services" ("2001:db8:11:2::/49")`),
 					}))
 				})
 

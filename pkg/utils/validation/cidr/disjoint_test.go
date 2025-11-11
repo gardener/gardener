@@ -188,17 +188,17 @@ var _ = Describe("utils", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("[].nodes"),
-					"Detail": ContainSubstring("shoot node network intersects with reserved shoot service network mapping range (243.0.0.0/8)"),
+					"Detail": ContainSubstring("node network intersects with reserved shoot service network mapping range (243.0.0.0/8)"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("[].services"),
-					"Detail": ContainSubstring("shoot service network intersects with reserved shoot node network mapping range (242.0.0.0/8)"),
+					"Detail": ContainSubstring("service network intersects with reserved shoot node network mapping range (242.0.0.0/8)"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("[].pods"),
-					"Detail": ContainSubstring("shoot pod network intersects with reserved seed pod network mapping range (241.0.0.0/8)"),
+					"Detail": ContainSubstring("pod network intersects with reserved seed pod network mapping range (241.0.0.0/8)"),
 				})),
 			))
 		})
@@ -224,7 +224,7 @@ var _ = Describe("utils", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("[].pods"),
-					"Detail": ContainSubstring("shoot pod network intersects with reserved shoot pod network mapping range (244.0.0.0/8)"),
+					"Detail": ContainSubstring("pod network intersects with reserved shoot pod network mapping range (244.0.0.0/8)"),
 				})),
 			))
 		})

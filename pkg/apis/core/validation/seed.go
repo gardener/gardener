@@ -288,46 +288,94 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 		return append(allErrs, errs...)
 	}
 
+	// Four buckets: all cidrs, seed cidrs and shoot defaults V4 and V6
+	// - all cidrs: must be valid CIDRs, must not overlap with reserved ranges
+	// - seed cidrs: must not overlap with each other
+	// - shoot defaults (V4): must not overlap with each other
+	// - shoot defaults (V6): must not overlap with each other, must not overlap with seed networks
 	var (
-		primaryIPFamily          = helper.DeterminePrimaryIPFamily(seedNetworks.IPFamilies)
-		networks                 []cidrvalidation.CIDR
-		reservedSeedServiceRange = cidrvalidation.NewCIDR(v1beta1constants.ReservedKubeApiServerMappingRange, field.NewPath(""))
+		primaryIPFamily                   = helper.DeterminePrimaryIPFamily(seedNetworks.IPFamilies)
+		allCIDRs                          []cidrvalidation.CIDR
+		seedCIDRs                         []cidrvalidation.CIDR
+		shootDefaultsV4                   []cidrvalidation.CIDR
+		shootDefaultsV6                   []cidrvalidation.CIDR
+		pods                              cidrvalidation.CIDR
+		services                          cidrvalidation.CIDR
+		nodes                             cidrvalidation.CIDR
+		shootPods                         cidrvalidation.CIDR
+		shootServices                     cidrvalidation.CIDR
+		reservedKubeApiServerMappingRange = cidrvalidation.NewCIDR(v1beta1constants.ReservedKubeApiServerMappingRange, field.NewPath(""))
 	)
 
 	if !inTemplate || len(seedNetworks.Pods) > 0 {
-		networks = append(networks, cidrvalidation.NewCIDR(seedNetworks.Pods, fldPath.Child("pods")))
+		pods = cidrvalidation.NewCIDR(seedNetworks.Pods, fldPath.Child("pods"))
+		allCIDRs = append(allCIDRs, pods)
+		seedCIDRs = append(seedCIDRs, pods)
 	}
 	if !inTemplate || len(seedNetworks.Services) > 0 {
-		services := cidrvalidation.NewCIDR(seedNetworks.Services, fldPath.Child("services"))
-		networks = append(networks, services)
+		services = cidrvalidation.NewCIDR(seedNetworks.Services, fldPath.Child("services"))
+		allCIDRs = append(allCIDRs, services)
+		seedCIDRs = append(seedCIDRs, services)
 		// Service range must not be larger than /8 for ipv4
 		if services.IsIPv4() {
-			maxSize, _ := reservedSeedServiceRange.GetIPNet().Mask.Size()
+			maxSize, _ := reservedKubeApiServerMappingRange.GetIPNet().Mask.Size()
 			allErrs = append(allErrs, services.ValidateMaxSize(maxSize)...)
 		}
 	}
 	if seedNetworks.Nodes != nil {
-		networks = append(networks, cidrvalidation.NewCIDR(*seedNetworks.Nodes, fldPath.Child("nodes")))
+		nodes = cidrvalidation.NewCIDR(*seedNetworks.Nodes, fldPath.Child("nodes"))
+		allCIDRs = append(allCIDRs, nodes)
+		seedCIDRs = append(seedCIDRs, nodes)
 	}
 	if shootDefaults := seedNetworks.ShootDefaults; shootDefaults != nil {
 		if shootDefaults.Pods != nil {
-			networks = append(networks, cidrvalidation.NewCIDR(*shootDefaults.Pods, fldPath.Child("shootDefaults", "pods")))
+			shootPods = cidrvalidation.NewCIDR(*shootDefaults.Pods, fldPath.Child("shootDefaults", "pods"))
+			allCIDRs = append(allCIDRs, shootPods)
+			if shootPods.IsIPv4() {
+				shootDefaultsV4 = append(shootDefaultsV4, shootPods)
+			} else {
+				shootDefaultsV6 = append(shootDefaultsV6, shootPods)
+			}
 		}
 		if shootDefaults.Services != nil {
-			networks = append(networks, cidrvalidation.NewCIDR(*shootDefaults.Services, fldPath.Child("shootDefaults", "services")))
+			shootServices = cidrvalidation.NewCIDR(*shootDefaults.Services, fldPath.Child("shootDefaults", "services"))
+			allCIDRs = append(allCIDRs, shootServices)
+			if shootServices.IsIPv4() {
+				shootDefaultsV4 = append(shootDefaultsV4, shootServices)
+			} else {
+				shootDefaultsV6 = append(shootDefaultsV6, shootServices)
+			}
 		}
 	}
 
-	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(networks...)...)
+	// All CIDRs must be valid
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(allCIDRs...)...)
 	// Don't check IP family in dualstack case.
 	if len(seedNetworks.IPFamilies) != 2 {
-		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(networks, string(primaryIPFamily))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(allCIDRs, string(primaryIPFamily))...)
 	}
-	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(networks, false)...)
 
-	allErrs = append(allErrs, reservedSeedServiceRange.ValidateNotOverlap(networks...)...)
-	vpnRangeV6 := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRangeV6, field.NewPath(""))
-	allErrs = append(allErrs, vpnRangeV6.ValidateNotOverlap(networks...)...)
+	// In case any IP ranges are incorrect, there is no benefit in checking for intersections.
+	if len(allErrs) > 0 {
+		return allErrs
+	}
+
+	// Seed CIDRs must not overlap with each other
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(seedCIDRs, false)...)
+	// Shoot default CIDRs must not overlap with each other
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(shootDefaultsV4, false)...)
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(shootDefaultsV6, false)...)
+	// Shoot default CIDRs (V6) must not overlap with seed CIDRs
+	for _, seedCIDR := range seedCIDRs {
+		allErrs = append(allErrs, seedCIDR.ValidateNotOverlap(shootDefaultsV6...)...)
+	}
+
+	// All CIDRs must not overlap with reserved ranges
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlapWithReservedRanges(pods, "pod")...)
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlapWithReservedRanges(services, "service")...)
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlapWithReservedRanges(nodes, "node")...)
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlapWithReservedRanges(shootPods, "pod")...)
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlapWithReservedRanges(shootServices, "service")...)
 
 	return allErrs
 }
