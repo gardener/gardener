@@ -100,14 +100,15 @@ func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error 
 func (b *Botanist) isVPAInPlaceOrRecreateUpdateModeEnabled() bool {
 	var (
 		isGardenletFeatureGateEnabled = features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates)
-		isShootVPAFeatureGateDisabled = false
+		isShootVPAFeatureGateEnabled  = true
 	)
 
 	shootVerticalPodAutoscaler := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler
 	if shootVerticalPodAutoscaler != nil {
-		shootVPAFeatureGate := shootVerticalPodAutoscaler.FeatureGates["InPlaceOrRecreate"]
-		isShootVPAFeatureGateDisabled = !shootVPAFeatureGate
+		if value, ok := shootVerticalPodAutoscaler.FeatureGates["InPlaceOrRecreate"]; ok {
+			isShootVPAFeatureGateEnabled = value
+		}
 	}
 
-	return isGardenletFeatureGateEnabled && !isShootVPAFeatureGateDisabled
+	return isGardenletFeatureGateEnabled && isShootVPAFeatureGateEnabled
 }
