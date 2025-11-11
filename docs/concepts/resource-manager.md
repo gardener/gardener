@@ -1156,7 +1156,6 @@ Available for deployment with both [gardenlet](https://github.com/gardener/garde
 VPAInPlaceUpdates
 ```
 
-
 ### Validating Webhooks
 
 #### Unconfirmed Deletion Prevention For Custom Resources And Definitions
