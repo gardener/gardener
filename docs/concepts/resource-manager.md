@@ -1148,7 +1148,7 @@ In addition, to prevent the _mutation_ of certain `VerticalPodAutoscaler` [resou
 vpa-in-place-updates.resources.gardener.cloud/skip
 ```
 
-could be appended to the resource's metadata. With the _label_ specified, the webhook will filter out the resources, leaving it's current `updateMode` configuration.
+could be appended to the resource metadata. With the _label_ specified, the webhook will filter out the resources, leaving its current `updateMode` configuration.
 
 Available for deployment with both [gardenlet](https://github.com/gardener/gardener/blob/master/docs/concepts/gardenlet.md) and [gardener-operator](https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md), enabling the webhook happens by activating a dedicated _feature gate_ within the respective component manifest:
 
