@@ -738,15 +738,20 @@ var _ = Describe("mutator", func() {
 									Version: latestNonExpiredVersion,
 								},
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
-									{Capabilities: gardencorev1beta1.Capabilities{
-										"architecture":   []string{v1beta1constants.ArchitectureAMD64},
-										"someCapability": []string{"value1"},
-									}},
-									{Capabilities: gardencorev1beta1.Capabilities{
-										"architecture":   []string{v1beta1constants.ArchitectureARM64},
-										"someCapability": []string{"value1"},
-									}},
-								}},
+									{
+										Capabilities: gardencorev1beta1.Capabilities{
+											"architecture":   []string{v1beta1constants.ArchitectureAMD64},
+											"someCapability": []string{"value1"},
+										},
+									},
+									{
+										Capabilities: gardencorev1beta1.Capabilities{
+											"architecture":   []string{v1beta1constants.ArchitectureARM64},
+											"someCapability": []string{"value1"},
+										},
+									},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: latestNonExpiredVersionThatSupportsCapabilities,
@@ -754,7 +759,8 @@ var _ = Describe("mutator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: nonExpiredVersion,
@@ -762,7 +768,8 @@ var _ = Describe("mutator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version:        expiringVersion,
@@ -771,7 +778,8 @@ var _ = Describe("mutator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version:        expiredVersion,
@@ -780,9 +788,11 @@ var _ = Describe("mutator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 						},
-					}, {
+					},
+					{
 						Name: imageName2,
 						Versions: []gardencorev1beta1.MachineImageVersion{
 							{
@@ -793,21 +803,27 @@ var _ = Describe("mutator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: latestNonExpiredVersion,
 								},
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
-									{Capabilities: gardencorev1beta1.Capabilities{
-										"architecture":   []string{v1beta1constants.ArchitectureARM64},
-										"someCapability": []string{"value1"},
-									}},
-									{Capabilities: gardencorev1beta1.Capabilities{
-										"architecture":   []string{v1beta1constants.ArchitectureAMD64},
-										"someCapability": []string{"value1"},
-									}},
-								}},
+									{
+										Capabilities: gardencorev1beta1.Capabilities{
+											"architecture":   []string{v1beta1constants.ArchitectureARM64},
+											"someCapability": []string{"value1"},
+										},
+									},
+									{
+										Capabilities: gardencorev1beta1.Capabilities{
+											"architecture":   []string{v1beta1constants.ArchitectureAMD64},
+											"someCapability": []string{"value1"},
+										},
+									},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: latestNonExpiredVersionThatSupportsCapabilities,
@@ -815,7 +831,8 @@ var _ = Describe("mutator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: nonExpiredVersion,
@@ -823,7 +840,8 @@ var _ = Describe("mutator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version:        expiringVersion,
@@ -832,7 +850,8 @@ var _ = Describe("mutator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version:        expiredVersion,
@@ -841,7 +860,8 @@ var _ = Describe("mutator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 						},
 					},
 				}
@@ -892,7 +912,8 @@ var _ = Describe("mutator", func() {
 									Architectures: []string{"amd64", "arm64"},
 								},
 							},
-						}, {
+						},
+						{
 							Name: imageName2,
 							Versions: []gardencorev1beta1.MachineImageVersion{
 								{
