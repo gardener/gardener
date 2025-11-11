@@ -252,7 +252,7 @@ var _ = Describe("Etcd", func() {
 						Name:       "etcd-druid",
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 					},
 				},
 			}
