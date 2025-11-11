@@ -66,8 +66,11 @@ type Values struct {
 	Type string
 	// Class holds the extension class used to control the responsibility for multiple provider extensions.
 	Class *extensionsv1alpha1.ExtensionClass
-	// SecretData is the secret data of the DNSRecord (containing provider credentials, etc.). If not provided, the
-	// secret in the Namespace with name SecretName will be referenced in the DNSRecord object.
+	// UseExistingSecret indicates whether to use an existing secret referenced by SecretName instead of creating/updating
+	// it with the given SecretData.
+	UseExistingSecret bool
+	// SecretData is the secret data of the DNSRecord (containing provider credentials, etc.), used for creating/updating
+	// the secret referenced by SecretName. Ignored if UseExistingSecret is true.
 	SecretData map[string][]byte
 	// Zone is the DNS hosted zone of the DNSRecord.
 	Zone *string
@@ -94,7 +97,7 @@ func New(
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
 ) Interface {
-	deployer := &dnsRecord{
+	return &dnsRecord{
 		log:                 log,
 		client:              client,
 		values:              values,
@@ -108,18 +111,13 @@ func New(
 				Namespace: values.Namespace,
 			},
 		},
-	}
-
-	if values.SecretData != nil {
-		deployer.secret = &corev1.Secret{
+		secret: &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      values.SecretName,
 				Namespace: values.Namespace,
 			},
-		}
+		},
 	}
-
-	return deployer
 }
 
 type dnsRecord struct {
@@ -158,11 +156,6 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, gardenerutils.AnnotationKeyIPStack, d.values.IPStack)
 		}
 
-		secretRef := corev1.SecretReference{Name: d.values.SecretName, Namespace: d.values.Namespace}
-		if d.secret != nil {
-			secretRef = corev1.SecretReference{Name: d.secret.Name, Namespace: d.secret.Namespace}
-		}
-
 		for k, v := range d.values.Labels {
 			if d.dnsRecord.Labels == nil {
 				d.dnsRecord.Labels = make(map[string]string)
@@ -175,7 +168,10 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 				Type:  d.values.Type,
 				Class: d.values.Class,
 			},
-			SecretRef:  secretRef,
+			SecretRef: corev1.SecretReference{
+				Name:      d.secret.Name,
+				Namespace: d.secret.Namespace,
+			},
 			Zone:       d.values.Zone,
 			Name:       d.values.DNSName,
 			RecordType: d.values.RecordType,
@@ -221,7 +217,7 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 }
 
 func (d *dnsRecord) deploySecret(ctx context.Context) error {
-	if d.secret == nil {
+	if d.values.UseExistingSecret {
 		return nil
 	}
 

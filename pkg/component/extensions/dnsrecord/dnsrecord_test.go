@@ -182,7 +182,7 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should only deploy the DNSRecord resource but not the secret", func() {
-			values.SecretData = nil
+			values.UseExistingSecret = true
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
