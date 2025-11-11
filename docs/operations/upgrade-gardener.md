@@ -59,7 +59,14 @@ You can upgrade extensions by updating the version in their `ControllerDeploymen
 
 ### Verify Readiness
 
-To confirm that all your seed clusters are updated, check each `Seed` resource and verify that its `.status.gardener.version` matches your target version. Also, ensure all health checks in the `Seed`'s status conditions report `True`.
+To confirm that all your seed clusters are updated, check the following for each `Seed` resource:
+
+- The `gardener.cloud/operation` annotation is removed, indicating the operation is complete.
+- The `.status.gardener.version` field shows your target version.
+- The `.status.observedGeneration` matches the `.metadata.generation`, meaning the latest configuration has been processed.
+- The `.status.lastOperation.state` is `Succeeded`.
+
+Finally, check the health conditions (`.status.conditions[]`) in the `Seed` resources to ensure they all report `True`.
 
 ## 4. Shoot Reconciliations
 
