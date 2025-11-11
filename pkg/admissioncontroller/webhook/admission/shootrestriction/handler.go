@@ -14,6 +14,7 @@ import (
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,6 +35,7 @@ var (
 	// group and the resource (but it ignores the version).
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
+	leaseResource                     = coordinationv1.Resource("leases")
 	projectResource                   = gardencorev1beta1.Resource("projects")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 )
@@ -67,7 +69,10 @@ func (h *Handler) Handle(_ context.Context, request admission.Request) admission
 		return h.admitCertificateSigningRequest(gardenletShootInfo, userType, request)
 
 	case gardenletResource:
-		return h.admitGardenlet(gardenletShootInfo, request)
+		return h.admitCreateWithResourcePrefix(gardenletShootInfo, request)
+
+	case leaseResource:
+		return h.admitCreateWithResourcePrefix(gardenletShootInfo, request)
 
 	default:
 		log.Info(
@@ -108,18 +113,6 @@ func (h *Handler) admitCertificateSigningRequest(gardenletShootInfo types.Namesp
 	return h.admit(gardenletShootInfo, types.NamespacedName{Name: name, Namespace: namespace})
 }
 
-func (h *Handler) admitGardenlet(gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
-	if request.Operation != admissionv1.Create {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
-	}
-
-	if !strings.HasPrefix(request.Name, gardenletutils.ResourcePrefixSelfHostedShoot) {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("the Gardenlet resources for self-hosted shoots must be prefixed with %q", gardenletutils.ResourcePrefixSelfHostedShoot))
-	}
-
-	return h.admit(gardenletShootInfo, types.NamespacedName{Name: strings.TrimPrefix(request.Name, gardenletutils.ResourcePrefixSelfHostedShoot), Namespace: request.Namespace})
-}
-
 func (h *Handler) admit(gardenletShootInfo, objectShootInfo types.NamespacedName) admission.Response {
 	// Allow request if the shoot the gardenlet is responsible for matches with the shoot related to the object.
 	if gardenletShootInfo.Name == objectShootInfo.Name && gardenletShootInfo.Namespace == objectShootInfo.Namespace {
@@ -127,4 +120,16 @@ func (h *Handler) admit(gardenletShootInfo, objectShootInfo types.NamespacedName
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
+}
+
+func (h *Handler) admitCreateWithResourcePrefix(gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	if !strings.HasPrefix(request.Name, gardenletutils.ResourcePrefixSelfHostedShoot) {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("the resource for self-hosted shoots must be prefixed with %q", gardenletutils.ResourcePrefixSelfHostedShoot))
+	}
+
+	return h.admit(gardenletShootInfo, types.NamespacedName{Name: strings.TrimPrefix(request.Name, gardenletutils.ResourcePrefixSelfHostedShoot), Namespace: request.Namespace})
 }

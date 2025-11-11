@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -533,6 +534,86 @@ var _ = Describe("Shoot", func() {
 				)
 			})
 
+			Context("when requested for Leases", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        coordinationv1.SchemeGroupVersion.Group,
+						Resource:        "leases",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				DescribeTable("should allow without consulting the graph because verb is create",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("create", "create"),
+				)
+
+				DescribeTable("should return correct result if path exists",
+					func(verb string) {
+						attrs.Verb = verb
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeLease, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeLease, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+						decision, reason, err = authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("no relationship found"))
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+				)
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get list patch update watch]"))
+
+					},
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because no allowed subresource", func() {
+					attrs.Subresource = "foo"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+				})
+			})
+
 			Context("when requested for Secrets", func() {
 				var (
 					name, namespace string
@@ -666,15 +747,47 @@ var _ = Describe("Shoot", func() {
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
-						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [patch update]"))
 
 					},
 
 					Entry("create", "create"),
-					Entry("update", "update"),
-					Entry("patch", "patch"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because no allowed subresource", func() {
+					attrs.Subresource = "foo"
+					attrs.Verb = "patch"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+				})
+
+				DescribeTable("should return correct result if path exists",
+					func(verb, subresource string) {
+						attrs.Verb = verb
+						attrs.Subresource = subresource
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeShoot, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeShoot, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+						decision, reason, err = authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("no relationship found"))
+					},
+
+					Entry("patch w/o subresource", "patch", ""),
+					Entry("patch w/ status subresource", "patch", "status"),
+					Entry("update w/o subresource", "update", ""),
+					Entry("update w/ status subresource", "update", "status"),
 				)
 			})
 		})

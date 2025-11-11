@@ -256,7 +256,7 @@ func (c *CustomVerbAuthorizer) admitShoots(ctx context.Context, a admission.Attr
 		}
 	}
 
-	if mustCheckShootAutonomy(oldObj, obj) {
+	if mustCheckIfShootIsSelfHosted(oldObj, obj) {
 		return c.authorize(ctx, a, CustomVerbShootMarkSelfHosted, "modify .spec.provider.workers[].controlPlane")
 	}
 
@@ -421,6 +421,6 @@ func mustCheckLimits(oldLimits, limits *core.Limits, parentCloudProfile *v1beta1
 		ptr.Deref(limits.MaxNodesTotal, 0) > ptr.Deref(parentCloudProfile.Spec.Limits.MaxNodesTotal, 0)
 }
 
-func mustCheckShootAutonomy(oldShoot, shoot *core.Shoot) bool {
+func mustCheckIfShootIsSelfHosted(oldShoot, shoot *core.Shoot) bool {
 	return !apiequality.Semantic.DeepEqual(helper.ControlPlaneWorkerPoolForShoot(oldShoot.Spec.Provider.Workers), helper.ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers))
 }

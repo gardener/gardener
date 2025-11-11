@@ -62,4 +62,7 @@ const (
 	// ManagedResourceProgressingRolloutStuck is a constant for a reason in a condition that indicates
 	// managed resource progressing condition is stuck in the true state for more than the threshold time.
 	ManagedResourceProgressingRolloutStuck = "ProgressingRolloutStuck"
+
+	// GardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
+	GardenletReady ConditionType = "GardenletReady"
 )

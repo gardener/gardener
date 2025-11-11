@@ -295,8 +295,13 @@ func (a *authorizer) authorizeLease(requestAuthorizer *authwebhook.RequestAuthor
 	}
 
 	// This is needed if the seed cluster is a garden cluster at the same time.
-	if attrs.GetName() == "gardenlet-leader-election" &&
-		slices.Contains([]string{"create", "get", "list", "watch", "update"}, attrs.GetVerb()) {
+	// TODO(rfranzke): Remove this logic once we only support gardener-operator-based Gardener deployments (in this
+	//  case, the seed authorizer would not handle gardenlet's leader-election Lease requests since they are not
+	//  performed in the virtual/garden cluster but in the runtime cluster).
+	if attrs.GetName() == "gardenlet-leader-election" {
+		if ok, reason := authwebhook.CheckVerb(requestAuthorizer.Log, attrs, "create", "get", "list", "update", "watch"); !ok {
+			return auth.DecisionNoOpinion, reason, nil
+		}
 		return auth.DecisionAllow, "", nil
 	}
 

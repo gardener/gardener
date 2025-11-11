@@ -162,6 +162,19 @@ In order to activate it, provide the following configuration:
 
 Consequently, to ensure that `ExposureClass`es in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `ExposureClass` anymore.
 
+### [Gardenlet Lifecycle Controller](../../pkg/controllermanager/controller/gardenletlifecycle)
+
+The "Lifecycle" reconciler processes `Seed` and self-hosted `Shoot` objects which are enqueued every 10 seconds in order to check if the responsible
+`gardenlet` is still responding and operable. Therefore, it checks renewals via `Lease` objects in the garden cluster
+which are renewed regularly by the `gardenlet`.
+
+In case a `Lease` is not renewed for the configured amount in `config.controllers.seed.monitorPeriod.duration`:
+
+1. The reconciler assumes that the `gardenlet` stopped operating and updates the `GardenletReady` condition to `Unknown`.
+2. Additionally, the conditions and constraints of all affected `Shoot` resources are set to `Unknown` as well,
+   because a striking `gardenlet` won't be able to maintain these conditions anymore.
+3. For `Seed`s: If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed`, then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate.
+
 ### [`ManagedSeedSet` Controller](../../pkg/controllermanager/controller/managedseedset)
 
 `ManagedSeedSet` objects maintain a stable set of replicas of `ManagedSeed`s, i.e. they guarantee the availability of a specified number of identical `ManagedSeed`s on an equal number of identical `Shoot`s.
@@ -320,19 +333,6 @@ Once the `BackupBucket` is healthy again, the seed will be re-queued and the con
 This reconciler reconciles `Seed` objects and checks whether all `ControllerInstallation`s referencing them are in a healthy state.
 Concretely, all three conditions `Valid`, `Installed`, and `Healthy` must have status `True` and the `Progressing` condition must have status `False`.
 Based on this check, it maintains the `ExtensionsReady` condition in the respective `Seed`'s `.status.conditions` list.
-
-#### ["Lifecycle" Reconciler](../../pkg/controllermanager/controller/seed/lifecycle)
-
-The "Lifecycle" reconciler processes `Seed` objects which are enqueued every 10 seconds in order to check if the responsible
-`gardenlet` is still responding and operable. Therefore, it checks renewals via `Lease` objects of the seed in the garden cluster
-which are renewed regularly by the `gardenlet`.
-
-In case a `Lease` is not renewed for the configured amount in `config.controllers.seed.monitorPeriod.duration`:
-
-1. The reconciler assumes that the `gardenlet` stopped operating and updates the `GardenletReady` condition to `Unknown`.
-2. Additionally, the conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well,
-   because a striking `gardenlet` won't be able to maintain these conditions any more.
-3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed`, then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate.
 
 #### ["Reference" Reconciler](../../pkg/controllermanager/controller/seed/reference)
 

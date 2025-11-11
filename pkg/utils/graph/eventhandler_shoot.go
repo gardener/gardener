@@ -19,6 +19,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) error {
@@ -106,7 +107,9 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	g.deleteAllIncomingEdges(VertexTypeSecretBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeCredentialsBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeShootState, VertexTypeShoot, shoot.Namespace, shoot.Name)
-	if !g.forSelfHostedShoots {
+	if g.forSelfHostedShoots {
+		g.deleteAllIncomingEdges(VertexTypeLease, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	} else {
 		g.deleteAllOutgoingEdges(VertexTypeShoot, shoot.Namespace, shoot.Name, VertexTypeSeed)
 	}
 
@@ -236,6 +239,11 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 				g.addEdge(saPublicKeysSecretVertex, shootVertex)
 			}
 		}
+	}
+
+	if g.forSelfHostedShoots {
+		leaseVertex := g.getOrCreateVertex(VertexTypeLease, shoot.Namespace, gardenlet.ResourcePrefixSelfHostedShoot+shoot.Name)
+		g.addEdge(leaseVertex, shootVertex)
 	}
 }
 

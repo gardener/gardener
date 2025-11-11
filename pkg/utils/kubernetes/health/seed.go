@@ -15,7 +15,7 @@ import (
 
 var (
 	trueSeedConditionTypes = []gardencorev1beta1.ConditionType{
-		gardencorev1beta1.SeedGardenletReady,
+		gardencorev1beta1.GardenletReady,
 		gardencorev1beta1.SeedSystemComponentsHealthy,
 	}
 )

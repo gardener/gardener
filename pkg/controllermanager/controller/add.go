@@ -11,6 +11,7 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
@@ -20,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/gardenletlifecycle"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project"
@@ -90,6 +92,13 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *controllermanag
 		Config: *cfg.Controllers.ExposureClass,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding ExposureClass controller: %w", err)
+	}
+
+	if err := (&gardenletlifecycle.Reconciler{
+		Config:         *cfg.Controllers.Seed,
+		LeaseNamespace: gardencorev1beta1.GardenerSeedLeaseNamespace,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding gardenlet lifecycle reconciler: %w", err)
 	}
 
 	if err := (&managedseedset.Reconciler{

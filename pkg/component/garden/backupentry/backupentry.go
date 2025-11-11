@@ -52,7 +52,7 @@ type Values struct {
 }
 
 // New creates a new instance of DeployWaiter for a BackupEntry. It takes a garden client and returns a deployer for a
-// // core.gardener.cloud/v1beta1.BackupEntry resource in the garden cluster.
+// core.gardener.cloud/v1beta1.BackupEntry resource in the garden cluster.
 func New(
 	log logr.Logger,
 	client client.Client,

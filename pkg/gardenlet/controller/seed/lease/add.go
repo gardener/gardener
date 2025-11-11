@@ -5,52 +5,44 @@
 package lease
 
 import (
-	"time"
-
-	"k8s.io/client-go/util/workqueue"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/lease"
+	"github.com/gardener/gardener/pkg/healthz"
 )
 
-// ControllerName is the name of this controller.
-const ControllerName = "seed-lease"
+// AddToManager adds the seed-lease controller to the given manager.
+func AddToManager(
+	mgr manager.Manager,
+	gardenCluster cluster.Cluster,
+	seedRESTClient rest.Interface,
+	config gardenletconfigv1alpha1.SeedControllerConfiguration,
+	healthManager healthz.Manager,
+	seedName string,
+	clock clock.Clock,
+	leaseNamespace *string,
+) error {
+	return (&lease.Reconciler{
+		RuntimeRESTClient: seedRESTClient,
+		HealthManager:     healthManager,
+		Clock:             clock,
 
-// AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Cluster) error {
-	if r.GardenClient == nil {
-		r.GardenClient = gardenCluster.GetClient()
-	}
-	if r.Clock == nil {
-		r.Clock = clock.RealClock{}
-	}
-	if r.LeaseNamespace == "" {
-		r.LeaseNamespace = gardencorev1beta1.GardenerSeedLeaseNamespace
-	}
+		NewObjectFunc: func() client.Object { return &gardencorev1beta1.Seed{} },
+		GetObjectConditions: func(obj client.Object) []gardencorev1beta1.Condition {
+			return obj.(*gardencorev1beta1.Seed).Status.Conditions
+		},
+		SetObjectConditions: func(obj client.Object, conditions []gardencorev1beta1.Condition) {
+			obj.(*gardencorev1beta1.Seed).Status.Conditions = conditions
+		},
 
-	return builder.
-		ControllerManagedBy(mgr).
-		Named(ControllerName).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: 1,
-			RateLimiter:             workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](time.Millisecond, 2*time.Second),
-			ReconciliationTimeout:   time.Duration(*r.Config.LeaseResyncSeconds) * time.Second,
-		}).
-		WatchesRawSource(
-			source.Kind[client.Object](gardenCluster.GetCache(),
-				&gardencorev1beta1.Seed{},
-				&handler.EnqueueRequestForObject{},
-				predicateutils.HasName(r.SeedName),
-				predicateutils.ForEventTypes(predicateutils.Create)),
-		).
-		Complete(r)
+		LeaseNamespace:     leaseNamespace,
+		LeaseResyncSeconds: *config.LeaseResyncSeconds,
+	}).AddToManager(mgr, gardenCluster, "seed", predicateutils.HasName(seedName))
 }

@@ -21,9 +21,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/lease"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/status"
+	"github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 // AddToManager adds all Shoot controllers to the given manager.
@@ -37,6 +40,7 @@ func AddToManager(
 	cfg gardenletconfigv1alpha1.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
+	healthManager healthz.Manager,
 ) error {
 	var responsibleForUnmanagedSeed bool
 	if err := gardenCluster.GetAPIReader().Get(ctx, client.ObjectKey{Name: cfg.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
@@ -87,6 +91,12 @@ func AddToManager(
 			SeedName: cfg.SeedConfig.Name,
 		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 			return fmt.Errorf("failed adding state reconciler: %w", err)
+		}
+	}
+
+	if gardenlet.IsResponsibleForSelfHostedShoot() {
+		if err := lease.AddToManager(mgr, gardenCluster, seedClientSet.RESTClient(), healthManager, nil); err != nil {
+			return fmt.Errorf("failed adding lease reconciler: %w", err)
 		}
 	}
 

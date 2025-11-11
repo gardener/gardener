@@ -16,6 +16,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -25,6 +26,7 @@ import (
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/shootrestriction"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
@@ -269,6 +271,154 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						})
 						Expect(err).NotTo(HaveOccurred())
 						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+			})
+
+			Context("when requested for Gardenlets", func() {
+				var name string
+
+				BeforeEach(func() {
+					name = "self-hosted-shoot-foo"
+
+					request.Name = name
+					request.UserInfo = gardenletUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    seedmanagementv1alpha1.SchemeGroupVersion.Group,
+						Version:  seedmanagementv1alpha1.SchemeGroupVersion.Version,
+						Resource: "gardenlets",
+					}
+				})
+
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
+							},
+						}))
+					},
+
+					Entry("update", admissionv1.Update),
+					Entry("delete", admissionv1.Delete),
+				)
+
+				Context("when operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					It("should return an error because resource name is not prefixed", func() {
+						request.Name = "foo"
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: `the resource for self-hosted shoots must be prefixed with "self-hosted-shoot-"`,
+								},
+							},
+						}))
+					})
+
+					It("should return an error because the requestor is not responsible for the resource", func() {
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "object does not belong to shoot " + shootNamespace + "/" + shootName,
+								},
+							},
+						}))
+					})
+
+					It("should return success because the requestor is responsible for the resource", func() {
+						request.Name = "self-hosted-shoot-" + shootName
+						request.Namespace = shootNamespace
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+			})
+
+			Context("when requested for Leases", func() {
+				var name string
+
+				BeforeEach(func() {
+					name = "self-hosted-shoot-foo"
+
+					request.Name = name
+					request.UserInfo = gardenletUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    coordinationv1.SchemeGroupVersion.Group,
+						Version:  coordinationv1.SchemeGroupVersion.Version,
+						Resource: "leases",
+					}
+				})
+
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
+							},
+						}))
+					},
+
+					Entry("update", admissionv1.Update),
+					Entry("delete", admissionv1.Delete),
+				)
+
+				Context("when operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					It("should return an error because resource name is not prefixed", func() {
+						request.Name = "foo"
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: `the resource for self-hosted shoots must be prefixed with "self-hosted-shoot-"`,
+								},
+							},
+						}))
+					})
+
+					It("should return an error because the requestor is not responsible for the resource", func() {
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "object does not belong to shoot " + shootNamespace + "/" + shootName,
+								},
+							},
+						}))
+					})
+
+					It("should return success because the requestor is responsible for the resource", func() {
+						request.Name = "self-hosted-shoot-" + shootName
+						request.Namespace = shootNamespace
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})

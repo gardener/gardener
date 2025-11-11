@@ -317,7 +317,7 @@ func appendShootConditionsToShoot(shoot *gardencorev1beta1.Shoot) {
 func appendSeedConditionsToShoot(shoot *gardencorev1beta1.Shoot) {
 	shoot.Status.Conditions = append(shoot.Status.Conditions, []gardencorev1beta1.Condition{
 		{
-			Type:   gardencorev1beta1.SeedGardenletReady,
+			Type:   gardencorev1beta1.GardenletReady,
 			Status: gardencorev1beta1.ConditionTrue,
 		},
 		{

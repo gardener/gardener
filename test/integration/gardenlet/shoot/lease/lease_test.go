@@ -23,31 +23,31 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Seed lease controller tests", func() {
+var _ = Describe("Shoot lease controller tests", func() {
 	var lease *coordinationv1.Lease
 
 	BeforeEach(OncePerOrdered, func() {
 		fakeClock.SetTime(time.Now())
 
-		lease = &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Name: seed.Name, Namespace: testNamespace.Name}}
+		lease = &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Name: "self-hosted-shoot-" + shoot.Name, Namespace: shoot.Namespace}}
 	})
 
 	Describe("maintain the Lease object and set the internal health status to true", Ordered, func() {
 		It("should ensured Lease gets maintained", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
-				g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Seed", Name: seed.Name, UID: seed.UID}))
+				g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Shoot", Name: shoot.Name, UID: shoot.UID}))
 				g.Expect(lease.Spec.RenewTime.Sub(fakeClock.Now())).To(BeNumerically("<=", 0))
-				g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(1))))
-				g.Expect(lease.Spec.HolderIdentity).To(Equal(&seed.Name))
+				g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(2))))
+				g.Expect(lease.Spec.HolderIdentity).To(Equal(&shoot.Name))
 				g.Expect(healthManager.Get()).To(BeTrue())
 			}).Should(Succeed())
 		})
 
 		It("should ensure GardenletReady condition gets maintained", func() {
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.GardenletReady), WithStatus(gardencorev1beta1.ConditionTrue)))
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				g.Expect(shoot.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.GardenletReady), WithStatus(gardencorev1beta1.ConditionTrue)))
 			}).Should(Succeed())
 		})
 
@@ -65,9 +65,9 @@ var _ = Describe("Seed lease controller tests", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 				g.Expect(lease.Spec.RenewTime.Sub(fakeClock.Now())).To(BeNumerically("<=", 0))
-				g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Seed", Name: seed.Name, UID: seed.UID}))
-				g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(1))))
-				g.Expect(lease.Spec.HolderIdentity).To(Equal(&seed.Name))
+				g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Shoot", Name: shoot.Name, UID: shoot.UID}))
+				g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(2))))
+				g.Expect(lease.Spec.HolderIdentity).To(Equal(&shoot.Name))
 			}).Should(Succeed())
 		})
 	})
@@ -82,18 +82,18 @@ var _ = Describe("Seed lease controller tests", func() {
 		It("should ensure Lease gets maintained", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
-				g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Seed", Name: seed.Name, UID: seed.UID}))
+				g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Shoot", Name: shoot.Name, UID: shoot.UID}))
 				g.Expect(lease.Spec.RenewTime.Sub(fakeClock.Now())).To(BeNumerically("<=", 0))
-				g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(1))))
-				g.Expect(lease.Spec.HolderIdentity).To(Equal(&seed.Name))
+				g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(2))))
+				g.Expect(lease.Spec.HolderIdentity).To(Equal(&shoot.Name))
 				g.Expect(healthManager.Get()).To(BeTrue())
 			}).Should(Succeed())
 		})
 
 		It("should ensure GardenletReady condition gets maintained", func() {
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.GardenletReady), WithStatus(gardencorev1beta1.ConditionTrue)))
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				g.Expect(shoot.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.GardenletReady), WithStatus(gardencorev1beta1.ConditionTrue)))
 			}).Should(Succeed())
 		})
 
@@ -115,9 +115,9 @@ var _ = Describe("Seed lease controller tests", func() {
 			Consistently(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 				g.Expect(fakeClock.Now().Sub(lease.Spec.RenewTime.Time)).To(BeNumerically(">=", time.Hour))
-				g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Seed", Name: seed.Name, UID: seed.UID}))
-				g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(1))))
-				g.Expect(lease.Spec.HolderIdentity).To(Equal(&seed.Name))
+				g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Shoot", Name: shoot.Name, UID: shoot.UID}))
+				g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(2))))
+				g.Expect(lease.Spec.HolderIdentity).To(Equal(&shoot.Name))
 			}).Should(Succeed())
 		})
 	})

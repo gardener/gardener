@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package lifecycle_test
+package gardenletlifecycle_test
 
 import (
 	"context"
@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
@@ -30,15 +29,15 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/lifecycle"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/gardenletlifecycle"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
-func TestLifecycle(t *testing.T) {
+func TestGardenletLifecycle(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ControllerManager Seed Lifecycle Suite")
+	RunSpecs(t, "Test Integration ControllerManager GardenletLifecycle Suite")
 }
 
 const (
@@ -90,13 +89,17 @@ var _ = BeforeSuite(func() {
 	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			GenerateName: testID + "-",
+			GenerateName: "gardener-system-seed-lease-",
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
-	testRunID = testNamespace.Name + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+	testRunID = testNamespace.Name
+
+	DeferCleanup(func() {
+		By("Delete test Namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -117,7 +120,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
 
-	Expect((&lifecycle.Reconciler{
+	Expect((&gardenletlifecycle.Reconciler{
 		Config: controllermanagerconfigv1alpha1.SeedControllerConfiguration{
 			MonitorPeriod:      &metav1.Duration{Duration: seedMonitorPeriod},
 			ShootMonitorPeriod: &metav1.Duration{Duration: shootMonitorPeriod},

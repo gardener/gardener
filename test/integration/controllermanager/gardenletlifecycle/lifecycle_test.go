@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package lifecycle_test
+package gardenletlifecycle_test
 
 import (
 	"time"
@@ -20,7 +20,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Seed Lifecycle controller tests", func() {
+var _ = Describe("Gardenlet Lifecycle controller tests", func() {
 	var (
 		seed            *gardencorev1beta1.Seed
 		lease           *coordinationv1.Lease
@@ -168,7 +168,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 			By("Add GardenletReady condition to Seed")
 			patch := client.MergeFrom(seed.DeepCopy())
 			seed.Status.Conditions = []gardencorev1beta1.Condition{{
-				Type:               gardencorev1beta1.SeedGardenletReady,
+				Type:               gardencorev1beta1.GardenletReady,
 				Status:             gardencorev1beta1.ConditionTrue,
 				LastTransitionTime: metav1.Time{Time: fakeClock.Now().Add(-24 * time.Hour)},
 			}}

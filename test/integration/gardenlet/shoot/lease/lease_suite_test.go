@@ -31,8 +31,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/lease"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -41,10 +40,10 @@ import (
 
 func TestLease(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration Gardenlet Seed Lease Suite")
+	RunSpecs(t, "Test Integration Gardenlet Shoot Lease Suite")
 }
 
-const testID = "seed-lease-controller-test"
+const testID = "shoot-lease-controller-test"
 
 var (
 	ctx = context.Background()
@@ -57,7 +56,7 @@ var (
 	testNamespace *corev1.Namespace
 	testRunID     string
 
-	seed          *gardencorev1beta1.Seed
+	shoot         *gardencorev1beta1.Shoot
 	fakeClock     *testclock.FakeClock
 	healthManager healthz.Manager
 )
@@ -70,7 +69,7 @@ var _ = BeforeSuite(func() {
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator,ShootMutator"},
 		},
 	}
 
@@ -95,51 +94,10 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("Create seed")
-	seed = &gardencorev1beta1.Seed{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "seed-",
-			Labels:       map[string]string{testID: testRunID},
-		},
-		Spec: gardencorev1beta1.SeedSpec{
-			Provider: gardencorev1beta1.SeedProvider{
-				Region: "region",
-				Type:   "providerType",
-			},
-			Ingress: &gardencorev1beta1.Ingress{
-				Domain: "seed.example.com",
-				Controller: gardencorev1beta1.IngressController{
-					Kind: "nginx",
-				},
-			},
-			DNS: gardencorev1beta1.SeedDNS{
-				Provider: &gardencorev1beta1.SeedDNSProvider{
-					Type: "providerType",
-					SecretRef: corev1.SecretReference{
-						Name:      "some-secret",
-						Namespace: "some-namespace",
-					},
-				},
-			},
-			Networks: gardencorev1beta1.SeedNetworks{
-				Pods:     "10.0.0.0/16",
-				Services: "10.1.0.0/16",
-				Nodes:    ptr.To("10.2.0.0/16"),
-			},
-		},
-	}
-	Expect(testClient.Create(ctx, seed)).To(Succeed())
-	log.Info("Created Seed for test", "seed", seed.Name)
-
-	DeferCleanup(func() {
-		By("Delete seed")
-		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
 	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gardener-system-seed-lease-",
+			GenerateName: "garden-",
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
@@ -149,6 +107,46 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	By("Create Shoot")
+	shoot = &gardencorev1beta1.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "shoot-",
+			Namespace:    testNamespace.Name,
+			Labels:       map[string]string{testID: testRunID},
+		},
+		Spec: gardencorev1beta1.ShootSpec{
+			CredentialsBindingName: ptr.To("my-provider-account"),
+			CloudProfile:           &gardencorev1beta1.CloudProfileReference{Name: "test-cloudprofile", Kind: "CloudProfile"},
+			Region:                 "foo-region",
+			Provider: gardencorev1beta1.Provider{
+				Type: "test",
+				Workers: []gardencorev1beta1.Worker{
+					{
+						Name:    "cpu-worker",
+						Minimum: 2,
+						Maximum: 2,
+						Machine: gardencorev1beta1.Machine{
+							Type: "large",
+						},
+					},
+				},
+			},
+			Kubernetes: gardencorev1beta1.Kubernetes{
+				Version: "1.31.1",
+			},
+			Networking: &gardencorev1beta1.Networking{
+				Type: ptr.To("foo-networking"),
+			},
+		},
+	}
+	Expect(testClient.Create(ctx, shoot)).To(Succeed())
+	log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
+
+	DeferCleanup(func() {
+		By("Delete Shoot")
+		Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("Setup manager")
@@ -172,9 +170,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 	healthManager = healthz.NewDefaultHealthz()
 
-	Expect(lease.AddToManager(mgr, mgr, kubernetesClient.RESTClient(), gardenletconfigv1alpha1.SeedControllerConfiguration{
-		LeaseResyncSeconds: ptr.To[int32](1),
-	}, healthManager, seed.Name, fakeClock, &testNamespace.Name)).To(Succeed())
+	Expect(lease.AddToManager(mgr, mgr, kubernetesClient.RESTClient(), healthManager, fakeClock)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

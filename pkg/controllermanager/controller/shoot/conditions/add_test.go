@@ -63,11 +63,11 @@ var _ = Describe("Add", func() {
 
 				oldSeed, newSeed *gardencorev1beta1.Seed
 				gardenletReady   = []gardencorev1beta1.Condition{{
-					Type:   gardencorev1beta1.SeedGardenletReady,
+					Type:   gardencorev1beta1.GardenletReady,
 					Status: gardencorev1beta1.ConditionTrue,
 				}}
 				gardenletNotReady = []gardencorev1beta1.Condition{{
-					Type:   gardencorev1beta1.SeedGardenletReady,
+					Type:   gardencorev1beta1.GardenletReady,
 					Status: gardencorev1beta1.ConditionFalse,
 				}}
 			)

@@ -731,7 +731,7 @@ func createSeed(region string, zones []string, accessRestrictions []gardencorev1
 		},
 		Conditions: []gardencorev1beta1.Condition{
 			{
-				Type:   gardencorev1beta1.SeedGardenletReady,
+				Type:   gardencorev1beta1.GardenletReady,
 				Status: gardencorev1beta1.ConditionTrue,
 			},
 		},

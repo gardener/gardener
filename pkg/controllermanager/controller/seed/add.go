@@ -13,7 +13,6 @@ import (
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/extensionscheck"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/lifecycle"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/reference"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/secrets"
 )
@@ -30,12 +29,6 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 		Config: *cfg.Controllers.SeedExtensionsCheck,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding extensions check reconciler: %w", err)
-	}
-
-	if err := (&lifecycle.Reconciler{
-		Config: *cfg.Controllers.Seed,
-	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding lifecycle reconciler: %w", err)
 	}
 
 	if err := (&secrets.Reconciler{}).AddToManager(mgr); err != nil {

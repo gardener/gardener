@@ -90,7 +90,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			seed.Status = gardencorev1beta1.SeedStatus{
 				ObservedGeneration: seed.GetGeneration(),
 				Conditions: []gardencorev1beta1.Condition{
-					{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.GardenletReady, Status: gardencorev1beta1.ConditionTrue},
 					{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
 				},

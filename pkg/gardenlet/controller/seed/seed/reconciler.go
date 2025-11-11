@@ -221,7 +221,7 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, seed *gar
 			switch cond.Type {
 			case gardencorev1beta1.SeedBackupBucketsReady,
 				gardencorev1beta1.SeedExtensionsReady,
-				gardencorev1beta1.SeedGardenletReady,
+				gardencorev1beta1.GardenletReady,
 				gardencorev1beta1.SeedSystemComponentsHealthy:
 				if cond.Status != gardencorev1beta1.ConditionFalse {
 					seed.Status.Conditions[i].Status = gardencorev1beta1.ConditionProgressing

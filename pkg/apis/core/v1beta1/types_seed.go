@@ -490,8 +490,6 @@ const (
 	SeedBackupBucketsReady ConditionType = "BackupBucketsReady"
 	// SeedExtensionsReady is a constant for a condition type indicating that the extensions are ready.
 	SeedExtensionsReady ConditionType = "ExtensionsReady"
-	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
-	SeedGardenletReady ConditionType = "GardenletReady"
 	// SeedSystemComponentsHealthy is a constant for a condition type indicating the system components health.
 	SeedSystemComponentsHealthy ConditionType = "SeedSystemComponentsHealthy"
 	// SeedEmergencyStopShootReconciliations is a constant for a condition type indicating disabled shoot reconciliations.
