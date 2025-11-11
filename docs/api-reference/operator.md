@@ -371,6 +371,7 @@ EncryptionAtRest
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>EncryptionAtRest contains information about garden data encryption at rest.</p>
 </td>
 </tr>
@@ -1838,7 +1839,7 @@ Credentials
 <p>EncryptedResources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
 Resources which are encrypted by default will not appear here.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config">https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config</a> for more details.</p>
-<p>Deprecated: This field is deprecated and will be removed in a future release.
+<p>Deprecated: This field is deprecated and will be removed with release v1.138.
 This field will be removed in favor of <code>gardenStatus.credentials.encryptionAtRest.resources</code>.</p>
 </td>
 </tr>

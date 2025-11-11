@@ -252,7 +252,7 @@ var _ = Describe("Strategy", func() {
 			})
 		})
 
-		DescribeTable("#migrate encryptedResources",
+		DescribeTable("should sync encrypted resources from status.encryptedResources to status.credentials.encryptionAtRest.resources",
 			func(status core.ShootStatus, expected core.ShootStatus) {
 				oldShoot.Status = status
 				newShoot.Status = status
@@ -268,7 +268,7 @@ var _ = Describe("Strategy", func() {
 				},
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
-						EncryptionAtRest: core.EncryptionAtRest{
+						EncryptionAtRest: &core.EncryptionAtRest{
 							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
 						},
 					},
@@ -277,7 +277,7 @@ var _ = Describe("Strategy", func() {
 			),
 			Entry("should overwrite", core.ShootStatus{
 				Credentials: &core.ShootCredentials{
-					EncryptionAtRest: core.EncryptionAtRest{
+					EncryptionAtRest: &core.EncryptionAtRest{
 						Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
 					},
 				},
@@ -285,7 +285,7 @@ var _ = Describe("Strategy", func() {
 			},
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
-						EncryptionAtRest: core.EncryptionAtRest{
+						EncryptionAtRest: &core.EncryptionAtRest{
 							Resources: []string{"configmaps"},
 						},
 					},
@@ -833,7 +833,7 @@ var _ = Describe("Strategy", func() {
 			)
 		})
 
-		DescribeTable("#migrate encryptedResources",
+		DescribeTable("should sync encrypted resources from status.encryptedResources to status.credentials.encryptionAtRest.resources",
 			func(status core.ShootStatus, expected core.ShootStatus) {
 				oldShoot := &core.Shoot{
 					Spec:   core.ShootSpec{},
@@ -852,7 +852,7 @@ var _ = Describe("Strategy", func() {
 				},
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
-						EncryptionAtRest: core.EncryptionAtRest{
+						EncryptionAtRest: &core.EncryptionAtRest{
 							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
 						},
 					},
@@ -861,7 +861,7 @@ var _ = Describe("Strategy", func() {
 			),
 			Entry("should overwrite", core.ShootStatus{
 				Credentials: &core.ShootCredentials{
-					EncryptionAtRest: core.EncryptionAtRest{
+					EncryptionAtRest: &core.EncryptionAtRest{
 						Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
 					},
 				},
@@ -869,7 +869,7 @@ var _ = Describe("Strategy", func() {
 			},
 				core.ShootStatus{
 					Credentials: &core.ShootCredentials{
-						EncryptionAtRest: core.EncryptionAtRest{
+						EncryptionAtRest: &core.EncryptionAtRest{
 							Resources: []string{"configmaps"},
 						},
 					},

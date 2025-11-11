@@ -193,7 +193,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	if newShoot.Spec.Hibernation != nil {
 		hibernationEnabled = ptr.Deref(newShoot.Spec.Hibernation.Enabled, false)
 	}
-	if newShoot.Status.Credentials != nil {
+	if newShoot.Status.Credentials != nil && newShoot.Status.Credentials.EncryptionAtRest != nil {
 		for _, er := range newShoot.Status.Credentials.EncryptionAtRest.Resources {
 			encryptedResources.Insert(schema.ParseGroupResource(er))
 		}
@@ -1521,7 +1521,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 		}
 	}
 
-	if old.Status.Credentials != nil {
+	if old.Status.Credentials != nil && old.Status.Credentials.EncryptionAtRest != nil {
 		for _, er := range old.Status.Credentials.EncryptionAtRest.Resources {
 			encryptedResourcesInStatus.Insert(schema.ParseGroupResource(er))
 		}
@@ -2923,7 +2923,7 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		return allErrs
 	}
 
-	if shoot.Status.Credentials != nil {
+	if shoot.Status.Credentials != nil && shoot.Status.Credentials.EncryptionAtRest != nil {
 		for _, er := range shoot.Status.Credentials.EncryptionAtRest.Resources {
 			encryptedResources.Insert(schema.ParseGroupResource(er))
 		}

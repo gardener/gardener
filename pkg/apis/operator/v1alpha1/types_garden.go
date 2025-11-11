@@ -765,7 +765,7 @@ type GardenStatus struct {
 	// Resources which are encrypted by default will not appear here.
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
 	//
-	// Deprecated: This field is deprecated and will be removed in a future release.
+	// Deprecated: This field is deprecated and will be removed with release v1.138.
 	// This field will be removed in favor of `gardenStatus.credentials.encryptionAtRest.resources`.
 	// +optional
 	EncryptedResources []string `json:"encryptedResources,omitempty"`
@@ -777,7 +777,8 @@ type Credentials struct {
 	// +optional
 	Rotation *CredentialsRotation `json:"rotation,omitempty"`
 	// EncryptionAtRest contains information about garden data encryption at rest.
-	EncryptionAtRest EncryptionAtRest `json:"encryptionAtRest"`
+	// +optional
+	EncryptionAtRest *EncryptionAtRest `json:"encryptionAtRest,omitempty"`
 }
 
 // CredentialsRotation contains information about the rotation of credentials.

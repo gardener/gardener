@@ -81,7 +81,7 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		newShoot.Spec.CredentialsBindingName = nil
 	}
 
-	// Migrate encryptedResources status from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
+	// Ensure that encrypted resources are synced from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
 	SyncEncryptedResourcesStatus(newShoot)
 }
 
@@ -256,7 +256,7 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	// Migrate encryptedResources status from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
+	// Ensure that encrypted resources are synced from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
 	SyncEncryptedResourcesStatus(newShoot)
 }
 
@@ -371,13 +371,18 @@ func getStatusSeedName(shoot *core.Shoot) string {
 
 // SyncEncryptedResourcesStatus ensures the status fields shoot.status.encryptedResources and
 // shoot.status.credentials.encryptionAtRest.resources are in sync.
-// TODO(AleksandarSavchev): Remove this function with the removal of the `.status.encryptedResources` field.
+// TODO(AleksandarSavchev): Remove this function after v1.135 has been released.
 func SyncEncryptedResourcesStatus(shoot *core.Shoot) {
-	if len(shoot.Status.EncryptedResources) == 0 && shoot.Status.Credentials == nil {
-		return
-	} else if shoot.Status.Credentials == nil {
-		shoot.Status.Credentials = &core.ShootCredentials{}
-	}
+	if len(shoot.Status.EncryptedResources) > 0 {
+		if shoot.Status.Credentials == nil {
+			shoot.Status.Credentials = &core.ShootCredentials{}
+		}
+		if shoot.Status.Credentials.EncryptionAtRest == nil {
+			shoot.Status.Credentials.EncryptionAtRest = &core.EncryptionAtRest{}
+		}
 
-	shoot.Status.Credentials.EncryptionAtRest.Resources = shoot.Status.EncryptedResources
+		shoot.Status.Credentials.EncryptionAtRest.Resources = shoot.Status.EncryptedResources
+	} else if shoot.Status.Credentials != nil && shoot.Status.Credentials.EncryptionAtRest != nil {
+		shoot.Status.Credentials.EncryptionAtRest.Resources = nil
+	}
 }

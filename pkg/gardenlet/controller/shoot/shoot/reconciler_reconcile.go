@@ -492,11 +492,22 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 							encryptedResources = shared.StringifyGroupResources(shared.GetResourcesForEncryptionFromConfig(o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.EncryptionConfig))
 						}
 
+						// TODO(AleksandarSavchev): Stop setting the shoot.Status.EncryptedResources after v1.135 has been released.
 						shoot.Status.EncryptedResources = encryptedResources
-						if shoot.Status.Credentials == nil {
-							shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{}
+
+						if len(encryptedResources) > 0 {
+							if shoot.Status.Credentials == nil {
+								shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{}
+							}
+							if shoot.Status.Credentials.EncryptionAtRest == nil {
+								shoot.Status.Credentials.EncryptionAtRest = &gardencorev1beta1.EncryptionAtRest{}
+							}
+
+							shoot.Status.Credentials.EncryptionAtRest.Resources = encryptedResources
+						} else if shoot.Status.Credentials != nil && shoot.Status.Credentials.EncryptionAtRest != nil {
+							shoot.Status.Credentials.EncryptionAtRest.Resources = nil
 						}
-						shoot.Status.Credentials.EncryptionAtRest.Resources = encryptedResources
+
 						return nil
 					}); err != nil {
 						return err

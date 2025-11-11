@@ -531,11 +531,23 @@ func (r *Reconciler) reconcile(
 					encryptedResources := append(getKubernetesResourcesForEncryption(garden), getGardenerResourcesForEncryption(garden)...)
 
 					patch := client.MergeFrom(garden.DeepCopy())
+
+					// TODO(AleksandarSavchev): Stop setting the shoot.Status.EncryptedResources after v1.135 has been released.
 					garden.Status.EncryptedResources = shared.StringifyGroupResources(encryptedResources)
-					if garden.Status.Credentials == nil {
-						garden.Status.Credentials = &operatorv1alpha1.Credentials{}
+
+					if len(encryptedResources) > 0 {
+						if garden.Status.Credentials == nil {
+							garden.Status.Credentials = &operatorv1alpha1.Credentials{}
+						}
+						if garden.Status.Credentials.EncryptionAtRest == nil {
+							garden.Status.Credentials.EncryptionAtRest = &operatorv1alpha1.EncryptionAtRest{}
+						}
+
+						garden.Status.Credentials.EncryptionAtRest.Resources = shared.StringifyGroupResources(encryptedResources)
+					} else if garden.Status.Credentials != nil && garden.Status.Credentials.EncryptionAtRest != nil {
+						garden.Status.Credentials.EncryptionAtRest.Resources = nil
 					}
-					garden.Status.Credentials.EncryptionAtRest.Resources = shared.StringifyGroupResources(encryptedResources)
+
 					if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
 						return fmt.Errorf("error patching Garden status after snapshotting ETCD: %w", err)
 					}

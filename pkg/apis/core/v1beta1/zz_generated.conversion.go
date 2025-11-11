@@ -6762,9 +6762,7 @@ func Convert_core_ShootAdvertisedAddress_To_v1beta1_ShootAdvertisedAddress(in *c
 
 func autoConvert_v1beta1_ShootCredentials_To_core_ShootCredentials(in *ShootCredentials, out *core.ShootCredentials, s conversion.Scope) error {
 	out.Rotation = (*core.ShootCredentialsRotation)(unsafe.Pointer(in.Rotation))
-	if err := Convert_v1beta1_EncryptionAtRest_To_core_EncryptionAtRest(&in.EncryptionAtRest, &out.EncryptionAtRest, s); err != nil {
-		return err
-	}
+	out.EncryptionAtRest = (*core.EncryptionAtRest)(unsafe.Pointer(in.EncryptionAtRest))
 	return nil
 }
 
@@ -6775,9 +6773,7 @@ func Convert_v1beta1_ShootCredentials_To_core_ShootCredentials(in *ShootCredenti
 
 func autoConvert_core_ShootCredentials_To_v1beta1_ShootCredentials(in *core.ShootCredentials, out *ShootCredentials, s conversion.Scope) error {
 	out.Rotation = (*ShootCredentialsRotation)(unsafe.Pointer(in.Rotation))
-	if err := Convert_core_EncryptionAtRest_To_v1beta1_EncryptionAtRest(&in.EncryptionAtRest, &out.EncryptionAtRest, s); err != nil {
-		return err
-	}
+	out.EncryptionAtRest = (*EncryptionAtRest)(unsafe.Pointer(in.EncryptionAtRest))
 	return nil
 }
 

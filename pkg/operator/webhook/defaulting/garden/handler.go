@@ -45,11 +45,15 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 	}
 
 	// Defaulting used for migration from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
-	// TODO(AleksandarSavchev): Remove this block with the removal of the `.status.encryptedResources` field.
+	// TODO(AleksandarSavchev): Remove this block after v1.135 has been released.
 	if len(garden.Status.EncryptedResources) > 0 {
 		if garden.Status.Credentials == nil {
 			garden.Status.Credentials = &operatorv1alpha1.Credentials{}
 		}
+		if garden.Status.Credentials.EncryptionAtRest == nil {
+			garden.Status.Credentials.EncryptionAtRest = &operatorv1alpha1.EncryptionAtRest{}
+		}
+
 		if len(garden.Status.Credentials.EncryptionAtRest.Resources) == 0 {
 			garden.Status.Credentials.EncryptionAtRest.Resources = garden.Status.EncryptedResources
 		}

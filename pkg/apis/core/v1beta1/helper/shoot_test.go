@@ -1636,6 +1636,6 @@ var _ = Describe("Helper", func() {
 		},
 		Entry("no credentials field", gardencorev1beta1.ShootStatus{}, nil),
 		Entry("without resources", gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}, nil),
-		Entry("with resources", gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{EncryptionAtRest: gardencorev1beta1.EncryptionAtRest{Resources: []string{"configmaps", "shoots.core.gardener.cloud"}}}}, []string{"configmaps", "shoots.core.gardener.cloud"}),
+		Entry("with resources", gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{EncryptionAtRest: &gardencorev1beta1.EncryptionAtRest{Resources: []string{"configmaps", "shoots.core.gardener.cloud"}}}}, []string{"configmaps", "shoots.core.gardener.cloud"}),
 	)
 })

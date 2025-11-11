@@ -215,7 +215,7 @@ type ShootStatus struct {
 	// Secrets are encrypted by default and are not part of the list.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	//
-	// Deprecated: This field is deprecated and will be removed in a future release.
+	// Deprecated: This field is deprecated and will be removed with release v1.138.
 	// This field will be removed in favor of `shootStatus.credentials.encryptionAtRest.resources`.
 	// +optional
 	EncryptedResources []string `json:"encryptedResources,omitempty" protobuf:"bytes,18,rep,name=encryptedResources"`
@@ -284,7 +284,8 @@ type ShootCredentials struct {
 	// +optional
 	Rotation *ShootCredentialsRotation `json:"rotation,omitempty" protobuf:"bytes,1,opt,name=rotation"`
 	// EncryptionAtRest contains information about Shoot data encryption at rest.
-	EncryptionAtRest EncryptionAtRest `json:"encryptionAtRest" protobuf:"bytes,2,opt,name=encryptionAtRest"`
+	// +optional
+	EncryptionAtRest *EncryptionAtRest `json:"encryptionAtRest,omitempty" protobuf:"bytes,2,opt,name=encryptionAtRest"`
 }
 
 // ShootCredentialsRotation contains information about the rotation of credentials.

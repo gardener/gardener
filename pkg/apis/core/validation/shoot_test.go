@@ -262,7 +262,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				},
 				Status: core.ShootStatus{
-					Credentials: &core.ShootCredentials{},
+					Credentials: &core.ShootCredentials{
+						EncryptionAtRest: &core.EncryptionAtRest{},
+					},
 				},
 			}
 		})
@@ -5199,7 +5201,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Type: core.LastOperationTypeReconcile,
 					},
 					Credentials: &core.ShootCredentials{
-						EncryptionAtRest: core.EncryptionAtRest{
+						EncryptionAtRest: &core.EncryptionAtRest{
 							Resources: []string{"configmaps"},
 						},
 					},
@@ -5974,7 +5976,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Type: core.LastOperationTypeReconcile,
 					},
 					Credentials: &core.ShootCredentials{
-						EncryptionAtRest: core.EncryptionAtRest{
+						EncryptionAtRest: &core.EncryptionAtRest{
 							Resources: []string{"configmaps"},
 						},
 					},
@@ -5985,7 +5987,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Type: core.LastOperationTypeReconcile,
 						},
 						Credentials: &core.ShootCredentials{
-							EncryptionAtRest: core.EncryptionAtRest{
+							EncryptionAtRest: &core.EncryptionAtRest{
 								Resources: []string{"configmaps"},
 							},
 						},
@@ -5996,7 +5998,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Type: core.LastOperationTypeReconcile,
 						},
 						Credentials: &core.ShootCredentials{
-							EncryptionAtRest: core.EncryptionAtRest{
+							EncryptionAtRest: &core.EncryptionAtRest{
 								Resources: []string{"configmaps"},
 							},
 						},
@@ -6007,7 +6009,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Type: core.LastOperationTypeReconcile,
 						},
 						Credentials: &core.ShootCredentials{
-							EncryptionAtRest: core.EncryptionAtRest{
+							EncryptionAtRest: &core.EncryptionAtRest{
 								Resources: []string{"configmaps."},
 							},
 						},
@@ -6129,7 +6131,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Type: core.LastOperationTypeReconcile,
 					},
 					Credentials: &core.ShootCredentials{
-						EncryptionAtRest: core.EncryptionAtRest{
+						EncryptionAtRest: &core.EncryptionAtRest{
 							Resources: []string{"configmaps"},
 						},
 					},
@@ -6140,7 +6142,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Type: core.LastOperationTypeReconcile,
 						},
 						Credentials: &core.ShootCredentials{
-							EncryptionAtRest: core.EncryptionAtRest{
+							EncryptionAtRest: &core.EncryptionAtRest{
 								Resources: []string{"configmaps"},
 							},
 						},
@@ -6151,7 +6153,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Type: core.LastOperationTypeReconcile,
 						},
 						Credentials: &core.ShootCredentials{
-							EncryptionAtRest: core.EncryptionAtRest{
+							EncryptionAtRest: &core.EncryptionAtRest{
 								Resources: []string{"configmaps"},
 							},
 						},
@@ -6162,7 +6164,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Type: core.LastOperationTypeReconcile,
 						},
 						Credentials: &core.ShootCredentials{
-							EncryptionAtRest: core.EncryptionAtRest{
+							EncryptionAtRest: &core.EncryptionAtRest{
 								Resources: []string{"configmaps."},
 							},
 						},

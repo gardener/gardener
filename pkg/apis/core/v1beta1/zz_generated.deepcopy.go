@@ -5473,7 +5473,11 @@ func (in *ShootCredentials) DeepCopyInto(out *ShootCredentials) {
 		*out = new(ShootCredentialsRotation)
 		(*in).DeepCopyInto(*out)
 	}
-	in.EncryptionAtRest.DeepCopyInto(&out.EncryptionAtRest)
+	if in.EncryptionAtRest != nil {
+		in, out := &in.EncryptionAtRest, &out.EncryptionAtRest
+		*out = new(EncryptionAtRest)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

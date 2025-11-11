@@ -303,7 +303,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are not equal", false,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
+							EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps", "projects.core.gardener.cloud"},
 							},
 						},
@@ -319,7 +319,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are equal", true,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
+							EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
 							},
 						},
@@ -906,7 +906,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are not equal", false,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
+							EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps", "projects.core.gardener.cloud"},
 							},
 						},
@@ -922,7 +922,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are equal", true,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
+							EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps.", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
 							},
 						},
@@ -997,7 +997,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are not equal", false,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
+							EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps", "projects.core.gardener.cloud"},
 							},
 						},
@@ -1013,7 +1013,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("when spec encrypted resources and status encrypted resources are equal", true,
 					operatorv1alpha1.GardenStatus{
 						Credentials: &operatorv1alpha1.Credentials{
-							EncryptionAtRest: operatorv1alpha1.EncryptionAtRest{
+							EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
 								Resources: []string{"configmaps.", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
 							},
 						},
@@ -2598,7 +2598,9 @@ var _ = Describe("Validation Tests", func() {
 					},
 				},
 				Status: operatorv1alpha1.GardenStatus{
-					Credentials: &operatorv1alpha1.Credentials{},
+					Credentials: &operatorv1alpha1.Credentials{
+						EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{},
+					},
 				},
 			}
 

@@ -176,7 +176,7 @@ func (r *REST) ShortNames() []string {
 }
 
 // defaultOnRead ensures the shoot.status.credentials.encryptionAtRest.resources field is set on read requests.
-// TODO(AleksandarSavchev): Remove this function with the removal of the `.status.encryptedResources` field.
+// TODO(AleksandarSavchev): Remove this function after v1.135 has been released.
 func defaultOnRead(obj runtime.Object) {
 	switch s := obj.(type) {
 	case *core.Shoot:

@@ -245,7 +245,7 @@ func GetAPIServerSNIDomains(domains []string, sni operatorv1alpha1.SNI) []string
 
 // GetEncryptedResourcesInStatus returns the encrypted resources from the garden status.
 func GetEncryptedResourcesInStatus(gardenStatus operatorv1alpha1.GardenStatus) []string {
-	if gardenStatus.Credentials != nil {
+	if gardenStatus.Credentials != nil && gardenStatus.Credentials.EncryptionAtRest != nil {
 		return gardenStatus.Credentials.EncryptionAtRest.Resources
 	}
 
