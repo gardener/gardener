@@ -36,6 +36,7 @@ PARALLEL_E2E_TESTS                         ?= 5
 GARDENER_RELEASE_DOWNLOAD_PATH             := $(REPO_ROOT)/dev
 DEV_SETUP_WITH_LPP_RESIZE_SUPPORT          ?= false
 DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT   ?= false
+TARGET_PLATFORMS                           ?= linux/$(shell go env GOARCH)
 PRINT_HELP ?=
 
 ifneq ($(SEED_NAME),provider-extensions)
@@ -91,18 +92,18 @@ build:
 
 .PHONY: docker-images
 docker-images:
-	@echo "Building docker images with version and tag $(EFFECTIVE_VERSION)"
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(APISERVER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(APISERVER_IMAGE_REPOSITORY):latest                 -f Dockerfile --target apiserver .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)        -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):latest        -f Dockerfile --target controller-manager .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(SCHEDULER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(SCHEDULER_IMAGE_REPOSITORY):latest                 -f Dockerfile --target scheduler .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(ADMISSION_IMAGE_REPOSITORY):latest                 -f Dockerfile --target admission-controller .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):latest          -f Dockerfile --target resource-manager .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(NODE_AGENT_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(NODE_AGENT_IMAGE_REPOSITORY):latest                -f Dockerfile --target node-agent .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(OPERATOR_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                  -t $(OPERATOR_IMAGE_REPOSITORY):latest                  -f Dockerfile --target operator .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(GARDENLET_IMAGE_REPOSITORY):latest                 -f Dockerfile --target gardenlet .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(GARDENADM_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(GARDENADM_IMAGE_REPOSITORY):latest                 -f Dockerfile --target gardenadm .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)  -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):latest  -f Dockerfile --target gardener-extension-provider-local .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(EXTENSION_ADMISSION_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(EXTENSION_ADMISSION_LOCAL_IMAGE_REPOSITORY):latest -f Dockerfile --target gardener-extension-admission-local .
+	@echo "Building docker images with version and tag $(EFFECTIVE_VERSION) for target platforms $(TARGET_PLATFORMS)"
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) --platform $(TARGET_PLATFORMS) -t $(APISERVER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(APISERVER_IMAGE_REPOSITORY):latest                 -f Dockerfile --target apiserver .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) --platform $(TARGET_PLATFORMS) -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)        -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):latest        -f Dockerfile --target controller-manager .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) --platform $(TARGET_PLATFORMS) -t $(SCHEDULER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(SCHEDULER_IMAGE_REPOSITORY):latest                 -f Dockerfile --target scheduler .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) --platform $(TARGET_PLATFORMS) -t $(ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(ADMISSION_IMAGE_REPOSITORY):latest                 -f Dockerfile --target admission-controller .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) --platform $(TARGET_PLATFORMS) -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):latest          -f Dockerfile --target resource-manager .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) --platform $(TARGET_PLATFORMS) -t $(NODE_AGENT_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(NODE_AGENT_IMAGE_REPOSITORY):latest                -f Dockerfile --target node-agent .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) --platform $(TARGET_PLATFORMS) -t $(OPERATOR_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                  -t $(OPERATOR_IMAGE_REPOSITORY):latest                  -f Dockerfile --target operator .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) --platform $(TARGET_PLATFORMS) -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(GARDENLET_IMAGE_REPOSITORY):latest                 -f Dockerfile --target gardenlet .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) --platform $(TARGET_PLATFORMS) -t $(GARDENADM_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(GARDENADM_IMAGE_REPOSITORY):latest                 -f Dockerfile --target gardenadm .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) --platform $(TARGET_PLATFORMS) -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)  -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):latest  -f Dockerfile --target gardener-extension-provider-local .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) --platform $(TARGET_PLATFORMS) -t $(EXTENSION_ADMISSION_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(EXTENSION_ADMISSION_LOCAL_IMAGE_REPOSITORY):latest -f Dockerfile --target gardener-extension-admission-local .
 
 .PHONY: docker-push
 docker-push:
