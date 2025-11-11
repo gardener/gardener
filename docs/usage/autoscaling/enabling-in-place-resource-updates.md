@@ -47,7 +47,7 @@ To make use of the _mutating_ resource manager webhook, the `Shoot`'s [Vertical 
 
 #### Seed
 
->  When deployed in a `Seed` cluster, the _mutating_ webhook targets `vertical pod autoscaler` resources __outside__ `kube-system` and `kubernetes-dashboard` namespaces.
+>  When deployed in a `Seed` cluster, the _mutating_ webhook targets `vertical pod autoscaler` resources __outside__ the `kube-system` and `kubernetes-dashboard` namespaces.
 
 To make use of the _mutating_ resource manager webhook, the `Seed`'s [Vertical Pod Autoscaler](https://github.com/kubernetes/autoscaler) deployment must have the `InPlaceOrRecreate` feature gate enabled. Follow the [in-place resource updates](./in-place-resource-updates.md#seed) guide for more details about the Vertical Pod Autoscaler components setup.
 
