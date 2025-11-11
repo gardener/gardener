@@ -740,6 +740,7 @@ func (r *Reconciler) newKubeAPIServer(
 		v1beta1constants.PriorityClassNameGardenSystem500,
 		true,
 		false,
+		features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
 		auditWebhookConfig,
 		authenticationWebhookConfig,
 		authorizationWebhookConfigs,

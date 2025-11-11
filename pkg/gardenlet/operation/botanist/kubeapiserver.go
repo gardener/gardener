@@ -65,6 +65,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		v1beta1constants.PriorityClassNameShootControlPlane500,
 		b.Shoot.IsWorkerless,
 		b.Shoot.RunsControlPlane(),
+		b.ShootUsesIstioTLSTermination(),
 		nil,
 		nil,
 		nil,

@@ -34,6 +34,10 @@ spec:
           protocolDetectionTimeout: 100ms
           runtimeValues:
             "overload.global_downstream_max_connections": "750000"
+            # Limits for mitigating HTTP/2 "Rapid Reset" DoS Vulnerability
+            # See also https://github.com/envoyproxy/envoy/security/advisories/GHSA-jhv4-f7mr-xx76
+            "overload.premature_reset_total_stream_count": "100"
+            "overload.premature_reset_min_stream_lifetime_seconds": "1"
     spec:
       serviceAccountName: istio-ingressgateway-service-account
       securityContext:
