@@ -5,6 +5,7 @@
 package shoot
 
 import (
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -169,6 +170,11 @@ func addCustomMachineImage(namespacedCloudProfile *gardencorev1beta1.NamespacedC
 }
 
 func itShouldVerifyShootPrometheusHealthCheck(s *ShootContext) {
+	if os.Getenv("IPFAMILY") == "ipv6" {
+		s.Log.Info("Skip shoot Prometheus health check test in IPv6 mode due to cross-node communication issues in the test setup")
+		return
+	}
+
 	rule := &monitoringv1.PrometheusRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "shoot-health-down",
