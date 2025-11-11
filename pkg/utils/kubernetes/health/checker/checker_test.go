@@ -24,7 +24,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -734,14 +733,14 @@ var _ = Describe("HealthChecker", func() {
 				PointTo(beConditionWithFalseStatusReasonAndMsg("Unknown", "bar is unknown"))),
 		)
 
-		Describe("CheckManagedPrometheuses", func() {
+		Describe("CheckPrometheuses", func() {
 			var (
-				condition      = gardencorev1beta1.Condition{Type: "test"}
-				filterTrueFunc = func(resourcesv1alpha1.ManagedResource) bool { return true }
+				condition       = gardencorev1beta1.Condition{Type: "test"}
+				filterTrueFunc  = func(*monitoringv1.Prometheus) bool { return true }
+				filterFalseFunc = func(*monitoringv1.Prometheus) bool { return false }
 
 				healthChecker               *HealthChecker
-				managedResources            []resourcesv1alpha1.ManagedResource
-				prometheus                  *monitoringv1.Prometheus
+				prometheuses                []monitoringv1.Prometheus
 				testPrometheusHealthChecker health.PrometheusHealthChecker
 
 				healthy   = func() (bool, error) { return true, nil }
@@ -762,25 +761,7 @@ var _ = Describe("HealthChecker", func() {
 						return testPrometheusHealthChecker(ctx, endpoint, port)
 					}))
 
-				managedResources = []resourcesv1alpha1.ManagedResource{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-mr",
-						Namespace: namespace,
-					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
-						Resources: []resourcesv1alpha1.ObjectReference{
-							{
-								ObjectReference: corev1.ObjectReference{
-									Kind:      monitoringv1.PrometheusesKind,
-									Name:      "testprom",
-									Namespace: namespace,
-								},
-							},
-						},
-					},
-				}}
-
-				prometheus = &monitoringv1.Prometheus{
+				prometheuses = []monitoringv1.Prometheus{{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "testprom",
 						Namespace: namespace,
@@ -790,74 +771,19 @@ var _ = Describe("HealthChecker", func() {
 							Replicas: ptr.To(int32(3)),
 						},
 					},
-				}
-
-				Expect(fakeClient.Create(ctx, prometheus)).To(Succeed())
+				}}
 			})
 
-			It("should return nil when no prometheus instances are found", func() {
-				managedResources[0].Status.Resources = []resourcesv1alpha1.ObjectReference{}
-
-				result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
-				Expect(result).To(BeNil())
-			})
-
-			It("should return nil when filter function returns false", func() {
-				filterFalseFunc := func(resourcesv1alpha1.ManagedResource) bool { return false }
-
-				result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterFalseFunc)
-				Expect(result).To(BeNil())
-			})
-
-			It("should skip resources with ignore annotation", func() {
-				// health checking of an unhealthy Prometheus is ignored if the managed resource is annotated with resources.gardener.cloud/ignore=true
+			It("should skip when filter function returns false", func() {
 				testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (bool, error) {
 					return unhealthy()
 				}
 
-				result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+				result := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 				Expect(result).NotTo(BeNil())
 
-				managedResources[0].Annotations = map[string]string{
-					resourcesv1alpha1.Ignore: "true",
-				}
-
-				result = healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+				result = healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterFalseFunc)
 				Expect(result).To(BeNil())
-			})
-
-			It("should return error condition when prometheus resource is not found", func() {
-				Expect(fakeClient.Delete(ctx, prometheus)).To(Succeed())
-
-				result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
-				Expect(result).NotTo(BeNil())
-				Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
-				Expect(result.Reason).To(Equal("PrometheusHealthCheckError"))
-				Expect(result.Message).To(Equal(`Prometheus "shoot--foo--bar/testprom" not found`))
-			})
-
-			It("should return error condition when client returns error", func() {
-				errorClient := fakeclient.NewClientBuilder().
-					WithScheme(kubernetes.SeedScheme).
-					WithInterceptorFuncs(interceptor.Funcs{
-						Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-							gvks, _, err := kubernetes.SeedScheme.ObjectKinds(obj)
-							if err == nil && len(gvks) > 0 {
-								if gvks[0].Kind == monitoringv1.PrometheusesKind {
-									return errors.New("test error")
-								}
-							}
-							return client.Get(ctx, key, obj, opts...)
-						},
-					}).
-					Build()
-
-				healthChecker := NewHealthChecker(errorClient, fakeClock)
-				result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
-				Expect(result).NotTo(BeNil())
-				Expect(result.Status).To(Equal(gardencorev1beta1.ConditionUnknown))
-				Expect(result.Reason).To(Equal("ConditionCheckError"))
-				Expect(result.Message).To(Equal(`failed checking Prometheus "shoot--foo--bar/testprom": test error`))
 			})
 
 			It("should return error condition when health check returns error in at least a replica", func() {
@@ -878,7 +804,7 @@ var _ = Describe("HealthChecker", func() {
 					}
 				}
 
-				result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+				result := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 				Expect(result).NotTo(BeNil())
 				Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 				Expect(result.Reason).To(Equal("PrometheusHealthCheckError"))
@@ -903,7 +829,7 @@ var _ = Describe("HealthChecker", func() {
 					}
 				}
 
-				result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+				result := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 				Expect(result).NotTo(BeNil())
 				Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 				Expect(result.Reason).To(Equal("PrometheusHealthCheckDown"))
@@ -929,7 +855,7 @@ var _ = Describe("HealthChecker", func() {
 					}
 				}
 
-				result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+				result := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 				Expect(result).To(BeNil())
 			})
 
@@ -941,55 +867,14 @@ var _ = Describe("HealthChecker", func() {
 					return false, errors.New(msg)
 				}
 
-				prometheus.Spec.Replicas = ptr.To(int32(0))
-				Expect(fakeClient.Update(ctx, prometheus)).To(Succeed())
-
-				result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+				prometheuses[0].Spec.Replicas = ptr.To(int32(0))
+				result := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 				Expect(result).To(BeNil())
 			})
 
-			Context("multiple managed Prometheus", func() {
-				var prometheus2 *monitoringv1.Prometheus
-
+			Context("multiple Prometheus", func() {
 				BeforeEach(func() {
-					managedResources = []resourcesv1alpha1.ManagedResource{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "test-mr",
-								Namespace: namespace,
-							},
-							Status: resourcesv1alpha1.ManagedResourceStatus{
-								Resources: []resourcesv1alpha1.ObjectReference{
-									{
-										ObjectReference: corev1.ObjectReference{
-											Kind:      monitoringv1.PrometheusesKind,
-											Name:      "testprom",
-											Namespace: namespace,
-										},
-									},
-								},
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "test-mr-2",
-								Namespace: namespace,
-							},
-							Status: resourcesv1alpha1.ManagedResourceStatus{
-								Resources: []resourcesv1alpha1.ObjectReference{
-									{
-										ObjectReference: corev1.ObjectReference{
-											Kind:      monitoringv1.PrometheusesKind,
-											Name:      "testprom2",
-											Namespace: namespace,
-										},
-									},
-								},
-							},
-						},
-					}
-
-					prometheus2 = &monitoringv1.Prometheus{
+					prometheuses = append(prometheuses, monitoringv1.Prometheus{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "testprom2",
 							Namespace: namespace,
@@ -999,9 +884,7 @@ var _ = Describe("HealthChecker", func() {
 								Replicas: ptr.To(int32(3)),
 							},
 						},
-					}
-
-					Expect(fakeClient.Create(ctx, prometheus2)).To(Succeed())
+					})
 				})
 
 				It("should check for all Prometheus instances in parallel", func() {
@@ -1012,16 +895,16 @@ var _ = Describe("HealthChecker", func() {
 					}
 
 					// Validate the test input contains more than one managed Prometheus with more than one replica
-					Expect(managedResources[0].Status.Resources[0].Name).To(Equal("testprom"))
-					Expect(managedResources[1].Status.Resources[0].Name).To(Equal("testprom2"))
-					Expect(*prometheus.Spec.Replicas).To(Equal(int32(3)))
-					Expect(*prometheus2.Spec.Replicas).To(Equal(int32(3)))
+					Expect(prometheuses[0].Name).To(Equal("testprom"))
+					Expect(prometheuses[1].Name).To(Equal("testprom2"))
+					Expect(*prometheuses[0].Spec.Replicas).To(Equal(int32(3)))
+					Expect(*prometheuses[1].Spec.Replicas).To(Equal(int32(3)))
 
 					// The test should take a bit more than the check duration
 					maxDuration := checkDuration + 50*time.Millisecond
 
 					start := time.Now()
-					healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+					healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 					duration := time.Since(start)
 					Expect(duration).To(BeNumerically("<", maxDuration), fmt.Sprintf("Test took too long: %d ms. Are Prometheus instances checked in parallel?", duration.Milliseconds()))
 				})
@@ -1050,7 +933,7 @@ var _ = Describe("HealthChecker", func() {
 						}
 					}
 
-					result := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+					result := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 					Expect(result).NotTo(BeNil())
 					Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 					Expect(result.Reason).To(Equal("PrometheusHealthCheckDown"))
@@ -1058,8 +941,8 @@ var _ = Describe("HealthChecker", func() {
 						`Access Prometheus UI and query for "{type="health"}" for more details.`))
 
 					// Change the order of managed resources and expect the same result
-					managedResources = []resourcesv1alpha1.ManagedResource{managedResources[1], managedResources[0]}
-					result2 := healthChecker.CheckManagedPrometheuses(ctx, condition, managedResources, filterTrueFunc)
+					prometheuses = []monitoringv1.Prometheus{prometheuses[1], prometheuses[0]}
+					result2 := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 					Expect(result2).To(Equal(result))
 				})
 			})
