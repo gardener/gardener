@@ -747,8 +747,22 @@ func ValidateKubernetesVersionUpdate(new, old string, skipMinorVersionAllowed bo
 		return allErrs
 	}
 
+	// Fill missing defaulted Kubernetes version parts from the old version, as they are only added afterwards via the mutating admission webhook.
+	// This way we can properly compare the versions even if the new version is e.g. "1.20" and the old one "1.20.7".
+	// Setting missing parts from the old version is valid, as e.g. "1.20" is equivalent to "1.20.x" where x is the latest patch version available for minor version "1.20".
+	newVersionDefaultSimulated := new
+	oldVersionSplits := strings.Split(old, ".")
+	if len(oldVersionSplits) == 3 {
+		switch len(strings.Split(new, ".")) {
+		case 1:
+			newVersionDefaultSimulated += oldVersionSplits[1] + "." + oldVersionSplits[2]
+		case 2:
+			newVersionDefaultSimulated += "." + oldVersionSplits[2]
+		}
+	}
+
 	// Forbid Kubernetes version downgrade
-	downgrade, err := versionutils.CompareVersions(new, "<", old)
+	downgrade, err := versionutils.CompareVersions(newVersionDefaultSimulated, "<", old)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
 	}

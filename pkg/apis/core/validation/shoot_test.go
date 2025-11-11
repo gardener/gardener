@@ -4203,6 +4203,41 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 				))
 			})
+
+			It("should pass for kubernetes version upgrades based on defaulting", func() {
+				shoot.Spec.Kubernetes.Version = "1.25.2"
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.25"
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should pass for kubernetes version upgrades based on defaulting", func() {
+				shoot.Spec.Kubernetes.Version = "1.25.2"
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1"
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should forbid kubernetes version downgrades with omitted patch version", func() {
+				shoot.Spec.Kubernetes.Version = "1.25.3"
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.24"
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.version"),
+						"Detail": Equal("kubernetes version downgrade is not supported"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
+						"Detail": Equal("kubernetes version downgrade is not supported"),
+					})),
+				))
+			})
 		})
 
 		Context("worker pool kubernetes version", func() {
