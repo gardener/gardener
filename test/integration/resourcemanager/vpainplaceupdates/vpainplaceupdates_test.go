@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package vpainplaceorrecreateupdatemode_test
+package vpainplaceupdates_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -42,7 +42,7 @@ var _ = Describe("VPAInPlaceUpdates tests", func() {
 		})
 
 		It("should not mutate vertical pod autoscaler", func() {
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, "vpa-in-place-or-recreate-update-mode.resources.gardener.cloud/skip", "")
+			metav1.SetMetaDataLabel(&vpa.ObjectMeta, "vpa-in-place-updates.resources.gardener.cloud/skip", "")
 
 			Expect(testClient.Create(ctx, vpa)).To(Succeed())
 			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeRecreate)))

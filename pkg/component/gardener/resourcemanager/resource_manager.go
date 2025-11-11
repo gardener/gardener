@@ -67,7 +67,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/systemcomponentsconfig"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/vpainplaceorrecreateupdatemode"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/vpainplaceupdates"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -621,7 +621,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
 			},
-			VPAInPlaceUpdates: resourcemanagerconfigv1alpha1.VPAInPlaceOrRecreateUpdateModeConfig{
+			VPAInPlaceUpdates: resourcemanagerconfigv1alpha1.VPAInPlaceUpdatesConfig{
 				Enabled: r.values.VPAInPlaceUpdatesEnabled,
 			},
 		},
@@ -1402,7 +1402,7 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 	}
 
 	if r.values.VPAInPlaceUpdatesEnabled {
-		webhooks = append(webhooks, NewInPlaceOrRecreateUpdateModeWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+		webhooks = append(webhooks, NewInPlaceUpdatesWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	r.skipStaticPods(webhooks)
@@ -1948,15 +1948,15 @@ func NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 	}
 }
 
-// NewInPlaceOrRecreateUpdateModeWebhook returns the VerticalPodAutoscaler mutating webhook for the resourcemanager component for reuse
+// NewInPlaceUpdatesWebhook returns the VerticalPodAutoscaler mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
-func NewInPlaceOrRecreateUpdateModeWebhook(
+func NewInPlaceUpdatesWebhook(
 	namespaceSelector *metav1.LabelSelector,
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
 ) admissionregistrationv1.MutatingWebhook {
 	return admissionregistrationv1.MutatingWebhook{
-		Name: "vpa-in-place-or-recreate-update-mode.resources.gardener.cloud",
+		Name: "vpa-in-place-updates.resources.gardener.cloud",
 		Rules: []admissionregistrationv1.RuleWithOperations{{
 			Rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{vpaautoscalingv1.SchemeGroupVersion.Group},
@@ -1972,12 +1972,12 @@ func NewInPlaceOrRecreateUpdateModeWebhook(
 		ObjectSelector: &metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{
 				{
-					Key:      resourcesv1alpha1.VPAInPlaceOrRecreateUpdateModeSkip,
+					Key:      resourcesv1alpha1.VPAInPlaceUpdatesSkip,
 					Operator: metav1.LabelSelectorOpDoesNotExist,
 				},
 			},
 		},
-		ClientConfig:            buildClientConfigFn(secretServerCA, vpainplaceorrecreateupdatemode.WebhookPath),
+		ClientConfig:            buildClientConfigFn(secretServerCA, vpainplaceupdates.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		ReinvocationPolicy:      ptr.To(admissionregistrationv1.NeverReinvocationPolicy),
 		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),

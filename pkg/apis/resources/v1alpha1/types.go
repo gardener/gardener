@@ -191,10 +191,10 @@ const (
 	// NetworkingServiceNamespace is a constant for a label on a NetworkPolicy which contains the namespace of the
 	// Service is has been created for.
 	NetworkingServiceNamespace = NetworkPolicyLabelKeyPrefix + "service-namespace"
-	// VPAInPlaceOrRecreateUpdateModeSkip is a constant for a label on a VerticalPodAutoscaler resource which indicates that
+	// VPAInPlaceUpdatesSkip is a constant for a label on a VerticalPodAutoscaler resource which indicates that
 	// it's updateMode field option should not be modified to "InPlaceOrRecreate"
-	// TODO(vitanovs): Remove the VPAInPlaceOrRecreateUpdateModeSkip label constant once the VPAInPlaceUpdates feature gates is deprecated.
-	VPAInPlaceOrRecreateUpdateModeSkip = "vpa-in-place-or-recreate-update-mode.resources.gardener.cloud/skip"
+	// TODO(vitanovs): Remove the VPAInPlaceUpdatesSkip label constant once the VPAInPlaceUpdates feature gates is deprecated.
+	VPAInPlaceUpdatesSkip = "vpa-in-place-updates.resources.gardener.cloud/skip"
 )
 
 // +kubebuilder:resource:shortName="mr"

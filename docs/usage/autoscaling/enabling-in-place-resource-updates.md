@@ -25,7 +25,7 @@ VPAInPlaceUpdates
 To keep a VerticalPodAutoscaler resource out of the _mutating_ webhook scope, add the following `skip` label indicating that the resource should preserve it's current configuration and __not__ get  updated:
 
 ```
-vpa-in-place-or-recreate-update-mode.resources.gardener.cloud/skip
+vpa-in-place-updates.resources.gardener.cloud/skip
 ```
 
 ### Gardenlet

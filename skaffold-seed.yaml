@@ -351,7 +351,7 @@ build:
             - pkg/resourcemanager/webhook/projectedtokenmount
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
-            - pkg/resourcemanager/webhook/vpainplaceorrecreateupdatemode
+            - pkg/resourcemanager/webhook/vpainplaceupdates
             - pkg/utils
             - pkg/utils/chart
             - pkg/utils/context
@@ -503,7 +503,7 @@ build:
             - pkg/resourcemanager/webhook/projectedtokenmount
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
-            - pkg/resourcemanager/webhook/vpainplaceorrecreateupdatemode
+            - pkg/resourcemanager/webhook/vpainplaceupdates
             - pkg/utils
             - pkg/utils/context
             - pkg/utils/errors

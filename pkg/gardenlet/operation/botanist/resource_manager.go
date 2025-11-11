@@ -58,7 +58,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 			TopologyAwareRoutingEnabled:         b.Shoot.TopologyAwareRoutingEnabled,
 			// TODO(vitanovs): Remove the VPAInPlaceUpdates webhook once the
 			// VPAInPlaceUpdates feature gates is deprecated.
-			VPAInPlaceUpdatesEnabled: b.isVPAInPlaceOrRecreateUpdateModeEnabled(),
+			VPAInPlaceUpdatesEnabled: b.isVPAInPlaceUpdatesEnabled(),
 		}
 	)
 
@@ -97,7 +97,7 @@ func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error 
 	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}, 1)
 }
 
-func (b *Botanist) isVPAInPlaceOrRecreateUpdateModeEnabled() bool {
+func (b *Botanist) isVPAInPlaceUpdatesEnabled() bool {
 	var (
 		isGardenletFeatureGateEnabled = features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates)
 		isShootVPAFeatureGateEnabled  = true

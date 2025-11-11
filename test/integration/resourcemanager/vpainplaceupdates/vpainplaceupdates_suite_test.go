@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package vpainplaceorrecreateupdatemode_test
+package vpainplaceupdates_test
 
 import (
 	"context"
@@ -32,7 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/vpainplaceorrecreateupdatemode"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/vpainplaceupdates"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -42,7 +42,7 @@ func TestVPAInPlaceUpdatesProfile(t *testing.T) {
 	RunSpecs(t, "Test Integration ResourceManager VPAInPlaceUpdates Suite")
 }
 
-const testID = "vpa-in-place-or-recreate-update-mode-webhook-test"
+const testID = "vpa-in-place-updates-webhook-test"
 
 var (
 	ctx = context.Background()
@@ -118,7 +118,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register webhook")
-	Expect((&vpainplaceorrecreateupdatemode.Handler{
+	Expect((&vpainplaceupdates.Handler{
 		Logger: log,
 	}).AddToManager(mgr)).To(Succeed())
 
@@ -152,7 +152,7 @@ func getMutatingWebhookConfigurations(namespaceName string) []*admissionregistra
 				Name: "gardener-resource-manager",
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.NewInPlaceOrRecreateUpdateModeWebhook(&metav1.LabelSelector{
+				resourcemanager.NewInPlaceUpdatesWebhook(&metav1.LabelSelector{
 					MatchLabels: map[string]string{corev1.LabelMetadataName: namespaceName},
 				}, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
 					return admissionregistrationv1.WebhookClientConfig{

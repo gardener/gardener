@@ -1145,7 +1145,7 @@ configured with `Auto` or `Recreate` to switch to update mode `InPlaceOrRecreate
 In addition, to prevent the _mutation_ of certain `VerticalPodAutoscaler` [resources](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/deploy/vpa-crd.yaml), falling within the webhook's scope, the following _label_
 
 ```
-vpa-in-place-or-recreate-update-mode.resources.gardener.cloud/skip
+vpa-in-place-updates.resources.gardener.cloud/skip
 ```
 
 could be appended to the resource's metadata. With the _label_ specified, the webhook will filter out the resources, leaving it's current `updateMode` configuration.

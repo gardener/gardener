@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/systemcomponentsconfig"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/vpainplaceorrecreateupdatemode"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/vpainplaceupdates"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
@@ -138,10 +138,10 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 	}
 
 	if cfg.Webhooks.VPAInPlaceUpdates.Enabled {
-		if err := (&vpainplaceorrecreateupdatemode.Handler{
-			Logger: mgr.GetLogger().WithName("webhook").WithName(vpainplaceorrecreateupdatemode.HandlerName),
+		if err := (&vpainplaceupdates.Handler{
+			Logger: mgr.GetLogger().WithName("webhook").WithName(vpainplaceupdates.HandlerName),
 		}).AddToManager(mgr); err != nil {
-			return fmt.Errorf("failed adding %s webhook handler: %w", vpainplaceorrecreateupdatemode.HandlerName, err)
+			return fmt.Errorf("failed adding %s webhook handler: %w", vpainplaceupdates.HandlerName, err)
 		}
 	}
 

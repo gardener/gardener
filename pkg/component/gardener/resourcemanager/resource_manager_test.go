@@ -1303,7 +1303,7 @@ var _ = Describe("ResourceManager", func() {
 				TimeoutSeconds:          ptr.To[int32](10),
 			},
 				admissionregistrationv1.MutatingWebhook{
-					Name: "vpa-in-place-or-recreate-update-mode.resources.gardener.cloud",
+					Name: "vpa-in-place-updates.resources.gardener.cloud",
 					Rules: []admissionregistrationv1.RuleWithOperations{{
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{"autoscaling.k8s.io"},
@@ -1316,7 +1316,7 @@ var _ = Describe("ResourceManager", func() {
 					ObjectSelector: &metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{
 							{
-								Key:      resourcesv1alpha1.VPAInPlaceOrRecreateUpdateModeSkip,
+								Key:      resourcesv1alpha1.VPAInPlaceUpdatesSkip,
 								Operator: metav1.LabelSelectorOpDoesNotExist,
 							},
 						},
@@ -1325,7 +1325,7 @@ var _ = Describe("ResourceManager", func() {
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      ptr.To("/webhooks/vpa-in-place-or-recreate-update-mode"),
+							Path:      ptr.To("/webhooks/vpa-in-place-updates"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
