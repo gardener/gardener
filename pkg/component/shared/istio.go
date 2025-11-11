@@ -180,6 +180,11 @@ func AddIstioIngressGateway(
 	} else {
 		zones = []string{*zone}
 
+		if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+			// When IstioTLSTermination server is enabled, more resources might be required on seeds.
+			maxReplicas = ptr.To(len(zones) * 12)
+		}
+
 		enforceSpreadAcrossHosts, err = ShouldEnforceSpreadAcrossHosts(ctx, cl, []string{*zone})
 		if err != nil {
 			return err
