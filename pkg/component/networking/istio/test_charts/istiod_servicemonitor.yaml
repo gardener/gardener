@@ -18,4 +18,3 @@ spec:
     matchLabels:
       app: istiod
       istio: pilot
-status: {}
