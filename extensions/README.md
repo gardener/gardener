@@ -65,7 +65,7 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 - [Shoot Certificate Service](https://github.com/gardener/gardener-extension-shoot-cert-service)
 - [Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service)
 - [Shoot Falco Service](https://github.com/gardener/gardener-extension-shoot-falco-service)
-- [Shoot Flux Service](https://github.com/23technologies/gardener-extension-shoot-flux)
+- [Shoot Flux Service](https://github.com/stackitcloud/gardener-extension-shoot-flux)
 - [Shoot Lakom Service](https://github.com/gardener/gardener-extension-shoot-lakom-service)
 - [Shoot Networking Filter](https://github.com/gardener/gardener-extension-shoot-networking-filter)
 - [Shoot Networking Problem Detector](https://github.com/gardener/gardener-extension-shoot-networking-problemdetector)
