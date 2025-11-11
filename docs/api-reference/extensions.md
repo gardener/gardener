@@ -3254,6 +3254,18 @@ FileContent
 <p>Content describe the file&rsquo;s content.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>nodeName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>NodeName contains the name of the node for node-specific configurations.
+If NodeName is not empty the corresponding file will only be rolled out to the node with the specified name.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.FileCodecID">FileCodecID
