@@ -329,6 +329,10 @@ For convenience a [helper script](../../hack/usage/generate-admin-kubeconf.sh) i
 ./hack/usage/generate-admin-kubeconf.sh > admin-kubeconf.yaml
 ```
 
+> [!NOTE]
+> Keep in mind that using a VPN on your local machine could cause problems with the setup, and the shoot's kubeconfig could fail with connection issues.
+> If you experience connection problems using the shoot's kubeconfig, try disabling the VPN first.
+
 If you want to change the default namespace or shoot name, you can do so by passing different values as arguments.
 
 ```bash
