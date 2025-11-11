@@ -544,11 +544,9 @@ var _ = Describe("Garden health", func() {
 			})
 		})
 
-		Context("when there are Managed Resources responsible for Prometheus", func() {
+		Context("When there are Prometheus in the runtime cluster", func() {
 			var (
-				managedResource     *resourcesv1alpha1.ManagedResource
-				prometheusName      = "foo"
-				prometheusNamespace = v1beta1constants.GardenNamespace
+				prometheus *monitoringv1.Prometheus
 
 				healthy   = func(_ context.Context, _ string, _ int) (bool, error) { return true, nil }
 				unhealthy = func(_ context.Context, _ string, _ int) (bool, error) { return false, nil }
@@ -556,28 +554,14 @@ var _ = Describe("Garden health", func() {
 			)
 
 			BeforeEach(func() {
-				managedResource = healthyManagedResource("prometheus-"+prometheusName, "ObservabilityComponentsHealthy")
-				managedResource.Labels = map[string]string{
-					"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
-					"managed-by":                         "gardener-operator",
-				}
-
-				managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{{
-					ObjectReference: corev1.ObjectReference{
-						Kind:      monitoringv1.PrometheusesKind,
-						Name:      prometheusName,
-						Namespace: prometheusNamespace,
-					}},
-				}
-
-				prometheus := &monitoringv1.Prometheus{
+				prometheus = &monitoringv1.Prometheus{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      prometheusName,
-						Namespace: prometheusNamespace,
+						Name:      "foo",
+						Namespace: v1beta1constants.GardenNamespace,
+						Labels:    map[string]string{"health-check-by": "gardener-operator"},
 					},
 				}
 
-				Expect(runtimeClient.Create(ctx, managedResource)).To(Succeed())
 				Expect(runtimeClient.Create(ctx, prometheus)).To(Succeed())
 			})
 
@@ -633,14 +617,14 @@ var _ = Describe("Garden health", func() {
 				expectHealthyObservabilityComponents(updatedConditions)
 			})
 
-			Context("when the Managed Resource is filtered out from the health check", func() {
+			Context("Prometheus is filtered out from the health check", func() {
 				var (
 					healthChecker *healthchecker.HealthChecker
 					conditions    []gardencorev1beta1.Condition
 				)
 
-				// Departing from an unhealthy Prometheus that sets the condition to unhealthy, make sure the condition
-				// is set to healthy if the managed resource is filtered out.
+				// Depart from an unhealthy Prometheus that sets the condition to unhealthy and make sure the condition
+				// is set to healthy if the Prometheus resource is filtered out.
 				BeforeEach(func() {
 					healthChecker = healthchecker.NewHealthChecker(runtimeClient, fakeClock, healthchecker.WithPrometheusHealthChecker(unhealthy))
 					conditions = NewHealth(
@@ -661,26 +645,9 @@ var _ = Describe("Garden health", func() {
 							`There are health issues in Prometheus pod "garden/prometheus-foo-0". Access Prometheus UI and query for "{type="health"}" for more details.`)))
 				})
 
-				It("should ignore the Prometheus resource if it doesn't have the right care label", func() {
-					managedResource.Labels = map[string]string{"managed-by": "gardener-operator"}
-					Expect(runtimeClient.Update(ctx, managedResource)).To(Succeed())
-
-					conditions = NewHealth(
-						garden,
-						runtimeClient,
-						gardenClientSet,
-						fakeClock,
-						nil,
-						gardenNamespace,
-						healthChecker,
-					).Check(ctx, gardenConditions)
-
-					expectHealthyObservabilityComponents(conditions)
-				})
-
-				It("should ignore the Prometheus resource if it doesn't have the right managed-by label", func() {
-					managedResource.Labels = map[string]string{"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy"}
-					Expect(runtimeClient.Update(ctx, managedResource)).To(Succeed())
+				It("should ignore the Prometheus resource if it doesn't have the right health-check-by label", func() {
+					prometheus.Labels = map[string]string{"health-check-by": "foo"}
+					Expect(runtimeClient.Update(ctx, prometheus)).To(Succeed())
 
 					conditions = NewHealth(
 						garden,
