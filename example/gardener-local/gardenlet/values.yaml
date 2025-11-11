@@ -41,7 +41,6 @@ config:
     IstioTLSTermination: true
     OpenTelemetryCollector: true
     UseUnifiedHTTPProxyPort: true
-    VPAInPlaceUpdates: true
   logging:
     enabled: true
     vali:
