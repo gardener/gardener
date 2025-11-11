@@ -41,7 +41,7 @@ Refer to the `gardenlet` component configuration [manifest](../../../example/20-
 
 #### Shoot
 
-> When deployed in a `Shoot` cluster, the _mutating_ webhook targets `vertical pod autoscaler` resources __inside__ `kube-system` and `kubernetes-dashboard` namespaces.
+> When deployed in a `Shoot` cluster, the _mutating_ webhook targets `vertical pod autoscaler` resources __inside__ the `kube-system` and `kubernetes-dashboard` namespaces.
 
 To make use of the _mutating_ resource manager webhook, the `Shoot`'s [Vertical Pod Autoscaler](https://github.com/kubernetes/autoscaler) deployment must have the `InPlaceOrRecreate` feature gate enabled. Follow the [in-place resource updates](./in-place-resource-updates.md#shoot) guide for more details about the Vertical Pod Autoscaler components setup.
 
