@@ -1205,6 +1205,7 @@ func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, g
 					Type:                         provider.Type,
 					Class:                        ptr.To(extensionsv1alpha1.ExtensionClassGarden),
 					SecretName:                   provider.SecretRef.Name,
+					UseExistingSecret:            true,
 					ReconcileOnlyOnChangeOrError: true,
 				},
 				dnsrecord.DefaultInterval,

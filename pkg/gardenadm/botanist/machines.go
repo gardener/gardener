@@ -36,7 +36,7 @@ func (b *GardenadmBotanist) GetMachineByIndex(index int) (*machinev1alpha1.Machi
 	return &b.controlPlaneMachines[index], nil
 }
 
-// addressTypePreference when retrieving the SSH Address of a machine. Higher value means higher priority.
+// addressTypePreference when retrieving the SSH Address of a node/machine. Higher value means higher priority.
 // Unknown address types have the lowest priority (0).
 var addressTypePreference = map[corev1.NodeAddressType]int{
 	// internal names have priority, as we jump via a bastion host
@@ -48,14 +48,14 @@ var addressTypePreference = map[corev1.NodeAddressType]int{
 	corev1.NodeHostName: 1,
 }
 
-// PreferredAddressForMachine returns the preferred address of the given machine based on addressTypePreference.
-// If the machine has no addresses, an error is returned.
-func PreferredAddressForMachine(machine *machinev1alpha1.Machine) (string, error) {
-	if len(machine.Status.Addresses) == 0 {
-		return "", fmt.Errorf("no addresses found in status of machine %s", machine.Name)
+// PreferredAddress returns the preferred address of the given node/machine addresses based on addressTypePreference.
+// If the node/machine has no addresses, an error is returned.
+func PreferredAddress(addresses []corev1.NodeAddress) (string, error) {
+	if len(addresses) == 0 {
+		return "", fmt.Errorf("no addresses found in status")
 	}
 
-	address := slices.MaxFunc(machine.Status.Addresses, func(a, b corev1.NodeAddress) int {
+	address := slices.MaxFunc(addresses, func(a, b corev1.NodeAddress) int {
 		return addressTypePreference[a.Type] - addressTypePreference[b.Type]
 	})
 

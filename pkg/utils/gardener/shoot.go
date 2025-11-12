@@ -784,9 +784,15 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) stri
 	return fmt.Sprintf("%s-%s--%s", v1beta1constants.TechnicalIDPrefix, projectName, shoot.Name)
 }
 
-// IsShootNamespace returns true if the given namespace is a shoot namespace, i.e. it starts with the technical id prefix.
-func IsShootNamespace(namespace string) bool {
-	return strings.HasPrefix(namespace, v1beta1constants.TechnicalIDPrefix)
+// IsShootNamespace returns true if the given namespace is a shoot control plane namespace, i.e., if it has the
+// garden.cloud/role=shoot label.
+func IsShootNamespace(ctx context.Context, reader client.Reader, namespaceName string) (bool, error) {
+	namespace := &corev1.Namespace{}
+	if err := reader.Get(ctx, client.ObjectKey{Name: namespaceName}, namespace); err != nil {
+		return false, err
+	}
+
+	return namespace.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShoot, nil
 }
 
 // GetShootConditionTypes returns all known shoot condition types.

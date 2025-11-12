@@ -33,9 +33,9 @@ func (b *GardenadmBotanist) ConnectToControlPlaneMachine(ctx context.Context) er
 		return err
 	}
 
-	machineAddr, err := PreferredAddressForMachine(machine)
+	machineAddr, err := PreferredAddress(machine.Status.Addresses)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed getting preferred address for machine %q: %w", machine.Name, err)
 	}
 	sshAddr := net.JoinHostPort(machineAddr, "22")
 

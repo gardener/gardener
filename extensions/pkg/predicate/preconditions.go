@@ -45,7 +45,10 @@ func (p *shootNotFailedPredicate) Create(e event.CreateEvent) bool {
 		return false
 	}
 
-	if !gardenerutils.IsShootNamespace(e.Object.GetNamespace()) {
+	if isShootNamespace, err := gardenerutils.IsShootNamespace(p.ctx, p.reader, e.Object.GetNamespace()); err != nil {
+		logger.Error(err, "Error checking if extension object is in a shoot namespace")
+		return true
+	} else if !isShootNamespace {
 		return true
 	}
 

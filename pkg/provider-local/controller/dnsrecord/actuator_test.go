@@ -47,12 +47,12 @@ var _ = Describe("Actuator", func() {
 			configMapWithRule  *corev1.ConfigMap
 		)
 
-		BeforeEach(func() {
+		BeforeEach(func(ctx SpecContext) {
 			log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter))
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 
 			actuator = &Actuator{
-				Client: fakeClient,
+				RuntimeClient: fakeClient,
 			}
 
 			namespace = "foo"
@@ -82,6 +82,15 @@ var _ = Describe("Actuator", func() {
 					},
 				},
 			}
+
+			dnsSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dns-secret",
+					Namespace: namespace,
+				},
+			}
+			Expect(fakeClient.Create(ctx, dnsSecret)).To(Succeed())
+
 			apiDNSRecord = &extensionsv1alpha1.DNSRecord{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
@@ -90,6 +99,10 @@ var _ = Describe("Actuator", func() {
 					Name:   "api.something.local.gardener.cloud",
 					Values: []string{"1.2.3.4", "5.6.7.8"},
 					TTL:    ptr.To[int64](123),
+					SecretRef: corev1.SecretReference{
+						Name:      dnsSecret.Name,
+						Namespace: dnsSecret.Namespace,
+					},
 				},
 			}
 			otherDNSRecord = &extensionsv1alpha1.DNSRecord{

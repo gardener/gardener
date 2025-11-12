@@ -16,7 +16,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of the controller.
@@ -46,7 +45,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 // IsShootNamespace returns a predicate that returns true if the namespace is a shoot namespace.
 func IsShootNamespace() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return gardenerutils.IsShootNamespace(obj.GetName())
+		return obj.GetLabels()[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShoot
 	})
 }
 

@@ -30,8 +30,7 @@ case "$COMMAND" in
   down)
     kubectl --kubeconfig "$VIRTUAL_GARDEN_KUBECONFIG" annotate projects local garden confirmation.gardener.cloud/deletion=true || true
     kubectl annotate garden local confirmation.gardener.cloud/deletion=true || true
-
-    kubectl delete -k "$(dirname "$0")/garden/overlays/$SCENARIO" --ignore-not-found
+    kubectl delete garden local --wait=false --ignore-not-found
 
     echo "Waiting for the garden to be deleted..."
     kubectl wait --for=delete                            garden                             local          --timeout=300s
@@ -39,6 +38,9 @@ case "$COMMAND" in
     kubectl wait --for=condition=RequiredRuntime="False" extensions.operator.gardener.cloud provider-local --timeout=120s
     kubectl wait --for=condition=RequiredVirtual="False" extensions.operator.gardener.cloud provider-local --timeout=30s
     kubectl wait --for=condition=Installed="False"       extensions.operator.gardener.cloud provider-local --timeout=30s
+
+    # cleanup the remaining resources required for successful deletion of the garden
+    kubectl delete -k "$(dirname "$0")/garden/overlays/$SCENARIO" --ignore-not-found
     ;;
 
   *)

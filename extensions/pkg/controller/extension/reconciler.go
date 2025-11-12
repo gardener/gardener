@@ -72,7 +72,9 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	var cluster *extensions.Cluster
-	if gardenerutils.IsShootNamespace(ex.Namespace) {
+	if isShootNamespace, err := gardenerutils.IsShootNamespace(ctx, r.client, ex.Namespace); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error checking if Extension is in a shoot namespace: %w", err)
+	} else if isShootNamespace {
 		var err error
 		cluster, err = extensionscontroller.GetCluster(ctx, r.client, ex.Namespace)
 		if err != nil {

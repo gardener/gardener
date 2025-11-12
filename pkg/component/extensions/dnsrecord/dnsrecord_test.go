@@ -182,7 +182,7 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should only deploy the DNSRecord resource but not the secret", func() {
-			values.SecretData = nil
+			values.UseExistingSecret = true
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
@@ -671,6 +671,28 @@ var _ = Describe("DNSRecord", func() {
 					Expect(s.Data).To(Equal(secret.Data))
 					return nil
 				})
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{}), gomock.Any())
+			mc.EXPECT().Delete(ctx, dns)
+
+			dnsRecord := dnsrecord.New(log, mc, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
+			Expect(dnsRecord.Destroy(ctx)).To(Succeed())
+		})
+
+		It("should skip updating the DNSRecord secret if SecretName is empty", func() {
+			values.SecretName = ""
+
+			dns := &extensionsv1alpha1.DNSRecord{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						"confirmation.gardener.cloud/deletion": "true",
+						v1beta1constants.GardenerTimestamp:     now.UTC().Format(time.RFC3339Nano),
+					},
+				},
+			}
+
+			mc := mockclient.NewMockClient(ctrl)
 			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{}), gomock.Any())
 			mc.EXPECT().Delete(ctx, dns)
 
