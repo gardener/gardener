@@ -141,6 +141,18 @@ var _ = Describe("istiod", func() {
 			return str
 		}
 
+		istioIngressAutoscalerTLSTerminationHPA = func(min *int, max *int) string {
+			data, _ := os.ReadFile("./test_charts/ingress_autoscaler_tls_termination_hpa.yaml")
+			str := strings.ReplaceAll(string(data), "<MIN_REPLICAS>", strconv.Itoa(ptr.Deref(min, 2)))
+			str = strings.ReplaceAll(str, "<MAX_REPLICAS>", strconv.Itoa(ptr.Deref(max, 9)))
+			return str
+		}
+
+		istioIngressAutoscalerTLSTerminationVPA = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_autoscaler_tls_termination_vpa.yaml")
+			return string(data)
+		}
+
 		istioIngressEnvoyVPNFilter = func(i int) string {
 			data, _ := os.ReadFile("./test_charts/ingress_vpn_envoy_filter.yaml")
 			return strings.Split(string(data), "---\n")[i]
@@ -392,7 +404,6 @@ var _ = Describe("istiod", func() {
 
 			expectedIstioManifests := []string{
 				istioIngressNamespace(),
-				istioIngressAutoscaler(minReplicas, maxReplicas),
 				istioIngressRole(),
 				istioIngressRoleBinding(),
 				istioIngressService(),
@@ -439,7 +450,11 @@ var _ = Describe("istiod", func() {
 
 			if expectAPIServerTLSTermination {
 				expectedIstioManifests = append(expectedIstioManifests, istioAPIServerTLSTerminationEnvoyFilter())
+				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscalerTLSTerminationHPA(minReplicas, maxReplicas))
+				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscalerTLSTerminationVPA())
 				expectedIstioManifests = append(expectedIstioManifests, istioStripTrailingDotEnvoyFilter())
+			} else {
+				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscaler(minReplicas, maxReplicas))
 			}
 
 			if igw[0].TerminateLoadBalancerProxyProtocol {

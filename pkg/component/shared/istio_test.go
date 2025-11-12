@@ -24,6 +24,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	. "github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -92,6 +94,9 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 	if zoneSize := len(testValues.zones); zoneSize > 1 {
 		minReplicas = ptr.To(zoneSize * 2)
 		maxReplicas = ptr.To(zoneSize * 6)
+		if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+			maxReplicas = ptr.To(zoneSize * 8)
+		}
 	}
 
 	networkPolicyLabels := map[string]string{
@@ -207,6 +212,8 @@ var _ = Describe("Istio", func() {
 	)
 
 	BeforeEach(func() {
+		gardenletfeatures.RegisterFeatureGates()
+
 		zones = nil
 		istioDeploy = nil
 	})
@@ -242,6 +249,16 @@ var _ = Describe("Istio", func() {
 		Context("with VPN enabled", func() {
 			BeforeEach(func() {
 				vpnEnabled = true
+			})
+
+			It("should successfully create a new Istio deployer", func() {
+				checkIstio(istioDeploy, testValues)
+			})
+		})
+
+		Context("with IstioTLSTermination enabled", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
 			})
 
 			It("should successfully create a new Istio deployer", func() {
