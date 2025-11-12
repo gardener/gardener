@@ -115,8 +115,6 @@ type Reconciler struct {
 	// Channel and TokenSecretSyncConfigs are used by the reconciler to trigger events for the token reconciler during an in-place service-account-key rotation.
 	Channel                chan event.TypedGenericEvent[*corev1.Secret]
 	TokenSecretSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig
-
-	nodeRole string
 }
 
 // Reconcile decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
@@ -150,17 +148,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if node != nil {
-		log.Info("Setting node-role label on Node object")
-
-		r.nodeRole = "worker"
+		nodeRole := "worker"
 		if slices.ContainsFunc(osc.Spec.Files, func(file extensionsv1alpha1.File) bool {
 			return file.Path == filepath.Join(kubeletcomponent.FilePathKubernetesManifests, "kube-apiserver.yaml")
 		}) {
-			r.nodeRole = "control-plane"
+			nodeRole = "control-plane"
 		}
 
+		log.Info("Setting node-role label on Node object", "role", nodeRole)
+
 		patch := client.MergeFrom(node.DeepCopy())
-		metav1.SetMetaDataLabel(&node.ObjectMeta, "node-role.kubernetes.io/"+r.nodeRole, "")
+		metav1.SetMetaDataLabel(&node.ObjectMeta, "node-role.kubernetes.io/"+nodeRole, "")
 		if err := r.Client.Patch(ctx, node, patch); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add node-role label to node object: %w", err)
 		}

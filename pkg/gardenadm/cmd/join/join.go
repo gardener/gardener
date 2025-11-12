@@ -96,7 +96,7 @@ func run(ctx context.Context, opts *Options) error {
 			gardenerNodeAgentSecretName string
 
 			retrieveShortLivedKubeconfig = g.Add(flow.Task{
-				Name: "Retrieving short-lived kubeconfig cluster to prepare control plane scale-up",
+				Name: "Retrieving short-lived shoot cluster kubeconfig to prepare control plane scale-up",
 				Fn: func(ctx context.Context) error {
 					shootClientSet, err := cmd.InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
 					if err != nil {
