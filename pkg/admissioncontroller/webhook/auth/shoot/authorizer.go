@@ -68,6 +68,7 @@ var (
 	secretResource                    = corev1.Resource("secrets")
 	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
+	shootStateResource                = gardencorev1beta1.Resource("shootstates")
 )
 
 func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth.Decision, string, error) {
@@ -141,6 +142,16 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			return requestAuthorizer.Check(graph.VertexTypeShoot, attrs,
 				authwebhook.WithAllowedVerbs("update", "patch"),
 				authwebhook.WithAllowedSubresources("status"),
+			)
+		case shootStateResource:
+			if slices.Contains([]string{"create", "get", "list", "watch", "patch"}, attrs.GetVerb()) &&
+				attrs.GetName() == shootName && attrs.GetNamespace() == shootNamespace {
+				return auth.DecisionAllow, "", nil
+			}
+
+			return requestAuthorizer.Check(graph.VertexTypeShoot, attrs,
+				authwebhook.WithAllowedVerbs("create", "get", "list", "watch", "patch"),
+				authwebhook.WithAlwaysAllowedVerbs("create"),
 			)
 
 		default:

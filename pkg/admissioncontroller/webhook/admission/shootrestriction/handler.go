@@ -38,6 +38,7 @@ var (
 	leaseResource                     = coordinationv1.Resource("leases")
 	projectResource                   = gardencorev1beta1.Resource("projects")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
+	shootStateResource                = gardencorev1beta1.Resource("shootstates")
 )
 
 // Handler restricts requests made by shoot gardenlets.
@@ -73,6 +74,9 @@ func (h *Handler) Handle(_ context.Context, request admission.Request) admission
 
 	case leaseResource:
 		return h.admitCreateWithResourcePrefix(gardenletShootInfo, request)
+
+	case shootStateResource:
+		return h.admitShootState(gardenletShootInfo, request)
 
 	default:
 		log.Info(
@@ -111,6 +115,14 @@ func (h *Handler) admitCertificateSigningRequest(gardenletShootInfo types.Namesp
 
 	namespace, name, _, _ := shootidentity.FromCertificateSigningRequest(x509cr)
 	return h.admit(gardenletShootInfo, types.NamespacedName{Name: name, Namespace: namespace})
+}
+
+func (h *Handler) admitShootState(gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	return h.admit(gardenletShootInfo, types.NamespacedName{Name: request.Name, Namespace: request.Namespace})
 }
 
 func (h *Handler) admit(gardenletShootInfo, objectShootInfo types.NamespacedName) admission.Response {
