@@ -8,7 +8,7 @@ metadata:
 spec:
   cloudProfile:
     name: local
-  secretBindingName: local
+  credentialsBindingName: local
   region: local
   networking:
     type: calico
