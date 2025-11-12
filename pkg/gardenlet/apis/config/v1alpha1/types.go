@@ -719,18 +719,6 @@ const (
 	// By default we set this to 0 so that then BackupEntryController will trigger deletion immediately.
 	DefaultBackupEntryDeletionGracePeriodHours = 0
 
-	// DefaultDiscoveryDirName is the name of the default directory used for discovering Kubernetes APIs.
-	DefaultDiscoveryDirName = "gardenlet-discovery"
-
-	// DefaultDiscoveryCacheDirName is the name of the default directory used for the discovery cache.
-	DefaultDiscoveryCacheDirName = "cache"
-
-	// DefaultDiscoveryHTTPCacheDirName is the name of the default directory used for the discovery HTTP cache.
-	DefaultDiscoveryHTTPCacheDirName = "http-cache"
-
-	// DefaultDiscoveryTTL is the default ttl for the cached discovery client.
-	DefaultDiscoveryTTL = 10 * time.Second
-
 	// DefaultControllerConcurrentSyncs is a default value for concurrent syncs for controllers.
 	DefaultControllerConcurrentSyncs = 20
 

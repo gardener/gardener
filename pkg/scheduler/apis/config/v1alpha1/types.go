@@ -5,8 +5,6 @@
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
@@ -22,12 +20,6 @@ const (
 	SchedulerDefaultLockObjectNamespace = "garden"
 	// SchedulerDefaultLockObjectName is the default lock name for leader election.
 	SchedulerDefaultLockObjectName = "gardener-scheduler-leader-election"
-	// SchedulerDefaultConfigurationConfigMapNamespace is the namespace of the scheduler configuration config map
-	SchedulerDefaultConfigurationConfigMapNamespace = "garden"
-	// SchedulerDefaultConfigurationConfigMapName is the name of the scheduler configuration config map
-	SchedulerDefaultConfigurationConfigMapName = "gardener-scheduler-configmap"
-	// DefaultDiscoveryTTL is the default ttl for the cached discovery client.
-	DefaultDiscoveryTTL = 10 * time.Second
 
 	// LogLevelDebug is the debug log level, i.e. the most verbose.
 	LogLevelDebug = "debug"
