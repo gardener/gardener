@@ -3742,6 +3742,36 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("invalid with negative verbosity", core.ClusterAutoscaler{
 					Verbosity: &negativeInteger,
 				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("verbosity"), int64(negativeInteger), "must be greater than or equal to 0").WithOrigin("minimum"))),
+				Entry("valid with initialNodeGroupBackoffDuration", core.ClusterAutoscaler{
+					InitialNodeGroupBackoffDuration: &metav1.Duration{Duration: time.Minute},
+				}, version_1_32, BeEmpty()),
+				Entry("invalid with negative initialNodeGroupBackoffDuration", core.ClusterAutoscaler{
+					InitialNodeGroupBackoffDuration: &negativeDuration,
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("initialNodeGroupBackoffDuration"),
+					"Detail": Equal("must be non-negative"),
+				})))),
+				Entry("valid with maxNodeGroupBackoffDuration", core.ClusterAutoscaler{
+					MaxNodeGroupBackoffDuration: &metav1.Duration{Duration: time.Minute},
+				}, version_1_32, BeEmpty()),
+				Entry("invalid with negative maxNodeGroupBackoffDuration", core.ClusterAutoscaler{
+					MaxNodeGroupBackoffDuration: &negativeDuration,
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("maxNodeGroupBackoffDuration"),
+					"Detail": Equal("must be non-negative"),
+				})))),
+				Entry("valid with nodeGroupBackoffResetTimeout", core.ClusterAutoscaler{
+					NodeGroupBackoffResetTimeout: &metav1.Duration{Duration: time.Minute},
+				}, version_1_32, BeEmpty()),
+				Entry("invalid with negative nodeGroupBackoffResetTimeout", core.ClusterAutoscaler{
+					NodeGroupBackoffResetTimeout: &negativeDuration,
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("nodeGroupBackoffResetTimeout"),
+					"Detail": Equal("must be non-negative"),
+				})))),
 			)
 
 			Describe("taint validation", func() {

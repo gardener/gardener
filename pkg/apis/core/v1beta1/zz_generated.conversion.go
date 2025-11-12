@@ -2855,6 +2855,9 @@ func autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *Cluster
 	out.StatusTaints = *(*[]string)(unsafe.Pointer(&in.StatusTaints))
 	out.MaxScaleDownParallelism = (*int32)(unsafe.Pointer(in.MaxScaleDownParallelism))
 	out.MaxDrainParallelism = (*int32)(unsafe.Pointer(in.MaxDrainParallelism))
+	out.InitialNodeGroupBackoffDuration = (*metav1.Duration)(unsafe.Pointer(in.InitialNodeGroupBackoffDuration))
+	out.MaxNodeGroupBackoffDuration = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeGroupBackoffDuration))
+	out.NodeGroupBackoffResetTimeout = (*metav1.Duration)(unsafe.Pointer(in.NodeGroupBackoffResetTimeout))
 	return nil
 }
 
@@ -2872,6 +2875,9 @@ func autoConvert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *core.Cl
 	out.ScanInterval = (*metav1.Duration)(unsafe.Pointer(in.ScanInterval))
 	out.Expander = (*ExpanderMode)(unsafe.Pointer(in.Expander))
 	out.MaxNodeProvisionTime = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeProvisionTime))
+	out.InitialNodeGroupBackoffDuration = (*metav1.Duration)(unsafe.Pointer(in.InitialNodeGroupBackoffDuration))
+	out.MaxNodeGroupBackoffDuration = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeGroupBackoffDuration))
+	out.NodeGroupBackoffResetTimeout = (*metav1.Duration)(unsafe.Pointer(in.NodeGroupBackoffResetTimeout))
 	out.MaxGracefulTerminationSeconds = (*int32)(unsafe.Pointer(in.MaxGracefulTerminationSeconds))
 	out.StartupTaints = *(*[]string)(unsafe.Pointer(&in.StartupTaints))
 	out.StatusTaints = *(*[]string)(unsafe.Pointer(&in.StatusTaints))

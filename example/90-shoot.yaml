@@ -323,6 +323,9 @@ spec:
   #   expander: "priority,least-waste" # see: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders
   #   maxGracefulTerminationSeconds: 600
   #   maxNodeProvisionTime: 20m
+  #   initialNodeGroupBackoffDuration: 5m
+  #   maxNodeGroupBackoffDuration: 30m
+  #   nodeGroupBackoffResetTimeout: 3h
   #   scaleDownUtilizationThreshold: 0.5
   #   scaleDownUnneededTime: 30m
   #   scaleDownDelayAfterAdd: 1h

@@ -375,6 +375,15 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 	if obj.MaxDrainParallelism == nil {
 		obj.MaxDrainParallelism = ptr.To[int32](1)
 	}
+	if obj.InitialNodeGroupBackoffDuration == nil {
+		obj.InitialNodeGroupBackoffDuration = &metav1.Duration{Duration: 5 * time.Minute}
+	}
+	if obj.MaxNodeGroupBackoffDuration == nil {
+		obj.MaxNodeGroupBackoffDuration = &metav1.Duration{Duration: 30 * time.Minute}
+	}
+	if obj.NodeGroupBackoffResetTimeout == nil {
+		obj.NodeGroupBackoffResetTimeout = &metav1.Duration{Duration: 3 * time.Hour}
+	}
 }
 
 // SetDefaults_NginxIngress sets default values for NginxIngress objects.

@@ -4071,6 +4071,48 @@ int32
 Default: 1</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>initialNodeGroupBackoffDuration</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InitialNodeGroupBackoffDuration is the duration of first backoff after a new node failed to start (default: 5m).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxNodeGroupBackoffDuration</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxNodeGroupBackoffDuration is the maximum backoff duration for a NodeGroup after new nodes failed to start (default: 30m).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeGroupBackoffResetTimeout</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeGroupBackoffResetTimeout is the time after last failed scale-up when the backoff duration is reset (default: 3h).</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ClusterAutoscalerOptions">ClusterAutoscalerOptions

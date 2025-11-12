@@ -548,6 +548,12 @@ type ClusterAutoscaler struct {
 	Expander *ExpanderMode
 	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
 	MaxNodeProvisionTime *metav1.Duration
+	// InitialNodeGroupBackoffDuration is the duration of first backoff after a new node failed to start (default: 5m).
+	InitialNodeGroupBackoffDuration *metav1.Duration
+	// MaxNodeGroupBackoffDuration is the maximum backoff duration for a NodeGroup after new nodes failed to start (default: 30m).
+	MaxNodeGroupBackoffDuration *metav1.Duration
+	// NodeGroupBackoffResetTimeout is the time after last failed scale-up when the backoff duration is reset (default: 3h).
+	NodeGroupBackoffResetTimeout *metav1.Duration
 	// MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
 	MaxGracefulTerminationSeconds *int32
 	// StartupTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
