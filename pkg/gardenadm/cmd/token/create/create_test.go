@@ -95,25 +95,11 @@ var _ = Describe("Create", func() {
 		When("the join command should be printed", func() {
 			BeforeEach(func() {
 				Expect(command.Flags().Set("print-join-command", "true")).To(Succeed())
-				Expect(command.Flags().Set("worker-pool-name", "test-pool")).To(Succeed())
-			})
-
-			It("should fail because there are no gardener-node-agent-secrets", func() {
-				Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("no gardener-node-agent secrets found")))
 			})
 
 			It("should successfully print the join command", func() {
-				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-					Name:      "gardener-node-agent-test-pool",
-					Namespace: "kube-system",
-					Labels: map[string]string{
-						"gardener.cloud/role":        "operating-system-config",
-						"worker.gardener.cloud/pool": "test-pool",
-					},
-				}})).To(Succeed())
-
 				Expect(command.RunE(command, []string{token})).To(Succeed())
-				Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" --gardener-node-agent-secret-name gardener-node-agent-test-pool some-host
+				Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
 `))
 			})
 		})

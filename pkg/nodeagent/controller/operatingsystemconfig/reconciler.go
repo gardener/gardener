@@ -147,6 +147,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed extracting OSC from secret: %w", err)
 	}
 
+	if node != nil {
+		nodeRole := "worker"
+		if slices.ContainsFunc(osc.Spec.Files, func(file extensionsv1alpha1.File) bool {
+			return file.Path == filepath.Join(kubeletcomponent.FilePathKubernetesManifests, "kube-apiserver.yaml")
+		}) {
+			nodeRole = "control-plane"
+		}
+
+		log.Info("Setting node-role label on Node object", "role", nodeRole)
+
+		patch := client.MergeFrom(node.DeepCopy())
+		metav1.SetMetaDataLabel(&node.ObjectMeta, "node-role.kubernetes.io/"+nodeRole, "")
+		if err := r.Client.Patch(ctx, node, patch); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add node-role label to node object: %w", err)
+		}
+	}
+
 	log.Info("Applying containerd configuration")
 	if err := r.ReconcileContainerdConfig(ctx, log, osc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)

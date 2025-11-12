@@ -23,6 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
@@ -56,6 +57,8 @@ type Values struct {
 	ExternalClusterDomain *string
 	// IsWorkerless specifies whether the cluster has worker nodes.
 	IsWorkerless bool
+	// IsSelfHosted specifies whether the cluster is self-hosted.
+	IsSelfHosted bool
 	// KubernetesVersion is the version of the cluster.
 	KubernetesVersion *semver.Version
 	// EncryptedResources is the list of resources which are encrypted by the kube-apiserver.
@@ -324,6 +327,10 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
+	if err := registry.Add(s.selfHostedShootResources()...); err != nil {
+		return nil, err
+	}
+
 	return registry.SerializedObjects()
 }
 
@@ -470,4 +477,75 @@ func addNetworkToMap(name string, cidrs []net.IPNet, data map[string]string) {
 	if networks != "" {
 		data[name] = networks
 	}
+}
+
+func (s *shootSystem) selfHostedShootResources() []client.Object {
+	if !s.values.IsSelfHosted {
+		return nil
+	}
+
+	var (
+		rbacName = "gardener.cloud:gardenadm"
+
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: rbacName,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups:     []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+					Resources:     []string{"clusters"},
+					Verbs:         []string{"get"},
+					ResourceNames: []string{metav1.NamespaceSystem},
+				},
+			},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: rbacName,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     clusterRole.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Group",
+				Name:     v1beta1constants.ShootsGroup,
+			}},
+		}
+
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      rbacName,
+				Namespace: metav1.NamespaceSystem,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"secrets"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
+		}
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      rbacName,
+				Namespace: metav1.NamespaceSystem,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     role.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Group",
+				Name:     v1beta1constants.ShootsGroup,
+			}},
+		}
+	)
+
+	return []client.Object{clusterRole, clusterRoleBinding, role, roleBinding}
 }

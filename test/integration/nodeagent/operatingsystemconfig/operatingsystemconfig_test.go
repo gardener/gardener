@@ -882,6 +882,30 @@ units: {}
 		})
 	})
 
+	Context("node-role label", func() {
+		When("no static Kubernetes control-plane manifests are part of the OSC files", func() {
+			It("should add the 'worker' role label", func() {
+				Eventually(func(g Gomega) map[string]string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+					return node.Labels
+				}).Should(HaveKeyWithValue("node-role.kubernetes.io/worker", ""))
+			})
+		})
+
+		When("static Kubernetes control-plane manifests are part of the OSC files", func() {
+			BeforeEach(func() {
+				operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, extensionsv1alpha1.File{Path: "/etc/kubernetes/manifests/kube-apiserver.yaml"})
+			})
+
+			It("should add the 'control-plane' role label", func() {
+				Eventually(func(g Gomega) map[string]string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+					return node.Labels
+				}).Should(HaveKeyWithValue("node-role.kubernetes.io/control-plane", ""))
+			})
+		})
+	})
+
 	Context("in-place updates", func() {
 		var (
 			kubeletUnit                    extensionsv1alpha1.Unit

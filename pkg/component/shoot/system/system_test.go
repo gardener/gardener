@@ -564,6 +564,82 @@ var _ = Describe("ShootSystem", func() {
 					Expect(managedResource).To(contain(clusterRole))
 				})
 			})
+
+			When("shoot is self-hosted", func() {
+				BeforeEach(func() {
+					values.IsSelfHosted = true
+				})
+
+				It("should successfully deploy all gardenadm RBAC resources", func() {
+					expectedClusterRole := &rbacv1.ClusterRole{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gardener.cloud:gardenadm",
+						},
+						Rules: []rbacv1.PolicyRule{
+							{
+								APIGroups:     []string{"extensions.gardener.cloud"},
+								Resources:     []string{"clusters"},
+								Verbs:         []string{"get"},
+								ResourceNames: []string{"kube-system"},
+							},
+						},
+					}
+
+					expectedClusterRoleBinding := &rbacv1.ClusterRoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gardener.cloud:gardenadm",
+						},
+						RoleRef: rbacv1.RoleRef{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "ClusterRole",
+							Name:     "gardener.cloud:gardenadm",
+						},
+						Subjects: []rbacv1.Subject{{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "Group",
+							Name:     "gardener.cloud:system:shoots",
+						}},
+					}
+
+					expectedRole := &rbacv1.Role{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gardener.cloud:gardenadm",
+							Namespace: "kube-system",
+						},
+						Rules: []rbacv1.PolicyRule{
+							{
+								APIGroups: []string{""},
+								Resources: []string{"secrets"},
+								Verbs:     []string{"get", "list", "watch"},
+							},
+						},
+					}
+
+					expectedRoleBinding := &rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gardener.cloud:gardenadm",
+							Namespace: "kube-system",
+						},
+						RoleRef: rbacv1.RoleRef{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "Role",
+							Name:     "gardener.cloud:gardenadm",
+						},
+						Subjects: []rbacv1.Subject{{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "Group",
+							Name:     "gardener.cloud:system:shoots",
+						}},
+					}
+
+					Expect(managedResource).To(contain(
+						expectedClusterRole,
+						expectedClusterRoleBinding,
+						expectedRole,
+						expectedRoleBinding,
+					))
+				})
+			})
 		})
 	})
 

@@ -232,14 +232,26 @@ func (r *Reconciler) mustApproveKubeletServing(ctx context.Context, csr *certifi
 }
 
 func (r *Reconciler) mustApproveKubeAPIServerClient(ctx context.Context, csr *certificatesv1.CertificateSigningRequest, x509cr *x509.CertificateRequest) (string, decision, error) {
-	// Handle CSRs for gardener-node-agent only. There are other "kube-apiserver-client" CSRs which must not be touched.
-	if !strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix) {
-		return fmt.Sprintf("commonName %q is not prefixed with %q", x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix), csrNoOpinion, nil
+	// Handle CSRs for gardener-node-agent and gardenadm clients only. There might other "kube-apiserver-client" CSRs
+	// which must not be touched.
+	switch {
+	case strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix):
+		return r.mustApproveGardenerNodeAgentCSR(ctx, csr, x509cr)
+
+	case strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.GardenadmUserNamePrefix):
+		return mustApproveGardenadmCSR(csr, x509cr)
+
+	default:
+		return fmt.Sprintf("commonName %q is not prefixed with %q or %q", x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix, v1beta1constants.GardenadmUserNamePrefix), csrNoOpinion, nil
 	}
+}
 
-	machineName := strings.TrimPrefix(x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix)
+func (r *Reconciler) mustApproveGardenerNodeAgentCSR(ctx context.Context, csr *certificatesv1.CertificateSigningRequest, x509cr *x509.CertificateRequest) (string, decision, error) {
+	var (
+		machineName = strings.TrimPrefix(x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix)
+		nodeName    = machineName
+	)
 
-	nodeName := machineName
 	if r.Config.MachineNamespace != nil {
 		machine := &machinev1alpha1.Machine{}
 		if err := r.SourceClient.Get(ctx, client.ObjectKey{Namespace: *r.Config.MachineNamespace, Name: machineName}, machine); err != nil {
@@ -260,12 +272,26 @@ func (r *Reconciler) mustApproveKubeAPIServerClient(ctx context.Context, csr *ce
 				return "", csrNoOpinion, fmt.Errorf("error getting node object with name %q: %w", nodeName, err)
 			}
 		}
+
 	case strings.HasPrefix(csr.Spec.Username, v1beta1constants.NodeAgentUserNamePrefix):
 		if csr.Spec.Username != x509cr.Subject.CommonName {
 			return fmt.Sprintf("username %q and commonName %q do not match", csr.Spec.Username, x509cr.Subject.CommonName), csrDenied, nil
 		}
+
 	default:
 		return fmt.Sprintf("username %q is not allowed to create CSRs for a gardener-node-agent", csr.Spec.Username), csrDenied, nil
+	}
+
+	return "all checks passed", csrApproved, nil
+}
+
+func mustApproveGardenadmCSR(csr *certificatesv1.CertificateSigningRequest, x509cr *x509.CertificateRequest) (string, decision, error) {
+	if !strings.HasPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix) {
+		return fmt.Sprintf("username %q is not allowed to create CSRs for a gardenadm client", csr.Spec.Username), csrDenied, nil
+	}
+
+	if len(x509cr.Subject.Organization) != 1 || !slices.Contains(x509cr.Subject.Organization, v1beta1constants.ShootsGroup) {
+		return "organization in CSR does not match nodes group", csrDenied, nil
 	}
 
 	return "all checks passed", csrApproved, nil

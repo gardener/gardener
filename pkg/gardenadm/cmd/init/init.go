@@ -336,27 +336,20 @@ To start using your cluster, you need to run the following as a regular user:
   sudo cp -i %s $HOME/.kube/config
   sudo chown $(id -u):$(id -g) $HOME/.kube/config
   kubectl get nodes
-`, botanist.PathKubeconfig)
 
-	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
-		if worker.ControlPlane == nil {
-			fmt.Fprintf(opts.Out, `
-You can now join any number of worker machines to pool %[1]q (or any other
-worker pool). Run this on a control plane node:
+You can now join any number of control-plane or worker nodes. A bootstrap token
+is required to authenticate a new machine when joining the cluster. To create
+such a token, run this on a control-plane node:
 
-  gardenadm token create --print-join-command --worker-pool-name %[1]s
+  gardenadm token create --print-join-command
 
-Copy the output and run it as root on each node you would like to join the
-cluster.
-`, worker.Name)
-			break
-		}
-	}
+Copy the output and run it as root on the machine you would like to join the
+cluster. Append '--control-plane' to the printed command if the machine should
+be joined as a control-plane node.
 
-	fmt.Fprintf(opts.Out, `
-Note that the mentioned kubeconfig file will be disabled once you deploy the
-gardenlet and connect this cluster to an existing Gardener installation. Run
-this while targeting the garden cluster to which you want to connect this
+Note that the above mentioned kubeconfig file will be disabled once you deploy
+the gardenlet and connect this cluster to an existing Gardener installation.
+Run this while targeting the garden cluster to which you want to connect this
 self-hosted shoot cluster:
 
   gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s
@@ -366,7 +359,7 @@ gardenlet for connectivity to Gardener.
 
 Please use the shoots/adminkubeconfig subresource to retrieve a kubeconfig,
 see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
-`, b.Shoot.GetInfo().Namespace, b.Shoot.GetInfo().Name)
+`, botanist.PathKubeconfig, b.Shoot.GetInfo().Namespace, b.Shoot.GetInfo().Name)
 
 	return nil
 }

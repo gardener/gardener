@@ -35,7 +35,8 @@ var _ = Describe("Options", func() {
 	Describe("#Validate", func() {
 		It("should succeed when proper values were provided", func() {
 			options.BootstrapToken = "some-token"
-			options.GardenerNodeAgentSecretName = "some-secret-name"
+			options.WorkerPoolName = "some-pool-name"
+
 			Expect(options.Validate()).To(Succeed())
 		})
 
@@ -43,9 +44,12 @@ var _ = Describe("Options", func() {
 			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a bootstrap token")))
 		})
 
-		It("should fail when no node-agent secret name is provided", func() {
+		It("should fail when worker pool is provided when control plane instance should be joined", func() {
 			options.BootstrapToken = "some-token"
-			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a secret name for gardener-node-agent")))
+			options.WorkerPoolName = "some-pool-name"
+			options.ControlPlane = true
+
+			Expect(options.Validate()).To(MatchError(ContainSubstring("cannot provide a worker pool name when joining a control plane node")))
 		})
 	})
 

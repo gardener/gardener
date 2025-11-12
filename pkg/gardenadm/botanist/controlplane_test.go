@@ -6,7 +6,6 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -35,38 +34,14 @@ var _ = Describe("ControlPlane", func() {
 	})
 
 	Describe("#DiscoverKubernetesVersion", func() {
-		var (
-			controlPlaneAddress = "control-plane-address"
-			token               = "token"
-			caBundle            = []byte("ca-bundle")
-		)
-
 		It("should succeed discovering the version", func() {
-			DeferCleanup(test.WithVar(&NewWithConfig, func(_ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-				return fakekubernetes.NewClientSetBuilder().WithVersion("1.33.0").Build(), nil
-			}))
-
-			version, err := b.DiscoverKubernetesVersion(controlPlaneAddress, caBundle, token)
+			version, err := b.DiscoverKubernetesVersion(fakekubernetes.NewClientSetBuilder().WithVersion("1.33.0").Build())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(version).To(Equal(semver.MustParse("1.33.0")))
 		})
 
-		It("should fail creating the client set from the kubeconfig", func() {
-			DeferCleanup(test.WithVar(&NewWithConfig, func(_ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-				return nil, fmt.Errorf("fake err")
-			}))
-
-			version, err := b.DiscoverKubernetesVersion(controlPlaneAddress, caBundle, token)
-			Expect(err).To(MatchError(ContainSubstring("fake err")))
-			Expect(version).To(BeNil())
-		})
-
 		It("should fail parsing the kubernetes version", func() {
-			DeferCleanup(test.WithVar(&NewWithConfig, func(_ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-				return fakekubernetes.NewClientSetBuilder().WithVersion("cannot-parse").Build(), nil
-			}))
-
-			version, err := b.DiscoverKubernetesVersion(controlPlaneAddress, caBundle, token)
+			version, err := b.DiscoverKubernetesVersion(fakekubernetes.NewClientSetBuilder().WithVersion("cannot-parse").Build())
 			Expect(err).To(MatchError(ContainSubstring("failed parsing semver version")))
 			Expect(version).To(BeNil())
 		})
