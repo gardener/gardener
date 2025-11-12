@@ -6,7 +6,23 @@ Upgrading Gardener is a multi-step process that updates its core components, inc
 
 First, understand Gardener's [version skew policy](../deployment/version_skew_policy.md), which defines which component versions are compatible with each other.
 
+> [!NOTE]
+> Please pay special attention to this part of the version skew policy:
+>
+> _"However, given that our release cadence is much more frequent compared to Kubernetes (every `14d` vs. every `120d`), in many cases it might be possible to skip minor versions, though we do not test these upgrade paths._
+> _Consequently, in general it might not work, and to be on the safe side, it is highly recommended to follow the described policy and increment the minor version only one step at a time."_
+> 
+> _"🚨 Note that downgrading Gardener versions is generally not tested during development and should be considered unsupported."_
+
 Next, carefully read the [release notes](https://github.com/gardener/gardener/releases) for your target version. The notes will detail any breaking changes, new features, and bug fixes.
+Each release note has target audience:
+
+- `[USER]` (end-users or users of `Shoot` resources and related configuration)
+- `[OPERATOR]` (operators deploying Gardener, managing configuration, seed clusters, etc.)
+- `[DEVELOPER]` (developers changing or reviewing code in this repository)
+- `[DEPENDENCY]` (developers depending on code in this repository (e.g., extension developers))
+
+In the context of this guide, you should focus on release notes with `[OPERATOR]` and `[USER]` prefixes.
 
 If there are breaking changes, you must apply them to your configuration files (manifests) *before* you update the version numbers. This prevents components from starting with an incompatible configuration.
 
@@ -41,7 +57,7 @@ Next, upgrade the `gardenlet`s (and optionally your Gardener extensions).
 
 ### Unmanaged Seeds
 
-Start with `gardenlet`s that manage "unmanaged" seeds - seed clusters that are not created via `Shoot`s. These should be configured using `Gardenlet` resources in the `garden` namespace.
+Start with `gardenlet`s that manage "unmanaged" seeds - seed clusters that are not created via `Shoot`s. These should be configured using `Gardenlet` resources in the `garden` namespace within the (virtual) garden cluster.
 
 If you've enabled auto-updates (by adding the `operator.gardener.cloud/auto-update-gardenlet-helm-chart-ref=true` label to your `Gardenlet` resources), the `gardener-operator` will automatically trigger the upgrade. The `gardenlet`s will then perform a self-upgrade.
 
@@ -55,7 +71,12 @@ To prevent overloading the system, these upgrades are staggered using a "jitter"
 
 ### Extensions
 
-You can upgrade extensions by updating the version in their `ControllerDeployment` resource. This can be done at the same time as the `gardenlet` upgrade, but always check the extension's release notes to ensure compatibility.
+With `gardener-operator`, extensions should always be installed via the `operator.gardener.cloud/v1alpha1.Extension` API in the runtime cluster.
+In order to upgrade them, update their OCI references in these `Extension` resources.
+
+In case you also have extensions manually deployed to the (virtual) garden cluster (not recommended), update the version in their `ControllerDeployment` resources.
+
+In both cases, make sure to always check the extension's release notes to ensure compatibility with the Gardener version.
 
 ### Verify Readiness
 
@@ -73,6 +94,13 @@ Finally, check the health conditions (`.status.conditions[]`) in the `Seed` reso
 By default, after a `gardenlet` is upgraded, it immediately starts reconciling the `Shoot` clusters it manages. While this is suitable for small setups, it's often better to perform these reconciliations only during a predefined maintenance window.
 
 To enable this, set `.controllers.shoot.reconcileInMaintenanceOnly=true` in the `gardenlet`'s [component configuration](../../example/20-componentconfig-gardenlet.yaml). When this setting is enabled, all `Shoot`s will be reconciled during their next scheduled maintenance window, which typically occurs within 24 hours. You can learn more about shoot maintenance [here](../usage/shoot/shoot_maintenance.md#cluster-reconciliation).
+
+> [!IMPORTANT]
+> Make sure that all `Shoot`s have been reconciled (even if it failed) with the currently installed Gardener version before upgrading to the next version.
+> This is especially relevant if you choose to only reconcile in the shoot clusters' maintenance time windows.
+> In this case, you need to wait `24h` before upgrading Gardener again to be on the safe side.
+>
+> You can verify that all `Shoot`s have been reconciled with the current Gardener version by chekcing that their `.status.gardener.version` fields show your target version.
 
 ### Operating System Config Updates
 
