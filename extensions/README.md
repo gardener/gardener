@@ -21,6 +21,7 @@ Check out these repositories for implementations of the Gardener Extension contr
 - [Equinix Metal](https://github.com/gardener/gardener-extension-provider-equinix-metal)
 - [GCP](https://github.com/gardener/gardener-extension-provider-gcp)
 - [Hetzner Cloud](https://github.com/23technologies/gardener-extension-provider-hcloud)
+- [IronCore](https://github.com/ironcore-dev/gardener-extension-provider-ironcore)
 - [Kubevirt](https://github.com/gardener/gardener-extension-provider-kubevirt)
 - [MetalStack](https://github.com/metal-stack/gardener-extension-provider-metal)
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
@@ -61,6 +62,8 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 ### Generic Extensions
 
 - [Minimal Working Example](https://github.com/23technologies/gardener-extension-mwe)
+- [ACL](https://github.com/stackitcloud/gardener-extension-acl)
+- [Image Rewriter](https://github.com/gardener/gardener-extension-image-rewriter)
 - [Registry Cache](https://github.com/gardener/gardener-extension-registry-cache)
 - [Shoot Certificate Service](https://github.com/gardener/gardener-extension-shoot-cert-service)
 - [Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service)
@@ -71,6 +74,10 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 - [Shoot Networking Problem Detector](https://github.com/gardener/gardener-extension-shoot-networking-problemdetector)
 - [Shoot OpenID Connect Service](https://github.com/gardener/gardener-extension-shoot-oidc-service)
 - [Shoot Rsyslog Relp](https://github.com/gardener/gardener-extension-shoot-rsyslog-relp)
+
+### Others
+
+- [OIDC Apps Controller](https://github.com/gardener/oidc-apps-controller)
 
 If you implemented a new extension, please feel free to add it to this list!
 
