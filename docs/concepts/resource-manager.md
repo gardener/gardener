@@ -1130,6 +1130,32 @@ spec:
 For mutating pods, the webhook needs to know the namespace of the istio ingress gateway responsible for the kube-apiserver and its host names.
 These values are stored in `istio-internal-load-balancing` configmap in the same namespace as the pod being mutated.
 
+#### Vertical Pod Autoscaler In-Place Or Recreate Update Mode
+
+When enabled, this webhook provides a mechanism of mutating `VerticalPodAutoscaler` [resources](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/deploy/vpa-crd.yaml)
+
+```yaml
+.spec.updatePolicy.updateMode
+```
+
+configured with `Auto` or `Recreate` to switch to update mode `InPlaceOrRecreate`, enabling _in-place_ `Pod` [resources updates](https://kubernetes.io/blog/2025/05/16/kubernetes-v1-33-in-place-pod-resize-beta/). Preserving the `resource-manager` scope, the following constraints apply:
+- _mutates_ all `vpa` resources __inside__ `kube-system` and `kubernetes-dashboards` namespaces on `Shoot` clusters
+- _mutates_ all `vpa` resources __outside__ `kube-system` and `kubernetes-dashboards` namespaces on `Seed` clusters
+
+In addition, to prevent the _mutation_ of certain `VerticalPodAutoscaler` [resources](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/deploy/vpa-crd.yaml) falling within the webhook's scope, the following _label_
+
+```
+vpa-in-place-updates.resources.gardener.cloud/skip
+```
+
+could be appended to the resource metadata. With the _label_ specified, the webhook will filter out the resources, leaving its current `updateMode` configuration.
+
+Available for deployment with both [gardenlet](https://github.com/gardener/gardener/blob/master/docs/concepts/gardenlet.md) and [gardener-operator](https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md), enabling the webhook happens by activating a dedicated _feature gate_ within the respective component manifest:
+
+```
+VPAInPlaceUpdates
+```
+
 ### Validating Webhooks
 
 #### Unconfirmed Deletion Prevention For Custom Resources And Definitions

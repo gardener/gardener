@@ -288,6 +288,7 @@ build:
             - pkg/resourcemanager/webhook/projectedtokenmount
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
+            - pkg/resourcemanager/webhook/vpainplaceupdates
             - pkg/scheduler/apis/config/v1alpha1
             - pkg/utils
             - pkg/utils/chart
@@ -415,6 +416,7 @@ build:
             - pkg/resourcemanager/webhook/projectedtokenmount
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
+            - pkg/resourcemanager/webhook/vpainplaceupdates
             - pkg/utils
             - pkg/utils/context
             - pkg/utils/errors

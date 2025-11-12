@@ -190,3 +190,5 @@ data:
         machineNamespace: {{ .Values.global.config.webhooks.nodeAgentAuthorizer.machineNamespace }}
         {{- end }}
         authorizeWithSelectors: {{ .Values.global.config.webhooks.nodeAgentAuthorizer.authorizeWithSelectors }}
+      vpaInPlaceUpdates:
+        enabled: {{ .Values.global.config.webhooks.vpaInPlaceUpdates.enabled }}

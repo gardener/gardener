@@ -251,6 +251,8 @@ type ResourceManagerWebhookConfiguration struct {
 	NodeAgentAuthorizer NodeAgentAuthorizerWebhookConfig `json:"nodeAgentAuthorizer"`
 	// SeccompProfile is the configuration for the seccomp-profile webhook.
 	SeccompProfile SeccompProfileWebhookConfig `json:"seccompProfile"`
+	// VPAInPlaceUpdates is the configuration for the vpa-in-place-updates webhook.
+	VPAInPlaceUpdates VPAInPlaceUpdatesConfig `json:"vpaInPlaceUpdates"`
 }
 
 // CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
@@ -352,6 +354,12 @@ type NodeAgentAuthorizerWebhookConfig struct {
 
 // SeccompProfileWebhookConfig is the configuration for the seccomp-profile webhook.
 type SeccompProfileWebhookConfig struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool `json:"enabled"`
+}
+
+// VPAInPlaceUpdatesConfig is the configuration for the vpa-in-place-updates webhook.
+type VPAInPlaceUpdatesConfig struct {
 	// Enabled defines whether this webhook is enabled.
 	Enabled bool `json:"enabled"`
 }

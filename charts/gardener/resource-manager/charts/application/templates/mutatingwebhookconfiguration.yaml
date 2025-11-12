@@ -282,3 +282,38 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 10
 {{- end }}
+{{- if .Values.global.config.webhooks.vpaInPlaceUpdates.enabled }}
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /webhooks/vpa-in-place-updates
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: vpa-in-place-updates.resources.gardener.cloud
+  namespaceSelector: {}
+  objectSelector:
+    matchExpressions:
+      - key: vpa-in-place-updates.resources.gardener.cloud/skip
+      operator: DoesNotExist
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - autoscaling.k8s.io
+    apiVersions:
+    - v1
+    resources:
+    - verticalpodautoscalers
+    operations:
+    - CREATE
+    - UPDATE
+  sideEffects: None
+  timeoutSeconds: 10
+{{- end }}
