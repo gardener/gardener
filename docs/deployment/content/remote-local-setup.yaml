@@ -493,7 +493,7 @@ spec:
           EOF
           new_window "shoot lifecycle" "Create" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            k apply -f example/provider-local/shoot.yaml
+            if [[ "$IPFAMILY" == "ipv6" ]]; then k apply -f example/provider-local/shoot-ipv6.yaml; else k apply -f example/provider-local/shoot.yaml; fi
           EOF
           new_pane "Reconcile" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
