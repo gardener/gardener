@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -92,6 +93,12 @@ func AddToManager(
 		// TODO(rfranzke): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
 		if err := lease.AddToManager(mgr, gardenCluster, seedClientSet.RESTClient(), healthManager, nil); err != nil {
 			return fmt.Errorf("failed adding shoot-lease reconciler: %w", err)
+		}
+
+		if err := (&state.Reconciler{
+			Config: *cfg.Controllers.ShootState,
+		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+			return fmt.Errorf("failed adding Shoot State controller: %w", err)
 		}
 
 		return nil
