@@ -145,11 +145,13 @@ spec:
           There are multiple variants of the local setup of Gardener
           that can be prepared in a tmux session for convenience:
 
-          - '${g}prepare-gardener.sh${n}'          A basic 'make kind-up gardener-up' setup
-          - '${g}prepare-operator.sh${n}'          A 'make kind-multi-zone-up operator-up' setup
-             ${g}                   ${n}           with several tmux windows
-          - '${g}prepare-operator-complete.sh${n}' A 'make kind-multi-zone-up operator-up operator-seed-up' setup,
-             ${g}                            ${n}  a complete local "development landscape"
+          - '${g}prepare-gardener.sh${n}'                        A basic 'make kind-up gardener-up' setup
+          - '${g}prepare-operator.sh${n}'                        A 'make kind-multi-zone-up operator-up' setup
+             ${g}                   ${n}                         with several tmux windows
+          - '${g}prepare-operator-complete.sh${n}'               A 'make kind-multi-zone-up operator-up operator-seed-up' setup,
+             ${g}                            ${n}                a complete local "development landscape"
+          - '${g}IPFAMILY=ipv6 prepare-operator-complete.sh${n}' As 'prepare-operator-complete.sh' but using IPv6. It requires
+             ${g}                                          ${n}  a shoot with IPv6 enabled.
 
           The "Gardener HA" tmux session is prepared by default.
           To switch to another tmux session, please run the respective script.
