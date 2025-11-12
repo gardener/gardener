@@ -92,7 +92,6 @@
 
 * [DNS Autoscaling](usage/autoscaling/dns-autoscaling.md)
 * [In-place Resource Updates](usage/autoscaling/in-place-resource-updates.md)
-* [Enabling In-place Resource Updates](usage/autoscaling/enabling-in-place-resource-updates.md)
 * [Shoot Auto-Scaling Configuration](usage/autoscaling/shoot_autoscaling.md)
 * [Shoot Pod Auto-Scaling Best Practices](usage/autoscaling/shoot_pod_autoscaling_best_practices.md)
 
@@ -256,6 +255,7 @@
 
 * [Gardener configuration and usage](operations/configuration.md)
 * [Control Plane Migration](operations/control_plane_migration.md)
+* [Enabling In-place Resource Updates](operations/enabling-in-place-resource-updates.md)
 * [Immutable Backup Buckets](operations/immutable-backup-buckets.md)
 * [Istio](operations/istio.md)
 * [Kube API server load balancing](operations/kube_apiserver_loadbalancing.md)
