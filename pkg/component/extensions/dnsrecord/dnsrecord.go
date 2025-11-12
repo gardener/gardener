@@ -251,8 +251,12 @@ func (d *dnsRecord) Migrate(ctx context.Context) error {
 
 // Destroy deletes the DNSRecord resource.
 func (d *dnsRecord) Destroy(ctx context.Context) error {
-	if err := d.deploySecret(ctx); err != nil {
-		return err
+	// Deploy the provider secret if desired, so that the extension controller can use it to delete the DNSRecord.
+	// The SecretName value might be empty during destruction, i.e., for using the existing secret on the cluster.
+	if d.values.SecretName != "" {
+		if err := d.deploySecret(ctx); err != nil {
+			return err
+		}
 	}
 
 	return extensions.DeleteExtensionObject(
