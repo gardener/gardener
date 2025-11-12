@@ -225,7 +225,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				{
 					Path:     "path7",
 					Content:  osc.Spec.Files[0].Content,
-					NodeName: "-&#39;invalid&#39;",
+					NodeName: ptr.To("-&#39;invalid&#39;"),
 				},
 			}
 

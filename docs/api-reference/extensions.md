@@ -3262,6 +3262,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>NodeName contains the name of the node for node-specific configurations.
 If NodeName is not empty the corresponding file will only be rolled out to the node with the specified name.</p>
 </td>

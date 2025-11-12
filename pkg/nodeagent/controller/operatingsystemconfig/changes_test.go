@@ -183,21 +183,20 @@ var _ = Describe("Changes", func() {
 			osc := &extensionsv1alpha1.OperatingSystemConfig{
 				Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 					Files: []extensionsv1alpha1.File{
-						{Path: "/etc/foo", NodeName: ""},
-						{Path: "/etc/bar", NodeName: ""},
+						{Path: "/etc/foo", NodeName: nil},
+						{Path: "/etc/bar", NodeName: nil},
 					},
 				},
 				Status: extensionsv1alpha1.OperatingSystemConfigStatus{
 					ExtensionFiles: []extensionsv1alpha1.File{
-						{Path: "/etc/baz", NodeName: ""},
+						{Path: "/etc/baz", NodeName: nil},
 					},
 				},
 			}
-			files := CollectAllFiles(osc, "node-1")
-			Expect(files).To(ConsistOf(
-				extensionsv1alpha1.File{Path: "/etc/foo", NodeName: ""},
-				extensionsv1alpha1.File{Path: "/etc/bar", NodeName: ""},
-				extensionsv1alpha1.File{Path: "/etc/baz", NodeName: ""},
+			Expect(CollectAllFiles(osc, "node-1")).To(ConsistOf(
+				extensionsv1alpha1.File{Path: "/etc/foo", NodeName: nil},
+				extensionsv1alpha1.File{Path: "/etc/bar", NodeName: nil},
+				extensionsv1alpha1.File{Path: "/etc/baz", NodeName: nil},
 			))
 		})
 
@@ -205,25 +204,24 @@ var _ = Describe("Changes", func() {
 			osc := &extensionsv1alpha1.OperatingSystemConfig{
 				Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 					Files: []extensionsv1alpha1.File{
-						{Path: "/etc/foo", NodeName: "node-1"},
-						{Path: "/etc/bar", NodeName: "node-2"},
-						{Path: "/etc/all", NodeName: ""},
+						{Path: "/etc/foo", NodeName: ptr.To("node-1")},
+						{Path: "/etc/bar", NodeName: ptr.To("node-2")},
+						{Path: "/etc/all", NodeName: nil},
 					},
 				},
 				Status: extensionsv1alpha1.OperatingSystemConfigStatus{
 					ExtensionFiles: []extensionsv1alpha1.File{
-						{Path: "/etc/baz", NodeName: "node-1"},
-						{Path: "/etc/qux", NodeName: "node-3"},
-						{Path: "/etc/sts", NodeName: ""},
+						{Path: "/etc/baz", NodeName: ptr.To("node-1")},
+						{Path: "/etc/qux", NodeName: ptr.To("node-3")},
+						{Path: "/etc/sts", NodeName: nil},
 					},
 				},
 			}
-			files := CollectAllFiles(osc, "node-1")
-			Expect(files).To(ConsistOf(
-				extensionsv1alpha1.File{Path: "/etc/foo", NodeName: "node-1"},
-				extensionsv1alpha1.File{Path: "/etc/baz", NodeName: "node-1"},
-				extensionsv1alpha1.File{Path: "/etc/all", NodeName: ""},
-				extensionsv1alpha1.File{Path: "/etc/sts", NodeName: ""},
+			Expect(CollectAllFiles(osc, "node-1")).To(ConsistOf(
+				extensionsv1alpha1.File{Path: "/etc/foo", NodeName: ptr.To("node-1")},
+				extensionsv1alpha1.File{Path: "/etc/baz", NodeName: ptr.To("node-1")},
+				extensionsv1alpha1.File{Path: "/etc/all", NodeName: nil},
+				extensionsv1alpha1.File{Path: "/etc/sts", NodeName: nil},
 			))
 		})
 	})

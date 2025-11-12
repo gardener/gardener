@@ -148,7 +148,8 @@ type File struct {
 	Content FileContent `json:"content"`
 	// NodeName contains the name of the node for node-specific configurations.
 	// If NodeName is not empty the corresponding file will only be rolled out to the node with the specified name.
-	NodeName string `json:"nodeName,omitempty"`
+	// +optional
+	NodeName *string `json:"nodeName,omitempty"`
 }
 
 // FileContent can either reference a secret or contain inline configuration.

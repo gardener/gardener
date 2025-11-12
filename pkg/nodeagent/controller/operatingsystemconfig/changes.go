@@ -514,7 +514,7 @@ func mergeUnits(specUnits, statusUnits []extensionsv1alpha1.Unit) []extensionsv1
 func CollectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig, nodeName string) []extensionsv1alpha1.File {
 	clone := slices.Clone(append(osc.Spec.Files, osc.Status.ExtensionFiles...))
 	return slices.DeleteFunc(clone, func(file extensionsv1alpha1.File) bool {
-		return len(file.NodeName) != 0 && file.NodeName != nodeName
+		return file.NodeName != nil && *file.NodeName != nodeName
 	})
 }
 
