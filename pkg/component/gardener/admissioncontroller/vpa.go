@@ -17,7 +17,7 @@ func (a *gardenerAdmissionController) vpa() *vpaautoscalingv1.VerticalPodAutosca
 	updateMode := vpaautoscalingv1.UpdateModeRecreate
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      DeploymentName,
+			Name:      DeploymentName + "-vpa",
 			Namespace: a.namespace,
 			Labels:    GetLabels(),
 		},
