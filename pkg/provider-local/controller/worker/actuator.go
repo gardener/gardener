@@ -88,6 +88,12 @@ func (a *actuator) Restore(ctx context.Context, log logr.Logger, worker *extensi
 }
 
 func (a *actuator) deleteNoLongerNeededMachines(ctx context.Context, log logr.Logger, namespace string) error {
+	if namespace == metav1.NamespaceSystem {
+		// In the self-hosted shoot scenario, we do not need to delete any machines since we will adapt the machine pods
+		// running in the kind cluster (i.e., outside the self-hosted shoot).
+		return nil
+	}
+
 	_, shootClient, err := util.NewClientForShoot(ctx, a.workerDelegate.seedClient, namespace, client.Options{}, extensionsconfigv1alpha1.RESTOptions{})
 	if err != nil {
 		return fmt.Errorf("failed creating client for shoot cluster: %w", err)
