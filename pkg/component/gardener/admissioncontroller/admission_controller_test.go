@@ -817,7 +817,7 @@ func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
 
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gardener-admission-controller",
+			Name:      "gardener-admission-controller-vpa",
 			Namespace: namespace,
 			Labels: map[string]string{
 				"app":  "gardener",
