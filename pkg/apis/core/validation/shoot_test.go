@@ -8243,8 +8243,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"foo.**.bar": "abc",
 					"foo.bar*":   "123",
 					"foo.bar.*":  "abc",
+					"_foo.bar":   "123",
+					"/foo.bar":   "abc",
 				}, SatisfyAll(
-					HaveLen(12),
+					HaveLen(14),
 					HaveEach(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  ContainSubstring("sysctls."),

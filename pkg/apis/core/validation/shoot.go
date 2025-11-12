@@ -3375,7 +3375,7 @@ func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, 
 }
 
 // sysctlKeyRegex is used to validate the key of a sysctl
-var sysctlKeyRegex = regexp.MustCompile(`^(?:(?:[a-zA-Z0-9_/-]+|\*)\.)*[a-zA-Z0-9_/-]*[a-zA-Z0-9]$`)
+var sysctlKeyRegex = regexp.MustCompile(`^(?:(?:[a-zA-Z0-9-][a-zA-Z0-9_/-]*|\*)\.)*[a-zA-Z0-9_/-]*[a-zA-Z0-9]$`)
 
 // ValidateSysctls validates sysctls for valid keys and non-empty values
 func ValidateSysctls(sysctls map[string]string, fldPath *field.Path) field.ErrorList {
@@ -3394,9 +3394,9 @@ func ValidateSysctls(sysctls map[string]string, fldPath *field.Path) field.Error
 			allErrs = append(allErrs, field.TooLong(fldPath.Child(sysctlKey), sysctlKey, maxPathLen))
 		}
 
-		for _, v := range strings.Split(sysctlKey, ".") {
-			if len(v) > 255 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child(sysctlKey), v, "sub key of sysctl must not exceed 255 bytes"))
+		for subkey := range strings.SplitSeq(sysctlKey, ".") {
+			if len(subkey) > 255 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child(sysctlKey), subkey, "sub key of sysctl must not exceed 255 bytes"))
 			}
 		}
 
