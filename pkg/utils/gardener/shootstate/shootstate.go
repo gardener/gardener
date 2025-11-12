@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -125,28 +126,32 @@ func computeGardenerData(
 	if err != nil {
 		return nil, err
 	}
+	// Deactivate this for now as there are now MachineDeployments in self-hosted shoots for unmanaged infrastructure case.
+	if !gardenletutils.IsResponsibleForSelfHostedShoot() {
+		machineState, err := computeMachineState(ctx, seedClient, seedNamespace)
+		if err != nil {
+			return nil, err
+		}
 
-	machineState, err := computeMachineState(ctx, seedClient, seedNamespace)
-	if err != nil {
-		return nil, err
-	}
+		if machineState != nil {
+			machineStateJSON, err := json.Marshal(machineState)
+			if err != nil {
+				return nil, fmt.Errorf("failed marshalling machine state to JSON: %w", err)
+			}
 
-	machineStateJSON, err := json.Marshal(machineState)
-	if err != nil {
-		return nil, fmt.Errorf("failed marshalling machine state to JSON: %w", err)
-	}
+			machineStateJSONCompressed, err := compressMachineState(machineStateJSON)
+			if err != nil {
+				return nil, fmt.Errorf("failed compressing machine state data: %w", err)
+			}
 
-	machineStateJSONCompressed, err := compressMachineState(machineStateJSON)
-	if err != nil {
-		return nil, fmt.Errorf("failed compressing machine state data: %w", err)
-	}
-
-	if machineStateJSONCompressed != nil {
-		secretsToPersist = append(secretsToPersist, gardencorev1beta1.GardenerResourceData{
-			Name: v1beta1constants.DataTypeMachineState,
-			Type: v1beta1constants.DataTypeMachineState,
-			Data: runtime.RawExtension{Raw: machineStateJSONCompressed},
-		})
+			if machineStateJSONCompressed != nil {
+				secretsToPersist = append(secretsToPersist, gardencorev1beta1.GardenerResourceData{
+					Name: v1beta1constants.DataTypeMachineState,
+					Type: v1beta1constants.DataTypeMachineState,
+					Data: runtime.RawExtension{Raw: machineStateJSONCompressed},
+				})
+			}
+		}
 	}
 
 	return secretsToPersist, nil
