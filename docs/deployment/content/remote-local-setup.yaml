@@ -89,6 +89,8 @@ spec:
           echo stern           && go install github.com/stern/stern@latest
           echo neat            && krew install neat
           echo node-shell      && krew install node-shell
+          echo ""                                                                        >> /etc/hosts
+          echo "### Gardener IPv4 hosts ###"                                             >> /etc/hosts
           bash -c "
             echo {{p,g}-seed,{gu,p,v}-local--local}.ingress.local.seed.local.gardener.cloud \
                  api.{e2e-managedseed.garden,local.local}.{internal,external}.local.gardener.cloud \
@@ -102,6 +104,21 @@ spec:
           echo "172.18.255.3 dashboard.ingress.runtime-garden.local.gardener.cloud"      >> /etc/hosts
           echo "172.18.255.3 discovery.ingress.runtime-garden.local.gardener.cloud"      >> /etc/hosts
           echo "127.0.0.1 garden.local.gardener.cloud"                                   >> /etc/hosts
+          echo ""                                                                        >> /etc/hosts
+          echo "### Gardener IPv6 hosts ###"                                             >> /etc/hosts
+          bash -c "
+            echo {{p,g}-seed,{gu,p,v}-local--local}.ingress.local.seed.local.gardener.cloud \
+                 api.{e2e-managedseed.garden,local.local}.{internal,external}.local.gardener.cloud \
+                 api.e2e-{hib,upg-hib,wake-up,wake-up-ncp,migrate,rotate,default,upd-node,upgrade,upg-ha}{,-wl}.local.{internal,external}.local.gardener.cloud \
+                 api.e2e-upd-node-ovr.local.{internal,external}.local.gardener.cloud \
+                 api.e2e-{unpriv,mgr-hib,force-delete,fd-hib,auth-{one,two},layer4-lb,default-ip,rot-{{,nr-}ip,noroll,etcd}}.local.{internal,external}.local.gardener.cloud \
+                 gu-local--e2e-{rotate{,-wl},rot-{{,nr-}ip,noroll,etcd}}.ingress.local.seed.local.gardener.cloud
+              " | sed 's/ /\n/g' | sed 's/^/::1 /' | sort                                >> /etc/hosts
+          echo "::3 api.virtual-garden.local.gardener.cloud"                             >> /etc/hosts
+          echo "::3 plutono-garden.ingress.runtime-garden.local.gardener.cloud"          >> /etc/hosts
+          echo "::3 dashboard.ingress.runtime-garden.local.gardener.cloud"               >> /etc/hosts
+          echo "::3 discovery.ingress.runtime-garden.local.gardener.cloud"               >> /etc/hosts
+          echo "::1 garden.local.gardener.cloud"                                         >> /etc/hosts
 
           # Resolve e.g. gu-local--e2e-rot{ate{-wl},-noroll}.ingress.$seed_name. ... to 127.0.0.1 for the e2e tests:
           echo '
