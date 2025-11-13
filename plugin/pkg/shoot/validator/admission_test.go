@@ -293,7 +293,8 @@ var _ = Describe("validator", func() {
 								Machine: core.Machine{
 									Type: "machine-type-1",
 									Image: &core.ShootMachineImage{
-										Name: validMachineImageName,
+										Name:    validMachineImageName,
+										Version: "0.0.1",
 									},
 									Architecture: ptr.To("amd64"),
 								},
@@ -2936,7 +2937,8 @@ var _ = Describe("validator", func() {
 					Machine: core.Machine{
 						Type: "machine-type-kc",
 						Image: &core.ShootMachineImage{
-							Name: validMachineImageName,
+							Name:    validMachineImageName,
+							Version: "0.0.1",
 						},
 						Architecture: ptr.To("amd64"),
 					},
@@ -3288,15 +3290,20 @@ var _ = Describe("validator", func() {
 									Version: latestNonExpiredVersion,
 								},
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
-									{Capabilities: gardencorev1beta1.Capabilities{
-										"architecture":   []string{v1beta1constants.ArchitectureAMD64},
-										"someCapability": []string{"value1"},
-									}},
-									{Capabilities: gardencorev1beta1.Capabilities{
-										"architecture":   []string{v1beta1constants.ArchitectureARM64},
-										"someCapability": []string{"value1"},
-									}},
-								}},
+									{
+										Capabilities: gardencorev1beta1.Capabilities{
+											"architecture":   []string{v1beta1constants.ArchitectureAMD64},
+											"someCapability": []string{"value1"},
+										},
+									},
+									{
+										Capabilities: gardencorev1beta1.Capabilities{
+											"architecture":   []string{v1beta1constants.ArchitectureARM64},
+											"someCapability": []string{"value1"},
+										},
+									},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: latestNonExpiredVersionThatSupportsCapabilities,
@@ -3304,7 +3311,8 @@ var _ = Describe("validator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: nonExpiredVersion,
@@ -3312,7 +3320,8 @@ var _ = Describe("validator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version:        expiringVersion,
@@ -3321,7 +3330,8 @@ var _ = Describe("validator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version:        expiredVersion,
@@ -3330,9 +3340,11 @@ var _ = Describe("validator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 						},
-					}, {
+					},
+					{
 						Name: imageName2,
 						Versions: []gardencorev1beta1.MachineImageVersion{
 							{
@@ -3343,21 +3355,27 @@ var _ = Describe("validator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: latestNonExpiredVersion,
 								},
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
-									{Capabilities: gardencorev1beta1.Capabilities{
-										"architecture":   []string{v1beta1constants.ArchitectureARM64},
-										"someCapability": []string{"value1"},
-									}},
-									{Capabilities: gardencorev1beta1.Capabilities{
-										"architecture":   []string{v1beta1constants.ArchitectureAMD64},
-										"someCapability": []string{"value1"},
-									}},
-								}},
+									{
+										Capabilities: gardencorev1beta1.Capabilities{
+											"architecture":   []string{v1beta1constants.ArchitectureARM64},
+											"someCapability": []string{"value1"},
+										},
+									},
+									{
+										Capabilities: gardencorev1beta1.Capabilities{
+											"architecture":   []string{v1beta1constants.ArchitectureAMD64},
+											"someCapability": []string{"value1"},
+										},
+									},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: latestNonExpiredVersionThatSupportsCapabilities,
@@ -3365,7 +3383,8 @@ var _ = Describe("validator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: nonExpiredVersion,
@@ -3373,7 +3392,8 @@ var _ = Describe("validator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version:        expiringVersion,
@@ -3382,7 +3402,8 @@ var _ = Describe("validator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version:        expiredVersion,
@@ -3391,7 +3412,8 @@ var _ = Describe("validator", func() {
 								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
+								},
+							},
 						},
 					},
 				}
@@ -3441,7 +3463,8 @@ var _ = Describe("validator", func() {
 									Architectures: []string{"amd64", "arm64"},
 								},
 							},
-						}, {
+						},
+						{
 							Name: imageName2,
 							Versions: []gardencorev1beta1.MachineImageVersion{
 								{
@@ -3515,31 +3538,6 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
-				})
-
-				It("should reject due to an invalid machine image (not present in cloudprofile)", func() {
-					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name:    "not-supported",
-						Version: "not-supported",
-					}
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).To(BeForbiddenError())
-					Expect(err.Error()).To(ContainSubstring("image is not supported"))
-				})
-
-				It("should reject due to an invalid machine image (version unset)", func() {
-					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name: "not-supported",
-					}
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("spec.provider.workers[0]: Invalid value: %q: image is not supported", "not-supported"))
 				})
 
 				It("should reject due to a machine image with expiration date in the past", func() {
@@ -3967,211 +3965,28 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("machine image 'constraint-image-name@1.2.3' does not support kubelet version '1.25.0', supported kubelet versions by this machine image version: '>= 1.26'"))
 				})
 
-				It("should default version to latest supported non-preview version as shoot does not specify one", func() {
-					expectedImageVersion := latestNonExpiredVersionThatSupportsCapabilities
-					if !isCapabilityCloudProfile {
-						expectedImageVersion = latestNonExpiredVersion
-					}
-					shoot.Spec.Provider.Workers[0].Machine.Image = nil
-					shoot.Spec.Provider.Workers[1].Machine.Image = nil
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName1,
-						Version: expectedImageVersion,
-					}))
-					Expect(shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName1,
-						Version: latestNonExpiredVersion,
-					}))
-				})
-
-				It("should default version to latest supported non-preview version as shoot only specifies name", func() {
-					expectedImageVersion := latestNonExpiredVersionThatSupportsCapabilities
-					if !isCapabilityCloudProfile {
-						expectedImageVersion = latestNonExpiredVersion
-					}
+				It("should throw an error because of an invalid patch version", func() {
 					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name: imageName1,
-					}
-					shoot.Spec.Provider.Workers[1].Machine.Image = &core.ShootMachineImage{
-						Name: imageName1,
+						Name:    imageName1,
+						Version: "1.2.baz",
 					}
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName1,
-						Version: expectedImageVersion,
-					}))
-					Expect(shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName1,
-						Version: latestNonExpiredVersion,
-					}))
+					Expect(err).To(MatchError(ContainSubstring("Unsupported value: \"1.2.baz\": supported values:")))
 				})
 
-				Context("default machine image version", func() {
-					var (
-						suffixedVersion = "2.1.1-suffixed"
-					)
+				It("should reject to create a worker group with an expired machine image version", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name:    imageName1,
+						Version: "1.1.1",
+					}
 
-					BeforeEach(func() {
-						cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions,
-							gardencorev1beta1.MachineImageVersion{
-								ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: suffixedVersion},
-								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
-									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
-									{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureARM64}}},
-								}},
-						)
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
 
-						if !isCapabilityCloudProfile {
-							cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions,
-								gardencorev1beta1.MachineImageVersion{
-									ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: suffixedVersion},
-									Architectures:    []string{"amd64", "arm64"},
-								},
-							)
-						}
-					})
-
-					It("should throw an error because of an invalid major version", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
-							Version: "foo",
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(MatchError(ContainSubstring("must be a semantic version")))
-					})
-
-					It("should throw an error because of an invalid minor version", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
-							Version: "1.bar",
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(MatchError(ContainSubstring("must be a semantic version")))
-					})
-
-					It("should throw an error because of an invalid patch version", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
-							Version: "1.2.baz",
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(MatchError(ContainSubstring("Unsupported value: \"1.2.baz\": supported values:")))
-					})
-
-					It("should default a machine image version to latest major.minor.patch version", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name: imageName1,
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(Not(HaveOccurred()))
-						Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(suffixedVersion))
-					})
-
-					It("should default a major machine image version to latest minor.patch version", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
-							Version: "1",
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(Not(HaveOccurred()))
-						Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(expiringVersion))
-					})
-
-					It("should default a major.minor machine image version to latest supported patch version", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
-							Version: "2.0",
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(Not(HaveOccurred()))
-						Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(latestNonExpiredVersionThatSupportsCapabilities))
-					})
-
-					It("should reject defaulting a major.minor machine image version if there is no higher non-preview version available for defaulting", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
-							Version: "3",
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(MatchError(ContainSubstring("failed to determine latest machine image from cloud profile")))
-					})
-
-					It("should be able to explicitly pick preview versions", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
-							Version: "3.0.0",
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(Not(HaveOccurred()))
-						Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(previewVersion))
-					})
-
-					It("should reject: default only exactly matching minor machine image version", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
-							Version: "1.0",
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(MatchError(ContainSubstring("failed to determine latest machine image from cloud profile")))
-					})
-
-					It("should reject to create a worker group with an expired machine image version", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
-							Version: "1.1.1",
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machine-image:%s' is expired", expiredVersion)))
-					})
-
-					It("should reject defaulting a machine image version for worker pool with inplace update strategy if there is no machine image available in the cloud profile supporting inplace update", func() {
-						shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(MatchError(ContainSubstring("failed to determine latest machine image from cloud profile")))
-
-					})
+					Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machine-image:%s' is expired", expiredVersion)))
 				})
 
 				It("should allow supported CRI and CRs", func() {
@@ -5027,234 +4842,6 @@ var _ = Describe("validator", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{Name: "constraint-image-name", Version: "1.2.4"}))
 				})
-
-				It("should keep machine image of the old shoot (unset in new shoot)", func() {
-					newShoot := shoot.DeepCopy()
-					newShoot.Spec.Provider.Workers[0].Machine.Image = nil
-
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(shoot.Spec.Provider.Workers[0].Machine.Image))
-				})
-
-				It("should keep machine image of the old shoot (version unset in new shoot)", func() {
-					newShoot := shoot.DeepCopy()
-					newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name: imageName1,
-					}
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(shoot.Spec.Provider.Workers[0].Machine.Image))
-				})
-
-				It("should use updated machine image version as specified", func() {
-					newShoot := shoot.DeepCopy()
-					newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name:    imageName1,
-						Version: latestNonExpiredVersionThatSupportsCapabilities,
-					}
-
-					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName1,
-						Version: latestNonExpiredVersionThatSupportsCapabilities,
-					}))
-				})
-
-				It("should default a version prefix of an existing worker pool to the latest supported non-preview version", func() {
-					expectedImageVersion := latestNonExpiredVersionThatSupportsCapabilities
-					if !isCapabilityCloudProfile {
-						expectedImageVersion = latestNonExpiredVersion
-					}
-					newShoot := shoot.DeepCopy()
-					newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name:    imageName1,
-						Version: "2",
-					}
-
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).To(Not(HaveOccurred()))
-					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(expectedImageVersion))
-				})
-
-				It("should default a version prefix of a new image of an existing worker pool to the latest supported non-preview version", func() {
-					newShoot := shoot.DeepCopy()
-					newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name:    imageName2,
-						Version: "2.0",
-					}
-
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).To(Not(HaveOccurred()))
-					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(latestNonExpiredVersionThatSupportsCapabilities))
-				})
-
-				It("should default version of new worker pool to latest supported non-preview version", func() {
-					expectedImageVersion := latestNonExpiredVersionThatSupportsCapabilities
-					if !isCapabilityCloudProfile {
-						expectedImageVersion = latestNonExpiredVersion
-					}
-					newShoot := shoot.DeepCopy()
-					newWorker := newShoot.Spec.Provider.Workers[0].DeepCopy()
-					newWorker2 := newShoot.Spec.Provider.Workers[0].DeepCopy()
-					newWorker.Name = "second-worker"
-					newWorker2.Name = "third-worker"
-					newWorker.Machine.Image = nil
-					newWorker2.Machine.Image = nil
-					newWorker2.Machine.Type = "machine-type-3"
-					newWorker2.Machine.Architecture = ptr.To("arm64")
-					newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, *newWorker, *newWorker2)
-
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(newShoot.Spec.Provider.Workers[0]).To(Equal(shoot.Spec.Provider.Workers[0]))
-					Expect(newShoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName1,
-						Version: expectedImageVersion,
-					}))
-					Expect(newShoot.Spec.Provider.Workers[2].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName1,
-						Version: latestNonExpiredVersion,
-					}))
-				})
-
-				It("should default version of new worker pool to latest supported non-preview version (version unset)", func() {
-					expectedImageVersion := latestNonExpiredVersionThatSupportsCapabilities
-					if !isCapabilityCloudProfile {
-						expectedImageVersion = latestNonExpiredVersion
-					}
-
-					newShoot := shoot.DeepCopy()
-					newWorker := newShoot.Spec.Provider.Workers[0].DeepCopy()
-					newWorker2 := newShoot.Spec.Provider.Workers[0].DeepCopy()
-					newWorker.Name = "second-worker"
-					newWorker2.Name = "third-worker"
-					newWorker2.Machine.Type = "machine-type-3"
-					newWorker2.Machine.Architecture = ptr.To("arm64")
-					newWorker.Machine.Image = &core.ShootMachineImage{
-						Name: imageName2,
-					}
-					newWorker2.Machine.Image = &core.ShootMachineImage{
-						Name: imageName2,
-					}
-					newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, *newWorker, *newWorker2)
-
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(newShoot.Spec.Provider.Workers[0]).To(Equal(shoot.Spec.Provider.Workers[0]))
-					Expect(newShoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName2,
-						Version: expectedImageVersion,
-					}))
-					Expect(newShoot.Spec.Provider.Workers[2].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName2,
-						Version: latestNonExpiredVersion,
-					}))
-				})
-
-				It("should default version of worker pool to latest supported non-preview version when machine architecture is changed", func() {
-					newShoot := shoot.DeepCopy()
-					newShoot.Spec.Provider.Workers[0].Machine.Type = "machine-type-3"
-					newShoot.Spec.Provider.Workers[0].Machine.Image = nil
-					newShoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To("arm64")
-
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName1,
-						Version: nonExpiredVersion,
-					}))
-				})
-
-				It("should use version of new worker pool as specified", func() {
-					newShoot := shoot.DeepCopy()
-					newWorker := newShoot.Spec.Provider.Workers[0].DeepCopy()
-					newWorker.Name = "second-worker"
-					newWorker.Machine.Image = &core.ShootMachineImage{
-						Name:    imageName2,
-						Version: nonExpiredVersion,
-					}
-					newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, *newWorker)
-
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(newShoot.Spec.Provider.Workers[0]).To(Equal(shoot.Spec.Provider.Workers[0]))
-					Expect(newShoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName2,
-						Version: nonExpiredVersion,
-					}))
-				})
-
-				It("should default version of new image to latest supported non-preview version (version unset)", func() {
-					expectedImageVersion := latestNonExpiredVersionThatSupportsCapabilities
-					if !isCapabilityCloudProfile {
-						expectedImageVersion = latestNonExpiredVersion
-					}
-
-					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name:    imageName1,
-						Version: latestNonExpiredVersionThatSupportsCapabilities,
-					}
-
-					newShoot := shoot.DeepCopy()
-					newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name: imageName2,
-					}
-
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName2,
-						Version: expectedImageVersion,
-					}))
-				})
-
-				It("should use version of new image as specified", func() {
-					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name:    imageName1,
-						Version: latestNonExpiredVersionThatSupportsCapabilities,
-					}
-
-					newShoot := shoot.DeepCopy()
-					newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name:    imageName2,
-						Version: latestNonExpiredVersionThatSupportsCapabilities,
-					}
-
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
-						Name:    imageName2,
-						Version: latestNonExpiredVersionThatSupportsCapabilities,
-					}))
-				})
 			})
 
 			Context("delete Shoot", func() {
@@ -5395,7 +4982,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 					},
@@ -5554,7 +5145,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5601,7 +5196,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5649,7 +5248,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5684,7 +5287,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5721,7 +5328,11 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-1",
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5731,7 +5342,11 @@ var _ = Describe("validator", func() {
 					},
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-2",
+							Type: "machine-type-2",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{
@@ -5741,7 +5356,11 @@ var _ = Describe("validator", func() {
 					},
 					{
 						Machine: core.Machine{
-							Type:         "machine-type-2",
+							Type: "machine-type-2",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+							},
 							Architecture: ptr.To("amd64"),
 						},
 						Volume: &core.Volume{

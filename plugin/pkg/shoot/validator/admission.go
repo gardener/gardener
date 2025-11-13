@@ -11,7 +11,6 @@ import (
 	"io"
 	"reflect"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -31,7 +30,6 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -330,9 +328,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	}
 	if err := validationContext.validateCredentialsBindingChange(ctx, a, v.authorizer, v.credentialsBindingLister); err != nil {
 		return err
-	}
-	if allErrs = validationContext.ensureMachineImages(); len(allErrs) > 0 {
-		return admission.NewForbidden(a, allErrs.ToAggregate())
 	}
 
 	allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
@@ -753,25 +748,6 @@ func (c *validationContext) validateCredentialsBindingChange(
 	return nil
 }
 
-func (c *validationContext) ensureMachineImages() field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if c.shoot.DeletionTimestamp == nil {
-		for idx, worker := range c.shoot.Spec.Provider.Workers {
-			fldPath := field.NewPath("spec", "provider", "workers").Index(idx)
-
-			image, err := c.ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, fldPath)
-			if err != nil {
-				allErrs = append(allErrs, err)
-				continue
-			}
-			c.shoot.Spec.Provider.Workers[idx].Machine.Image = image
-		}
-	}
-
-	return allErrs
-}
-
 func (c *validationContext) validateAdmissionPlugins(a admission.Attributes, secretLister kubecorev1listers.SecretLister) field.ErrorList {
 	var (
 		allErrs           field.ErrorList
@@ -1172,9 +1148,10 @@ func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList
 		if ok, gvk := usesInternalVersion(worker.ProviderConfig); ok {
 			allErrs = append(allErrs, field.Invalid(workerPath.Child("providerConfig"), gvk, internalVersionErrorMsg))
 		}
-
-		if ok, gvk := usesInternalVersion(worker.Machine.Image.ProviderConfig); ok {
-			allErrs = append(allErrs, field.Invalid(workerPath.Child("machine", "image", "providerConfig"), gvk, internalVersionErrorMsg))
+		if worker.Machine.Image != nil {
+			if ok, gvk := usesInternalVersion(worker.Machine.Image.ProviderConfig); ok {
+				allErrs = append(allErrs, field.Invalid(workerPath.Child("machine", "image", "providerConfig"), gvk, internalVersionErrorMsg))
+			}
 		}
 
 		if worker.CRI != nil && worker.CRI.ContainerRuntimes != nil {
@@ -1605,137 +1582,6 @@ func validateZone(constraints []gardencorev1beta1.Region, region, zone string) (
 	return false, validValues
 }
 
-// getDefaultMachineImage determines the default machine image version for a shoot.
-// It selects the latest non-preview version from the first machine image in the CloudProfile
-// that supports the desired architecture and capabilities of the machine type.
-func getDefaultMachineImage(
-	machineImages []gardencorev1beta1.MachineImage,
-	image *core.ShootMachineImage,
-	arch *string,
-	machineType *gardencorev1beta1.MachineType,
-	capabilityDefinitions []gardencorev1beta1.CapabilityDefinition,
-	isUpdateStrategyInPlace bool,
-	fldPath *field.Path,
-) (*core.ShootMachineImage, *field.Error) {
-	var imageReference string
-	if image != nil {
-		imageReference = fmt.Sprintf("%s@%s", image.Name, image.Version)
-	}
-
-	if len(machineImages) == 0 {
-		return nil, field.Invalid(fldPath, imageReference, "the cloud profile does not contain any machine image - cannot create shoot cluster")
-	}
-
-	var defaultImage *gardencorev1beta1.MachineImage
-
-	if image != nil && len(image.Name) != 0 {
-		for _, mi := range machineImages {
-			machineImage := mi
-			if machineImage.Name == image.Name {
-				defaultImage = &machineImage
-				break
-			}
-		}
-		if defaultImage == nil {
-			return nil, field.Invalid(fldPath, image.Name, "image is not supported")
-		}
-	} else {
-		// select the first image which supports the required architecture type
-		for _, mi := range machineImages {
-			machineImage := mi
-			for _, version := range machineImage.Versions {
-				if v1beta1helper.ArchitectureSupportedByImageVersion(version, *arch, capabilityDefinitions) {
-					defaultImage = &machineImage
-					break
-				}
-				// skip capabilities check if machineType was not found in the cloud profile
-				if machineType != nil && v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineType.Capabilities, version.CapabilityFlavors, capabilityDefinitions) {
-					defaultImage = &machineImage
-					break
-				}
-			}
-			if defaultImage != nil {
-				break
-			}
-		}
-		if defaultImage == nil {
-			return nil, field.Invalid(fldPath, imageReference, fmt.Sprintf("no valid machine image found that supports architecture `%s`", *arch))
-		}
-	}
-
-	var (
-		machineImageVersionMajor *uint64
-		machineImageVersionMinor *uint64
-	)
-
-	if image != nil {
-		var err error
-		versionParts := strings.Split(strings.TrimPrefix(image.Version, "v"), ".")
-		if len(versionParts) == 3 {
-			return image, nil
-		}
-		if len(versionParts) == 2 && len(versionParts[1]) > 0 {
-			if machineImageVersionMinor, err = parseSemanticVersionPart(versionParts[1]); err != nil {
-				return nil, field.Invalid(fldPath, image.Version, err.Error())
-			}
-		}
-		if len(versionParts) >= 1 && len(versionParts[0]) > 0 {
-			if machineImageVersionMajor, err = parseSemanticVersionPart(versionParts[0]); err != nil {
-				return nil, field.Invalid(fldPath, image.Version, err.Error())
-			}
-		}
-	}
-
-	var validVersions []core.MachineImageVersion
-
-	for _, version := range defaultImage.Versions {
-		if !v1beta1helper.ArchitectureSupportedByImageVersion(version, *arch, capabilityDefinitions) {
-			continue
-		}
-
-		// skip capabilities check if machineType was not found in the cloud profile
-		if machineType != nil && !v1beta1helper.AreCapabilitiesSupportedByImageFlavors(machineType.Capabilities, version.CapabilityFlavors, capabilityDefinitions) {
-			continue
-		}
-
-		// if InPlace update is true, only consider versions that support in-place updates
-		if isUpdateStrategyInPlace && (version.InPlaceUpdates == nil || !version.InPlaceUpdates.Supported) {
-			continue
-		}
-
-		// CloudProfile cannot contain invalid semVer machine image version
-		parsedVersion := semver.MustParse(version.Version)
-		if machineImageVersionMajor != nil && parsedVersion.Major() != *machineImageVersionMajor ||
-			machineImageVersionMinor != nil && parsedVersion.Minor() != *machineImageVersionMinor {
-			continue
-		}
-
-		var coreVersion core.MachineImageVersion
-		if err := api.Scheme.Convert(&version, &coreVersion, nil); err != nil {
-			return nil, field.InternalError(fldPath, fmt.Errorf("failed to convert machine image from cloud profile: %s", err.Error()))
-		}
-		validVersions = append(validVersions, coreVersion)
-	}
-
-	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(validVersions, true)
-	if err != nil {
-		return nil, field.Invalid(fldPath, imageReference, fmt.Sprintf("failed to determine latest machine image from cloud profile: %s", err.Error()))
-	}
-	var providerConfig *runtime.RawExtension
-	if image != nil {
-		providerConfig = image.ProviderConfig
-	}
-	return &core.ShootMachineImage{Name: defaultImage.Name, ProviderConfig: providerConfig, Version: latestMachineImageVersion.Version}, nil
-}
-
-func parseSemanticVersionPart(part string) (*uint64, error) {
-	v, err := strconv.ParseUint(part, 10, 0)
-	if err != nil {
-		return nil, fmt.Errorf("%s must be a semantic version: %w", part, err)
-	}
-	return ptr.To(v), nil
-}
-
 func validateMachineImagesConstraints(a admission.Attributes, constraints []gardencorev1beta1.MachineImage, isNewWorkerPool, isUpdateStrategyInPlace bool, machine, oldMachine core.Machine, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) (bool, bool, bool, bool, []string) {
 	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && ptr.Equal(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, true, nil
@@ -1903,36 +1749,6 @@ func validateKubeletVersion(constraints []gardencorev1beta1.MachineImage, worker
 	}
 
 	return nil
-}
-
-func (c *validationContext) ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
-	// General approach with machine image defaulting in this code: Try to keep the machine image
-	// from the old shoot object to not accidentally update it to the default machine image.
-	// This should only happen in the maintenance time window of shoots and is performed by the
-	// shoot maintenance controller.
-	machineType := v1beta1helper.FindMachineTypeByName(c.cloudProfileSpec.MachineTypes, worker.Machine.Type)
-
-	oldWorker := helper.FindWorkerByName(oldWorkers, worker.Name)
-	if oldWorker != nil && oldWorker.Machine.Image != nil {
-		// worker is already existing -> keep the machine image if name/version is unspecified
-		if worker.Machine.Image == nil {
-			// machine image completely unspecified in new worker -> keep the old one
-			return oldWorker.Machine.Image, nil
-		}
-
-		if oldWorker.Machine.Image.Name == worker.Machine.Image.Name {
-			// image name was not changed -> keep version from the new worker if specified, otherwise use the old worker image version
-			if len(worker.Machine.Image.Version) != 0 {
-				return getDefaultMachineImage(c.cloudProfileSpec.MachineImages, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.MachineCapabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
-			}
-			return oldWorker.Machine.Image, nil
-		} else if len(worker.Machine.Image.Version) != 0 {
-			// image name was changed -> keep version from new worker if specified, otherwise default the image version
-			return getDefaultMachineImage(c.cloudProfileSpec.MachineImages, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.MachineCapabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
-		}
-	}
-
-	return getDefaultMachineImage(c.cloudProfileSpec.MachineImages, worker.Machine.Image, worker.Machine.Architecture, machineType, c.cloudProfileSpec.MachineCapabilities, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
 }
 
 // wasShootRescheduledToNewSeed returns true if the shoot.Spec.SeedName has been changed, but the migration operation has not started yet.
