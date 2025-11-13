@@ -1840,7 +1840,7 @@ Credentials
 Resources which are encrypted by default will not appear here.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config">https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config</a> for more details.</p>
 <p>Deprecated: This field is deprecated and will be removed with release v1.138.
-This field will be removed in favor of <code>gardenStatus.credentials.encryptionAtRest.resources</code>.</p>
+This field will be removed in favor of <code>status.credentials.encryptionAtRest.resources</code>.</p>
 </td>
 </tr>
 </tbody>

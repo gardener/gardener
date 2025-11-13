@@ -766,7 +766,7 @@ type GardenStatus struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
 	//
 	// Deprecated: This field is deprecated and will be removed with release v1.138.
-	// This field will be removed in favor of `gardenStatus.credentials.encryptionAtRest.resources`.
+	// This field will be removed in favor of `status.credentials.encryptionAtRest.resources`.
 	// +optional
 	EncryptedResources []string `json:"encryptedResources,omitempty"`
 }
