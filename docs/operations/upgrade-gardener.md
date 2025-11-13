@@ -49,6 +49,15 @@ Gardener components and extensions use an "image vector" to define the specific 
 
 Each Gardener release includes a `component-descriptor.yaml` file as a release asset. This file lists all container images for that version. You can use this list to pull the images, push them to your private registry, and generate the necessary configuration overwrite.
 
+### Extensions
+
+With `gardener-operator`, extensions should always be installed via the `operator.gardener.cloud/v1alpha1.Extension` API in the runtime cluster.
+In order to upgrade them, update their OCI references in these `Extension` resources.
+
+In case you also have extensions manually deployed to the (virtual) garden cluster (not recommended), update the version in their `ControllerDeployment` resources.
+
+In both cases, make sure to always check the extension's release notes to ensure compatibility with the Gardener version.
+
 ### Verify Readiness
 
 Before moving to the next step, you must verify that the `Garden` resource has been successfully updated. Check the following:
@@ -61,10 +70,11 @@ Before moving to the next step, you must verify that the `Garden` resource has b
 At this stage, it's normal for the `gardenlet`s to still be running the old version. This is similar to how Kubernetes upgrades its control plane before the `kubelet`s on worker nodes.
 
 Finally, check the health conditions (`.status.conditions[]`) in the `Garden` resource to ensure they all report `True`.
+Also check the health conditions in the `operator.gardener.cloud/v1alpha1.Extension` resources and ensure they all report `True`.
 
-## 3. Upgrade Your `gardenlet`s and Extensions
+## 3. Upgrade Your `gardenlet`s
 
-Next, upgrade the `gardenlet`s (and optionally your Gardener extensions).
+Next, upgrade the `gardenlet`s.
 
 ### Unmanaged Seeds
 
@@ -79,15 +89,6 @@ Alternatively, if you manage your `Gardenlet` resources with a GitOps tool like 
 Once a `gardenlet` is upgraded, it automatically begins upgrading any "managed" seeds it controls. No manual action is needed for this step. Note that a `ManagedSeed` upgrade will wait until any ongoing reconciliation of its underlying `Shoot` cluster is complete.
 
 To prevent overloading the system, these upgrades are staggered using a "jitter" period, so they won't all start at once. By default, this period is 5 minutes. You can adjust it in the `gardenlet`'s [component configuration](../../example/20-componentconfig-gardenlet.yaml) by setting `.controllers.managedSeed.syncJitterPeriod`. Set it to `0` to start all upgrades immediately, or increase it if you have many seed clusters to manage the load.
-
-### Extensions
-
-With `gardener-operator`, extensions should always be installed via the `operator.gardener.cloud/v1alpha1.Extension` API in the runtime cluster.
-In order to upgrade them, update their OCI references in these `Extension` resources.
-
-In case you also have extensions manually deployed to the (virtual) garden cluster (not recommended), update the version in their `ControllerDeployment` resources.
-
-In both cases, make sure to always check the extension's release notes to ensure compatibility with the Gardener version.
 
 ### Verify Readiness
 
