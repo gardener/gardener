@@ -14,7 +14,6 @@ import (
 	"slices"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,8 +39,8 @@ func computeMachineState(ctx context.Context, seedClient client.Client, namespac
 
 	machineDeployments := &machinev1alpha1.MachineDeploymentList{}
 	if err := seedClient.List(ctx, machineDeployments, client.InNamespace(namespace)); err != nil {
-		// In case of self-hosted shoot clusters with unmanaged infra structure, the MCM resources are not present.
-		if !meta.IsNoMatchError(err) && !apierrors.IsNotFound(err) {
+		// In case of self-hosted shoot clusters with unmanaged infrastructure, the MCM resources are not present.
+		if meta.IsNoMatchError(err) {
 			return nil, nil
 		}
 		return nil, err

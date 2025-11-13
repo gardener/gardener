@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -32,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/lease"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/tokenrequestor/workloadidentity"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -98,7 +98,7 @@ func AddToManager(
 		if err := (&state.Reconciler{
 			Config: *cfg.Controllers.ShootState,
 		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-			return fmt.Errorf("failed adding Shoot State controller: %w", err)
+			return fmt.Errorf("failed adding ShootState controller: %w", err)
 		}
 
 		return nil
