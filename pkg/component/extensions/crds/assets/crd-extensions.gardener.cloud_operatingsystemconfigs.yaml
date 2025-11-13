@@ -450,6 +450,18 @@ spec:
                   - type
                   type: object
                 type: array
+              controllers:
+                items:
+                  properties:
+                    active:
+                      type: boolean
+                    name:
+                      type: string
+                  required:
+                  - active
+                  - name
+                  type: object
+                type: array
               extensionFiles:
                 description: ExtensionFiles is a list of additional files provided
                   by the extension.

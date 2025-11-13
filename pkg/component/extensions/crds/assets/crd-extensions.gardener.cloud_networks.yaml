@@ -148,6 +148,18 @@ spec:
                   - type
                   type: object
                 type: array
+              controllers:
+                items:
+                  properties:
+                    active:
+                      type: boolean
+                    name:
+                      type: string
+                  required:
+                  - active
+                  - name
+                  type: object
+                type: array
               ipFamilies:
                 description: |-
                   IPFamilies specifies the IP protocol versions that actually are used for shoot networking.

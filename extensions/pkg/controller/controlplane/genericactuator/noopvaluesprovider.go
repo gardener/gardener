@@ -41,3 +41,8 @@ func (vp NoopValuesProvider) GetControlPlaneShootCRDsChartValues(context.Context
 func (vp NoopValuesProvider) GetStorageClassesChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (map[string]any, error) {
 	return nil, nil
 }
+
+// GetControllersValues returns the names of the controllers for which state should written to the controlplane status.
+func (vp NoopValuesProvider) GetControllersValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) ([]string, error) {
+	return nil, nil
+}

@@ -82,6 +82,13 @@ type DefaultStatus struct {
 	// Resources holds a list of named resource references that can be referred to in the state by their names.
 	// +optional
 	Resources []gardencorev1beta1.NamedResourceReference `json:"resources,omitempty"`
+
+	Controllers []ControllerConfig `json:"controllers,omitempty"`
+}
+
+type ControllerConfig struct {
+	Name   string `json:"name"`
+	Active bool   `json:"active"`
 }
 
 // GetProviderStatus implements Status.

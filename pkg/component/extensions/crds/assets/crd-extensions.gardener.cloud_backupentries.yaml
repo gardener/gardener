@@ -162,6 +162,18 @@ spec:
                   - type
                   type: object
                 type: array
+              controllers:
+                items:
+                  properties:
+                    active:
+                      type: boolean
+                    name:
+                      type: string
+                  required:
+                  - active
+                  - name
+                  type: object
+                type: array
               lastError:
                 description: LastError holds information about the last occurred error
                   during an operation.

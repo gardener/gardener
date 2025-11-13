@@ -2597,6 +2597,44 @@ DefaultStatus
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ControllerConfig">ControllerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">DefaultStatus</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>active</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.CredentialsRotation">CredentialsRotation
 </h3>
 <p>
@@ -3074,6 +3112,18 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <em>(Optional)</em>
 <p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>controllers</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ControllerConfig">
+[]ControllerConfig
+</a>
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>
