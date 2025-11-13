@@ -2169,6 +2169,10 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 		}
 	}
 
+	if worker.Sysctls != nil {
+		allErrs = append(allErrs, ValidateSysctls(worker.Sysctls, fldPath.Child("sysctls"))...)
+	}
+
 	return allErrs
 }
 
@@ -3368,6 +3372,40 @@ func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, 
 			}
 
 			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
+		}
+	}
+
+	return allErrs
+}
+
+// sysctlKeyRegex is used to validate the key of a sysctl
+var sysctlKeyRegex = regexp.MustCompile(`^(?:(?:[a-zA-Z0-9-][a-zA-Z0-9_/-]*|\*)\.)*[a-zA-Z0-9_/-]*[a-zA-Z0-9]$`)
+
+// ValidateSysctls validates sysctls for valid keys and non-empty values
+func ValidateSysctls(sysctls map[string]string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for sysctlKey, sysctlValue := range sysctls {
+		if !sysctlKeyRegex.MatchString(sysctlKey) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child(sysctlKey), sysctlKey, fmt.Sprintf("sysctl key must must match regex %q", sysctlKeyRegex)))
+		}
+
+		// sysctl keys translate to files in /proc/sys and hence, the limits in
+		// include/linux/limits.h (NAME_MAX = 255 and PATH_MAX = 4096) apply
+		maxPathLen := 4096 - len("/proc/sys/")
+
+		if len(sysctlKey) > maxPathLen {
+			allErrs = append(allErrs, field.TooLong(fldPath.Child(sysctlKey), sysctlKey, maxPathLen))
+		}
+
+		for subkey := range strings.SplitSeq(sysctlKey, ".") {
+			if len(subkey) > 255 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child(sysctlKey), subkey, "sub key of sysctl must not exceed 255 bytes"))
+			}
+		}
+
+		if len(sysctlValue) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child(sysctlKey), "sysctl requires a non-empty value"))
 		}
 	}
 

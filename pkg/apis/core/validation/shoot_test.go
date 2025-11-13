@@ -8242,6 +8242,75 @@ var _ = Describe("Shoot Validation Tests", func() {
 				"Detail": Equal("can not be less than -1"),
 			}))))
 		})
+
+		DescribeTable("sysctl setting validation", func(sysctls map[string]string, matcher gomegatypes.GomegaMatcher) {
+			errList := ValidateSysctls(sysctls, field.NewPath("sysctls"))
+			Expect(errList).To(matcher)
+		},
+			Entry("accept valid sysctl keys",
+				map[string]string{
+					"foo.bar":                        "123",
+					"fs.aio-nr":                      "192",
+					"fs.binfmt_misc.python3/13":      "enabled",
+					"net.ipv4.conf.eth0.forwarding":  "1",
+					"net.ipv4.tcp_mem":               "374874	499832	749748",
+					"-net.ipv4.conf.all.proxy_arp":   "0",
+					"net.ipv4.conf.*.route_localnet": "1",
+				},
+				BeEmpty(),
+			),
+			Entry("reject invalid sysctl keys not matching regex",
+				map[string]string{
+					".foo.bar":   "123",
+					"foo..bar":   "abc",
+					"foo.bar.":   "123",
+					"foo.bar_":   "abc",
+					"foo.bar/":   "123",
+					"foo.bar-":   "abc",
+					"foo\"bar":   "123",
+					"foo=bar":    "abc",
+					"foo;bar":    "123",
+					"foo.**.bar": "abc",
+					"foo.bar*":   "123",
+					"foo.bar.*":  "abc",
+					"_foo.bar":   "123",
+					"/foo.bar":   "abc",
+				}, SatisfyAll(
+					HaveLen(14),
+					HaveEach(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  ContainSubstring("sysctls."),
+						"Detail": ContainSubstring("sysctl key must must match regex"),
+					}))),
+				),
+			),
+			Entry("reject sysctl keys with too long subkeys",
+				map[string]string{
+					func(size int) string {
+						// create a very long string
+						var b strings.Builder
+						for range size {
+							fmt.Fprint(&b, "s")
+						}
+						return b.String()
+					}(256): "abc",
+				}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  ContainSubstring("sysctls.sss"),
+					"Detail": Equal("sub key of sysctl must not exceed 255 bytes"),
+				}))),
+			),
+			Entry("reject empty sysctl values",
+				map[string]string{
+					"foo": "",
+				}, ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("sysctls.foo"),
+					})),
+				),
+			),
+		)
 	})
 
 	Describe("#ValidateWorkers", func() {
