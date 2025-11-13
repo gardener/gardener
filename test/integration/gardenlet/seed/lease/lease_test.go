@@ -75,7 +75,7 @@ var _ = Describe("Seed lease controller tests", func() {
 	Describe("do not update the Lease object and set the internal health status to false", Ordered, func() {
 		var fakeError error
 
-		BeforeEach(OncePerOrdered, func() {
+		BeforeAll(func() {
 			DeferCleanup(test.WithVar(&leasecontroller.CheckConnection, func(context.Context, rest.Interface) error { return fakeError }))
 		})
 
