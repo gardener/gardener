@@ -78,7 +78,7 @@ const (
 	// VPAInPlaceUpdates enables the usage of in-place Pod resource updates in the Vertical Pod Autoscaler resources
 	// to perform in-place Pod resource updates.
 	// owner: @vitanovs @ialidzhikov
-	// alpha: v1.132.0
+	// alpha: v1.133.0
 	VPAInPlaceUpdates featuregate.Feature = "VPAInPlaceUpdates"
 )
 
