@@ -143,14 +143,10 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 				authwebhook.WithAllowedVerbs("update", "patch"),
 				authwebhook.WithAllowedSubresources("status"),
 			)
-		case shootStateResource:
-			if slices.Contains([]string{"create", "get", "list", "watch", "patch"}, attrs.GetVerb()) &&
-				attrs.GetName() == shootName && attrs.GetNamespace() == shootNamespace {
-				return auth.DecisionAllow, "", nil
-			}
 
-			return requestAuthorizer.Check(graph.VertexTypeShoot, attrs,
-				authwebhook.WithAllowedVerbs("create", "get", "list", "watch", "patch"),
+		case shootStateResource:
+			return requestAuthorizer.Check(graph.VertexTypeShootState, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "patch"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
 			)
 

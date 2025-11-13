@@ -95,6 +95,7 @@ func AddToManager(
 			return fmt.Errorf("failed adding shoot-lease reconciler: %w", err)
 		}
 
+		// TODO(tobschli): Remove this once all shoot reconcilers are added via `shoot.AddToManager`.
 		if err := (&state.Reconciler{
 			Config: *cfg.Controllers.ShootState,
 		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {

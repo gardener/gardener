@@ -426,6 +426,66 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 			})
 		})
 
+		Context("when requested for ShootStates", func() {
+			var name string
+
+			BeforeEach(func() {
+				name = "foo"
+
+				request.Name = name
+				request.UserInfo = gardenletUser
+				request.Resource = metav1.GroupVersionResource{
+					Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+					Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+					Resource: "shootstates",
+				}
+			})
+
+			DescribeTable("should not allow the request because no allowed verb",
+				func(operation admissionv1.Operation) {
+					request.Operation = operation
+
+					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+						AdmissionResponse: admissionv1.AdmissionResponse{
+							Allowed: false,
+							Result: &metav1.Status{
+								Code:    int32(http.StatusBadRequest),
+								Message: fmt.Sprintf("unexpected operation: %q", operation),
+							},
+						},
+					}))
+				},
+
+				Entry("update", admissionv1.Update),
+				Entry("delete", admissionv1.Delete),
+			)
+
+			Context("when operation is create", func() {
+				BeforeEach(func() {
+					request.Operation = admissionv1.Create
+				})
+
+				It("should return an error because the requestor is not responsible for the resource", func() {
+					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+						AdmissionResponse: admissionv1.AdmissionResponse{
+							Allowed: false,
+							Result: &metav1.Status{
+								Code:    int32(http.StatusForbidden),
+								Message: "object does not belong to shoot " + shootNamespace + "/" + shootName,
+							},
+						},
+					}))
+				})
+
+				It("should return success because the requestor is responsible for the resource", func() {
+					request.Name = shootName
+					request.Namespace = shootNamespace
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+			})
+		})
+
 		Context("gardenadm client", func() {
 			Context("when requested for Projects", func() {
 				var (
