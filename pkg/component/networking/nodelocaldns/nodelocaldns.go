@@ -126,6 +126,8 @@ type Values struct {
 	Workers []gardencorev1beta1.Worker
 	// KubeProxyConfig is the kube-proxy configuration for the shoot.
 	KubeProxyConfig *gardencorev1beta1.KubeProxyConfig
+	// MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.
+	MinAllowed corev1.ResourceList
 }
 
 // New creates a new instance of DeployWaiter for node-local-dns.

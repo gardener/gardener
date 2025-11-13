@@ -4419,7 +4419,8 @@ control plane of a shoot.</p>
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.ETCDConfig">ETCDConfig</a>, 
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>, 
+<a href="#core.gardener.cloud/v1beta1.NodeLocalDNS">NodeLocalDNS</a>)
 </p>
 <p>
 <p>ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.</p>
@@ -4442,7 +4443,7 @@ Kubernetes core/v1.ResourceList
 </em>
 </td>
 <td>
-<p>MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+<p>MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.
 Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
 Default values are not applied to this field.</p>
 </td>
@@ -9644,6 +9645,20 @@ bool
 <em>(Optional)</em>
 <p>DisableForwardToUpstreamDNS indicates whether requests from node local DNS to upstream DNS should be disabled.
 Default, if unspecified, is to forward requests for external domains to upstream DNS</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>autoscaling</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControlPlaneAutoscaling">
+ControlPlaneAutoscaling
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for the node local DNS components.</p>
 </td>
 </tr>
 </tbody>

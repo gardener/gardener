@@ -997,7 +997,7 @@ type KubeAPIServerConfig struct {
 
 // ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
 type ControlPlaneAutoscaling struct {
-	// MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+	// MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.
 	// Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
 	// Default values are not applied to this field.
 	MinAllowed corev1.ResourceList `json:"minAllowed" protobuf:"bytes,1,rep,name=minAllowed,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
@@ -2006,6 +2006,9 @@ type NodeLocalDNS struct {
 	// Default, if unspecified, is to forward requests for external domains to upstream DNS
 	// +optional
 	DisableForwardToUpstreamDNS *bool `json:"disableForwardToUpstreamDNS,omitempty" protobuf:"varint,4,opt,name=disableForwardToUpstreamDNS"`
+	// Autoscaling contains auto-scaling configuration options for the node local DNS components.
+	// +optional
+	Autoscaling *ControlPlaneAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,5,opt,name=autoscaling"`
 }
 
 const (
