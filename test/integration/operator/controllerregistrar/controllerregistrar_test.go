@@ -23,7 +23,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Controller Registrar controller tests", Ordered, func() {
+var _ = Describe("Controller Registrar controller tests", func() {
 	var (
 		operatorCtx, operatorCancel = context.WithCancel(ctx)
 		garden                      *operatorv1alpha1.Garden
