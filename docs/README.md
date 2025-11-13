@@ -254,6 +254,7 @@
 ## Operations
 
 * [Gardener configuration and usage](operations/configuration.md)
+* [Gardener Upgrade Guide](operations/upgrade-gardener.md)
 * [Control Plane Migration](operations/control_plane_migration.md)
 * [Enabling In-place Resource Updates](operations/enabling-in-place-resource-updates.md)
 * [Immutable Backup Buckets](operations/immutable-backup-buckets.md)
