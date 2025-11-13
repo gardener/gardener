@@ -112,7 +112,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// must be delayed, until the deletion is finished.
 	if r.ClassFilter.IsWaitForCleanupRequired(mr) {
 		log.Info("Waiting for previous handler to clean resources created by ManagedResource")
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{}, nil
 	}
 	return r.reconcile(ctx, log, mr)
 }

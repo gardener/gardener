@@ -437,6 +437,39 @@ var _ = Describe("ManagedResource controller tests", func() {
 				return managedResource.Status.Conditions
 			}).Should(BeEmpty())
 		})
+
+		It("should transfer responsibility if class changes", func() {
+			By("Add finalizer to ManagedResource for other class")
+			patch := client.MergeFrom(managedResource.DeepCopy())
+			controllerutil.AddFinalizer(managedResource, "resources.gardener.cloud/gardener-resource-manager-test")
+			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+
+			By("Change class of ManagedResource to default to transfer responsibility")
+			patch = client.MergeFrom(managedResource.DeepCopy())
+			managedResource.Spec.Class = ptr.To(filter.ResourceClass())
+			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+
+			By("Ensure that the finalizer for the test class is not removed after the class is changed")
+			Consistently(func(g Gomega) []string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				return managedResource.Finalizers
+			}).Should(ContainElement("resources.gardener.cloud/gardener-resource-manager-test"))
+
+			By("Remove the finalizer for the test class to finish responsibility transfer")
+			patch = client.MergeFrom(managedResource.DeepCopy())
+			controllerutil.RemoveFinalizer(managedResource, "resources.gardener.cloud/gardener-resource-manager-test")
+			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+
+			By("Ensure that finalizer for default class is added and that resources are created")
+			Eventually(func(g Gomega) []string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				return managedResource.Finalizers
+			}).Should(ContainElement("resources.gardener.cloud/gardener-resource-manager"))
+
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+			}).Should(Succeed())
+		})
 	})
 
 	Describe("Reconciliation Modes/Annotations", func() {
