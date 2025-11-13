@@ -19,7 +19,10 @@ Technically, we follow the same [policy](https://kubernetes.io/releases/version-
 However, given that our release cadence is much more frequent compared to Kubernetes (every `14d` vs. every `120d`), in many cases it might be possible to skip minor versions, though we do not test these upgrade paths.
 Consequently, in general it might not work, and to be on the safe side, it is highly recommended to follow the described policy and increment the minor version only one step at a time.
 
-🚨 Note that downgrading Gardener versions is generally not tested during development and should be considered unsupported.
+>[!NOTE]
+> 🚨 Downgrading Gardener versions is generally not tested during development and should be considered unsupported.
+
+Please also take a look at the [Gardener upgrade guide](../operations/upgrade-gardener.md).
 
 #### gardener-apiserver
 

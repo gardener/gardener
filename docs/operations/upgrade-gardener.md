@@ -24,8 +24,6 @@ Each release note has target audience:
 
 In the context of this guide, you should focus on release notes with `[OPERATOR]` and `[USER]` prefixes.
 
-If there are breaking changes, you must apply them to your configuration files (manifests) *before* you update the version numbers. This prevents components from starting with an incompatible configuration.
-
 ### Deprecations and Backwards-Compatibility
 
 Gardener introduces breaking changes cautiously to ensure stability. You can read the full policy [here](../development/process.md#deprecations-and-backwards-compatibility). The release notes will always highlight when you need to perform manual steps.
@@ -34,9 +32,22 @@ Gardener introduces breaking changes cautiously to ensure stability. You can rea
 - Changes to operator-level APIs (like `Garden` or `Seed`) are deprecated for at least three minor releases before being removed.
 - For extensions, the deprecation period is even longer, typically nine minor releases.
 
+If there are breaking changes, you must apply them to your configuration files (manifests) *before* you update the version numbers. This prevents components from starting with an incompatible configuration.
+
+> [!NOTE]
+> As explained above, changes affecting the `Shoot` API for `[USER]`s are typically connected with a Kubernetes minor version upgrade.
+> Hence, they only become relevant when they upgrade Kubernetes - see also [this document](../usage/shoot/shoot_kubernetes_versions.md).
+> All `[USER]`-related changes mark as "breaking" must be adapted right now.
+
 ## 2. Upgrade `gardener-operator` and Gardener Control Plane
 
 After updating your configuration files, you can deploy the new `gardener-operator` using its [Helm chart](../../charts/gardener/operator). Once the new operator is running, it will automatically begin updating the `Garden` resource. This process rolls out the new versions of the Gardener control plane components, such as `gardener-apiserver` and `gardener-controller-manager`.
+
+### Image Vector and Overwrites
+
+Gardener components and extensions use an "image vector" to define the specific container images they deploy. If your organization requires using a private container registry, you can replicate the official images and configure Gardener to use them. Follow the instructions [here](../deployment/image_vector.md) to create an image vector overwrite.
+
+Each Gardener release includes a `component-descriptor.yaml` file as a release asset. This file lists all container images for that version. You can use this list to pull the images, push them to your private registry, and generate the necessary configuration overwrite.
 
 ### Verify Readiness
 
@@ -100,16 +111,13 @@ To enable this, set `.controllers.shoot.reconcileInMaintenanceOnly=true` in the 
 > This is especially relevant if you choose to only reconcile in the shoot clusters' maintenance time windows.
 > In this case, you need to wait `24h` before upgrading Gardener again to be on the safe side.
 >
-> You can verify that all `Shoot`s have been reconciled with the current Gardener version by chekcing that their `.status.gardener.version` fields show your target version.
+> You can verify that all `Shoot`s have been reconciled with the current Gardener version by checking that their `.status.gardener.version` fields show your target version.
 
 ### Operating System Config Updates
 
-Similar to seed upgrades, updates to the operating system on `Shoot` cluster worker nodes are also staggered. This prevents all nodes from being updated simultaneously, which could cause disruptions like `kubelet` restarts across the entire cluster.
+Gardener upgrades also roll out new versions of `gardener-node-agent` which runs on each worker node of all `Shoot`s.
+This rollout happens during `Shoot` reconciliation and could also include other operating system configuration updates.
+Similar to seed upgrades, such updates to the operating system on `Shoot` cluster worker nodes are also staggered.
+This prevents all nodes from being updated simultaneously, which could cause disruptions like `kubelet` restarts across the entire cluster.
 
 By default, the rollout across all nodes completes within 5 minutes. You can customize this timeframe by adding the `shoot.gardener.cloud/cloud-config-execution-max-delay-seconds` annotation to your `Shoot`s. A value of `0` updates all nodes in parallel, while a higher value spreads the update over a longer period (up to 1800 seconds).
-
-## Image Vector and Overwrites
-
-Gardener components and extensions use an "image vector" to define the specific container images they deploy. If your organization requires using a private container registry, you can replicate the official images and configure Gardener to use them. Follow the instructions [here](../deployment/image_vector.md) to create an image vector overwrite.
-
-Each Gardener release includes a `component-descriptor.yaml` file as a release asset. This file lists all container images for that version. You can use this list to pull the images, push them to your private registry, and generate the necessary configuration overwrite.
