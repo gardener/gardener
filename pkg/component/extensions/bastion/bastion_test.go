@@ -112,7 +112,7 @@ id gardener || useradd gardener -mU
 mkdir -p /home/gardener/.ssh
 echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDJXpm5HiBLMIX/M7TrES/pEaYNSdc4cBlVyTilWFj8h3yPbOOtWUFmnWSUBEr8y3UE86ZEpC2DvndQJ7BiOlF1OHLOyJwrPgWWDibvannttaz/CL6PY3lFzR4X3xHL/8VjoZuzlUlWLPtZJ8ShdpIURgiS/4IooBD0nSSSJjO2LLP6n+5IPuwg4BWSyPgzn8P7gZW2olX7hpJ1Si2i556EnV/CZz9lOxzMxcCctxXoE/03QZfltQFb6z8dIwud0TL4ZLJ7Up2AtmKXMCh2a161B0tgI5dmyK990J4XyWwuMtX+i4Az4XDAzlBtTWL6JhGpWTwCnLOz1Yy+4CnyarlR" > /home/gardener/.ssh/authorized_keys
 chown gardener:gardener /home/gardener/.ssh/authorized_keys
-systemctl start ssh
+systemctl start sshd || systemctl start ssh
 `))
 		})
 
