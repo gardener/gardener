@@ -299,6 +299,7 @@ build:
             - pkg/utils/gardener/gardenlet
             - pkg/utils/gardener/operator
             - pkg/utils/gardener/secretsrotation
+            - pkg/utils/gardener/shootstate
             - pkg/utils/gardener/tokenrequest
             - pkg/utils/imagevector
             - pkg/utils/istio
@@ -1342,9 +1343,55 @@ build:
         dependencies:
           paths:
             - cmd/machine-controller-manager-provider-local
+            - pkg/api
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
+            - pkg/apis/core
+            - pkg/apis/core/install
+            - pkg/apis/core/v1
+            - pkg/apis/core/v1beta1
+            - pkg/apis/core/v1beta1/constants
+            - pkg/apis/core/v1beta1/helper
+            - pkg/apis/extensions
+            - pkg/apis/extensions/v1alpha1
+            - pkg/apis/operations
+            - pkg/apis/operations/install
+            - pkg/apis/operations/v1alpha1
+            - pkg/apis/operator
+            - pkg/apis/operator/v1alpha1
+            - pkg/apis/resources
+            - pkg/apis/resources/v1alpha1
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
+            - pkg/apis/seedmanagement
+            - pkg/apis/seedmanagement/encoding
+            - pkg/apis/seedmanagement/install
+            - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/settings
+            - pkg/apis/settings/install
+            - pkg/apis/settings/v1alpha1
+            - pkg/chartrenderer
+            - pkg/client/kubernetes
+            - pkg/client/kubernetes/cache
+            - pkg/gardenlet/apis/config/v1alpha1
+            - pkg/logger
+            - pkg/provider-local/local
             - pkg/provider-local/machine-provider/api/v1alpha1
             - pkg/provider-local/machine-provider/api/validation
             - pkg/provider-local/machine-provider/local
+            - pkg/resourcemanager/controller/garbagecollector/references
+            - pkg/utils
+            - pkg/utils/context
+            - pkg/utils/errors
+            - pkg/utils/flow
+            - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/health
+            - pkg/utils/retry
+            - pkg/utils/timewindow
+            - pkg/utils/validation/kubernetesversion
+            - pkg/utils/version
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
