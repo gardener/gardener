@@ -11,6 +11,7 @@ import (
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Cluster
 
 // ExposureClass represents a control plane endpoint exposure strategy.
 type ExposureClass struct {

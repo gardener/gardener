@@ -11,6 +11,7 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Namespaced
 
 // Quota represents a quota on resources consumed by shoot clusters either per project or per provider secret.
 type Quota struct {

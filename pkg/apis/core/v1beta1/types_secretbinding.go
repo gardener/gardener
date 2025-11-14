@@ -11,6 +11,7 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Namespaced
 
 // SecretBinding represents a binding to a secret in the same or another namespace.
 //

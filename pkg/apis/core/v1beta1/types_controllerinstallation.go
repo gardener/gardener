@@ -13,6 +13,8 @@ import (
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:subresource:status
 
 // ControllerInstallation represents an installation request for an external controller.
 type ControllerInstallation struct {

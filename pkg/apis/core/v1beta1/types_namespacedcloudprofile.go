@@ -11,6 +11,8 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:subresource:status
 
 // NamespacedCloudProfile represents certain properties about a provider environment.
 type NamespacedCloudProfile struct {

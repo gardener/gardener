@@ -19,6 +19,7 @@ import (
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Cluster
 
 // CloudProfile represents certain properties about a provider environment.
 type CloudProfile struct {

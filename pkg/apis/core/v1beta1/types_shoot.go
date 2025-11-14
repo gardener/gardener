@@ -19,6 +19,8 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:subresource:status
 
 // Shoot represents a Shoot cluster created and managed by Gardener.
 type Shoot struct {

@@ -15,6 +15,8 @@ const (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:subresource:status
 
 // BackupEntry holds details about shoot backup.
 type BackupEntry struct {
