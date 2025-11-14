@@ -121,14 +121,14 @@ In addition, we had issues with shoot clusters having more than one node (hence,
 
 This controller renders a simple cloud-init template which can later be executed by the shoot worker nodes.
 
-The shoot worker nodes are `Pod`s with a container based on the `kindest/node` image. This is maintained in the [gardener/machine-controller-manager-provider-local repository](https://github.com/gardener/machine-controller-manager-provider-local/tree/master/node) and has a special `run-userdata` systemd service which executes the cloud-init generated earlier by the `OperatingSystemConfig` controller.
+The shoot worker nodes are `Pod`s with a container based on the `kindest/node` image. This is maintained in the [`pkg/provider-local/node`](../../pkg/provider-local/node) directory and has a special `run-userdata` systemd service which executes the cloud-init generated earlier by the `OperatingSystemConfig` controller.
 
 #### `Worker`
 
-This controller leverages the standard [generic `Worker` actuator](../../extensions/pkg/controller/worker/genericactuator) in order to generate the [`MachineClass`es](https://github.com/gardener/machine-controller-manager-provider-local/blob/master/kubernetes/machine-class.yaml) and the `MachineDeployment`s based on the specification of the `Worker` resource.
+This controller leverages the standard [generic `Worker` actuator](../../extensions/pkg/controller/worker/genericactuator) in order to generate the `MachineClasses` and the `MachineDeployments` based on the specification of the `Worker` resource.
 
-Additionally, the controller deploys RBAC objects for granting machine-controller-manager additional permissions in the control plane namespace.
-This is needed because the [local machine provider](#machine-controller-manager-provider-local) creates Kubernetes objects in the control plane namespace for starting `Machines`, which is different to all other machine provider implementations.
+Additionally, the controller deploys RBAC objects for granting machine-controller-manager additional permissions in the namespace of the machine pods.
+This is needed because the [local machine provider](#machine-controller-manager-provider-local) creates Kubernetes objects for starting `Machines`, which is different to all other machine provider implementations.
 
 #### `Bastion`
 
@@ -220,6 +220,30 @@ For every `Machine` object, the [local machine provider](../../pkg/provider-loca
 A machine pod uses an [image](../../pkg/provider-local/node) based on [kind's](https://github.com/kubernetes-sigs/kind) node image (`kindest/node`).
 The machine's user data is deployed as a `Secret` in the shoot control plane namespace and mounted into the machine pod.
 In contrast to kind, the local machine image doesn't directly run kubelet as a systemd unit. Instead, it has a unit for running the user data script at `/etc/machine/userdata`.
+
+The local provider spec of the `MachineClass` supports the following fields:
+
+```yaml
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineClass
+metadata:
+  name: shoot--garden-local--local-worker-06d11
+  namespace: shoot--garden-local--local
+provider: local
+providerSpec:
+  image: garden.local.gardener.cloud:5001/local-skaffold_gardener-extension-provider-local-node:...
+  ipPoolNameV4: shoot-machine-pods-shoot--garden-local--local-ipv4
+  ipPoolNameV6: shoot-machine-pods-shoot--garden-local--local-ipv6
+  namespace: shoot--garden-local--local
+```
+
+The `image` field specifies the image reference for the `provider-local/node` image.
+It is determined from the `CloudProfile.spec.providerConfig.machineImages` field.
+The `ipPoolNameV{4,6}` fields specify the name of the calico `IPPool`s to allocate IP addresses for the machine pods from (which are created by the [`Infrastructure` controller](#infrastructure)).
+The names are passed to the `cni.projectcalico.org/ipv{4,6}pools` annotations on the machine pods.
+The `namespace` field specifies the namespace in which the machine pods are created.
+Typically, this is the shoot control plane namespace.
+However, for self-hosted shoots with managed infrastructure, this is the kind cluster namespace where the infrastructure resources are created during `gardenadm bootstrap` (the control plane namespace is `kube-system` in this case).
 
 Typically, machines running in a cloud infrastructure environment can resolve the hostnames of other machines in the same cluster/network.
 To mimic this behavior in the local setup, the machine provider creates a `Service` for every `Machine` with the same name as the `Pod`. 

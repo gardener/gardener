@@ -50,7 +50,7 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 		return nil, err
 	}
 
-	userDataSecret := userDataSecretForMachine(req.Machine, req.MachineClass)
+	userDataSecret := userDataSecretForMachine(req.Machine, req.MachineClass, providerSpec)
 	userDataSecret.Data = map[string][]byte{"userdata": req.Secret.Data["userData"]}
 
 	pod, err := d.applyPod(ctx, providerClient, req, providerSpec, userDataSecret)
@@ -71,7 +71,7 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error applying user data secret: %s", err.Error()))
 	}
 
-	if err := d.applyService(ctx, providerClient, req, pod); err != nil {
+	if err := d.applyService(ctx, providerClient, req, pod, providerSpec); err != nil {
 		return nil, err
 	}
 
@@ -86,8 +86,8 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 	}, nil
 }
 
-func (d *localDriver) applyService(ctx context.Context, providerClient client.Client, req *driver.CreateMachineRequest, owner client.Object) error {
-	service := serviceForMachine(req.Machine, req.MachineClass)
+func (d *localDriver) applyService(ctx context.Context, providerClient client.Client, req *driver.CreateMachineRequest, owner client.Object, providerSpec *apiv1alpha1.ProviderSpec) error {
+	service := serviceForMachine(req.Machine, req.MachineClass, providerSpec)
 
 	service.Labels = map[string]string{
 		labelKeyProvider: apiv1alpha1.Provider,
@@ -132,7 +132,7 @@ func (d *localDriver) applyPod(
 	*corev1.Pod,
 	error,
 ) {
-	pod := podForMachine(req.Machine, req.MachineClass)
+	pod := podForMachine(req.Machine, req.MachineClass, providerSpec)
 	pod.Annotations = map[string]string{}
 
 	if providerSpec.IPPoolNameV4 != "" {

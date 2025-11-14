@@ -32,8 +32,13 @@ func (d *localDriver) ListMachines(ctx context.Context, req *driver.ListMachines
 	klog.V(3).Infof("Machine list request has been received for %q", req.MachineClass.Name)
 	defer klog.V(3).Infof("Machine list request has been processed for %q", req.MachineClass.Name)
 
+	providerSpec, err := validateProviderSpecAndSecret(req.MachineClass, req.Secret)
+	if err != nil {
+		return nil, err
+	}
+
 	podList := &corev1.PodList{}
-	if err := providerClient.List(ctx, podList, client.InNamespace(req.MachineClass.Namespace), client.MatchingLabels{labelKeyProvider: apiv1alpha1.Provider}); err != nil {
+	if err := providerClient.List(ctx, podList, client.InNamespace(providerSpec.Namespace), client.MatchingLabels{labelKeyProvider: apiv1alpha1.Provider}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

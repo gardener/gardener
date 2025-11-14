@@ -108,7 +108,8 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		})
 
 		providerConfig := map[string]interface{}{
-			"image": image.Image,
+			"image":     image.Image,
+			"namespace": w.cluster.Shoot.Status.TechnicalID,
 		}
 
 		for _, ipFamily := range w.cluster.Shoot.Spec.Networking.IPFamilies {
