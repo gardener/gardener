@@ -4,6 +4,7 @@ import (
 	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Private consts
@@ -15,8 +16,8 @@ const (
 	promRuleName                 = "-x509-certificate-exporter"
 	inClusterManagedResourceName = "x509-certificate-exporter"
 	nodeManagedResourceName      = "x509-certificate-exporter-node"
-	clusterRoleName              = "gardener-cloud:x509-certificate-exporter"
-	clusterRoleBindingName       = "gardener-cloud:x509-certificate-exporter"
+	clusterRoleName              = "gardener.cloud:monitoring:x509-certificate-exporter"
+	clusterRoleBindingName       = "gardener.cloud:monitoring:x509-certificate-exporter"
 	// portName is the name of the port on which the x509-certificate-exporter exposes metrics and is scraped on
 	portName = "metrics"
 	// labelComponent is the component label value for the `role` label
@@ -29,6 +30,8 @@ const (
 	defaultKubeAPIBurst uint32 = 30
 	// defaultKubeAPIRateLimit is the default rate limit for the kube api client
 	defaultKubeAPIRateLimit uint32 = 20
+	// istioSecretType is the istio secret type constant
+	istioSecretType corev1.SecretType = "istio.io/ca-root"
 )
 
 // Alerting consts

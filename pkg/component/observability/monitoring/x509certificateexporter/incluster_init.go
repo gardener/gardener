@@ -96,7 +96,8 @@ func validateSecretType(secretType corev1.SecretType) error {
 	case corev1.SecretTypeTLS,
 		corev1.SecretTypeOpaque,
 		corev1.SecretTypeBasicAuth,
-		corev1.SecretTypeSSHAuth:
+		corev1.SecretTypeSSHAuth,
+		istioSecretType:
 		return nil
 	}
 	return ErrInvalidSecretType

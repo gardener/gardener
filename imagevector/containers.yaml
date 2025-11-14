@@ -456,30 +456,21 @@ images:
             teamname: 'gardener/monitoring-maintainers'
   - name: x509-certificate-exporter
     sourceRepository: github.com/enix/x509-certificate-exporter
-<<<<<<< Updated upstream
-    repository: docker.io/enix/x509-certificate-exporter
-    # repository: europe-docker.pkg.dev/gardener-project/releases/3rd/enix/x509-certificate-exporter
-    tag: 3.19.1
-    # TODO(mimiteto):
-    # Switch to Gardener registry
-    # Set categorisation
-=======
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/enix/x509-certificate-exporter
-    tag: '3.19.1'
+    tag: "3.19.1"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'high'
-          integrity_requirement: 'low'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "high"
+          integrity_requirement: "low"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
->>>>>>> Stashed changes
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   # Shoot core addons
   - name: vpn-client
     sourceRepository: github.com/gardener/vpn2
