@@ -75,6 +75,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter, credentialsRotationInterval t
 			DeleteStrategy: shootStrategy,
 
 			TableConvertor: newTableConvertor(),
+			Decorator:      defaultOnRead,
 		}
 		options = &generic.StoreOptions{
 			RESTOptions: optsGetter,
@@ -172,4 +173,30 @@ var _ rest.ShortNamesProvider = &REST{}
 // ShortNames implements the ShortNamesProvider interface. Returns a list of short names for a resource.
 func (r *REST) ShortNames() []string {
 	return []string{}
+}
+
+// defaultOnRead ensures the shoot.status.credentials.encryptionAtRest.resources field is set on read requests.
+// TODO(AleksandarSavchev): Remove this function after v1.135 has been released.
+func defaultOnRead(obj runtime.Object) {
+	switch s := obj.(type) {
+	case *core.Shoot:
+		defaultOnReadShoot(s)
+	case *core.ShootList:
+		defaultOnReadShoots(s)
+	default:
+	}
+}
+
+func defaultOnReadShoot(s *core.Shoot) {
+	shoot.SyncEncryptedResourcesStatus(s)
+}
+
+func defaultOnReadShoots(shootList *core.ShootList) {
+	if shootList == nil {
+		return
+	}
+
+	for i := range shootList.Items {
+		defaultOnReadShoot(&shootList.Items[i])
+	}
 }

@@ -214,6 +214,9 @@ type ShootStatus struct {
 	// EncryptedResources is the list of resources in the Shoot which are currently encrypted.
 	// Secrets are encrypted by default and are not part of the list.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
+	//
+	// Deprecated: This field is deprecated and will be removed with release v1.138.
+	// This field will be removed in favor of `status.credentials.encryptionAtRest.resources`.
 	// +optional
 	EncryptedResources []string `json:"encryptedResources,omitempty" protobuf:"bytes,18,rep,name=encryptedResources"`
 	// Networking contains information about cluster networking such as CIDRs.
@@ -280,6 +283,9 @@ type ShootCredentials struct {
 	// Rotation contains information about the credential rotations.
 	// +optional
 	Rotation *ShootCredentialsRotation `json:"rotation,omitempty" protobuf:"bytes,1,opt,name=rotation"`
+	// EncryptionAtRest contains information about Shoot data encryption at rest.
+	// +optional
+	EncryptionAtRest *EncryptionAtRest `json:"encryptionAtRest,omitempty" protobuf:"bytes,2,opt,name=encryptionAtRest"`
 }
 
 // ShootCredentialsRotation contains information about the rotation of credentials.
@@ -303,6 +309,15 @@ type ShootCredentialsRotation struct {
 	// ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.
 	// +optional
 	ETCDEncryptionKey *ETCDEncryptionKeyRotation `json:"etcdEncryptionKey,omitempty" protobuf:"bytes,6,opt,name=etcdEncryptionKey"`
+}
+
+// EncryptionAtRest contains information about Shoot data encryption at rest.
+type EncryptionAtRest struct {
+	// Resources is the list of resources in the Shoot which are currently encrypted.
+	// Secrets are encrypted by default and are not part of the list.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
+	// +optional
+	Resources []string `json:"resources,omitempty" protobuf:"bytes,1,rep,name=resources"`
 }
 
 // CARotation contains information about the certificate authority credential rotation.

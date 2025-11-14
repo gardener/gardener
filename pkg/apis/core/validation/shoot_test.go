@@ -261,6 +261,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 						{Key: "foo"},
 					},
 				},
+				Status: core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						EncryptionAtRest: &core.EncryptionAtRest{},
+					},
+				},
 			}
 		})
 
@@ -2547,7 +2552,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"configmaps", "deployments.apps"},
 					}
-					shoot.Status.EncryptedResources = []string{"deployments.apps", "configmaps"}
+					shoot.Status.Credentials.EncryptionAtRest.Resources = []string{"deployments.apps", "configmaps"}
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
@@ -2560,7 +2565,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: resources,
 					}
-					shoot.Status.EncryptedResources = resources
+					shoot.Status.Credentials.EncryptionAtRest.Resources = resources
 					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
 					newShoot := prepareShootForUpdate(shoot)
@@ -2580,7 +2585,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: resources,
 					}
-					shoot.Status.EncryptedResources = resources
+					shoot.Status.Credentials.EncryptionAtRest.Resources = resources
 					shoot.Status.IsHibernated = true
 
 					newShoot := prepareShootForUpdate(shoot)
@@ -2595,15 +2600,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: resources,
 					}
-					shoot.Status.EncryptedResources = resources
+					shoot.Status.Credentials.EncryptionAtRest.Resources = resources
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
-					newShoot.Status.Credentials = &core.ShootCredentials{
-						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationPreparing,
-							},
+					newShoot.Status.Credentials.Rotation = &core.ShootCredentialsRotation{
+						ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+							Phase: core.RotationPreparing,
 						},
 					}
 
@@ -2621,19 +2624,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: resources,
 					}
-					shoot.Status.EncryptedResources = resources
+					shoot.Status.Credentials.EncryptionAtRest.Resources = resources
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
-					newShoot.Status.Credentials = nil
+					newShoot.Status.Credentials.Rotation = nil
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 
-					newShoot.Status.Credentials = &core.ShootCredentials{
-						Rotation: &core.ShootCredentialsRotation{
-							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
-								Phase: core.RotationCompleted,
-							},
+					newShoot.Status.Credentials.Rotation = &core.ShootCredentialsRotation{
+						ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+							Phase: core.RotationCompleted,
 						},
 					}
 
@@ -5199,7 +5200,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
-					EncryptedResources: []string{"configmaps"},
+					Credentials: &core.ShootCredentials{
+						EncryptionAtRest: &core.EncryptionAtRest{
+							Resources: []string{"configmaps"},
+						},
+					},
 				}),
 				Entry("when AutoInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
 					LastOperation: &core.LastOperation{
@@ -5970,28 +5975,44 @@ var _ = Describe("Shoot Validation Tests", func() {
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
-					EncryptedResources: []string{"configmaps"},
+					Credentials: &core.ShootCredentials{
+						EncryptionAtRest: &core.EncryptionAtRest{
+							Resources: []string{"configmaps"},
+						},
+					},
 				}),
 				Entry("when shoot spec encrypted resources and status encrypted resources are not equal", false,
 					[]string{"pods"}, core.ShootStatus{
 						LastOperation: &core.LastOperation{
 							Type: core.LastOperationTypeReconcile,
 						},
-						EncryptedResources: []string{"configmaps"},
+						Credentials: &core.ShootCredentials{
+							EncryptionAtRest: &core.EncryptionAtRest{
+								Resources: []string{"configmaps"},
+							},
+						},
 					}),
 				Entry("when shoot spec encrypted resources and status encrypted resources are equal", true,
 					[]string{"configmaps"}, core.ShootStatus{
 						LastOperation: &core.LastOperation{
 							Type: core.LastOperationTypeReconcile,
 						},
-						EncryptedResources: []string{"configmaps"},
+						Credentials: &core.ShootCredentials{
+							EncryptionAtRest: &core.EncryptionAtRest{
+								Resources: []string{"configmaps"},
+							},
+						},
 					}),
 				Entry("when shoot spec encrypted resources and status encrypted resources are equal", true,
 					[]string{"configmaps"}, core.ShootStatus{
 						LastOperation: &core.LastOperation{
 							Type: core.LastOperationTypeReconcile,
 						},
-						EncryptedResources: []string{"configmaps."},
+						Credentials: &core.ShootCredentials{
+							EncryptionAtRest: &core.EncryptionAtRest{
+								Resources: []string{"configmaps."},
+							},
+						},
 					}),
 			)
 
@@ -6109,28 +6130,44 @@ var _ = Describe("Shoot Validation Tests", func() {
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
-					EncryptedResources: []string{"configmaps"},
+					Credentials: &core.ShootCredentials{
+						EncryptionAtRest: &core.EncryptionAtRest{
+							Resources: []string{"configmaps"},
+						},
+					},
 				}),
 				Entry("when shoot spec encrypted resources and status encrypted resources are not equal", false,
 					[]string{"pods"}, core.ShootStatus{
 						LastOperation: &core.LastOperation{
 							Type: core.LastOperationTypeReconcile,
 						},
-						EncryptedResources: []string{"configmaps"},
+						Credentials: &core.ShootCredentials{
+							EncryptionAtRest: &core.EncryptionAtRest{
+								Resources: []string{"configmaps"},
+							},
+						},
 					}),
 				Entry("when shoot spec encrypted resources and status encrypted resources are equal", true,
 					[]string{"configmaps"}, core.ShootStatus{
 						LastOperation: &core.LastOperation{
 							Type: core.LastOperationTypeReconcile,
 						},
-						EncryptedResources: []string{"configmaps"},
+						Credentials: &core.ShootCredentials{
+							EncryptionAtRest: &core.EncryptionAtRest{
+								Resources: []string{"configmaps"},
+							},
+						},
 					}),
 				Entry("when shoot spec encrypted resources and status encrypted resources are equal", true,
 					[]string{"configmaps"}, core.ShootStatus{
 						LastOperation: &core.LastOperation{
 							Type: core.LastOperationTypeReconcile,
 						},
-						EncryptedResources: []string{"configmaps."},
+						Credentials: &core.ShootCredentials{
+							EncryptionAtRest: &core.EncryptionAtRest{
+								Resources: []string{"configmaps."},
+							},
+						},
 					}),
 			)
 
@@ -6622,7 +6659,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Resources: []string{"events", "configmaps"},
 					},
 				}
-				shoot.Status.EncryptedResources = []string{"events"}
+				shoot.Status.Credentials.EncryptionAtRest.Resources = []string{"events"}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
@@ -6630,7 +6667,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.hibernation.enabled"),
-					"Detail": ContainSubstring("when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.encryptedResources are not equal"),
+					"Detail": ContainSubstring("when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.credentials.encryptionAtRest.resources are not equal"),
 				}))))
 			})
 
@@ -6641,7 +6678,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Resources: []string{"events", "configmaps"},
 					},
 				}
-				shoot.Status.EncryptedResources = []string{"configmaps.", "events"}
+				shoot.Status.Credentials.EncryptionAtRest.Resources = []string{"configmaps.", "events"}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}

@@ -361,6 +361,20 @@ CredentialsRotation
 <p>Rotation contains information about the credential rotations.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>encryptionAtRest</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.EncryptionAtRest">
+EncryptionAtRest
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EncryptionAtRest contains information about garden data encryption at rest.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.CredentialsRotation">CredentialsRotation
@@ -1152,6 +1166,39 @@ Storage
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.EncryptionAtRest">EncryptionAtRest
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Credentials">Credentials</a>)
+</p>
+<p>
+<p>EncryptionAtRest contains information about virtual garden data encryption at rest.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
+Resources which are encrypted by default will not appear here.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config">https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config</a> for more details.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.Extension">Extension
 </h3>
 <p>
@@ -1792,6 +1839,8 @@ Credentials
 <p>EncryptedResources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
 Resources which are encrypted by default will not appear here.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config">https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config</a> for more details.</p>
+<p>Deprecated: This field is deprecated and will be removed with release v1.138.
+This field will be removed in favor of <code>status.credentials.encryptionAtRest.resources</code>.</p>
 </td>
 </tr>
 </tbody>

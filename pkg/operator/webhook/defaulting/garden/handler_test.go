@@ -111,5 +111,47 @@ var _ = Describe("Handler", func() {
 			Expect(handler.Default(ctx, garden)).To(Succeed())
 			Expect(garden.Spec.RuntimeCluster.Networking.IPFamilies).To(Equal([]gardencorev1beta1.IPFamily{"foo"}))
 		})
+
+		DescribeTable("should sync encrypted resources from status.encryptedResources to status.credentials.encryptionAtRest.resources",
+			func(status operatorv1alpha1.GardenStatus, expected operatorv1alpha1.GardenStatus) {
+				garden.Status = status
+
+				Expect(handler.Default(ctx, garden)).To(Succeed())
+
+				Expect(garden.Status).To(Equal(expected))
+			},
+			Entry("no encrypted resources", operatorv1alpha1.GardenStatus{}, operatorv1alpha1.GardenStatus{}),
+			Entry("with encrypted resources",
+				operatorv1alpha1.GardenStatus{
+					EncryptedResources: []string{"configmaps", "shoots.core.gardener.cloud"},
+				},
+				operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
+							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
+						},
+					},
+					EncryptedResources: []string{"configmaps", "shoots.core.gardener.cloud"},
+				},
+			),
+			Entry("should not overwrite",
+				operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
+							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
+						},
+					},
+					EncryptedResources: []string{"configmaps"},
+				},
+				operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
+							Resources: []string{"configmaps", "shoots.core.gardener.cloud"},
+						},
+					},
+					EncryptedResources: []string{"configmaps"},
+				},
+			),
+		)
 	})
 })

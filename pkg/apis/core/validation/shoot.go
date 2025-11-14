@@ -193,8 +193,10 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	if newShoot.Spec.Hibernation != nil {
 		hibernationEnabled = ptr.Deref(newShoot.Spec.Hibernation.Enabled, false)
 	}
-	for _, er := range newShoot.Status.EncryptedResources {
-		encryptedResources.Insert(schema.ParseGroupResource(er))
+	if newShoot.Status.Credentials != nil && newShoot.Status.Credentials.EncryptionAtRest != nil {
+		for _, er := range newShoot.Status.Credentials.EncryptionAtRest.Resources {
+			encryptedResources.Insert(schema.ParseGroupResource(er))
+		}
 	}
 
 	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, encryptedResources, etcdEncryptionKeyRotation, hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
@@ -1519,8 +1521,10 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 		}
 	}
 
-	for _, r := range old.Status.EncryptedResources {
-		encryptedResourcesInStatus.Insert(schema.ParseGroupResource(r))
+	if old.Status.Credentials != nil && old.Status.Credentials.EncryptionAtRest != nil {
+		for _, er := range old.Status.Credentials.EncryptionAtRest.Resources {
+			encryptedResourcesInStatus.Insert(schema.ParseGroupResource(er))
+		}
 	}
 
 	if !hibernationEnabledInOld && hibernationEnabledInNew {
@@ -1536,7 +1540,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 		}
 
 		if !encryptedResourcesInOldSpec.Equal(encryptedResourcesInStatus) {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "shoot cannot be hibernated when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.encryptedResources are not equal"))
+			allErrs = append(allErrs, field.Forbidden(fldPath, "shoot cannot be hibernated when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.credentials.encryptionAtRest.resources are not equal"))
 		}
 	}
 
@@ -2923,8 +2927,10 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		return allErrs
 	}
 
-	for _, res := range shoot.Status.EncryptedResources {
-		encryptedResources.Insert(schema.ParseGroupResource(res))
+	if shoot.Status.Credentials != nil && shoot.Status.Credentials.EncryptionAtRest != nil {
+		for _, er := range shoot.Status.Credentials.EncryptionAtRest.Resources {
+			encryptedResources.Insert(schema.ParseGroupResource(er))
+		}
 	}
 
 	fldPathOp := fldPath.Key(v1beta1constants.GardenerOperation)

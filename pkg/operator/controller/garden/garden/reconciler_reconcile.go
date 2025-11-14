@@ -180,7 +180,7 @@ func (r *Reconciler) reconcile(
 		virtualClusterClient    client.Client
 		defaultEncryptedGVKs    = append(gardenerutils.DefaultGardenerGVKsForEncryption(), gardenerutils.DefaultGVKsForEncryption()...)
 		resourcesToEncrypt      = append(shared.StringifyGroupResources(getKubernetesResourcesForEncryption(garden)), shared.StringifyGroupResources(getGardenerResourcesForEncryption(garden))...)
-		encryptedResources      = shared.NormalizeResources(garden.Status.EncryptedResources)
+		encryptedResources      = shared.NormalizeResources(helper.GetEncryptedResourcesInStatus(garden.Status))
 
 		g                              = flow.NewGraph("Garden reconciliation")
 		generateGenericTokenKubeconfig = g.Add(flow.Task{
@@ -531,7 +531,23 @@ func (r *Reconciler) reconcile(
 					encryptedResources := append(getKubernetesResourcesForEncryption(garden), getGardenerResourcesForEncryption(garden)...)
 
 					patch := client.MergeFrom(garden.DeepCopy())
+
+					// TODO(AleksandarSavchev): Stop setting the shoot.Status.EncryptedResources after v1.135 has been released.
 					garden.Status.EncryptedResources = shared.StringifyGroupResources(encryptedResources)
+
+					if len(encryptedResources) > 0 {
+						if garden.Status.Credentials == nil {
+							garden.Status.Credentials = &operatorv1alpha1.Credentials{}
+						}
+						if garden.Status.Credentials.EncryptionAtRest == nil {
+							garden.Status.Credentials.EncryptionAtRest = &operatorv1alpha1.EncryptionAtRest{}
+						}
+
+						garden.Status.Credentials.EncryptionAtRest.Resources = shared.StringifyGroupResources(encryptedResources)
+					} else if garden.Status.Credentials != nil && garden.Status.Credentials.EncryptionAtRest != nil {
+						garden.Status.Credentials.EncryptionAtRest.Resources = nil
+					}
+
 					if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
 						return fmt.Errorf("error patching Garden status after snapshotting ETCD: %w", err)
 					}
@@ -954,7 +970,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			nil,
 			nil,
 			shared.StringifyGroupResources(getKubernetesResourcesForEncryption(garden)),
-			utils.FilterEntriesByFilterFn(shared.NormalizeResources(garden.Status.EncryptedResources), operator.IsServedByKubeAPIServer),
+			utils.FilterEntriesByFilterFn(shared.NormalizeResources(helper.GetEncryptedResourcesInStatus(garden.Status)), operator.IsServedByKubeAPIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			false,
 		)
@@ -991,7 +1007,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 			r.GardenNamespace,
 			gardenerAPIServer,
 			shared.StringifyGroupResources(getGardenerResourcesForEncryption(garden)),
-			utils.FilterEntriesByFilterFn(garden.Status.EncryptedResources, operator.IsServedByGardenerAPIServer),
+			utils.FilterEntriesByFilterFn(helper.GetEncryptedResourcesInStatus(garden.Status), operator.IsServedByGardenerAPIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials),
 		)
