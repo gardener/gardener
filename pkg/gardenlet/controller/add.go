@@ -102,6 +102,10 @@ func AddToManager(
 			return fmt.Errorf("failed adding ShootState controller: %w", err)
 		}
 
+		if err := vpaevictionrequirements.AddToManager(ctx, mgr, gardenletCancel, *cfg.Controllers.VPAEvictionRequirements, seedCluster); err != nil {
+			return fmt.Errorf("failed adding VPAEvictionRequirements controller: %w", err)
+		}
+
 		return nil
 	}
 
