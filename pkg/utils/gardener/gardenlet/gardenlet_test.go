@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,6 +66,31 @@ var _ = Describe("Gardenlet", func() {
 					return &meta.NoResourceMatchError{}
 				})
 			Expect(SeedIsGarden(ctx, mockReader)).To(BeFalse())
+		})
+	})
+
+	Describe("#SeedIsSelfHostedShoot", func() {
+		var (
+			ctx        = context.Background()
+			fakeClient client.Client
+		)
+
+		BeforeEach(func() {
+			fakeClient = fake.NewClientBuilder().Build()
+		})
+
+		It("should return that the seed is a self-hosted shoot", func() {
+			Expect(fakeClient.Create(ctx, &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardenlet",
+					Namespace: "kube-system",
+				},
+			})).To(Succeed())
+			Expect(SeedIsSelfHostedShoot(ctx, fakeClient)).To(BeTrue())
+		})
+
+		It("should return that the seed is not a self-hosted shoot because no gardenlet deployment found", func() {
+			Expect(SeedIsSelfHostedShoot(ctx, fakeClient)).To(BeFalse())
 		})
 	})
 

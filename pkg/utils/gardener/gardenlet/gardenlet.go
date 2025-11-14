@@ -11,7 +11,9 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,6 +21,7 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -37,6 +40,17 @@ func SeedIsGarden(ctx context.Context, seedClient client.Reader) (bool, error) {
 		seedIsGarden = false
 	}
 	return seedIsGarden, nil
+}
+
+// SeedIsSelfHostedShoot returns 'true' if the cluster is a self-hosted shoot cluster.
+func SeedIsSelfHostedShoot(ctx context.Context, seedClient client.Reader) (bool, error) {
+	if err := seedClient.Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenlet, Namespace: metav1.NamespaceSystem}, &appsv1.Deployment{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // SetDefaultGardenClusterAddress sets the default garden cluster address in the given gardenlet configuration if it is not already set.
