@@ -864,6 +864,11 @@ func (in *GardenSpec) DeepCopyInto(out *GardenSpec) {
 	}
 	in.RuntimeCluster.DeepCopyInto(&out.RuntimeCluster)
 	in.VirtualCluster.DeepCopyInto(&out.VirtualCluster)
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = make([]v1beta1.NamedResourceReference, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

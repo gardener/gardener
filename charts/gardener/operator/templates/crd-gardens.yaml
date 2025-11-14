@@ -144,6 +144,39 @@ spec:
                   - type
                   type: object
                 type: array
+              resources:
+                description: Resources holds a list of named resource references that
+                  can be referred to in extension configs by their names.
+                items:
+                  description: NamedResourceReference is a named reference to a resource.
+                  properties:
+                    name:
+                      description: Name of the resource reference.
+                      type: string
+                    resourceRef:
+                      description: ResourceRef is a reference to a resource.
+                      properties:
+                        apiVersion:
+                          description: apiVersion is the API version of the referent
+                          type: string
+                        kind:
+                          description: 'kind is the kind of the referent; More info:
+                            https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                          type: string
+                        name:
+                          description: 'name is the name of the referent; More info:
+                            https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                          type: string
+                      required:
+                      - kind
+                      - name
+                      type: object
+                      x-kubernetes-map-type: atomic
+                  required:
+                  - name
+                  - resourceRef
+                  type: object
+                type: array
               runtimeCluster:
                 description: RuntimeCluster contains configuration for the runtime
                   cluster.

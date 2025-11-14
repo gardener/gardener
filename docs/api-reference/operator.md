@@ -1570,6 +1570,18 @@ VirtualCluster
 <p>VirtualCluster contains configuration for the virtual cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+[]github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds a list of named resource references that can be referred to in extension configs by their names.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -1699,6 +1711,18 @@ VirtualCluster
 </td>
 <td>
 <p>VirtualCluster contains configuration for the virtual cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+[]github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds a list of named resource references that can be referred to in extension configs by their names.</p>
 </td>
 </tr>
 </tbody>

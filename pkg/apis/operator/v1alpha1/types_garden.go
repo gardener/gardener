@@ -64,6 +64,9 @@ type GardenSpec struct {
 	RuntimeCluster RuntimeCluster `json:"runtimeCluster"`
 	// VirtualCluster contains configuration for the virtual cluster.
 	VirtualCluster VirtualCluster `json:"virtualCluster"`
+	// Resources holds a list of named resource references that can be referred to in extension configs by their names.
+	// +optional
+	Resources []gardencorev1beta1.NamedResourceReference `json:"resources,omitempty"`
 }
 
 // DNSManagement contains specifications of DNS providers.
