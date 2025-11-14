@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionsconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
@@ -30,14 +31,15 @@ import (
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type delegateFactory struct {
-	gardenReader client.Reader
-	seedClient   client.Client
-	decoder      runtime.Decoder
-	restConfig   *rest.Config
-	scheme       *runtime.Scheme
+	gardenReader  client.Reader
+	runtimeClient client.Client
+	decoder       runtime.Decoder
+	restConfig    *rest.Config
+	scheme        *runtime.Scheme
 }
 
 type actuator struct {
@@ -49,10 +51,10 @@ type actuator struct {
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.
 func NewActuator(mgr manager.Manager, gardenCluster cluster.Cluster) worker.Actuator {
 	workerDelegate := &delegateFactory{
-		seedClient: mgr.GetClient(),
-		decoder:    serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
-		restConfig: mgr.GetConfig(),
-		scheme:     mgr.GetScheme(),
+		runtimeClient: mgr.GetClient(),
+		decoder:       serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
+		restConfig:    mgr.GetConfig(),
+		scheme:        mgr.GetScheme(),
 	}
 
 	if gardenCluster != nil {
@@ -66,7 +68,7 @@ func NewActuator(mgr manager.Manager, gardenCluster cluster.Cluster) worker.Actu
 }
 
 func (a *actuator) Restore(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
-	if err := genericactuator.RestoreWithoutReconcile(ctx, log, a.workerDelegate.gardenReader, a.workerDelegate.seedClient, a.workerDelegate, worker, cluster); err != nil {
+	if err := genericactuator.RestoreWithoutReconcile(ctx, log, a.workerDelegate.gardenReader, a.workerDelegate.runtimeClient, a.workerDelegate, worker, cluster); err != nil {
 		return fmt.Errorf("failed restoring the worker state: %w", err)
 	}
 
@@ -94,18 +96,18 @@ func (a *actuator) deleteNoLongerNeededMachines(ctx context.Context, log logr.Lo
 		return nil
 	}
 
-	_, shootClient, err := util.NewClientForShoot(ctx, a.workerDelegate.seedClient, namespace, client.Options{}, extensionsconfigv1alpha1.RESTOptions{})
+	_, shootClient, err := util.NewClientForShoot(ctx, a.workerDelegate.runtimeClient, namespace, client.Options{}, extensionsconfigv1alpha1.RESTOptions{})
 	if err != nil {
 		return fmt.Errorf("failed creating client for shoot cluster: %w", err)
 	}
 
 	machineList := &machinev1alpha1.MachineList{}
-	if err := a.workerDelegate.seedClient.List(ctx, machineList, client.InNamespace(namespace)); err != nil {
+	if err := a.workerDelegate.runtimeClient.List(ctx, machineList, client.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("failed listing machines: %w", err)
 	}
 
 	podList := &corev1.PodList{}
-	if err := a.workerDelegate.seedClient.List(ctx, podList, client.InNamespace(namespace), client.MatchingLabels{"app": "machine"}); err != nil {
+	if err := a.workerDelegate.runtimeClient.List(ctx, podList, client.InNamespace(namespace), client.MatchingLabels{"app": "machine"}); err != nil {
 		return fmt.Errorf("failed listing pods: %w", err)
 	}
 
@@ -126,7 +128,7 @@ func (a *actuator) deleteNoLongerNeededMachines(ctx context.Context, log logr.Lo
 			return fmt.Errorf("failed deleting node %q for machine %q: %w", nodeName, machine.Name, err)
 		}
 
-		if err := a.workerDelegate.seedClient.Delete(ctx, machine.DeepCopy()); err != nil {
+		if err := a.workerDelegate.runtimeClient.Delete(ctx, machine.DeepCopy()); err != nil {
 			return fmt.Errorf("failed deleting machine %q: %w", machine.Name, err)
 		}
 	}
@@ -134,7 +136,7 @@ func (a *actuator) deleteNoLongerNeededMachines(ctx context.Context, log logr.Lo
 	return nil
 }
 
-func (d *delegateFactory) WorkerDelegate(_ context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (genericactuator.WorkerDelegate, error) {
+func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (genericactuator.WorkerDelegate, error) {
 	clientset, err := kubernetes.NewForConfig(d.restConfig)
 	if err != nil {
 		return nil, err
@@ -151,11 +153,13 @@ func (d *delegateFactory) WorkerDelegate(_ context.Context, worker *extensionsv1
 	}
 
 	return NewWorkerDelegate(
-		d.seedClient,
+		ctx,
+		logf.FromContext(ctx),
+		d.runtimeClient,
+		d.restConfig,
 		d.decoder,
 		d.scheme,
 		seedChartApplier,
-		kubernetesclient.NewPodExecutor(d.restConfig),
 		serverVersion.GitVersion,
 		worker,
 		cluster,
@@ -163,9 +167,17 @@ func (d *delegateFactory) WorkerDelegate(_ context.Context, worker *extensionsv1
 }
 
 type workerDelegate struct {
-	client  client.Client
-	decoder runtime.Decoder
-	scheme  *runtime.Scheme
+	// runtimeClient uses provider-local's in-cluster config, e.g., for the seed/bootstrap cluster it runs in.
+	// It's used to interact with extension objects. By default, it's also used as the provider client to interact with
+	// infrastructure resources, unless a kubeconfig is specified in the cloudprovider secret.
+	runtimeClient client.Client
+	// providerClient is a client for the cluster in which provider-local should manage infrastructure resources,
+	// e.g., Services, NetworkPolicies, machine Pods, etc. If the provider secret contains a kubeconfig, a client for that
+	// kubeconfig is created. Otherwise, the given client for the runtime cluster is returned.
+	// See https://github.com/gardener/gardener/blob/master/docs/extensions/provider-local.md#credentials.
+	providerClient client.Client
+	decoder        runtime.Decoder
+	scheme         *runtime.Scheme
 
 	seedChartApplier    kubernetesclient.ChartApplier
 	podExecutor         kubernetesclient.PodExecutor
@@ -181,11 +193,13 @@ type workerDelegate struct {
 
 // NewWorkerDelegate creates a new context for a worker reconciliation.
 func NewWorkerDelegate(
-	client client.Client,
+	ctx context.Context,
+	log logr.Logger,
+	runtimeClient client.Client,
+	restConfig *rest.Config,
 	decoder runtime.Decoder,
 	scheme *runtime.Scheme,
 	seedChartApplier kubernetesclient.ChartApplier,
-	podExecutor kubernetesclient.PodExecutor,
 	serverVersion string,
 	worker *extensionsv1alpha1.Worker,
 	cluster *extensionscontroller.Cluster,
@@ -198,9 +212,37 @@ func NewWorkerDelegate(
 		return nil, err
 	}
 
+	providerSecret, err := kubernetesutils.GetSecretByReference(ctx, runtimeClient, &worker.Spec.SecretRef)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve provider secret: %w", err)
+	}
+
+	var (
+		providerClient = runtimeClient
+		podExecutor    = kubernetesclient.NewPodExecutor(restConfig)
+	)
+
+	if len(providerSecret.Data[kubernetesclient.KubeConfig]) == 0 {
+		log.Info("Using in-cluster config for provider client as no kubeconfig is specified in the provider secret")
+	} else {
+		clientSet, err := kubernetesclient.NewClientFromBytes(providerSecret.Data[kubernetesclient.KubeConfig],
+			kubernetesclient.WithClientOptions(client.Options{Scheme: kubernetesclient.SeedScheme}),
+			kubernetesclient.WithDisabledCachedClient(),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not create client from provider secret: %w", err)
+		}
+
+		log.Info("Using kubeconfig from provider secret for provider client")
+
+		providerClient = clientSet.Client()
+		podExecutor = clientSet.PodExecutor()
+	}
+
 	return &workerDelegate{
 		scheme:             scheme,
-		client:             client,
+		runtimeClient:      runtimeClient,
+		providerClient:     providerClient,
 		decoder:            decoder,
 		seedChartApplier:   seedChartApplier,
 		podExecutor:        podExecutor,
