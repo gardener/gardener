@@ -32,7 +32,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -49,8 +48,8 @@ type ValuesProvider interface {
 	GetControlPlaneShootCRDsChartValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (map[string]any, error)
 	// GetStorageClassesChartValues returns the values for the storage classes chart applied by this actuator.
 	GetStorageClassesChartValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (map[string]any, error)
-	// GetControllersValues returns the names of the controllers for which state should written to the controlplane status.
-	GetControllersValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) ([]string, error)
+	// GetControllersValues returns the controller configurations for which state should written to the controlplane status and if a requeue is required.
+	GetControllersValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) ([]extensionsv1alpha1.ControllerConfig, bool, error)
 }
 
 // NewActuator creates a new Actuator that acts upon and updates the status of ControlPlane resources.
@@ -292,45 +291,13 @@ func (a *actuator) Reconcile(
 		}
 	}
 
-	// Get controller state and update the controlplane status accordingly
-	controllers, err := a.vp.GetControllersValues(ctx, cp, cluster)
+	// Get and update controllers' status
+	controllers, requeue, err := a.vp.GetControllersValues(ctx, cp, cluster)
 	if err != nil {
 		return false, err
 	}
 
-	currentControllers := make(map[string]bool)
-	for _, controllerName := range controllers {
-		deployment := &appsv1.Deployment{}
-		ready := false
-
-		if err := a.client.Get(ctx, client.ObjectKey{Namespace: cp.Namespace, Name: controllerName}, deployment); err != nil {
-			if client.IgnoreNotFound(err) != nil {
-				return false, fmt.Errorf("could not get deployment '%s/%s': %w", cp.Namespace, controllerName, err)
-			}
-		} else {
-			// Deployment exists, check if it has replicas and is healthy
-			if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas == 0 {
-				log.Info("Controller deployment has 0 replicas", "controller", controllerName)
-				requeue = true
-			} else if err := health.CheckDeployment(deployment); err != nil {
-				log.Info("Controller deployment not ready yet", "controller", controllerName, "reason", err.Error())
-				requeue = true
-			} else {
-				ready = true
-			}
-		}
-		currentControllers[controllerName] = ready
-	}
-
-	newControllers := make([]extensionsv1alpha1.ControllerConfig, 0, len(currentControllers))
-	for controllerName, ready := range currentControllers {
-		newControllers = append(newControllers, extensionsv1alpha1.ControllerConfig{
-			Name:   controllerName,
-			Active: ready,
-		})
-	}
-
-	cp.Status.Controllers = newControllers
+	cp.Status.Controllers = controllers
 
 	if err := a.client.Status().Update(ctx, cp); err != nil {
 		return false, fmt.Errorf("failed to update controlplane status: %w", err)

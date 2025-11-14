@@ -42,7 +42,7 @@ func (vp NoopValuesProvider) GetStorageClassesChartValues(context.Context, *exte
 	return nil, nil
 }
 
-// GetControllersValues returns the names of the controllers for which state should written to the controlplane status.
-func (vp NoopValuesProvider) GetControllersValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) ([]string, error) {
-	return nil, nil
+// GetControllersValues returns the controller configurations for which state should written to the controlplane status and if a requeue is required.
+func (vp NoopValuesProvider) GetControllersValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) ([]extensionsv1alpha1.ControllerConfig, bool, error) {
+	return nil, false, nil
 }
