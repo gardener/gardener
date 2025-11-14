@@ -19,6 +19,7 @@ func CmpOptsForDestinationRule() cmp.Option {
 		istioapinetworkingv1beta1.DestinationRule{},
 		istioapinetworkingv1beta1.TrafficPolicy{},
 		istioapinetworkingv1beta1.ConnectionPoolSettings{},
+		istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{},
 		istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{},
 		istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{},
 		istioapinetworkingv1beta1.LoadBalancerSettings{},
