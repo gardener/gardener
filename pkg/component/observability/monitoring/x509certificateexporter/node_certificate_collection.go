@@ -34,20 +34,28 @@ func (x *x509CertificateExporter) daemonSet(
 	wg workerGroup,
 ) *appsv1.DaemonSet {
 	var (
-		labelz       = x.getGenericLabels(nodeCertificateLabelValue)
-		args         = wg.GetArgs()
-		volumeMounts []corev1.VolumeMount
-		volumes      []corev1.Volume
-		podSpec      corev1.PodSpec
+		labelz           = x.getGenericLabels(nodeCertificateLabelValue)
+		args             = wg.GetArgs()
+		volumeMounts     []corev1.VolumeMount
+		volumes          []corev1.Volume
+		podSpec          corev1.PodSpec
+		defaultMountPath = func(hostPath, mountPath string) string {
+			if mountPath == "" {
+				return hostPath
+			}
+			return mountPath
+		}
 	)
 
+	labelz["part-of"] = resName
+
 	for mountName, mount := range wg.Mounts {
-		vol, volmount := getPathSetup(mount.Path, mountName)
+		vol, volmount := getPathSetup(mount.HostPath, defaultMountPath(mount.HostPath, mount.MountPath), mountName)
 		volumes = append(volumes, vol)
 		volumeMounts = append(volumeMounts, volmount)
 	}
 
-	podSpec = x.defaultPodSpec(sa)
+	podSpec = x.defaultPodSpec(sa, wg.NodeSelector)
 	podSpec.Containers[0].Args = args
 	podSpec.Volumes = volumes
 	podSpec.Containers[0].VolumeMounts = volumeMounts
@@ -60,12 +68,14 @@ func (x *x509CertificateExporter) daemonSet(
 			Labels:    labelz,
 		},
 		Spec: appsv1.DaemonSetSpec{
-			Selector: wg.Selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labelz,
 				},
 				Spec: podSpec,
+			},
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labelz,
 			},
 		},
 	}

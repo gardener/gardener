@@ -9,7 +9,6 @@ import (
 
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -34,15 +33,25 @@ type commonExporterConfigs struct {
 	ExposePerCertErrorMetrics bool `yaml:"exposePerCertErrorMetrics,omitempty"`
 	// ExposeExpiryMetrics flag for the exporter
 	ExposeLabelsMetrics bool `yaml:"exposeLabelsMetrics,omitempty"`
+	// Selector is selector for nodes
+	NodeSelector map[string]string `yaml:"nodeSelector,omitempty"`
+}
+
+// watchableSecret holds configuration for a specific secret type and key regex
+type watchableSecret struct {
+	// Type is the secret type to monitor
+	Type string `yaml:"type"`
+	// RegExNames is the regex to match secret keys within the secret type
+	RegEx string `yaml:"regex"`
 }
 
 // inClusterConfig holds configuration options for in-cluster x509 certificate monitoring
 type inClusterConfig struct {
-	commonExporterConfigs
+	commonExporterConfigs `yaml:",inline"`
 	// Enabled specifies if the component is enabled
 	Enabled bool `yaml:"enabled,omitempty"`
-	// SecretTypes specifies the secret types to monitor
-	SecretTypes []string `yaml:"secretTypes,omitempty"`
+	// SecretsToWatch specifies the secret types to monitor
+	SecretsToWatch []watchableSecret `yaml:"secretTypes,omitempty"`
 	// ConfigMapKeys specifies the config map keys to monitor
 	ConfigMapKeys []string `yaml:"configMapKeys,omitempty"`
 	// IncludeLabels includes labels, similar to the namespaces vars.
@@ -64,8 +73,10 @@ type inClusterConfig struct {
 }
 
 type monitorableMount struct {
-	// Path is the mount path within the pod
-	Path string `yaml:"path"`
+	// HostPath is the path on the host that will be mounted
+	HostPath string `yaml:"hostPath"`
+	// MountPath is the mount path within the pod
+	MountPath string `yaml:"mountPath,omitempty"`
 	// WatchKubeconfigs is a list of kubeconfigs passed to the exporter
 	WatchKubeconfigs []string `yaml:"watchKubeconfigs,omitempty"`
 	// WatchCertificates is a list of certificate paths passed to the exporter
@@ -76,12 +87,9 @@ type monitorableMount struct {
 
 // workerGroup holds configuration options for a single worker group x509 certificate monitoring
 type workerGroup struct {
-	commonExporterConfigs
+	commonExporterConfigs `yaml:",inline"`
 	// NameSuffix is attached to the daemonset name and related resources
 	NameSuffix string `yaml:"nameSuffix,omitempty"`
-	// TODO: Nodelocaldns for ds
-	// Selector is the label selector to identify the worker nodes
-	Selector *metav1.LabelSelector `yaml:"selector,omitempty"`
 	// Mounts is a map of mounts and the monitored resources within
 	Mounts map[string]monitorableMount `yaml:"mounts"`
 }

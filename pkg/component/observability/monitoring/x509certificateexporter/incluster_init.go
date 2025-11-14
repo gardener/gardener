@@ -12,12 +12,18 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func secretTypesAsArgs(secretTypes []string) []string {
-	return stringsToArgs("secret-type", secretTypes)
+func secretTypesAsArgs(watchedSecrets []watchableSecret) []string {
+	return stringsToArgs("secret-type", func() []string {
+		result := make([]string, len(watchedSecrets))
+		for i, stype := range watchedSecrets {
+			result[i] = stype.String()
+		}
+		return result
+	}())
 }
 
 func configMapKeysAsArgs(configMapKeys []string) []string {
-	return stringsToArgs("configmap-key", configMapKeys)
+	return stringsToArgs("configmap-keys", configMapKeys)
 }
 
 func includedLabelsAsArgs(includedLabels map[string]string) []string {
@@ -37,15 +43,15 @@ func excludedNamespacesAsArgs(excludedNamespaces []string) []string {
 }
 
 func maxCacheDurationAsArgs(duration time.Duration) string {
-	return fmt.Sprintf("--max-cache-duration=%d", duration)
+	return fmt.Sprintf("--max-cache-duration=%s", duration)
 }
 
 func kubeAPIBurstAsArgs(burst *uint32) string {
-	return fmt.Sprintf("--kube-api-rate-limit-burst=%d", burst)
+	return fmt.Sprintf("--kube-api-rate-limit-burst=%d", *burst)
 }
 
 func kubeAPIRateLimitAsArgs(rate *uint32) string {
-	return fmt.Sprintf("--kube-api-rate-limit-qps=%d", rate)
+	return fmt.Sprintf("--kube-api-rate-limit-qps=%d", *rate)
 }
 
 var configMapKeyRegexp = regexp.MustCompile(`^[-._a-zA-Z0-9]+$`)
@@ -97,46 +103,24 @@ func validateSecretType(secretType corev1.SecretType) error {
 }
 
 func (i *inClusterConfig) Default() {
-	if !i.Enabled {
-		return
-	}
-	if i.TrimComponents == nil {
-		i.TrimComponents = ptr.To(uint32(0))
-	}
-	if i.Replicas == nil {
-		i.Replicas = ptr.To(defaultReplicas)
-	}
-	if i.KubeAPIRateLimit == nil {
-		i.KubeAPIRateLimit = ptr.To(defaultKubeAPIRateLimit)
-	}
-	if i.KubeAPIBurst == nil {
-		i.KubeAPIBurst = ptr.To(defaultKubeAPIBurst)
-	}
+	i.DefaultCommon()
 
-	if *i.Replicas == 0 {
-		i.Replicas = ptr.To(defaultReplicas)
-	}
-	if *i.KubeAPIBurst == 0 {
-		i.KubeAPIBurst = ptr.To(defaultKubeAPIBurst)
-	}
-	if *i.KubeAPIRateLimit == 0 {
-		i.KubeAPIRateLimit = ptr.To(defaultKubeAPIRateLimit)
-	}
-	if i.MaxCacheDuration == 0 {
-		i.MaxCacheDuration = defaultCertCacheDuration
-	}
+	i.KubeAPIBurst = ptr.To(defaultKubeAPIBurst)
+	i.KubeAPIRateLimit = ptr.To(defaultKubeAPIRateLimit)
+	i.MaxCacheDuration = defaultCertCacheDuration
+	i.Replicas = ptr.To(defaultReplicas)
 }
 
 func (i *inClusterConfig) Validate() error {
 	if !i.Enabled {
 		return nil
 	}
-	if len(i.SecretTypes) == 0 && len(i.ConfigMapKeys) == 0 {
+	if len(i.SecretsToWatch) == 0 && len(i.ConfigMapKeys) == 0 {
 		return ErrNoConfigMapKeyOrSecretTypes
 	}
 	errs := make([]error, 0)
-	for idx, stype := range i.SecretTypes {
-		if err := validateSecretType(corev1.SecretType(stype)); err != nil {
+	for idx, stype := range i.SecretsToWatch {
+		if err := validateSecretType(corev1.SecretType(stype.Type)); err != nil {
 			errs = append(errs, fmt.Errorf("secretTypes[%d] is invalid: %w", idx, err))
 		}
 	}
@@ -163,12 +147,12 @@ func (i *inClusterConfig) Validate() error {
 func (i *inClusterConfig) GetArgs() []string {
 	args := make(
 		[]string, 0,
-		len(i.SecretTypes)+len(i.ConfigMapKeys)+len(i.IncludeLabels)+
+		len(i.SecretsToWatch)+len(i.ConfigMapKeys)+len(i.IncludeLabels)+
 			len(i.ExcludeLabels)+len(i.IncludeNamespaces)+len(i.ExcludeNamespaces)+
-			// MaxCacheDuration, KubeAPIBurst, KubeAPIRateLimit
-			3,
+			// MaxCacheDuration, KubeAPIBurst, KubeAPIRateLimit, watch-kube-secrets
+			4,
 	)
-	args = append(args, secretTypesAsArgs(i.SecretTypes)...)
+	args = append(args, secretTypesAsArgs(i.SecretsToWatch)...)
 	args = append(args, configMapKeysAsArgs(i.ConfigMapKeys)...)
 	args = append(args, includedLabelsAsArgs(i.IncludeLabels)...)
 	args = append(args, excludedLabelsAsArgs(i.ExcludeLabels)...)
@@ -176,6 +160,7 @@ func (i *inClusterConfig) GetArgs() []string {
 	args = append(args, excludedNamespacesAsArgs(i.ExcludeNamespaces)...)
 	args = append(args, maxCacheDurationAsArgs(i.MaxCacheDuration), kubeAPIBurstAsArgs(i.KubeAPIBurst), kubeAPIRateLimitAsArgs(i.KubeAPIRateLimit))
 	args = append(args, i.GetCommonArgs()...)
+	args = append(args, "--watch-kube-secrets")
 	sort.Strings(args)
 
 	return args

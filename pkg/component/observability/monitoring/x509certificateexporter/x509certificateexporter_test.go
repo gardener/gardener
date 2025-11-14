@@ -128,6 +128,40 @@ alertingConfig:
 				),
 			)
 		})
+		Context("fullblown config", func() {
+			It("should succeed", func() {
+				obj, err := x.New(fakeclient.NewFakeClient(), nil, "garden", x.Values{
+					Image:              "some-image:some-tag",
+					PriorityClassName:  "some-priority-class",
+					NameSuffix:         x.SuffixRuntime,
+					PrometheusInstance: "some-prometheus-instance",
+					ConfigData: []byte(`
+inCluster:
+  enable: true
+  secretTypes:
+    - Opaque
+    - kubernetes.io/tls
+  configMapKeys:
+    - ca-crl.pem
+    - root-cert.pem
+    - ca.crt
+alertingConfig:
+  certificateExpirationDays: 1
+workerGroups:
+  - nameSuffix: gol-cplane
+    selector:
+      kubernetes.io/hostname: gardener-operator-local-control-plane
+    mounts:
+      etc:
+        path: /x509-mon
+        watchDirs:
+        - /x509-mon/etc/ssl/certs/
+`),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(obj).NotTo(BeNil())
+			})
+		})
 	})
 	var (
 		unhealthyManagedResourceStatus = resourcesv1alpha1.ManagedResourceStatus{

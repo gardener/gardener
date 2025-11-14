@@ -12,7 +12,7 @@ import (
 
 func getMountedArgs(arg, mount string, filenames []string) []string {
 	return mapStrings(filenames, func(value string) string {
-		return fmt.Sprintf("--%s=%s/%s", mount, arg, value)
+		return fmt.Sprintf("--%s=%s/%s", arg, mount, value)
 	})
 }
 
@@ -30,18 +30,18 @@ func getCertificateDirAsArg(mount string, directories []string) []string {
 
 func getTrimComponentsArg(trim *uint32) []string {
 	if trim != nil {
-		return []string{fmt.Sprintf("--trim-path-components=%d", trim)}
+		return []string{fmt.Sprintf("--trim-path-components=%d", *trim)}
 	}
 	return []string{}
 }
 
 // getPathSetup creates the volume and volume mount for a given path
-func getPathSetup(mountPath, mountName string) (corev1.Volume, corev1.VolumeMount) {
+func getPathSetup(hostPath, mountPath, mountName string) (corev1.Volume, corev1.VolumeMount) {
 	return corev1.Volume{
 			Name: mountName,
 			VolumeSource: corev1.VolumeSource{
 				HostPath: &corev1.HostPathVolumeSource{
-					Path: mountPath,
+					Path: hostPath,
 					Type: ptr.To(corev1.HostPathDirectory),
 				},
 			},
@@ -60,15 +60,21 @@ func (n noNodeSelectorOrNameForWorkerError) Error() string {
 }
 
 func (m *monitorableMount) Validate() error {
-	if !filepath.IsAbs(m.Path) {
-		return fmt.Errorf("%w: %v", ErrMountPathNotAbsolute, m.Path)
+	if !filepath.IsAbs(m.HostPath) {
+		return fmt.Errorf("%w: %v", ErrHostPathNotAbsolute, m.MountPath)
+	}
+	if m.MountPath == "" {
+		return ErrMountPathEmpty
+	}
+	if !filepath.IsAbs(m.MountPath) {
+		return fmt.Errorf("%w: %v", ErrMountPathNotAbsolute, m.MountPath)
 	}
 	if len(m.WatchKubeconfigs) == 0 && len(m.WatchCertificates) == 0 && len(m.WatchDirs) == 0 {
 		return ErrNoMonitorableFiles
 	}
 
 	var (
-		fps  = make([]string, len(m.WatchKubeconfigs)+len(m.WatchCertificates)+len(m.WatchDirs))
+		fps  = make([]string, 0, len(m.WatchKubeconfigs)+len(m.WatchCertificates)+len(m.WatchDirs))
 		errs = make([]error, 0)
 	)
 
@@ -77,7 +83,7 @@ func (m *monitorableMount) Validate() error {
 	fps = append(fps, m.WatchDirs...)
 	for _, path := range fps {
 		if !filepath.IsAbs(path) {
-			errs = append(errs, fmt.Errorf("%w: %q", ErrWatchedFileNotAbsolutePath, path))
+			errs = append(errs, fmt.Errorf("%w: %q, %+v", ErrWatchedFileNotAbsolutePath, path, m))
 		}
 	}
 	if len(errs) > 0 {
@@ -87,7 +93,7 @@ func (m *monitorableMount) Validate() error {
 }
 
 func (wg *workerGroup) Validate() error {
-	if wg.Selector == nil || wg.NameSuffix == "" {
+	if wg.NameSuffix == "" {
 		return noNodeSelectorOrNameForWorkerError(fmt.Sprintf("%+v", wg))
 	}
 	if len(wg.Mounts) == 0 {
@@ -116,18 +122,17 @@ func (wg *workerGroup) GetArgs() []string {
 			}
 			return
 		}
-		getArgsForMount = func(mountName string, mount monitorableMount) []string {
+		getArgsForMount = func(mount monitorableMount) []string {
 			mountArgs := make([]string, 0, countArgsForMount(mount))
-			mountArgs = append(mountArgs, getCertificateFileAsArg(mountName, mount.WatchCertificates)...)
-			mountArgs = append(mountArgs, getCertificateDirAsArg(mountName, mount.WatchKubeconfigs)...)
-			return append(mountArgs, getKubeconfigFileAsArg(mountName, mount.WatchDirs)...)
+			mountArgs = append(mountArgs, getCertificateFileAsArg(mount.MountPath, mount.WatchCertificates)...)
+			mountArgs = append(mountArgs, getCertificateDirAsArg(mount.MountPath, mount.WatchDirs)...)
+			return append(mountArgs, getKubeconfigFileAsArg(mount.MountPath, mount.WatchKubeconfigs)...)
 		}
 		getArgs = func() []string {
-			args := make([]string, 0, countArgs()+1)
-			for mountName, mount := range wg.Mounts {
-				args = append(args, getArgsForMount(mountName, mount)...)
+			args := make([]string, 0, countArgs())
+			for _, mount := range wg.Mounts {
+				args = append(args, getArgsForMount(mount)...)
 			}
-			args = append(args, fmt.Sprintf("--listen-address=:%d", Port))
 			return args
 		}
 		args = getArgs()
@@ -135,6 +140,16 @@ func (wg *workerGroup) GetArgs() []string {
 	args = append(args, wg.GetCommonArgs()...)
 	sort.Strings(args)
 	return args
+}
+
+func (wg *workerGroup) Default() {
+	wg.DefaultCommon()
+}
+
+func (wgs *workerGroupsConfig) Default() {
+	for _, wg := range *wgs {
+		wg.Default()
+	}
 }
 
 func (wgs *workerGroupsConfig) Validate() error {
@@ -147,7 +162,9 @@ func (wgs *workerGroupsConfig) Validate() error {
 	}
 	for _, wg := range *wgs {
 		err := wg.Validate()
-		wgErrs = append(wgErrs, err)
+		if err != nil {
+			wgErrs = append(wgErrs, err)
+		}
 		if errors.As(err, &noNameOrSuffixErr) && len(*wgs) > 1 {
 			return fmt.Errorf("%w: %w: %w", ErrWorkerGroupInvalid, ErrMultipleGroupsNoSelectorOrSuffix, err)
 		}

@@ -88,6 +88,10 @@ const (
 	ErrWorkerGroupMissingMount Error = "worker group must have at least one mount defined"
 	// ErrMultipleGroupsNoSelectorOrSuffix is returned when multiple workergroups are defined but some of them miss name suffix or selector
 	ErrMultipleGroupsNoSelectorOrSuffix Error = "multiple worker groups defined, but at least one is missing a node selector"
+	// ErrHostPathNotAbsolute is returned when a relative path is passed as mount path
+	ErrHostPathNotAbsolute Error = "host path is not an absolute path"
+	// ErrMountPathEmpty is returned when mount path is empty
+	ErrMountPathEmpty Error = "mount path is empty"
 	// ErrMountPathNotAbsolute is returned when a relative path is passed as mount path
 	ErrMountPathNotAbsolute Error = "mount path is not an absolute path"
 	// ErrMountValidation is returned when a mount definition is invalid

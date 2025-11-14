@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 
-	"go.yaml.in/yaml/v2"
+	"go.yaml.in/yaml/v4"
+
+	"k8s.io/utils/ptr"
 )
 
 func mapStrings(slice []string, fn func(string) string) []string {
@@ -19,9 +21,9 @@ func mapStrings(slice []string, fn func(string) string) []string {
 	return result
 }
 
-func mapStringsWithVals(slice map[string]string, fn func(string, string) string) []string {
+func mapStringsWithVals(stringMap map[string]string, fn func(string, string) string) []string {
 	results := make([]string, 0)
-	for k, v := range slice {
+	for k, v := range stringMap {
 		results = append(results, fn(k, v))
 	}
 	return results
@@ -29,7 +31,7 @@ func mapStringsWithVals(slice map[string]string, fn func(string, string) string)
 
 func stringsToArgs(argName string, values []string) []string {
 	return mapStrings(values, func(value string) string {
-		return "--" + argName + "=" + value
+		return fmt.Sprintf("--%s=%s", argName, value)
 	})
 }
 
@@ -61,6 +63,10 @@ func getExposeLabelsMetricsArg(expose bool) []string {
 	return boolToArg("--expose-labels-metrics", expose)
 }
 
+func (s watchableSecret) String() string {
+	return fmt.Sprintf("%s:%s", s.Type, s.RegEx)
+}
+
 func (c *commonExporterConfigs) GetCommonArgs() []string {
 	args := []string{fmt.Sprintf("--listen-address=:%d", Port)}
 	args = append(args, getExposeRelativeMetricsArg(c.ExposeRelativeMetrics)...)
@@ -70,35 +76,24 @@ func (c *commonExporterConfigs) GetCommonArgs() []string {
 	return args
 }
 
-func (a *alertingConfig) Default() {
-	if a.CertificateExpirationDays == 0 {
-		a.CertificateExpirationDays = defaultCertificateExpirationDays
-	}
-	if a.CertificateRenewalDays == 0 {
-		a.CertificateRenewalDays = defaultCertificateRenewalDays
-	}
+func (c *commonExporterConfigs) DefaultCommon() {
+	c.TrimComponents = ptr.To(uint32(0))
+	c.ExposeRelativeMetrics = false
+	c.ExposePerCertErrorMetrics = false
+	c.ExposeLabelsMetrics = false
+}
 
-	if a.ReadErrorsSeverity == "" {
-		a.ReadErrorsSeverity = defaultReadErrorsSeverity
-	}
-	if a.CertificateErrorsSeverity == "" {
-		a.CertificateErrorsSeverity = defaultCertificateErrorsSeverity
-	}
-	if a.RenewalSeverity == "" {
-		a.RenewalSeverity = defaultRenewalSeverity
-	}
-	if a.ExpirationSeverity == "" {
-		a.ExpirationSeverity = defaultExpirationSeverity
-	}
-	if a.ExpiresTodaySeverity == "" {
-		a.ExpiresTodaySeverity = defaultExpiresTodaySeverity
-	}
-	if a.DurationForAlertEvaluation == "" {
-		a.DurationForAlertEvaluation = defaultDurationForAlertEvaluation
-	}
-	if a.PrometheusRuleName == "" {
-		a.PrometheusRuleName = defaultPrometheusRuleName
-	}
+func (a *alertingConfig) Default() {
+	a.CertificateExpirationDays = defaultCertificateExpirationDays
+	a.CertificateRenewalDays = defaultCertificateRenewalDays
+
+	a.ReadErrorsSeverity = defaultReadErrorsSeverity
+	a.CertificateErrorsSeverity = defaultCertificateErrorsSeverity
+	a.RenewalSeverity = defaultRenewalSeverity
+	a.ExpirationSeverity = defaultExpirationSeverity
+	a.ExpiresTodaySeverity = defaultExpiresTodaySeverity
+	a.DurationForAlertEvaluation = defaultDurationForAlertEvaluation
+	a.PrometheusRuleName = defaultPrometheusRuleName
 }
 
 func (a *alertingConfig) Validate() error {
@@ -135,7 +130,7 @@ func (xc *x509certificateExporterConfig) IsWorkerGroupsEnabled() bool {
 func (xc *x509certificateExporterConfig) Validate() error {
 	var errs []error
 	if !xc.IsInclusterEnabled() && !xc.IsWorkerGroupsEnabled() {
-		errs = append(errs, ErrEmptyExporterConfig)
+		errs = append(errs, fmt.Errorf("%w: %+v", ErrEmptyExporterConfig, xc))
 	}
 
 	if err := xc.InCluster.Validate(); err != nil {
@@ -153,15 +148,16 @@ func (xc *x509certificateExporterConfig) Validate() error {
 
 func (xc *x509certificateExporterConfig) Default() {
 	xc.InCluster.Default()
+	xc.WorkerGroups.Default()
 	xc.Alerting.Default()
 }
 
 func parseConfig(data []byte, out *x509certificateExporterConfig) error {
+	out.Default()
 	if err := yaml.Unmarshal(data, out); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidExporterConfigFormat, err)
 	}
 
-	out.Default()
 	if err := out.Validate(); err != nil {
 		return fmt.Errorf("%w: %v", ErrConfigValidationFailed, err)
 	}

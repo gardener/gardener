@@ -23,7 +23,7 @@ func (x *x509CertificateExporter) deployment(
 	)
 
 	podLabels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
-	podSpec = x.defaultPodSpec(sa)
+	podSpec = x.defaultPodSpec(sa, x.conf.InCluster.NodeSelector)
 	podSpec.Containers[0].Args = x.conf.InCluster.GetArgs()
 
 	return &appsv1.Deployment{

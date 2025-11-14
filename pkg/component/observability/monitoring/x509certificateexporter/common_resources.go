@@ -53,7 +53,7 @@ func (x *x509CertificateExporter) getGenericLabels(source podTypeLabelValues) ma
 	}
 }
 
-func (x *x509CertificateExporter) defaultPodSpec(sa *corev1.ServiceAccount) corev1.PodSpec {
+func (x *x509CertificateExporter) defaultPodSpec(sa *corev1.ServiceAccount, nodeSelector map[string]string) corev1.PodSpec {
 	return corev1.PodSpec{
 		ServiceAccountName: sa.Name,
 		SecurityContext: &corev1.PodSecurityContext{
@@ -87,5 +87,6 @@ func (x *x509CertificateExporter) defaultPodSpec(sa *corev1.ServiceAccount) core
 		},
 		PriorityClassName: x.values.PriorityClassName,
 		RestartPolicy:     corev1.RestartPolicyAlways,
+		NodeSelector:      nodeSelector,
 	}
 }
