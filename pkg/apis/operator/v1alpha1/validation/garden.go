@@ -48,14 +48,14 @@ import (
 )
 
 var (
-	gardenCoreScheme                      *runtime.Scheme
-	forbiddenShootOperationsToRunTogether = map[string]sets.Set[string]{
+	gardenCoreScheme                 *runtime.Scheme
+	incompatibleOperationAnnotations = map[string]sets.Set[string]{
 		v1beta1constants.OperationRotateETCDEncryptionKey: sets.New(
 			v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 		),
 	}
 	// TODO(AleksandarSavchev): Remove this variable and the associated validation after support for Kubernetes v1.33 is dropped.
-	forbiddenETCDEncryptionKeyShootOperationsWithK8s134 = sets.New(
+	forbiddenETCDEncryptionKeyOperationsWithK8s134 = sets.New(
 		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 		v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
 	)
@@ -629,13 +629,13 @@ func validateOperation(operations []string, garden *operatorv1alpha1.Garden, fld
 	operationsSet := sets.New(operations...)
 
 	for _, operation := range operationsSet.UnsortedList() {
-		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(operation) && !k8sLess134 {
+		if forbiddenETCDEncryptionKeyOperationsWithK8s134.Has(operation) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", operation)))
 		}
 		if !operatorv1alpha1.AvailableOperationAnnotations.Has(operation) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(operatorv1alpha1.AvailableOperationAnnotations)))
 		}
-		if forbiddenOps, ok := forbiddenShootOperationsToRunTogether[operation]; ok && forbiddenOps.HasAny(operations...) {
+		if forbiddenOps, ok := incompatibleOperationAnnotations[operation]; ok && forbiddenOps.HasAny(operations...) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be run together with %s operations", operation, strings.Join(sets.List(forbiddenOps), ", "))))
 		}
 	}

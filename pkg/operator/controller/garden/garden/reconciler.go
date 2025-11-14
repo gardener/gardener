@@ -177,8 +177,7 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	var (
 		now                = metav1.NewTime(r.Clock.Now().UTC())
 		operations         = helper.GetGardenerOperations(garden.Annotations)
-		operationsSet      = sets.New(operations...)
-		filteredOperations = operationsSet.UnsortedList()
+		filteredOperations = sets.New(operations...).UnsortedList()
 		description        string
 	)
 

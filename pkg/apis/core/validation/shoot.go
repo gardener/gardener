@@ -100,7 +100,7 @@ var (
 		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 	)
 	availableShootOperationsToRunInParallel = availableShootMaintenanceOperations
-	forbiddenShootOperationsToRunTogether   = map[string][]string{
+	incompatibleShootOperations             = map[string][]string{
 		v1beta1constants.OperationRotateCredentialsStart: {
 			v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
 			v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
@@ -2988,7 +2988,7 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(op) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", op)))
 		}
-		if forbiddenOps, ok := forbiddenShootOperationsToRunTogether[op]; ok && operationsSet.HasAny(forbiddenOps...) {
+		if forbiddenOps, ok := incompatibleShootOperations[op]; ok && operationsSet.HasAny(forbiddenOps...) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be run together with %s operations", op, strings.Join(forbiddenOps, ", "))))
 		}
 		if helper.IsShootInHibernation(shoot) &&
@@ -3005,7 +3005,7 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(op) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", op)))
 		}
-		if forbiddenOps, ok := forbiddenShootOperationsToRunTogether[op]; ok && maintenanceOperationsSet.HasAny(forbiddenOps...) {
+		if forbiddenOps, ok := incompatibleShootOperations[op]; ok && maintenanceOperationsSet.HasAny(forbiddenOps...) {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted to be run together with %s maintenance operations", op, strings.Join(forbiddenOps, ", "))))
 		}
 		if helper.IsShootInHibernation(shoot) &&

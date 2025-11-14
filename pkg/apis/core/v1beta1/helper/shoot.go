@@ -769,8 +769,8 @@ func GetShootMaintenanceOperations(annotations map[string]string) []string {
 	return utils.SplitAndTrimString(annotations[v1beta1constants.GardenerMaintenanceOperation], v1beta1constants.GardenerOperationsSeparator)
 }
 
-// RemoveOperation removes listed operations from the operations slice.
-// Operations between the new length and the original length are replaced with empty strings.
+// RemoveOperation removes listed operations from the operations slice and returns a new slice that does not contain these operations.
+// Note that the input operations slice is modified.
 func RemoveOperation(operations []string, operationsToRemove ...string) []string {
 	return slices.DeleteFunc(operations, func(operation string) bool {
 		return slices.Contains(operationsToRemove, operation)
