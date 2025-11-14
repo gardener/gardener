@@ -34,7 +34,12 @@ func (d *localDriver) DeleteMachine(ctx context.Context, req *driver.DeleteMachi
 	klog.V(3).Infof("Machine deletion request has been received for %q", req.Machine.Name)
 	defer klog.V(3).Infof("Machine deletion request has been processed for %q", req.Machine.Name)
 
-	pod := podForMachine(req.Machine, req.MachineClass)
+	providerSpec, err := validateProviderSpecAndSecret(req.MachineClass, req.Secret)
+	if err != nil {
+		return nil, err
+	}
+
+	pod := podForMachine(req.Machine, req.MachineClass, providerSpec)
 	if err := providerClient.Delete(ctx, pod); err != nil {
 		if !apierrors.IsNotFound(err) {
 			// Unknown leads to short retry in machine controller
