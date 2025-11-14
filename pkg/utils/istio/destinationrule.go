@@ -35,6 +35,9 @@ func DestinationRuleWithTLSTermination(destinationRule *istionetworkingv1beta1.D
 			CredentialName: caSecret,
 			Sni:            sniHost,
 		},
+		&istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{
+			UseClientProtocol: true,
+		},
 	)
 }
 
@@ -55,6 +58,7 @@ func DestinationRuleWithLocalityPreferenceAndTLS(destinationRule *istionetworkin
 			MinHealthPercent: 0,
 		},
 		tls,
+		nil,
 	)
 }
 
@@ -65,6 +69,7 @@ func destinationRuleWithTrafficPolicy(
 	loadbalancer *istioapinetworkingv1beta1.LoadBalancerSettings,
 	outlierDetection *istioapinetworkingv1beta1.OutlierDetection,
 	tls *istioapinetworkingv1beta1.ClientTLSSettings,
+	httpConnectionPool *istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings,
 ) func() error {
 	return func() error {
 		destinationRule.Labels = labels
@@ -80,6 +85,7 @@ func destinationRuleWithTrafficPolicy(
 							Interval: &durationpb.Duration{Seconds: 75},
 						},
 					},
+					Http: httpConnectionPool,
 				},
 				LoadBalancer:     loadbalancer,
 				OutlierDetection: outlierDetection,
