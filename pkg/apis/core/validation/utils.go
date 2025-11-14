@@ -26,6 +26,7 @@ import (
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
@@ -34,19 +35,31 @@ func ValidateName(name string, prefix bool) []string {
 	return apivalidation.NameIsDNSSubdomain(name, prefix)
 }
 
-func validateCrossVersionObjectReference(ref autoscalingv1.CrossVersionObjectReference, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+func validateCrossVersionObjectReference(ref autoscalingv1.CrossVersionObjectReference, fldPath *field.Path, allowWorkloadIdentity bool) field.ErrorList {
+	var (
+		allErrs     = field.ErrorList{}
+		allowedGVKs = []string{
+			corev1.SchemeGroupVersion.WithKind("Secret").String(),
+			corev1.SchemeGroupVersion.WithKind("ConfigMap").String(),
+		}
+	)
+
+	if allowWorkloadIdentity {
+		allowedGVKs = append(allowedGVKs, securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity").String())
+	}
 
 	if len(ref.APIVersion) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("apiVersion"), "must provide an apiVersion"))
-	} else if ref.APIVersion != corev1.SchemeGroupVersion.String() {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("apiVersion"), ref.APIVersion, []string{corev1.SchemeGroupVersion.String()}))
 	}
 
 	if len(ref.Kind) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("kind"), "must provide a kind"))
-	} else if ref.Kind != "Secret" && ref.Kind != "ConfigMap" {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kind"), ref.Kind, []string{"Secret", "ConfigMap"}))
+	}
+
+	if gvk, err := unstructured.GVKFromCrossVersionObjectReference(&ref); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, ref, fmt.Sprintf("cannot determine GroupVersionKind for specified reference: %v", err)))
+	} else if !slices.Contains(allowedGVKs, gvk.String()) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, gvk.String(), allowedGVKs))
 	}
 
 	if len(ref.Name) == 0 {
@@ -533,7 +546,7 @@ func validateExtensions(extensions []core.Extension, fldPath *field.Path) field.
 }
 
 // ValidateResources validates the given list of NamedResourceReference for valid values and combinations.
-func ValidateResources(resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
+func ValidateResources(resources []core.NamedResourceReference, fldPath *field.Path, allowWorkloadIdentity bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 	names := sets.Set[string]{}
 	for i, resource := range resources {
@@ -544,7 +557,7 @@ func ValidateResources(resources []core.NamedResourceReference, fldPath *field.P
 		} else {
 			names.Insert(resource.Name)
 		}
-		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.ResourceRef, fldPath.Index(i).Child("resourceRef"))...)
+		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.ResourceRef, fldPath.Index(i).Child("resourceRef"), allowWorkloadIdentity)...)
 	}
 	return allErrs
 }
