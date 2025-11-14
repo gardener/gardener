@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/reference"
@@ -55,7 +56,8 @@ func Predicate(oldObj, newObj client.Object) bool {
 		gardenerAPIServerAdmissionPluginSecretChanged(oldGarden.Spec.VirtualCluster.Gardener.APIServer, newGarden.Spec.VirtualCluster.Gardener.APIServer) ||
 		kubeAPIServerStructuredAuthenticationConfigMapChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		kubeAPIServerStructuredAuthorizationConfigMapChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
-		kubeAPIServerStructuredAuthorizationSecretsChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer)
+		kubeAPIServerStructuredAuthorizationSecretsChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
+		resourceReferencesChanged(oldGarden.Spec.Resources, newGarden.Spec.Resources)
 }
 
 func kubeAPIServerAuditPolicyConfigMapChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeAPIServerConfig) bool {
@@ -312,6 +314,12 @@ func getReferencedSecretNames(obj client.Object) []string {
 		}
 	}
 
+	for _, ref := range garden.Spec.Resources {
+		if ref.ResourceRef.APIVersion == "v1" && ref.ResourceRef.Kind == "Secret" {
+			out = append(out, ref.ResourceRef.Name)
+		}
+	}
+
 	return out
 }
 
@@ -342,5 +350,15 @@ func getReferencedConfigMapNames(obj client.Object) []string {
 		out = append(out, virtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name)
 	}
 
+	for _, ref := range garden.Spec.Resources {
+		if ref.ResourceRef.APIVersion == "v1" && ref.ResourceRef.Kind == "ConfigMap" {
+			out = append(out, ref.ResourceRef.Name)
+		}
+	}
+
 	return out
+}
+
+func resourceReferencesChanged(oldRefs, newRefs []gardencorev1beta1.NamedResourceReference) bool {
+	return !v1beta1helper.ResourceReferencesEqual(oldRefs, newRefs)
 }

@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,20 +21,22 @@ import (
 
 var _ = Describe("Garden Reference controller tests", func() {
 	var (
-		secret1 *corev1.Secret
-		secret2 *corev1.Secret
-		secret3 *corev1.Secret
-		secret4 *corev1.Secret
-		secret5 *corev1.Secret
-		secret6 *corev1.Secret
-		secret7 *corev1.Secret
-		secret8 *corev1.Secret
-		secret9 *corev1.Secret
+		secret1  *corev1.Secret
+		secret2  *corev1.Secret
+		secret3  *corev1.Secret
+		secret4  *corev1.Secret
+		secret5  *corev1.Secret
+		secret6  *corev1.Secret
+		secret7  *corev1.Secret
+		secret8  *corev1.Secret
+		secret9  *corev1.Secret
+		secret10 *corev1.Secret
 
 		configMap1 *corev1.ConfigMap
 		configMap2 *corev1.ConfigMap
 		configMap3 *corev1.ConfigMap
 		configMap4 *corev1.ConfigMap
+		configMap5 *corev1.ConfigMap
 
 		allReferencedObjects []client.Object
 		garden               *operatorv1alpha1.Garden
@@ -49,14 +52,16 @@ var _ = Describe("Garden Reference controller tests", func() {
 		secret7 = initializeObject("secret").(*corev1.Secret)
 		secret8 = initializeObject("secret").(*corev1.Secret)
 		secret9 = initializeObject("secret").(*corev1.Secret)
+		secret10 = initializeObject("secret").(*corev1.Secret)
 
 		configMap1 = initializeObject("configMap").(*corev1.ConfigMap)
 		configMap2 = initializeObject("configMap").(*corev1.ConfigMap)
 		configMap3 = initializeObject("configMap").(*corev1.ConfigMap)
 		configMap4 = initializeObject("configMap").(*corev1.ConfigMap)
+		configMap5 = initializeObject("configMap").(*corev1.ConfigMap)
 
-		allReferencedObjects = append([]client.Object{}, secret1, secret2, secret3, secret4, secret5, secret6, secret7, secret8, secret9)
-		allReferencedObjects = append(allReferencedObjects, configMap1, configMap2, configMap3, configMap4)
+		allReferencedObjects = append([]client.Object{}, secret1, secret2, secret3, secret4, secret5, secret6, secret7, secret8, secret9, secret10)
+		allReferencedObjects = append(allReferencedObjects, configMap1, configMap2, configMap3, configMap4, configMap5)
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
@@ -163,6 +168,24 @@ var _ = Describe("Garden Reference controller tests", func() {
 						Services: []string{"100.64.0.0/13"},
 					},
 				},
+				Resources: []gardencorev1beta1.NamedResourceReference{
+					{
+						Name: "secret-resource",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							Kind:       "Secret",
+							APIVersion: "v1",
+							Name:       secret10.Name,
+						},
+					},
+					{
+						Name: "secret-resource",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							Kind:       "ConfigMap",
+							APIVersion: "v1",
+							Name:       configMap5.Name,
+						},
+					},
+				},
 			},
 		}
 	})
@@ -189,6 +212,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 			garden.Spec.VirtualCluster.Gardener.APIServer = nil
 			garden.Spec.DNS = nil
+			garden.Spec.Resources = nil
 		})
 
 		It("should not add the finalizer to the garden", func() {
@@ -222,6 +246,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 			garden.Spec.VirtualCluster.Gardener.APIServer = nil
 			garden.Spec.DNS = nil
+			garden.Spec.Resources = nil
 			Expect(testClient.Patch(ctx, garden, patch)).To(Succeed())
 
 			for _, obj := range append([]client.Object{garden}, allReferencedObjects...) {

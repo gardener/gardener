@@ -7,6 +7,7 @@ package reference_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 
@@ -140,6 +141,21 @@ var _ = Describe("Add", func() {
 		It("should return true because the gardener-apiserver admission plugin secret fields changed", func() {
 			oldShoot := garden.DeepCopy()
 			garden.Spec.VirtualCluster.Gardener.APIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{KubeconfigSecretName: ptr.To("foo")}}
+			Expect(Predicate(oldShoot, garden)).To(BeTrue())
+		})
+
+		It("should return true because the resource references changed", func() {
+			oldShoot := garden.DeepCopy()
+			garden.Spec.Resources = []gardencorev1beta1.NamedResourceReference{
+				{
+					Name: "foo",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "bar",
+					},
+				},
+			}
 			Expect(Predicate(oldShoot, garden)).To(BeTrue())
 		})
 	})
