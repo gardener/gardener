@@ -48,8 +48,8 @@ type ValuesProvider interface {
 	GetControlPlaneShootCRDsChartValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (map[string]any, error)
 	// GetStorageClassesChartValues returns the values for the storage classes chart applied by this actuator.
 	GetStorageClassesChartValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (map[string]any, error)
-	// GetControllersValues returns the controller configurations for which state should written to the controlplane status and if a requeue is required.
-	GetControllersValues(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) ([]extensionsv1alpha1.ControllerConfig, bool, error)
+	// GetControllersStatus returns status of controllers and if a requeue is required.
+	GetControllersStatus(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) ([]extensionsv1alpha1.ControllerConfig, bool, error)
 }
 
 // NewActuator creates a new Actuator that acts upon and updates the status of ControlPlane resources.
@@ -291,13 +291,11 @@ func (a *actuator) Reconcile(
 		}
 	}
 
-	// Get and update controllers' status
-	controllers, requeue, err := a.vp.GetControllersValues(ctx, cp, cluster)
+	// Get status of controllers
+	cp.Status.Controllers, requeue, err = a.vp.GetControllersStatus(ctx, cp, cluster)
 	if err != nil {
 		return false, err
 	}
-
-	cp.Status.Controllers = controllers
 
 	if err := a.client.Status().Update(ctx, cp); err != nil {
 		return false, fmt.Errorf("failed to update controlplane status: %w", err)
