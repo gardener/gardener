@@ -89,7 +89,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		}
 
 		var (
-			deploymentName = fmt.Sprintf("%s-%s", w.worker.Namespace, pool.Name)
+			deploymentName = fmt.Sprintf("%s-%s", w.cluster.Shoot.Status.TechnicalID, pool.Name)
 			className      = fmt.Sprintf("%s-%s", deploymentName, workerPoolHash)
 		)
 
@@ -117,7 +117,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				key = "ipPoolNameV6"
 			}
 
-			providerConfig[key] = infrastructure.IPPoolName(w.worker.Namespace, string(ipFamily))
+			providerConfig[key] = infrastructure.IPPoolName(w.cluster.Shoot.Status.TechnicalID, string(ipFamily))
 		}
 
 		providerConfigBytes, err := json.Marshal(providerConfig)
@@ -271,7 +271,7 @@ func (w *workerDelegate) PostReconcileHook(ctx context.Context) error {
 	// Overwrite only if Machine Image Version is not present to prevent overwriting the new version after an in-place update.
 
 	podList := &corev1.PodList{}
-	if err := w.providerClient.List(ctx, podList, client.InNamespace(w.worker.Namespace), client.MatchingLabels{
+	if err := w.providerClient.List(ctx, podList, client.InNamespace(w.cluster.Shoot.Status.TechnicalID), client.MatchingLabels{
 		"app":              "machine",
 		"machine-provider": "local",
 	}); err != nil {

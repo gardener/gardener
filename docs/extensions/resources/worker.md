@@ -132,7 +132,10 @@ The `spec.pools[].clusterAutoscaler` field contains `cluster-autoscaler` setting
 
 The controller must only inject its provider-specific sidecar container into the `machine-controller-manager` `Deployment` managed by `gardenlet`.
 
-After that, it must compute the desired machine classes and the desired machine deployments.
+After that, it must compute the desired `MachineClasses` and the desired `MachineDeployments`.
+The object names are prefixed with the technical ID of the shoot.
+The worker extension needs to determine the technical ID by reading the `shoot.status.technicalID` field from the `Cluster` object in the seed cluster, as the `Worker` object's namespace might be different from the shoot's technical ID (i.e., in case of [self-hosted shoots](../../proposals/28-self-hosted-shoot-clusters.md#managed-infrastructure)).
+
 Typically, one class maps to one deployment, and one class/deployment is created per availability zone.
 Following this convention, the created resource would look like this:
 
