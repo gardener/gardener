@@ -479,6 +479,9 @@ var _ = Describe("#SNI", func() {
 			BeforeEach(func() {
 				istioTLSTermination = true
 
+				expectedDestinationRule.Spec.TrafficPolicy.ConnectionPool.Http = &istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{
+					UseClientProtocol: true,
+				}
 				expectedDestinationRule.Spec.TrafficPolicy.LoadBalancer = &istioapinetworkingv1beta1.LoadBalancerSettings{
 					LbPolicy: &istioapinetworkingv1beta1.LoadBalancerSettings_Simple{
 						Simple: istioapinetworkingv1beta1.LoadBalancerSettings_LEAST_REQUEST,
@@ -544,6 +547,9 @@ var _ = Describe("#SNI", func() {
 					Hosts:     wildcardHosts,
 				}
 
+				expectedDestinationRule.Spec.TrafficPolicy.ConnectionPool.Http = &istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{
+					UseClientProtocol: true,
+				}
 				expectedDestinationRule.Spec.TrafficPolicy.LoadBalancer = &istioapinetworkingv1beta1.LoadBalancerSettings{
 					LbPolicy: &istioapinetworkingv1beta1.LoadBalancerSettings_Simple{
 						Simple: istioapinetworkingv1beta1.LoadBalancerSettings_LEAST_REQUEST,
@@ -625,6 +631,9 @@ var _ = Describe("#SNI", func() {
 					Hosts:               wildcardHosts,
 				}
 
+				expectedDestinationRule.Spec.TrafficPolicy.ConnectionPool.Http = &istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{
+					UseClientProtocol: true,
+				}
 				expectedDestinationRule.Spec.TrafficPolicy.LoadBalancer = &istioapinetworkingv1beta1.LoadBalancerSettings{
 					LbPolicy: &istioapinetworkingv1beta1.LoadBalancerSettings_Simple{
 						Simple: istioapinetworkingv1beta1.LoadBalancerSettings_LEAST_REQUEST,
