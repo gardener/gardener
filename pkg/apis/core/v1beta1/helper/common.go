@@ -100,7 +100,7 @@ func HasOperationAnnotation(annotations map[string]string) bool {
 		annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
 }
 
-// ResourceReferencesEqual returns true when at least one of the Secret/ConfigMap resource references has changed.
+// ResourceReferencesEqual returns true when none of the Secret/ConfigMap/WorkloadIdentity resource reference has changed.
 func ResourceReferencesEqual(oldResources, newResources []gardencorev1beta1.NamedResourceReference) bool {
 	var (
 		oldNames = sets.New[string]()
@@ -108,13 +108,15 @@ func ResourceReferencesEqual(oldResources, newResources []gardencorev1beta1.Name
 	)
 
 	for _, resource := range oldResources {
-		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
+		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) ||
+			resource.ResourceRef.APIVersion == "security.gardener.cloud/v1alpha1" && resource.ResourceRef.Kind == "WorkloadIdentity" {
 			oldNames.Insert(resource.ResourceRef.Kind + "/" + resource.ResourceRef.Name)
 		}
 	}
 
 	for _, resource := range newResources {
-		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
+		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) ||
+			resource.ResourceRef.APIVersion == "security.gardener.cloud/v1alpha1" && resource.ResourceRef.Kind == "WorkloadIdentity" {
 			newNames.Insert(resource.ResourceRef.Kind + "/" + resource.ResourceRef.Name)
 		}
 	}

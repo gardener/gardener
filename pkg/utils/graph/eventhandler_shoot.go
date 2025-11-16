@@ -107,6 +107,7 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	g.deleteAllIncomingEdges(VertexTypeSecretBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeCredentialsBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeShootState, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllIncomingEdges(VertexTypeWorkloadIdentity, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	if g.forSelfHostedShoots {
 		g.deleteAllIncomingEdges(VertexTypeLease, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	} else {
@@ -191,7 +192,7 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	}
 
 	for _, resource := range shoot.Spec.Resources {
-		// only secrets and configMap are supported here
+		// only v1.Secrets, v1.ConfigMaps, and security.gardener.cloud/v1alpha1.WorkloadIdentities are supported here
 		if resource.ResourceRef.APIVersion == "v1" {
 			if resource.ResourceRef.Kind == "Secret" {
 				secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, resource.ResourceRef.Name)
@@ -200,6 +201,11 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 			if resource.ResourceRef.Kind == "ConfigMap" {
 				configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, resource.ResourceRef.Name)
 				g.addEdge(configMapVertex, shootVertex)
+			}
+		} else if resource.ResourceRef.APIVersion == "security.gardener.cloud/v1alpha1" {
+			if resource.ResourceRef.Kind == "WorkloadIdentity" {
+				workloadIdentityVertex := g.getOrCreateVertex(VertexTypeWorkloadIdentity, shoot.Namespace, resource.ResourceRef.Name)
+				g.addEdge(workloadIdentityVertex, shootVertex)
 			}
 		}
 	}
