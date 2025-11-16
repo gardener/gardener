@@ -178,7 +178,8 @@ func seedDNSProviderSecretRefEqual(oldDNS, newDNS *gardencorev1beta1.SeedDNSProv
 func addSeedResources(seedSpec gardencorev1beta1.SeedSpec, g *graph, seedVertex *Vertex) {
 	for _, resource := range seedSpec.Resources {
 		// only v1.Secrets, v1.ConfigMaps, and security.gardener.cloud/v1alpha1.WorkloadIdentity are supported here
-		if resource.ResourceRef.APIVersion == "v1" {
+		switch resource.ResourceRef.APIVersion {
+		case "v1":
 			if resource.ResourceRef.Kind == "Secret" {
 				secretVertex := g.getOrCreateVertex(VertexTypeSecret, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
 				g.addEdge(secretVertex, seedVertex)
@@ -187,7 +188,7 @@ func addSeedResources(seedSpec gardencorev1beta1.SeedSpec, g *graph, seedVertex 
 				configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
 				g.addEdge(configMapVertex, seedVertex)
 			}
-		} else if resource.ResourceRef.APIVersion == "security.gardener.cloud/v1alpha1" {
+		case "security.gardener.cloud/v1alpha1":
 			if resource.ResourceRef.Kind == "WorkloadIdentity" {
 				workloadIdentityVertex := g.getOrCreateVertex(VertexTypeWorkloadIdentity, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
 				g.addEdge(workloadIdentityVertex, seedVertex)

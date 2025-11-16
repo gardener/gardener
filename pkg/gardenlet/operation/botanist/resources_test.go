@@ -236,15 +236,15 @@ var _ = Describe("Resources", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(managedResource), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), &corev1.Secret{})).To(BeNotFoundError())
 
-			workloadIdentitySecerts := &corev1.SecretList{}
-			Expect(seedClient.List(ctx, workloadIdentitySecerts,
+			workloadIdentitySecrets := &corev1.SecretList{}
+			Expect(seedClient.List(ctx, workloadIdentitySecrets,
 				client.InNamespace(gardenNamespace),
 				client.MatchingLabels(map[string]string{
 					"workloadidentity.security.gardener.cloud/referenced": "true",
 					"security.gardener.cloud/purpose":                     "workload-identity-token-requestor",
 				}),
 			)).To(Succeed())
-			Expect(workloadIdentitySecerts.Items).To(BeEmpty())
+			Expect(workloadIdentitySecrets.Items).To(BeEmpty())
 		})
 	})
 })

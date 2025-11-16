@@ -193,7 +193,8 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 
 	for _, resource := range shoot.Spec.Resources {
 		// only v1.Secrets, v1.ConfigMaps, and security.gardener.cloud/v1alpha1.WorkloadIdentities are supported here
-		if resource.ResourceRef.APIVersion == "v1" {
+		switch resource.ResourceRef.APIVersion {
+		case "v1":
 			if resource.ResourceRef.Kind == "Secret" {
 				secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, resource.ResourceRef.Name)
 				g.addEdge(secretVertex, shootVertex)
@@ -202,7 +203,7 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 				configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, resource.ResourceRef.Name)
 				g.addEdge(configMapVertex, shootVertex)
 			}
-		} else if resource.ResourceRef.APIVersion == "security.gardener.cloud/v1alpha1" {
+		case "security.gardener.cloud/v1alpha1":
 			if resource.ResourceRef.Kind == "WorkloadIdentity" {
 				workloadIdentityVertex := g.getOrCreateVertex(VertexTypeWorkloadIdentity, shoot.Namespace, resource.ResourceRef.Name)
 				g.addEdge(workloadIdentityVertex, shootVertex)
