@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -148,5 +149,9 @@ func ShouldSkipOperation(operationType gardencorev1beta1.LastOperationType, obj 
 // GetObjectByReference gets an object by the given reference, in the given namespace.
 // If the object kind doesn't match the given reference kind this will result in an error.
 func GetObjectByReference(ctx context.Context, c client.Client, ref *autoscalingv1.CrossVersionObjectReference, namespace string, obj client.Object) error {
-	return c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + ref.Name}, obj)
+	prefix := v1beta1constants.ReferencedResourcesPrefix
+	if ref.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && ref.Kind == "WorkloadIdentity" {
+		prefix = v1beta1constants.ReferencedWorkloadIdentityPrefix
+	}
+	return c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: prefix + ref.Name}, obj)
 }
