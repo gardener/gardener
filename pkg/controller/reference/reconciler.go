@@ -66,9 +66,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	unreferencedWorkloadIdentities, err := r.getUnreferencedResources(ctx, obj, &securityv1alpha1.WorkloadIdentityList{}, r.GetReferencedWorkloadIdentityNames)
-	if err != nil {
-		return reconcile.Result{}, err
+	unreferencedWorkloadIdentities := []client.Object{}
+	if r.GetReferencedWorkloadIdentityNames != nil {
+		unreferencedWorkloadIdentities, err = r.getUnreferencedResources(ctx, obj, &securityv1alpha1.WorkloadIdentityList{}, r.GetReferencedWorkloadIdentityNames)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	if err := r.releaseUnreferencedResources(ctx, log, append(unreferencedSecrets, append(unreferencedConfigMaps, unreferencedWorkloadIdentities...)...)...); err != nil {
@@ -94,9 +97,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	addedFinalizerToWorkloadIdentity, err := r.handleReferencedResources(ctx, log, "WorkloadIdentity", func() client.Object { return &securityv1alpha1.WorkloadIdentity{} }, r.GetNamespace(obj), r.GetReferencedWorkloadIdentityNames(obj)...)
-	if err != nil {
-		return reconcile.Result{}, err
+	addedFinalizerToWorkloadIdentity := false
+	if r.GetReferencedWorkloadIdentityNames != nil {
+		addedFinalizerToWorkloadIdentity, err = r.handleReferencedResources(ctx, log, "WorkloadIdentity", func() client.Object { return &securityv1alpha1.WorkloadIdentity{} }, r.GetNamespace(obj), r.GetReferencedWorkloadIdentityNames(obj)...)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	var (

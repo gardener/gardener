@@ -28,7 +28,7 @@ func AddToManager(mgr manager.Manager, gardenNamespace string) error {
 		GetNamespace:                       func(client.Object) string { return gardenNamespace },
 		GetReferencedSecretNames:           getReferencedSecretNames,
 		GetReferencedConfigMapNames:        getReferencedConfigMapNames,
-		GetReferencedWorkloadIdentityNames: func(client.Object) []string { return nil },
+		GetReferencedWorkloadIdentityNames: nil,
 		ReferenceChangedPredicate:          Predicate,
 	}).AddToManager(mgr, "garden")
 }
