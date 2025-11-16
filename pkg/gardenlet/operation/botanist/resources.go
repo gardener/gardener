@@ -25,11 +25,33 @@ func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 	}
 
 	// Create managed resource from the slice of unstructured objects
-	return managedresources.CreateFromUnstructured(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, managedResourceName,
-		false, v1beta1constants.SeedResourceManagerClass, unstructuredObjs, false, nil)
+	if err := managedresources.CreateFromUnstructured(
+		ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, managedResourceName,
+		false, v1beta1constants.SeedResourceManagerClass, unstructuredObjs, false, nil,
+	); err != nil {
+		return fmt.Errorf("failed to create managed resource for referenced resources: %w", err)
+	}
+
+	// Reconcile secrets for referenced WorkloadIdentities
+	if err := gardenerutils.ReconcileWorkloadIdentityReferencedResources(
+		ctx, b.GardenClient, b.SeedClientSet.Client(), b.Shoot.GetInfo().Spec.Resources,
+		b.Shoot.GetInfo().Namespace, b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(),
+	); err != nil {
+		return fmt.Errorf("failed to reconcile referenced workload identities: %w", err)
+	}
+
+	return nil
 }
 
 // DestroyReferencedResources deletes the managed resource containing referenced resources from the Seed cluster.
 func (b *Botanist) DestroyReferencedResources(ctx context.Context) error {
-	return client.IgnoreNotFound(managedresources.Delete(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, managedResourceName, false))
+	if err := gardenerutils.DestroyWorkloadIdentityReferencedResources(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace); err != nil {
+		return fmt.Errorf("failed to destroy referenced workload identities: %w", err)
+	}
+
+	if err := client.IgnoreNotFound(managedresources.Delete(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, managedResourceName, false)); err != nil {
+		return fmt.Errorf("failed to delete managed resource for referenced resources: %w", err)
+	}
+
+	return nil
 }
