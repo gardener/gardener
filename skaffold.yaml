@@ -274,6 +274,7 @@ build:
             - pkg/apis/security
             - pkg/apis/security/install
             - pkg/apis/security/v1alpha1
+            - pkg/apis/security/v1alpha1/constants
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
@@ -365,6 +366,7 @@ build:
             - pkg/utils/validation/features
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/workloadidentity
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -403,6 +405,7 @@ build:
             - pkg/apis/security
             - pkg/apis/security/install
             - pkg/apis/security/v1alpha1
+            - pkg/apis/security/v1alpha1/constants
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
@@ -442,6 +445,7 @@ build:
             - pkg/utils/validation/cidr
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/workloadidentity
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -501,6 +505,7 @@ build:
             - pkg/apis/security
             - pkg/apis/security/install
             - pkg/apis/security/v1alpha1
+            - pkg/apis/security/v1alpha1/constants
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
@@ -538,6 +543,7 @@ build:
             - pkg/utils/validation
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/workloadidentity
             - pkg/webhook/authorizer
             - pkg/webhook/configvalidator
             - VERSION
@@ -828,6 +834,7 @@ build:
             - pkg/utils/timewindow
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/workloadidentity
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -1368,6 +1375,7 @@ build:
             - pkg/apis/security
             - pkg/apis/security/install
             - pkg/apis/security/v1alpha1
+            - pkg/apis/security/v1alpha1/constants
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
@@ -1438,6 +1446,7 @@ build:
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/workloadidentity
             - pkg/webhook/authorizer
             - VERSION
         ldflags:
@@ -1487,6 +1496,7 @@ build:
             - pkg/apis/security
             - pkg/apis/security/install
             - pkg/apis/security/v1alpha1
+            - pkg/apis/security/v1alpha1/constants
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
@@ -1561,6 +1571,7 @@ build:
             - pkg/utils/validation
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/workloadidentity
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
