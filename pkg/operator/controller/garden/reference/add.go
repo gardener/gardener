@@ -22,13 +22,14 @@ import (
 // AddToManager adds the garden-reference controller to the given manager.
 func AddToManager(mgr manager.Manager, gardenNamespace string) error {
 	return (&reference.Reconciler{
-		ConcurrentSyncs:             ptr.To(1),
-		NewObjectFunc:               func() client.Object { return &operatorv1alpha1.Garden{} },
-		NewObjectListFunc:           func() client.ObjectList { return &operatorv1alpha1.GardenList{} },
-		GetNamespace:                func(client.Object) string { return gardenNamespace },
-		GetReferencedSecretNames:    getReferencedSecretNames,
-		GetReferencedConfigMapNames: getReferencedConfigMapNames,
-		ReferenceChangedPredicate:   Predicate,
+		ConcurrentSyncs:                    ptr.To(1),
+		NewObjectFunc:                      func() client.Object { return &operatorv1alpha1.Garden{} },
+		NewObjectListFunc:                  func() client.ObjectList { return &operatorv1alpha1.GardenList{} },
+		GetNamespace:                       func(client.Object) string { return gardenNamespace },
+		GetReferencedSecretNames:           getReferencedSecretNames,
+		GetReferencedConfigMapNames:        getReferencedConfigMapNames,
+		GetReferencedWorkloadIdentityNames: func(client.Object) []string { return nil },
+		ReferenceChangedPredicate:          Predicate,
 	}).AddToManager(mgr, "garden")
 }
 
