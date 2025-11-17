@@ -254,7 +254,7 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 			return fmt.Errorf("failed reconciling OperatingSystemConfig %s for worker %s: %w", client.ObjectKeyFromObject(osc), worker.Name, err)
 		}
 
-		oscKey, err := o.calculateKey(hashVersion, &worker)
+		oscKey, err := calculateKeyForValues(hashVersion, o.values, &worker)
 		if err != nil {
 			return err
 		}
@@ -356,7 +356,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 			// check if hashes still match
 			hashHasChanged := false
 			for version, hash := range workerHash.HashVersionToOSCKey {
-				expectedHash, err := o.calculateKey(version, &worker)
+				expectedHash, err := calculateKeyForValues(version, o.values, &worker)
 				if err != nil {
 					return err
 				}
@@ -371,11 +371,11 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 			}
 
 			// calculate expected hashes
-			currentHash, err := o.calculateKey(workerHash.CurrentVersion, &worker)
+			currentHash, err := calculateKeyForValues(workerHash.CurrentVersion, o.values, &worker)
 			if err != nil {
 				return err
 			}
-			latestHash, err := o.calculateKey(LatestHashVersion(), &worker)
+			latestHash, err := calculateKeyForValues(LatestHashVersion(), o.values, &worker)
 			if err != nil {
 				return err
 			}
@@ -580,7 +580,7 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			oscKey, err := o.calculateKey(version, &worker)
+			oscKey, err := calculateKeyForValues(version, o.values, &worker)
 			if err != nil {
 				return nil, err
 			}
@@ -602,7 +602,7 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(int, *extens
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			oscKey, err := o.calculateKey(version, &worker)
+			oscKey, err := calculateKeyForValues(version, o.values, &worker)
 			if err != nil {
 				return err
 			}
@@ -719,7 +719,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		return deployer{}, fmt.Errorf("failed finding hyperkube image for version %s: %w", kubernetesVersion.String(), err)
 	}
 
-	oscKey, err := o.calculateKey(version, &worker)
+	oscKey, err := calculateKeyForValues(version, o.values, &worker)
 	if err != nil {
 		return deployer{}, err
 	}
@@ -988,26 +988,22 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	return d.osc, err
 }
 
-func (o *operatingSystemConfig) calculateKey(version int, worker *gardencorev1beta1.Worker) (string, error) {
+func calculateKeyForValues(version int, values *Values, worker *gardencorev1beta1.Worker) (string, error) {
 	if v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
 		return fmt.Sprintf("gardener-node-agent-%s", worker.Name), nil
 	}
 
-	return o.calculateKeyForVersion(version, worker)
-}
-
-func (o *operatingSystemConfig) calculateKeyForVersion(version int, worker *gardencorev1beta1.Worker) (string, error) {
-	kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+	kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(values.KubernetesVersion, worker.Kubernetes)
 	if err != nil {
 		return "", err
 	}
-	kubeletConfiguration := v1beta1helper.CalculateEffectiveKubeletConfiguration(o.values.KubeletConfig, worker.Kubernetes)
+	kubeletConfiguration := v1beta1helper.CalculateEffectiveKubeletConfiguration(values.KubeletConfig, worker.Kubernetes)
 	kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{}
-	if o.values.KubeProxyConfig != nil {
-		kubeProxyConfig = o.values.KubeProxyConfig
+	if values.KubeProxyConfig != nil {
+		kubeProxyConfig = values.KubeProxyConfig
 	}
 
-	return CalculateKeyForVersion(version, kubernetesVersion, o.values, worker, kubeletConfiguration, kubeProxyConfig)
+	return CalculateKeyForVersion(version, kubernetesVersion, values, worker, kubeletConfiguration, kubeProxyConfig)
 }
 
 // CalculateKeyForVersion is exposed for testing purposes only
