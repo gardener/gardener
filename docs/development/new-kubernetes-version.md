@@ -172,33 +172,6 @@ After the PR in `gardener/gardener` for the support of the new version has been 
 Provider extensions are using upstream `cloud-controller-manager` images.
 Make sure to adopt the new `cloud-controller-manager` release for the new Kubernetes minor version ([example PR](https://github.com/gardener/gardener-extension-provider-aws/pull/1055)).
 
-Some of the cloud providers are not using upstream `cloud-controller-manager` images for some of the supported Kubernetes versions.
-Instead, we build and maintain the images ourselves:
-
-- [cloud-provider-gcp](https://github.com/gardener/cloud-provider-gcp)
-
-Use the instructions below in case you need to maintain a release branch for such `cloud-controller-manager` image:
-
-<details>
-
-<summary>Expand the instructions!</summary>
-
-Until we switch to upstream images, you need to update the Kubernetes dependencies and release a new image.
-The required steps are as follows:
-
-- Checkout the `legacy-cloud-provider` branch of the respective repository
-- Bump the versions in the `Dockerfile` ([example commit](https://github.com/gardener/cloud-provider-gcp/commit/b7eb3f56b252aaf29adc78406672574b1bc17495)).
-- Update the `VERSION` to `vX.Y.Z-dev` where `Z` is the latest available Kubernetes patch version for the `vX.Y` minor version.
-- Update the `k8s.io/*` dependencies in the `go.mod` file to `vX.Y.Z` and run `go mod tidy` ([example commit](https://github.com/gardener/cloud-provider-gcp/commit/d41cc9f035bcc4893b40d90a4f617c4d436c5d62)).
-- Checkout a new `release-vX.Y` branch and release it ([example](https://github.com/gardener/cloud-provider-gcp/commits/release-v1.23))
-
-> As you are already on it, it is great if you also bump the `k8s.io/*` dependencies for the last three minor releases as well.
-In this case, you need to check out the `release-vX.{Y-{1,2,3}}` branches and only perform the last three steps ([example branch](https://github.com/gardener/cloud-provider-gcp/commits/release-v1.20), [example commit](https://github.com/gardener/cloud-provider-gcp/commit/372aa43fbacdeb76b3da9f6fad6cfd924d916227)).
-
-Now you need to update the new releases in the `imagevector/images.yaml` of the respective provider extension so that they are used (see this [example commit](https://github.com/gardener/gardener-extension-provider-aws/pull/942/commits/7e5c0d95ff95d65459d13ae7f79a030049322c71) for reference).
-
-</details>
-
 #### Maintaining Additional Images
 
 Provider extensions might also deploy additional images other than `cloud-controller-manager` that are specific for a given Kubernetes minor version.
