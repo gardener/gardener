@@ -16,6 +16,7 @@ reviewers:
 
 ## Table of Contents
 
+- [Terminology](#terminology)
 - [Summary](#summary)
 - [Motivation](#motivation)
   - [Goals](#goals)
@@ -33,16 +34,16 @@ Since this document relies on work that has already been done in [GEP-34](./34-o
 
 ## Summary
 
-This proposal introduces the deployment of [VictoriaLogs](https://github.com/VictoriaMetrics/VictoriaLogs) which will act as the replacement for [Vali](https://github.com/credativ/vali) in the Control Plane of all Shoot clusters that have the observability stack enabled, as well as in Seed clusters and Garden clusters.
+This proposal introduces the deployment of [VictoriaLogs](https://github.com/VictoriaMetrics/VictoriaLogs) which will act as the replacement for [Vali](https://github.com/credativ/vali) in the Control Plane of all `Shoot` clusters that have the observability stack enabled, as well as in `Seed` clusters and `Garden` clusters.
 After the work that has been done on [GEP-34](https://github.com/gardener/gardener/pull/11861), we are in a favourable position to easily switch our storage layer for the clusters' log signals.
 
 This document fully relies on [GEP-34](./34-observability2.0-opentelemtry-operator-and-collectors.md) having already been implemented. 
 For this reason, it's expected that the reader is familiar with the concepts and terminology introduced in that GEP.
 
-A new operator is introduced that will be deployed to the `garden` namespace of seed & garden clusters.
-This operator will manage the k8s deployment of the new `VictoriaLogs` instances to the `garden` namespace of seed & garden clusters, as well as to the Control Plane namespace of Shoot clusters via the [`VLSingle` CustomResource](https://github.com/VictoriaMetrics/operator/blob/471ecf6e0ad8839e2e88a6668d962e52e8fd677a/docs/resources/vlsingle.md).
+A new operator is introduced that will be deployed to the `garden` namespace of `Seed` & `Garden` clusters.
+This operator will manage the k8s deployment of the new `VictoriaLogs` instances to the `garden` namespace of `Seed` & `Garden` clusters, as well as to the Control Plane namespace of `Shoot` clusters via the [`VLSingle` CustomResource](https://github.com/VictoriaMetrics/operator/blob/471ecf6e0ad8839e2e88a6668d962e52e8fd677a/docs/resources/vlsingle.md).
 
-Since we'd like to make the transition from `Vali` to `VictoriaLogs` as painless as possible, this proposal also introduces multiple ways to migrate in already running landscapes without losing data that has accumulated with the existing `Vali` instances.
+Since we'd like to make the transition from `Vali` to `VictoriaLogs` as painless as possible, this proposal also discusses migration in already running landscapes without losing data that has accumulated with the existing `Vali` instances and gives an implementation plan for that.
 
 ## Motivation
 
@@ -57,10 +58,10 @@ After careful consideration, we've converged to using [VictoriaLogs](https://git
 
 ### Goals
 
-- Deploy a `VictoriaOperator` instances in the `garden` namespace of the `Garden` cluster.
+- Deploy a `VictoriaOperator` instance in the `garden` namespace of the `Garden` cluster.
 - Deploy a `VictoriaLogs` instance in the `garden` namespace of the `Garden` cluster via the `VLSingle` CustomResource.
 - Deploy a `VictoriaOperator` instance to `garden` namespace of the `Seed` clusters.
-- Deploy a `VictoriaLogs` instance in the control-plane namespace of new and existing `Shoot` clusters via the `VLSingle` CustomResource.
+- Deploy a `VictoriaLogs` instance in the control-plane namespaces of new and existing `Shoot` clusters via the `VLSingle` CustomResource.
 - Give an appropriate migration strategy from `Vali` to `VictoriaLogs` for existing clusters.
 
 ### Non-Goals
@@ -75,7 +76,7 @@ After careful consideration, we've converged to using [VictoriaLogs](https://git
 
 This includes 2 steps:
 - Deployment of a new [VictoriaOperator](https://github.com/VictoriaMetrics/operator) component during the `Garden` reconciliation flow in the `garden` namespace.
-- Deployment of a `VLSingle` CustomResource during the Garden reconciliation flow but *after* the `VictoriaOperator` k8s deployment has finished.
+- Deployment of a `VLSingle` CustomResource during the Garden reconciliation flow *after* the `VictoriaOperator` k8s deployment has finished.
 The `VLSingle` CustomResource will be managed by the operator and will create a `VictoriaLogs` k8s deployment in the `garden` namespace.
 
 Both new components will implement the already existing pattern that components implement (e.g. OpenTelemetry Operator, Prometheus Operator).
@@ -93,7 +94,7 @@ In other words, the `VictoriaLogs` instance will be exposed via a service in the
 
 Analogously to the deployment in the `Garden` cluster, this includes 2 steps:
 - Deployment of a new [VictoriaOperator](https://github.com/VictoriaMetrics/operator) component during the `Seed` reconciliation flow in the `garden` namespace.
-- Creation of a `VLSingle` CustomResource in the `garden` namespace during the `Seed` reconciliation flow but *after* the `VictoriaOperator` k8s deployment has finished.
+- Creation of a `VLSingle` CustomResource in the `garden` namespace during the `Seed` reconciliation flow *after* the `VictoriaOperator` k8s deployment has finished.
 The `VLSingle` CustomResource will be managed by the operator and will create a `VictoriaLogs` k8s deployment in the `garden` namespace.
 
 #### Sending Logs to VictoriaLogs in the `Seed` cluster
@@ -141,7 +142,7 @@ During all the replacements of `Vali` we want to ensure that existing clusters d
 For this reason, 2 strategies for migration have been considered:
 - "One-shot" migration.
 Reformat all the Vali data into the VictoriaLogs format (or OTLP).
-Could be done via the OpenTelemetry Collector since there is no tool that exists to do this out of the box.
+There is no tool that exists to do this out of the box.
 
     Pros:
     - Migration step is quick.
@@ -167,19 +168,20 @@ The deployment alongside `Vali` will be controlled using two feature gates.
 
 ##### Dual Migration Implementation Details
 
-To facilitate the "dual" migration, a feature gate `VictoriaLogs` will be introduced.
+To facilitate the "dual" migration, a feature gate `DeployVictoriaLogs` will be introduced for the `gardenlet` and the `gardener-operator` components.
 When this feature gate is enabled:
-- New  and existing clusters will have `VictoriaLogs` deployed *alongside* `Vali`.
+- New and existing clusters will have `VictoriaLogs` deployed *alongside* `Vali`.
 - The OpenTelemetry Collector will be reconfigured to ship logs to *both* `Vali` and `VictoriaLogs`.
 - `FluentBit` instances will be reconfigured to ship logs to *both* `Vali` and `VictoriaLogs`.
 
 ##### Removing Vali after the migration period
 
-Removal of Vali will further rely on another feature gate called `SkipVali` that will rely on the `VictoriaLogs` already being enabled for the specific cluster.
+Removal of Vali will further rely on another feature gate called `RemoveVali` that will rely on the `VictoriaLogs` already being enabled for the specific component.
+This feature gate will be introduced for the `gardenlet` and the `gardener-operator` components.
 
-When this feature gate is enabled, based on whether the retention period has passed since `VictoriaLogs` has been introduced, `Vali` will be removed from the cluster. 
+When this feature gate is enabled, based on whether the retention period has passed since `VictoriaLogs` has been deployed, `Vali` will be removed from the cluster. 
 Making the migration into 2 feature gates allows us more safety if any issue occurs, by allowing us to rollback only one of the feature gates.
-First the `VictoriaLogs` feature gate can mature, then the `SkipVali` feature gate, at which point both can simultaniously be removed.
+First the `DeployVictoriaLogs` feature gate can mature, then the `RemoveVali` feature gate, at which point both can simultaneously be removed.
 
 ##### Resource utilization during the migration period
 
@@ -193,7 +195,7 @@ However, since CPU Utilization and Memory Utilization have been seen to be negli
 More precisely, `Seed` and `Garden` clusters will see an increase in volume usage by exactly the number of already existing `Vali` volumes.
 This concern is primarily for `Seed` clusters that are hosting a large number of `Shoot` clusters.
 
-Thus, it is advised that the `VictoriaLogs` feature gate is enabled inteligently - starting with less critical clusters, batching the number of `Seed` clusters that have the feature gate enabled, distributing the feature gate equaly among zones so that no single zone gets overloaded, etc.
+Thus, it is advised that the `DeployVictoriaLogs` feature gate is enabled intelligently - starting with less critical clusters, batching the number of `Seed` clusters that have the feature gate enabled, distributing the feature gate equally among zones so that no single zone gets overloaded, etc.
 
 #### UI Migration
 
