@@ -74,11 +74,22 @@ func NewControlPlaneBootstrap(
 				Name:      "gardenadm-" + values.Worker.Name,
 				Namespace: values.Namespace,
 			}},
+			// Ensure that the secret name is included in the worker pool mapping, so that the worker pool hash in the
+			// self-hosted shoot will result in the same hash.
+			// Without the NodeAgentSecretName, the WorkerPoolHash func will always use hash version v1, although we used v2
+			// in the bootstrap cluster.
+			IncludeSecretNameInWorkerPool: true,
 		},
 	}
 }
 
 func (c *controlPlaneBootstrap) Deploy(ctx context.Context) error {
+	oscKey, err := calculateKeyForValues(2, c.values.Values, c.values.Worker)
+	if err != nil {
+		return err
+	}
+	c.osc.GardenerNodeAgentSecretName = oscKey
+
 	sshKeypairSecret, found := c.secretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)

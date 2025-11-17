@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -172,13 +173,13 @@ var _ = Describe("controlPlaneBootstrap", func() {
 		})
 
 		It("should return the correct result from the Deploy and Wait operations", func() {
-			Expect(deployer.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
-				worker.Name: {
-					Init: Data{
-						SecretName: ptr.To(ccSecret.Name),
-					},
-				},
-			}))
+			Expect(deployer.WorkerPoolNameToOperatingSystemConfigsMap()).To(
+				HaveKeyWithValue(worker.Name, HaveField("Init", And(
+					HaveField("SecretName", ptr.To(ccSecret.Name)),
+					HaveField("IncludeSecretNameInWorkerPool", true),
+					HaveField("GardenerNodeAgentSecretName", "gardener-node-agent-control-plane-afd64c60da0e2d2d"),
+				))),
+			)
 		})
 	})
 })
