@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1763385805135,
+  "iteration": 1763396492868,
   "links": [],
   "panels": [
     {
@@ -37,7 +37,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "decimals": 0,
       "fieldConfig": {
         "defaults": {
@@ -145,7 +145,7 @@
       }
     },
     {
-      "datasource": null,
+      "datasource": "${datasource}",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -212,7 +212,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "decimals": 0,
       "fieldConfig": {
         "defaults": {
@@ -322,7 +322,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "decimals": 0,
       "fieldConfig": {
         "defaults": {},
@@ -429,7 +429,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "decimals": 0,
       "fieldConfig": {
         "defaults": {
@@ -539,7 +539,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "decimals": 0,
       "fieldConfig": {
         "defaults": {},
@@ -661,7 +661,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "decimals": 0,
       "fieldConfig": {
         "defaults": {},
@@ -709,31 +709,124 @@
           "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval]))) by (vpa_name)",
           "hide": false,
           "interval": "",
-          "legendFormat": "successs/{{vpa_name}}",
+          "legendFormat": "{{vpa_name}}",
           "refId": "Succeeded Pod updates by VPA"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval]))) by (vpa_name)",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "failure/{{vpa_name}}",
-          "refId": "Failed Pod updates by VPA"
         },
         {
           "exemplar": true,
           "expr": "sum(ceil(increase(vpa_updater_in_place_updated_pods_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
-          "legendFormat": "Total successful updates",
+          "legendFormat": "Total",
           "refId": "Total number of successful Pod updates across all VPAs"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Successful Pod in-place updates by VPA",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:65",
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:66",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "${datasource}",
+      "decimals": 0,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "hiddenSeries": false,
+      "id": 28,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": true,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.43",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval]))) by (vpa_name)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{vpa_name}}",
+          "refId": "Failed Pod updates by VPA"
         },
         {
           "exemplar": true,
           "expr": "sum(ceil(increase(vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
-          "legendFormat": "Total failed updates",
+          "legendFormat": "Total",
           "refId": "Total number of failed Pod updates across all VPAs"
         }
       ],
@@ -741,7 +834,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Pod in-place updates by VPA",
+      "title": "Failed Pod in-place updates by VPA",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -788,7 +881,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 51
       },
       "id": 22,
       "panels": [],
@@ -800,7 +893,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "${datasource}",
       "decimals": 0,
       "fieldConfig": {
         "defaults": {},
@@ -812,7 +905,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 52
       },
       "hiddenSeries": false,
       "id": 24,
@@ -848,31 +941,124 @@
           "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval]))) by (vpa_name)",
           "hide": false,
           "interval": "",
-          "legendFormat": "successs/{{vpa_name}}",
+          "legendFormat": "{{vpa_name}}",
           "refId": "Succeeded Pod evictions by VPA"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval]))) by (vpa_name)",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "failure/{{vpa_name}}",
-          "refId": "Failed Pod evictions by VPA"
         },
         {
           "exemplar": true,
           "expr": "sum(ceil(increase(vpa_updater_evicted_pods_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
-          "legendFormat": "Total successful updates",
+          "legendFormat": "Total",
           "refId": "Total number of successful Pod evictions across all VPAs"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Successful Pod evictions by VPA",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:65",
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:66",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "${datasource}",
+      "decimals": 0,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "hiddenSeries": false,
+      "id": 26,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": true,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.43",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval]))) by (vpa_name)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{vpa_name}}",
+          "refId": "Failed Pod evictions by VPA"
         },
         {
           "exemplar": true,
           "expr": "sum(ceil(increase(vpa_updater_failed_eviction_attempts_total{pod=\"$pod\", vpa_namespace=\"$namespace\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
-          "legendFormat": "Total failed updates",
+          "legendFormat": "Total",
           "refId": "Total number of failed Pod evictions across all VPAs"
         }
       ],
@@ -880,7 +1066,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Pod evictions by VPA",
+      "title": "Failed Pod evictions by VPA",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -930,20 +1116,36 @@
   "templating": {
     "list": [
       {
-        "allValue": null,
-        "datasource": null,
-        "definition": "label_values(vpa_updater_controlled_pods_total{},pod)",
         "description": null,
         "error": null,
         "hide": 0,
         "includeAll": false,
         "label": null,
         "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "allValue": null,
+        "datasource": "${datasource}",
+        "definition": "label_values(vpa_updater_controlled_pods_total{},pod)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": "pod",
+        "multi": false,
         "name": "pod",
         "options": [],
         "query": {
           "query": "label_values(vpa_updater_controlled_pods_total{},pod)",
-          "refId": "StandardVariableQuery"
+          "refId": "prometheus-pod-Variable-Query"
         },
         "refresh": 1,
         "regex": "",
@@ -957,7 +1159,7 @@
       },
       {
         "allValue": null,
-        "datasource": null,
+        "datasource": "${datasource}",
         "definition": "query_result(vpa_updater_in_place_updated_pods_total{pod=\"$pod\"} or vpa_updater_evicted_pods_total{pod=\"$pod\"} or failed_in_place_update_attempts_total{pod=\"$pod\"} or failed_eviction_attempts_total{pod=\"$pod\"})",
         "description": null,
         "error": null,
@@ -969,7 +1171,7 @@
         "options": [],
         "query": {
           "query": "query_result(vpa_updater_in_place_updated_pods_total{pod=\"$pod\"} or vpa_updater_evicted_pods_total{pod=\"$pod\"} or failed_in_place_update_attempts_total{pod=\"$pod\"} or failed_eviction_attempts_total{pod=\"$pod\"})",
-          "refId": "StandardVariableQuery"
+          "refId": "prometheus-namespace-Variable-Query"
         },
         "refresh": 1,
         "regex": "/.*vpa_namespace=\"([^\"]+)\".*/",
@@ -984,12 +1186,12 @@
     ]
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "utc",
   "title": "VPA Updater",
   "uid": "vpa-updater",
-  "version": 9
+  "version": 17
 }
