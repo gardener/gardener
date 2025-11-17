@@ -345,6 +345,7 @@ var _ = Describe("ResourceManager", func() {
 			ManagedResourceLabels:                     map[string]string{"foo": "bar"},
 			NodeAgentAuthorizerEnabled:                true,
 			NodeAgentAuthorizerAuthorizeWithSelectors: ptr.To(true),
+			MachineNamespace:                          ptr.To(watchedNamespace),
 			PodKubeAPIServerLoadBalancingWebhook: PodKubeAPIServerLoadBalancingWebhook{
 				Enabled: false,
 				Configs: []PodKubeAPIServerLoadBalancingWebhookConfig{
@@ -426,7 +427,7 @@ var _ = Describe("ResourceManager", func() {
 					CSRApprover: resourcemanagerconfigv1alpha1.CSRApproverControllerConfig{
 						Enabled:          !isWorkerless,
 						ConcurrentSyncs:  &maxConcurrentCSRApproverWorkers,
-						MachineNamespace: watchedNamespace,
+						MachineNamespace: cfg.MachineNamespace,
 					},
 					ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
 						ConcurrentSyncs: &concurrentSyncs,
@@ -466,7 +467,7 @@ var _ = Describe("ResourceManager", func() {
 					NodeAgentAuthorizer: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
 						Enabled:                true,
 						AuthorizeWithSelectors: ptr.To(true),
-						MachineNamespace:       watchedNamespace,
+						MachineNamespace:       cfg.MachineNamespace,
 					},
 				},
 			}
