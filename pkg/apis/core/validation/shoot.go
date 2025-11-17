@@ -2955,9 +2955,9 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 
 	for _, op := range operations {
 		if !availableShootOperations.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers) {
-			allErrs = append(allErrs, field.NotSupported(fldPathOp, op, sets.List(availableShootOperations)))
+			return append(allErrs, field.NotSupported(fldPathOp, op, sets.List(availableShootOperations)))
 		} else if len(operations) > 1 && !availableShootOperationsToRunInParallel.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", op)))
+			return append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", op)))
 		}
 	}
 
@@ -3045,7 +3045,7 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 	}
 
 	// Validate operation contexts for each operation
-	for _, op := range operationsSet.UnsortedList() {
+	for _, op := range operations {
 		allErrs = append(allErrs, validateShootOperationContext(op, shoot, fldPathOp)...)
 	}
 

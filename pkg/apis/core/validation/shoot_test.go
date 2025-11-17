@@ -6246,11 +6246,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			It("should return an error only on first invalid operation annotation", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "foo-bar;baz")
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"Field":    Equal("metadata.annotations[gardener.cloud/operation]"),
+					"BadValue": Equal("foo-bar"),
+				}))))
+			})
+
 			It("should return an error if the maintenance operation annotation is invalid", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "foo-bar")
 				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+				}))))
+			})
+
+			It("should return an error only on first invalid maintenance operation annotation", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "foo-bar;baz")
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"Field":    Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+					"BadValue": Equal("foo-bar"),
 				}))))
 			})
 
@@ -6732,6 +6750,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Entry("retry with other operation", "retry;rotate-ssh-keypair", "retry"),
 					Entry("maintain with other operation", "rotate-ssh-keypair; maintain", "maintain"),
 				)
+
+				It("should return an error on first not allowed to be run in parallel operation", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "retry;reconcile;maintain")
+					Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": ContainSubstring("operation 'retry' is not permitted to be run in parallel with other operations"),
+					}))))
+				})
 
 				DescribeTable("should reject forbidden operation combinations",
 					func(operation, notCompatibleOperation, notCompatibleWith string) {

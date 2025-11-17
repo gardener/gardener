@@ -626,9 +626,10 @@ func validateOperation(operations []string, garden *operatorv1alpha1.Garden, fld
 		return allErrs
 	}
 
-	operationsSet := sets.New(operations...)
+	// Create a `set` to deduplicate the operations array.
+	operations = sets.New(operations...).UnsortedList()
 
-	for _, operation := range operationsSet.UnsortedList() {
+	for _, operation := range operations {
 		if forbiddenETCDEncryptionKeyOperationsWithK8s134.Has(operation) && !k8sLess134 {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", operation)))
 		}
@@ -640,7 +641,7 @@ func validateOperation(operations []string, garden *operatorv1alpha1.Garden, fld
 		}
 	}
 
-	allErrs = append(allErrs, validateOperationContext(operationsSet.UnsortedList(), garden, fldPathOp)...)
+	allErrs = append(allErrs, validateOperationContext(operations, garden, fldPathOp)...)
 
 	return allErrs
 }
