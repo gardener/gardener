@@ -131,22 +131,24 @@ func computeGardenerData(
 		return nil, err
 	}
 
-	machineStateJSON, err := json.Marshal(machineState)
-	if err != nil {
-		return nil, fmt.Errorf("failed marshalling machine state to JSON: %w", err)
-	}
+	if machineState != nil {
+		machineStateJSON, err := json.Marshal(machineState)
+		if err != nil {
+			return nil, fmt.Errorf("failed marshalling machine state to JSON: %w", err)
+		}
 
-	machineStateJSONCompressed, err := compressMachineState(machineStateJSON)
-	if err != nil {
-		return nil, fmt.Errorf("failed compressing machine state data: %w", err)
-	}
+		machineStateJSONCompressed, err := compressMachineState(machineStateJSON)
+		if err != nil {
+			return nil, fmt.Errorf("failed compressing machine state data: %w", err)
+		}
 
-	if machineStateJSONCompressed != nil {
-		secretsToPersist = append(secretsToPersist, gardencorev1beta1.GardenerResourceData{
-			Name: v1beta1constants.DataTypeMachineState,
-			Type: v1beta1constants.DataTypeMachineState,
-			Data: runtime.RawExtension{Raw: machineStateJSONCompressed},
-		})
+		if machineStateJSONCompressed != nil {
+			secretsToPersist = append(secretsToPersist, gardencorev1beta1.GardenerResourceData{
+				Name: v1beta1constants.DataTypeMachineState,
+				Type: v1beta1constants.DataTypeMachineState,
+				Data: runtime.RawExtension{Raw: machineStateJSONCompressed},
+			})
+		}
 	}
 
 	return secretsToPersist, nil

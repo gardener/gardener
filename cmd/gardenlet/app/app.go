@@ -358,6 +358,10 @@ func (g *garden) Start(ctx context.Context) error {
 						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.selfHostedShootMeta.Name}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootMeta.Namespace: {}},
 					},
+					&gardencorev1beta1.ShootState{}: {
+						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.selfHostedShootMeta.Name}),
+						Namespaces: map[string]cache.Config{g.selfHostedShootMeta.Namespace: {}},
+					},
 					&seedmanagementv1alpha1.Gardenlet{}: {
 						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenlet.ResourcePrefixSelfHostedShoot + g.selfHostedShootMeta.Name}),
 						Namespaces: map[string]cache.Config{g.selfHostedShootMeta.Namespace: {}},
