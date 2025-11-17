@@ -301,6 +301,8 @@ const (
 	GardenRoleHelmPullSecret = "helm-pull-secret"
 	// GardenRoleObservability is the value of the GardenRole key indicating type 'observability'.
 	GardenRoleObservability = "observability"
+	// GardenRoleIngress is the value of the GardenRole key indicating type 'ingress'.
+	GardenRoleIngress = "ingress"
 
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
