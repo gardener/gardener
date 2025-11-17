@@ -139,3 +139,10 @@ monitoring:
   shoot:
     enabled: false
 ```
+
+
+## Optional runtime certificate monitoring
+The Gardener operator is able to deploy a monitoring solution for runtime cluster certificate monitoring.
+To do so, a human operator needs to deploy a ConfigMap named `garden-runtime-x509-certificate-exporter-conf` before reconciling the `garden` resource.
+An example ConfigMap can be found [in this example ConfigMap](../../example/monitoring/05-example-certificate-monitoring-cm.yaml).
+
