@@ -33,7 +33,7 @@ var _ = Describe("X509Certificate Exporter", func() {
 			DescribeTable("should return unsupported cluster type error", func(suffix string) {
 				obj, err := x.New(nil, nil, "", x.Values{NameSuffix: suffix})
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(x.ErrUnsuportedClusterType))
+				Expect(err).To(MatchError(x.ErrUnsupportedClusterType))
 				Expect(obj).To(BeNil())
 			},
 				Entry("seed suffix", x.SuffixSeed),
@@ -123,7 +123,7 @@ alertingConfig:
         - type: Opaque
       configMapKeys: ["`+strings.Repeat("a", 254)+`"]
   `,
-					x.ErrConfigValidationFailed, x.ErrConfigMapMaxKeyLenght,
+					x.ErrConfigValidationFailed, x.ErrConfigMapMaxKeyLength,
 				),
 				Entry("should return error when includeLabels has invalid key", `inCluster:
       enabled: true

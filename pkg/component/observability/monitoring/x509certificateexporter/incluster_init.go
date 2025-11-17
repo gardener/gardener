@@ -69,7 +69,7 @@ func validateConfigMapKey(key string) error {
 		return fmt.Errorf("%w: %q", ErrKeyIsIllegal, key)
 	}
 	if len(key) > 253 {
-		return fmt.Errorf("%w: %q", ErrConfigMapMaxKeyLenght, key)
+		return fmt.Errorf("%w: %q", ErrConfigMapMaxKeyLength, key)
 	}
 	return nil
 }

@@ -67,9 +67,9 @@ const (
 
 // Errors
 const (
-	// ErrUnsuportedClusterType is returned when new config is called for seed/shoot cluster
-	ErrUnsuportedClusterType Error = "x509CertificateExporter is currently supported only on the runtime cluster"
-	// ErrInvalidExporterConfigFormat is returned when the config format is innapropritate
+	// ErrUnsupportedClusterType is returned when new config is called for seed/shoot cluster
+	ErrUnsupportedClusterType Error = "x509CertificateExporter is currently supported only on the runtime cluster"
+	// ErrInvalidExporterConfigFormat is returned when the config format is inappropriate
 	ErrInvalidExporterConfigFormat Error = "failed to unmarshal x509certificateexporter config"
 	// ErrConfigValidationFailed is returned when config validation fails
 	ErrConfigValidationFailed Error = "x509certificateexporter config validation failed"
@@ -114,8 +114,8 @@ const (
 	ErrEmptyConfigMapKey Error = "config map key cannot be empty"
 	// ErrKeyIsIllegal is returned when an illegal key is configured as a key in the configmap
 	ErrKeyIsIllegal Error = "invalid configmap key"
-	// ErrConfigMapMaxKeyLenght is returned when the configmap key is too long
-	ErrConfigMapMaxKeyLenght Error = "config map key exceeds maximum length of 253 characrets"
+	// ErrConfigMapMaxKeyLength is returned when the configmap key is too long
+	ErrConfigMapMaxKeyLength Error = "config map key exceeds maximum length of 253 characrets"
 	// ErrIncludeLabelsInvalid is returned when the labels set is invalid
 	ErrIncludeLabelsInvalid Error = "includeLabels has invalid key or value"
 	// ErrInvalidNamespace is returned when the NS argiment to the include/exclude namespaces is invalid

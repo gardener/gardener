@@ -29,7 +29,7 @@ func New(client client.Client, secretsManager secretsmanager.Interface, namespac
 
 	// TODO(mimiteto): Support Seed/Shoot cluster deployment as well
 	if values.NameSuffix != SuffixRuntime {
-		return nil, ErrUnsuportedClusterType
+		return nil, ErrUnsupportedClusterType
 	}
 	if err := parseConfig(values.ConfigData, conf); err != nil {
 		return nil, fmt.Errorf("failed to parse x509CertificateExporter config: %w", err)
