@@ -182,7 +182,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Name:       deploymentName,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
