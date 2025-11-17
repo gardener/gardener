@@ -24,9 +24,9 @@ const (
 	PushEndpoint = "/opentelemetry.proto.collector.logs.v1.LogsService/Export"
 	// PushPort is the port that the OTLP receiver listens on in the OpenTelemetry Collector deployment.
 	PushPort = 4317
-	// KubeRBACProxyLokiReceiverPort is the port that the KubeRBACProxy that forwrads to the `loki` receiver listens on in the OpenTelemetry Collector deployment.
+	// KubeRBACProxyLokiReceiverPort is the port that the KubeRBACProxy that forwards to the `loki` receiver listens on in the OpenTelemetry Collector deployment.
 	KubeRBACProxyLokiReceiverPort int32 = 8081
-	// KubeRBACProxyOTLPReceiverPort is the port that the KubeRBACProxy that forwrads to the `otlp` receiver listens on in the OpenTelemetry Collector deployment.
+	// KubeRBACProxyOTLPReceiverPort is the port that the KubeRBACProxy that forwards to the `otlp` receiver listens on in the OpenTelemetry Collector deployment.
 	KubeRBACProxyOTLPReceiverPort int32 = 8080
 	// OpenTelemetryCollectorSecretName is the name of a secret in the kube-system namespace in the target cluster containing
 	// opentelemetry-collector's token for communication with the kube-apiserver.
