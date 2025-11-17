@@ -8,6 +8,9 @@ import (
 	"context"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
@@ -24,11 +27,12 @@ import (
 const caNameControlPlane = "ca-" + local.Name + "-controlplane"
 
 // NewValuesProvider creates a new ValuesProvider for the generic actuator.
-func NewValuesProvider() genericactuator.ValuesProvider {
-	return &valuesProvider{}
+func NewValuesProvider(mgr manager.Manager) genericactuator.ValuesProvider {
+	return &valuesProvider{client: mgr.GetClient()}
 }
 
 type valuesProvider struct {
+	client client.Client
 	genericactuator.NoopValuesProvider
 }
 
@@ -104,4 +108,30 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	_ map[string]string,
 ) (map[string]any, error) {
 	return map[string]any{}, nil
+}
+
+// GetControllersStatus returns status of controllers and if a requeue is required.
+func (vp *valuesProvider) GetControllersStatus(ctx context.Context,
+	cp *extensionsv1alpha1.ControlPlane,
+	_ *extensionscontroller.Cluster,
+) ([]extensionsv1alpha1.ControllerConfig, bool, error) {
+	// names originating from https://github.com/kubernetes/cloud-provider/blob/master/names/controller_names.go
+	return []extensionsv1alpha1.ControllerConfig{
+		{
+			Name:   "cloud-node-controller",
+			Active: false,
+		},
+		{
+			Name:   "service-lb-controller",
+			Active: false,
+		},
+		{
+			Name:   "node-route-controller",
+			Active: false,
+		},
+		{
+			Name:   "node-lifecycle-controller",
+			Active: false,
+		},
+	}, false, nil
 }

@@ -82,7 +82,8 @@ type DefaultStatus struct {
 	// Resources holds a list of named resource references that can be referred to in the state by their names.
 	// +optional
 	Resources []gardencorev1beta1.NamedResourceReference `json:"resources,omitempty"`
-
+	// Controllers holds a list of controller configurations.
+	// +optional
 	Controllers []ControllerConfig `json:"controllers,omitempty"`
 }
 
