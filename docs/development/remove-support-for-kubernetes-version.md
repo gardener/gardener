@@ -10,7 +10,7 @@ This guide describes the typical steps to remove support for a Kubernetes versio
 
 ## Prerequisites
 
-- As mentioned in [Adding Support For a New Kubernetes Version](new-kubernetes-version.md) - adding support for a new Kubernetes version is a prerequisite for dropping support for versions older than 5 Kubernetes minor versions.
+- As mentioned in [Adding Support For a New Kubernetes Version](new-kubernetes-version.md) - adding support for a new Kubernetes version is a prerequisite for dropping support for versions older than 4 Kubernetes minor versions.
 
 ## Tasks
 
