@@ -6,7 +6,6 @@ package genericactuator
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -57,7 +56,7 @@ func RestoreWithoutReconcile(
 	// Parse the worker state to a separate machineDeployment states and attach them to
 	// the corresponding machineDeployments which are to be deployed later
 	log.Info("Extracting machine state")
-	if err := addStateToMachineDeployment(ctx, log, gardenReader, cluster.Shoot, wantedMachineDeployments); err != nil {
+	if err := addStateToMachineDeployment(ctx, log, gardenReader, cluster.Shoot, worker, wantedMachineDeployments); err != nil {
 		return err
 	}
 
@@ -103,35 +102,42 @@ func addStateToMachineDeployment(
 	log logr.Logger,
 	gardenReader client.Reader,
 	shoot *gardencorev1beta1.Shoot,
+	worker *extensionsv1alpha1.Worker,
 	wantedMachineDeployments extensionsworkercontroller.MachineDeployments,
 ) error {
 	var state []byte
 
-	// We use the `gardenReader` here to prevent controller-runtime from trying to cache/list the ShootStates.
-	shootState := &gardencorev1beta1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shoot.Name, Namespace: shoot.Namespace}}
-	if err := gardenReader.Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
-		return err
-	}
+	if worker.Status.State != nil && len(worker.Status.State.Raw) > 0 {
+		log.Info("Reading machine state from Worker status")
+		state = worker.Status.State.Raw
+	} else {
+		// TODO(timebertt): Remove this fallback logic after a few gardener releases.
+		if gardenReader == nil {
+			return fmt.Errorf("cannot fetch machine state from ShootState because garden client is missing")
+		}
 
-	gardenerData := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
-	if machineState := gardenerData.Get(v1beta1constants.DataTypeMachineState); machineState != nil && machineState.Type == v1beta1constants.DataTypeMachineState {
-		log.Info("Fetching machine state from ShootState succeeded", "shootState", client.ObjectKeyFromObject(shootState))
-		var err error
-		state, err = shootstate.DecompressMachineState(machineState.Data.Raw)
-		if err != nil {
-			return err
+		shootState := &gardencorev1beta1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shoot.Name, Namespace: shoot.Namespace}}
+		log.Info("Reading machine state from ShootState as fallback", "shootState", client.ObjectKeyFromObject(shootState))
+
+		// We use the `gardenReader` here to prevent controller-runtime from trying to cache/list the ShootStates.
+		if err := gardenReader.Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
+			return fmt.Errorf("failed reading ShootState %q from garden: %w", client.ObjectKeyFromObject(shootState), err)
+		}
+
+		gardenerData := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+		if machineState := gardenerData.Get(v1beta1constants.DataTypeMachineState); machineState != nil && machineState.Type == v1beta1constants.DataTypeMachineState {
+			state = machineState.Data.Raw
 		}
 	}
 
-	if len(state) == 0 {
-		log.Info("Machine state is empty, no state to add")
-		return nil
+	machineState, err := shootstate.UnmarshalMachineState(state)
+	if err != nil {
+		return err
 	}
 
-	// Parse the worker state to MachineDeploymentStates
-	machineState := &shootstate.MachineState{MachineDeployments: make(map[string]*shootstate.MachineDeploymentState)}
-	if err := json.Unmarshal(state, &machineState); err != nil {
-		return err
+	if len(machineState.MachineDeployments) == 0 {
+		log.Info("Machine state is empty, no state to add")
+		return nil
 	}
 
 	// Attach the parsed MachineDeploymentStates to the wanted MachineDeployments
