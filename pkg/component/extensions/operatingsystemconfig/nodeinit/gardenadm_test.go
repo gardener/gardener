@@ -85,7 +85,12 @@ unmount() {
 trap unmount EXIT
 
 echo "> Pull gardenadm image and mount it to the temporary directory"
-ctr images pull --hosts-dir "/etc/containerd/certs.d" "` + image + `"
+CTR_MAJOR=$(ctr version | grep Version | tail -n1 | awk '{print $2}' | cut -d '.' -f 1 | sed 's/[a-zA-Z]//g')
+CTR_EXTRA_ARGS=""
+if [ "$CTR_MAJOR" -gt 1 ]; then
+    CTR_EXTRA_ARGS="--skip-metadata"
+fi
+ctr images pull $CTR_EXTRA_ARGS --hosts-dir "/etc/containerd/certs.d" "` + image + `"
 ctr images mount "` + image + `" "$tmp_dir"
 
 echo "> Copy gardenadm binary to host (/opt/bin) and make it executable"

@@ -12,7 +12,17 @@ unmount() {
 trap unmount EXIT
 
 echo "> Pull {{ .binaryName }} image and mount it to the temporary directory"
-ctr images pull --hosts-dir "/etc/containerd/certs.d" "{{ .image }}"
+{{- /*
+ctr v2 pulls manifests for all platforms of a multi-arch image by default. Mirror registries
+might not copy manifests for unused architectures, which causes the default pull command to fail.
+Ref: https://github.com/containerd/containerd/pull/9029#issuecomment-1706963854
+*/}}
+CTR_MAJOR=$(ctr version | grep Version | tail -n1 | awk '{print $2}' | cut -d '.' -f 1 | sed 's/[a-zA-Z]//g')
+CTR_EXTRA_ARGS=""
+if [ "$CTR_MAJOR" -gt 1 ]; then
+    CTR_EXTRA_ARGS="--skip-metadata"
+fi
+ctr images pull $CTR_EXTRA_ARGS --hosts-dir "/etc/containerd/certs.d" "{{ .image }}"
 ctr images mount "{{ .image }}" "$tmp_dir"
 
 echo "> Copy {{ .binaryName }} binary to host ({{ .binaryDirectory }}) and make it executable"
