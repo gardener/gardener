@@ -85,7 +85,10 @@ var _ = Describe("controlPlaneBootstrap", func() {
 		}
 
 		values = &ControlPlaneBootstrapValues{
-			Namespace:      namespace,
+			Values: &Values{
+				Namespace:         namespace,
+				KubernetesVersion: semver.MustParse("1.34.0"),
+			},
 			Worker:         worker,
 			GardenadmImage: "gardenadm-image",
 		}
