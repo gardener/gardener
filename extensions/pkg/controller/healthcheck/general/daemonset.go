@@ -44,7 +44,7 @@ var (
 	_ healthcheck.ShootClient = (*ShootDaemonSetHealthChecker)(nil)
 )
 
-// NewSeedDaemonSetHealthChecker is a healthCheck function to check DaemonSets
+// NewSeedDaemonSetHealthChecker is a healthCheck function to check DaemonSets in the Seed cluster
 func NewSeedDaemonSetHealthChecker(name string) *SeedDaemonSetHealthChecker {
 	return &SeedDaemonSetHealthChecker{
 		daemonSetHealthChecker: daemonSetHealthChecker{
@@ -53,7 +53,7 @@ func NewSeedDaemonSetHealthChecker(name string) *SeedDaemonSetHealthChecker {
 	}
 }
 
-// NewShootDaemonSetHealthChecker is a healthCheck function to check DaemonSets
+// NewShootDaemonSetHealthChecker is a healthCheck function to check DaemonSets in the Shoot cluster
 func NewShootDaemonSetHealthChecker(name string) *ShootDaemonSetHealthChecker {
 	return &ShootDaemonSetHealthChecker{
 		daemonSetHealthChecker: daemonSetHealthChecker{

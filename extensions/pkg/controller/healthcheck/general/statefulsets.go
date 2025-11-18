@@ -44,7 +44,7 @@ var (
 	_ healthcheck.ShootClient = (*ShootStatefulSetHealthChecker)(nil)
 )
 
-// NewSeedStatefulSetChecker is a healthCheck function to check StatefulSets
+// NewSeedStatefulSetChecker is a healthCheck function to check StatefulSets in the Seed cluster
 func NewSeedStatefulSetChecker(name string) *SeedStatefulSetHealthChecker {
 	return &SeedStatefulSetHealthChecker{
 		statefulSetHealthChecker: statefulSetHealthChecker{
@@ -53,7 +53,7 @@ func NewSeedStatefulSetChecker(name string) *SeedStatefulSetHealthChecker {
 	}
 }
 
-// NewShootStatefulSetChecker is a healthCheck function to check StatefulSets
+// NewShootStatefulSetChecker is a healthCheck function to check StatefulSets in the Shoot cluster
 func NewShootStatefulSetChecker(name string) *ShootStatefulSetHealthChecker {
 	return &ShootStatefulSetHealthChecker{
 		statefulSetHealthChecker: statefulSetHealthChecker{
