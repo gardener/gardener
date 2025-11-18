@@ -11,11 +11,8 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 	"internal/v1alpha1": {
 		"storage-version-gc": {},
 	},
-	"admissionregistration/v1beta1": {
-		"validatingadmissionpolicy-status-controller": {AddedInVersion: "1.28", RemovedInVersion: "1.30"},
-	},
 	"admissionregistration/v1": {
-		"validatingadmissionpolicy-status-controller": {AddedInVersion: "1.30"},
+		"validatingadmissionpolicy-status-controller": {},
 	},
 	"apps/v1": {
 		"daemonset":   {},
@@ -72,7 +69,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"service-cidr-controller": {AddedInVersion: "1.33"},
 	},
 	"networking/v1alpha1": {
-		"service-cidr-controller": {AddedInVersion: "1.29", RemovedInVersion: "1.31"},
+		"service-cidr-controller": {RemovedInVersion: "1.31"},
 	},
 	"networking/v1beta1": {
 		"service-cidr-controller": {AddedInVersion: "1.31", RemovedInVersion: "1.33"},
@@ -105,7 +102,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"volumeattributesclass-protection-controller": {AddedInVersion: "1.32", RemovedInVersion: "1.34"},
 	},
 	"storagemigration/v1alpha1": {
-		"storage-version-migrator-controller": {AddedInVersion: "1.30"},
+		"storage-version-migrator-controller": {},
 	},
 	"v1": {
 		"attachdetach":                         {},
@@ -123,10 +120,9 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"endpointslice":                        {},
 		"endpointslicemirroring":               {},
 		"ephemeral-volume":                     {},
-		"garbagecollector":                     {RemovedInVersion: "1.30"},
 		"horizontalpodautoscaling":             {},
 		"job":                                  {},
-		"legacy-service-account-token-cleaner": {AddedInVersion: "1.28"},
+		"legacy-service-account-token-cleaner": {},
 		"namespace":                            {},
 		"nodelifecycle":                        {},
 		"persistentvolume-binder":              {},
@@ -142,11 +138,11 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"route":                                {},
 		"selinux-warning-controller":           {AddedInVersion: "1.32"},
 		"service":                              {},
-		"service-cidr-controller":              {AddedInVersion: "1.29"},
+		"service-cidr-controller":              {},
 		"serviceaccount":                       {},
 		"serviceaccount-token":                 {},
 		"statefulset":                          {},
-		"taint-eviction-controller":            {AddedInVersion: "1.29"},
+		"taint-eviction-controller":            {},
 		"tokencleaner":                         {},
 		"ttl":                                  {},
 		"ttl-after-finished":                   {},
