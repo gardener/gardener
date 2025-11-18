@@ -228,10 +228,10 @@ func validateExpirableVersion(version core.ExpirableVersion, fldPath *field.Path
 func validateLifecycleClassificationsValid(lifecycle []core.LifecycleStage, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	validValues := sets.List(supportedVersionClassifications)
+
 	for i, l := range lifecycle {
 		if !supportedVersionClassifications.Has(string(l.Classification)) {
-			validValues := supportedVersionClassifications.UnsortedList()
-			slices.Sort(validValues)
 			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i).Child("classification"), l.Classification, validValues))
 		}
 	}
