@@ -3963,7 +3963,7 @@ int32
 <td>
 <em>(Optional)</em>
 <p>IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
-Deprecated: Ignore taints are deprecated as of K8S 1.29 and treated as startup taints</p>
+Deprecated: Ignore taints are deprecated and treated as startup taints</p>
 </td>
 </tr>
 <tr>
@@ -6736,8 +6736,7 @@ StructuredAuthentication
 </td>
 <td>
 <em>(Optional)</em>
-<p>StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver.
-This field is only available for Kubernetes v1.30 or later.</p>
+<p>StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver.</p>
 </td>
 </tr>
 <tr>
@@ -6751,8 +6750,7 @@ StructuredAuthorization
 </td>
 <td>
 <em>(Optional)</em>
-<p>StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.
-This field is only available for Kubernetes v1.30 or later.</p>
+<p>StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.</p>
 </td>
 </tr>
 <tr>

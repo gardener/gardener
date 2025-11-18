@@ -2413,7 +2413,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					},
 					"ignoreTaints": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group. Deprecated: Ignore taints are deprecated as of K8S 1.29 and treated as startup taints",
+							Description: "IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group. Deprecated: Ignore taints are deprecated and treated as startup taints",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4730,13 +4730,13 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					},
 					"structuredAuthentication": {
 						SchemaProps: spec.SchemaProps{
-							Description: "StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver. This field is only available for Kubernetes v1.30 or later.",
+							Description: "StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication"),
 						},
 					},
 					"structuredAuthorization": {
 						SchemaProps: spec.SchemaProps{
-							Description: "StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver. This field is only available for Kubernetes v1.30 or later.",
+							Description: "StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization"),
 						},
 					},
