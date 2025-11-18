@@ -29,7 +29,6 @@ var _ = Describe("admissionplugins", func() {
 			}
 		},
 		Entry("Unknown admission plugin", "Unknown", "1.30", false, false),
-		Entry("Known admission plugin but version not present in supported range", "SecurityContextDeny", "1.30", false, true),
 		Entry("Known admission plugin and version present in supported range", "DenyServiceExternalIPs", "1.30", true, true),
 		Entry("Known admission plugin but version range not present", "PodNodeSelector", "1.30", true, true),
 	)
@@ -68,11 +67,6 @@ var _ = Describe("admissionplugins", func() {
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0]").String()),
 				"Detail": Equal("admission plugin \"MutatingAdmissionWebhook\" cannot be disabled"),
-			})))),
-			Entry("adding forbidden admission plugin", []core.AdmissionPlugin{{Name: "SecurityContextDeny"}}, "1.27.4", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal(field.NewPath("admissionPlugins").String()),
-				"Detail": Equal("forbidden admission plugin(s) [SecurityContextDeny] - do not use plugins from the following list for Kubernetes version 1.27.4: [SecurityContextDeny]"),
 			})))),
 			Entry("adding kubeconfig secret to admission plugin not supporting external kubeconfig", []core.AdmissionPlugin{{Name: "TaintNodesByCondition", KubeconfigSecretName: ptr.To("test-secret")}}, "1.27.5", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),

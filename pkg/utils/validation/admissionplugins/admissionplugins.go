@@ -68,7 +68,6 @@ var (
 		"Priority":                             {Required: true},
 		"ResourceQuota":                        {AllowsConfiguration: true},
 		"RuntimeClass":                         {},
-		"SecurityContextDeny":                  {Forbidden: true, VersionRange: versionutils.VersionRange{RemovedInVersion: "1.30"}},
 		"ServiceAccount":                       {},
 		"StorageObjectInUseProtection":         {Required: true},
 		"TaintNodesByCondition":                {},

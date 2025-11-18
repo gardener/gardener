@@ -2338,21 +2338,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))
 				})
 
-				It("should forbid specifying the SecurityContextDeny admission plugin", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
-						{
-							Name: "SecurityContextDeny",
-						},
-					}
-
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0].name"),
-					}))))
-				})
-
 				It("should forbid disabling the required plugins", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 						{
