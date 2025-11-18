@@ -3947,22 +3947,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("Authentication validation", func() {
-			It("should forbid for version < v1.30", func() {
-				shoot.Spec.Kubernetes.Version = "v1.29.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
-				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &core.StructuredAuthentication{
-					ConfigMapName: "foo",
-				}
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).ToNot(BeEmpty())
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.kubeAPIServer.structuredAuthentication"),
-					"Detail": Equal("is available for Kubernetes versions >= v1.30"),
-				}))))
-			})
-
 			It("should forbid empty name", func() {
 				shoot.Spec.Kubernetes.Version = "v1.30.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
@@ -4023,20 +4007,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("Authorization validation", func() {
-			It("should forbid for version < v1.30", func() {
-				shoot.Spec.Kubernetes.Version = "v1.29.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{
-					ConfigMapName: "foo",
-					Kubeconfigs:   []core.AuthorizerKubeconfigReference{{AuthorizerName: "foo", SecretName: "bar"}},
-				}
-
-				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.kubeAPIServer.structuredAuthorization"),
-					"Detail": Equal("is available for Kubernetes versions >= v1.30"),
-				}))))
-			})
-
 			It("should forbid empty name", func() {
 				shoot.Spec.Kubernetes.Version = "v1.30.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{}

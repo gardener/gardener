@@ -35,7 +35,7 @@ const (
 
 func (k *kubeAPIServer) useStructuredAuthorization() bool {
 	value, ok := k.values.FeatureGates["StructuredAuthorizationConfiguration"]
-	return (!ok || value) && !versionutils.ConstraintK8sLess130.Check(k.values.Version)
+	return !ok || value
 }
 
 func (k *kubeAPIServer) reconcileConfigMapAuthorizationConfig(ctx context.Context, configMap *corev1.ConfigMap) error {
