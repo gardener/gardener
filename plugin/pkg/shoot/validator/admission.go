@@ -177,10 +177,10 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = (*ValidateShoot)(nil)
+var _ admission.ValidationInterface = (*ValidateShoot)(nil)
 
-// Admit validates the Shoot details against the referenced CloudProfile.
-func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+// Validate validates the Shoot details against the referenced CloudProfile and Seed.
+func (v *ValidateShoot) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
 		v.AssignReadyFunc(func() bool {
@@ -247,12 +247,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		// do not ignore metadata updates to detect and prevent removal of the gardener finalizer or unwanted changes to annotations
 		if reflect.DeepEqual(shoot.Spec, oldShoot.Spec) && reflect.DeepEqual(shoot.ObjectMeta, oldShoot.ObjectMeta) {
 			return nil
-		}
-	}
-
-	if a.GetOperation() == admission.Create {
-		if len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 && shoot.Spec.CloudProfile != nil {
-			return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
 		}
 	}
 

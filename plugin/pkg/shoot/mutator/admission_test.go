@@ -232,6 +232,20 @@ var _ = Describe("mutator", func() {
 				err := admissionHandler.Admit(ctx, attrs, nil)
 				Expect(err).To(BeInternalServerError())
 			})
+
+			Context("CloudProfile reference and CloudProfileName", func() {
+				It("should fail when both cloudProfileName and cloudProfile are provided for a new shoot", func() {
+					shoot.Spec.CloudProfileName = ptr.To("profile")
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "profile",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(MatchError(ContainSubstring("new shoot can only specify either cloudProfileName or cloudProfile reference")))
+				})
+			})
 		})
 
 		Context("created-by annotation", func() {

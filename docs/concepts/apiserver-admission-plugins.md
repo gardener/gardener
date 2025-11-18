@@ -239,9 +239,6 @@ It mutates the `Shoot` in the following way:
 - It defaults the Shoot Kubernetes version (`.spec.kubernetes.version` and `.spec.provider.workers[].kubernetes.version`).
 - It defaults the Shoot machine image version (`.spec.provider.workers[].machine.image.{name,version}`).
 
-Over time, the `ShootMutator` admission plugin will take over all the mutations that are performed by `ShootValidator`.
-For more details, see https://github.com/gardener/gardener/issues/2158.
-
 ## `ShootNodeLocalDNSEnabledByDefault`
 
 **Type**: Mutating. **Enabled by default**: No.
@@ -295,7 +292,7 @@ will not be affected by this admission plugin.
 
 ## `ShootValidator`
 
-**Type**: Mutating. **Enabled by default**: Yes.
+**Type**: Validating. **Enabled by default**: Yes.
 
 This admission controller reacts on `CREATE`, `UPDATE` and `DELETE` operations for `Shoot`s.
 It validates certain configurations in the specification against the referred `CloudProfile` (e.g., machine images, machine types, used Kubernetes version, ...).
