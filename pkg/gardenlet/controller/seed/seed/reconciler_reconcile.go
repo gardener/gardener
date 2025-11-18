@@ -426,6 +426,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seedIsGarden,
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying OpenTelemetry Collector",
+			Fn:           c.openTelemetryCollector.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
 		deployFluentOperator = g.Add(flow.Task{
 			Name:         "Deploying Fluent Operator",
 			Fn:           c.fluentOperator.Deploy,
