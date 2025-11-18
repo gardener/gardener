@@ -43,7 +43,7 @@ func ValidateBackupBucketSpec(spec *core.BackupBucketSpec, fldPath *field.Path) 
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider.region"), spec.Provider.Region, "region must not be empty"))
 	}
 
-	if spec.SeedName == nil || len(*spec.SeedName) == 0 {
+	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed must not be empty"))
 	}
 
