@@ -162,7 +162,6 @@ var _ = Describe("CloudProfile Helper", func() {
 
 	})
 
-	// TODO:(RAPSNX) Consider change / improve these tests in future, this was a shourtcut to test the function.
 	Describe("Get the duration until the next lifecycle stage from the CloudProfile", func() {
 		var (
 			fakeNow          time.Time
