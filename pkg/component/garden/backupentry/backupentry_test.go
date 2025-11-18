@@ -129,8 +129,8 @@ var _ = Describe("BackupEntry", func() {
 			actual := &gardencorev1beta1.BackupEntry{}
 			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
 
-			expected.Spec.BucketName = differentBucketName
-			expected.Spec.SeedName = &differentSeedName
+			expected.Spec.BucketName = bucketName
+			expected.Spec.SeedName = &seedName
 			expected.ResourceVersion = "2"
 			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
 
