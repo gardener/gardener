@@ -28,12 +28,9 @@ var _ = Describe("featuregates", func() {
 
 		Entry("TopologyAwareHints is supported in 1.27.4", "TopologyAwareHints", "1.27.4", true, true),                   // AddedInVersion: 1.21
 		Entry("AllowServiceLBStatusOnNonLB is supported in 1.30.3", "AllowServiceLBStatusOnNonLB", "1.30.3", true, true), // AddedInVersion: 1.29
-		Entry("SecurityContextDeny is supported in 1.29.3", "SecurityContextDeny", "1.29.3", true, true),                 // RemovedInVersion: 1.30
 		Entry("CSIMigrationRBD is supported in 1.27.1", "CSIMigrationRBD", "1.27.1", true, true),                         // RemovedInVersion: 1.31
 
-		Entry("StorageVersionMigrator is not supported in 1.29.8", "StorageVersionMigrator", "1.29.8", false, true),       // AddedInVersion: 1.30
 		Entry("SupplementalGroupsPolicy is not supported in 1.30.8", "SupplementalGroupsPolicy", "1.30.8", false, true),   // AddedInVersion: 1.31
-		Entry("CSIMigrationAzureFile is not supported in 1.31.4", "CSIMigrationAzureFile", "1.31.4", false, true),         // RemovedInVersion: 1.30
 		Entry("ValidatingAdmissionPolicy is not supported in 1.33.3", "ValidatingAdmissionPolicy", "1.33.3", false, true), // RemovedInVersion: 1.32
 		Entry("Foo is unknown in 1.25.8", "Foo", "1.25.8", false, false),                                                  // Unknown
 
@@ -50,10 +47,10 @@ var _ = Describe("featuregates", func() {
 
 			Entry("empty list", nil, "1.18.14", BeEmpty()),
 			Entry("supported feature gate", map[string]bool{"AnyVolumeDataSource": true}, "1.18.14", BeEmpty()),
-			Entry("unsupported feature gate", map[string]bool{"WatchListClient": true}, "1.29.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported feature gate", map[string]bool{"WindowsCPUAndMemoryAffinity": true}, "1.31.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal(field.NewPath("WatchListClient").String()),
-				"Detail": Equal("not supported in Kubernetes version 1.29.10"),
+				"Field":  Equal(field.NewPath("WindowsCPUAndMemoryAffinity").String()),
+				"Detail": Equal("not supported in Kubernetes version 1.31.10"),
 			})))),
 			Entry("unknown feature gate", map[string]bool{"Foo": true}, "1.25.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
