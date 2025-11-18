@@ -872,6 +872,72 @@ var _ = Describe("Shoot", func() {
 		})
 
 		Context("gardenadm client", func() {
+			Context("when requested for BackupBuckets", func() {
+				var attrs *auth.AttributesRecord
+
+				BeforeEach(func() {
+					attrs = &auth.AttributesRecord{
+						User:            gardenadmUser,
+						Name:            shootName,
+						Namespace:       shootNamespace,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "backupbuckets",
+						ResourceRequest: true,
+					}
+				})
+
+				It("should allow because verb is 'create'", func() {
+					attrs.Verb = "create"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because verb is not allowed", func() {
+					attrs.Verb = "list"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+			})
+
+			Context("when requested for BackupEntries", func() {
+				var attrs *auth.AttributesRecord
+
+				BeforeEach(func() {
+					attrs = &auth.AttributesRecord{
+						User:            gardenadmUser,
+						Name:            shootName,
+						Namespace:       shootNamespace,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "backupentries",
+						ResourceRequest: true,
+					}
+				})
+
+				It("should allow because verb is 'create'", func() {
+					attrs.Verb = "create"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion because verb is not allowed", func() {
+					attrs.Verb = "list"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+			})
+
 			Context("when requested for CloudProfiles", func() {
 				var attrs *auth.AttributesRecord
 
@@ -1154,6 +1220,16 @@ var _ = Describe("Shoot", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should allow status patches", func() {
+					attrs.Verb = "patch"
+					attrs.Subresource = "status"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
 					Expect(reason).To(BeEmpty())
 				})
 			})

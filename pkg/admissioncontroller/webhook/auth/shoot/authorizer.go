@@ -54,6 +54,8 @@ var (
 
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
+	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
+	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource                 = corev1.Resource("configmaps")

@@ -22,6 +22,7 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -292,11 +293,16 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
-		It("should see the Shoot resource in the Gardener API", func(ctx SpecContext) {
-			Eventually(ctx, func() error {
+		It("should see the Shoot resource in the Gardener API with the correct UID", func(ctx SpecContext) {
+			stdOut, _, err := execute(ctx, 0, "cat", "/var/lib/gardenadm/shoot-uid")
+			Expect(err).NotTo(HaveOccurred())
+			expectedShootStatusUID := types.UID(stdOut.Contents())
+
+			Eventually(ctx, func(g Gomega) types.UID {
 				shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
-				return gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-			}).Should(Succeed())
+				g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Status.UID
+			}).Should(Equal(expectedShootStatusUID))
 		}, SpecTimeout(2*time.Minute))
 	})
 })

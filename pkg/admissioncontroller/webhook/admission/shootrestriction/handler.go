@@ -33,6 +33,8 @@ import (
 var (
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
+	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
+	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 	leaseResource                     = coordinationv1.Resource("leases")
@@ -49,7 +51,7 @@ type Handler struct {
 }
 
 // Handle restricts requests made by gardenlets.
-func (h *Handler) Handle(_ context.Context, request admission.Request) admission.Response {
+func (h *Handler) Handle(ctx context.Context, request admission.Request) admission.Response {
 	shootNamespace, shootName, isSelfHostedShoot, userType := shootidentity.FromAuthenticationV1UserInfo(request.UserInfo)
 	if !isSelfHostedShoot {
 		return admissionwebhook.Allowed("")
@@ -61,7 +63,7 @@ func (h *Handler) Handle(_ context.Context, request admission.Request) admission
 	)
 
 	if userType == gardenletidentity.UserTypeGardenadm {
-		return h.admitGardenadmRequests(gardenletShootInfo, request)
+		return h.admitGardenadmRequests(ctx, gardenletShootInfo, request)
 	}
 
 	requestResource := schema.GroupResource{Group: request.Resource.Group, Resource: request.Resource.Resource}
