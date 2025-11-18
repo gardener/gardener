@@ -653,7 +653,7 @@
       },
       "id": 14,
       "panels": [],
-      "title": "Pod in-place resource updates witin \"$namespace\" namespace",
+      "title": "Pod in-place resource updates within \"$namespace\" namespace",
       "type": "row"
     },
     {
