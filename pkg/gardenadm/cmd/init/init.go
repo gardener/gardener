@@ -309,10 +309,42 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.FinalizeEtcdBootstrapTransition,
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
 		})
+		// During the migration from the bootstrap etcds to the druid-managed etcds, components serving webhooks might be
+		// crash-looping while retrying to connect to the API server. Therefore, we explicitly wait for them to be healthy
+		// again before deploying other components.
+		waitUntilWebhookComponentsReady = g.Add(flow.Task{
+			Name: "Waiting until components with webhooks are ready",
+			Fn: flow.Sequential(
+				b.Shoot.Components.ControlPlane.ResourceManager.Wait,
+				b.WaitUntilExtensionControllerInstallationsHealthy,
+			),
+			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
+		})
+		deployMachineControllerManager = g.Add(flow.Task{
+			Name:         "Deploying machine-controller-manager",
+			Fn:           flow.TaskFn(b.DeployMachineControllerManager).RetryUntilTimeout(time.Second, time.Minute),
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(waitUntilWebhookComponentsReady),
+		})
+		deployWorker = g.Add(flow.Task{
+			Name:         "Deploying shoot worker pools",
+			Fn:           b.DeployWorker,
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(deployMachineControllerManager),
+		})
+		waitUntilWorkerReady = g.Add(flow.Task{
+			Name:         "Waiting until shoot worker nodes have been reconciled",
+			Fn:           b.Shoot.Components.Extensions.Worker.Wait,
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(deployWorker),
+		})
+		// We need to deploy the worker before activating the node-agent-authorizer. Without the machine objects,
+		// the node-agent-authorizer would reject requests from gardener-node-agent because it cannot find a corresponding
+		// machine for them.
 		finalizeGardenerNodeAgentBootstrapping = g.Add(flow.Task{
 			Name:         "Finalizing gardener-node-agent bootstrapping (remove cluster-admin access, activate node-agent authorizer)",
 			Fn:           b.FinalizeGardenerNodeAgentBootstrapping,
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until gardener-node-agent lease is renewed",
