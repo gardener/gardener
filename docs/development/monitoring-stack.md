@@ -199,7 +199,7 @@ The following parameters should be added to all dashboards to ensure a homogeneo
 Dashboards have to:
 
 * contain a title which refers to the component name(s)
-* contain a timezone statement which should be the browser time
+* contain a timezone statement which should be UTC
 * contain tags which express where the component is running (`seed` or `shoot`) and to which category the component belong (see dashboard structure)
 * contain a version statement with a value of 1
 * be immutable
