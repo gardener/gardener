@@ -565,7 +565,7 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying prometheus-operator",
 			Fn:   c.prometheusOperator.Deploy,
 		})
-		_ = g.Add(flow.Task{
+		deployOpenTelemetryOperator = g.Add(flow.Task{
 			Name: "Deploying OpenTelemetry Operator",
 			Fn:   c.openTelemetryOperator.Deploy,
 		})
@@ -599,6 +599,11 @@ func (r *Reconciler) reconcile(
 				return r.deployLongTermPrometheus(ctx, secretsManager, c.prometheusLongTerm)
 			},
 			Dependencies: flow.NewTaskIDs(deployPrometheusGarden),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying OpenTelemetry Collector",
+			Fn:           c.openTelemetryCollector.Deploy,
+			Dependencies: flow.NewTaskIDs(deployOpenTelemetryOperator),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying blackbox-exporter",
