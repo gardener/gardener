@@ -28,8 +28,13 @@ type ManagedResourceHealthChecker struct {
 	managedResourceName string
 }
 
+var (
+	_ healthcheck.HealthCheck = (*ManagedResourceHealthChecker)(nil)
+	_ healthcheck.SeedClient  = (*ManagedResourceHealthChecker)(nil)
+)
+
 // CheckManagedResource is a healthCheck function to check ManagedResources
-func CheckManagedResource(managedResourceName string) healthcheck.HealthCheck {
+func CheckManagedResource(managedResourceName string) *ManagedResourceHealthChecker {
 	return &ManagedResourceHealthChecker{
 		managedResourceName: managedResourceName,
 	}
@@ -43,13 +48,6 @@ func (healthChecker *ManagedResourceHealthChecker) InjectSeedClient(seedClient c
 // SetLoggerSuffix injects the logger
 func (healthChecker *ManagedResourceHealthChecker) SetLoggerSuffix(provider, extension string) {
 	healthChecker.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-managed-resource", provider, extension))
-}
-
-// DeepCopy clones the healthCheck struct by making a copy and returning the pointer to that new copy
-// Actually, it does not perform a *deep* copy.
-func (healthChecker *ManagedResourceHealthChecker) DeepCopy() healthcheck.HealthCheck {
-	shallowCopy := *healthChecker
-	return &shallowCopy
 }
 
 // configurationProblemRegex is used to check if a not healthy managed resource has a configuration problem.

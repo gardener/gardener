@@ -20,84 +20,81 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
-// DaemonSetHealthChecker contains all the information for the DaemonSet HealthCheck
-type DaemonSetHealthChecker struct {
-	logger      logr.Logger
-	seedClient  client.Client
-	shootClient client.Client
-	name        string
-	checkType   DaemonSetCheckType
+// daemonSetHealthChecker contains all the information for the DaemonSet HealthCheck
+type daemonSetHealthChecker struct {
+	logger logr.Logger
+	client client.Client
+	name   string
 }
 
-// DaemonSetCheckType in which cluster the check will be executed
-type DaemonSetCheckType string
+// SeedDaemonSetHealthChecker is a healthCheck for DaemonSets in the Seed cluster
+type SeedDaemonSetHealthChecker struct {
+	daemonSetHealthChecker
+}
 
-const (
-	daemonSetCheckTypeSeed  DaemonSetCheckType = "Seed"
-	daemonSetCheckTypeShoot DaemonSetCheckType = "Shoot"
+// ShootDaemonSetHealthChecker is a healthCheck for DaemonSets in the Shoot cluster
+type ShootDaemonSetHealthChecker struct {
+	daemonSetHealthChecker
+}
+
+var (
+	_ healthcheck.HealthCheck = (*SeedDaemonSetHealthChecker)(nil)
+	_ healthcheck.SeedClient  = (*SeedDaemonSetHealthChecker)(nil)
+	_ healthcheck.HealthCheck = (*ShootDaemonSetHealthChecker)(nil)
+	_ healthcheck.ShootClient = (*ShootDaemonSetHealthChecker)(nil)
 )
 
-// NewSeedDaemonSetHealthChecker is a healthCheck function to check DaemonSets
-func NewSeedDaemonSetHealthChecker(name string) healthcheck.HealthCheck {
-	return &DaemonSetHealthChecker{
-		name:      name,
-		checkType: daemonSetCheckTypeSeed,
+// NewSeedDaemonSetHealthChecker is a healthCheck function to check DaemonSets in the Seed cluster
+func NewSeedDaemonSetHealthChecker(name string) *SeedDaemonSetHealthChecker {
+	return &SeedDaemonSetHealthChecker{
+		daemonSetHealthChecker: daemonSetHealthChecker{
+			name: name,
+		},
 	}
 }
 
-// NewShootDaemonSetHealthChecker is a healthCheck function to check DaemonSets
-func NewShootDaemonSetHealthChecker(name string) healthcheck.HealthCheck {
-	return &DaemonSetHealthChecker{
-		name:      name,
-		checkType: daemonSetCheckTypeShoot,
+// NewShootDaemonSetHealthChecker is a healthCheck function to check DaemonSets in the Shoot cluster
+func NewShootDaemonSetHealthChecker(name string) *ShootDaemonSetHealthChecker {
+	return &ShootDaemonSetHealthChecker{
+		daemonSetHealthChecker: daemonSetHealthChecker{
+			name: name,
+		},
 	}
 }
 
 // InjectSeedClient injects the seed client
-func (healthChecker *DaemonSetHealthChecker) InjectSeedClient(seedClient client.Client) {
-	healthChecker.seedClient = seedClient
+func (h *SeedDaemonSetHealthChecker) InjectSeedClient(seedClient client.Client) {
+	h.client = seedClient
 }
 
 // InjectShootClient injects the shoot client
-func (healthChecker *DaemonSetHealthChecker) InjectShootClient(shootClient client.Client) {
-	healthChecker.shootClient = shootClient
+func (h *ShootDaemonSetHealthChecker) InjectShootClient(shootClient client.Client) {
+	h.client = shootClient
 }
 
 // SetLoggerSuffix injects the logger
-func (healthChecker *DaemonSetHealthChecker) SetLoggerSuffix(provider, extension string) {
-	healthChecker.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-deployment", provider, extension))
-}
-
-// DeepCopy clones the healthCheck struct by making a copy and returning the pointer to that new copy
-// Actually, it does not perform a *deep* copy.
-func (healthChecker *DaemonSetHealthChecker) DeepCopy() healthcheck.HealthCheck {
-	shallowCopy := *healthChecker
-	return &shallowCopy
+func (h *daemonSetHealthChecker) SetLoggerSuffix(provider, extension string) {
+	h.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-daemonset", provider, extension))
 }
 
 // Check executes the health check
-func (healthChecker *DaemonSetHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
+func (h *daemonSetHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
 	daemonSet := &appsv1.DaemonSet{}
-	var err error
-	if healthChecker.checkType == daemonSetCheckTypeSeed {
-		err = healthChecker.seedClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, daemonSet)
-	} else {
-		err = healthChecker.shootClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, daemonSet)
-	}
-	if err != nil {
+
+	if err := h.client.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: h.name}, daemonSet); err != nil {
 		if apierrors.IsNotFound(err) {
 			return &healthcheck.SingleCheckResult{
 				Status: gardencorev1beta1.ConditionFalse,
-				Detail: fmt.Sprintf("DaemonSet %q in namespace %q not found", healthChecker.name, request.Namespace),
+				Detail: fmt.Sprintf("DaemonSet %q in namespace %q not found", h.name, request.Namespace),
 			}, nil
 		}
 
-		err := fmt.Errorf("failed to retrieve DaemonSet %q in namespace %q: %w", healthChecker.name, request.Namespace, err)
-		healthChecker.logger.Error(err, "Health check failed")
+		err := fmt.Errorf("failed to retrieve DaemonSet %q in namespace %q: %w", h.name, request.Namespace, err)
+		h.logger.Error(err, "Health check failed")
 		return nil, err
 	}
 	if isHealthy, err := DaemonSetIsHealthy(daemonSet); !isHealthy {
-		healthChecker.logger.Error(err, "Health check failed")
+		h.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
