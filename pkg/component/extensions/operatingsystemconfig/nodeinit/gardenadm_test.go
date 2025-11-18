@@ -101,6 +101,11 @@ chmod +x "/opt/bin/gardenadm"
 						},
 					},
 				},
+				And(
+					HaveField("Path", "/var/lib/gardener-node-agent/machine-name"),
+					HaveField("Content.Inline.Data", "<<MACHINE_NAME>>"),
+					HaveField("Content.TransmitUnencoded", HaveValue(BeTrue())),
+				),
 			))
 		})
 	})

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"slices"
 	"strings"
 	"time"
@@ -105,8 +106,12 @@ func (b *GardenadmBotanist) ActivateGardenerNodeAgent(ctx context.Context) error
 		return nil
 	}
 
-	if err := b.FS.WriteFile(nodeagentconfigv1alpha1.MachineNameFilePath, []byte(b.HostName), 0600); err != nil {
-		return fmt.Errorf("failed writing machine name file: %w", err)
+	// Write machine name file only if it does not exist yet. It might be given by the OSC/machine-controller-manager in
+	// the case of a shoot with managed infrastructure.
+	if _, err := b.FS.Stat(nodeagentconfigv1alpha1.MachineNameFilePath); errors.Is(err, fs.ErrNotExist) {
+		if err := b.FS.WriteFile(nodeagentconfigv1alpha1.MachineNameFilePath, []byte(b.HostName), 0600); err != nil {
+			return fmt.Errorf("failed writing machine name file: %w", err)
+		}
 	}
 
 	if err := b.WriteBootstrapToken(ctx); err != nil {

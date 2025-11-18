@@ -126,6 +126,11 @@ var _ = Describe("controlPlaneBootstrap", func() {
 					HaveField("Content.Inline.Encoding", "b64"),
 					HaveField("Content.Inline.Data", Not(BeEmpty())),
 				),
+				And(
+					HaveField("Path", "/var/lib/gardener-node-agent/machine-name"),
+					HaveField("Content.Inline.Data", "<<MACHINE_NAME>>"),
+					HaveField("Content.TransmitUnencoded", HaveValue(BeTrue())),
+				),
 			))
 
 			Expect(actual.Spec.Type).To(Equal("type1"))
