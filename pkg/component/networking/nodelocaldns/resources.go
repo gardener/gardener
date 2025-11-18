@@ -212,13 +212,17 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 						},
 						InitContainers: []corev1.Container{
 							{
-								Name:  sideCarName,
-								Image: n.values.CorednsConfigAdapterImage,
+								Name:  sideCarName + "-init",
+								Image: n.values.AlpineImage,
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("5m"),
 										corev1.ResourceMemory: resource.MustParse("10Mi"),
 									},
+								},
+								Args: []string{
+									"touch",
+									volumeMountPathGeneratedConfig + "/custom-server-block.server",
 								},
 								SecurityContext: &corev1.SecurityContext{
 									AllowPrivilegeEscalation: ptr.To(false),
@@ -226,23 +230,12 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 									RunAsUser:                ptr.To[int64](65532),
 									RunAsGroup:               ptr.To[int64](65532),
 								},
-								Args: []string{
-									"-inputDir=" + volumeMountPathCustomConfig,
-									"-outputDir=" + volumeMountPathGeneratedConfig,
-									"-bind=bind " + n.bindIP(),
-								},
 								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      volumeMountNameCustomConfig,
-										MountPath: volumeMountPathCustomConfig,
-										ReadOnly:  true,
-									},
 									{
 										MountPath: volumeMountPathGeneratedConfig,
 										Name:      volumeMountNameGeneratedConfig,
 									},
 								},
-								RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways),
 							},
 						},
 						Containers: []corev1.Container{
@@ -321,6 +314,38 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 										MountPath: "/etc/kube-dns",
 										Name:      "kube-dns-config",
 									},
+									{
+										Name:      volumeMountNameCustomConfig,
+										MountPath: volumeMountPathCustomConfig,
+										ReadOnly:  true,
+									},
+									{
+										MountPath: volumeMountPathGeneratedConfig,
+										Name:      volumeMountNameGeneratedConfig,
+									},
+								},
+							},
+							{
+								Name:  sideCarName,
+								Image: n.values.CorednsConfigAdapterImage,
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("5m"),
+										corev1.ResourceMemory: resource.MustParse("10Mi"),
+									},
+								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+									RunAsNonRoot:             ptr.To(true),
+									RunAsUser:                ptr.To[int64](65532),
+									RunAsGroup:               ptr.To[int64](65532),
+								},
+								Args: []string{
+									"-inputDir=" + volumeMountPathCustomConfig,
+									"-outputDir=" + volumeMountPathGeneratedConfig,
+									"-bind=bind " + n.bindIP(),
+								},
+								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      volumeMountNameCustomConfig,
 										MountPath: volumeMountPathCustomConfig,

@@ -455,8 +455,8 @@ status:
 								},
 								InitContainers: []corev1.Container{
 									{
-										Name:  "coredns-config-adapter",
-										Image: values.CorednsConfigAdapterImage,
+										Name:  "coredns-config-adapter-init",
+										Image: values.AlpineImage,
 										Resources: corev1.ResourceRequirements{
 											Requests: corev1.ResourceList{
 												corev1.ResourceCPU:    resource.MustParse("5m"),
@@ -470,22 +470,15 @@ status:
 											RunAsGroup:               ptr.To[int64](65532),
 										},
 										Args: []string{
-											"-inputDir=/etc/custom",
-											"-outputDir=/etc/generated-config",
-											"-bind=bind " + bindIP(values),
+											"touch",
+											"/etc/generated-config/custom-server-block.server",
 										},
 										VolumeMounts: []corev1.VolumeMount{
-											{
-												Name:      "custom-config-volume",
-												MountPath: "/etc/custom",
-												ReadOnly:  true,
-											},
 											{
 												MountPath: "/etc/generated-config",
 												Name:      "generated-config",
 											},
 										},
-										RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways),
 									},
 								},
 								Containers: []corev1.Container{
@@ -564,6 +557,38 @@ status:
 												MountPath: "/etc/kube-dns",
 												Name:      "kube-dns-config",
 											},
+											{
+												Name:      "custom-config-volume",
+												MountPath: "/etc/custom",
+												ReadOnly:  true,
+											},
+											{
+												MountPath: "/etc/generated-config",
+												Name:      "generated-config",
+											},
+										},
+									},
+									{
+										Name:  "coredns-config-adapter",
+										Image: values.CorednsConfigAdapterImage,
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("5m"),
+												corev1.ResourceMemory: resource.MustParse("10Mi"),
+											},
+										},
+										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
+											RunAsNonRoot:             ptr.To(true),
+											RunAsUser:                ptr.To[int64](65532),
+											RunAsGroup:               ptr.To[int64](65532),
+										},
+										Args: []string{
+											"-inputDir=/etc/custom",
+											"-outputDir=/etc/generated-config",
+											"-bind=bind " + bindIP(values),
+										},
+										VolumeMounts: []corev1.VolumeMount{
 											{
 												Name:      "custom-config-volume",
 												MountPath: "/etc/custom",
