@@ -78,13 +78,13 @@ func VersionIsSupported(version core.ExpirableVersion) bool {
 
 // SupportedLifecycleClassification returns the lifecycle stage in which the version is classified as supported.
 // It returns nil if no such stage exists.
-func SupportedLifecycleClassification(version core.ExpirableVersion) *core.LifecycleStage {
+func SupportedLifecycleClassification(version core.ExpirableVersion) core.LifecycleStage {
 	for _, stage := range version.Lifecycle {
 		if stage.Classification == core.ClassificationSupported {
-			return &stage
+			return stage
 		}
 	}
-	return nil
+	return core.LifecycleStage{}
 }
 
 // FindMachineImageVersion finds the machine image version in the <cloudProfile> for the given <name> and <version>.
