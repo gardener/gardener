@@ -51,19 +51,19 @@ var _ = Describe("admissionplugins", func() {
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("admission plugin \"PersistentVolumeLabel\" is not supported in Kubernetes version 1.31.1"),
 			})))),
-			Entry("admission plugin without name", []core.AdmissionPlugin{{}}, "1.29.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("admission plugin without name", []core.AdmissionPlugin{{}}, "1.30.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeRequired),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("must provide a name"),
 			})))),
-			Entry("unknown admission plugin", []core.AdmissionPlugin{{Name: "Foo"}}, "1.29.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unknown admission plugin", []core.AdmissionPlugin{{Name: "Foo"}}, "1.30.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
 				"Field":    Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"BadValue": Equal("Foo"),
 				"Detail":   Equal("unknown admission plugin \"Foo\""),
 			})))),
-			Entry("disabling non-required admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit", Disabled: ptr.To(true)}}, "1.29.8", BeEmpty()),
-			Entry("disabling required admission plugin", []core.AdmissionPlugin{{Name: "MutatingAdmissionWebhook", Disabled: ptr.To(true)}}, "1.29.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("disabling non-required admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit", Disabled: ptr.To(true)}}, "1.30.8", BeEmpty()),
+			Entry("disabling required admission plugin", []core.AdmissionPlugin{{Name: "MutatingAdmissionWebhook", Disabled: ptr.To(true)}}, "1.30.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0]").String()),
 				"Detail": Equal("admission plugin \"MutatingAdmissionWebhook\" cannot be disabled"),
