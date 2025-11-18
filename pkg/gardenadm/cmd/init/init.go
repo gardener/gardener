@@ -443,7 +443,7 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 			Fn: flow.TaskFn(func(_ context.Context) error {
 				clientSet, err = b.CreateClientSet(ctx)
 				return err
-			}).RetryUntilTimeout(2*time.Second, time.Minute),
+			}).RetryUntilTimeout(2*time.Second, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(applyOperatingSystemConfig),
 		})
 		_ = g.Add(flow.Task{
