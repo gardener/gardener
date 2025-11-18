@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -22,7 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	. "github.com/gardener/gardener/pkg/webhook/configvalidator"
 )
 
@@ -36,15 +37,21 @@ var _ = Describe("Handler", func() {
 
 		configMap *corev1.ConfigMap
 		shoot     *gardencorev1beta1.Shoot
+		garden    *operatorv1alpha1.Garden
 
 		handler *Handler
 		request admission.Request
 	)
 
 	BeforeEach(func() {
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		scheme := runtime.NewScheme()
+		utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
+		utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
+		utilruntime.Must(corev1.AddToScheme(scheme))
+
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 		encoder = &jsonserializer.Serializer{}
-		decoder = admission.NewDecoder(kubernetes.GardenScheme)
+		decoder = admission.NewDecoder(scheme)
 
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -67,6 +74,33 @@ var _ = Describe("Handler", func() {
 				},
 			},
 		}
+		garden = &operatorv1alpha1.Garden{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: operatorv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "Garden",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "garden-name",
+			},
+			Spec: operatorv1alpha1.GardenSpec{
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					Kubernetes: operatorv1alpha1.Kubernetes{
+						Version: "1.30.0",
+					},
+					Gardener: operatorv1alpha1.Gardener{
+						APIServer: &operatorv1alpha1.GardenerAPIServerConfig{
+							AuditConfig: &gardencorev1beta1.AuditConfig{
+								AuditPolicy: &gardencorev1beta1.AuditPolicy{
+									ConfigMapRef: &corev1.ObjectReference{
+										Name: configMap.Name,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
 
 		handler = &Handler{
 			APIReader: fakeClient,
@@ -77,6 +111,18 @@ var _ = Describe("Handler", func() {
 			ConfigMapDataKey: "config.yaml",
 			GetConfigMapNameFromShoot: func(_ *core.Shoot) string {
 				return configMap.Name
+			},
+			GetNamespace: func() string {
+				return configMap.Namespace
+			},
+			GetConfigMapNameFromGarden: func(g *operatorv1alpha1.Garden) string {
+				if g.Spec.VirtualCluster.Gardener.APIServer != nil &&
+					g.Spec.VirtualCluster.Gardener.APIServer.AuditConfig != nil &&
+					g.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy != nil &&
+					g.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {
+					return g.Spec.VirtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name
+				}
+				return ""
 			},
 		}
 		request = admission.Request{}
@@ -345,6 +391,295 @@ var _ = Describe("Handler", func() {
 		})
 	})
 
+	Context("Gardens", func() {
+		BeforeEach(func() {
+			request.Kind = metav1.GroupVersionKind{Group: "operator.gardener.cloud", Version: "v1alpha1", Kind: "Garden"}
+
+			rawGarden, err := runtime.Encode(encoder, garden)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawGarden
+
+			// Set up handler for Garden resources
+			handler.GetConfigMapNameFromShoot = nil // Clear shoot handler
+			handler.AdmitGardenConfig = func(_ string) (int32, error) { return 0, nil }
+		})
+
+		It("should return an error because it cannot decode the object", func() {
+			request.Object = runtime.RawExtension{Raw: []byte(`{`)}
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Code).To(Equal(int32(500)))
+			Expect(response.Result.Message).To(ContainSubstring("couldn't get version/kind; json parse error: unexpected end of JSON input"))
+		})
+
+		It("should allow since the garden has a deletion timestamp", func() {
+			garden.DeletionTimestamp = ptr.To(metav1.Now())
+
+			rawGarden, err := runtime.Encode(encoder, garden)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawGarden
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeTrue())
+			Expect(response.Result.Code).To(Equal(int32(200)))
+			Expect(response.Result.Message).To(Equal("garden is already marked for deletion"))
+		})
+
+		It("should allow because the garden does not specify a config map", func() {
+			garden.Spec.VirtualCluster.Gardener.APIServer = nil
+
+			rawGarden, err := runtime.Encode(encoder, garden)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawGarden
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeTrue())
+			Expect(response.Result.Code).To(Equal(int32(200)))
+			Expect(response.Result.Message).To(Equal("no audit policy config map reference found in garden spec"))
+		})
+
+		It("should allow on update because the specification was not changed", func() {
+			request.Operation = admissionv1.Update
+
+			rawGarden, err := runtime.Encode(encoder, garden)
+			Expect(err).NotTo(HaveOccurred())
+			request.OldObject.Raw = rawGarden
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeTrue())
+			Expect(response.Result.Code).To(Equal(int32(200)))
+			Expect(response.Result.Message).To(Equal("garden spec was not changed"))
+		})
+
+		It("should allow on update because config map reference and kubernetes version were not changed", func() {
+			request.Operation = admissionv1.Update
+
+			oldGarden := garden.DeepCopy()
+			garden.Labels = map[string]string{"foo": "bar"} // Change only labels
+
+			rawOldGarden, err := runtime.Encode(encoder, oldGarden)
+			Expect(err).NotTo(HaveOccurred())
+			request.OldObject.Raw = rawOldGarden
+
+			rawGarden, err := runtime.Encode(encoder, garden)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawGarden
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeTrue())
+			Expect(response.Result.Code).To(Equal(int32(200)))
+			Expect(response.Result.Message).To(Equal("garden spec was not changed"))
+		})
+
+		It("should return an error because the ConfigMap cannot be read", func() {
+			Expect(fakeClient.Delete(ctx, configMap)).To(Succeed())
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Code).To(Equal(int32(422)))
+			Expect(response.Result.Message).To(ContainSubstring("referenced ConfigMap shoot-namespace/config-name does not exist: configmaps \"config-name\" not found"))
+		})
+
+		It("should return an error because the ConfigMap does not contain the data key", func() {
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Code).To(Equal(int32(422)))
+			Expect(response.Result.Message).To(ContainSubstring("error getting ConfigMap shoot-namespace/config-name: missing test config key in config.yaml ConfigMap data"))
+		})
+
+		It("should return an error because the data key in the ConfigMap is empty", func() {
+			configMap.Data = map[string]string{"config.yaml": ""}
+			Expect(fakeClient.Update(ctx, configMap)).To(Succeed())
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Code).To(Equal(int32(422)))
+			Expect(response.Result.Message).To(ContainSubstring("error getting ConfigMap shoot-namespace/config-name: test config in config.yaml key is empty"))
+		})
+
+		It("should return an error because the admit function returns an error", func() {
+			configMap.Data = map[string]string{"config.yaml": "foo"}
+			Expect(fakeClient.Update(ctx, configMap)).To(Succeed())
+
+			handler.AdmitGardenConfig = func(_ string) (int32, error) { return 1337, fmt.Errorf("fake error") }
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Code).To(Equal(int32(1337)))
+			Expect(response.Result.Message).To(ContainSubstring("fake error"))
+		})
+
+		It("should allow because the admit function does not return an error", func() {
+			configMap.Data = map[string]string{"config.yaml": "foo"}
+			Expect(fakeClient.Update(ctx, configMap)).To(Succeed())
+
+			handler.AdmitGardenConfig = func(_ string) (int32, error) { return 0, nil }
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeTrue())
+			Expect(response.Result.Code).To(Equal(int32(200)))
+			Expect(response.Result.Message).To(Equal("referenced configMap is valid"))
+		})
+	})
+
+	Context("ConfigMaps for Gardens", func() {
+		BeforeEach(func() {
+			request.Kind = metav1.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"}
+			request.Operation = admissionv1.Update
+			request.Name = configMap.Name
+			request.Namespace = configMap.Namespace
+
+			rawConfigMap, err := runtime.Encode(encoder, configMap)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawConfigMap
+
+			// Set up handler for Garden ConfigMap resources
+			handler.GetConfigMapNameFromShoot = nil // Clear shoot handler
+			handler.AdmitGardenConfig = func(_ string) (int32, error) { return 0, nil }
+		})
+
+		It("should allow because the operation is not update", func() {
+			request.Operation = admissionv1.Create
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeTrue())
+			Expect(response.Result.Code).To(Equal(int32(200)))
+			Expect(response.Result.Message).To(Equal("operation is not update, nothing to validate"))
+		})
+
+		It("should return an error because it cannot decode the object", func() {
+			request.Object = runtime.RawExtension{Raw: []byte(`{`)}
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Code).To(Equal(int32(500)))
+			Expect(response.Result.Message).To(ContainSubstring("couldn't get version/kind; json parse error: unexpected end of JSON input"))
+		})
+
+		It("should allow because no garden resources found", func() {
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeTrue())
+			Expect(response.Result.Code).To(Equal(int32(200)))
+			Expect(response.Result.Message).To(Equal("no garden resources found, nothing to validate"))
+		})
+
+		It("should allow because the ConfigMap is not referenced by garden", func() {
+			// Create a garden that doesn't reference this ConfigMap
+			gardenNotReferencing := garden.DeepCopy()
+			gardenNotReferencing.Spec.VirtualCluster.Gardener.APIServer = nil
+			Expect(fakeClient.Create(ctx, gardenNotReferencing)).To(Succeed())
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeTrue())
+			Expect(response.Result.Code).To(Equal(int32(200)))
+			Expect(response.Result.Message).To(Equal("config map is not referenced by garden resource, nothing to validate"))
+		})
+
+		It("should return an error because the ConfigMap does not contain the data key", func() {
+			Expect(fakeClient.Create(ctx, garden)).To(Succeed())
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Code).To(Equal(int32(422)))
+			Expect(response.Result.Message).To(ContainSubstring("error getting test config from ConfigMap shoot-namespace/config-name: missing test config key in config.yaml ConfigMap data"))
+		})
+
+		It("should return an error because the data key in the ConfigMap is empty", func() {
+			Expect(fakeClient.Create(ctx, garden)).To(Succeed())
+
+			configMap.Data = map[string]string{"config.yaml": ""}
+
+			rawConfigMap, err := runtime.Encode(encoder, configMap)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawConfigMap
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Code).To(Equal(int32(422)))
+			Expect(response.Result.Message).To(ContainSubstring("error getting test config from ConfigMap shoot-namespace/config-name: test config in config.yaml key is empty"))
+		})
+
+		It("should return an error because it cannot decode the old object", func() {
+			Expect(fakeClient.Create(ctx, garden)).To(Succeed())
+
+			configMap.Data = map[string]string{"config.yaml": "foo"}
+
+			rawConfigMap, err := runtime.Encode(encoder, configMap)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawConfigMap
+
+			request.OldObject = runtime.RawExtension{Raw: []byte(`{`)}
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Code).To(Equal(int32(500)))
+			Expect(response.Result.Message).To(ContainSubstring("couldn't get version/kind; json parse error: unexpected end of JSON input"))
+		})
+
+		It("should allow because the config did not change", func() {
+			Expect(fakeClient.Create(ctx, garden)).To(Succeed())
+
+			configMap.Data = map[string]string{"config.yaml": "foo"}
+
+			rawConfigMap, err := runtime.Encode(encoder, configMap)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawConfigMap
+			request.OldObject.Raw = rawConfigMap
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeTrue())
+			Expect(response.Result.Code).To(Equal(int32(200)))
+			Expect(response.Result.Message).To(Equal("test config did not change"))
+		})
+
+		It("should return an error because the admit function returns an error", func() {
+			Expect(fakeClient.Create(ctx, garden)).To(Succeed())
+
+			configMap.Data = map[string]string{"config.yaml": "foo"}
+
+			rawConfigMap, err := runtime.Encode(encoder, configMap)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawConfigMap
+
+			configMap.Data = map[string]string{"config.yaml": "bar"}
+
+			rawConfigMap, err = runtime.Encode(encoder, configMap)
+			Expect(err).NotTo(HaveOccurred())
+			request.OldObject.Raw = rawConfigMap
+
+			handler.AdmitGardenConfig = func(_ string) (int32, error) { return 1337, fmt.Errorf("fake error") }
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Code).To(Equal(int32(1337)))
+			Expect(response.Result.Message).To(ContainSubstring("fake error"))
+		})
+
+		It("should allow because the admit function does not return an error", func() {
+			Expect(fakeClient.Create(ctx, garden)).To(Succeed())
+
+			configMap.Data = map[string]string{"config.yaml": "foo"}
+
+			rawConfigMap, err := runtime.Encode(encoder, configMap)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawConfigMap
+
+			configMap.Data = map[string]string{"config.yaml": "bar"}
+
+			rawConfigMap, err = runtime.Encode(encoder, configMap)
+			Expect(err).NotTo(HaveOccurred())
+			request.OldObject.Raw = rawConfigMap
+
+			handler.AdmitGardenConfig = func(_ string) (int32, error) { return 0, nil }
+
+			response := handler.Handle(ctx, request)
+			Expect(response.Allowed).To(BeTrue())
+			Expect(response.Result.Code).To(Equal(int32(200)))
+			Expect(response.Result.Message).To(Equal("referenced test config is valid"))
+		})
+	})
+
 	Context("unrelated resource", func() {
 		BeforeEach(func() {
 			request.Kind = metav1.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
@@ -354,7 +689,7 @@ var _ = Describe("Handler", func() {
 			response := handler.Handle(ctx, request)
 			Expect(response.Allowed).To(BeTrue())
 			Expect(response.Result.Code).To(Equal(int32(200)))
-			Expect(response.Result.Message).To(Equal("resource is neither of type *core.gardener.cloud/v1beta1.Shoot nor *corev1.ConfigMap"))
+			Expect(response.Result.Message).To(Equal("resource is neither of type core.gardener.cloud/v1beta1.Shoot, operator.gardener.cloud/v1alpha1.Garden, nor corev1.ConfigMap"))
 		})
 	})
 })
