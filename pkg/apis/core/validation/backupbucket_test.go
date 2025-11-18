@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -94,12 +95,11 @@ var _ = Describe("validation", func() {
 			backupBucket.Spec.CredentialsRef = nil
 			backupBucket.Spec.SeedName = nil
 
-			errorList := ValidateBackupBucket(backupBucket)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.provider.type"),
-			})),
+			Expect(ValidateBackupBucket(backupBucket)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.provider.type"),
+				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.provider.region"),
@@ -109,10 +109,16 @@ var _ = Describe("validation", func() {
 					"Field":  Equal("spec.credentialsRef"),
 					"Detail": Equal(`must be set and refer a Secret or WorkloadIdentity`),
 				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.seedName"),
-				}))))
+			))
+		})
+
+		It("should forbid specifying an empty seed name", func() {
+			backupBucket.Spec.SeedName = ptr.To("")
+
+			Expect(ValidateBackupBucket(backupBucket)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.seedName"),
+			}))))
 		})
 
 		It("should forbid updating some keys", func() {
@@ -122,9 +128,7 @@ var _ = Describe("validation", func() {
 			seed := "another-seed"
 			newBackupBucket.Spec.SeedName = &seed
 
-			errorList := ValidateBackupBucketUpdate(newBackupBucket, backupBucket)
-
-			Expect(errorList).To(ConsistOf(
+			Expect(ValidateBackupBucketUpdate(newBackupBucket, backupBucket)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.provider"),
@@ -204,7 +208,6 @@ var _ = Describe("validation", func() {
 			})
 		})
 	})
-
 })
 
 func prepareBackupBucketForUpdate(obj *core.BackupBucket) *core.BackupBucket {
