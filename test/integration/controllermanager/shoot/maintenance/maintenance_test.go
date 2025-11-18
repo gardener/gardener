@@ -1868,12 +1868,12 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					},
 				}
 
-				By("Create k8s v1.29 Shoot")
+				By("Create k8s v1.30 Shoot")
 				Expect(testClient.Create(ctx, shoot130)).To(Succeed())
-				log.Info("Created shoot with k8s v1.29 for test", "shoot", client.ObjectKeyFromObject(shoot130))
+				log.Info("Created shoot with k8s v1.30 for test", "shoot", client.ObjectKeyFromObject(shoot130))
 
 				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.29")
+					By("Delete Shoot with k8s v1.30")
 					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot130))).To(Succeed())
 				})
 
