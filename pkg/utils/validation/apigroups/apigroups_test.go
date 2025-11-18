@@ -70,15 +70,15 @@ var _ = Describe("apigroups", func() {
 				"Field":  Equal("runtimeConfig[networking.k8s.io/v1beta1/ipaddresses]"),
 				"Detail": Equal("api \"networking.k8s.io/v1beta1/ipaddresses\" is not supported in Kubernetes version 1.32.1, only supported in versions < 1.31"),
 			})))),
-			Entry("unsupported API group version resource", map[string]bool{"resource.k8s.io/v1alpha2/resourceclaimparameters": true}, "1.28.4", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported API group version resource", map[string]bool{"coordination.k8s.io/v1alpha1/leasecandidates": true}, "1.30.4", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("runtimeConfig[resource.k8s.io/v1alpha2/resourceclaimparameters]"),
-				"Detail": Equal("api \"resource.k8s.io/v1alpha2/resourceclaimparameters\" is not supported in Kubernetes version 1.28.4, only supported in versions >= 1.30, < 1.31"),
+				"Field":  Equal("runtimeConfig[coordination.k8s.io/v1alpha1/leasecandidates]"),
+				"Detail": Equal("api \"coordination.k8s.io/v1alpha1/leasecandidates\" is not supported in Kubernetes version 1.30.4, only supported in versions >= 1.31, < 1.32"),
 			})))),
-			Entry("unsupported API group version", map[string]bool{"storagemigration.k8s.io/v1alpha1": false}, "1.29.4", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported API group version", map[string]bool{"resource.k8s.io/v1beta2": false}, "1.32.4", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("runtimeConfig[storagemigration.k8s.io/v1alpha1]"),
-				"Detail": Equal("api \"storagemigration.k8s.io/v1alpha1\" is not supported in Kubernetes version 1.29.4, only supported in versions >= 1.30"),
+				"Field":  Equal("runtimeConfig[resource.k8s.io/v1beta2]"),
+				"Detail": Equal("api \"resource.k8s.io/v1beta2\" is not supported in Kubernetes version 1.32.4, only supported in versions >= 1.33"),
 			})))),
 			Entry("disabling non-required API group version", map[string]bool{"batch/v1": false}, "1.26.8", false, BeEmpty()),
 			Entry("disabling non-required API group version for workerless shoot", map[string]bool{"apps/v1": false}, "1.26.8", true, BeEmpty()),
