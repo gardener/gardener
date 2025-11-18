@@ -712,7 +712,7 @@ type ClusterAutoscaler struct {
 	// +optional
 	MaxGracefulTerminationSeconds *int32 `json:"maxGracefulTerminationSeconds,omitempty" protobuf:"varint,9,opt,name=maxGracefulTerminationSeconds"`
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
-	// Deprecated: Ignore taints are deprecated as of K8S 1.29 and treated as startup taints
+	// Deprecated: Ignore taints are deprecated and treated as startup taints
 	// +optional
 	IgnoreTaints []string `json:"ignoreTaints,omitempty" protobuf:"bytes,10,opt,name=ignoreTaints"`
 
@@ -998,11 +998,9 @@ type KubeAPIServerConfig struct {
 	// +optional
 	EncryptionConfig *EncryptionConfig `json:"encryptionConfig,omitempty" protobuf:"bytes,16,opt,name=encryptionConfig"`
 	// StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver.
-	// This field is only available for Kubernetes v1.30 or later.
 	// +optional
 	StructuredAuthentication *StructuredAuthentication `json:"structuredAuthentication,omitempty" protobuf:"bytes,17,opt,name=structuredAuthentication"`
 	// StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.
-	// This field is only available for Kubernetes v1.30 or later.
 	// +optional
 	StructuredAuthorization *StructuredAuthorization `json:"structuredAuthorization,omitempty" protobuf:"bytes,18,opt,name=structuredAuthorization"`
 	// Autoscaling contains auto-scaling configuration options for the kube-apiserver.
@@ -1545,7 +1543,6 @@ type SwapBehavior string
 
 const (
 	// NoSwap is a constant for the kubelet's swap behavior restricting Kubernetes workloads to not use swap.
-	// Only available for Kubernetes versions >= v1.30.
 	NoSwap SwapBehavior = "NoSwap"
 	// LimitedSwap is a constant for the kubelet's swap behavior limiting the amount of swap usable for Kubernetes workloads. Workloads on the node not managed by Kubernetes can still swap.
 	// - cgroupsv1 host: Kubernetes workloads can use any combination of memory and swap, up to the pod's memory limit

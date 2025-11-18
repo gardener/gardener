@@ -576,7 +576,7 @@ type ClusterAutoscaler struct {
 	// Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
 	StatusTaints []string
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
-	// Ignore taints are deprecated as of K8S 1.29 and treated as startup taints.
+	// Ignore taints are deprecated and treated as startup taints.
 	IgnoreTaints []string
 	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
 	NewPodScaleUpDelay *metav1.Duration
@@ -1174,7 +1174,6 @@ type SwapBehavior string
 
 const (
 	// NoSwap is a constant for the kubelet's swap behavior restricting Kubernetes workloads to not use swap.
-	// Only available for Kubernetes versions >= v1.30.
 	NoSwap SwapBehavior = "NoSwap"
 	// LimitedSwap is a constant for the kubelet's swap behavior limiting the amount of swap usable for Kubernetes workloads. Workloads on the node not managed by Kubernetes can still swap.
 	// - cgroupsv1 host: Kubernetes workloads can use any combination of memory and swap, up to the pod's memory limit
