@@ -201,3 +201,17 @@ func ComputeOffsetIP(subnet *net.IPNet, offset int64) (net.IP, error) {
 
 	return nil, fmt.Errorf("computed IPv4 address %q is broadcast for subnet %q", ip, subnet)
 }
+
+// SplitAndTrimString returns a new slice from a string separated by the given separator with all empty entries removed.
+func SplitAndTrimString(s, sep string) []string {
+	if len(s) == 0 {
+		return nil
+	}
+
+	result := strings.Split(s, sep)
+	for i := range result {
+		result[i] = strings.TrimSpace(result[i])
+	}
+
+	return result
+}

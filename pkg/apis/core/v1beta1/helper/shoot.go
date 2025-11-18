@@ -18,6 +18,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -756,4 +757,22 @@ func GetShootEncryptedResourcesInStatus(shootStatus gardencorev1beta1.ShootStatu
 	}
 
 	return nil
+}
+
+// GetShootGardenerOperations returns the Shoot's gardener operations specified in the operation annotation.
+func GetShootGardenerOperations(annotations map[string]string) []string {
+	return utils.SplitAndTrimString(annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)
+}
+
+// GetShootMaintenanceOperations returns the Shoot's maintenance operations specified in the operation annotation.
+func GetShootMaintenanceOperations(annotations map[string]string) []string {
+	return utils.SplitAndTrimString(annotations[v1beta1constants.GardenerMaintenanceOperation], v1beta1constants.GardenerOperationsSeparator)
+}
+
+// RemoveOperation removes listed operations from the operations slice and returns a new slice that does not contain these operations.
+// Note that the input operations slice is modified.
+func RemoveOperation(operations []string, operationsToRemove ...string) []string {
+	return slices.DeleteFunc(operations, func(operation string) bool {
+		return slices.Contains(operationsToRemove, operation)
+	})
 }

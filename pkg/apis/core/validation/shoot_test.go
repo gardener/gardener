@@ -29,6 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -6245,11 +6246,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			It("should return an error only on first invalid operation annotation", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "foo-bar;baz")
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"Field":    Equal("metadata.annotations[gardener.cloud/operation]"),
+					"BadValue": Equal("foo-bar"),
+				}))))
+			})
+
 			It("should return an error if the maintenance operation annotation is invalid", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "foo-bar")
 				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+				}))))
+			})
+
+			It("should return an error only on first invalid maintenance operation annotation", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "foo-bar;baz")
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"Field":    Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+					"BadValue": Equal("foo-bar"),
 				}))))
 			})
 
@@ -6314,7 +6333,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					if sets.New(v1beta1constants.OperationRotateCredentialsComplete,
 						v1beta1constants.OperationRotateCAComplete,
 						v1beta1constants.OperationRotateServiceAccountKeyComplete,
-						v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(maintenanceOpAnnotation) {
+						v1beta1constants.OperationRotateETCDEncryptionKeyComplete).HasAny(utils.SplitAndTrimString(maintenanceOpAnnotation, v1beta1constants.GardenerOperationsSeparator)...) {
 						shoot.Status.Credentials = &core.ShootCredentials{
 							Rotation: &core.ShootCredentialsRotation{
 								CertificateAuthorities: &core.CARotation{
@@ -6346,15 +6365,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-credentials-start", "rotate-serviceaccount-key-start-without-workers-rollout", "operation 'rotate-serviceaccount-key-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 				Entry("rotate-etcd-encryption-key-start", "rotate-credentials-start", "rotate-etcd-encryption-key-start", "operation 'rotate-etcd-encryption-key-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 				Entry("rotate-etcd-encryption-key", "rotate-credentials-start", "rotate-etcd-encryption-key", "operation 'rotate-etcd-encryption-key' is not permitted when maintenance operation is 'rotate-credentials-start'"),
+				Entry("rotate-ca-start & rotate-etcd-encryption-key", "rotate-credentials-start", "rotate-ca-start; rotate-etcd-encryption-key", "operation 'rotate-ca-start, rotate-etcd-encryption-key' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 
 				Entry("rotate-ca-complete", "rotate-credentials-complete", "rotate-ca-complete", "operation 'rotate-ca-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-credentials-complete", "rotate-serviceaccount-key-complete", "operation 'rotate-serviceaccount-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
 				Entry("rotate-etcd-encryption-key-complete", "rotate-credentials-complete", "rotate-etcd-encryption-key-complete", "operation 'rotate-etcd-encryption-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
+				Entry("rotate-ca-complete & rotate-serviceaccount-key-complete", "rotate-credentials-complete", "rotate-ca-complete; rotate-serviceaccount-key-complete", "operation 'rotate-ca-complete, rotate-serviceaccount-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
 
 				Entry("rotate-credentials-start", "rotate-ca-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-ca-start'"),
 				Entry("rotate-credentials-start", "rotate-serviceaccount-key-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-serviceaccount-key-start'"),
 				Entry("rotate-credentials-start", "rotate-etcd-encryption-key-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-start'"),
 				Entry("rotate-credentials-start", "rotate-etcd-encryption-key", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-etcd-encryption-key'"),
+				Entry("rotate-credentials-start", "rotate-ca-start; rotate-etcd-encryption-key", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-ca-start, rotate-etcd-encryption-key'"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-ca-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-ca-start'"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-serviceaccount-key-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-serviceaccount-key-start'"),
 				Entry("rotate-credentials-start-without-workers-rollout", "rotate-etcd-encryption-key-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-start'"),
@@ -6363,17 +6385,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-credentials-complete", "rotate-ca-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-ca-complete'"),
 				Entry("rotate-credentials-complete", "rotate-serviceaccount-key-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-serviceaccount-key-complete'"),
 				Entry("rotate-credentials-complete", "rotate-etcd-encryption-key-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-complete'"),
+				Entry("rotate-credentials-complete", "rotate-ca-complete; rotate-serviceaccount-key-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-ca-complete, rotate-serviceaccount-key-complete'"),
 			)
 
 			DescribeTable("forbid certain rotation operations when shoot is hibernated",
-				func(operation string) {
+				func(operation, forbiddenOp string) {
 					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operation)
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated or is waking up"),
+						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted when shoot is hibernated or is waking up", forbiddenOp)),
 					}))))
 					delete(shoot.Annotations, "gardener.cloud/operation")
 
@@ -6381,21 +6404,22 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated or is waking up"),
+						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted when shoot is hibernated or is waking up", forbiddenOp)),
 					}))))
 					delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
 				},
 
-				Entry("rotate-credentials-start", "rotate-credentials-start"),
-				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
-				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
-				Entry("rotate-etcd-encryption-key", "rotate-etcd-encryption-key"),
-				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
-				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
-				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
-				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
-				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
-				Entry("rotate-rollout-workers", "rotate-rollout-workers=worker-name"),
+				Entry("rotate-credentials-start", "rotate-credentials-start", "rotate-credentials-start"),
+				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
+				Entry("rotate-credentials-complete", "rotate-credentials-complete", "rotate-credentials-complete"),
+				Entry("rotate-etcd-encryption-key", "rotate-etcd-encryption-key", "rotate-etcd-encryption-key"),
+				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
+				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
+				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
+				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
+				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
+				Entry("rotate-rollout-workers", "rotate-rollout-workers=worker-name", "rotate-rollout-workers=worker-name"),
+				Entry("multiple-operations", "rotate-ssh-keypair;rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
 			)
 
 			Context("trigger workers rollout", func() {
@@ -6433,7 +6457,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-						"Detail": Equal("operation is not permitted when shoot is hibernated or is waking up"),
+						"Detail": Equal("operation 'rotate-rollout-workers=worker-name' is not permitted when shoot is hibernated or is waking up"),
 					}))))
 				})
 
@@ -6452,7 +6476,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-						"Detail": Equal("operation is not permitted when shoot is hibernated or is waking up"),
+						"Detail": Equal("operation 'rotate-rollout-workers=worker-name' is not permitted when shoot is hibernated or is waking up"),
 					}))))
 				})
 
@@ -6492,7 +6516,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			DescribeTable("forbid certain rotation operations when shoot is waking up",
-				func(operation string) {
+				func(operation, forbiddenOp string) {
 					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
 					shoot.Status = core.ShootStatus{
 						IsHibernated: true,
@@ -6502,7 +6526,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated or is waking up"),
+						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted when shoot is hibernated or is waking up", forbiddenOp)),
 					}))))
 					delete(shoot.Annotations, "gardener.cloud/operation")
 
@@ -6510,20 +6534,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated or is waking up"),
+						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted when shoot is hibernated or is waking up", forbiddenOp)),
 					}))))
 					delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
 				},
 
-				Entry("rotate-credentials-start", "rotate-credentials-start"),
-				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
-				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
-				Entry("rotate-etcd-encryption-key", "rotate-etcd-encryption-key"),
-				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
-				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
-				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
-				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
-				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
+				Entry("rotate-credentials-start", "rotate-credentials-start", "rotate-credentials-start"),
+				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
+				Entry("rotate-credentials-complete", "rotate-credentials-complete", "rotate-credentials-complete"),
+				Entry("rotate-etcd-encryption-key", "rotate-etcd-encryption-key", "rotate-etcd-encryption-key"),
+				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
+				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
+				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
+				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
+				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
+				Entry("multiple-operations", "rotate-ssh-keypair;rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
 			)
 
 			DescribeTable("not forbid certain rotation maintenance operations when shoot is in deletion",
@@ -6554,7 +6579,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.hibernation.enabled"),
-						"Detail": ContainSubstring("shoot cannot be hibernated when maintenance.gardener.cloud/operation=" + operation + " annotation is set"),
+						"Detail": ContainSubstring(fmt.Sprintf("shoot cannot be hibernated when maintenance.gardener.cloud/operation annotation contains %s operation", operation)),
 					}))))
 				},
 
@@ -6684,6 +6709,103 @@ var _ = Describe("Shoot Validation Tests", func() {
 				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			Context("multiple operations", func() {
+				BeforeEach(func() {
+					shoot.Status.LastOperation = &core.LastOperation{
+						Type:  core.LastOperationTypeCreate,
+						State: core.LastOperationStateSucceeded,
+					}
+				})
+
+				DescribeTable("should accept valid multiple operations",
+					func(operation string) {
+						metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operation)
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+						delete(shoot.Annotations, "gardener.cloud/operation")
+
+						metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+						delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
+					},
+
+					Entry("single gardener operation", "rotate-ssh-keypair"),
+					Entry("two parallel operations", "rotate-ssh-keypair;rotate-observability-credentials"),
+					Entry("three parallel operations", "rotate-ssh-keypair;rotate-observability-credentials;rotate-ca-start"),
+					Entry("operations with spaces", " rotate-ssh-keypair ; rotate-observability-credentials "),
+				)
+
+				DescribeTable("should reject operations not allowed to run in parallel",
+					func(operation, expectedOperation string) {
+						metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operation)
+						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+							"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", expectedOperation)),
+						}))))
+						delete(shoot.Annotations, "gardener.cloud/operation")
+					},
+
+					Entry("retry with other operation", "retry;rotate-ssh-keypair", "retry"),
+					Entry("maintain with other operation", "rotate-ssh-keypair; maintain", "maintain"),
+				)
+
+				It("should return an error on first not allowed to be run in parallel operation", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "retry;reconcile;maintain")
+					Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": ContainSubstring("operation 'retry' is not permitted to be run in parallel with other operations"),
+					}))))
+				})
+
+				DescribeTable("should reject forbidden operation combinations",
+					func(operation, notCompatibleOperation, notCompatibleWith string) {
+						metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operation)
+						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+							"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted to be run together with %s operations", notCompatibleOperation, notCompatibleWith)),
+						}))))
+						delete(shoot.Annotations, "gardener.cloud/operation")
+
+						metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
+						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+							"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted to be run together with %s maintenance operations", notCompatibleOperation, notCompatibleWith)),
+						}))))
+						delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
+					},
+
+					Entry("rotate-credentials-start with rotate-credentials-start-without-workers-rollout", "rotate-credentials-start;rotate-credentials-start-without-workers-rollout",
+						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout"),
+					Entry("rotate-credentials-start with rotate-ca-start-without-workers-rollout", "rotate-credentials-start;rotate-ca-start-without-workers-rollout",
+						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout"),
+					Entry("rotate-credentials-start with rotate-serviceaccount-key-start-without-workers-rollout", "rotate-credentials-start;rotate-serviceaccount-key-start-without-workers-rollout",
+						"rotate-credentials-start", "rotate-ca-start-without-workers-rollout, rotate-serviceaccount-key-start-without-workers-rollout, rotate-credentials-start-without-workers-rollout"),
+					Entry("rotate-credentials-start-without-workers-rollout with rotate-ca-start", "rotate-credentials-start-without-workers-rollout;rotate-ca-start",
+						"rotate-credentials-start-without-workers-rollout", "rotate-ca-start, rotate-serviceaccount-key-start"),
+					Entry("rotate-credentials-start-without-workers-rollout with rotate-serviceaccount-key-start", "rotate-credentials-start-without-workers-rollout;rotate-serviceaccount-key-start",
+						"rotate-credentials-start-without-workers-rollout", "rotate-ca-start, rotate-serviceaccount-key-start"),
+					Entry("rotate-ca-start with rotate-ca-start-without-workers-rollout", "rotate-ca-start;rotate-ca-start-without-workers-rollout",
+						"rotate-ca-start", "rotate-ca-start-without-workers-rollout"),
+					Entry("rotate-serviceaccount-key-start with rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start;rotate-serviceaccount-key-start-without-workers-rollout",
+						"rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start-without-workers-rollout"),
+					Entry("rotate-etcd-encryption-key with rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key;rotate-etcd-encryption-key-start",
+						"rotate-etcd-encryption-key", "rotate-etcd-encryption-key-start"),
+				)
+
+				It("should prevent duplicate operations across annotations", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-observability-credentials;rotate-ssh-keypair")
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start;rotate-ssh-keypair")
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations"),
+						"Detail": ContainSubstring("must not have any equal operations"),
+					}))))
+				})
 			})
 		})
 

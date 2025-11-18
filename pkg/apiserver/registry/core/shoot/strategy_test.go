@@ -6,6 +6,7 @@ package shoot_test
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -19,6 +20,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apiserver/registry/core/shoot"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -503,7 +505,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			DescribeTable("operation annotations",
-				func(operationAnnotation string, mutateOldShoot func(*core.Shoot), shouldIncreaseGeneration, shouldKeepAnnotation bool) {
+				func(operationAnnotation string, mutateOldShoot func(*core.Shoot), shouldIncreaseGeneration bool, mutatedAnnotation []string) {
 					oldShoot := &core.Shoot{
 						Spec: core.ShootSpec{
 							Provider: core.Provider{
@@ -534,8 +536,9 @@ var _ = Describe("Strategy", func() {
 					}
 					Expect(newShoot.Generation).To(Equal(expectedGeneration))
 
-					if shouldKeepAnnotation {
-						Expect(newShoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, operationAnnotation))
+					if mutatedAnnotation != nil {
+						Expect(newShoot.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
+						Expect(utils.SplitAndTrimString(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.GardenerOperationsSeparator)).To(ConsistOf(mutatedAnnotation))
 					} else {
 						Expect(newShoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 					}
@@ -545,134 +548,182 @@ var _ = Describe("Strategy", func() {
 					v1beta1constants.ShootOperationRetry,
 					func(s *core.Shoot) { s.Status.LastOperation.State = core.LastOperationStateFailed },
 					true,
-					false,
+					nil,
 				),
 				Entry("retry; last operation is not failed",
 					v1beta1constants.ShootOperationRetry,
 					func(s *core.Shoot) { s.Status.LastOperation.State = core.LastOperationStateSucceeded },
 					false,
-					true,
+					[]string{v1beta1constants.ShootOperationRetry},
 				),
 				Entry("retry; last operation is not set",
 					v1beta1constants.ShootOperationRetry,
 					func(s *core.Shoot) { s.Status.LastOperation = nil },
 					false,
-					true,
+					[]string{v1beta1constants.ShootOperationRetry},
 				),
 				Entry("reconcile",
 					v1beta1constants.GardenerOperationReconcile,
 					nil,
 					true,
-					false,
+					nil,
 				),
 
 				Entry("rotate-credentials-start",
 					v1beta1constants.OperationRotateCredentialsStart,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateCredentialsStart},
 				),
 				Entry("rotate-credentials-start-without-workers-rollout",
 					v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout},
 				),
 				Entry("rotate-credentials-complete",
 					v1beta1constants.OperationRotateCredentialsComplete,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateCredentialsComplete},
 				),
 
 				Entry("rotate-ssh-keypair (ssh enabled)",
 					v1beta1constants.ShootOperationRotateSSHKeypair,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.ShootOperationRotateSSHKeypair},
 				),
 				Entry("rotate-ssh-keypair (ssh is not enabled)",
 					v1beta1constants.ShootOperationRotateSSHKeypair,
 					func(s *core.Shoot) { s.Spec.Provider.Workers = nil },
 					false,
-					false,
+					nil,
 				),
 				Entry("rotate-observability-credentials",
 					v1beta1constants.OperationRotateObservabilityCredentials,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateObservabilityCredentials},
 				),
 
 				Entry("rotate-etcd-encryption-key",
 					v1beta1constants.OperationRotateETCDEncryptionKey,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateETCDEncryptionKey},
 				),
 				Entry("rotate-etcd-encryption-key-start",
 					v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateETCDEncryptionKeyStart},
 				),
 				Entry("rotate-etcd-encryption-key-complete",
 					v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateETCDEncryptionKeyComplete},
 				),
 
 				Entry("rotate-ca-start",
 					v1beta1constants.OperationRotateCAStart,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateCAStart},
 				),
 				Entry("rotate-ca-start-without-workers-rollout",
 					v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateCAStartWithoutWorkersRollout},
 				),
 				Entry("rotate-ca-complete",
 					v1beta1constants.OperationRotateCAComplete,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateCAComplete},
 				),
 
 				Entry("rotate-serviceaccount-key-start",
 					v1beta1constants.OperationRotateServiceAccountKeyStart,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateServiceAccountKeyStart},
 				),
 				Entry("rotate-serviceaccount-key-start-without-workers-rollout",
 					v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout},
 				),
 				Entry("rotate-serviceaccount-key-complete",
 					v1beta1constants.OperationRotateServiceAccountKeyComplete,
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateServiceAccountKeyComplete},
 				),
 
 				Entry("rotate-rollout-workers",
 					v1beta1constants.OperationRotateRolloutWorkers+"=foo",
 					nil,
 					true,
-					true,
+					[]string{v1beta1constants.OperationRotateRolloutWorkers + "=foo"},
 				),
 
 				Entry("force-in-place-update",
 					v1beta1constants.ShootOperationForceInPlaceUpdate,
 					nil,
 					false,
+					[]string{v1beta1constants.ShootOperationForceInPlaceUpdate},
+				),
+
+				Entry("reconcile and rotate-etcd-encryption-key",
+					fmt.Sprintf("%s;%s", v1beta1constants.GardenerOperationReconcile, v1beta1constants.OperationRotateETCDEncryptionKey),
+					nil,
 					true,
+					[]string{v1beta1constants.OperationRotateETCDEncryptionKey},
+				),
+
+				Entry("remove operations covered by rotate-credentials-start",
+					fmt.Sprintf("%s;%s;%s;%s;%s;%s;%s;%s", v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCAStart,
+						v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+						v1beta1constants.OperationRotateObservabilityCredentials, v1beta1constants.ShootOperationRotateSSHKeypair, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout),
+					nil,
+					true,
+					[]string{v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout},
+				),
+
+				Entry("remove operations covered by rotate-credentials-start-without-workers-rollout",
+					fmt.Sprintf("%s;%s;%s;%s;%s;%s;%s;%s", v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
+						v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+						v1beta1constants.OperationRotateObservabilityCredentials, v1beta1constants.ShootOperationRotateSSHKeypair, v1beta1constants.OperationRotateCAStart),
+					nil,
+					true,
+					[]string{v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout, v1beta1constants.OperationRotateCAStart},
+				),
+
+				Entry("remove operations covered by rotate-credentials-complete",
+					fmt.Sprintf("%s;%s;%s;%s;%s", v1beta1constants.OperationRotateCredentialsComplete, v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete,
+						v1beta1constants.OperationRotateETCDEncryptionKeyComplete, v1beta1constants.ShootOperationRotateSSHKeypair),
+					nil,
+					true,
+					[]string{v1beta1constants.OperationRotateCredentialsComplete, v1beta1constants.ShootOperationRotateSSHKeypair},
+				),
+
+				Entry("remove duplicate operations",
+					fmt.Sprintf("%s;%s;%s;%s;%s", v1beta1constants.OperationRotateCredentialsComplete, v1beta1constants.OperationRotateCredentialsComplete, v1beta1constants.ShootOperationRotateSSHKeypair,
+						v1beta1constants.OperationRotateCredentialsComplete, v1beta1constants.ShootOperationRotateSSHKeypair),
+					nil,
+					true,
+					[]string{v1beta1constants.OperationRotateCredentialsComplete, v1beta1constants.ShootOperationRotateSSHKeypair},
+				),
+
+				Entry("reconcile and rotate-ssh-keypair (ssh is not enabled)",
+					fmt.Sprintf("%s;%s", v1beta1constants.GardenerOperationReconcile, v1beta1constants.ShootOperationRotateSSHKeypair),
+					func(s *core.Shoot) { s.Spec.Provider.Workers = nil },
+					true,
+					nil,
 				),
 			)
 		})

@@ -285,4 +285,26 @@ var _ = Describe("helper", func() {
 		Entry("without resources", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}, nil),
 		Entry("with resources", operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{Resources: []string{"configmaps", "shoots.core.gardener.cloud"}}}}, []string{"configmaps", "shoots.core.gardener.cloud"}),
 	)
+
+	DescribeTable("#GetGardenerOperations",
+		func(annotations map[string]string, expectedResult []string) {
+			Expect(GetGardenerOperations(annotations)).To(Equal(expectedResult))
+		},
+		Entry("annotations are empty", nil, nil),
+		Entry("gardener.cloud/operation annotation is not set", map[string]string{
+			"foo": "bar",
+		}, nil),
+		Entry("gardener.cloud/operation annotation is empty", map[string]string{
+			"gardener.cloud/operation": "",
+		}, nil),
+		Entry("gardener.cloud/operation has single operation", map[string]string{
+			"gardener.cloud/operation": "reconcile",
+		}, []string{"reconcile"}),
+		Entry("gardener.cloud/operation has multiple operations", map[string]string{
+			"gardener.cloud/operation": "reconcile;rotate-credentials-start;rotate-ssh-keypair",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair"}),
+		Entry("gardener.cloud/operation has whitespaces", map[string]string{
+			"gardener.cloud/operation": "reconcile ;rotate-credentials-start  ; rotate-ssh-keypair;   ",
+		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair", ""}),
+	)
 })

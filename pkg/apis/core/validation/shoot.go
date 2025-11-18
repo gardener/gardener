@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
@@ -98,6 +99,27 @@ var (
 		v1beta1constants.OperationRotateETCDEncryptionKey,
 		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 	)
+	availableShootOperationsToRunInParallel = availableShootMaintenanceOperations
+	incompatibleShootOperations             = map[string][]string{
+		v1beta1constants.OperationRotateCredentialsStart: {
+			v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
+			v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
+			v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
+		},
+		v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout: {
+			v1beta1constants.OperationRotateCAStart,
+			v1beta1constants.OperationRotateServiceAccountKeyStart,
+		},
+		v1beta1constants.OperationRotateCAStart: {
+			v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
+		},
+		v1beta1constants.OperationRotateServiceAccountKeyStart: {
+			v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
+		},
+		v1beta1constants.OperationRotateETCDEncryptionKey: {
+			v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+		},
+	}
 	availableShootPurposes = sets.New(
 		string(core.ShootPurposeEvaluation),
 		string(core.ShootPurposeTesting),
@@ -158,7 +180,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
-	allErrs = append(allErrs, validateShootOperation(shoot.Annotations[v1beta1constants.GardenerOperation], shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation], shoot, field.NewPath("metadata", "annotations"))...)
+	allErrs = append(allErrs, validateShootOperation(v1beta1helper.GetShootGardenerOperations(shoot.Annotations), v1beta1helper.GetShootMaintenanceOperations(shoot.Annotations), shoot, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false)...)
 	allErrs = append(allErrs, ValidateShootHAConfig(shoot)...)
 
@@ -2630,8 +2652,10 @@ func ValidateHibernation(annotations map[string]string, hibernation *core.Hibern
 		return allErrs
 	}
 
-	if maintenanceOp := annotations[v1beta1constants.GardenerMaintenanceOperation]; forbiddenShootOperationsWhenHibernated.Has(maintenanceOp) && ptr.Deref(hibernation.Enabled, false) {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s=%s annotation is set", v1beta1constants.GardenerMaintenanceOperation, maintenanceOp)))
+	for _, op := range v1beta1helper.GetShootMaintenanceOperations(annotations) {
+		if forbiddenShootOperationsWhenHibernated.Has(op) && ptr.Deref(hibernation.Enabled, false) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s annotation contains %s operation", v1beta1constants.GardenerMaintenanceOperation, op)))
+		}
 	}
 
 	allErrs = append(allErrs, ValidateHibernationSchedules(hibernation.Schedules, fldPath.Child("schedules"))...)
@@ -2916,15 +2940,33 @@ func ValidateCoreDNSRewritingCommonSuffixes(commonSuffixes []string, fldPath *fi
 	return allErrs
 }
 
-func validateShootOperation(operation, maintenanceOperation string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
+func validateShootOperation(operations, maintenanceOperations []string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
 	var (
+		fldPathOp          = fldPath.Key(v1beta1constants.GardenerOperation)
+		fldPathMaintOp     = fldPath.Key(v1beta1constants.GardenerMaintenanceOperation)
 		allErrs            = field.ErrorList{}
 		encryptedResources = sets.New[schema.GroupResource]()
 		k8sLess134, _      = versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, "< 1.34")
 	)
 
-	if operation == "" && maintenanceOperation == "" {
+	if len(operations) == 0 && len(maintenanceOperations) == 0 {
 		return allErrs
+	}
+
+	for _, op := range operations {
+		if !availableShootOperations.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers) {
+			return append(allErrs, field.NotSupported(fldPathOp, op, sets.List(availableShootOperations)))
+		} else if len(operations) > 1 && !availableShootOperationsToRunInParallel.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers) {
+			return append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", op)))
+		}
+	}
+
+	for _, op := range maintenanceOperations {
+		if !availableShootOperations.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers) {
+			return append(allErrs, field.NotSupported(fldPathMaintOp, op, sets.List(availableShootOperations)))
+		} else if len(maintenanceOperations) > 1 && !availableShootOperationsToRunInParallel.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers) {
+			return append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", op)))
+		}
 	}
 
 	if shoot.Status.Credentials != nil && shoot.Status.Credentials.EncryptionAtRest != nil {
@@ -2933,75 +2975,88 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		}
 	}
 
-	fldPathOp := fldPath.Key(v1beta1constants.GardenerOperation)
-	fldPathMaintOp := fldPath.Key(v1beta1constants.GardenerMaintenanceOperation)
+	var (
+		operationsSet            = sets.New(operations...)
+		maintenanceOperationsSet = sets.New(maintenanceOperations...)
+	)
 
-	if operation == maintenanceOperation {
-		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("annotations %s and %s must not be equal", fldPathOp, fldPathMaintOp)))
+	if operationsSet.HasAny(maintenanceOperations...) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("annotations %s and %s must not have any equal operations", fldPathOp, fldPathMaintOp)))
 	}
 
-	if operation != "" {
-		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(operation) && !k8sLess134 {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", operation)))
+	for _, op := range operations {
+		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(op) && !k8sLess134 {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", op)))
 		}
-		if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers) {
-			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(availableShootOperations)))
+		if forbiddenOps, ok := incompatibleShootOperations[op]; ok && operationsSet.HasAny(forbiddenOps...) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be run together with %s operations", op, strings.Join(forbiddenOps, ", "))))
 		}
 		if helper.IsShootInHibernation(shoot) &&
-			(forbiddenShootOperationsWhenHibernated.Has(operation) || strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers)) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated or is waking up"))
+			(forbiddenShootOperationsWhenHibernated.Has(op) || strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers)) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when shoot is hibernated or is waking up", op)))
 		}
 		if !encryptedResources.Equal(sets.New(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer)...)) &&
-			forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(operation) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted because a previous encryption configuration change is currently being rolled out"))
+			forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(op) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted because a previous encryption configuration change is currently being rolled out", op)))
 		}
 	}
 
-	if maintenanceOperation != "" {
-		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(maintenanceOperation) && !k8sLess134 {
-			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", maintenanceOperation)))
+	for _, op := range maintenanceOperations {
+		if forbiddenETCDEncryptionKeyShootOperationsWithK8s134.Has(op) && !k8sLess134 {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("for Kubernetes versions >= 1.34, operation '%s' is no longer supported, please use 'rotate-etcd-encryption-key' instead, which performs a complete etcd encryption key rotation", op)))
 		}
-		if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRolloutWorkers) {
-			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, sets.List(availableShootMaintenanceOperations)))
+		if forbiddenOps, ok := incompatibleShootOperations[op]; ok && maintenanceOperationsSet.HasAny(forbiddenOps...) {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted to be run together with %s maintenance operations", op, strings.Join(forbiddenOps, ", "))))
 		}
 		if helper.IsShootInHibernation(shoot) &&
-			(forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRolloutWorkers)) {
-			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated or is waking up"))
+			(forbiddenShootOperationsWhenHibernated.Has(op) || strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers)) {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted when shoot is hibernated or is waking up", op)))
 		}
-		if !encryptedResources.Equal(sets.New(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer)...)) && forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(maintenanceOperation) {
-			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted because a previous encryption configuration change is currently being rolled out"))
-		}
-	}
-
-	switch maintenanceOperation {
-	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
-		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(operation) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
-		}
-	case v1beta1constants.OperationRotateCredentialsComplete:
-		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(operation) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
+		if !encryptedResources.Equal(sets.New(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer)...)) && forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(op) {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted because a previous encryption configuration change is currently being rolled out", op)))
 		}
 	}
 
-	switch operation {
-	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
-		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(maintenanceOperation) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
-		}
-	case v1beta1constants.OperationRotateCredentialsComplete:
-		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(maintenanceOperation) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
+	// Validate operation conflicts with maintenance operations
+	for _, op := range maintenanceOperations {
+		switch op {
+		case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
+			if intersection := operationsSet.Intersection(sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart)); intersection.Len() > 0 {
+				allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", strings.Join(sets.List(intersection), ", "), op)))
+			}
+		case v1beta1constants.OperationRotateCredentialsComplete:
+			if intersection := operationsSet.Intersection(sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete)); intersection.Len() > 0 {
+				allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", strings.Join(sets.List(intersection), ", "), op)))
+			}
 		}
 	}
 
-	allErrs = append(allErrs, validateShootOperationContext(operation, shoot, fldPathOp)...)
+	for _, op := range operations {
+		switch op {
+		case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
+			if intersection := maintenanceOperationsSet.Intersection(sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKey, v1beta1constants.OperationRotateETCDEncryptionKeyStart)); intersection.Len() > 0 {
+				allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", op, strings.Join(sets.List(intersection), ", "))))
+			}
+		case v1beta1constants.OperationRotateCredentialsComplete:
+			if intersection := maintenanceOperationsSet.Intersection(sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete)); intersection.Len() > 0 {
+				allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", op, strings.Join(sets.List(intersection), ", "))))
+			}
+		}
+	}
+
+	// Validate operation contexts for each operation
+	for _, op := range operations {
+		allErrs = append(allErrs, validateShootOperationContext(op, shoot, fldPathOp)...)
+	}
+
 	if shoot.DeletionTimestamp == nil {
 		// Only validate maintenance operation context when shoot has no deletion timestamp. If it has such a timestamp,
 		// any validation is pointless since there are no maintenance operations for shoots in deletion, so we basically
 		// don't care. Without this, we could wrongly prevent metadata changes in case the annotation is still present
 		// but the shoot is in deletion.
-		allErrs = append(allErrs, validateShootOperationContext(maintenanceOperation, shoot, fldPathMaintOp)...)
+		for _, op := range maintenanceOperations {
+			allErrs = append(allErrs, validateShootOperationContext(op, shoot, fldPathMaintOp)...)
+		}
 	}
 
 	return allErrs

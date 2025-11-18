@@ -692,8 +692,8 @@ func mustMaintainNow(shoot *gardencorev1beta1.Shoot, clock clock.Clock) bool {
 }
 
 func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
-	operation, ok := shoot.Annotations[v1beta1constants.GardenerOperation]
-	return ok && operation == v1beta1constants.ShootOperationMaintain
+	operations := v1beta1helper.GetShootGardenerOperations(shoot.Annotations)
+	return slices.Contains(operations, v1beta1constants.ShootOperationMaintain)
 }
 
 func needsRetry(shoot *gardencorev1beta1.Shoot) bool {

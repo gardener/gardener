@@ -7,6 +7,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -27,8 +29,10 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -71,6 +75,13 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	newShoot.Status = oldShoot.Status               // can only be changed by shoots/status subresource
 	newShoot.Spec.SeedName = oldShoot.Spec.SeedName // can only be changed by shoots/binding subresource
 
+	if op, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok {
+		newShoot.Annotations[v1beta1constants.GardenerOperation] = cleanUpOperation(op)
+	}
+	if op, ok := newShoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]; ok {
+		newShoot.Annotations[v1beta1constants.GardenerMaintenanceOperation] = cleanUpOperation(op)
+	}
+
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
@@ -106,6 +117,8 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 		var (
 			mustIncrease                  bool
 			mustRemoveOperationAnnotation bool
+			operations                    = v1beta1helper.GetShootGardenerOperations(newShoot.Annotations)
+			updatedOperations             = slices.Clone(operations)
 		)
 
 		switch lastOperation.State {
@@ -115,51 +128,80 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			}
 
 		default:
-			switch newShoot.Annotations[v1beta1constants.GardenerOperation] {
-			case v1beta1constants.GardenerOperationReconcile:
-				mustIncrease, mustRemoveOperationAnnotation = true, true
+			for _, operation := range operations {
+				switch operation {
+				case v1beta1constants.GardenerOperationReconcile:
+					mustIncrease = true
+					updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
 
-			case v1beta1constants.OperationRotateCredentialsStart,
-				v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
-				v1beta1constants.OperationRotateCredentialsComplete,
-				v1beta1constants.OperationRotateCAStart,
-				v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
-				v1beta1constants.OperationRotateCAComplete,
-				v1beta1constants.OperationRotateServiceAccountKeyStart,
-				v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
-				v1beta1constants.OperationRotateServiceAccountKeyComplete,
-				v1beta1constants.OperationRotateETCDEncryptionKey,
-				v1beta1constants.OperationRotateETCDEncryptionKeyStart,
-				v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
-				v1beta1constants.OperationRotateObservabilityCredentials:
-				// We don't want to remove the annotation so that the gardenlet can pick it up and perform
-				// the rotation. It has to remove the annotation after it is done.
-				mustIncrease, mustRemoveOperationAnnotation = true, false
+				case v1beta1constants.OperationRotateCAStart,
+					v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
+					v1beta1constants.OperationRotateCAComplete,
+					v1beta1constants.OperationRotateServiceAccountKeyStart,
+					v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
+					v1beta1constants.OperationRotateServiceAccountKeyComplete,
+					v1beta1constants.OperationRotateETCDEncryptionKey,
+					v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+					v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
+					v1beta1constants.OperationRotateObservabilityCredentials:
+					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
+					// the rotation. It has to remove the annotation after it is done.
+					mustIncrease = true
+				case v1beta1constants.OperationRotateCredentialsStart:
+					// We remove operations that are covered by rotate-credentials-start
+					mustIncrease = true
+					updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, v1beta1constants.OperationRotateCAStart,
+						v1beta1constants.OperationRotateServiceAccountKeyStart,
+						v1beta1constants.OperationRotateETCDEncryptionKey,
+						v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+						v1beta1constants.OperationRotateObservabilityCredentials,
+						v1beta1constants.ShootOperationRotateSSHKeypair,
+					)
+				case v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
+					// We remove operations that are covered by rotate-credentials-start-without-workers-rollout
+					mustIncrease = true
+					updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
+						v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
+						v1beta1constants.OperationRotateETCDEncryptionKey,
+						v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+						v1beta1constants.OperationRotateObservabilityCredentials,
+						v1beta1constants.ShootOperationRotateSSHKeypair,
+					)
+				case v1beta1constants.OperationRotateCredentialsComplete:
+					// We remove operations that are covered by rotate-credentials-complete
+					mustIncrease = true
+					updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, v1beta1constants.OperationRotateCAComplete,
+						v1beta1constants.OperationRotateServiceAccountKeyComplete,
+						v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
+					)
 
-			case v1beta1constants.ShootOperationRotateSSHKeypair:
-				if !gardencorehelper.ShootEnablesSSHAccess(newShoot) {
-					// If SSH is not enabled for the Shoot, don't increase generation, just remove the annotation
-					mustIncrease, mustRemoveOperationAnnotation = false, true
-				} else {
-					mustIncrease, mustRemoveOperationAnnotation = true, false
+				case v1beta1constants.ShootOperationRotateSSHKeypair:
+					if !gardencorehelper.ShootEnablesSSHAccess(newShoot) {
+						// If SSH is not enabled for the Shoot, don't increase generation, just remove the annotation
+						updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
+					} else {
+						mustIncrease = true
+					}
+
+				case v1beta1constants.ShootOperationForceInPlaceUpdate:
+					// The annotation will be removed later by gardenlet once the in-place update is finished.
+					// The generation will be increased if there really is a spec change in the object.
+					mustIncrease, mustRemoveOperationAnnotation = false, false
 				}
 
-			case v1beta1constants.ShootOperationForceInPlaceUpdate:
-				// The annotation will be removed later by gardenlet once the in-place update is finished.
-				// The generation will be increased if there really is a spec change in the object.
-				mustIncrease, mustRemoveOperationAnnotation = false, false
-			}
-
-			if strings.HasPrefix(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.OperationRotateRolloutWorkers) ||
-				strings.HasPrefix(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.OperationRolloutWorkers) {
-				// We don't want to remove the annotation so that the gardenlet can pick it up and perform
-				// the rotation/rollout. It has to remove the annotation after it is done.
-				mustIncrease, mustRemoveOperationAnnotation = true, false
+				if strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) ||
+					strings.HasPrefix(operation, v1beta1constants.OperationRolloutWorkers) {
+					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
+					// the rotation/rollout. It has to remove the annotation after it is done.
+					mustIncrease, mustRemoveOperationAnnotation = true, false
+				}
 			}
 		}
 
-		if mustRemoveOperationAnnotation {
+		if mustRemoveOperationAnnotation || len(updatedOperations) == 0 {
 			delete(newShoot.Annotations, v1beta1constants.GardenerOperation)
+		} else if len(operations) != len(updatedOperations) {
+			newShoot.Annotations[v1beta1constants.GardenerOperation] = strings.Join(updatedOperations, v1beta1constants.GardenerOperationsSeparator)
 		}
 		if mustIncrease {
 			return true
@@ -385,4 +427,9 @@ func SyncEncryptedResourcesStatus(shoot *core.Shoot) {
 	} else if shoot.Status.Credentials != nil && shoot.Status.Credentials.EncryptionAtRest != nil {
 		shoot.Status.Credentials.EncryptionAtRest.Resources = nil
 	}
+}
+
+func cleanUpOperation(operation string) string {
+	operations := utils.SplitAndTrimString(operation, v1beta1constants.GardenerOperationsSeparator)
+	return strings.Join(sets.New(operations...).UnsortedList(), v1beta1constants.GardenerOperationsSeparator)
 }

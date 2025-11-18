@@ -115,6 +115,15 @@ maintenance.gardener.cloud/operation=<operation>
 This will execute the specified `<operation>` during the next maintenance reconciliation.
 Note that Gardener will remove this annotation after it has been performed in the maintenance reconciliation.
 
+
+Specific `Shoot` operations can run in parallel with 
+
+```
+maintenance.gardener.cloud/operation=<operation1>;<operation2>;..;<operationN>
+```
+
+A list of operations that can run in parallel can be found in the [Shoot Operations documentation](../shoot-operations/shoot_operations.md#running-operations-in-parallel).
+
 > ⚠️ This is skipped when the `Shoot`'s `.status.lastOperation.state=Failed`. Make sure to [retry](../shoot-operations/shoot_operations.md#retry-failed-reconciliation) your shoot reconciliation beforehand.
 
 ## Special Operations During Maintenance
