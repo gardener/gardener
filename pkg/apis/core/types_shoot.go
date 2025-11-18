@@ -1179,9 +1179,6 @@ const (
 	// - cgroupsv1 host: Kubernetes workloads can use any combination of memory and swap, up to the pod's memory limit
 	// - cgroupsv2 host: swap is managed independently from memory. Kubernetes workloads cannot use swap memory.
 	LimitedSwap SwapBehavior = "LimitedSwap"
-	// UnlimitedSwap is a constant for the kubelet's swap behavior enabling Kubernetes workloads to use as much swap memory as required, up to the system limit (not limited by pod or container memory limits).
-	// Only available for Kubernetes versions < v1.30.
-	UnlimitedSwap SwapBehavior = "UnlimitedSwap"
 )
 
 // MemorySwapConfiguration contains kubelet swap configuration
