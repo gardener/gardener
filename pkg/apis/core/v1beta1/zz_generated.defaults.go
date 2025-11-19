@@ -169,6 +169,9 @@ func SetObjectDefaults_Shoot(in *Shoot) {
 				if in.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair != nil {
 					SetDefaults_MaintenanceRotationConfig(in.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair)
 				}
+				if in.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey != nil {
+					SetDefaults_MaintenanceRotationConfig(in.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey)
+				}
 			}
 		}
 	}

@@ -1261,6 +1261,8 @@ type MaintenanceCredentialsAutoRotation struct {
 	Observability *MaintenanceRotationConfig
 	// SSHKeypair configures the automatic rotation for the ssh keypair for worker nodes.
 	SSHKeypair *MaintenanceRotationConfig
+	// ETCDEncryptionKey configures the automatic rotation for the etcd encryption key.
+	ETCDEncryptionKey *MaintenanceRotationConfig
 }
 
 // MaintenanceRotationConfig contains configuration for automatic rotation.

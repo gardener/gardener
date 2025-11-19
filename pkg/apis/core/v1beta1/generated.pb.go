@@ -3154,7 +3154,7 @@ var xxx_messageInfo_Maintenance proto.InternalMessageInfo
 func (m *MaintenanceAutoRotation) Reset()      { *m = MaintenanceAutoRotation{} }
 func (*MaintenanceAutoRotation) ProtoMessage() {}
 func (*MaintenanceAutoRotation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{110}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{111}
 }
 func (m *MaintenanceAutoRotation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3182,7 +3182,7 @@ var xxx_messageInfo_MaintenanceAutoRotation proto.InternalMessageInfo
 func (m *MaintenanceAutoUpdate) Reset()      { *m = MaintenanceAutoUpdate{} }
 func (*MaintenanceAutoUpdate) ProtoMessage() {}
 func (*MaintenanceAutoUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{111}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{112}
 }
 func (m *MaintenanceAutoUpdate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3210,7 +3210,7 @@ var xxx_messageInfo_MaintenanceAutoUpdate proto.InternalMessageInfo
 func (m *MaintenanceCredentialsAutoRotation) Reset()      { *m = MaintenanceCredentialsAutoRotation{} }
 func (*MaintenanceCredentialsAutoRotation) ProtoMessage() {}
 func (*MaintenanceCredentialsAutoRotation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{112}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{113}
 }
 func (m *MaintenanceCredentialsAutoRotation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3238,7 +3238,7 @@ var xxx_messageInfo_MaintenanceCredentialsAutoRotation proto.InternalMessageInfo
 func (m *MaintenanceRotationConfig) Reset()      { *m = MaintenanceRotationConfig{} }
 func (*MaintenanceRotationConfig) ProtoMessage() {}
 func (*MaintenanceRotationConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{113}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{114}
 }
 func (m *MaintenanceRotationConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3266,7 +3266,7 @@ var xxx_messageInfo_MaintenanceRotationConfig proto.InternalMessageInfo
 func (m *MaintenanceTimeWindow) Reset()      { *m = MaintenanceTimeWindow{} }
 func (*MaintenanceTimeWindow) ProtoMessage() {}
 func (*MaintenanceTimeWindow) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{112}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{115}
 }
 func (m *MaintenanceTimeWindow) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3294,7 +3294,7 @@ var xxx_messageInfo_MaintenanceTimeWindow proto.InternalMessageInfo
 func (m *ManualWorkerPoolRollout) Reset()      { *m = ManualWorkerPoolRollout{} }
 func (*ManualWorkerPoolRollout) ProtoMessage() {}
 func (*ManualWorkerPoolRollout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{113}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{116}
 }
 func (m *ManualWorkerPoolRollout) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3322,7 +3322,7 @@ var xxx_messageInfo_ManualWorkerPoolRollout proto.InternalMessageInfo
 func (m *MemorySwapConfiguration) Reset()      { *m = MemorySwapConfiguration{} }
 func (*MemorySwapConfiguration) ProtoMessage() {}
 func (*MemorySwapConfiguration) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{114}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{117}
 }
 func (m *MemorySwapConfiguration) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3350,7 +3350,7 @@ var xxx_messageInfo_MemorySwapConfiguration proto.InternalMessageInfo
 func (m *Monitoring) Reset()      { *m = Monitoring{} }
 func (*Monitoring) ProtoMessage() {}
 func (*Monitoring) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{115}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{118}
 }
 func (m *Monitoring) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3378,7 +3378,7 @@ var xxx_messageInfo_Monitoring proto.InternalMessageInfo
 func (m *NamedResourceReference) Reset()      { *m = NamedResourceReference{} }
 func (*NamedResourceReference) ProtoMessage() {}
 func (*NamedResourceReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{116}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{119}
 }
 func (m *NamedResourceReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3406,7 +3406,7 @@ var xxx_messageInfo_NamedResourceReference proto.InternalMessageInfo
 func (m *NamespacedCloudProfile) Reset()      { *m = NamespacedCloudProfile{} }
 func (*NamespacedCloudProfile) ProtoMessage() {}
 func (*NamespacedCloudProfile) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{117}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{120}
 }
 func (m *NamespacedCloudProfile) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3434,7 +3434,7 @@ var xxx_messageInfo_NamespacedCloudProfile proto.InternalMessageInfo
 func (m *NamespacedCloudProfileList) Reset()      { *m = NamespacedCloudProfileList{} }
 func (*NamespacedCloudProfileList) ProtoMessage() {}
 func (*NamespacedCloudProfileList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{118}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{121}
 }
 func (m *NamespacedCloudProfileList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3462,7 +3462,7 @@ var xxx_messageInfo_NamespacedCloudProfileList proto.InternalMessageInfo
 func (m *NamespacedCloudProfileSpec) Reset()      { *m = NamespacedCloudProfileSpec{} }
 func (*NamespacedCloudProfileSpec) ProtoMessage() {}
 func (*NamespacedCloudProfileSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{119}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{122}
 }
 func (m *NamespacedCloudProfileSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3490,7 +3490,7 @@ var xxx_messageInfo_NamespacedCloudProfileSpec proto.InternalMessageInfo
 func (m *NamespacedCloudProfileStatus) Reset()      { *m = NamespacedCloudProfileStatus{} }
 func (*NamespacedCloudProfileStatus) ProtoMessage() {}
 func (*NamespacedCloudProfileStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{120}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{123}
 }
 func (m *NamespacedCloudProfileStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3518,7 +3518,7 @@ var xxx_messageInfo_NamespacedCloudProfileStatus proto.InternalMessageInfo
 func (m *Networking) Reset()      { *m = Networking{} }
 func (*Networking) ProtoMessage() {}
 func (*Networking) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{121}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{124}
 }
 func (m *Networking) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3546,7 +3546,7 @@ var xxx_messageInfo_Networking proto.InternalMessageInfo
 func (m *NetworkingStatus) Reset()      { *m = NetworkingStatus{} }
 func (*NetworkingStatus) ProtoMessage() {}
 func (*NetworkingStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{122}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{125}
 }
 func (m *NetworkingStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3574,7 +3574,7 @@ var xxx_messageInfo_NetworkingStatus proto.InternalMessageInfo
 func (m *NginxIngress) Reset()      { *m = NginxIngress{} }
 func (*NginxIngress) ProtoMessage() {}
 func (*NginxIngress) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{123}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{126}
 }
 func (m *NginxIngress) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3602,7 +3602,7 @@ var xxx_messageInfo_NginxIngress proto.InternalMessageInfo
 func (m *NodeLocalDNS) Reset()      { *m = NodeLocalDNS{} }
 func (*NodeLocalDNS) ProtoMessage() {}
 func (*NodeLocalDNS) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{124}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{127}
 }
 func (m *NodeLocalDNS) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3630,7 +3630,7 @@ var xxx_messageInfo_NodeLocalDNS proto.InternalMessageInfo
 func (m *OCIRepository) Reset()      { *m = OCIRepository{} }
 func (*OCIRepository) ProtoMessage() {}
 func (*OCIRepository) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{125}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{128}
 }
 func (m *OCIRepository) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3658,7 +3658,7 @@ var xxx_messageInfo_OCIRepository proto.InternalMessageInfo
 func (m *OIDCConfig) Reset()      { *m = OIDCConfig{} }
 func (*OIDCConfig) ProtoMessage() {}
 func (*OIDCConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{126}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{129}
 }
 func (m *OIDCConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3686,7 +3686,7 @@ var xxx_messageInfo_OIDCConfig proto.InternalMessageInfo
 func (m *ObservabilityRotation) Reset()      { *m = ObservabilityRotation{} }
 func (*ObservabilityRotation) ProtoMessage() {}
 func (*ObservabilityRotation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{127}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{130}
 }
 func (m *ObservabilityRotation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3714,7 +3714,7 @@ var xxx_messageInfo_ObservabilityRotation proto.InternalMessageInfo
 func (m *OpenIDConnectClientAuthentication) Reset()      { *m = OpenIDConnectClientAuthentication{} }
 func (*OpenIDConnectClientAuthentication) ProtoMessage() {}
 func (*OpenIDConnectClientAuthentication) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{128}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{131}
 }
 func (m *OpenIDConnectClientAuthentication) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3742,7 +3742,7 @@ var xxx_messageInfo_OpenIDConnectClientAuthentication proto.InternalMessageInfo
 func (m *PendingWorkerUpdates) Reset()      { *m = PendingWorkerUpdates{} }
 func (*PendingWorkerUpdates) ProtoMessage() {}
 func (*PendingWorkerUpdates) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{129}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{132}
 }
 func (m *PendingWorkerUpdates) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3770,7 +3770,7 @@ var xxx_messageInfo_PendingWorkerUpdates proto.InternalMessageInfo
 func (m *PendingWorkersRollout) Reset()      { *m = PendingWorkersRollout{} }
 func (*PendingWorkersRollout) ProtoMessage() {}
 func (*PendingWorkersRollout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{130}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{133}
 }
 func (m *PendingWorkersRollout) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3798,7 +3798,7 @@ var xxx_messageInfo_PendingWorkersRollout proto.InternalMessageInfo
 func (m *Project) Reset()      { *m = Project{} }
 func (*Project) ProtoMessage() {}
 func (*Project) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{131}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{134}
 }
 func (m *Project) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3826,7 +3826,7 @@ var xxx_messageInfo_Project proto.InternalMessageInfo
 func (m *ProjectList) Reset()      { *m = ProjectList{} }
 func (*ProjectList) ProtoMessage() {}
 func (*ProjectList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{132}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{135}
 }
 func (m *ProjectList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3854,7 +3854,7 @@ var xxx_messageInfo_ProjectList proto.InternalMessageInfo
 func (m *ProjectMember) Reset()      { *m = ProjectMember{} }
 func (*ProjectMember) ProtoMessage() {}
 func (*ProjectMember) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{133}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{136}
 }
 func (m *ProjectMember) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3882,7 +3882,7 @@ var xxx_messageInfo_ProjectMember proto.InternalMessageInfo
 func (m *ProjectSpec) Reset()      { *m = ProjectSpec{} }
 func (*ProjectSpec) ProtoMessage() {}
 func (*ProjectSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{134}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{137}
 }
 func (m *ProjectSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3910,7 +3910,7 @@ var xxx_messageInfo_ProjectSpec proto.InternalMessageInfo
 func (m *ProjectStatus) Reset()      { *m = ProjectStatus{} }
 func (*ProjectStatus) ProtoMessage() {}
 func (*ProjectStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{135}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{138}
 }
 func (m *ProjectStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3938,7 +3938,7 @@ var xxx_messageInfo_ProjectStatus proto.InternalMessageInfo
 func (m *ProjectTolerations) Reset()      { *m = ProjectTolerations{} }
 func (*ProjectTolerations) ProtoMessage() {}
 func (*ProjectTolerations) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{136}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{139}
 }
 func (m *ProjectTolerations) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3966,7 +3966,7 @@ var xxx_messageInfo_ProjectTolerations proto.InternalMessageInfo
 func (m *Provider) Reset()      { *m = Provider{} }
 func (*Provider) ProtoMessage() {}
 func (*Provider) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{137}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{140}
 }
 func (m *Provider) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -3994,7 +3994,7 @@ var xxx_messageInfo_Provider proto.InternalMessageInfo
 func (m *Quota) Reset()      { *m = Quota{} }
 func (*Quota) ProtoMessage() {}
 func (*Quota) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{138}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{141}
 }
 func (m *Quota) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4022,7 +4022,7 @@ var xxx_messageInfo_Quota proto.InternalMessageInfo
 func (m *QuotaList) Reset()      { *m = QuotaList{} }
 func (*QuotaList) ProtoMessage() {}
 func (*QuotaList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{139}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{142}
 }
 func (m *QuotaList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4050,7 +4050,7 @@ var xxx_messageInfo_QuotaList proto.InternalMessageInfo
 func (m *QuotaSpec) Reset()      { *m = QuotaSpec{} }
 func (*QuotaSpec) ProtoMessage() {}
 func (*QuotaSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{140}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{143}
 }
 func (m *QuotaSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4078,7 +4078,7 @@ var xxx_messageInfo_QuotaSpec proto.InternalMessageInfo
 func (m *Region) Reset()      { *m = Region{} }
 func (*Region) ProtoMessage() {}
 func (*Region) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{141}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{144}
 }
 func (m *Region) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4106,7 +4106,7 @@ var xxx_messageInfo_Region proto.InternalMessageInfo
 func (m *ResourceData) Reset()      { *m = ResourceData{} }
 func (*ResourceData) ProtoMessage() {}
 func (*ResourceData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{142}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{145}
 }
 func (m *ResourceData) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4134,7 +4134,7 @@ var xxx_messageInfo_ResourceData proto.InternalMessageInfo
 func (m *ResourceWatchCacheSize) Reset()      { *m = ResourceWatchCacheSize{} }
 func (*ResourceWatchCacheSize) ProtoMessage() {}
 func (*ResourceWatchCacheSize) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{143}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{146}
 }
 func (m *ResourceWatchCacheSize) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4162,7 +4162,7 @@ var xxx_messageInfo_ResourceWatchCacheSize proto.InternalMessageInfo
 func (m *SSHAccess) Reset()      { *m = SSHAccess{} }
 func (*SSHAccess) ProtoMessage() {}
 func (*SSHAccess) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{144}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{147}
 }
 func (m *SSHAccess) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4190,7 +4190,7 @@ var xxx_messageInfo_SSHAccess proto.InternalMessageInfo
 func (m *SecretBinding) Reset()      { *m = SecretBinding{} }
 func (*SecretBinding) ProtoMessage() {}
 func (*SecretBinding) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{145}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{148}
 }
 func (m *SecretBinding) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4218,7 +4218,7 @@ var xxx_messageInfo_SecretBinding proto.InternalMessageInfo
 func (m *SecretBindingList) Reset()      { *m = SecretBindingList{} }
 func (*SecretBindingList) ProtoMessage() {}
 func (*SecretBindingList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{146}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{149}
 }
 func (m *SecretBindingList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4246,7 +4246,7 @@ var xxx_messageInfo_SecretBindingList proto.InternalMessageInfo
 func (m *SecretBindingProvider) Reset()      { *m = SecretBindingProvider{} }
 func (*SecretBindingProvider) ProtoMessage() {}
 func (*SecretBindingProvider) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{147}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{150}
 }
 func (m *SecretBindingProvider) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4274,7 +4274,7 @@ var xxx_messageInfo_SecretBindingProvider proto.InternalMessageInfo
 func (m *Seed) Reset()      { *m = Seed{} }
 func (*Seed) ProtoMessage() {}
 func (*Seed) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{148}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{151}
 }
 func (m *Seed) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4302,7 +4302,7 @@ var xxx_messageInfo_Seed proto.InternalMessageInfo
 func (m *SeedDNS) Reset()      { *m = SeedDNS{} }
 func (*SeedDNS) ProtoMessage() {}
 func (*SeedDNS) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{149}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{152}
 }
 func (m *SeedDNS) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4330,7 +4330,7 @@ var xxx_messageInfo_SeedDNS proto.InternalMessageInfo
 func (m *SeedDNSProvider) Reset()      { *m = SeedDNSProvider{} }
 func (*SeedDNSProvider) ProtoMessage() {}
 func (*SeedDNSProvider) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{150}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{153}
 }
 func (m *SeedDNSProvider) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4358,7 +4358,7 @@ var xxx_messageInfo_SeedDNSProvider proto.InternalMessageInfo
 func (m *SeedDNSProviderConfig) Reset()      { *m = SeedDNSProviderConfig{} }
 func (*SeedDNSProviderConfig) ProtoMessage() {}
 func (*SeedDNSProviderConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{151}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{154}
 }
 func (m *SeedDNSProviderConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4386,7 +4386,7 @@ var xxx_messageInfo_SeedDNSProviderConfig proto.InternalMessageInfo
 func (m *SeedList) Reset()      { *m = SeedList{} }
 func (*SeedList) ProtoMessage() {}
 func (*SeedList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{152}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{155}
 }
 func (m *SeedList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4414,7 +4414,7 @@ var xxx_messageInfo_SeedList proto.InternalMessageInfo
 func (m *SeedNetworks) Reset()      { *m = SeedNetworks{} }
 func (*SeedNetworks) ProtoMessage() {}
 func (*SeedNetworks) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{153}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{156}
 }
 func (m *SeedNetworks) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4442,7 +4442,7 @@ var xxx_messageInfo_SeedNetworks proto.InternalMessageInfo
 func (m *SeedProvider) Reset()      { *m = SeedProvider{} }
 func (*SeedProvider) ProtoMessage() {}
 func (*SeedProvider) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{154}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{157}
 }
 func (m *SeedProvider) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4470,7 +4470,7 @@ var xxx_messageInfo_SeedProvider proto.InternalMessageInfo
 func (m *SeedSelector) Reset()      { *m = SeedSelector{} }
 func (*SeedSelector) ProtoMessage() {}
 func (*SeedSelector) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{155}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{158}
 }
 func (m *SeedSelector) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4498,7 +4498,7 @@ var xxx_messageInfo_SeedSelector proto.InternalMessageInfo
 func (m *SeedSettingDependencyWatchdog) Reset()      { *m = SeedSettingDependencyWatchdog{} }
 func (*SeedSettingDependencyWatchdog) ProtoMessage() {}
 func (*SeedSettingDependencyWatchdog) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{156}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{159}
 }
 func (m *SeedSettingDependencyWatchdog) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4526,7 +4526,7 @@ var xxx_messageInfo_SeedSettingDependencyWatchdog proto.InternalMessageInfo
 func (m *SeedSettingDependencyWatchdogProber) Reset()      { *m = SeedSettingDependencyWatchdogProber{} }
 func (*SeedSettingDependencyWatchdogProber) ProtoMessage() {}
 func (*SeedSettingDependencyWatchdogProber) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{157}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{160}
 }
 func (m *SeedSettingDependencyWatchdogProber) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4554,7 +4554,7 @@ var xxx_messageInfo_SeedSettingDependencyWatchdogProber proto.InternalMessageInf
 func (m *SeedSettingDependencyWatchdogWeeder) Reset()      { *m = SeedSettingDependencyWatchdogWeeder{} }
 func (*SeedSettingDependencyWatchdogWeeder) ProtoMessage() {}
 func (*SeedSettingDependencyWatchdogWeeder) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{158}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{161}
 }
 func (m *SeedSettingDependencyWatchdogWeeder) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4582,7 +4582,7 @@ var xxx_messageInfo_SeedSettingDependencyWatchdogWeeder proto.InternalMessageInf
 func (m *SeedSettingExcessCapacityReservation) Reset()      { *m = SeedSettingExcessCapacityReservation{} }
 func (*SeedSettingExcessCapacityReservation) ProtoMessage() {}
 func (*SeedSettingExcessCapacityReservation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{159}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{162}
 }
 func (m *SeedSettingExcessCapacityReservation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4612,7 +4612,7 @@ func (m *SeedSettingExcessCapacityReservationConfig) Reset() {
 }
 func (*SeedSettingExcessCapacityReservationConfig) ProtoMessage() {}
 func (*SeedSettingExcessCapacityReservationConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{160}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{163}
 }
 func (m *SeedSettingExcessCapacityReservationConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4640,7 +4640,7 @@ var xxx_messageInfo_SeedSettingExcessCapacityReservationConfig proto.InternalMes
 func (m *SeedSettingLoadBalancerServices) Reset()      { *m = SeedSettingLoadBalancerServices{} }
 func (*SeedSettingLoadBalancerServices) ProtoMessage() {}
 func (*SeedSettingLoadBalancerServices) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{161}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{164}
 }
 func (m *SeedSettingLoadBalancerServices) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4670,7 +4670,7 @@ func (m *SeedSettingLoadBalancerServicesZonalIngress) Reset() {
 }
 func (*SeedSettingLoadBalancerServicesZonalIngress) ProtoMessage() {}
 func (*SeedSettingLoadBalancerServicesZonalIngress) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{162}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{165}
 }
 func (m *SeedSettingLoadBalancerServicesZonalIngress) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4698,7 +4698,7 @@ var xxx_messageInfo_SeedSettingLoadBalancerServicesZonalIngress proto.InternalMe
 func (m *SeedSettingLoadBalancerServicesZones) Reset()      { *m = SeedSettingLoadBalancerServicesZones{} }
 func (*SeedSettingLoadBalancerServicesZones) ProtoMessage() {}
 func (*SeedSettingLoadBalancerServicesZones) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{163}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{166}
 }
 func (m *SeedSettingLoadBalancerServicesZones) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4726,7 +4726,7 @@ var xxx_messageInfo_SeedSettingLoadBalancerServicesZones proto.InternalMessageIn
 func (m *SeedSettingScheduling) Reset()      { *m = SeedSettingScheduling{} }
 func (*SeedSettingScheduling) ProtoMessage() {}
 func (*SeedSettingScheduling) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{164}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{167}
 }
 func (m *SeedSettingScheduling) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4754,7 +4754,7 @@ var xxx_messageInfo_SeedSettingScheduling proto.InternalMessageInfo
 func (m *SeedSettingTopologyAwareRouting) Reset()      { *m = SeedSettingTopologyAwareRouting{} }
 func (*SeedSettingTopologyAwareRouting) ProtoMessage() {}
 func (*SeedSettingTopologyAwareRouting) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{165}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{168}
 }
 func (m *SeedSettingTopologyAwareRouting) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4782,7 +4782,7 @@ var xxx_messageInfo_SeedSettingTopologyAwareRouting proto.InternalMessageInfo
 func (m *SeedSettingVerticalPodAutoscaler) Reset()      { *m = SeedSettingVerticalPodAutoscaler{} }
 func (*SeedSettingVerticalPodAutoscaler) ProtoMessage() {}
 func (*SeedSettingVerticalPodAutoscaler) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{166}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{169}
 }
 func (m *SeedSettingVerticalPodAutoscaler) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4810,7 +4810,7 @@ var xxx_messageInfo_SeedSettingVerticalPodAutoscaler proto.InternalMessageInfo
 func (m *SeedSettings) Reset()      { *m = SeedSettings{} }
 func (*SeedSettings) ProtoMessage() {}
 func (*SeedSettings) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{167}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{170}
 }
 func (m *SeedSettings) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4838,7 +4838,7 @@ var xxx_messageInfo_SeedSettings proto.InternalMessageInfo
 func (m *SeedSpec) Reset()      { *m = SeedSpec{} }
 func (*SeedSpec) ProtoMessage() {}
 func (*SeedSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{168}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{171}
 }
 func (m *SeedSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4866,7 +4866,7 @@ var xxx_messageInfo_SeedSpec proto.InternalMessageInfo
 func (m *SeedStatus) Reset()      { *m = SeedStatus{} }
 func (*SeedStatus) ProtoMessage() {}
 func (*SeedStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{169}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{172}
 }
 func (m *SeedStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4894,7 +4894,7 @@ var xxx_messageInfo_SeedStatus proto.InternalMessageInfo
 func (m *SeedTaint) Reset()      { *m = SeedTaint{} }
 func (*SeedTaint) ProtoMessage() {}
 func (*SeedTaint) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{170}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{173}
 }
 func (m *SeedTaint) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4922,7 +4922,7 @@ var xxx_messageInfo_SeedTaint proto.InternalMessageInfo
 func (m *SeedTemplate) Reset()      { *m = SeedTemplate{} }
 func (*SeedTemplate) ProtoMessage() {}
 func (*SeedTemplate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{171}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{174}
 }
 func (m *SeedTemplate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4950,7 +4950,7 @@ var xxx_messageInfo_SeedTemplate proto.InternalMessageInfo
 func (m *SeedVolume) Reset()      { *m = SeedVolume{} }
 func (*SeedVolume) ProtoMessage() {}
 func (*SeedVolume) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{172}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{175}
 }
 func (m *SeedVolume) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4978,7 +4978,7 @@ var xxx_messageInfo_SeedVolume proto.InternalMessageInfo
 func (m *SeedVolumeProvider) Reset()      { *m = SeedVolumeProvider{} }
 func (*SeedVolumeProvider) ProtoMessage() {}
 func (*SeedVolumeProvider) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{173}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{176}
 }
 func (m *SeedVolumeProvider) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5006,7 +5006,7 @@ var xxx_messageInfo_SeedVolumeProvider proto.InternalMessageInfo
 func (m *ServiceAccountConfig) Reset()      { *m = ServiceAccountConfig{} }
 func (*ServiceAccountConfig) ProtoMessage() {}
 func (*ServiceAccountConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{174}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{177}
 }
 func (m *ServiceAccountConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5034,7 +5034,7 @@ var xxx_messageInfo_ServiceAccountConfig proto.InternalMessageInfo
 func (m *ServiceAccountKeyRotation) Reset()      { *m = ServiceAccountKeyRotation{} }
 func (*ServiceAccountKeyRotation) ProtoMessage() {}
 func (*ServiceAccountKeyRotation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{175}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{178}
 }
 func (m *ServiceAccountKeyRotation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5062,7 +5062,7 @@ var xxx_messageInfo_ServiceAccountKeyRotation proto.InternalMessageInfo
 func (m *Shoot) Reset()      { *m = Shoot{} }
 func (*Shoot) ProtoMessage() {}
 func (*Shoot) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{176}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{179}
 }
 func (m *Shoot) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5090,7 +5090,7 @@ var xxx_messageInfo_Shoot proto.InternalMessageInfo
 func (m *ShootAdvertisedAddress) Reset()      { *m = ShootAdvertisedAddress{} }
 func (*ShootAdvertisedAddress) ProtoMessage() {}
 func (*ShootAdvertisedAddress) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{177}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{180}
 }
 func (m *ShootAdvertisedAddress) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5118,7 +5118,7 @@ var xxx_messageInfo_ShootAdvertisedAddress proto.InternalMessageInfo
 func (m *ShootCredentials) Reset()      { *m = ShootCredentials{} }
 func (*ShootCredentials) ProtoMessage() {}
 func (*ShootCredentials) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{178}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{181}
 }
 func (m *ShootCredentials) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5146,7 +5146,7 @@ var xxx_messageInfo_ShootCredentials proto.InternalMessageInfo
 func (m *ShootCredentialsRotation) Reset()      { *m = ShootCredentialsRotation{} }
 func (*ShootCredentialsRotation) ProtoMessage() {}
 func (*ShootCredentialsRotation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{179}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{182}
 }
 func (m *ShootCredentialsRotation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5174,7 +5174,7 @@ var xxx_messageInfo_ShootCredentialsRotation proto.InternalMessageInfo
 func (m *ShootKubeconfigRotation) Reset()      { *m = ShootKubeconfigRotation{} }
 func (*ShootKubeconfigRotation) ProtoMessage() {}
 func (*ShootKubeconfigRotation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{180}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{183}
 }
 func (m *ShootKubeconfigRotation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5202,7 +5202,7 @@ var xxx_messageInfo_ShootKubeconfigRotation proto.InternalMessageInfo
 func (m *ShootList) Reset()      { *m = ShootList{} }
 func (*ShootList) ProtoMessage() {}
 func (*ShootList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{181}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{184}
 }
 func (m *ShootList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5230,7 +5230,7 @@ var xxx_messageInfo_ShootList proto.InternalMessageInfo
 func (m *ShootMachineImage) Reset()      { *m = ShootMachineImage{} }
 func (*ShootMachineImage) ProtoMessage() {}
 func (*ShootMachineImage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{182}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{185}
 }
 func (m *ShootMachineImage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5258,7 +5258,7 @@ var xxx_messageInfo_ShootMachineImage proto.InternalMessageInfo
 func (m *ShootNetworks) Reset()      { *m = ShootNetworks{} }
 func (*ShootNetworks) ProtoMessage() {}
 func (*ShootNetworks) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{183}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{186}
 }
 func (m *ShootNetworks) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5286,7 +5286,7 @@ var xxx_messageInfo_ShootNetworks proto.InternalMessageInfo
 func (m *ShootSSHKeypairRotation) Reset()      { *m = ShootSSHKeypairRotation{} }
 func (*ShootSSHKeypairRotation) ProtoMessage() {}
 func (*ShootSSHKeypairRotation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{184}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{187}
 }
 func (m *ShootSSHKeypairRotation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5314,7 +5314,7 @@ var xxx_messageInfo_ShootSSHKeypairRotation proto.InternalMessageInfo
 func (m *ShootSpec) Reset()      { *m = ShootSpec{} }
 func (*ShootSpec) ProtoMessage() {}
 func (*ShootSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{185}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{188}
 }
 func (m *ShootSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5342,7 +5342,7 @@ var xxx_messageInfo_ShootSpec proto.InternalMessageInfo
 func (m *ShootState) Reset()      { *m = ShootState{} }
 func (*ShootState) ProtoMessage() {}
 func (*ShootState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{186}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{189}
 }
 func (m *ShootState) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5370,7 +5370,7 @@ var xxx_messageInfo_ShootState proto.InternalMessageInfo
 func (m *ShootStateList) Reset()      { *m = ShootStateList{} }
 func (*ShootStateList) ProtoMessage() {}
 func (*ShootStateList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{187}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{190}
 }
 func (m *ShootStateList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5398,7 +5398,7 @@ var xxx_messageInfo_ShootStateList proto.InternalMessageInfo
 func (m *ShootStateSpec) Reset()      { *m = ShootStateSpec{} }
 func (*ShootStateSpec) ProtoMessage() {}
 func (*ShootStateSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{188}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{191}
 }
 func (m *ShootStateSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5426,7 +5426,7 @@ var xxx_messageInfo_ShootStateSpec proto.InternalMessageInfo
 func (m *ShootStatus) Reset()      { *m = ShootStatus{} }
 func (*ShootStatus) ProtoMessage() {}
 func (*ShootStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{189}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{192}
 }
 func (m *ShootStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5454,7 +5454,7 @@ var xxx_messageInfo_ShootStatus proto.InternalMessageInfo
 func (m *ShootTemplate) Reset()      { *m = ShootTemplate{} }
 func (*ShootTemplate) ProtoMessage() {}
 func (*ShootTemplate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{190}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{193}
 }
 func (m *ShootTemplate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5482,7 +5482,7 @@ var xxx_messageInfo_ShootTemplate proto.InternalMessageInfo
 func (m *StructuredAuthentication) Reset()      { *m = StructuredAuthentication{} }
 func (*StructuredAuthentication) ProtoMessage() {}
 func (*StructuredAuthentication) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{191}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{194}
 }
 func (m *StructuredAuthentication) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5510,7 +5510,7 @@ var xxx_messageInfo_StructuredAuthentication proto.InternalMessageInfo
 func (m *StructuredAuthorization) Reset()      { *m = StructuredAuthorization{} }
 func (*StructuredAuthorization) ProtoMessage() {}
 func (*StructuredAuthorization) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{192}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{195}
 }
 func (m *StructuredAuthorization) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5538,7 +5538,7 @@ var xxx_messageInfo_StructuredAuthorization proto.InternalMessageInfo
 func (m *SystemComponents) Reset()      { *m = SystemComponents{} }
 func (*SystemComponents) ProtoMessage() {}
 func (*SystemComponents) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{193}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{196}
 }
 func (m *SystemComponents) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5566,7 +5566,7 @@ var xxx_messageInfo_SystemComponents proto.InternalMessageInfo
 func (m *Toleration) Reset()      { *m = Toleration{} }
 func (*Toleration) ProtoMessage() {}
 func (*Toleration) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{194}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{197}
 }
 func (m *Toleration) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5594,7 +5594,7 @@ var xxx_messageInfo_Toleration proto.InternalMessageInfo
 func (m *VerticalPodAutoscaler) Reset()      { *m = VerticalPodAutoscaler{} }
 func (*VerticalPodAutoscaler) ProtoMessage() {}
 func (*VerticalPodAutoscaler) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{195}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{198}
 }
 func (m *VerticalPodAutoscaler) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5622,7 +5622,7 @@ var xxx_messageInfo_VerticalPodAutoscaler proto.InternalMessageInfo
 func (m *Volume) Reset()      { *m = Volume{} }
 func (*Volume) ProtoMessage() {}
 func (*Volume) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{196}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{199}
 }
 func (m *Volume) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5650,7 +5650,7 @@ var xxx_messageInfo_Volume proto.InternalMessageInfo
 func (m *VolumeType) Reset()      { *m = VolumeType{} }
 func (*VolumeType) ProtoMessage() {}
 func (*VolumeType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{197}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{200}
 }
 func (m *VolumeType) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5678,7 +5678,7 @@ var xxx_messageInfo_VolumeType proto.InternalMessageInfo
 func (m *WatchCacheSizes) Reset()      { *m = WatchCacheSizes{} }
 func (*WatchCacheSizes) ProtoMessage() {}
 func (*WatchCacheSizes) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{198}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{201}
 }
 func (m *WatchCacheSizes) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5706,7 +5706,7 @@ var xxx_messageInfo_WatchCacheSizes proto.InternalMessageInfo
 func (m *Worker) Reset()      { *m = Worker{} }
 func (*Worker) ProtoMessage() {}
 func (*Worker) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{199}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{202}
 }
 func (m *Worker) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5734,7 +5734,7 @@ var xxx_messageInfo_Worker proto.InternalMessageInfo
 func (m *WorkerControlPlane) Reset()      { *m = WorkerControlPlane{} }
 func (*WorkerControlPlane) ProtoMessage() {}
 func (*WorkerControlPlane) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{200}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{203}
 }
 func (m *WorkerControlPlane) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5762,7 +5762,7 @@ var xxx_messageInfo_WorkerControlPlane proto.InternalMessageInfo
 func (m *WorkerKubernetes) Reset()      { *m = WorkerKubernetes{} }
 func (*WorkerKubernetes) ProtoMessage() {}
 func (*WorkerKubernetes) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{201}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{204}
 }
 func (m *WorkerKubernetes) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5790,7 +5790,7 @@ var xxx_messageInfo_WorkerKubernetes proto.InternalMessageInfo
 func (m *WorkerSystemComponents) Reset()      { *m = WorkerSystemComponents{} }
 func (*WorkerSystemComponents) ProtoMessage() {}
 func (*WorkerSystemComponents) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{202}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{205}
 }
 func (m *WorkerSystemComponents) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5818,7 +5818,7 @@ var xxx_messageInfo_WorkerSystemComponents proto.InternalMessageInfo
 func (m *WorkersSettings) Reset()      { *m = WorkersSettings{} }
 func (*WorkersSettings) ProtoMessage() {}
 func (*WorkersSettings) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{203}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{206}
 }
 func (m *WorkersSettings) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -13555,6 +13555,18 @@ func (m *MaintenanceCredentialsAutoRotation) MarshalToSizedBuffer(dAtA []byte) (
 	_ = i
 	var l int
 	_ = l
+	if m.ETCDEncryptionKey != nil {
+		{
+			size, err := m.ETCDEncryptionKey.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
 	if m.SSHKeypair != nil {
 		{
 			size, err := m.SSHKeypair.MarshalToSizedBuffer(dAtA[:i])
@@ -21999,6 +22011,10 @@ func (m *MaintenanceCredentialsAutoRotation) Size() (n int) {
 		l = m.SSHKeypair.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if m.ETCDEncryptionKey != nil {
+		l = m.ETCDEncryptionKey.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -25863,6 +25879,7 @@ func (this *MaintenanceCredentialsAutoRotation) String() string {
 	s := strings.Join([]string{`&MaintenanceCredentialsAutoRotation{`,
 		`Observability:` + strings.Replace(this.Observability.String(), "MaintenanceRotationConfig", "MaintenanceRotationConfig", 1) + `,`,
 		`SSHKeypair:` + strings.Replace(this.SSHKeypair.String(), "MaintenanceRotationConfig", "MaintenanceRotationConfig", 1) + `,`,
+		`ETCDEncryptionKey:` + strings.Replace(this.ETCDEncryptionKey.String(), "MaintenanceRotationConfig", "MaintenanceRotationConfig", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -46594,6 +46611,42 @@ func (m *MaintenanceCredentialsAutoRotation) Unmarshal(dAtA []byte) error {
 				m.SSHKeypair = &MaintenanceRotationConfig{}
 			}
 			if err := m.SSHKeypair.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ETCDEncryptionKey", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ETCDEncryptionKey == nil {
+				m.ETCDEncryptionKey = &MaintenanceRotationConfig{}
+			}
+			if err := m.ETCDEncryptionKey.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

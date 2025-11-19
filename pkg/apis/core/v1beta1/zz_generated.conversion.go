@@ -5078,6 +5078,7 @@ func Convert_core_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(in *cor
 func autoConvert_v1beta1_MaintenanceCredentialsAutoRotation_To_core_MaintenanceCredentialsAutoRotation(in *MaintenanceCredentialsAutoRotation, out *core.MaintenanceCredentialsAutoRotation, s conversion.Scope) error {
 	out.Observability = (*core.MaintenanceRotationConfig)(unsafe.Pointer(in.Observability))
 	out.SSHKeypair = (*core.MaintenanceRotationConfig)(unsafe.Pointer(in.SSHKeypair))
+	out.ETCDEncryptionKey = (*core.MaintenanceRotationConfig)(unsafe.Pointer(in.ETCDEncryptionKey))
 	return nil
 }
 
@@ -5089,6 +5090,7 @@ func Convert_v1beta1_MaintenanceCredentialsAutoRotation_To_core_MaintenanceCrede
 func autoConvert_core_MaintenanceCredentialsAutoRotation_To_v1beta1_MaintenanceCredentialsAutoRotation(in *core.MaintenanceCredentialsAutoRotation, out *MaintenanceCredentialsAutoRotation, s conversion.Scope) error {
 	out.Observability = (*MaintenanceRotationConfig)(unsafe.Pointer(in.Observability))
 	out.SSHKeypair = (*MaintenanceRotationConfig)(unsafe.Pointer(in.SSHKeypair))
+	out.ETCDEncryptionKey = (*MaintenanceRotationConfig)(unsafe.Pointer(in.ETCDEncryptionKey))
 	return nil
 }
 

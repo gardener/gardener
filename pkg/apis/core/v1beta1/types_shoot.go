@@ -1649,6 +1649,9 @@ type MaintenanceCredentialsAutoRotation struct {
 	// SSHKeypair configures the automatic rotation for the ssh keypair for worker nodes.
 	// +optional
 	SSHKeypair *MaintenanceRotationConfig `json:"sshKeypair,omitempty" protobuf:"bytes,2,opt,name=sshKeypair"`
+	// ETCDEncryptionKey configures the automatic rotation for the etcd encryption key.
+	// +optional
+	ETCDEncryptionKey *MaintenanceRotationConfig `json:"etcdEncryptionKey,omitempty" protobuf:"bytes,3,opt,name=etcdEncryptionKey"`
 }
 
 // MaintenanceRotationConfig contains configuration for automatic rotation.

@@ -3546,6 +3546,11 @@ func (in *MaintenanceCredentialsAutoRotation) DeepCopyInto(out *MaintenanceCrede
 		*out = new(MaintenanceRotationConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ETCDEncryptionKey != nil {
+		in, out := &in.ETCDEncryptionKey, &out.ETCDEncryptionKey
+		*out = new(MaintenanceRotationConfig)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
