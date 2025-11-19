@@ -1282,6 +1282,18 @@ func completeRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *meta
 	})
 }
 
+func startRotationSSHKeypair(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
+	v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
+		rotation.LastInitiationTime = now
+	})
+}
+
+func startRotationObservability(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
+	v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ObservabilityRotation) {
+		rotation.LastInitiationTime = now
+	})
+}
+
 func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1beta1.LastOperationType, duration time.Duration) {
 	var (
 		workerless = utils.IifString(v1beta1helper.IsWorkerless(shoot), "true", "false")
