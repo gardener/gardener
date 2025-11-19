@@ -30,25 +30,29 @@ import (
 const ManagedResourceName = "shoot-core-gardeneraccess"
 
 // New creates a new instance of the deployer for GardenerAccess.
+// `withShootAccess` parameter defines whether to create ClusterRoleBindings for shoot access (adminkubeconfig and viewerkubeconfig).
 func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
+	withShootAccess bool,
 ) component.DeployWaiter {
 	return &gardener{
-		client:         client,
-		namespace:      namespace,
-		secretsManager: secretsManager,
-		values:         values,
+		client:          client,
+		namespace:       namespace,
+		secretsManager:  secretsManager,
+		values:          values,
+		withShootAccess: withShootAccess,
 	}
 }
 
 type gardener struct {
-	client         client.Client
-	namespace      string
-	secretsManager secretsmanager.Interface
-	values         Values
+	client          client.Client
+	namespace       string
+	secretsManager  secretsmanager.Interface
+	values          Values
+	withShootAccess bool
 }
 
 // Values contains configurations for the component.
@@ -157,8 +161,11 @@ func (g *gardener) computeResourcesData(serviceAccountNames ...string) (map[stri
 		})
 	}
 
-	resources := append(adminClusterRoleBindings(), viewerClusterRoleBindings()...)
-	resources = append(resources, gardenerSystemClusterRoleBinding)
+	resources := []client.Object{gardenerSystemClusterRoleBinding}
+	if g.withShootAccess {
+		resources = append(resources, adminClusterRoleBindings()...)
+		resources = append(resources, viewerClusterRoleBindings()...)
+	}
 
 	return registry.AddAllAndSerialize(resources...)
 }
