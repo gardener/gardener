@@ -95,6 +95,7 @@ function install_previous_release() {
   copy_kubeconfig_from_kubeconfig_env_var
   gardener_up
   migrate_secretbinding_secret_ref_namespace
+  migrate_credentialsbinding_name
   popd >/dev/null
 }
 
@@ -124,6 +125,37 @@ provider:
   type: local
 secretRef:
   name: local
+EOF
+}
+
+# TODO(vpnachev): Remove this after v1.133 has been released.
+# See https://prow.gardener.cloud/view/gs/gardener-prow/pr-logs/pull/gardener_gardener/13491/pull-gardener-e2e-kind-upgrade/1991099554581188608#1:build-log.txt%3A1418
+function migrate_credentialsbinding_name() {
+  if [[ $(kubectl -n garden-local get --ignore-not-found credentialsbinding local -o jsonpath='{.credentialsRef.kind}') == "Secret" ]]; then
+    return
+  fi
+
+  kubectl -n garden-local delete credentialsbinding local --ignore-not-found
+  cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: local
+  namespace: garden-local
+type: Opaque
+---
+apiVersion: security.gardener.cloud/v1alpha1
+kind: CredentialsBinding
+metadata:
+  name: local
+  namespace: garden-local
+credentialsRef:
+  apiVersion: v1
+  kind: Secret
+  name: local
+  namespace: garden-local
+provider:
+  type: local
 EOF
 }
 
