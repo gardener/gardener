@@ -9158,6 +9158,20 @@ MaintenanceRotationConfig
 <p>SSHKeypair configures the automatic rotation for the ssh keypair for worker nodes.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>etcdEncryptionKey</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MaintenanceRotationConfig">
+MaintenanceRotationConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ETCDEncryptionKey configures the automatic rotation for the etcd encryption key.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MaintenanceRotationConfig">MaintenanceRotationConfig

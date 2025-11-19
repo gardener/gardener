@@ -2084,6 +2084,10 @@ message MaintenanceCredentialsAutoRotation {
   // SSHKeypair configures the automatic rotation for the ssh keypair for worker nodes.
   // +optional
   optional MaintenanceRotationConfig sshKeypair = 2;
+
+  // ETCDEncryptionKey configures the automatic rotation for the etcd encryption key.
+  // +optional
+  optional MaintenanceRotationConfig etcdEncryptionKey = 3;
 }
 
 // MaintenanceRotationConfig contains configuration for automatic rotation.
