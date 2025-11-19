@@ -19,7 +19,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
@@ -144,13 +143,9 @@ func createSecretForWorkloadIdentity(ctx context.Context, gardenClient, seedClie
 
 func deleteUnreferencedWorkloadIdentitySecrets(ctx context.Context, c client.Client, namespace string, secretsToRetain sets.Set[string]) error {
 	secrets := &corev1.SecretList{}
-	if err := c.List(
-		ctx,
-		secrets,
+	if err := c.List(ctx, secrets,
 		client.InNamespace(namespace),
-		client.MatchingLabels(utils.MergeStringMaps(referencedWorkloadIdentitySecretLabels,
-			map[string]string{securityv1alpha1constants.LabelPurpose: securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor},
-		)),
+		client.MatchingLabels(referencedWorkloadIdentitySecretLabels),
 	); err != nil {
 		return fmt.Errorf("failed to list referenced workload identity secrets in namespace %s: %w", namespace, err)
 	}
@@ -174,13 +169,9 @@ func deleteUnreferencedWorkloadIdentitySecrets(ctx context.Context, c client.Cli
 
 // DestroyWorkloadIdentityReferencedResources deletes the referenced workload identity Secrets in the target namespace.
 func DestroyWorkloadIdentityReferencedResources(ctx context.Context, seedClient client.Client, targetNamespace string) error {
-	if err := seedClient.DeleteAllOf(
-		ctx,
-		&corev1.Secret{},
+	if err := seedClient.DeleteAllOf(ctx, &corev1.Secret{},
 		client.InNamespace(targetNamespace),
-		client.MatchingLabels(utils.MergeStringMaps(referencedWorkloadIdentitySecretLabels,
-			map[string]string{securityv1alpha1constants.LabelPurpose: securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor},
-		)),
+		client.MatchingLabels(referencedWorkloadIdentitySecretLabels),
 	); err != nil {
 		return fmt.Errorf("failed to destroy referenced workload identity secrets in namespace %s: %w", targetNamespace, err)
 	}

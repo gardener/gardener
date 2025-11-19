@@ -204,11 +204,9 @@ var _ = Describe("Resources", func() {
 			Expect(ReconcileWorkloadIdentityReferencedResources(ctx, fakeGardenClient, fakeSeedClient, resources, sourceNamespace, targetNamespace, shoot)).To(Succeed())
 
 			secrets := &corev1.SecretList{}
-			Expect(fakeSeedClient.List(ctx, secrets, client.InNamespace(targetNamespace),
-				client.MatchingLabels(map[string]string{
-					"workloadidentity.security.gardener.cloud/referenced": "true",
-					"security.gardener.cloud/purpose":                     "workload-identity-token-requestor",
-				}),
+			Expect(fakeSeedClient.List(ctx, secrets,
+				client.InNamespace(targetNamespace),
+				client.MatchingLabels(map[string]string{"workloadidentity.security.gardener.cloud/referenced": "true"}),
 			)).To(Succeed())
 
 			Expect(secrets.Items).To(HaveLen(1))
@@ -240,10 +238,7 @@ var _ = Describe("Resources", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "workload-identity-ref-foo",
 					Namespace: targetNamespace,
-					Labels: map[string]string{
-						"workloadidentity.security.gardener.cloud/referenced": "true",
-						"security.gardener.cloud/purpose":                     "workload-identity-token-requestor",
-					},
+					Labels:    map[string]string{"workloadidentity.security.gardener.cloud/referenced": "true"},
 				},
 			}
 
@@ -251,11 +246,9 @@ var _ = Describe("Resources", func() {
 			Expect(DestroyWorkloadIdentityReferencedResources(ctx, fakeSeedClient, targetNamespace)).To(Succeed())
 
 			secrets := &corev1.SecretList{}
-			Expect(fakeSeedClient.List(ctx, secrets, client.InNamespace(targetNamespace),
-				client.MatchingLabels(map[string]string{
-					"workloadidentity.security.gardener.cloud/referenced": "true",
-					"security.gardener.cloud/purpose":                     "workload-identity-token-requestor",
-				}),
+			Expect(fakeSeedClient.List(ctx, secrets,
+				client.InNamespace(targetNamespace),
+				client.MatchingLabels(map[string]string{"workloadidentity.security.gardener.cloud/referenced": "true"}),
 			)).To(Succeed())
 			Expect(secrets.Items).To(BeEmpty())
 		})

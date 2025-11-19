@@ -225,7 +225,6 @@ var _ = Describe("Resources", func() {
 					Name:      "workload-identity-ref-foo",
 					Labels: map[string]string{
 						"workloadidentity.security.gardener.cloud/referenced": "true",
-						"security.gardener.cloud/purpose":                     "workload-identity-token-requestor",
 					},
 				},
 			}
@@ -241,7 +240,6 @@ var _ = Describe("Resources", func() {
 				client.InNamespace(gardenNamespace),
 				client.MatchingLabels(map[string]string{
 					"workloadidentity.security.gardener.cloud/referenced": "true",
-					"security.gardener.cloud/purpose":                     "workload-identity-token-requestor",
 				}),
 			)).To(Succeed())
 			Expect(workloadIdentitySecrets.Items).To(BeEmpty())
