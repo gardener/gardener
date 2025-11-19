@@ -278,7 +278,7 @@ func run(ctx context.Context, opts *Options) error {
 
 		connectToMachine = g.Add(flow.Task{
 			Name:         "Connecting to the first control plane machine",
-			Fn:           flow.TaskFn(b.ConnectToControlPlaneMachine).RetryUntilTimeout(5*time.Second, 5*time.Minute),
+			Fn:           flow.TaskFn(b.ConnectToControlPlaneMachine).RetryUntilTimeout(5*time.Second, 6*time.Minute),
 			Dependencies: flow.NewTaskIDs(listControlPlaneMachines, deployBastion),
 		})
 		copyManifests = g.Add(flow.Task{

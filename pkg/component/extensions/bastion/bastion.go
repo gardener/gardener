@@ -75,8 +75,8 @@ func New(
 		Values:         values,
 
 		Clock:               &clock.RealClock{},
-		WaitInterval:        5 * time.Second,
-		WaitSevereThreshold: 30 * time.Second,
+		WaitInterval:        10 * time.Second,
+		WaitSevereThreshold: 6 * time.Minute,
 		WaitTimeout:         15 * time.Minute,
 		SSHDial:             sshutils.Dial,
 
