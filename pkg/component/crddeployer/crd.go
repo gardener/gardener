@@ -66,7 +66,7 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 
 				crd.Spec = desiredCRD.Spec
 				return nil
-			})
+			}, controllerutils.SkipEmptyPatch{})
 			return err
 		})
 	}
