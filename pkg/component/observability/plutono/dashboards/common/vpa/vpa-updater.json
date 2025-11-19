@@ -1160,7 +1160,7 @@
       {
         "allValue": null,
         "datasource": "${datasource}",
-        "definition": "query_result(vpa_updater_in_place_updated_pods_total{pod=\"$pod\"} or vpa_updater_evicted_pods_total{pod=\"$pod\"} or failed_in_place_update_attempts_total{pod=\"$pod\"} or failed_eviction_attempts_total{pod=\"$pod\"})",
+        "definition": "query_result(vpa_updater_in_place_updated_pods_total{pod=\"$pod\"} or vpa_updater_evicted_pods_total{pod=\"$pod\"} or vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\"} or vpa_updater_failed_eviction_attempts_total{pod=\"$pod\"})",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1170,7 +1170,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "query_result(vpa_updater_in_place_updated_pods_total{pod=\"$pod\"} or vpa_updater_evicted_pods_total{pod=\"$pod\"} or failed_in_place_update_attempts_total{pod=\"$pod\"} or failed_eviction_attempts_total{pod=\"$pod\"})",
+          "query": "query_result(vpa_updater_in_place_updated_pods_total{pod=\"$pod\"} or vpa_updater_evicted_pods_total{pod=\"$pod\"} or vpa_updater_failed_in_place_update_attempts_total{pod=\"$pod\"} or vpa_updater_failed_eviction_attempts_total{pod=\"$pod\"})",
           "refId": "prometheus-namespace-Variable-Query"
         },
         "refresh": 1,
