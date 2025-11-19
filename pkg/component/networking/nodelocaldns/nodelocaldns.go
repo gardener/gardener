@@ -64,8 +64,6 @@ const (
 	metricsPortName      = "metrics"
 	errorMetricsPortName = "errormetrics"
 
-	sideCarName = "coredns-config-adapter"
-
 	domain            = gardencorev1beta1.DefaultDomain
 	serviceName       = "kube-dns-upstream"
 	livenessProbePort = 8099
@@ -76,14 +74,13 @@ const (
 
 	daemonSetPollInterval = 5 * time.Second
 
-	volumeMountNameCleanUp         = "cleanup-script"
-	volumeMountPathCleanUp         = "/scripts"
-	volumeMountNameXtablesLock     = "xtables-lock"
-	volumeMountPathXtablesLock     = "/run/xtables.lock"
-	volumeMountPathCustomConfig    = "/etc/custom"
-	volumeMountNameCustomConfig    = "custom-config-volume"
-	volumeMountNameGeneratedConfig = "generated-config"
-	volumeMountPathGeneratedConfig = "/etc/generated-config"
+	volumeMountNameCleanUp      = "cleanup-script"
+	volumeMountPathCleanUp      = "/scripts"
+	volumeMountNameXtablesLock  = "xtables-lock"
+	volumeMountPathXtablesLock  = "/run/xtables.lock"
+	volumeMountPathCustomConfig = "/etc/custom"
+	volumeMountNameCustomConfig = "custom-config-volume"
+	customConfigMapName         = "coredns-custom"
 )
 
 var (
@@ -106,8 +103,6 @@ type Values struct {
 	Image string
 	// AlpineImage is the container image used for the cleanup DaemonSet.
 	AlpineImage string
-	// CorednsConfigAdapterImage is the container image used for the coredns config adapter sidecar.
-	CorednsConfigAdapterImage string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
 	// Config is the node local configuration for the shoot spec

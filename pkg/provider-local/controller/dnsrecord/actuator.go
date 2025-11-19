@@ -21,7 +21,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
@@ -98,7 +97,7 @@ func (a *Actuator) Restore(ctx context.Context, log logr.Logger, dnsRecord *exte
 }
 
 func patchCoreDNSConfigMap(ctx context.Context, providerClient client.Client, mutate func(configMap *corev1.ConfigMap) error) error {
-	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: coredns.CustomConfigMapName, Namespace: "gardener-extension-provider-local-coredns"}}
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns-custom", Namespace: "gardener-extension-provider-local-coredns"}}
 	_, err := controllerutil.CreateOrPatch(ctx, providerClient, configMap, func() error {
 		return mutate(configMap)
 	})

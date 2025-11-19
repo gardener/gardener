@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
 )
@@ -117,14 +116,14 @@ var _ = Describe("Actuator", func() {
 			}
 			emptyConfigMap = &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      coredns.CustomConfigMapName,
+					Name:      "coredns-custom",
 					Namespace: extensionNamespace.Name,
 				},
 				Data: map[string]string{"test": "data"},
 			}
 			configMapWithRule = &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      coredns.CustomConfigMapName,
+					Name:      "coredns-custom",
 					Namespace: extensionNamespace.Name,
 				},
 				Data: map[string]string{

@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -101,7 +100,6 @@ ip6.arpa:53 {
     cache 30
     reload
     }
-import generated-config/custom-server-block.server
 `,
 			},
 		}
@@ -210,41 +208,6 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 							v1beta1constants.LabelNodeLocalDNS: "true",
 							v1beta1constants.LabelWorkerPool:   worker.Name,
 						},
-						InitContainers: []corev1.Container{
-							{
-								Name:  sideCarName,
-								Image: n.values.CorednsConfigAdapterImage,
-								Resources: corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("5m"),
-										corev1.ResourceMemory: resource.MustParse("10Mi"),
-									},
-								},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-									RunAsNonRoot:             ptr.To(true),
-									RunAsUser:                ptr.To[int64](65532),
-									RunAsGroup:               ptr.To[int64](65532),
-								},
-								Args: []string{
-									"-inputDir=" + volumeMountPathCustomConfig,
-									"-outputDir=" + volumeMountPathGeneratedConfig,
-									"-bind=bind " + n.bindIP(),
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      volumeMountNameCustomConfig,
-										MountPath: volumeMountPathCustomConfig,
-										ReadOnly:  true,
-									},
-									{
-										MountPath: volumeMountPathGeneratedConfig,
-										Name:      volumeMountNameGeneratedConfig,
-									},
-								},
-								RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways),
-							},
-						},
 						Containers: []corev1.Container{
 							{
 								Name:  containerName,
@@ -326,10 +289,6 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 										MountPath: volumeMountPathCustomConfig,
 										ReadOnly:  true,
 									},
-									{
-										MountPath: volumeMountPathGeneratedConfig,
-										Name:      volumeMountNameGeneratedConfig,
-									},
 								},
 							},
 						},
@@ -375,17 +334,11 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: coredns.CustomConfigMapName,
+											Name: customConfigMapName,
 										},
 										DefaultMode: ptr.To[int32](420),
 										Optional:    ptr.To(true),
 									},
-								},
-							},
-							{
-								Name: volumeMountNameGeneratedConfig,
-								VolumeSource: corev1.VolumeSource{
-									EmptyDir: &corev1.EmptyDirVolumeSource{},
 								},
 							},
 						},
@@ -413,16 +366,10 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 						UpdateMode: &vpaUpdateMode,
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-							{
-								ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-							},
-							{
-								ContainerName: sideCarName,
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-							},
-						},
+						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+							ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						}},
 					},
 				},
 			}
