@@ -373,7 +373,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(floor(increase(vpa_updater_vpas_with_in_place_updated_pods_total{pod=\"$pod\"}[$__rate_interval])))",
+          "expr": "sum(ceil(increase(vpa_updater_vpas_with_in_place_updated_pods_total{pod=\"$pod\"}[$__rate_interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Successfully in-place updated",
@@ -591,7 +591,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(floor(increase(vpa_updater_vpas_with_evicted_pods_total{pod=\"$pod\"}[$__rate_interval]))) by (update_mode)",
+          "expr": "sum(ceil(increase(vpa_updater_vpas_with_evicted_pods_total{pod=\"$pod\"}[$__rate_interval]))) by (update_mode)",
           "hide": false,
           "interval": "",
           "legendFormat": "Successfully evicted with '{{update_mode}}' mode",
