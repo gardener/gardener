@@ -1186,12 +1186,28 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
-  "timepicker": {},
+  "timepicker": {
+    "refresh_intervals": [
+      "30s",
+      "1m",
+      "5m"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "10d"
+    ]
+  },
   "timezone": "utc",
   "title": "VPA Updater",
   "uid": "vpa-updater",
-  "version": 17
+  "version": 1
 }
