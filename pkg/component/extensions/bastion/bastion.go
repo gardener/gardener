@@ -204,7 +204,7 @@ id %[1]s || useradd %[1]s -mU
 mkdir -p /home/%[1]s/.ssh
 echo "%[2]s" > /home/%[1]s/.ssh/authorized_keys
 chown %[1]s:%[1]s /home/%[1]s/.ssh/authorized_keys
-systemctl start ssh
+systemctl start sshd || systemctl start ssh
 `, bastionUser, sshPublicKey))
 }
 
