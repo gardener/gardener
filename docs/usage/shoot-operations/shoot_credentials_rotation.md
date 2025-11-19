@@ -202,7 +202,8 @@ The old key is stored in a `Secret` with the name `<shoot-name>.ssh-keypair.old`
 This key is used to encrypt the data of `Secret` resources inside etcd (see [upstream Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)).
 
 The encryption key has no expiration date.
-There is no automatic rotation, and **it is the responsibility of the end-user to regularly rotate the encryption key.**
+**Unless automatic credentials rotation is enabled, it is the responsibility of the end-user to regularly rotate those credentials.**
+Refer to [Automatic Credentials Rotation](../shoot/shoot_maintenance.md#automatic-credentials-rotation) for instructions on enabling automatic rotation for etcd encryption key.
 
 The rotation happens in three stages:
 
@@ -215,7 +216,8 @@ The `Completing` phase indicates stage three, and the `Completed` phase states t
 
 > You can check the `.status.credentials.rotation.etcdEncryptionKey` field in the `Shoot` to see when the rotation was last initiated, last completed, and in which phase it currently is.
 
-In order to perform the rotation, you have to annotate the shoot with the `rotate-etcd-encryption-key` operation:
+Manual rotation can be requested by annotating the `Shoot` with`gardener.cloud/operation=rotate-etcd-encryption-key`.
+This operation is not allowed for `Shoot`s that are already marked for deletion.
 
 ```bash
 kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-etcd-encryption-key
