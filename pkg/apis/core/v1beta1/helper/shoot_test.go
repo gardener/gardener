@@ -345,6 +345,50 @@ var _ = Describe("Helper", func() {
 			}, true),
 	)
 
+	DescribeTable("#IsETCDEncryptionKeyAutoRotationEnabled",
+		func(maintenance *gardencorev1beta1.Maintenance, expectedResult bool) {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: maintenance,
+				},
+			}
+			Expect(IsETCDEncryptionKeyAutoRotationEnabled(shoot)).To(Equal(expectedResult))
+		},
+
+		Entry("should return false when maintenance is nil", nil, false),
+		Entry("should return false when AutoRotation is nil", &gardencorev1beta1.Maintenance{}, false),
+		Entry("should return false when Credentials field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{}}, false),
+		Entry("should return false when ETCDEncryptionKey field is nil", &gardencorev1beta1.Maintenance{AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{}}}, false),
+		Entry("should return false when enabled is nil",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{},
+					},
+				},
+			}, false),
+		Entry("should return false when enabled is false",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+							Enabled: ptr.To(false),
+						},
+					},
+				},
+			}, false),
+		Entry("should return true when enabled is true",
+			&gardencorev1beta1.Maintenance{
+				AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+							Enabled: ptr.To(true),
+						},
+					},
+				},
+			}, true),
+	)
+
 	Describe("#IsMultiZonalShootControlPlane", func() {
 		var shoot *gardencorev1beta1.Shoot
 
