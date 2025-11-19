@@ -98,6 +98,9 @@ spec:
         sshKeypair:
           enabled: true # default: false
           rotationPeriod: 168h # default: 7d(168h)
+        etcdEncryptionKey:
+          enabled: true # default: false
+          rotationPeriod: 168h # default: 7d(168h)
 ```
 
 During the daily maintenance, the Gardener Controller Manager starts the rotation for specific credentials if the Shoot opted-in for automatic rotation for the given credential and the set period has passed since the last rotation completion.
