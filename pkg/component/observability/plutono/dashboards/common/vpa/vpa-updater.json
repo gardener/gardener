@@ -1134,7 +1134,7 @@
       {
         "allValue": null,
         "datasource": "${datasource}",
-        "definition": "label_values(vpa_updater_controlled_pods_total{},pod)",
+        "definition": "label_values(vpa_updater_controlled_pods_total,pod)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1144,7 +1144,7 @@
         "name": "pod",
         "options": [],
         "query": {
-          "query": "label_values(vpa_updater_controlled_pods_total{},pod)",
+          "query": "label_values(vpa_updater_controlled_pods_total,pod)",
           "refId": "prometheus-pod-Variable-Query"
         },
         "refresh": 1,
