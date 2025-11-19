@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
@@ -1381,6 +1382,10 @@ var _ = Describe("Shoot Maintenance", func() {
 									Enabled:        ptr.To(true),
 									RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
 								},
+								ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+									Enabled:        ptr.To(true),
+									RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
+								},
 							},
 						},
 					},
@@ -1398,6 +1403,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should return empty results if no credentials rotation is required", func() {
 			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.Enabled = ptr.To(false)
 			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.Enabled = ptr.To(false)
+			shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.Enabled = ptr.To(false)
 
 			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
 
@@ -1407,7 +1413,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should return successful results for all credentials rotation", func() {
 			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
 
-			Expect(results).To(HaveLen(2))
+			Expect(results).To(HaveLen(3))
 			Expect(results["ssh-keypair"]).To(Equal(updateResult{
 				description:  "SSH keypair rotation started",
 				reason:       "Automatic rotation of SSH keypair configured",
@@ -1416,6 +1422,11 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(results["observability-passwords"]).To(Equal(updateResult{
 				description:  "Observability passwords rotation started",
 				reason:       "Automatic rotation of observability passwords configured",
+				isSuccessful: true,
+			}))
+			Expect(results["etcd-encryption-key"]).To(Equal(updateResult{
+				description:  "ETCD Encryption key rotation started",
+				reason:       "Automatic rotation of etcd encryption key configured",
 				isSuccessful: true,
 			}))
 		})
@@ -1429,11 +1440,14 @@ var _ = Describe("Shoot Maintenance", func() {
 					Observability: &gardencorev1beta1.ObservabilityRotation{
 						LastCompletionTime: &metav1.Time{Time: now.Add(-72 * time.Hour)},
 					},
+					ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+						LastCompletionTime: &metav1.Time{Time: now.Add(-96 * time.Hour)},
+					},
 				},
 			}
 			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
 
-			Expect(results).To(HaveLen(2))
+			Expect(results).To(HaveLen(3))
 			Expect(results["ssh-keypair"]).To(Equal(updateResult{
 				description:  "SSH keypair rotation started",
 				reason:       "Automatic rotation of SSH keypair configured",
@@ -1443,6 +1457,31 @@ var _ = Describe("Shoot Maintenance", func() {
 				description:  "Observability passwords rotation started",
 				reason:       "Automatic rotation of observability passwords configured",
 				isSuccessful: true,
+			}))
+			Expect(results["etcd-encryption-key"]).To(Equal(updateResult{
+				description:  "ETCD Encryption key rotation started",
+				reason:       "Automatic rotation of etcd encryption key configured",
+				isSuccessful: true,
+			}))
+		})
+
+		It("should fail etcd encryption key rotation when etcd key rotation is in progress", func() {
+			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.Enabled = ptr.To(false)
+			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.Enabled = ptr.To(false)
+			shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+				Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+					ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+						Phase: gardencorev1beta1.RotationPrepared,
+					},
+				},
+			}
+			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
+
+			Expect(results).To(HaveLen(1))
+			Expect(results["etcd-encryption-key"]).To(Equal(updateResult{
+				description:  "Could not start ETCD encryption key rotation",
+				reason:       "ETCD encryption key rotation is already in progress",
+				isSuccessful: false,
 			}))
 		})
 
@@ -1454,6 +1493,9 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 					Observability: &gardencorev1beta1.ObservabilityRotation{
 						LastCompletionTime: &metav1.Time{Time: now.Add(-time.Hour)},
+					},
+					ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+						LastCompletionTime: &metav1.Time{Time: now.Add(-4 * time.Hour)},
 					},
 				},
 			}
@@ -1475,7 +1517,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		DescribeTable("#getOperation",
-			func(maintenanceAnnotation *string, credentialsToRotationUpdate map[string]updateResult, expectedResult string) {
+			func(maintenanceAnnotation *string, credentialsToRotationUpdate map[string]updateResult, expectedResult []string) {
 				if maintenanceAnnotation != nil {
 					shoot.Annotations = map[string]string{
 						"maintenance.gardener.cloud/operation": *maintenanceAnnotation,
@@ -1483,27 +1525,78 @@ var _ = Describe("Shoot Maintenance", func() {
 				}
 
 				result := getOperation(shoot, credentialsToRotationUpdate)
-				Expect(result).To(Equal(expectedResult))
+				resultOptions := utils.SplitAndTrimString(result, ";")
+				Expect(resultOptions).To(ConsistOf(expectedResult))
 			},
-			Entry("should return reconcile operation when there is no maintenance operation", nil, nil, "reconcile"),
-			Entry("should return reconcile operation when maintenance operation is empty", ptr.To(""), nil, "reconcile"),
-			Entry("should return maintenance operation when it is not empty", ptr.To("foo"), nil, "foo"),
+			Entry("should return reconcile operation when there is no maintenance operation", nil, nil, []string{"reconcile"}),
+			Entry("should return reconcile operation when maintenance operation is empty", ptr.To(""), nil, []string{"reconcile"}),
+			Entry("should return maintenance operation when it is not empty", ptr.To("foo"), nil, []string{"reconcile", "foo"}),
 			Entry("should return rotate-ssh-keypair operation when it is not part of the result updates", ptr.To("rotate-ssh-keypair"),
 				map[string]updateResult{
-					"observability-passwords": {},
-				}, "rotate-ssh-keypair"),
+					"observability-passwords": {
+						isSuccessful: true,
+					},
+				}, []string{"reconcile", "rotate-ssh-keypair", "rotate-observability-credentials"}),
 			Entry("should return rotate-observability-credentials operation when it is not part of the result updates", ptr.To("rotate-observability-credentials"),
 				map[string]updateResult{
-					"etcd-encryption-key": {},
-				}, "rotate-observability-credentials"),
-			Entry("should return reconcile operation when maintenance operation is rotate-ssh-keypair and it is part of results", ptr.To("rotate-ssh-keypair"),
+					"etcd-encryption-key": {
+						isSuccessful: true,
+					},
+				}, []string{"reconcile", "rotate-observability-credentials", "rotate-etcd-encryption-key"}),
+			Entry("should return appended options when maintenance operation is rotate-ssh-keypair", ptr.To("rotate-ssh-keypair"),
 				map[string]updateResult{
-					"ssh-keypair": {},
-				}, "reconcile"),
-			Entry("should return reconcile operation when maintenance operation is rotate-observability-credentials and it is part of results", ptr.To("rotate-observability-credentials"),
+					"ssh-keypair": {
+						isSuccessful: true,
+					},
+				}, []string{"reconcile", "rotate-ssh-keypair", "rotate-ssh-keypair"}),
+			Entry("should return appended options when maintenance operation is rotate-observability-credentials", ptr.To("rotate-credentials-start"),
 				map[string]updateResult{
-					"observability-passwords": {},
-				}, "reconcile"),
+					"observability-passwords": {
+						isSuccessful: true,
+					},
+				}, []string{"reconcile", "rotate-credentials-start", "rotate-observability-credentials"}),
+			Entry("should not append rotate-etcd-encryption-key when rotate-etcd-encryption-key-start is present in maintenance operations", ptr.To("rotate-etcd-encryption-key-start"),
+				map[string]updateResult{
+					"etcd-encryption-key": {
+						isSuccessful: true,
+					},
+				}, []string{"reconcile", "rotate-etcd-encryption-key-start"}),
+			Entry("should return reconcile when all operations in result updates have failed", nil,
+				map[string]updateResult{
+					"ssh-keypair": {
+						isSuccessful: false,
+					},
+					"observability-passwords": {
+						isSuccessful: false,
+					},
+					"etcd-encryption-key": {
+						isSuccessful: false,
+					},
+				}, []string{"reconcile"}),
+			Entry("should return correct operations", nil,
+				map[string]updateResult{
+					"ssh-keypair": {
+						isSuccessful: false,
+					},
+					"observability-passwords": {
+						isSuccessful: true,
+					},
+					"etcd-encryption-key": {
+						isSuccessful: true,
+					},
+				}, []string{"reconcile", "rotate-observability-credentials", "rotate-etcd-encryption-key"}),
+			Entry("should return all operations", ptr.To("rotate-credentials-start"),
+				map[string]updateResult{
+					"ssh-keypair": {
+						isSuccessful: true,
+					},
+					"observability-passwords": {
+						isSuccessful: true,
+					},
+					"etcd-encryption-key": {
+						isSuccessful: true,
+					},
+				}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair", "rotate-observability-credentials", "rotate-etcd-encryption-key"}),
 		)
 	})
 
