@@ -43,9 +43,27 @@ var _ = Describe("ExtensionLabels tests", func() {
 			providerType1   = "provider-type-1"
 			providerType2   = "provider-type-2"
 			dnsProviderType = "dns-provider"
+			extensionType1  = "extension-type-1"
 		)
 
 		BeforeEach(func() {
+			controllerRegistrations := []*gardencorev1beta1.ControllerRegistration{{
+				ObjectMeta: metav1.ObjectMeta{Name: "registration1"},
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{{
+						Kind: extensionsv1alpha1.ExtensionResource,
+						Type: extensionType1,
+						ClusterCompatibility: []gardencorev1beta1.ClusterType{
+							gardencorev1beta1.ClusterTypeSeed,
+						},
+					}},
+				},
+			}}
+
+			for _, reg := range controllerRegistrations {
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(reg)).To(Succeed())
+			}
+
 			seed = &core.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-seed",
@@ -63,6 +81,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 					Backup: &core.Backup{
 						Provider: providerType1,
 					},
+					Extensions: []core.Extension{{Type: extensionType1}},
 				},
 			}
 		})
@@ -76,6 +95,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 			expectedLabels := map[string]string{
 				"provider.extensions.gardener.cloud/" + providerType1:    "true",
 				"dnsrecord.extensions.gardener.cloud/" + dnsProviderType: "true",
+				"extensions.extensions.gardener.cloud/" + extensionType1: "true",
 			}
 
 			Expect(seed.ObjectMeta.Labels).To(Equal(expectedLabels))
@@ -86,6 +106,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 			newSeed.Spec.Backup = &core.Backup{
 				Provider: providerType2,
 			}
+			newSeed.Spec.Extensions = []core.Extension{}
 
 			attrs := admission.NewAttributesRecord(newSeed, seed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("Seed").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
