@@ -1695,6 +1695,8 @@ var _ = Describe("VPA", func() {
 					serviceAccountUpdater,
 					clusterRoleUpdater,
 					clusterRoleBindingUpdater,
+					clusterRoleUpdaterInPlace,
+					clusterRoleBindingUpdaterInPlace,
 					roleLeaderLockingUpdater,
 					roleBindingLeaderLockingUpdater,
 					deploymentUpdater,
@@ -1926,61 +1928,39 @@ var _ = Describe("VPA", func() {
 						args := getContainerArgs(deployment, "recommender")
 						Expect(args).ShouldNot(ContainElement(HavePrefix("--feature-gates=")))
 					})
-
-					It("should not deploy in-place allowing RBAC resources", func() {
-						Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-
-						clusterRoleBindingUpdaterInPlace.Subjects[0].Namespace = "kube-system"
-						resources := []client.Object{
-							clusterRoleUpdaterInPlace,
-							clusterRoleBindingUpdaterInPlace,
-						}
-						Expect(managedResource).NotTo(contain(resources...))
-					})
 				})
 
-				Context("with InPlaceOrRecreate enabled", func() {
+				Context("with feature gate enabled", func() {
 					BeforeEach(func() {
 						featureGates := map[string]bool{
-							"InPlaceOrRecreate": true,
+							"Foo": true,
 						}
 						vpa = vpaFor(component.ClusterTypeShoot, false, featureGates)
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 					})
 
-					It("should add InPlaceOrRecreate=true feature gate to vpa-admission-controller container", func() {
+					It("should add feature gate to vpa-admission-controller container", func() {
 						deployment := &appsv1.Deployment{}
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-admission-controller"}, deployment)).To(Succeed())
 
 						args := getContainerArgs(deployment, "admission-controller")
-						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=Foo=true")))
 					})
 
-					It("should add InPlaceOrRecreate=true feature gate to vpa-updater container", func() {
+					It("should add feature gate to vpa-updater container", func() {
 						deployment := &appsv1.Deployment{}
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-updater"}, deployment)).To(Succeed())
 
 						args := getContainerArgs(deployment, "updater")
-						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=Foo=true")))
 					})
 
-					It("should add InPlaceOrRecreate=true feature gate to vpa-recommender container", func() {
+					It("should add feature gate to vpa-recommender container", func() {
 						deployment := &appsv1.Deployment{}
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
 
 						args := getContainerArgs(deployment, "recommender")
-						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
-					})
-
-					It("should deploy in-place allowing RBAC resources", func() {
-						Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-
-						clusterRoleBindingUpdaterInPlace.Subjects[0].Namespace = "kube-system"
-						resources := []client.Object{
-							clusterRoleUpdaterInPlace,
-							clusterRoleBindingUpdaterInPlace,
-						}
-						Expect(managedResource).To(contain(resources...))
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=Foo=true")))
 					})
 				})
 			})
