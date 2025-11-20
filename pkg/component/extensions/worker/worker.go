@@ -242,9 +242,10 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			MaxSurge:       ptr.Deref(workerPool.MaxSurge, intstr.FromInt32(0)),
 			MaxUnavailable: ptr.Deref(workerPool.MaxUnavailable, intstr.FromInt32(0)),
 			Annotations:    workerPool.Annotations,
-			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled, gardenerNodeAgentSecretName),
-			Taints:         workerPool.Taints,
-			MachineType:    workerPool.Machine.Type,
+			// worker is not created for unmanaged shoots for all other cases ccm will always be there to put topology labels on the nodes for the region
+			Labels:      gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled, gardenerNodeAgentSecretName, ""),
+			Taints:      workerPool.Taints,
+			MachineType: workerPool.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{
 				Name:    workerPool.Machine.Image.Name,
 				Version: *workerPool.Machine.Image.Version,
