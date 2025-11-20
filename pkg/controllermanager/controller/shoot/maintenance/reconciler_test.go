@@ -1419,7 +1419,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				reason:       "Automatic rotation of SSH keypair configured",
 				isSuccessful: true,
 			}))
-			Expect(results["observability-passwords"]).To(Equal(updateResult{
+			Expect(results["observability-credentials"]).To(Equal(updateResult{
 				description:  "Observability passwords rotation started",
 				reason:       "Automatic rotation of observability passwords configured",
 				isSuccessful: true,
@@ -1453,7 +1453,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				reason:       "Automatic rotation of SSH keypair configured",
 				isSuccessful: true,
 			}))
-			Expect(results["observability-passwords"]).To(Equal(updateResult{
+			Expect(results["observability-credentials"]).To(Equal(updateResult{
 				description:  "Observability passwords rotation started",
 				reason:       "Automatic rotation of observability passwords configured",
 				isSuccessful: true,
@@ -1533,7 +1533,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Entry("should return maintenance operation when it is not empty", ptr.To("foo"), nil, []string{"reconcile", "foo"}),
 			Entry("should return rotate-ssh-keypair operation when it is not part of the result updates", ptr.To("rotate-ssh-keypair"),
 				map[string]updateResult{
-					"observability-passwords": {
+					"observability-credentials": {
 						isSuccessful: true,
 					},
 				}, []string{"reconcile", "rotate-ssh-keypair", "rotate-observability-credentials"}),
@@ -1551,7 +1551,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				}, []string{"reconcile", "rotate-ssh-keypair", "rotate-ssh-keypair"}),
 			Entry("should return appended options when maintenance operation is rotate-observability-credentials", ptr.To("rotate-credentials-start"),
 				map[string]updateResult{
-					"observability-passwords": {
+					"observability-credentials": {
 						isSuccessful: true,
 					},
 				}, []string{"reconcile", "rotate-credentials-start", "rotate-observability-credentials"}),
@@ -1566,7 +1566,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					"ssh-keypair": {
 						isSuccessful: false,
 					},
-					"observability-passwords": {
+					"observability-credentials": {
 						isSuccessful: false,
 					},
 					"etcd-encryption-key": {
@@ -1578,7 +1578,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					"ssh-keypair": {
 						isSuccessful: false,
 					},
-					"observability-passwords": {
+					"observability-credentials": {
 						isSuccessful: true,
 					},
 					"etcd-encryption-key": {
@@ -1590,7 +1590,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					"ssh-keypair": {
 						isSuccessful: true,
 					},
-					"observability-passwords": {
+					"observability-credentials": {
 						isSuccessful: true,
 					},
 					"etcd-encryption-key": {

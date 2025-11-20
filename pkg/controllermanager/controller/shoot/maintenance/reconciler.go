@@ -39,7 +39,7 @@ import (
 
 const (
 	sshKeypair             = "ssh-keypair"
-	observabilityPasswords = "observability-passwords" // #nosec G101 -- No credential.
+	observabilityPasswords = "observability-credentials" // #nosec G101 -- No credential.
 	etcdEncryptionKey      = "etcd-encryption-key"
 )
 
