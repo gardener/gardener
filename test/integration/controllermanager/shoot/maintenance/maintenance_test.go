@@ -1072,6 +1072,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 							ExtraConfig: map[string]string{"foo": "bar"},
 							Secret:      ptr.To("foo-secret"),
 						},
+						ClientID:  ptr.To("client-id"),
+						IssuerURL: ptr.To("https://foo.bar"),
 					},
 				}
 

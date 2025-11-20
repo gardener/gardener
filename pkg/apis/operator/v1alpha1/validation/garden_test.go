@@ -2518,7 +2518,14 @@ var _ = Describe("Validation Tests", func() {
 								IssuerURL:      ptr.To("https://example.com"),
 								ClientIDPublic: ptr.To("my-client-id"),
 							}}
-							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{OIDCConfig: &gardencorev1beta1.OIDCConfig{}}}
+							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+									OIDCConfig: &gardencorev1beta1.OIDCConfig{
+										ClientID:  ptr.To("someClientID"),
+										IssuerURL: ptr.To("https://issuer.com"),
+									},
+								},
+							}
 
 							Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 						})

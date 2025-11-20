@@ -1049,10 +1049,6 @@ func validateKubernetesForWorkerlessShoot(kubernetes core.Kubernetes, fldPath *f
 	return allErrs
 }
 
-func fieldNilOrEmptyString(field *string) bool {
-	return field == nil || len(*field) == 0
-}
-
 func validateNetworking(networking *core.Networking, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -1584,22 +1580,16 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	} else if oidc != nil {
 		oidcPath := fldPath.Child("oidcConfig")
 
-		if fieldNilOrEmptyString(oidc.ClientID) {
-			if oidc.ClientID != nil {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "clientID cannot be empty when key is provided"))
-			}
-			if !fieldNilOrEmptyString(oidc.IssuerURL) {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "clientID must be set when issuerURL is provided"))
-			}
+		if oidc.ClientID == nil {
+			allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "clientID must be set when oidcConfig is provided"))
+		} else if len(*oidc.ClientID) == 0 {
+			allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "clientID cannot be empty"))
 		}
 
-		if fieldNilOrEmptyString(oidc.IssuerURL) {
-			if oidc.IssuerURL != nil {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuerURL cannot be empty when key is provided"))
-			}
-			if !fieldNilOrEmptyString(oidc.ClientID) {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuerURL must be set when clientID is provided"))
-			}
+		if oidc.IssuerURL == nil {
+			allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "issuerURL must be set when oidcConfig is provided"))
+		} else if len(*oidc.IssuerURL) == 0 {
+			allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "issuerURL cannot be empty"))
 		} else {
 			allErrs = append(allErrs, ValidateOIDCIssuerURL(*oidc.IssuerURL, oidcPath.Child("issuerURL"))...)
 		}
