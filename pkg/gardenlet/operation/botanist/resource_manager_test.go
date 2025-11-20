@@ -151,6 +151,27 @@ var _ = Describe("ResourceManager", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VPAInPlaceUpdates, true))
 			})
 
+			Context("without feature gates", func() {
+				BeforeEach(func() {
+					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Kubernetes: gardencorev1beta1.Kubernetes{
+								VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
+									FeatureGates: nil,
+								},
+							},
+						},
+					})
+				})
+
+				It("should set VPAInPlaceUpdatesEnabled=true", func() {
+					resourceManager, err := botanist.DefaultResourceManager()
+					Expect(resourceManager).NotTo(BeNil())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(resourceManager.GetValues().VPAInPlaceUpdatesEnabled).To(BeTrue())
+				})
+			})
+
 			Context("with Shoot Vertical Pod Autoscaler InPlaceOrRecreate feature gate enabled", func() {
 				BeforeEach(func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
