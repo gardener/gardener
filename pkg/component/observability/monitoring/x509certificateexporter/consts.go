@@ -56,7 +56,7 @@ const (
 )
 
 // Public const
-// Generall
+// General
 const (
 	SuffixSeed    = "-seed"
 	SuffixRuntime = "-runtime"

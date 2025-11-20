@@ -18,13 +18,12 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
+	x "github.com/gardener/gardener/pkg/component/observability/monitoring/x509certificateexporter"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
-	x "github.com/gardener/gardener/pkg/component/observability/monitoring/x509certificateexporter"
 )
 
 var _ = Describe("X509Certificate Exporter", func() {

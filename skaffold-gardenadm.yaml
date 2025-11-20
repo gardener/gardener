@@ -236,6 +236,7 @@ build:
             - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_servicemonitors.yaml
             - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_thanosrulers.yaml
             - pkg/component/observability/monitoring/utils
+            - pkg/component/observability/monitoring/x509certificateexporter
             - pkg/component/observability/opentelemetry/collector
             - pkg/component/observability/opentelemetry/collector/constants
             - pkg/component/observability/opentelemetry/operator
@@ -358,7 +359,7 @@ build:
             - pkg/utils/workloadidentity
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardenadm
       hooks:
         after:
@@ -484,7 +485,7 @@ build:
             - pkg/utils/version
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardener-node-agent
       hooks:
         after:
@@ -601,7 +602,7 @@ build:
             - pkg/webhook/authorizer
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardener-resource-manager
       hooks:
         after:
@@ -843,6 +844,7 @@ build:
             - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_servicemonitors.yaml
             - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_thanosrulers.yaml
             - pkg/component/observability/monitoring/utils
+            - pkg/component/observability/monitoring/x509certificateexporter
             - pkg/component/observability/opentelemetry/collector
             - pkg/component/observability/opentelemetry/collector/constants
             - pkg/component/observability/opentelemetry/operator
@@ -973,7 +975,7 @@ build:
             - pkg/utils/workloadidentity
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardenlet
       hooks:
         after:
@@ -1008,11 +1010,11 @@ build:
     - garden.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
-      template: '{{.version}}-{{.sha}}'
+      template: "{{.version}}-{{.sha}}"
       components:
         - name: version
           envTemplate:
-            template: '{{.GARDENER_VERSION}}'
+            template: "{{.GARDENER_VERSION}}"
         - name: sha
           inputDigest: {}
 ---
@@ -1029,11 +1031,11 @@ build:
     - garden.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
-      template: '{{.version}}-{{.sha}}'
+      template: "{{.version}}-{{.sha}}"
       components:
         - name: version
           envTemplate:
-            template: '{{.GARDENER_VERSION}}'
+            template: "{{.GARDENER_VERSION}}"
         - name: sha
           inputDigest: {}
 ---
@@ -1227,7 +1229,7 @@ build:
             - pkg/utils/version
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardener-extension-provider-local
     - image: local-skaffold/machine-controller-manager-provider-local
       ko:
@@ -1239,7 +1241,7 @@ build:
             - pkg/provider-local/machine-provider/local
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/machine-controller-manager-provider-local
     - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
@@ -1255,11 +1257,11 @@ build:
     - garden.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
-      template: '{{.version}}-{{.sha}}'
+      template: "{{.version}}-{{.sha}}"
       components:
         - name: version
           envTemplate:
-            template: '{{.GARDENER_VERSION}}'
+            template: "{{.GARDENER_VERSION}}"
         - name: sha
           inputDigest: {}
 manifests:
