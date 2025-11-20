@@ -13,7 +13,7 @@ This is a short guide covering the enablement of `in-place` resource updates in 
 ## Compatibility
 
 `In-place` resource updates got introduced as an alpha [feature](https://kubernetes.io/blog/2023/05/12/in-place-pod-resize-alpha/) in Kubernetes 1.27. In Kubernetes 1.33, it got promoted to beta and enabled by default.
-On the `Vertical Pod Autoscaler` side, with Release [1.5.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.4.0), `in-place` resources updates are available as a _beta_ feature (enabled by default) for `vpa-admission-controller` and `vpa-updater`. For more details, see the [In-Place Updates documentation](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md#in-place-updates-inplaceorrecreate).
+On the `Vertical Pod Autoscaler` side, with Release [1.5.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.5.0), `in-place` resources updates are available as a _beta_ feature (enabled by default) for `vpa-admission-controller` and `vpa-updater`. For more details, see the [In-Place Updates documentation](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md#in-place-updates-inplaceorrecreate).
 
 ### Kubernetes
 
