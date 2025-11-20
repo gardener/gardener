@@ -178,7 +178,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 						},
 					},
 					{
-						Name: "secret-resource",
+						Name: "configmap-resource",
 						ResourceRef: autoscalingv1.CrossVersionObjectReference{
 							Kind:       "ConfigMap",
 							APIVersion: "v1",
