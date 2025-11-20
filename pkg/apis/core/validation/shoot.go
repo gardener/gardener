@@ -1000,7 +1000,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		}
 
 		if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
-			allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, kubernetes.Version, fldPath.Child("verticalPodAutoscaler"))...)
+			allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
 		}
 	}
 
@@ -1430,7 +1430,7 @@ func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileRefer
 }
 
 // ValidateVerticalPodAutoscaler validates the given VerticalPodAutoscaler fields.
-func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, version string, fldPath *field.Path) field.ErrorList {
+func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if autoScaler.EvictAfterOOMThreshold != nil {
