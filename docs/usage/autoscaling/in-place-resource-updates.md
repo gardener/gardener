@@ -30,7 +30,7 @@ As described in the [Compatibility](#compatibility) section, _alpha_ versions of
 
 ### Shoot
 
-Since `Vertical Pod Autoscaler` has its `InPlaceOrRecreate` feature gate in _beta_, making it enabled by default, make sure that it is __not__ explicilty disabled. In addition, verify that the `InPlacePodVerticalScaling` Kubernetes feature gate is not explicitly disabled in the Shoot spec for:
+Since `Vertical Pod Autoscaler` has its `InPlaceOrRecreate` feature gate in _beta_, making it enabled by default, make sure that it is __not__ explicitly disabled. In addition, verify that the `InPlacePodVerticalScaling` Kubernetes feature gate is not explicitly disabled in the Shoot spec for:
 - kube-apiserver: `.spec.kubernetes.kubeAPIServer.featureGates`
 - kubelet: `.spec.kubernetes.kubelet.featureGates` or `.spec.provider.workers[].kubernetes.kubelet.featureGates`
 
