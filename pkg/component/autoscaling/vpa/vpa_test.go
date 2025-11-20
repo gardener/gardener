@@ -1941,10 +1941,10 @@ var _ = Describe("VPA", func() {
 					})
 				})
 
-				Context("with InPlaceOrRecreate enabled", func() {
+				Context("with feature gate enabled", func() {
 					BeforeEach(func() {
 						featureGates := map[string]bool{
-							"InPlaceOrRecreate": true,
+							"Foo": true,
 						}
 						vpa = vpaFor(component.ClusterTypeShoot, false, featureGates)
 						Expect(vpa.Deploy(ctx)).To(Succeed())
@@ -1955,7 +1955,7 @@ var _ = Describe("VPA", func() {
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-admission-controller"}, deployment)).To(Succeed())
 
 						args := getContainerArgs(deployment, "admission-controller")
-						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=Foo=true")))
 					})
 
 					It("should add InPlaceOrRecreate=true feature gate to vpa-updater container", func() {
@@ -1963,7 +1963,7 @@ var _ = Describe("VPA", func() {
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-updater"}, deployment)).To(Succeed())
 
 						args := getContainerArgs(deployment, "updater")
-						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=Foo=true")))
 					})
 
 					It("should add InPlaceOrRecreate=true feature gate to vpa-recommender container", func() {
@@ -1971,7 +1971,7 @@ var _ = Describe("VPA", func() {
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
 
 						args := getContainerArgs(deployment, "recommender")
-						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=InPlaceOrRecreate=true")))
+						Expect(args).Should(ContainElement(ContainSubstring("--feature-gates=Foo=true")))
 					})
 
 					It("should deploy in-place allowing RBAC resources", func() {
