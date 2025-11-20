@@ -1695,6 +1695,8 @@ var _ = Describe("VPA", func() {
 					serviceAccountUpdater,
 					clusterRoleUpdater,
 					clusterRoleBindingUpdater,
+					clusterRoleUpdaterInPlace,
+					clusterRoleBindingUpdaterInPlace,
 					roleLeaderLockingUpdater,
 					roleBindingLeaderLockingUpdater,
 					deploymentUpdater,
@@ -1927,7 +1929,7 @@ var _ = Describe("VPA", func() {
 						Expect(args).ShouldNot(ContainElement(HavePrefix("--feature-gates=")))
 					})
 
-					It("should not deploy in-place allowing RBAC resources", func() {
+					It("should deploy in-place allowing RBAC resources", func() {
 						Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 
 						clusterRoleBindingUpdaterInPlace.Subjects[0].Namespace = "kube-system"
@@ -1935,7 +1937,7 @@ var _ = Describe("VPA", func() {
 							clusterRoleUpdaterInPlace,
 							clusterRoleBindingUpdaterInPlace,
 						}
-						Expect(managedResource).NotTo(contain(resources...))
+						Expect(managedResource).To(contain(resources...))
 					})
 				})
 
