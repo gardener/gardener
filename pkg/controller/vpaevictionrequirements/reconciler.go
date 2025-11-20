@@ -31,8 +31,8 @@ var upscaleOnlyRequirement = []*vpaautoscalingv1.EvictionRequirement{{
 
 // Reconciler implements the reconciliation logic for adding/removing EvictionRequirements to VPA objects.
 type Reconciler struct {
-	ConcurrentSyncs *int
 	SeedClient      client.Client
+	ConcurrentSyncs *int
 	Clock           clock.Clock
 }
 

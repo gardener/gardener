@@ -51,13 +51,13 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
-		WatchesRawSource(
-			source.Kind[client.Object](seedCluster.GetCache(),
-				&vpaautoscalingv1.VerticalPodAutoscaler{},
-				&handler.EnqueueRequestForObject{},
-				vpaEvictionRequirementsManagedByControllerPredicate,
-				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-				predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})),
-		).
+		WatchesRawSource(source.Kind[client.Object](
+			seedCluster.GetCache(),
+			&vpaautoscalingv1.VerticalPodAutoscaler{},
+			&handler.EnqueueRequestForObject{},
+			vpaEvictionRequirementsManagedByControllerPredicate,
+			predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+			predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}),
+		)).
 		Complete(r)
 }
