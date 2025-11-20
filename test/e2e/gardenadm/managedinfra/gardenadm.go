@@ -72,12 +72,12 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		It("should start the bootstrap flow", func() {
 			// Start the gardenadm process but don't wait for it to complete so that we can asynchronously perform assertions
 			// on individual steps in the test specs below.
-			session = Run("bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/managed-infra", "--kubeconfig-output", kubeconfigOutputFile)
+			session = Run("bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/managed-infra", "--kubeconfig-output", kubeconfigOutputFile,
+				// Override bastion ingress CIDR to a fixed value to avoid relying on public IP detection in e2e tests.
+				// Restricting bastion ingress traffic does not work in provider-local anyway.
+				"--bastion-ingress-cidr", "1.2.3.4/32",
+			)
 		})
-
-		It("should auto-detect the system's public IPs", func(ctx SpecContext) {
-			Eventually(ctx, session.Err).Should(gbytes.Say("Using auto-detected public IP addresses as bastion ingress CIDRs"))
-		}, SpecTimeout(time.Minute))
 
 		It("should find the cloud provider secret", func(ctx SpecContext) {
 			cloudProviderSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloudprovider", Namespace: technicalID}}
@@ -153,13 +153,12 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			}
 		}, SpecTimeout(time.Minute))
 
-		It("should deploy a bastion with the detected public IPs", func(ctx SpecContext) {
+		It("should deploy a bastion with the configured ingress CIDRs", func(ctx SpecContext) {
 			bastion := &extensionsv1alpha1.Bastion{ObjectMeta: metav1.ObjectMeta{Name: "gardenadm-bootstrap", Namespace: technicalID}}
 			Eventually(ctx, Object(bastion)).Should(And(
-				HaveField("Spec.Ingress", Not(Or(
-					ContainElement(HaveField("IPBlock.CIDR", "0.0.0.0/0")),
-					ContainElement(HaveField("IPBlock.CIDR", "::/0")),
-				))),
+				HaveField("Spec.Ingress", ConsistOf(
+					HaveField("IPBlock.CIDR", "1.2.3.4/32"),
+				)),
 				BeHealthy(health.CheckExtensionObject),
 			), "should be healthy and not have default (open) ingress CIDRs")
 		}, SpecTimeout(time.Minute))
@@ -276,7 +275,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		}, SpecTimeout(time.Minute))
 
 		It("should run successfully a second time (should be idempotent)", func(ctx SpecContext) {
-			RunAndWait(ctx, "bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/managed-infra")
+			RunAndWait(ctx, "bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/managed-infra", "--bastion-ingress-cidr", "1.2.3.4/32")
 		}, SpecTimeout(2*time.Minute))
 	})
 })
