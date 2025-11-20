@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"go.yaml.in/yaml/v4"
-
 	"k8s.io/utils/ptr"
 )
 

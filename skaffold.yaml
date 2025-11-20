@@ -238,7 +238,7 @@ build:
             - plugin/pkg/utils
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardener-apiserver
     - image: local-skaffold/gardener-controller-manager
       ko:
@@ -367,7 +367,7 @@ build:
             - pkg/utils/version
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardener-controller-manager
     - image: local-skaffold/gardener-scheduler
       ko:
@@ -444,7 +444,7 @@ build:
             - pkg/utils/version
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardener-scheduler
     - image: local-skaffold/gardener-admission-controller
       ko:
@@ -542,17 +542,17 @@ build:
             - pkg/webhook/configvalidator
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardener-admission-controller
   insecureRegistries:
     - garden.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
-      template: '{{.version}}-{{.sha}}'
+      template: "{{.version}}-{{.sha}}"
       components:
         - name: version
           envTemplate:
-            template: '{{.GARDENER_VERSION}}'
+            template: "{{.GARDENER_VERSION}}"
         - name: sha
           gitCommit:
             variant: AbbrevCommitSha
@@ -565,14 +565,14 @@ deploy:
           - example/gardener-local/controlplane/values.yaml
         namespace: garden
         setValueTemplates:
-          global.admission.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_admission_controller}}'
-          global.admission.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_admission_controller}}@{{.IMAGE_DIGEST_local_skaffold_gardener_admission_controller}}'
-          global.apiserver.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_apiserver}}'
-          global.apiserver.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_apiserver}}@{{.IMAGE_DIGEST_local_skaffold_gardener_apiserver}}'
-          global.controller.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_controller_manager}}'
-          global.controller.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_controller_manager}}@{{.IMAGE_DIGEST_local_skaffold_gardener_controller_manager}}'
-          global.scheduler.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_scheduler}}'
-          global.scheduler.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_scheduler}}@{{.IMAGE_DIGEST_local_skaffold_gardener_scheduler}}'
+          global.admission.image.repository: "{{.IMAGE_REPO_local_skaffold_gardener_admission_controller}}"
+          global.admission.image.tag: "{{.IMAGE_TAG_local_skaffold_gardener_admission_controller}}@{{.IMAGE_DIGEST_local_skaffold_gardener_admission_controller}}"
+          global.apiserver.image.repository: "{{.IMAGE_REPO_local_skaffold_gardener_apiserver}}"
+          global.apiserver.image.tag: "{{.IMAGE_TAG_local_skaffold_gardener_apiserver}}@{{.IMAGE_DIGEST_local_skaffold_gardener_apiserver}}"
+          global.controller.image.repository: "{{.IMAGE_REPO_local_skaffold_gardener_controller_manager}}"
+          global.controller.image.tag: "{{.IMAGE_TAG_local_skaffold_gardener_controller_manager}}@{{.IMAGE_DIGEST_local_skaffold_gardener_controller_manager}}"
+          global.scheduler.image.repository: "{{.IMAGE_REPO_local_skaffold_gardener_scheduler}}"
+          global.scheduler.image.tag: "{{.IMAGE_TAG_local_skaffold_gardener_scheduler}}@{{.IMAGE_DIGEST_local_skaffold_gardener_scheduler}}"
         setFiles:
           global.apiserver.workloadIdentity.token.signing.key: example/gardener-local/controlplane/workload-identity-signing-key
         createNamespace: true
@@ -830,7 +830,7 @@ build:
             - pkg/utils/version
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardener-extension-provider-local
     - image: local-skaffold/gardener-extension-provider-local-node
       context: pkg/provider-local/node
@@ -845,7 +845,7 @@ build:
             - pkg/provider-local/machine-provider/local
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/machine-controller-manager-provider-local
     - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
@@ -861,11 +861,11 @@ build:
     - garden.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
-      template: '{{.version}}-{{.sha}}'
+      template: "{{.version}}-{{.sha}}"
       components:
         - name: version
           envTemplate:
-            template: '{{.GARDENER_VERSION}}'
+            template: "{{.GARDENER_VERSION}}"
         - name: sha
           inputDigest: {}
 manifests:
@@ -1177,6 +1177,7 @@ build:
             - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_servicemonitors.yaml
             - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_thanosrulers.yaml
             - pkg/component/observability/monitoring/utils
+            - pkg/component/observability/monitoring/x509certificateexporter
             - pkg/component/observability/opentelemetry/collector
             - pkg/component/observability/opentelemetry/collector/constants
             - pkg/component/observability/opentelemetry/operator
@@ -1307,7 +1308,7 @@ build:
             - pkg/utils/workloadidentity
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardenlet
       hooks:
         after:
@@ -1441,7 +1442,7 @@ build:
             - pkg/webhook/authorizer
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardener-resource-manager
       hooks:
         after:
@@ -1563,7 +1564,7 @@ build:
             - pkg/utils/version
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardener-node-agent
       hooks:
         after:
@@ -1576,11 +1577,11 @@ build:
     - garden.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
-      template: '{{.version}}-{{.sha}}'
+      template: "{{.version}}-{{.sha}}"
       components:
         - name: version
           envTemplate:
-            template: '{{.GARDENER_VERSION}}'
+            template: "{{.GARDENER_VERSION}}"
         - name: sha
           gitCommit:
             variant: AbbrevCommitSha
@@ -1593,8 +1594,8 @@ deploy:
           - example/gardener-local/gardenlet/values.yaml
         namespace: garden
         setValueTemplates:
-          image.repository: '{{.IMAGE_REPO_local_skaffold_gardenlet}}'
-          image.tag: '{{.IMAGE_TAG_local_skaffold_gardenlet}}@{{.IMAGE_DIGEST_local_skaffold_gardenlet}}'
+          image.repository: "{{.IMAGE_REPO_local_skaffold_gardenlet}}"
+          image.tag: "{{.IMAGE_TAG_local_skaffold_gardenlet}}@{{.IMAGE_DIGEST_local_skaffold_gardenlet}}"
           # on a local cluster, skaffold uses a local immutable tag for artifacts,
           # overwrite our image vector to use the image that was just built
           # see https://skaffold.dev/docs/deployers/helm/#image-configuration
@@ -1743,7 +1744,7 @@ build:
             - pkg/utils/version
             - VERSION
         ldflags:
-          - '{{.LD_FLAGS}}'
+          - "{{.LD_FLAGS}}"
         main: ./cmd/gardener-extension-admission-local
     - image: local-skaffold/gardener-extension-admission-local/charts/runtime
       custom:
@@ -1764,11 +1765,11 @@ build:
             - charts/gardener/admission-local/charts/application
   tagPolicy:
     customTemplate:
-      template: '{{.version}}-{{.sha}}'
+      template: "{{.version}}-{{.sha}}"
       components:
         - name: version
           envTemplate:
-            template: '{{.GARDENER_VERSION}}'
+            template: "{{.GARDENER_VERSION}}"
         - name: sha
           gitCommit:
             variant: AbbrevCommitSha

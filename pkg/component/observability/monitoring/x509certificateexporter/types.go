@@ -7,9 +7,10 @@ package x509certificateexporter
 import (
 	"time"
 
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 type podTypeLabelValues string
@@ -48,6 +49,7 @@ type watchableSecret struct {
 // inClusterConfig holds configuration options for in-cluster x509 certificate monitoring
 type inClusterConfig struct {
 	commonExporterConfigs `yaml:",inline"`
+
 	// Enabled specifies if the component is enabled
 	Enabled bool `yaml:"enabled,omitempty"`
 	// SecretsToWatch specifies the secret types to monitor
@@ -63,7 +65,7 @@ type inClusterConfig struct {
 	// ExcludeNamespaces namespaces from which secrets are not monitored.
 	ExcludeNamespaces []string `yaml:"excludeNamespaces,omitempty"`
 	// Replicas is the number of replicas for the deployment of the incluster monitoring service
-	Replicas *uint32 `yaml:"replicas,omitempty"`
+	Replicas *int32 `yaml:"replicas,omitempty"`
 	// MaxCacheDuration is the maximum duration to cache certificate data
 	MaxCacheDuration time.Duration `yaml:"maxCacheDuration,omitempty"`
 	// KubeAPIRateLimit is the rate limit for the kubernetes api calls
@@ -88,6 +90,7 @@ type monitorableMount struct {
 // workerGroup holds configuration options for a single worker group x509 certificate monitoring
 type workerGroup struct {
 	commonExporterConfigs `yaml:",inline"`
+
 	// NameSuffix is attached to the daemonset name and related resources
 	NameSuffix string `yaml:"nameSuffix,omitempty"`
 	// Mounts is a map of mounts and the monitored resources within

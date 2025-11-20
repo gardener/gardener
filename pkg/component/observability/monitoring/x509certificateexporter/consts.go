@@ -27,13 +27,14 @@ const (
 	// labelComponent is the component label value for the `role` label
 	labelComponent = "x509-certificate-exporter"
 	// defaultReplicas is the default number of replicas for the x509-certificate-exporter deployment
-	defaultReplicas uint32 = 1
+	defaultReplicas int32 = 1
 	// defaultCertCacheDuration is the default duration for which certificates are cached
 	defaultCertCacheDuration = 24 * time.Hour
 	// defaultKubeAPIBurst is the default burst for the kube api client
 	defaultKubeAPIBurst uint32 = 30
 	// defaultKubeAPIRateLimit is the default rate limit for the kube api client
 	defaultKubeAPIRateLimit uint32 = 20
+	// #nosec G101
 	// istioSecretType is the istio secret type constant
 	istioSecretType corev1.SecretType = "istio.io/ca-root"
 )
@@ -56,7 +57,7 @@ const (
 )
 
 // Public const
-// Generall
+// General
 const (
 	SuffixSeed    = "-seed"
 	SuffixRuntime = "-runtime"
