@@ -149,11 +149,7 @@ generate_group () {
     relevant_files+=("$(basename "$crd_out")")
 
     if $add_deletion_protection_label; then
-      if grep -q "clusters.extensions.gardener.cloud"  "$crd_out"; then
-        :
-      else
         sed -i '4 a\  labels:\n\    gardener.cloud/deletion-protected: "true"' "$crd_out"
-      fi
     fi
 
     if $add_keep_object_annotation; then
