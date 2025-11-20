@@ -156,6 +156,8 @@ type OriginalValues struct {
 	PrimaryIPFamily gardencorev1beta1.IPFamily
 	// KubeProxyConfig is the configuration for kube-proxy.
 	KubeProxyConfig *gardencorev1beta1.KubeProxyConfig
+	// Region is a name of a region specificed in the shoot spec.
+	Region string
 }
 
 // New creates a new instance of Interface.
@@ -776,6 +778,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		taints:                                  taints,
 		caRotationLastInitiationTime:            caRotationLastInitiationTime,
 		serviceAccountKeyRotationLastInitiationTime: serviceAccountKeyRotationLastInitiationTime,
+		region: o.values.Region,
 	}, nil
 }
 
@@ -847,6 +850,7 @@ type deployer struct {
 	taints                                      []corev1.Taint
 	caRotationLastInitiationTime                *metav1.Time
 	serviceAccountKeyRotationLastInitiationTime *metav1.Time
+	region                                      string
 }
 
 // exposed for testing
@@ -871,7 +875,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		ClusterDomain:                           d.clusterDomain,
 		CRIName:                                 d.criName,
 		Images:                                  d.images,
-		NodeLabels:                              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.key),
+		NodeLabels:                              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.key, d.region),
 		NodeMonitorGracePeriod:                  d.nodeMonitorGracePeriod,
 		KubeletCABundle:                         d.kubeletCABundle,
 		KubeletConfigParameters:                 d.kubeletConfigParameters,

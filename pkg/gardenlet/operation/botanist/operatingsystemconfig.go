@@ -79,6 +79,11 @@ func (b *Botanist) OperatingSystemConfigValues() (*operatingsystemconfig.Values,
 		openTelemetryCollectorLogShipperEnabled, openTelemetryIngressHost = true, b.ComputeOpenTelemetryCollectorHost()
 	}
 
+	region := ""
+	if !b.Shoot.HasManagedInfrastructure() {
+		region = b.Shoot.GetInfo().Spec.Region
+	}
+
 	return &operatingsystemconfig.Values{
 		Namespace:         b.Shoot.ControlPlaneNamespace,
 		KubernetesVersion: b.Shoot.KubernetesVersion,
@@ -98,6 +103,7 @@ func (b *Botanist) OperatingSystemConfigValues() (*operatingsystemconfig.Values,
 			NodeMonitorGracePeriod:                  *b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod,
 			PrimaryIPFamily:                         b.Shoot.GetInfo().Spec.Networking.IPFamilies[0],
 			KubeProxyConfig:                         b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
+			Region:                                  region,
 		},
 	}, nil
 }
