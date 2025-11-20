@@ -19,7 +19,7 @@ func (b *Botanist) DefaultGardenerAccess() component.Deployer {
 		gardeneraccess.Values{
 			ServerInCluster:    b.Shoot.ComputeInClusterAPIServerAddress(false),
 			ServerOutOfCluster: b.Shoot.ComputeOutOfClusterAPIServerAddress(true),
+			IsGardenCluster:    false,
 		},
-		true,
 	)
 }

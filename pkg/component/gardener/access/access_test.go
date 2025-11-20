@@ -164,14 +164,12 @@ var _ = Describe("Access", func() {
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 
-		access = New(fakeClient, namespace, sm,
-			Values{
-				ServerOutOfCluster:    serverOutOfCluster,
-				ServerInCluster:       serverInCluster,
-				ManagedResourceLabels: map[string]string{"foo": "bar"},
-			},
-			true,
-		)
+		access = New(fakeClient, namespace, sm, Values{
+			ServerOutOfCluster:    serverOutOfCluster,
+			ServerInCluster:       serverInCluster,
+			ManagedResourceLabels: map[string]string{"foo": "bar"},
+			IsGardenCluster:       false,
+		})
 
 		expectedGardenerSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -327,14 +325,12 @@ users:
 		})
 
 		It("should not deploy shootAccess resource when configured so", func() {
-			access = New(fakeClient, namespace, sm,
-				Values{
-					ServerOutOfCluster:    serverOutOfCluster,
-					ServerInCluster:       serverInCluster,
-					ManagedResourceLabels: map[string]string{"foo": "bar"},
-				},
-				false,
-			)
+			access = New(fakeClient, namespace, sm, Values{
+				ServerOutOfCluster:    serverOutOfCluster,
+				ServerInCluster:       serverInCluster,
+				ManagedResourceLabels: map[string]string{"foo": "bar"},
+				IsGardenCluster:       true,
+			})
 			Expect(access.Deploy(ctx)).To(Succeed())
 
 			reconciledManagedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
