@@ -11,7 +11,7 @@ components:
 - ../../../../dev-setup/gardenconfig/components/credentials/etcd-backup
 - ../../../../dev-setup/gardenconfig/components/credentials/secret-project-garden
 - ../../../../dev-setup/gardenconfig/components/credentials/secret-project-local
-- ../../../../dev-setup/gardenconfig/components/credentials/workloadidentity-project-garden/
+- ../../../../dev-setup/gardenconfig/components/credentials/workloadidentity-project-garden
 - ../../../../dev-setup/gardenconfig/components/credentials/workloadidentity-project-local
 
 resources:
