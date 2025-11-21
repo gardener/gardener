@@ -132,7 +132,11 @@ var _ = Describe("ManagedSeed controller test", func() {
 						{
 							Name: "some-worker",
 							Machine: gardencorev1beta1.Machine{
-								Type:         "some-machine-type",
+								Type: "some-machine-type",
+								Image: &gardencorev1beta1.ShootMachineImage{
+									Name:    "some-image",
+									Version: ptr.To("1.0.0"),
+								},
 								Architecture: ptr.To("amd64"),
 							},
 							Maximum: 2,

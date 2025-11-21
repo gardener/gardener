@@ -46,6 +46,10 @@ var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 							Maximum: 3,
 							Machine: gardencorev1beta1.Machine{
 								Type: "large",
+								Image: &gardencorev1beta1.ShootMachineImage{
+									Name:    "some-image",
+									Version: ptr.To("1.0.0"),
+								},
 							},
 						},
 					},
