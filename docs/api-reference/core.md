@@ -5222,6 +5222,9 @@ string
 provider. When not specified, the Gardener will use the cloud provider credentials referenced
 by the Shoot and try to find respective credentials there (primary provider only). Specifying this field may override
 this behavior, i.e. forcing the Gardener to only look into the given secret.</p>
+<p>Deprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.35. Please use <code>CredentialsRef</code> instead.
+Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.
+TODO(vpnachev): Remove this field once support for Kubernetes 1.34 is dropped.</p>
 </td>
 </tr>
 <tr>
@@ -5250,6 +5253,21 @@ DNSIncludeExclude
 <p>Zones contains information about which hosted zones shall be included/excluded for this provider.</p>
 <p>Deprecated: This field is deprecated and will be removed in a future release.
 Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#crossversionobjectreference-v1-autoscaling">
+Kubernetes autoscaling/v1.CrossVersionObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRef is a reference to a resource providing credentials for the DNS provider.
+Supported resources are Secret and WorkloadIdentity.</p>
 </td>
 </tr>
 </tbody>
