@@ -1269,7 +1269,8 @@ type MaintenanceCredentialsAutoRotation struct {
 type MaintenanceRotationConfig struct {
 	// Enabled indicates whether automatic rotation should be performed.
 	Enabled *bool
-	// RotationPeriod is the period between a completed rotation and the start of a new rotation.
+	// RotationPeriod is the period between a completed rotation and the start of a new rotation (default: 7d).
+	// The allowed rotation period is between 30m and 90d.
 	RotationPeriod *metav1.Duration
 }
 
