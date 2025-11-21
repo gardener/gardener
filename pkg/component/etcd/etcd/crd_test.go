@@ -78,33 +78,6 @@ var _ = Describe("CRD", func() {
 			)
 		})
 	})
-
-	Describe("Getter", func() {
-		var (
-			crdGetter CRDGetter
-			err       error
-		)
-		crdGetter, err = NewCRDGetter(k8sVersion)
-		Expect(err).NotTo(HaveOccurred())
-
-		DescribeTable("Get CRD",
-			func(crdName string) {
-				crd, err := crdGetter.GetCRD(crdName)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(crd).NotTo(BeNil())
-			},
-
-			Entry("Etcd", "etcds.druid.gardener.cloud"),
-			Entry("EtcdCopyBackupsTask", "etcdcopybackupstasks.druid.gardener.cloud"),
-		)
-
-		Describe("Get all CRDs", func() {
-			allCRDs := crdGetter.GetAllCRDs()
-			Expect(allCRDs).To(HaveLen(2))
-			Expect(allCRDs).To(HaveKey("etcds.druid.gardener.cloud"))
-			Expect(allCRDs).To(HaveKey("etcdcopybackupstasks.druid.gardener.cloud"))
-		})
-	})
 })
 
 func verifyDeployedCRD(ctx context.Context, crdName string, c client.Client) {
