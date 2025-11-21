@@ -25,7 +25,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			verifier rotation.GardenletKubeconfigRotationVerifier
 		)
 
-		BeforeTestSetup(func() {
+		BeforeAll(func() {
 			testContext := NewTestContext()
 
 			// Find the first seed which is not "e2e-managedseed". Seed name differs between test scenarios, e.g., non-ha/ha.
@@ -48,8 +48,11 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			}
 
 			s = testContext.ForSeed(&seedList.Items[seedIndex])
-			ItShouldInitializeSeedClient(s)
 		})
+
+		It("Initialize Seed client", func(ctx SpecContext) {
+			InitializeSeedClient(ctx, s)
+		}, SpecTimeout(time.Minute))
 
 		It("Create gardenlet kubeconfig rotation verifier", func(_ SpecContext) {
 			verifier = rotation.GardenletKubeconfigRotationVerifier{
@@ -65,11 +68,15 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			verifier.Before(ctx)
 		}, SpecTimeout(time.Minute))
 
-		ItShouldAnnotateSeed(s, map[string]string{
-			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig,
-		})
+		It("Annotate Seed", func(ctx SpecContext) {
+			AnnotateSeed(ctx, s, map[string]string{
+				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig,
+			})
+		}, SpecTimeout(time.Minute))
 
-		ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Seed)
+		It("Should not have operation annotation", func(ctx SpecContext) {
+			EventuallyNotHaveOperationAnnotation(ctx, s.GardenKomega, s.Seed)
+		}, SpecTimeout(time.Minute))
 
 		It("Verify after gardenlet kubeconfig rotation", func(ctx SpecContext) {
 			verifier.After(ctx, false)
