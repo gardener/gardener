@@ -224,6 +224,10 @@ var _ = Describe("NginxIngress", func() {
 				Values:            []string{address},
 				AnnotateOperation: false,
 				IPStack:           "ipv4",
+				Labels: map[string]string{
+					"role":                "external",
+					"gardener.cloud/role": "nginx",
+				},
 			}))
 		})
 
@@ -271,6 +275,10 @@ var _ = Describe("NginxIngress", func() {
 				Values:            []string{address},
 				AnnotateOperation: false,
 				IPStack:           "ipv4",
+				Labels: map[string]string{
+					"role":                "external",
+					"gardener.cloud/role": "nginx",
+				},
 			}))
 		})
 
@@ -296,6 +304,10 @@ var _ = Describe("NginxIngress", func() {
 					Annotations: map[string]string{
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+					},
+					Labels: map[string]string{
+						"role":                "external",
+						"gardener.cloud/role": "nginx",
 					},
 				},
 				Spec: extensionsv1alpha1.DNSRecordSpec{
