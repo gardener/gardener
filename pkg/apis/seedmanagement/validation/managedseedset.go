@@ -27,7 +27,7 @@ import (
 
 // ValidateManagedSeedSet validates a ManagedSeedSet object.
 func ValidateManagedSeedSet(ManagedSeedSet *seedmanagement.ManagedSeedSet) field.ErrorList {
-	opts := gardencorevalidation.KubeAPIServerValidatonOption{
+	opts := gardencorevalidation.KubeAPIServerValidationOption{
 		AllowInvalidAcceptedIssuers: false,
 	}
 
@@ -35,7 +35,7 @@ func ValidateManagedSeedSet(ManagedSeedSet *seedmanagement.ManagedSeedSet) field
 }
 
 // ValidateManagedSeedSetWithOps validates ManagedSeedSet with given validation options.
-func ValidateManagedSeedSetWithOps(ManagedSeedSet *seedmanagement.ManagedSeedSet, opts gardencorevalidation.KubeAPIServerValidatonOption) field.ErrorList {
+func ValidateManagedSeedSetWithOps(ManagedSeedSet *seedmanagement.ManagedSeedSet, opts gardencorevalidation.KubeAPIServerValidationOption) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// Ensure namespace is garden
@@ -52,7 +52,7 @@ func ValidateManagedSeedSetWithOps(ManagedSeedSet *seedmanagement.ManagedSeedSet
 // ValidateManagedSeedSetUpdate validates a ManagedSeedSet object before an update.
 func ValidateManagedSeedSetUpdate(newManagedSeedSet, oldManagedSeedSet *seedmanagement.ManagedSeedSet) field.ErrorList {
 	allErrs := field.ErrorList{}
-	opts := gardencorevalidation.KubeAPIServerValidatonOption{
+	opts := gardencorevalidation.KubeAPIServerValidationOption{
 		AllowInvalidAcceptedIssuers: oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer != nil && newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer != nil &&
 			oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil && newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil &&
 			apiequality.Semantic.DeepEqual(oldManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers, newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers),
@@ -85,7 +85,7 @@ func ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, oldManagedSeedSet *se
 }
 
 // ValidateManagedSeedSetSpec validates the specification of a ManagedSeed object.
-func ValidateManagedSeedSetSpec(spec *seedmanagement.ManagedSeedSetSpec, opts gardencorevalidation.KubeAPIServerValidatonOption, fldPath *field.Path) field.ErrorList {
+func ValidateManagedSeedSetSpec(spec *seedmanagement.ManagedSeedSetSpec, opts gardencorevalidation.KubeAPIServerValidationOption, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// Ensure replicas is non-negative if specified
@@ -200,7 +200,7 @@ func ValidateManagedSeedTemplateForManagedSeedSet(template *seedmanagement.Manag
 }
 
 // ValidateShootTemplateForManagedSeedSet validates the given ShootTemplate.
-func ValidateShootTemplateForManagedSeedSet(template *gardencore.ShootTemplate, selector labels.Selector, opts gardencorevalidation.KubeAPIServerValidatonOption, fldPath *field.Path) field.ErrorList {
+func ValidateShootTemplateForManagedSeedSet(template *gardencore.ShootTemplate, selector labels.Selector, opts gardencorevalidation.KubeAPIServerValidationOption, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateTemplateLabels(&template.ObjectMeta, selector, fldPath.Child("metadata"))...)
