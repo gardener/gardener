@@ -61,29 +61,33 @@ var _ = Describe("CRDs", func() {
 		Expect(crdDeployer.Deploy(ctx)).To(Succeed(), "fluent operator crds deploy succeeds")
 	})
 
-	It("should deploy CRDs", func() {
-		for _, crdName := range expectedCRDs {
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed(), crdName+" should get created")
-		}
+	Describe("#Deploy", func() {
+		It("should deploy CRDs", func() {
+			for _, crdName := range expectedCRDs {
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed(), crdName+" should get created")
+			}
+		})
+
+		It("should re-create CRDs if they are deleted", func() {
+			for _, crdName := range expectedCRDs {
+				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}})).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			}
+
+			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+
+			for _, crdName := range expectedCRDs {
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed(), crdName+" should get recreated")
+			}
+		})
 	})
 
-	It("should re-create CRDs if they are deleted", func() {
-		for _, crdName := range expectedCRDs {
-			Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}})).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
-		}
-
-		Expect(crdDeployer.Deploy(ctx)).ToNot(HaveOccurred())
-
-		for _, crdName := range expectedCRDs {
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed(), crdName+" should get recreated")
-		}
-	})
-
-	It("should destroy CRDs", func() {
-		Expect(crdDeployer.Destroy(ctx)).To(Succeed())
-		for _, crdName := range expectedCRDs {
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError(), crdName+" should get deleted")
-		}
+	Describe("#Destroy", func() {
+		It("should destroy CRDs", func() {
+			Expect(crdDeployer.Destroy(ctx)).To(Succeed())
+			for _, crdName := range expectedCRDs {
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError(), crdName+" should get deleted")
+			}
+		})
 	})
 })

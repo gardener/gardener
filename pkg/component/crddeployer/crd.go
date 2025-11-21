@@ -60,13 +60,17 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 				},
 			}
 
-			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, crd, func() error {
-				crd.Labels = desiredCRD.Labels
-				crd.Annotations = desiredCRD.Annotations
+			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, crd,
+				func() error {
+					crd.Labels = desiredCRD.Labels
+					crd.Annotations = desiredCRD.Annotations
 
-				crd.Spec = desiredCRD.Spec
-				return nil
-			}, controllerutils.SkipEmptyPatch{})
+					crd.Spec = desiredCRD.Spec
+					return nil
+				},
+				// Not sending an empty patch goes against the recommendation in (https://github.com/gardener/gardener/blob/62ce73bd39cc2ff5ae8d711ce5d66f80cbbe2d00/docs/development/kubernetes-clients.md?plain=1#L352)
+				// However, skipping empty patches for CRDs is ok as we do not expect them to be handled by any mutating webhooks.
+				controllerutils.SkipEmptyPatch{})
 			return err
 		})
 	}
