@@ -14,6 +14,7 @@ spec:
       DefaultSeccompProfile: true
       IstioTLSTermination: true
       OpenTelemetryCollector: true
+      VPAInPlaceUpdates: true
     controllers:
       shoot:
         reconcileInMaintenanceOnly: true
