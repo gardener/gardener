@@ -2622,6 +2622,24 @@ var _ = Describe("Validation Tests", func() {
 						"Field": Equal("spec.resources[1].name"),
 					}))))
 			})
+
+			It("should complain about WorkloadIdentity", func() {
+				garden.Spec.Resources = []gardencorev1beta1.NamedResourceReference{{
+					Name: garden.Spec.Resources[0].Name,
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						APIVersion: "security.gardener.cloud/v1alpha1",
+						Kind:       "WorkloadIdentity",
+						Name:       "test-workload-identity",
+					},
+				}}
+
+				Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeNotSupported),
+						"Field":    Equal("spec.resources[0].resourceRef"),
+						"BadValue": Equal("security.gardener.cloud/v1alpha1, Kind=WorkloadIdentity"),
+					}))))
+			})
 		})
 	})
 

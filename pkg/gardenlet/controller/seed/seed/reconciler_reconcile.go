@@ -718,10 +718,31 @@ func (r *Reconciler) deployReferencedResources(ctx context.Context, seed *seedpk
 		return fmt.Errorf("failed to prepare referenced resources for seed copy: %w", err)
 	}
 
-	return managedresources.CreateFromUnstructured(ctx, r.SeedClientSet.Client(), r.GardenNamespace, managedResourceNamePrefix+seed.GetInfo().Name,
-		false, v1beta1constants.SeedResourceManagerClass, unstructuredObjs, false, nil)
+	if err := managedresources.CreateFromUnstructured(
+		ctx, r.SeedClientSet.Client(), r.GardenNamespace, managedResourceNamePrefix+seed.GetInfo().Name,
+		false, v1beta1constants.SeedResourceManagerClass, unstructuredObjs, false, nil,
+	); err != nil {
+		return fmt.Errorf("failed to create referenced resources managed resource: %w", err)
+	}
+
+	if err := gardenerutils.ReconcileWorkloadIdentityReferencedResources(
+		ctx, r.GardenClient, r.SeedClientSet.Client(), seed.GetInfo().Spec.Resources,
+		r.GardenNamespace, r.GardenNamespace, seed.GetInfo(),
+	); err != nil {
+		return fmt.Errorf("failed to reconcile workload identity referenced resources: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Reconciler) destroyReferencedResources(ctx context.Context, seed *seedpkg.Seed) error {
-	return client.IgnoreNotFound(managedresources.Delete(ctx, r.SeedClientSet.Client(), r.GardenNamespace, managedResourceNamePrefix+seed.GetInfo().Name, false))
+	if err := gardenerutils.DestroyWorkloadIdentityReferencedResources(ctx, r.SeedClientSet.Client(), r.GardenNamespace); err != nil {
+		return fmt.Errorf("failed to destroy referenced workload identities: %w", err)
+	}
+
+	if err := client.IgnoreNotFound(managedresources.Delete(ctx, r.SeedClientSet.Client(), r.GardenNamespace, managedResourceNamePrefix+seed.GetInfo().Name, false)); err != nil {
+		return fmt.Errorf("failed to delete managed resource for referenced resources: %w", err)
+	}
+
+	return nil
 }

@@ -16,7 +16,7 @@ Extension admission components should decode the provider configuration and perf
 ## Validation of Referenced Resources
 
 The provider configuration may contain references to another resources.
-Currently, only `Secret`s and `ConfigMap`s are allowed to be referenced.
+Currently, only `Secret`s, `ConfigMap`s and `WorkloadIdentity`s are allowed to be referenced.
 For more details, see [Referenced Resources](../extensions/referenced-resources.md).
 
 The referenced resources should be validated by the extension admission components.
@@ -25,6 +25,7 @@ However, it is challenging to validate `UPDATE` operations on referenced resourc
 Extension admission components have the following implementation options to cover validation for `UPDATE`:
 - Check if a `Secret` or `ConfigMap` is in-use as a referenced resource by a Shoot from the corresponding extension type. This usually increases the memory usage of the component due to client caches for `Secret`s/`ConfigMap`s.
 - Enforce the referenced resource to be immutable. In this way, the referenced resource cannot be updated. Hence, there is no need to validate update. However, this approach leads to poor end-user experience. Every time end-users have to update the referenced resource, they have to create a new one and update the reference in the corresponding Shoots.
+- [`ExtensionLabels` admission plugin](../concepts/apiserver-admission-plugins.md#extensionlabels) ensures that `WorkloadIdentity`s have the label `provider.extensions.gardener.cloud/<type>: "true"`, therefore extension admission components should make use of this label via `objectSelector` to admit only the `WorkloadIdentity`s of their type.
 
 With https://github.com/gardener/gardener/issues/12582, we want to adapt Gardener to maintain extension-specific label on referenced resources. With this, extension admission components will be able to define an `objectSelector` and filter only the `Secret`s/`ConfigMap`s which are in-use by Shoots using the corresponding extension type.
 

@@ -346,7 +346,7 @@ When an object is not actively referenced anymore because the `Seed` specificati
 
 This reconciler inspects the following references:
 
-- `Secret`s and `ConfigMap`s from `.spec.resources[]`
+- `Secret`s, `ConfigMap`s and `WorkloadIdentity`s from `.spec.resources[]`
 
 The checks naturally grow with the number of references that are added to the `Seed` specification.
 
@@ -393,7 +393,7 @@ This reconciler inspects the following references:
 - Structured authentication `ConfigMap`s (`.spec.kubernetes.kubeAPIServer.structuredAuthentication.configMapName`)
 - Structured authorization `ConfigMap`s (`.spec.kubernetes.kubeAPIServer.structuredAuthorization.configMapName`)
 - Structured authorization kubeconfig `Secret`s (`.spec.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs[].secretName`)
-- `Secret`s and `ConfigMap`s from `.spec.resources[]`
+- `Secret`s, `ConfigMap`s and `WorkloadIdentity`s from `.spec.resources[]`
 
 The checks naturally grow with the number of references that are added to the `Shoot` specification.
 

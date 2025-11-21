@@ -245,11 +245,16 @@ var _ = Describe("Utils", func() {
 
 	Describe("#GetObjectByReference", func() {
 		var (
-			ctx = context.TODO()
-			ref = &autoscalingv1.CrossVersionObjectReference{
+			ctx       = context.TODO()
+			secretRef = &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: "v1",
 				Kind:       "Secret",
 				Name:       "foo",
+			}
+			workloadIdentityRef = &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: "security.gardener.cloud/v1alpha1",
+				Kind:       "WorkloadIdentity",
+				Name:       "bar",
 			}
 			namespace = "shoot--test--foo"
 			refSecret = &corev1.Secret{
@@ -261,17 +266,31 @@ var _ = Describe("Utils", func() {
 					"foo": []byte("bar"),
 				},
 			}
+			refWorkloadIdentity = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "workload-identity-ref-bar",
+					Namespace: namespace,
+				},
+			}
 		)
 
 		It("should call client.Get and return the result", func() {
 			secret := &corev1.Secret{}
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + ref.Name}, secret).DoAndReturn(
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + secretRef.Name}, secret).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
 					refSecret.DeepCopyInto(secret)
 					return nil
 				})
-			Expect(GetObjectByReference(ctx, c, ref, namespace, secret)).To(Succeed())
+			Expect(GetObjectByReference(ctx, c, secretRef, namespace, secret)).To(Succeed())
 			Expect(secret).To(Equal(refSecret))
+
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "workload-identity-ref-" + workloadIdentityRef.Name}, secret).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
+					refWorkloadIdentity.DeepCopyInto(secret)
+					return nil
+				})
+			Expect(GetObjectByReference(ctx, c, workloadIdentityRef, namespace, secret)).To(Succeed())
+			Expect(secret).To(Equal(refWorkloadIdentity))
 		})
 	})
 })

@@ -365,7 +365,6 @@ var _ = Describe("Controller", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
 			Expect(extensionSecret.Annotations).To(Equal(map[string]string{v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().Format(time.RFC3339Nano)}))
 			Expect(extensionSecret.Labels).To(BeEmpty())
-
 		})
 	})
 
