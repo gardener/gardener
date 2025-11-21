@@ -33,12 +33,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	"github.com/gardener/gardener/pkg/operator/features"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
@@ -75,9 +75,11 @@ var _ = BeforeSuite(func() {
 	By("Fetch Etcd CRD")
 	k8sVersion, err := gardenerenvtest.GetK8SVersion()
 	Expect(err).NotTo(HaveOccurred())
-	etcdCRDGetter, err := etcd.NewCRDGetter(k8sVersion)
+	etcdCRDs, err := druidcorecrds.GetAll(k8sVersion.String())
 	Expect(err).NotTo(HaveOccurred())
-	etcdCRD, err := etcdCRDGetter.GetCRD(druidcorecrds.ResourceNameEtcd)
+	etcdCRDYAML, ok := etcdCRDs[druidcorecrds.ResourceNameEtcd]
+	Expect(ok).To(BeTrue())
+	etcdCRD, err := kubernetesutils.DecodeCRD(etcdCRDYAML)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Start test environment")
