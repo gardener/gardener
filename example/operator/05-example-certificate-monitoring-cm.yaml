@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # Note: name is static
+  name: garden-runtime-x509-certificate-exporter-conf
+  namespace: garden
+data:
+  # Note: key name is static
+  config.yaml: |
+    inCluster:
+      enabled: true
+      # trimComponents: 2
+      # exposeRelativeMetrics: true
+      # exposePerCertErrorMetrics: true
+      # exposeLabelsMetrics: true
+      # includeLabels: []
+      # excludeLabels: []
+      # includeNamespaces: []
+      # excludeNamespaces: []
+      # replicas: 1
+      # maxCacheDuration: 24h
+      # kubeApiRateLimit: 12
+      # KubeApiBurst: 24
+      # nodeSelector:
+      #   kubernetes.io/hostname: gardener-operator-local-control-plane
+      secretTypes:
+        - type: Opaque
+          regex: "(cacert|cert|.*.crt)"
+        - type: kubernetes.io/tls
+          regex: "(tls.crt|.*tls.crt)"
+      configMapKeys:
+        - ca-crl.pem
+        - root-cert.pem
+        - ca.crt
+    alertingConfig:
+      # certificateRenewalDays: 3
+      # certificateExpirationDays: 1
+      # readErrorsSeverity: info
+      # certificateErrorsSeverity: warning
+      # renewalSeverity: critical
+      # expirationSeverity: critical
+      # expiresTodaySeverity: blocker
+      # durationForAlertEvaluation: 15m
+      # prometheusRuleName: my-certificate-monitoring-rule
+    workerGroups:
+      - nameSuffix: xmon-cplane
+        # trimComponents: 2
+        # exposeRelativeMetrics: true
+        # exposePerCertErrorMetrics: true
+        # exposeLabelsMetrics: true
+        nodeSelector:
+          kubernetes.io/hostname: gardener-operator-local-control-plane
+        mounts:
+          etc:
+            mountPath: /x509-mon
+            hostPath: /etc
+            watchDirs:
+              - /etc/ssl/certs/
+      - nameSuffix: xmon-worker
+        nodeSelector:
+          kubernetes.io/hostname: gardener-operator-local-worker
+        mounts:
+          etc:
+            mountPath: /x509-mon
+            hostPath: /etc
+            watchDirs:
+              - /etc/ssl/certs/

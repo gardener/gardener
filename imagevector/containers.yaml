@@ -454,6 +454,23 @@ images:
         value:
           - type: 'githubTeam'
             teamname: 'gardener/monitoring-maintainers'
+  - name: x509-certificate-exporter
+    sourceRepository: github.com/enix/x509-certificate-exporter
+    repository: europe-docker.pkg.dev/gardener-project/releases/3rd/enix/x509-certificate-exporter
+    tag: "3.19.1"
+    labels:
+      - name: "gardener.cloud/cve-categorisation"
+        value:
+          network_exposure: "private"
+          authentication_enforced: false
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "high"
+          integrity_requirement: "low"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
+        value:
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   # Shoot core addons
   - name: vpn-client
     sourceRepository: github.com/gardener/vpn2

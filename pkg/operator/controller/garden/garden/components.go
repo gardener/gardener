@@ -75,6 +75,7 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	longtermprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/longterm"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/x509certificateexporter"
 	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -143,6 +144,7 @@ type components struct {
 	prometheusLongTerm            prometheus.Interface
 	blackboxExporter              component.DeployWaiter
 	persesOperator                component.DeployWaiter
+	x509CertificateExporter       component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -344,6 +346,11 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.persesOperator, err = r.newPersesOperator()
+	if err != nil {
+		return
+	}
+
+	c.x509CertificateExporter, err = r.newx509CertificateExporter(ctx)
 	if err != nil {
 		return
 	}
@@ -1638,4 +1645,17 @@ func discoveryServerDomain(garden *operatorv1alpha1.Garden) string {
 
 func workloadIdentityTokenIssuerURL(garden *operatorv1alpha1.Garden) string {
 	return "https://" + discoveryServerDomain(garden) + "/garden/workload-identity/issuer"
+}
+
+func (r *Reconciler) newx509CertificateExporter(ctx context.Context) (component.DeployWaiter, error) {
+	return sharedcomponent.NewX509CertificateExporter(
+		ctx,
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		r.RuntimeVersion,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		x509certificateexporter.SuffixRuntime,
+		"garden",
+		"garden-runtime-x509-certificate-exporter-conf",
+	)
 }
