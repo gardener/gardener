@@ -11156,6 +11156,25 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <p>SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.</p>
+<p>Deprecated: This field is deprecated and will be removed after v1.138.0 is released.
+Please use <code>CredentialsRef</code> instead.
+Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRef is a reference to a resource holding the credentials used for
+authentication with the DNS provider.
+As of now, only v1.Secret is supported.</p>
 </td>
 </tr>
 </tbody>

@@ -2755,7 +2755,17 @@ message SeedDNSProvider {
   optional string type = 1;
 
   // SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
+  //
+  // Deprecated: This field is deprecated and will be removed after v1.138.0 is released.
+  // Please use `CredentialsRef` instead.
+  // Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
   optional .k8s.io.api.core.v1.SecretReference secretRef = 2;
+
+  // CredentialsRef is a reference to a resource holding the credentials used for
+  // authentication with the DNS provider.
+  // As of now, only v1.Secret is supported.
+  // +optional
+  optional .k8s.io.api.core.v1.ObjectReference credentialsRef = 5;
 }
 
 // SeedDNSProviderConfig configures a DNS provider.
