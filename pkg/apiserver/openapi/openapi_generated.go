@@ -6156,7 +6156,7 @@ func schema_pkg_apis_core_v1beta1_MemorySwapConfiguration(ref common.ReferenceCa
 				Properties: map[string]spec.Schema{
 					"swapBehavior": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SwapBehavior configures swap memory available to container workloads. May be one of {\"LimitedSwap\", \"UnlimitedSwap\"} defaults to: LimitedSwap",
+							Description: "SwapBehavior configures swap memory available to container workloads. May be one of {\"NoSwap\", \"LimitedSwap\"} defaults to: LimitedSwap",
 							Type:        []string{"string"},
 							Format:      "",
 						},

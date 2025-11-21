@@ -223,15 +223,15 @@ var _ = Describe("Shoot defaulting", func() {
 			})
 
 			It("should not overwrite already set values for swap behaviour", func() {
-				unlimitedSwap := UnlimitedSwap
+				noSwap := NoSwap
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
 				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
-				obj.Spec.Kubernetes.Kubelet.MemorySwap = &MemorySwapConfiguration{SwapBehavior: &unlimitedSwap}
+				obj.Spec.Kubernetes.Kubelet.MemorySwap = &MemorySwapConfiguration{SwapBehavior: &noSwap}
 				SetObjectDefaults_Shoot(obj)
 
 				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(Not(BeNil()))
-				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(UnlimitedSwap)))
+				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(NoSwap)))
 			})
 
 			It("should not default the swap behaviour because failSwapOn=true", func() {
@@ -355,13 +355,13 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not overwrite already set values for swap behaviour for a worker pool", func() {
-			unlimitedSwap := UnlimitedSwap
+			noSwap := NoSwap
 			obj.Spec.Provider.Workers = []Worker{
 				{
 					Kubernetes: &WorkerKubernetes{
 						Kubelet: &KubeletConfig{
 							MemorySwap: &MemorySwapConfiguration{
-								SwapBehavior: &unlimitedSwap,
+								SwapBehavior: &noSwap,
 							},
 						},
 					},
@@ -371,7 +371,7 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 			SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(UnlimitedSwap)))
+			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(NoSwap)))
 		})
 
 		It("should not default the swap behaviour for a worker pool because failSwapOn=true (defaulted to true)", func() {

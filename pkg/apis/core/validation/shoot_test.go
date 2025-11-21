@@ -8654,14 +8654,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Entry("should allow empty memory swap", false, nil, "1.30", BeEmpty()),
 			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.30", BeEmpty()),
 			Entry("should allow LimitedSwap behavior", true, ptr.To("LimitedSwap"), "1.30", BeEmpty()),
-			Entry("should forbid UnlimitedSwap behavior for Kubernetes versions >= 1.30", true, ptr.To("UnlimitedSwap"), "1.30", ConsistOf(
+			Entry("should forbid random behavior", true, ptr.To("MagicSwap"), "1.30", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeNotSupported),
 					"Field":  Equal("memorySwap.swapBehavior"),
 					"Detail": Equal("supported values: \"NoSwap\", \"LimitedSwap\""),
 				})),
 			)),
-			Entry("should allow NoSwap behavior for Kubernetes versions >= 1.30", true, ptr.To("NoSwap"), "1.30", BeEmpty()),
+			Entry("should allow NoSwap behavior", true, ptr.To("NoSwap"), "1.30", BeEmpty()),
 			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, ptr.To("LimitedSwap"), "1.30", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),

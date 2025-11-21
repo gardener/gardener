@@ -407,7 +407,7 @@ spec:
                           properties:
                             swapBehavior:
                               description: |-
-                                SwapBehavior configures swap memory available to container workloads. May be one of {"LimitedSwap", "UnlimitedSwap"}
+                                SwapBehavior configures swap memory available to container workloads. May be one of {"NoSwap", "LimitedSwap"}
                                 defaults to: LimitedSwap
                               type: string
                           type: object

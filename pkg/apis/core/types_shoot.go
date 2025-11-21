@@ -1184,7 +1184,7 @@ const (
 // MemorySwapConfiguration contains kubelet swap configuration
 // For more information, please see KEP: 2400-node-swap
 type MemorySwapConfiguration struct {
-	// SwapBehavior configures swap memory available to container workloads. May be one of {"LimitedSwap", "UnlimitedSwap"}
+	// SwapBehavior configures swap memory available to container workloads. May be one of {"NoSwap", "LimitedSwap"}
 	// defaults to: LimitedSwap
 	SwapBehavior *SwapBehavior
 }

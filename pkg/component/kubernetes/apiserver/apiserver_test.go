@@ -922,48 +922,7 @@ var _ = Describe("KubeAPIServer", func() {
 				})
 			})
 
-			It("should successfully deploy the OIDCCABundle secret resource when StructuredAuthenticationConfiguration is disabled", func() {
-				var (
-					caBundle   = "some-ca-bundle"
-					oidcConfig = &gardencorev1beta1.OIDCConfig{CABundle: &caBundle}
-				)
-
-				kapi = New(kubernetesInterface, namespace, sm, Values{
-					Values: apiserver.Values{
-						RuntimeVersion: runtimeVersion,
-						FeatureGates: map[string]bool{
-							"StructuredAuthenticationConfiguration": false,
-						},
-					},
-					OIDC:    oidcConfig,
-					Version: version,
-				})
-
-				expectedSecretOIDCCABundle := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-oidc-cabundle", Namespace: namespace},
-					Data:       map[string][]byte{"ca.crt": []byte(caBundle)},
-				}
-				Expect(kubernetesutils.MakeUnique(expectedSecretOIDCCABundle)).To(Succeed())
-
-				actualSecretOIDCCABundle := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(BeNotFoundError())
-
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(Succeed())
-				Expect(actualSecretOIDCCABundle).To(DeepEqual(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            expectedSecretOIDCCABundle.Name,
-						Namespace:       expectedSecretOIDCCABundle.Namespace,
-						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-						ResourceVersion: "1",
-					},
-					Immutable: ptr.To(true),
-					Data:      expectedSecretOIDCCABundle.Data,
-				}))
-			})
-
-			It("should not deploy the OIDCCABundle secret resource when version is >= v1.30 and feature gate is not set", func() {
+			It("should not deploy the OIDCCABundle secret resource when feature gate is not set", func() {
 				var (
 					caBundle   = "some-ca-bundle"
 					clientID   = "some-client-id"
@@ -996,7 +955,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(BeNotFoundError())
 			})
 
-			It("should not deploy the OIDCCABundle secret resource when version is >= v1.30 and feature gate is set to true", func() {
+			It("should not deploy the OIDCCABundle secret resource when feature gate is set to true", func() {
 				var (
 					caBundle   = "some-ca-bundle"
 					clientID   = "some-client-id"
@@ -1032,7 +991,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(BeNotFoundError())
 			})
 
-			It("should successfully deploy the OIDCCABundle secret resource when version is >= v1.30 and feature gate is set to false", func() {
+			It("should successfully deploy the OIDCCABundle secret resource when feature gate is set to false", func() {
 				var (
 					caBundle   = "some-ca-bundle"
 					version    = semver.MustParse("1.30.0")
@@ -2387,7 +2346,7 @@ kind: AuthenticationConfiguration
 			})
 
 			Context("authorization configuration", func() {
-				It("should do nothing when Kubernetes version is >= v1.30 but the feature gate is disabled", func() {
+				It("should do nothing when the feature gate is disabled", func() {
 					version := semver.MustParse("1.30.0")
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -4629,7 +4588,7 @@ kind: AuthenticationConfiguration
 				})
 
 				Context("authorization settings", func() {
-					It("should properly configure the authorization settings with webhook for Kubernetes >= 1.30", func() {
+					It("should properly configure the authorization settings with webhook", func() {
 						values.AuthorizationWebhooks = []AuthorizationWebhook{{
 							Name: "foo",
 							WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{

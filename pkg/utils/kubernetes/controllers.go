@@ -12,7 +12,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"storage-version-gc": {},
 	},
 	"admissionregistration/v1": {
-		"validatingadmissionpolicy-status-controller": {},
+		"validatingadmissionpolicy-status-controller": {AddedInVersion: "1.30"},
 	},
 	"apps/v1": {
 		"daemonset":   {},
@@ -69,7 +69,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"service-cidr-controller": {AddedInVersion: "1.33"},
 	},
 	"networking/v1alpha1": {
-		"service-cidr-controller": {RemovedInVersion: "1.31"},
+		"service-cidr-controller": {AddedInVersion: "1.29", RemovedInVersion: "1.31"},
 	},
 	"networking/v1beta1": {
 		"service-cidr-controller": {AddedInVersion: "1.31", RemovedInVersion: "1.33"},
@@ -102,7 +102,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"volumeattributesclass-protection-controller": {AddedInVersion: "1.32", RemovedInVersion: "1.34"},
 	},
 	"storagemigration/v1alpha1": {
-		"storage-version-migrator-controller": {},
+		"storage-version-migrator-controller": {AddedInVersion: "1.30"},
 	},
 	"v1": {
 		"attachdetach":                         {},
@@ -122,7 +122,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"ephemeral-volume":                     {},
 		"horizontalpodautoscaling":             {},
 		"job":                                  {},
-		"legacy-service-account-token-cleaner": {},
+		"legacy-service-account-token-cleaner": {AddedInVersion: "1.28"},
 		"namespace":                            {},
 		"nodelifecycle":                        {},
 		"persistentvolume-binder":              {},
@@ -138,11 +138,11 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"route":                                {},
 		"selinux-warning-controller":           {AddedInVersion: "1.32"},
 		"service":                              {},
-		"service-cidr-controller":              {},
+		"service-cidr-controller":              {AddedInVersion: "1.29"},
 		"serviceaccount":                       {},
 		"serviceaccount-token":                 {},
 		"statefulset":                          {},
-		"taint-eviction-controller":            {},
+		"taint-eviction-controller":            {AddedInVersion: "1.29"},
 		"tokencleaner":                         {},
 		"ttl":                                  {},
 		"ttl-after-finished":                   {},
