@@ -454,6 +454,7 @@ rules:
   - servicemonitors
   - scrapeconfigs
   - prometheusrules
+  - prometheuses
   verbs:
   - list
   - watch

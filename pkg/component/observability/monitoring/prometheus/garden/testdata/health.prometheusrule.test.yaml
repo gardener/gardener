@@ -1,0 +1,136 @@
+rule_files:
+  - health.prometheusrule.yaml
+
+tests:
+  # New jobs should report a health issue as soon as they are down.
+  - input_series:
+      - series: up{job="foo"}
+        values: 0
+    promql_expr_test:
+      - expr: health:failing
+        eval_time: 0m
+        exp_samples:
+          - labels: health:failing{job="foo", reason="job:failing", type="health"}
+            value: 1
+
+  # Existing jobs should wait 5m before reporting a health issue.
+  - input_series:
+      - series: up{job="foo"}
+        values: 1 0 0 0 0 0
+    promql_expr_test:
+      - expr: health:failing
+        eval_time: 5m
+        exp_samples:
+          - labels: health:failing{job="foo", reason="job:failing", type="health"}
+            value: 1
+
+  - input_series:
+      - series: up{job="foo"}
+        values: 1 1 0 0 0 0
+    promql_expr_test:
+      - expr: health:failing
+        eval_time: 5m
+
+  # No health issues if everything is fine.
+  - input_series:
+      - series: up{job="foo"}
+        values: 1
+      - series: scrape_samples_scraped{job="foo"}
+        values: 1
+      - series: metering:cpu_requests:sum_by_namespace{seed="abc", namespace="garden"}
+        values: 1
+    promql_expr_test:
+      - expr: health:failing
+        eval_time: 0m
+
+  # Issues on missing data should trigger if there are no jobs deployed.
+  - promql_expr_test:
+      - expr: health:failing
+        eval_time: 0m
+        exp_samples:
+          - labels: health:failing{seed="abc", namespace="garden", reason="federate:metering:absent", type="health"}
+            value: 1
+
+  # No health issue should be reported if a job is in the process of being removed.
+  - input_series:
+      - series: up{job="foo"}
+        values: 1 0 0 0 0 stale
+      - series: metering:cpu_requests:sum_by_namespace{seed="abc", namespace="garden"}
+        values: 1 1 1 1 1 1
+    promql_expr_test:
+      - expr: health:failing
+        eval_time: 5m
+
+  # Jobs are up but data is missing.
+  - input_series:
+      - series: up{job="foo"}
+        values: 1
+      - series: scrape_samples_scraped{job="foo"}
+        values: 0
+    promql_expr_test:
+      - expr: health:failing
+        eval_time: 0m
+        exp_samples:
+          - labels: health:failing{job="foo", reason="job:scrapes:empty", type="health"}
+            value: 1
+          - labels: health:failing{seed="abc", namespace="garden", reason="federate:metering:absent", type="health"}
+            value: 1
+
+  # Test the go template works
+  - promql_expr_test:
+      - expr: health:meta:federate:metering:absent
+        eval_time: 0m
+        exp_samples:
+          - labels: health:meta:federate:metering:absent{seed="abc", namespace="garden", type="health:meta"}
+            value: 1
+
+  # Flapping
+
+  # All test cases need 11 values for 10m evaluation (0m-10m inclusive)
+  # and should start with stable values (1 1) to establish a baseline
+  # before the lookback window.
+
+  - promql_expr_test:
+      - expr: health:flapping
+        eval_time: 10m
+
+  - input_series:
+      - series: health:meta:job:down{job="foo", type="health:meta"}
+        values: 1x10
+    promql_expr_test:
+      - expr: health:flapping
+        eval_time: 10m
+
+  - input_series:
+      - series: health:meta:job:down{job="foo", type="health:meta"}
+        values: 1 1 1 1 1 stale 1 1 1 1 stale
+    promql_expr_test:
+      - expr: health:flapping
+        eval_time: 10m
+
+  - input_series:
+      - series: health:meta:job:down{job="foo", type="health:meta"}
+        values: 1 1 1 1 stale 1 1 1 stale 1 1
+    promql_expr_test:
+      - expr: health:flapping
+        eval_time: 10m
+
+  - input_series:
+      - series: health:meta:job:down{job="foo", type="health:meta"}
+        values: 1 1 stale 1 1 stale 1 1 stale 1 1
+    promql_expr_test:
+      - expr: health:flapping
+        eval_time: 10m
+        exp_samples:
+          - labels: health:flapping{job="foo", reason="job:down", type="health"}
+            value: 1
+
+  - input_series:
+      - series: health:meta:job:down{job="foo", type="health:meta"}
+        values: 1 1 stale 1 stale 1 stale 1 stale 1 stale
+    promql_expr_test:
+      - expr: health:flapping
+        eval_time: 10m
+        exp_samples:
+          - labels: health:flapping{job="foo", reason="job:down", type="health"}
+            value: 1

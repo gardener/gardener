@@ -68,6 +68,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldGetResponsibleSeed(s)
 			seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
+			// augment the create, update, delete test to also validate Prometheus health checks are in place
+			// for the shoot Prometheus, and avoid creating a new specific shoot for this test, which is costly.
+			itShouldVerifyShootPrometheusHealthCheck(s)
+
 			It("Verify shoot access using admin kubeconfig", func(ctx SpecContext) {
 				Eventually(ctx, s.ShootKomega.List(&corev1.NamespaceList{})).Should(Succeed())
 			}, SpecTimeout(time.Minute))
