@@ -156,7 +156,7 @@ type OriginalValues struct {
 	PrimaryIPFamily gardencorev1beta1.IPFamily
 	// KubeProxyConfig is the configuration for kube-proxy.
 	KubeProxyConfig *gardencorev1beta1.KubeProxyConfig
-	// Region is a name of a region specificed in the shoot spec.
+	// Region is the name of the region specified in the Shoot spec.
 	Region string
 }
 
