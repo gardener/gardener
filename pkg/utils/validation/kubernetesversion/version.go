@@ -6,8 +6,10 @@ package kubernetesversion
 
 import (
 	"fmt"
+	"os"
 
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // SupportedVersions is the list of supported Kubernetes versions for all runtime and target clusters, i.e. all gardens,
@@ -21,8 +23,18 @@ var SupportedVersions = []string{
 	"1.34",
 }
 
+// EXPERIMENTAL_DISABLE_VERSION_CHECK_ENV holds the name of the environment variable to prevent a crash
+// if the detected k8s version is not in the list of supported k8s versions.
+// This should only be used if you know exactly what you are doing and on your own risk.
+const EXPERIMENTAL_DISABLE_VERSION_CHECK_ENV = "DO_NOT_CRASH_ON_UNSUPPORTED_KUBERNETES_VERSION"
+
 // CheckIfSupported checks if the provided version is part of the supported Kubernetes versions list.
 func CheckIfSupported(gitVersion string) error {
+	if os.Getenv(EXPERIMENTAL_DISABLE_VERSION_CHECK_ENV) == "true" {
+		logf.Log.Info("%s set to true, not checking for k8s version compatibility", EXPERIMENTAL_DISABLE_VERSION_CHECK_ENV)
+		return nil
+	}
+
 	for _, supportedVersion := range SupportedVersions {
 		ok, err := versionutils.CompareVersions(gitVersion, "~", supportedVersion)
 		if err != nil {
