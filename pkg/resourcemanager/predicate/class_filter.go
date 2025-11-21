@@ -109,3 +109,31 @@ func (f *ClassFilter) Update(e event.UpdateEvent) bool {
 func (f *ClassFilter) Generic(e event.GenericEvent) bool {
 	return controllerutil.ContainsFinalizer(e.Object, f.objectFinalizer) || f.Responsible(e.Object)
 }
+
+// CleanupCompleted returns a predicate that detects if cleanup was completed after the class of a ManagedResource was changed.
+func (f *ClassFilter) CleanupCompleted() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(_ event.CreateEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldMR, ok := e.ObjectOld.(*resourcesv1alpha1.ManagedResource)
+			if !ok {
+				return false
+			}
+
+			newMR, ok := e.ObjectNew.(*resourcesv1alpha1.ManagedResource)
+			if !ok {
+				return false
+			}
+
+			return f.IsWaitForCleanupRequired(oldMR) && !f.IsWaitForCleanupRequired(newMR)
+		},
+		DeleteFunc: func(_ event.DeleteEvent) bool {
+			return false
+		},
+		GenericFunc: func(_ event.GenericEvent) bool {
+			return false
+		},
+	}
+}

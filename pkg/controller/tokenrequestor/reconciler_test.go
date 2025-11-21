@@ -127,7 +127,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
@@ -145,7 +145,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
@@ -166,7 +166,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
@@ -186,7 +186,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
@@ -208,7 +208,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
@@ -237,7 +237,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
@@ -256,7 +256,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err = ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			targetSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -284,7 +284,7 @@ var _ = Describe("Reconciler", func() {
 
 				result, err := ctrl.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 				Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
@@ -302,7 +302,7 @@ var _ = Describe("Reconciler", func() {
 
 				result, err := ctrl.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 				Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
@@ -331,7 +331,7 @@ var _ = Describe("Reconciler", func() {
 
 				result, err := ctrl.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: time.Hour}))
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: time.Hour}))
 			})
 		})
 
@@ -356,7 +356,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: delay}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: delay}))
 		})
 
 		It("should detect if the caBundle is incorrect (token case)", func() {
@@ -371,7 +371,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 
-			Expect(ctrl.Reconcile(ctx, request)).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(ctrl.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
@@ -388,7 +388,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: delay}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: delay}))
 		})
 
 		It("should detect if the caBundle is incorrect (kubeconfig case)", func() {
@@ -400,7 +400,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 
-			Expect(ctrl.Reconcile(ctx, request)).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(ctrl.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("kubeconfig", newKubeconfigRaw(token, []byte("fake-ca-bundle"))))
@@ -417,7 +417,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
@@ -432,7 +432,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
@@ -461,7 +461,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
@@ -476,7 +476,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 		})
 
 		Context("error", func() {
@@ -514,7 +514,7 @@ var _ = Describe("Reconciler", func() {
 
 				result, err := ctrl.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
 
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 				Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))

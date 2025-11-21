@@ -102,7 +102,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		if result, err := r.reconcile(ctx, log, ex, operationType); err != nil {
 			return result, err
 		}
-		return reconcile.Result{Requeue: r.resync != 0, RequeueAfter: r.resync}, nil
+		return reconcile.Result{RequeueAfter: r.resync}, nil
 	}
 }
 

@@ -14,8 +14,12 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-// DefaultReconciliationTimeout is the default timeout for the context of reconciliation functions.
-const DefaultReconciliationTimeout = 3 * time.Minute
+const (
+	// DefaultReconciliationTimeout is the default timeout for the context of reconciliation functions.
+	DefaultReconciliationTimeout = 3 * time.Minute
+	// DefaultRequeueAfterDuration is the default duration to wait before requeuing a reconciliation request.
+	DefaultRequeueAfterDuration = 5 * time.Millisecond
+)
 
 const separator = ","
 
