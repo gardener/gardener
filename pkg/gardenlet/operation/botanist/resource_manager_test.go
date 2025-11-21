@@ -73,16 +73,22 @@ var _ = Describe("ResourceManager", func() {
 			botanist.Shoot = &shootpkg.Shoot{
 				KubernetesVersion:     semver.MustParse("1.32.1"),
 				ExternalClusterDomain: ptr.To("foo.local.gardener.cloud"),
+				ControlPlaneNamespace: "shoot--foo--bar",
 			}
-			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					CredentialsBindingName: ptr.To("foo-credentials"),
+				},
+			})
 		})
 
 		It("should successfully create a resource-manager component", func() {
 			resourceManager, err := botanist.DefaultResourceManager()
 			Expect(resourceManager).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-			Expect(resourceManager.GetValues().PodTopologySpreadConstraintsEnabled).To(BeFalse())
 
+			Expect(resourceManager.GetValues().PodTopologySpreadConstraintsEnabled).To(BeFalse())
+			Expect(resourceManager.GetValues().NodeAgentAuthorizerMachineNamespace).To(HaveValue(Equal("shoot--foo--bar")))
 		})
 
 		It("should consider node toleration configuration", func() {
@@ -144,6 +150,44 @@ var _ = Describe("ResourceManager", func() {
 			Expect(resourceManager).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues().NodeAgentAuthorizerAuthorizeWithSelectors).To(PointTo(Equal(true)))
+		})
+
+		Context("self-hosted shoots", func() {
+			BeforeEach(func() {
+				shoot := botanist.Shoot.GetInfo()
+				shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
+					Name:         "control-plane",
+					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+				}}
+				botanist.Shoot.SetInfo(shoot)
+				botanist.Shoot.ControlPlaneNamespace = "kube-system"
+			})
+
+			Context("managed infrastructure", func() {
+				It("should correctly configure the resource-manager component", func() {
+					resourceManager, err := botanist.DefaultResourceManager()
+					Expect(resourceManager).NotTo(BeNil())
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(resourceManager.GetValues().NodeAgentAuthorizerMachineNamespace).To(HaveValue(Equal("kube-system")))
+				})
+			})
+
+			Context("unmanaged infrastructure", func() {
+				BeforeEach(func() {
+					shoot := botanist.Shoot.GetInfo()
+					shoot.Spec.CredentialsBindingName = nil
+					botanist.Shoot.SetInfo(shoot)
+				})
+
+				It("should correctly configure the resource-manager component", func() {
+					resourceManager, err := botanist.DefaultResourceManager()
+					Expect(resourceManager).NotTo(BeNil())
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(resourceManager.GetValues().NodeAgentAuthorizerMachineNamespace).To(BeNil())
+				})
+			})
 		})
 
 		When("VPAInPlaceUpdates feature gate is enabled", func() {

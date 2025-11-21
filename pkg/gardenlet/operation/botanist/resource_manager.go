@@ -62,6 +62,10 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		}
 	)
 
+	if b.Shoot.HasManagedInfrastructure() {
+		values.NodeAgentAuthorizerMachineNamespace = ptr.To(b.Shoot.ControlPlaneNamespace)
+	}
+
 	if b.Shoot.IsSelfHosted() {
 		values.KubernetesServiceHost = nil
 

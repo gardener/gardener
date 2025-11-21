@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -85,7 +86,10 @@ var _ = Describe("controlPlaneBootstrap", func() {
 		}
 
 		values = &ControlPlaneBootstrapValues{
-			Namespace:      namespace,
+			Values: &Values{
+				Namespace:         namespace,
+				KubernetesVersion: semver.MustParse("1.34.0"),
+			},
 			Worker:         worker,
 			GardenadmImage: "gardenadm-image",
 		}
@@ -121,6 +125,11 @@ var _ = Describe("controlPlaneBootstrap", func() {
 					HaveField("Permissions", ptr.To(uint32(0755))),
 					HaveField("Content.Inline.Encoding", "b64"),
 					HaveField("Content.Inline.Data", Not(BeEmpty())),
+				),
+				And(
+					HaveField("Path", "/var/lib/gardener-node-agent/machine-name"),
+					HaveField("Content.Inline.Data", "<<MACHINE_NAME>>"),
+					HaveField("Content.TransmitUnencoded", HaveValue(BeTrue())),
 				),
 			))
 
@@ -169,13 +178,13 @@ var _ = Describe("controlPlaneBootstrap", func() {
 		})
 
 		It("should return the correct result from the Deploy and Wait operations", func() {
-			Expect(deployer.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
-				worker.Name: {
-					Init: Data{
-						SecretName: ptr.To(ccSecret.Name),
-					},
-				},
-			}))
+			Expect(deployer.WorkerPoolNameToOperatingSystemConfigsMap()).To(
+				HaveKeyWithValue(worker.Name, HaveField("Init", And(
+					HaveField("SecretName", ptr.To(ccSecret.Name)),
+					HaveField("IncludeSecretNameInWorkerPool", true),
+					HaveField("GardenerNodeAgentSecretName", "gardener-node-agent-control-plane-afd64c60da0e2d2d"),
+				))),
+			)
 		})
 	})
 })

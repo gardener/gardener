@@ -134,6 +134,14 @@ var _ = Describe("NodeAgent", func() {
 			Expect(bootstrapToken).NotTo(BeEmpty())
 		})
 
+		It("should skip writing the machine name if it already exists", func() {
+			Expect(fakeFS.WriteFile("/var/lib/gardener-node-agent/machine-name", []byte("existing-machine-name"), 0o600)).To(Succeed())
+
+			Expect(b.ActivateGardenerNodeAgent(ctx)).To(Succeed())
+
+			Expect(fakeFS.ReadFile("/var/lib/gardener-node-agent/machine-name")).To(Equal([]byte("existing-machine-name")))
+		})
+
 		It("should create the temporary cluster-admin binding for bootstrapping the node-agent", func() {
 			Expect(b.ActivateGardenerNodeAgent(ctx)).To(Succeed())
 

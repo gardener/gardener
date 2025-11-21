@@ -15,6 +15,7 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/provider-local/local"
 	apiv1alpha1 "github.com/gardener/gardener/pkg/provider-local/machine-provider/api/v1alpha1"
 )
 
@@ -23,11 +24,21 @@ func (d *localDriver) ListMachines(ctx context.Context, req *driver.ListMachines
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, apiv1alpha1.Provider))
 	}
 
+	providerClient, err := local.GetProviderClient(ctx, log, d.runtimeClient, *req.MachineClass.CredentialsSecretRef)
+	if err != nil {
+		return nil, fmt.Errorf("could not create client for infrastructure resources: %w", err)
+	}
+
 	klog.V(3).Infof("Machine list request has been received for %q", req.MachineClass.Name)
 	defer klog.V(3).Infof("Machine list request has been processed for %q", req.MachineClass.Name)
 
+	providerSpec, err := validateProviderSpecAndSecret(req.MachineClass, req.Secret)
+	if err != nil {
+		return nil, err
+	}
+
 	podList := &corev1.PodList{}
-	if err := d.client.List(ctx, podList, client.InNamespace(req.MachineClass.Namespace), client.MatchingLabels{labelKeyProvider: apiv1alpha1.Provider}); err != nil {
+	if err := providerClient.List(ctx, podList, client.InNamespace(providerSpec.Namespace), client.MatchingLabels{labelKeyProvider: apiv1alpha1.Provider}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

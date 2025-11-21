@@ -269,6 +269,23 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, shootKomega.Object(dnsRecord)).Should(BeHealthy(health.CheckExtensionObject))
 		}, SpecTimeout(time.Minute))
 
+		It("should deploy/restore the Worker in the shoot", func(ctx SpecContext) {
+			worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: "kube-system"}}
+			Eventually(ctx, shootKomega.Object(worker)).Should(BeHealthy(health.CheckExtensionObject))
+		}, SpecTimeout(time.Minute))
+
+		It("should create machine pods in the bootstrap cluster", func(ctx SpecContext) {
+			// Similar to the infrastructure check above, this check is unrelated to gardenadm functionality, but verifies
+			// that provider-local correctly uses the kind kubeconfig in the cloudprovider secret to create a non-default
+			// provider client for managing machines.
+			podList := &corev1.PodList{}
+			Eventually(ctx, ObjectList(podList, client.InNamespace(technicalID), client.MatchingLabels{"app": "machine"})).
+				Should(HaveField("Items", ContainElements(
+					HaveField("ObjectMeta.Name", HavePrefix("machine-"+technicalID+"-control-plane-")),
+					HaveField("ObjectMeta.Name", HavePrefix("machine-"+technicalID+"-worker-")),
+				)))
+		}, SpecTimeout(time.Minute))
+
 		It("should finish successfully", func(ctx SpecContext) {
 			Wait(ctx, session)
 			Eventually(ctx, session.Out).Should(gbytes.Say("work in progress"))

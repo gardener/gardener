@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"path/filepath"
 
+	machinecontroller "github.com/gardener/machine-controller-manager/pkg/util/provider/machinecontroller"
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -53,16 +55,31 @@ func GardenadmConfig(gardenadmImage, sshPublicKey string) ([]extensionsv1alpha1.
 	units = append(units,
 		generateInitScriptUnit("gardenadm-download.service", "gardenadm", GardenadmPathDownloadScript),
 	)
-	files = append(files, extensionsv1alpha1.File{
-		Path:        GardenadmPathDownloadScript,
-		Permissions: ptr.To[uint32](0755),
-		Content: extensionsv1alpha1.FileContent{
-			Inline: &extensionsv1alpha1.FileContentInline{
-				Encoding: "b64",
-				Data:     utils.EncodeBase64(downloadScript),
+	files = append(files, []extensionsv1alpha1.File{
+		{
+			Path:        GardenadmPathDownloadScript,
+			Permissions: ptr.To[uint32](0755),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     utils.EncodeBase64(downloadScript),
+				},
 			},
 		},
-	})
+		{
+			// Instruct gardener-node-agent to request a client certificate corresponding to the machine name.
+			// Later on, when the node-agent-authorizer is enabled, gardener-node-agent's user will need to correspond to
+			// a machine object name, which might be different from the node/host name.
+			Path:        nodeagentconfigv1alpha1.MachineNameFilePath,
+			Permissions: ptr.To[uint32](0640),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Data: machinecontroller.MachineNamePlaceholder,
+				},
+				TransmitUnencoded: ptr.To(true),
+			},
+		},
+	}...)
 
 	return units, files, nil
 }
