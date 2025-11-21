@@ -62,13 +62,8 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, crd, func() error {
 				crd.Labels = desiredCRD.Labels
-
-				if crd.Labels == nil {
-					crd.Labels = make(map[string]string)
-				}
-
 				if c.deletionProtection && crd.Labels[gardenerutils.DeletionProtected] != "true" {
-					crd.Labels[gardenerutils.DeletionProtected] = "true"
+					metav1.SetMetaDataLabel(&crd.ObjectMeta, gardenerutils.DeletionProtected, "true")
 				}
 
 				crd.Annotations = desiredCRD.Annotations
