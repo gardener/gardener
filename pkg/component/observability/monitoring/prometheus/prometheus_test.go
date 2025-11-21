@@ -1053,7 +1053,7 @@ tls_config:
 			When("there is more than 1 replica", func() {
 				BeforeEach(func() {
 					values.Replicas = 2
-					values.RuntimeVersion = semver.MustParse("1.29.1")
+					values.RuntimeVersion = semver.MustParse("1.30.1")
 				})
 
 				It("should successfully deploy all resources", func() {

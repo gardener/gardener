@@ -120,7 +120,7 @@ The examples for other programming languages are similar to [the above](#shootsa
 
 ## Structured Authentication
 
-For shoots with Kubernetes version `>= 1.30`, which have `StructuredAuthenticationConfiguration` feature gate enabled (enabled by default), `kube-apiserver` of shoot clusters can be provided with [Structured Authentication configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration) via the Shoot spec:
+For shoots, which have `StructuredAuthenticationConfiguration` feature gate enabled (enabled by default), `kube-apiserver` of shoot clusters can be provided with [Structured Authentication configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration) via the Shoot spec:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -242,7 +242,7 @@ spec:
 
 ## Structured Authorization
 
-For shoots with Kubernetes version `>= 1.30`, which have `StructuredAuthorizationConfiguration` feature gate enabled (enabled by default), `kube-apiserver` of shoot clusters can be provided with [Structured Authorization configuration](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#using-configuration-file-for-authorization) via the Shoot spec:
+For shoots, which have `StructuredAuthorizationConfiguration` feature gate enabled (enabled by default), `kube-apiserver` of shoot clusters can be provided with [Structured Authorization configuration](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#using-configuration-file-for-authorization) via the Shoot spec:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -336,6 +336,6 @@ Shoots have to "opt-in" for such defaulting by using the `oidc=enable` label.
 
 For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpenIDConnectPreset and OpenIDConnectPreset](../security/openidconnect-presets.md).
 
-For shoots with Kubernetes version `>= 1.30`, which have `StructuredAuthenticationConfiguration` feature gate enabled (enabled by default), it is advised to use Structured Authentication instead of configuring `.spec.kubernetes.kubeAPIServer.oidcConfig` and/or `(Cluster)OpenIDConnectPreset`.
+For shoots, which have `StructuredAuthenticationConfiguration` feature gate enabled (enabled by default), it is advised to use Structured Authentication instead of configuring `.spec.kubernetes.kubeAPIServer.oidcConfig` and/or `(Cluster)OpenIDConnectPreset`.
 
 If `oidcConfig` is configured, it is translated into an `AuthenticationConfiguration` file to use for [Structured Authentication configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration).

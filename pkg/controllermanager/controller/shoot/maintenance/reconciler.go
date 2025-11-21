@@ -262,29 +262,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		operations = append(operations, reasons...)
 	}
 
-	// Set the swap behavior to `LimitedSwap`, when the shoot cluster and/or worker pool is updated to k8s version >= 1.30.
-	{
-		if versionutils.ConstraintK8sLess130.Check(oldShootKubernetesVersion) &&
-			versionutils.ConstraintK8sGreaterEqual130.Check(shootKubernetesVersion) &&
-			maintainedShoot.Spec.Kubernetes.Kubelet != nil {
-			operations = append(operations, setLimitedSwap(maintainedShoot.Spec.Kubernetes.Kubelet, "spec.kubernetes.kubelet.memorySwap.swapBehavior")...)
-		}
-
-		for i := range maintainedShoot.Spec.Provider.Workers {
-			if maintainedShoot.Spec.Provider.Workers[i].Kubernetes != nil && maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet != nil {
-				kubeletVersion := ptr.Deref(maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Version, maintainedShoot.Spec.Kubernetes.Version)
-				kubeletSemverVersion, err := semver.NewVersion(kubeletVersion)
-				if err != nil {
-					return fmt.Errorf("error parsing kubelet version for worker pool %q: %w", maintainedShoot.Spec.Provider.Workers[i].Name, err)
-				}
-
-				if versionutils.ConstraintK8sGreaterEqual130.Check(kubeletSemverVersion) {
-					operations = append(operations, setLimitedSwap(maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet, fmt.Sprintf("spec.provider.workers[%d].kubernetes.kubelet.memorySwap.swapBehavior", i))...)
-				}
-			}
-		}
-	}
-
 	// Move kubernetes.kubelet.systemReserved for a Shoot or worker pool to kubernetes.kubelet.kubeReserved, when Shoot cluster is being forcefully updated to K8s >= 1.31.
 	// Gardener forbids specifying kubernetes.kubelet.systemReserved for Shoots with K8s 1.31+. See https://github.com/gardener/gardener/pull/10290
 	{
@@ -739,20 +716,6 @@ func shouldMachineImageVersionBeUpdated(shootMachineImage *gardencorev1beta1.Sho
 	}
 
 	return false, "", false
-}
-
-// setLimitedSwap sets the swap behavior to `LimitedSwap` if it's currently set to `UnlimitedSwap`
-func setLimitedSwap(kubelet *gardencorev1beta1.KubeletConfig, reason string) []string {
-	var reasonsForUpdate []string
-
-	if kubelet.MemorySwap != nil &&
-		kubelet.MemorySwap.SwapBehavior != nil &&
-		*kubelet.MemorySwap.SwapBehavior == gardencorev1beta1.UnlimitedSwap {
-		kubelet.MemorySwap.SwapBehavior = ptr.To(gardencorev1beta1.LimitedSwap)
-		reasonsForUpdate = append(reasonsForUpdate, reason+" is set to 'LimitedSwap'. Reason: 'UnlimitedSwap' cannot be used for Kubernetes version 1.30 and higher.")
-	}
-
-	return reasonsForUpdate
 }
 
 func maintainFeatureGatesForShoot(shoot *gardencorev1beta1.Shoot) []string {

@@ -300,7 +300,7 @@ Generally, it performs validations that cannot be handled by the static API vali
 
 ## `ValidatingAdmissionPolicy`
 
-**Type**: Validating. **Enabled by default**: No.
+**Type**: Validating. **Enabled by default**: Yes.
 
 This admission controller is defined in the generic API server library (`k8s.io/apiserver`). See the [ValidatingAdmissionPolicy section](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionpolicy).
 

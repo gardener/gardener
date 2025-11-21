@@ -538,7 +538,7 @@ var _ = Describe("Alertmanager", func() {
 			When("there are more than 1 replicas", func() {
 				BeforeEach(func() {
 					values.Replicas = 2
-					values.RuntimeVersion = semver.MustParse("1.29.1")
+					values.RuntimeVersion = semver.MustParse("1.30.1")
 				})
 
 				It("should successfully deploy all resources", func() {

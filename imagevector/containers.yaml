@@ -87,21 +87,6 @@ images:
     sourceRepository: github.com/kubernetes/ingress-nginx
     repository: registry.k8s.io/ingress-nginx/controller-chroot
     tag: "v1.14.0"
-    targetVersion: ">= 1.30"
-    labels:
-      - name: 'gardener.cloud/cve-categorisation'
-        value:
-          network_exposure: 'public'
-          authentication_enforced: true
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'high'
-          integrity_requirement: 'high'
-          availability_requirement: 'low'
-  - name: nginx-ingress-controller
-    sourceRepository: github.com/kubernetes/ingress-nginx
-    repository: registry.k8s.io/ingress-nginx/controller-chroot
-    tag: "v1.13.4"
-    targetVersion: "1.29.x"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
@@ -175,11 +160,6 @@ images:
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
     tag: "v1.30.2"
     targetVersion: "1.30.x"
-  - name: cluster-autoscaler
-    sourceRepository: github.com/gardener/autoscaler
-    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
-    tag: "v1.29.2"
-    targetVersion: "1.29.x"
   - name: vpn-server
     sourceRepository: github.com/gardener/vpn2
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-server
@@ -406,7 +386,7 @@ images:
     sourceRepository: github.com/kubernetes-sigs/metrics-server
     repository: registry.k8s.io/metrics-server/metrics-server
     tag: v0.7.2
-    targetVersion: ">= 1.29 < 1.31"
+    targetVersion: "< 1.31"
     labels:
       - name: gardener.cloud/cve-categorisation
         value:

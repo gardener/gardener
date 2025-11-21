@@ -34,8 +34,7 @@ spec:
     - version: 1.32.4
     - version: 1.31.6
     - version: 1.30.8
-    - version: 1.29.10
-      expirationDate: 2022-11-30T01:02:03Z # optional
+      expirationDate: 2025-11-30T01:02:03Z # optional
   machineImages:
   - name: gardenlinux
   # updateStrategy: "major" # optional, either {patch,minor,major}

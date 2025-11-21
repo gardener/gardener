@@ -3297,14 +3297,14 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 					Spec: core.NamespacedCloudProfileSpec{
 						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.29.0", ExpirationDate: &expirationDateFuture1},
+							{Version: "1.30.0", ExpirationDate: &expirationDateFuture1},
 						}},
 					},
 				}
 
 				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
 				shoot.Spec.CloudProfileName = nil
-				shoot.Spec.Kubernetes.Version = "1.29.0"
+				shoot.Spec.Kubernetes.Version = "1.30.0"
 
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
@@ -3319,9 +3319,9 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should succeed if a used and extended kubernetes version already expired is not modified", func() {
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
-					{Version: "1.29.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported)},
-					{Version: "1.28.0", Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated)},
+					{Version: "1.32.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.31.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported)},
+					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated)},
 				}
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 
@@ -3333,15 +3333,15 @@ var _ = Describe("resourcereferencemanager", func() {
 					Spec: core.NamespacedCloudProfileSpec{
 						Parent: core.CloudProfileReference{Name: cloudProfile.Name, Kind: "CloudProfile"},
 						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.29.0", ExpirationDate: &expirationDatePast},
-							{Version: "1.28.0", ExpirationDate: &expirationDatePast},
+							{Version: "1.31.0", ExpirationDate: &expirationDatePast},
+							{Version: "1.30.0", ExpirationDate: &expirationDatePast},
 						}},
 					},
 				}
 
 				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
 				shoot.Spec.CloudProfileName = nil
-				shoot.Spec.Kubernetes.Version = "1.29.0"
+				shoot.Spec.Kubernetes.Version = "1.31.0"
 
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 
@@ -3355,8 +3355,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should succeed if an extended and used Kubernetes version is removed with the base version still being valid", func() {
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
-					{Version: "1.29.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported)},
+					{Version: "1.31.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported)},
 				}
 
 				namespacedCloudProfile := &core.NamespacedCloudProfile{
@@ -3367,14 +3367,14 @@ var _ = Describe("resourcereferencemanager", func() {
 					Spec: core.NamespacedCloudProfileSpec{
 						Parent: core.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfileName},
 						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.29.0", ExpirationDate: &expirationDateFuture1},
+							{Version: "1.30.0", ExpirationDate: &expirationDateFuture1},
 						}},
 					},
 				}
 
 				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
 				shoot.Spec.CloudProfileName = nil
-				shoot.Spec.Kubernetes.Version = "1.29.0"
+				shoot.Spec.Kubernetes.Version = "1.30.0"
 
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
@@ -3389,8 +3389,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should fail if an extended and used Kubernetes version is being removed with the base version being already expired", func() {
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
-					{Version: "1.29.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported), ExpirationDate: &expirationDatePast},
+					{Version: "1.31.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported), ExpirationDate: &expirationDatePast},
 				}
 
 				namespacedCloudProfile := &core.NamespacedCloudProfile{
@@ -3401,14 +3401,14 @@ var _ = Describe("resourcereferencemanager", func() {
 					Spec: core.NamespacedCloudProfileSpec{
 						Parent: core.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfileName},
 						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.29.0", ExpirationDate: &expirationDateFuture1},
+							{Version: "1.30.0", ExpirationDate: &expirationDateFuture1},
 						}},
 					},
 				}
 
 				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
 				shoot.Spec.CloudProfileName = nil
-				shoot.Spec.Kubernetes.Version = "1.29.0"
+				shoot.Spec.Kubernetes.Version = "1.30.0"
 
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
@@ -3422,13 +3422,13 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(MatchError(And(
 					ContainSubstring("unable to delete Kubernetes version"),
-					ContainSubstring("1.29.0"),
+					ContainSubstring("1.30.0"),
 					ContainSubstring("still in use by shoot"),
 				)))
 			})
 
 			It("should reject for the complete Kubernetes section being removed with Shoots using overridden versions rendering expired afterwards", func() {
-				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(-48 * time.Hour)})}}
+				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(-48 * time.Hour)})}}
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 
 				namespacedCloudProfile := &core.NamespacedCloudProfile{
@@ -3438,13 +3438,13 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 					Spec: core.NamespacedCloudProfileSpec{
 						Parent:     core.CloudProfileReference{Name: cloudProfile.Name, Kind: "CloudProfile"},
-						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(96 * time.Hour)})}}},
+						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(96 * time.Hour)})}}},
 					},
 				}
 
 				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
 				shoot.Spec.CloudProfileName = nil
-				shoot.Spec.Kubernetes.Version = "1.29.0"
+				shoot.Spec.Kubernetes.Version = "1.30.0"
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 
 				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
@@ -3454,15 +3454,15 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(And(
 					ContainSubstring("unable to delete Kubernetes version"),
-					ContainSubstring("1.29.0"),
+					ContainSubstring("1.30.0"),
 					ContainSubstring("still in use by shoot"),
 				)))
 			})
 
 			It("should succeed if a kubernetes version extended before but not used anymore is removed", func() {
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
-					{Version: "1.29.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported), ExpirationDate: &expirationDatePast},
+					{Version: "1.31.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported), ExpirationDate: &expirationDatePast},
 				}
 
 				namespacedCloudProfile := &core.NamespacedCloudProfile{
@@ -3473,14 +3473,14 @@ var _ = Describe("resourcereferencemanager", func() {
 					Spec: core.NamespacedCloudProfileSpec{
 						Parent: core.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfileName},
 						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.29.0", ExpirationDate: &expirationDateFuture1},
+							{Version: "1.30.0", ExpirationDate: &expirationDateFuture1},
 						}},
 					},
 				}
 
 				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
 				shoot.Spec.CloudProfileName = nil
-				shoot.Spec.Kubernetes.Version = "1.30.0"
+				shoot.Spec.Kubernetes.Version = "1.31.0"
 
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())

@@ -181,7 +181,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						ExpirableVersion:         gardencorev1beta1.ExpirableVersion{Version: "1.1.2"},
 						CRI:                      []gardencorev1beta1.CRI{{Name: "containerd"}},
 						Architectures:            []string{"arm64"},
-						KubeletVersionConstraint: ptr.To("==1.29.0"),
+						KubeletVersionConstraint: ptr.To("==1.30.0"),
 					}},
 					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
 				},
@@ -463,7 +463,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						ExpirableVersion:         gardencorev1beta1.ExpirableVersion{Version: "1.1.2"},
 						CRI:                      []gardencorev1beta1.CRI{{Name: "containerd"}},
 						Architectures:            []string{"arm64"},
-						KubeletVersionConstraint: ptr.To("==1.29.0"),
+						KubeletVersionConstraint: ptr.To("==1.30.0"),
 					}},
 					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
 				},
@@ -485,7 +485,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
 					machineImageParent := `{"name":"test-image","updateStrategy":"major","versions":[{"architectures":["amd64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}]}`
-					machineImageNamespacedCloudProfile := `{"name":"test-image-namespaced","updateStrategy":"major","versions":[{"architectures":["arm64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.29.0","version":"1.1.2"}]}`
+					machineImageNamespacedCloudProfile := `{"name":"test-image-namespaced","updateStrategy":"major","versions":[{"architectures":["arm64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.30.0","version":"1.1.2"}]}`
 					Expect(patch.Data(o)).To(And(
 						// The order is (currently) indeterministic.
 						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[`),

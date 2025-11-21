@@ -32,7 +32,3 @@ For Kubernetes specific upgrade notes the upstream Kubernetes release notes, [ch
 
 - The `Shoot`'s `spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication` field is forbidden.
 - The `Shoot`'s `.spec.kubernetes.kubelet.systemReserved` and `.spec.provider.workers[].kubernetes.kubelet.systemReserved` fields are forbidden. `Shoot` owners should use the `.spec.kubernetes.kubelet.kubeReserved` and `.spec.provider.workers[].kubernetes.kubelet.kubeReserved` fields.
-
-## Upgrading to Kubernetes `v1.30`
-
-- The `kubelet` `UnlimitedSwap` behavior, configured in the `Shoot`'s `.spec.{kubernetes,provider.workers[]}.kubelet.memorySwap.swapBehavior` fields, can no longer be used.

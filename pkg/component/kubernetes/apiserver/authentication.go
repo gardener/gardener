@@ -38,10 +38,6 @@ const (
 
 // reconcileConfigMapAuthenticationConfig reconciles the ConfigMap containing the authentication configuration.
 func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Context, configMap *corev1.ConfigMap) error {
-	if versionutils.ConstraintK8sLess130.Check(k.values.Version) && k.values.AuthenticationConfiguration != nil {
-		return errors.New("structured authentication is not available for versions < v1.30")
-	}
-
 	if k.values.AuthenticationConfiguration != nil && k.values.OIDC != nil {
 		return errors.New("oidc configuration is incompatible with structured authentication")
 	}
@@ -247,10 +243,6 @@ func (k *kubeAPIServer) handleOIDCSettings(deployment *appsv1.Deployment, secret
 }
 
 func (k *kubeAPIServer) structuredAuthenticationFeatureGateEnabled() bool {
-	if versionutils.ConstraintK8sLess130.Check(k.values.Version) {
-		return false
-	}
-
 	featureGateEnabled, featureGateSet := k.values.FeatureGates["StructuredAuthenticationConfiguration"]
 	if featureGateSet {
 		return featureGateEnabled

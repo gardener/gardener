@@ -34,7 +34,7 @@ var _ = Describe("Helper Functions", func() {
 	BeforeEach(func() {
 		expirationDateInTheFuture = metav1.Time{Time: time.Now().Add(time.Hour * 24)}
 		expirationDateInThePast = metav1.Time{Time: time.Now().Add(-time.Hour * 24)}
-		kubeletVersion = semver.MustParse("1.30.0")
+		kubeletVersion = semver.MustParse("1.31.0")
 
 		machineType = &gardencorev1beta1.MachineType{
 			Name: "Standard",
@@ -70,7 +70,7 @@ var _ = Describe("Helper Functions", func() {
 					CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{
 						Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
 					}},
-					KubeletVersionConstraint: ptr.To(">= 1.30.0"),
+					KubeletVersionConstraint: ptr.To(">= 1.31.0"),
 					InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 						Supported:           true,
 						MinVersionForUpdate: ptr.To("1.0.0"),
@@ -149,7 +149,7 @@ var _ = Describe("Helper Functions", func() {
 
 		It("should return an empty machine image if no versions found with matching kubelet version", func() {
 			worker.Machine.Image.Version = ptr.To("1.1.0")
-			kubeletVersion = semver.MustParse("1.29.0")
+			kubeletVersion = semver.MustParse("1.30.0")
 			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
 
 			Expect(filteredMachineImages.Versions).Should(BeEmpty())
