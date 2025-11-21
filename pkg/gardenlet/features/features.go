@@ -25,6 +25,6 @@ func GetFeatures() []featuregate.Feature {
 		features.DoNotCopyBackupCredentials,
 		features.OpenTelemetryCollector,
 		features.UseUnifiedHTTPProxyPort,
-		features.ServerBlockSupportForNodeLocalDNS,
+		features.CustomDNSServerInNodeLocalDNS,
 	}
 }

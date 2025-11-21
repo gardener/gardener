@@ -75,10 +75,10 @@ const (
 	// alpha: v1.130.0
 	UseUnifiedHTTPProxyPort featuregate.Feature = "UseUnifiedHTTPProxyPort"
 
-	// ServerBlockSupportForNodeLocalDNS enables custom server block support for NodeLocalDNS in the custom CoreDNS configuration of Shoot clusters.
+	// CustomDNSServerInNodeLocalDNS enables custom server block support for NodeLocalDNS in the custom CoreDNS configuration of Shoot clusters.
 	// owner: @docktofuture
-	// beta: v1.132.0
-	ServerBlockSupportForNodeLocalDNS featuregate.Feature = "ServerBlockSupportForNodeLocalDNS"
+	// beta: v1.133.0
+	CustomDNSServerInNodeLocalDNS featuregate.Feature = "CustomDNSServerInNodeLocalDNS"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -106,16 +106,16 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	DefaultSeccompProfile:             {Default: false, PreRelease: featuregate.Alpha},
-	ShootCredentialsBinding:           {Default: true, PreRelease: featuregate.Beta},
-	NewWorkerPoolHash:                 {Default: true, PreRelease: featuregate.Beta},
-	InPlaceNodeUpdates:                {Default: false, PreRelease: featuregate.Alpha},
-	IstioTLSTermination:               {Default: false, PreRelease: featuregate.Alpha},
-	CloudProfileCapabilities:          {Default: false, PreRelease: featuregate.Alpha},
-	DoNotCopyBackupCredentials:        {Default: true, PreRelease: featuregate.Beta},
-	OpenTelemetryCollector:            {Default: false, PreRelease: featuregate.Alpha},
-	UseUnifiedHTTPProxyPort:           {Default: false, PreRelease: featuregate.Alpha},
-	ServerBlockSupportForNodeLocalDNS: {Default: true, PreRelease: featuregate.Beta},
+	DefaultSeccompProfile:         {Default: false, PreRelease: featuregate.Alpha},
+	ShootCredentialsBinding:       {Default: true, PreRelease: featuregate.Beta},
+	NewWorkerPoolHash:             {Default: true, PreRelease: featuregate.Beta},
+	InPlaceNodeUpdates:            {Default: false, PreRelease: featuregate.Alpha},
+	IstioTLSTermination:           {Default: false, PreRelease: featuregate.Alpha},
+	CloudProfileCapabilities:      {Default: false, PreRelease: featuregate.Alpha},
+	DoNotCopyBackupCredentials:    {Default: true, PreRelease: featuregate.Beta},
+	OpenTelemetryCollector:        {Default: false, PreRelease: featuregate.Alpha},
+	UseUnifiedHTTPProxyPort:       {Default: false, PreRelease: featuregate.Alpha},
+	CustomDNSServerInNodeLocalDNS: {Default: true, PreRelease: featuregate.Beta},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

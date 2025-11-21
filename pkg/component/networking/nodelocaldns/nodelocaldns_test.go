@@ -236,7 +236,7 @@ var _ = Describe("NodeLocalDNS", func() {
 					Name: "worker-aaaa",
 				},
 			},
-			ServerBlockSupportForNodeLocalDNS: true,
+			CustomDNSServerInNodeLocalDNS: true,
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -299,7 +299,7 @@ metadata:
 `
 			configMapYAMLFor = func() string {
 				serverBlockImport := ""
-				if values.ServerBlockSupportForNodeLocalDNS {
+				if values.CustomDNSServerInNodeLocalDNS {
 					serverBlockImport = "\n    import generated-config/custom-server-block.server"
 				}
 				out := `apiVersion: v1
@@ -595,7 +595,7 @@ status:
 					},
 				}
 
-				if values.ServerBlockSupportForNodeLocalDNS {
+				if values.CustomDNSServerInNodeLocalDNS {
 					daemonSet.Spec.Template.Spec.InitContainers = append(daemonSet.Spec.Template.Spec.InitContainers, corev1.Container{
 						Name:  "coredns-config-adapter",
 						Image: values.CorednsConfigAdapterImage,
@@ -1287,13 +1287,13 @@ import generated-config/custom-server-block.server
 				})
 			})
 
-			Context("NodeLocalDNS with ipvsEnabled not enabled and featureGate ServerBlockSupportForNodeLocalDNS disabled", func() {
+			Context("NodeLocalDNS with ipvsEnabled not enabled and featureGate CustomDNSServerInNodeLocalDNS disabled", func() {
 				BeforeEach(func() {
 					values.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}
 					ipvsAddress = "169.254.20.10"
 					values.ClusterDNS = []string{"__PILLAR__CLUSTER__DNS__"}
 					values.DNSServers = []string{"1.2.3.4", "2001:db8::1"}
-					values.ServerBlockSupportForNodeLocalDNS = false
+					values.CustomDNSServerInNodeLocalDNS = false
 					vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
