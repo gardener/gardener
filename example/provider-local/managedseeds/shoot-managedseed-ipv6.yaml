@@ -1,0 +1,40 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  name: managedseed
+  namespace: garden
+  annotations:
+    shoot.gardener.cloud/cloud-config-execution-max-delay-seconds: "0"
+spec:
+  cloudProfile:
+    name: local
+  credentialsBindingName: local
+  region: local
+  networking:
+    type: calico
+    ipFamilies:
+    - IPv6
+    # Must be within fd00:10:1:100::/56 (subnet of kind pod CIDR fd00:10:1::/48, but disjoint with seed pod CIDR fd00:10:1::/56).
+    nodes: fd00:10:1:100::/56
+    providerConfig:
+      ipv6:
+        sourceNATEnabled: true
+  provider:
+    type: local
+    workers:
+    - name: local
+      machine:
+        type: local
+      cri:
+        name: containerd
+      minimum: 1
+      maximum: 1
+      maxSurge: 1
+      maxUnavailable: 0
+  kubernetes:
+    kubelet:
+      serializeImagePulls: false
+      registryPullQPS: 10
+      registryBurst: 20
+    verticalPodAutoscaler:
+      enabled: true

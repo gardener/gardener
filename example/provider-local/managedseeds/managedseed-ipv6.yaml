@@ -1,0 +1,24 @@
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: ManagedSeed
+metadata:
+  name: managedseed
+  namespace: garden
+spec:
+  shoot:
+    name: managedseed
+  gardenlet:
+    config:
+      apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+      kind: GardenletConfiguration
+      seedConfig:
+        spec:
+          networks:
+            ipFamilies:
+            - IPv6
+          settings:
+            excessCapacityReservation:
+              enabled: false
+            scheduling:
+              visible: false
+            verticalPodAutoscaler:
+              enabled: false
