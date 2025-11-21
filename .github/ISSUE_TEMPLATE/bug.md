@@ -4,6 +4,8 @@ about: Report a bug encountered while operating Gardener
 
 ---
 
+<!-- Please ensure that you do not include company internal information. -->
+
 **How to categorize this issue?**
 <!--
 Please select area, kind, and priority for this issue. This helps the community categorizing it.
