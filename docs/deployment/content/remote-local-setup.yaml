@@ -509,11 +509,11 @@ spec:
           EOF
           new_pane "create shoot" Enter <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            k apply -f example/provider-local/managedseeds/shoot-managedseed.yaml
+            if [[ "$IPFAMILY" == "ipv6" ]]; then k apply -f example/provider-local/managedseeds/shoot-managedseed-ipv6.yaml; else k apply -f example/provider-local/managedseeds/shoot-managedseed.yaml; fi
           EOF
           new_pane "create managed seed" Enter <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            k apply -f example/provider-local/managedseeds/managedseed.yaml
+            if [[ "$IPFAMILY" == "ipv6" ]]; then k apply -f example/provider-local/managedseeds/managedseed-ipv6.yaml; else k apply -f example/provider-local/managedseeds/managedseed.yaml; fi
           EOF
           new_pane "managed seed pods" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
