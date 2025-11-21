@@ -22,15 +22,15 @@ import (
 
 // NewCRD can be used to deploy the CRD definitions for all CRDs defined by etcd-druid.
 func NewCRD(client client.Client, k8sVersion *semver.Version) (component.DeployWaiter, error) {
-	crdGetter, err := NewCRDGetter(k8sVersion)
+	crdYAMLs, err := druidcorecrds.GetAll(k8sVersion.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get etcd-druid CRDs for Kubernetes version %s: %w", k8sVersion, err)
 	}
-	crds, err := crdGetter.GetAllCRDsAsStringSlice()
-	if err != nil {
-		return nil, err
+	crdStrings := make([]string, 0, len(crdYAMLs))
+	for _, crdYAML := range crdYAMLs {
+		crdStrings = append(crdStrings, crdYAML)
 	}
-	return crddeployer.New(client, crds, true)
+	return crddeployer.New(client, crdStrings, true)
 }
 
 // CRDGetter provides methods to get CRDs defined in etcd-druid.
