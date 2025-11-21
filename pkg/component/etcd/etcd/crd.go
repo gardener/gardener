@@ -6,6 +6,8 @@ package etcd
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/Masterminds/semver/v3"
 	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
@@ -21,9 +23,5 @@ func NewCRD(client client.Client, k8sVersion *semver.Version) (component.DeployW
 	if err != nil {
 		return nil, fmt.Errorf("failed to get etcd-druid CRDs for Kubernetes version %s: %w", k8sVersion, err)
 	}
-	crdStrings := make([]string, 0, len(crdYAMLs))
-	for _, crdYAML := range crdYAMLs {
-		crdStrings = append(crdStrings, crdYAML)
-	}
-	return crddeployer.New(client, crdStrings, true)
+	return crddeployer.New(client, slices.Collect(maps.Values(crdYAMLs)), true)
 }
