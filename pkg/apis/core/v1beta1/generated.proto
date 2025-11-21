@@ -918,6 +918,10 @@ message DNSProvider {
   // provider. When not specified, the Gardener will use the cloud provider credentials referenced
   // by the Shoot and try to find respective credentials there (primary provider only). Specifying this field may override
   // this behavior, i.e. forcing the Gardener to only look into the given secret.
+  //
+  // Deprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.35. Please use `CredentialsRef` instead.
+  // Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
+  // TODO(vpnachev): Remove this field once support for Kubernetes 1.34 is dropped.
   // +optional
   optional string secretName = 3;
 
@@ -931,6 +935,11 @@ message DNSProvider {
   // Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.
   // +optional
   optional DNSIncludeExclude zones = 5;
+
+  // CredentialsRef is a reference to a resource providing credentials for the DNS provider.
+  // Supported resources are Secret and WorkloadIdentity.
+  // +optional
+  optional .k8s.io.api.autoscaling.v1.CrossVersionObjectReference credentialsRef = 6;
 }
 
 // DataVolume contains information about a data volume.
