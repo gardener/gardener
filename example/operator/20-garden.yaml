@@ -315,3 +315,10 @@ spec:
     networking:
       services:
       - 100.64.0.0/13
+# List resources referenced by providerConfig and other sections
+# resources:
+# - name: foobar-secret
+#   resourceRef:
+#     apiVersion: v1
+#     kind: Secret
+#     name: my-foobar-secret

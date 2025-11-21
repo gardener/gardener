@@ -77,8 +77,22 @@ func ValidateGarden(garden *operatorv1alpha1.Garden, extensions []operatorv1alph
 	allErrs = append(allErrs, validateExtensions(garden.Spec.Extensions, extensions, field.NewPath("spec", "extensions"))...)
 	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.DNS, garden.Spec.RuntimeCluster, helper.HighAvailabilityEnabled(garden), field.NewPath("spec", "runtimeCluster"))...)
 	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.DNS, garden.Spec.VirtualCluster, garden.Spec.RuntimeCluster, field.NewPath("spec", "virtualCluster"))...)
+	allErrs = append(allErrs, validateResources(garden.Spec.Resources, field.NewPath("spec", "resources"))...)
 
 	return allErrs
+}
+
+func validateResources(resources []gardencorev1beta1.NamedResourceReference, path *field.Path) field.ErrorList {
+	coreResources := make([]gardencore.NamedResourceReference, 0, len(resources))
+	for i, res := range resources {
+		coreResource := &gardencore.NamedResourceReference{}
+		if err := gardenCoreScheme.Convert(&res, coreResource, nil); err != nil {
+			return field.ErrorList{field.InternalError(path.Index(i), err)}
+		}
+		coreResources = append(coreResources, *coreResource)
+	}
+
+	return gardencorevalidation.ValidateResources(coreResources, path)
 }
 
 // ValidateGardenUpdate contains functionality for performing extended validation of a Garden object under update which

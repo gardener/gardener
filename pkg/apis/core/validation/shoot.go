@@ -275,7 +275,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
-	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
+	allErrs = append(allErrs, ValidateResources(spec.Resources, fldPath.Child("resources"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, workerless, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)

@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
@@ -181,6 +182,111 @@ var _ = Describe("Utils tests", func() {
 					"BadValue": Equal("namespace-123-@"),
 				})),
 			))
+		})
+	})
+
+	Describe("#ValidateResources", func() {
+		var fldPath *field.Path
+
+		BeforeEach(func() {
+			fldPath = field.NewPath("resources")
+		})
+
+		It("should forbid resources w/o names or w/ invalid references", func() {
+			errorList := ValidateResources([]core.NamedResourceReference{{}}, fldPath)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("resources[0].name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("resources[0].resourceRef.kind"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("resources[0].resourceRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("resources[0].resourceRef.apiVersion"),
+				})),
+			))
+		})
+
+		It("should forbid resources of kind other than Secret/ConfigMap", func() {
+			ref := core.NamedResourceReference{
+				Name: "test",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "ServiceAccount",
+					Name:       "test-sa",
+					APIVersion: "v1",
+				},
+			}
+
+			errorList := ValidateResources([]core.NamedResourceReference{ref}, fldPath)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"Field":    Equal("resources[0].resourceRef.kind"),
+					"BadValue": Equal("ServiceAccount"),
+				})),
+			))
+		})
+
+		It("should forbid resources with non-unique names", func() {
+			ref := core.NamedResourceReference{
+				Name: "test",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "Secret",
+					Name:       "test-secret",
+					APIVersion: "v1",
+				},
+			}
+
+			ref2 := core.NamedResourceReference{
+				Name: "test",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "ConfigMap",
+					Name:       ref.Name,
+					APIVersion: "v1",
+				},
+			}
+
+			errorList := ValidateResources([]core.NamedResourceReference{ref, ref2}, fldPath)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("resources[1].name"),
+				})),
+			))
+		})
+
+		It("should allow resources w/ names and valid references", func() {
+			ref := core.NamedResourceReference{
+				Name: "test",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "Secret",
+					Name:       "test-secret",
+					APIVersion: "v1",
+				},
+			}
+
+			ref2 := core.NamedResourceReference{
+				Name: "test-cm",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "ConfigMap",
+					Name:       "test-cm",
+					APIVersion: "v1",
+				},
+			}
+
+			errorList := ValidateResources([]core.NamedResourceReference{ref, ref2}, fldPath)
+
+			Expect(errorList).To(BeEmpty())
 		})
 	})
 

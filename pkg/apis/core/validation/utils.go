@@ -532,7 +532,8 @@ func validateExtensions(extensions []core.Extension, fldPath *field.Path) field.
 	return allErrs
 }
 
-func validateResources(resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
+// ValidateResources validates the given list of NamedResourceReference for valid values and combinations.
+func ValidateResources(resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	names := sets.Set[string]{}
 	for i, resource := range resources {

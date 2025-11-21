@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -2584,6 +2585,42 @@ var _ = Describe("Validation Tests", func() {
 						Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 					})
 				})
+			})
+		})
+
+		Context("resources", func() {
+			BeforeEach(func() {
+				garden.Spec.Resources = []gardencorev1beta1.NamedResourceReference{
+					{
+						Name: "test",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							Kind:       "Secret",
+							Name:       "test-secret",
+							APIVersion: "v1",
+						},
+					},
+				}
+			})
+
+			It("should not complain for valid resource names", func() {
+				Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+			})
+
+			It("should complain about duplicate resource names", func() {
+				garden.Spec.Resources = append(garden.Spec.Resources, gardencorev1beta1.NamedResourceReference{
+					Name: garden.Spec.Resources[0].Name,
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "ConfigMap",
+						Name:       "some-other-name",
+						APIVersion: "v1",
+					},
+				})
+
+				Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.resources[1].name"),
+					}))))
 			})
 		})
 	})
