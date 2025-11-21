@@ -262,12 +262,16 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 }
 
 // ValidateShootTemplate validates a ShootTemplate.
-func ValidateShootTemplate(shootTemplate *core.ShootTemplate, fldPath *field.Path) field.ErrorList {
+func ValidateShootTemplate(shootTemplate *core.ShootTemplate, opts KubeAPIServerValidatonOption, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	shootValidationOptions := shootValidationOptions{
+		KubeAPIServerValidatonOption: opts,
+	}
 
 	allErrs = append(allErrs, metav1validation.ValidateLabels(shootTemplate.Labels, fldPath.Child("metadata", "labels"))...)
 	allErrs = append(allErrs, apivalidation.ValidateAnnotations(shootTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
-	allErrs = append(allErrs, ValidateShootSpec(shootTemplate.ObjectMeta, &shootTemplate.Spec, fldPath.Child("spec"), true)...)
+	allErrs = append(allErrs, ValidateShootSpec(shootTemplate.ObjectMeta, &shootTemplate.Spec, shootValidationOptions, fldPath.Child("spec"), true)...)
 
 	return allErrs
 }
