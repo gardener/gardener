@@ -45,6 +45,7 @@ const (
 	ingressName                     = "logging"
 	namespace                       = "some-namespace"
 	valiHost                        = "vali.foo.bar"
+	ingressHost                     = "otel.foo.bar"
 	managedResourceNameTarget       = "logging-target"
 	managedResourceSecretNameTarget = "managedresource-logging-target"
 )
@@ -65,7 +66,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			LokiEndpoint:            lokiEndpoint,
 			Replicas:                1,
 			ShootNodeLoggingEnabled: true,
-			IngressHost:             valiHost,
+			IngressHost:             ingressHost,
+			ValiHost:                valiHost,
 		}
 
 		c         client.Client
@@ -77,15 +79,17 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		customResourcesManagedResourceSecret *corev1.Secret
 		managedResourceSecretTarget          *corev1.Secret
 		fakeSecretManager                    secretsmanager.Interface
-		kubeRBACProxyContainer               corev1.Container
+		kubeRBACProxyValiContainer           corev1.Container
+		kubeRBACProxyOTLPContainer           corev1.Container
 
-		volume                 corev1.Volume
-		volumeMount            corev1.VolumeMount
-		managedResourceTarget  *resourcesv1alpha1.ManagedResource
-		openTelemetryCollector *otelv1beta1.OpenTelemetryCollector
-		serviceMonitor         *monitoringv1.ServiceMonitor
-		serviceAccount         *corev1.ServiceAccount
-		kubeRBACServicePort    corev1.ServicePort
+		volume                  corev1.Volume
+		volumeMount             corev1.VolumeMount
+		managedResourceTarget   *resourcesv1alpha1.ManagedResource
+		openTelemetryCollector  *otelv1beta1.OpenTelemetryCollector
+		serviceMonitor          *monitoringv1.ServiceMonitor
+		serviceAccount          *corev1.ServiceAccount
+		kubeRBACValiServicePort corev1.ServicePort
+		kubeRBACOTLPServicePort corev1.ServicePort
 	)
 
 	BeforeEach(func() {
@@ -177,8 +181,36 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			AutomountServiceAccountToken: ptr.To(false),
 		}
 
-		kubeRBACProxyContainer = corev1.Container{
-			Name:  "rbac-proxy",
+		kubeRBACProxyValiContainer = corev1.Container{
+			Name:  "rbac-proxy-vali",
+			Image: kubeRBACProxyImage,
+			Args: []string{
+				"--insecure-listen-address=0.0.0.0:8081",
+				"--upstream=http://logging:3100/",
+				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+				"--logtostderr=true",
+				"--v=6",
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("5m"),
+					corev1.ResourceMemory: resource.MustParse("30Mi"),
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
+				RunAsUser:                ptr.To[int64](65532),
+				RunAsGroup:               ptr.To[int64](65534),
+				RunAsNonRoot:             ptr.To(true),
+				ReadOnlyRootFilesystem:   ptr.To(true),
+			},
+			VolumeMounts: []corev1.VolumeMount{
+				volumeMount,
+			},
+		}
+
+		kubeRBACProxyOTLPContainer = corev1.Container{
+			Name:  "rbac-proxy-otlp",
 			Image: kubeRBACProxyImage,
 			Args: []string{
 				"--insecure-listen-address=0.0.0.0:8080",
@@ -272,8 +304,13 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			},
 		}
 
-		kubeRBACServicePort = corev1.ServicePort{
-			Name: "rbac-proxy",
+		kubeRBACValiServicePort = corev1.ServicePort{
+			Name: "rbac-proxy-vali",
+			Port: 8081,
+		}
+
+		kubeRBACOTLPServicePort = corev1.ServicePort{
+			Name: "rbac-proxy-otlp",
 			Port: 8080,
 		}
 
@@ -435,7 +472,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
-				getIngress("/opentelemetry.proto.collector.logs.v1.LogsService/Export", "opentelemetry-collector-collector", 8080),
+				getIngress(),
 				serviceMonitor,
 				serviceAccount,
 			))
@@ -478,14 +515,17 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(customResourcesManagedResource).To(DeepEqual(expectedMr))
 
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
-			openTelemetryCollector.Spec.AdditionalContainers = []corev1.Container{kubeRBACProxyContainer}
+			openTelemetryCollector.Spec.AdditionalContainers = []corev1.Container{kubeRBACProxyValiContainer, kubeRBACProxyOTLPContainer}
 			openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume}
 			openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
-				ServicePort: kubeRBACServicePort,
+				ServicePort: kubeRBACValiServicePort,
+			})
+			openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
+				ServicePort: kubeRBACOTLPServicePort,
 			})
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
-				getIngress("/opentelemetry.proto.collector.logs.v1.LogsService/Export", "opentelemetry-collector-collector", 8080),
+				getIngress(),
 				serviceMonitor,
 				serviceAccount,
 			))
@@ -635,7 +675,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 	})
 })
 
-func getIngress(path, serviceName string, port int32) *networkingv1.Ingress {
+func getIngress() *networkingv1.Ingress {
 	pathType := networkingv1.PathTypePrefix
 	annotations := map[string]string{"nginx.ingress.kubernetes.io/backend-protocol": "GRPC"}
 
@@ -651,10 +691,31 @@ func getIngress(path, serviceName string, port int32) *networkingv1.Ingress {
 			TLS: []networkingv1.IngressTLS{
 				{
 					SecretName: "logging-tls",
-					Hosts:      []string{valiHost},
+					Hosts:      []string{ingressHost, valiHost},
 				},
 			},
 			Rules: []networkingv1.IngressRule{
+				{
+					Host: ingressHost,
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{
+								{
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: "opentelemetry-collector-collector",
+											Port: networkingv1.ServiceBackendPort{
+												Number: 8080,
+											},
+										},
+									},
+									Path:     "/opentelemetry.proto.collector.logs.v1.LogsService/Export",
+									PathType: &pathType,
+								},
+							},
+						},
+					},
+				},
 				{
 					Host: valiHost,
 					IngressRuleValue: networkingv1.IngressRuleValue{
@@ -663,13 +724,13 @@ func getIngress(path, serviceName string, port int32) *networkingv1.Ingress {
 								{
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
-											Name: serviceName,
+											Name: "opentelemetry-collector-collector",
 											Port: networkingv1.ServiceBackendPort{
-												Number: port,
+												Number: 8081,
 											},
 										},
 									},
-									Path:     path,
+									Path:     "/vali/api/v1/push",
 									PathType: &pathType,
 								},
 							},

@@ -152,6 +152,7 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 			Replicas:                b.Shoot.GetReplicas(1),
 			ShootNodeLoggingEnabled: b.isShootNodeLoggingEnabled(),
 			IngressHost:             b.ComputeOpenTelemetryCollectorHost(),
+			ValiHost:                b.ComputeValiHost(),
 		},
 		b.SecretsManager,
 	), nil

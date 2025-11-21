@@ -37,15 +37,11 @@ import (
 const (
 	managedResourceNameTarget  = "logging-target"
 	managedResourceName        = "opentelemetry-collector"
-	scrapeJobName              = "opentelemetry-collector"
 	serviceMonitorName         = "opentelemetry-collector"
-	valitailName               = "gardener-valitail"
 	openTelemetryCollectorName = "gardener-opentelemetry-collector"
 
-	otelCollectorConfigName = "opentelemetry-collector-config"
-	kubeRBACProxyName       = "rbac-proxy"
+	kubeRBACProxyName = "rbac-proxy"
 
-	metricsEndpointName            = "metrics"
 	metricsPort                    = 8888
 	timeoutWaitForManagedResources = 2 * time.Minute
 )
@@ -66,6 +62,8 @@ type Values struct {
 	ShootNodeLoggingEnabled bool
 	// IngressHost is the name for the ingress to access the OpenTelemetry Collector.
 	IngressHost string
+	// ValiHost is the name for the ingress to access the Vali instance.
+	ValiHost string
 }
 
 type otelCollector struct {
@@ -124,7 +122,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			Name:                        "logging-tls",
 			CommonName:                  o.values.IngressHost,
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    []string{o.values.IngressHost},
+			DNSNames:                    []string{o.values.IngressHost, o.values.ValiHost},
 			CertType:                    secrets.ServerCert,
 			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
@@ -442,16 +440,46 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 	if o.values.WithRBACProxy {
 		obj.Spec.Ports = append(obj.Spec.Ports, otelv1beta1.PortsSpec{
 			ServicePort: corev1.ServicePort{
-				Name: kubeRBACProxyName,
-				Port: collectorconstants.KubeRBACProxyPort,
+				Name: kubeRBACProxyName + "-vali",
+				Port: collectorconstants.KubeRBACProxyLokiReceiverPort,
+			},
+		})
+		obj.Spec.Ports = append(obj.Spec.Ports, otelv1beta1.PortsSpec{
+			ServicePort: corev1.ServicePort{
+				Name: kubeRBACProxyName + "-otlp",
+				Port: collectorconstants.KubeRBACProxyOTLPReceiverPort,
 			},
 		})
 		obj.Spec.AdditionalContainers = []corev1.Container{
 			{
-				Name:  kubeRBACProxyName,
+				Name:  kubeRBACProxyName + "-vali",
 				Image: o.values.KubeRBACProxyImage,
 				Args: []string{
-					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", collectorconstants.KubeRBACProxyPort),
+					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", collectorconstants.KubeRBACProxyLokiReceiverPort),
+					fmt.Sprintf("--upstream=http://logging:%d/", valiconstants.ValiPort),
+					"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
+					"--logtostderr=true",
+					"--v=6",
+				},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("5m"),
+						corev1.ResourceMemory: resource.MustParse("30Mi"),
+					},
+				},
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: ptr.To(false),
+					RunAsUser:                ptr.To[int64](65532),
+					RunAsGroup:               ptr.To[int64](65534),
+					RunAsNonRoot:             ptr.To(true),
+					ReadOnlyRootFilesystem:   ptr.To(true),
+				},
+			},
+			{
+				Name:  kubeRBACProxyName + "-otlp",
+				Image: o.values.KubeRBACProxyImage,
+				Args: []string{
+					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", collectorconstants.KubeRBACProxyOTLPReceiverPort),
 					fmt.Sprintf("--upstream=http://127.0.0.1:%d/", collectorconstants.PushPort),
 					"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
 					"--logtostderr=true",
@@ -480,6 +508,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 
 		obj.Spec.Volumes = []corev1.Volume{gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig")}
 		obj.Spec.AdditionalContainers[0].VolumeMounts = []corev1.VolumeMount{gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)}
+		obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)}
 	}
 
 	return obj
@@ -504,25 +533,44 @@ func (o *otelCollector) getIngress(secretName string) *networkingv1.Ingress {
 			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
 			TLS: []networkingv1.IngressTLS{{
 				SecretName: secretName,
-				Hosts:      []string{o.values.IngressHost},
+				Hosts:      []string{o.values.IngressHost, o.values.ValiHost},
 			}},
-			Rules: []networkingv1.IngressRule{{
-				Host: o.values.IngressHost,
-				IngressRuleValue: networkingv1.IngressRuleValue{
-					HTTP: &networkingv1.HTTPIngressRuleValue{
-						Paths: []networkingv1.HTTPIngressPath{{
-							Backend: networkingv1.IngressBackend{
-								Service: &networkingv1.IngressServiceBackend{
-									Name: collectorconstants.ServiceName,
-									Port: networkingv1.ServiceBackendPort{Number: collectorconstants.KubeRBACProxyPort},
+			Rules: []networkingv1.IngressRule{
+				{
+					Host: o.values.IngressHost,
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{{
+								Backend: networkingv1.IngressBackend{
+									Service: &networkingv1.IngressServiceBackend{
+										Name: collectorconstants.ServiceName,
+										Port: networkingv1.ServiceBackendPort{Number: collectorconstants.KubeRBACProxyOTLPReceiverPort},
+									},
 								},
-							},
-							Path:     collectorconstants.PushEndpoint,
-							PathType: ptr.To(networkingv1.PathTypePrefix),
-						}},
+								Path:     collectorconstants.PushEndpoint,
+								PathType: ptr.To(networkingv1.PathTypePrefix),
+							}},
+						},
 					},
 				},
-			}},
+				{
+					Host: o.values.ValiHost,
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{{
+								Backend: networkingv1.IngressBackend{
+									Service: &networkingv1.IngressServiceBackend{
+										Name: collectorconstants.ServiceName,
+										Port: networkingv1.ServiceBackendPort{Number: collectorconstants.KubeRBACProxyLokiReceiverPort},
+									},
+								},
+								Path:     valiconstants.PushEndpoint,
+								PathType: ptr.To(networkingv1.PathTypePrefix),
+							}},
+						},
+					},
+				},
+			},
 		},
 	}
 }
