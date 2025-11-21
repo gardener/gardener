@@ -507,11 +507,11 @@ spec:
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             watch k get -A seeds,shoots,managedseeds
           EOF
-          new_pane "create shoot" Enter <<"EOF"
+          new_pane "create shoot" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             if [[ "$IPFAMILY" == "ipv6" ]]; then k apply -f example/provider-local/managedseeds/shoot-managedseed-ipv6.yaml; else k apply -f example/provider-local/managedseeds/shoot-managedseed.yaml; fi
           EOF
-          new_pane "create managed seed" Enter <<"EOF"
+          new_pane "create managed seed" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             if [[ "$IPFAMILY" == "ipv6" ]]; then k apply -f example/provider-local/managedseeds/managedseed-ipv6.yaml; else k apply -f example/provider-local/managedseeds/managedseed.yaml; fi
           EOF
