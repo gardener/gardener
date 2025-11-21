@@ -52,16 +52,50 @@ You can find implementation examples in the [healtcheck folder](../../extensions
 type HealthCheck interface {
     // Check is the function that executes the actual health check
     Check(context.Context, types.NamespacedName) (*SingleCheckResult, error)
-    // InjectSeedClient injects the seed client
-    InjectSeedClient(client.Client)
-    // InjectShootClient injects the shoot client
-    InjectShootClient(client.Client)
     // SetLoggerSuffix injects the logger
     SetLoggerSuffix(string, string)
-    // DeepCopy clones the healthCheck
-    DeepCopy() HealthCheck
 }
 ```
+
+### Client Injection
+
+Health check implementations can optionally implement one or both of the following interfaces to receive the appropriate Kubernetes clients:
+
+```go
+type ShootClient interface {
+    // InjectShootClient injects the shoot client
+    InjectShootClient(client.Client)
+}
+
+type SeedClient interface {
+    // InjectSeedClient injects the seed client
+    InjectSeedClient(client.Client)
+}
+```
+
+The health check controller automatically detects if a health checker implements these interfaces and injects the corresponding clients before executing the health checks.
+This allows health checks to interact with resources in the shoot cluster (via `ShootClient`) or the seed cluster (via `SeedClient`) as needed.
+
+For example, a health check that needs to verify resources in the shoot cluster would implement the `ShootClient` interface:
+
+```go
+type MyShootHealthCheck struct {
+    shootClient client.Client
+}
+
+func (h *MyShootHealthCheck) InjectShootClient(c client.Client) {
+    h.shootClient = c
+}
+
+func (h *MyShootHealthCheck) Check(ctx context.Context, request types.NamespacedName) (*SingleCheckResult, error) {
+    // Use h.shootClient to check resources in the shoot cluster
+    // ...
+}
+```
+
+Similarly, if a health check needs to access both shoot and seed resources, it can implement both interfaces.
+
+### Reconciliation
 
 The health check controller regularly (default: `30s`) reconciles the extension resource and executes the registered health checks for the dependent objects.
 As a result, the controller writes condition(s) to the status of the extension containing the health check result.
