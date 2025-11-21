@@ -16,5 +16,6 @@ func RegisterFeatureGates() {
 		features.ShootCredentialsBinding,
 		features.InPlaceNodeUpdates,
 		features.CloudProfileCapabilities,
+		features.CloudProfileVersionClassificationLifecycles,
 	)))
 }

@@ -31,6 +31,10 @@ spec:
   kubernetes:
     versions:
     - version: 1.33.2
+      # lifecycle: # CloudProfileVersionClassificationLifecycles feature gate enabled
+      # - classification: preview
+      # - classification: supported
+      #   startTime: "2024-12-01T00:00:00Z"
     - version: 1.32.4
     - version: 1.31.6
     - version: 1.30.8
@@ -61,11 +65,15 @@ spec:
   - name: ubuntu
     versions:
     - version: 18.04.201906170
-    # cri:
-    # - name: containerd
-    #   containerRuntimes:
-    #   - type: gvisor
-    #   - type: kata-containers
+      # lifecycle: # CloudProfileVersionClassificationLifecycles feature gate enabled
+      # - classification: preview
+      # - classification: supported
+      #   startTime: "2024-12-01T00:00:00Z"
+      # cri:
+      # - name: containerd
+      #   containerRuntimes:
+      #   - type: gvisor
+      #   - type: kata-containers
   machineTypes:
   - name: m5.large
     cpu: "2"

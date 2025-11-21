@@ -155,6 +155,7 @@ global:
     featureGates:
       CloudProfileCapabilities: true
       InPlaceNodeUpdates: true
+      CloudProfileVersionClassificationLifecycles: true
     resources: {}
     podLabels:
       networking.resources.gardener.cloud/to-all-webhook-targets: allowed
