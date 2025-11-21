@@ -60,15 +60,16 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 				},
 			}
 
-			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, crd, func() error {
-				crd.Labels = desiredCRD.Labels
-				if c.deletionProtection {
-					metav1.SetMetaDataLabel(&crd.ObjectMeta, gardenerutils.DeletionProtected, "true")
-				}
+			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, crd,
+				func() error {
+					crd.Labels = desiredCRD.Labels
+					if c.deletionProtection {
+						metav1.SetMetaDataLabel(&crd.ObjectMeta, gardenerutils.DeletionProtected, "true")
+					}
 
-				crd.Annotations = desiredCRD.Annotations
-
+					crd.Annotations = desiredCRD.Annotations
 					crd.Spec = desiredCRD.Spec
+
 					return nil
 				},
 				// Not sending an empty patch goes against the recommendation in the Kubernetes Clients in Gardener guide.
