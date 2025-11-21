@@ -106,7 +106,7 @@ ip6.arpa:53 {
 		}
 	)
 
-	if n.values.ServerBlockSupportForNodeLocalDNS {
+	if n.values.CustomDNSServerInNodeLocalDNS {
 		configMap.Data[configDataKey] = configMap.Data[configDataKey] + "import generated-config/custom-server-block.server\n"
 	}
 
@@ -352,7 +352,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 			},
 		}
 
-		if n.values.ServerBlockSupportForNodeLocalDNS {
+		if n.values.CustomDNSServerInNodeLocalDNS {
 			daemonSet.Spec.Template.Spec.InitContainers = append(daemonSet.Spec.Template.Spec.InitContainers, corev1.Container{
 				Name:  sideCarName,
 				Image: n.values.CorednsConfigAdapterImage,
@@ -429,7 +429,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 					},
 				},
 			}
-			if n.values.ServerBlockSupportForNodeLocalDNS {
+			if n.values.CustomDNSServerInNodeLocalDNS {
 				vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 					ContainerName: sideCarName,
 					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),

@@ -26,6 +26,6 @@ func GetFeatures() []featuregate.Feature {
 		features.OpenTelemetryCollector,
 		features.UseUnifiedHTTPProxyPort,
 		features.VPAInPlaceUpdates,
-		features.ServerBlockSupportForNodeLocalDNS,
+		features.CustomDNSServerInNodeLocalDNS,
 	}
 }
