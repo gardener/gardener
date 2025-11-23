@@ -40,6 +40,7 @@ var (
 	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
 	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
+	configMapResource                 = corev1.Resource("configmaps")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 	leaseResource                     = coordinationv1.Resource("leases")
 	projectResource                   = gardencorev1beta1.Resource("projects")

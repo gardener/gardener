@@ -71,6 +71,17 @@ func (h *Handler) admitGardenadmRequests(ctx context.Context, gardenletShootInfo
 
 		return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
 
+	case configMapResource, secretResource:
+		if request.Operation != admissionv1.Create {
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+		}
+
+		if gardenletShootInfo.Namespace == request.Namespace {
+			return admission.Allowed("")
+		}
+
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
+
 	case projectResource:
 		if request.Operation != admissionv1.Create {
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
