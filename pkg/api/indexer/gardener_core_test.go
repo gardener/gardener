@@ -70,6 +70,21 @@ var _ = Describe("Core", func() {
 		Entry("Shoot w/ seedName", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{SeedName: ptr.To("seed")}}, ConsistOf("seed")),
 	)
 
+	DescribeTable("#AddShootStatusUID",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddShootStatusUID(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.Shoot{}))
+			Expect(indexer.field).To(Equal("status.uid"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no Shoot", &corev1.Secret{}, ConsistOf("")),
+		Entry("Shoot w/o uid", &gardencorev1beta1.Shoot{}, ConsistOf("")),
+		Entry("Shoot w/ uid", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{UID: "uid"}}, ConsistOf("uid")),
+	)
+
 	DescribeTable("#AddBackupBucketSeedName",
 		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
 			Expect(AddBackupBucketSeedName(context.TODO(), indexer)).To(Succeed())
