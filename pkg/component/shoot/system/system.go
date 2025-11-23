@@ -375,6 +375,8 @@ func (s *shootSystem) shootInfoData() map[string]string {
 		"serviceNetwork":    s.values.ServiceNetworkCIDRs[0].String(),
 		"maintenanceBegin":  s.values.Object.Spec.Maintenance.TimeWindow.Begin,
 		"maintenanceEnd":    s.values.Object.Spec.Maintenance.TimeWindow.End,
+		"uid":               string(s.values.Object.UID),
+		"statusUID":         string(s.values.Object.Status.UID),
 	}
 
 	if domain := s.values.ExternalClusterDomain; domain != nil {
