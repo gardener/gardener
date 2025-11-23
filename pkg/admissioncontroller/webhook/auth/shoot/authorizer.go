@@ -27,6 +27,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/graph"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
@@ -109,6 +110,24 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 				authwebhook.WithAlwaysAllowedVerbs("create"),
 				authwebhook.WithAllowedSubresources("status", "finalizers"),
 				authwebhook.WithFieldSelectors(map[string]string{metav1.ObjectNameField: string(shoot.Status.UID)}),
+			)
+
+		case backupEntryResource:
+			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+			if err := a.client.Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
+				return auth.DecisionNoOpinion, "", fmt.Errorf("failed reading Shoot %q: %w", client.ObjectKeyFromObject(shoot), err)
+			}
+
+			expectedBackupEntryName, err := gardenerutils.GenerateBackupEntryName(metav1.NamespaceSystem, shoot.Status.UID, shoot.UID)
+			if err != nil {
+				return auth.DecisionNoOpinion, "", fmt.Errorf("failed computing expected BackupEntry name for shoot: %w", err)
+			}
+
+			return requestAuthorizer.Check(graph.VertexTypeBackupEntry, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch", "delete"),
+				authwebhook.WithAlwaysAllowedVerbs("create"),
+				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithFieldSelectors(map[string]string{metav1.ObjectNameField: expectedBackupEntryName}),
 			)
 
 		case certificateSigningRequestResource:

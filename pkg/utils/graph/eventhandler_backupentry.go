@@ -69,7 +69,9 @@ func (g *graph) handleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.B
 
 	g.deleteAllIncomingEdges(VertexTypeBackupBucket, VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name)
 	g.deleteAllOutgoingEdges(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name, VertexTypeShoot)
-	g.deleteAllOutgoingEdges(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name, VertexTypeSeed)
+	if !g.forSelfHostedShoots {
+		g.deleteAllOutgoingEdges(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name, VertexTypeSeed)
+	}
 
 	var (
 		backupEntryVertex  = g.getOrCreateVertex(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name)
