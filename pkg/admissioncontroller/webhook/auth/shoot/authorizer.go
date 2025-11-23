@@ -98,6 +98,19 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 	if attrs.IsResourceRequest() {
 		requestResource := schema.GroupResource{Group: attrs.GetAPIGroup(), Resource: attrs.GetResource()}
 		switch requestResource {
+		case backupBucketResource:
+			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+			if err := a.client.Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
+				return auth.DecisionNoOpinion, "", fmt.Errorf("failed reading Shoot %q: %w", client.ObjectKeyFromObject(shoot), err)
+			}
+
+			return requestAuthorizer.Check(graph.VertexTypeBackupBucket, attrs,
+				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch", "delete"),
+				authwebhook.WithAlwaysAllowedVerbs("create"),
+				authwebhook.WithAllowedSubresources("status", "finalizers"),
+				authwebhook.WithFieldSelectors(map[string]string{metav1.ObjectNameField: string(shoot.Status.UID)}),
+			)
+
 		case certificateSigningRequestResource:
 			if userType == gardenletidentity.UserTypeExtension {
 				return requestAuthorizer.CheckRead(graph.VertexTypeCertificateSigningRequest, attrs)
@@ -193,5 +206,8 @@ func (a *authorizer) authorizeSecret(ctx context.Context, requestAuthorizer *aut
 		}
 	}
 
-	return auth.DecisionNoOpinion, "", nil
+	return requestAuthorizer.Check(graph.VertexTypeSecret, attrs,
+		authwebhook.WithAllowedVerbs("get", "list", "watch", "patch", "update", "delete"),
+		authwebhook.WithAlwaysAllowedVerbs("create"),
+	)
 }
