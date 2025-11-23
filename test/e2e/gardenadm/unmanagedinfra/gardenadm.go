@@ -25,11 +25,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardenadm/common"
@@ -37,8 +39,10 @@ import (
 
 var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gardenadm", "unmanaged-infra"), func() {
 	var (
-		shootNamespace = "garden"
-		shootName      = "root"
+		shootNamespace        = "garden"
+		shootName             = "root"
+		shoot                 = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+		controlPlaneNamespace = "kube-system"
 	)
 
 	BeforeEach(OncePerOrdered, func(ctx SpecContext) {
@@ -69,6 +73,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			configDirectory = "/gardenadm/resources"
 
 			gardenClientSet                      kubernetes.Interface
+			gardenKomega                         Komega
 			gardenClusterKubeconfigPathOnHost    = filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "virtual-garden", "kubeconfig")
 			gardenClusterKubeconfigPathOnMachine = "/tmp/virtual-garden-kubeconfig"
 		)
@@ -132,7 +137,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 			Eventually(ctx, func(g Gomega) []corev1.Pod {
 				podList := &corev1.PodList{}
-				g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace("kube-system"))).To(Succeed())
+				g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace(controlPlaneNamespace))).To(Succeed())
 				return podList.Items
 			}).Should(ContainElements(
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-events-machine-0")})}),
@@ -150,7 +155,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 		It("should ensure the control plane namespace is properly labeled", func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) map[string]string {
-				namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}}
+				namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: controlPlaneNamespace}}
 				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
 				return namespace.Labels
 			}).Should(HaveKeyWithValue("gardener.cloud/role", "shoot"))
@@ -175,7 +180,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			By("Check gardener-resource-manager")
 			Eventually(ctx, func(g Gomega) {
 				podList := &corev1.PodList{}
-				g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace("kube-system"), client.MatchingLabels{"app": "gardener-resource-manager"})).To(Succeed())
+				g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{"app": "gardener-resource-manager"})).To(Succeed())
 
 				for _, pod := range podList.Items {
 					g.Expect(pod.Spec.HostNetwork).To(BeFalse(), "pod %s", client.ObjectKeyFromObject(&pod))
@@ -194,7 +199,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 		It("should ensure that extension webhooks on control plane components are functioning", func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) map[string]string {
 				pod := &corev1.Pod{}
-				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Name: "kube-scheduler-machine-0", Namespace: "kube-system"}, pod)).To(Succeed())
+				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Name: "kube-scheduler-machine-0", Namespace: controlPlaneNamespace}, pod)).To(Succeed())
 				return pod.Labels
 			}).Should(HaveKeyWithValue("injected-by", "provider-local"))
 		}, SpecTimeout(time.Minute))
@@ -244,6 +249,8 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 				)
 				return err
 			}).Should(Succeed())
+
+			gardenKomega = New(gardenClientSet.Client())
 		}, SpecTimeout(time.Minute))
 
 		It("should copy the garden cluster kubeconfig to the machine pod", func(ctx SpecContext) {
@@ -299,11 +306,23 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			expectedShootStatusUID := types.UID(stdOut.Contents())
 
 			Eventually(ctx, func(g Gomega) types.UID {
-				shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
 				g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Status.UID
 			}).Should(Equal(expectedShootStatusUID))
-		}, SpecTimeout(2*time.Minute))
+		}, SpecTimeout(time.Minute))
+
+		It("should deploy and reconcile the BackupBucket resource", func(ctx SpecContext) {
+			backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: string(shoot.Status.UID)}}
+			Eventually(ctx, gardenKomega.Object(backupBucket)).Should(BeHealthy(health.CheckBackupBucket))
+		}, SpecTimeout(time.Minute))
+
+		It("should deploy and reconcile the BackupEntry resource", func(ctx SpecContext) {
+			backupEntryName, err := gardenerutils.GenerateBackupEntryName(controlPlaneNamespace, shoot.Status.UID, shoot.UID)
+			Expect(err).NotTo(HaveOccurred())
+
+			backupEntry := &gardencorev1beta1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: backupEntryName, Namespace: shootNamespace}}
+			Eventually(ctx, gardenKomega.Object(backupEntry)).Should(BeHealthy(health.CheckBackupEntry))
+		}, SpecTimeout(time.Minute))
 	})
 })
 
