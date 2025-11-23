@@ -1313,7 +1313,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{""},
 							APIVersions: []string{"v1"},
-							Resources:   []string{"secrets"},
+							Resources:   []string{"configmaps", "secrets"},
 						},
 					},
 					{
