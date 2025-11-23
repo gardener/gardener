@@ -17,6 +17,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -28,9 +29,9 @@ type GardenKubeconfig struct {
 	Log logr.Logger
 	// Config is the gardenlet component configuration.
 	Config *gardenletconfigv1alpha1.GardenletConfiguration
-	// SelfHostedShootMeta is the NamespacedName of the self-hosted shoot the gardenlet is responsible for (if
+	// SelfHostedShootInfo is the NamespacedName of the self-hosted shoot the gardenlet is responsible for (if
 	// applicable).
-	SelfHostedShootMeta *types.NamespacedName
+	SelfHostedShootInfo *gardenletutils.SelfHostedShootInfo
 	// Result is a structure that will be filled with information about the requested kubeconfig. Must be initialized
 	// by the caller.
 	Result *KubeconfigBootstrapResult
@@ -139,6 +140,11 @@ func (g *GardenKubeconfig) getOrBootstrapKubeconfig(ctx context.Context) ([]byte
 	}
 
 	log.Info("Using provided bootstrap kubeconfig to request signed certificate")
+	var selfHostedShootMeta *types.NamespacedName
+	if g.SelfHostedShootInfo != nil {
+		selfHostedShootMeta = &g.SelfHostedShootInfo.Meta
+	}
+
 	return RequestKubeconfigWithBootstrapClient(
 		ctx,
 		log,
@@ -147,7 +153,7 @@ func (g *GardenKubeconfig) getOrBootstrapKubeconfig(ctx context.Context) ([]byte
 		kubeconfigKey,
 		bootstrapKubeconfigKey,
 		g.Config.SeedConfig,
-		g.SelfHostedShootMeta,
+		selfHostedShootMeta,
 		g.Config.GardenClientConnection.KubeconfigValidity.Validity,
 	)
 }

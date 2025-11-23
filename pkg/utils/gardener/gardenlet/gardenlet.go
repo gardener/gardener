@@ -90,6 +90,17 @@ func IsResponsibleForSelfHostedShoot() bool {
 	return os.Getenv("NAMESPACE") == metav1.NamespaceSystem
 }
 
+// SelfHostedShootInfo contains information about the self-hosted shoot (extracted from the shoot-info ConfigMap within
+// the cluster).
+type SelfHostedShootInfo struct {
+	// Meta is the namespace and name of the shoot.
+	Meta types.NamespacedName
+	// UID is the .metadata.uid of the shoot.
+	UID types.UID
+	// StatusUID is the .status.uid of the shoot.
+	StatusUID types.UID
+}
+
 // ShootMetaFromBootstrapToken extracts the shoot namespace and name from the description of the given bootstrap token
 // secret. This only works if the secret has been created with 'gardenadm token create' which writes a proper
 // description.

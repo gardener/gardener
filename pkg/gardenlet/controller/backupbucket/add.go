@@ -25,6 +25,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 // ControllerName is the name of this controller.
@@ -75,10 +76,15 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 // SeedNamePredicate returns a predicate which returns true when the object belongs to this seed.
 func (r *Reconciler) SeedNamePredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		if gardenletutils.IsResponsibleForSelfHostedShoot() {
+			return true
+		}
+
 		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 		if !ok {
 			return false
 		}
+
 		return ptr.Deref(backupBucket.Spec.SeedName, "") == r.SeedName
 	})
 }
