@@ -91,6 +91,13 @@ func AddToManager(
 			return fmt.Errorf("failed adding BackupBucket controller: %w", err)
 		}
 
+		if err := (&backupentry.Reconciler{
+			Config:          *cfg.Controllers.BackupEntry,
+			GardenNamespace: metav1.NamespaceSystem,
+		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+			return fmt.Errorf("failed adding BackupEntry controller: %w", err)
+		}
+
 		if err := (&gardenlet.Reconciler{
 			Config: *cfg,
 		}).AddToManager(mgr, gardenCluster, seedClientSet); err != nil {
