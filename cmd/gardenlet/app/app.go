@@ -357,9 +357,18 @@ func (g *garden) Start(ctx context.Context) error {
 		} else {
 			opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
 				// gardenlet should watch only objects which are related to the shoot it is responsible for.
+				backupEntryName, err := gardenerutils.GenerateBackupEntryName(metav1.NamespaceSystem, g.selfHostedShootInfo.StatusUID, g.selfHostedShootInfo.UID)
+				if err != nil {
+					return nil, fmt.Errorf("failed generating expected BackupEntry name for self-hosted shoot: %w", err)
+				}
+
 				opts.ByObject = map[client.Object]cache.ByObject{
 					&gardencorev1beta1.BackupBucket{}: {
 						Field: fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: string(g.selfHostedShootInfo.StatusUID)}),
+					},
+					&gardencorev1beta1.BackupEntry{}: {
+						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: backupEntryName}),
+						Namespaces: map[string]cache.Config{g.selfHostedShootInfo.Meta.Namespace: {}},
 					},
 					&gardencorev1beta1.Shoot{}: {
 						Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.selfHostedShootInfo.Meta.Name}),
@@ -764,13 +773,7 @@ func (g *garden) overwriteGardenHostWhenDeployedInRuntimeCluster(ctx context.Con
 }
 
 func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
-	// TODO(rfranzke): Revisit this once `gardenadm connect` progresses (currently, this causes informers to be started
-	//  against the API server, but gardenlet does not have the needed permissions).
-	if gardenlet.IsResponsibleForSelfHostedShoot() {
-		return nil
-	}
-
-	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+	fns := []func(context.Context, client.FieldIndexer) error{
 		// core API group
 		indexer.AddShootSeedName,
 		indexer.AddShootStatusSeedName,
@@ -783,7 +786,18 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 		indexer.AddBastionShootName,
 		// seedmanagement API group
 		indexer.AddManagedSeedShootName,
-	} {
+	}
+
+	// TODO(rfranzke): Revisit this once `gardenadm connect` progresses (currently, this causes informers to be started
+	//  against the API server, but gardenlet does not have the needed permissions).
+	if gardenlet.IsResponsibleForSelfHostedShoot() {
+		fns = []func(context.Context, client.FieldIndexer) error{
+			// core API group
+			indexer.AddBackupEntryBucketName,
+		}
+	}
+
+	for _, fn := range fns {
 		if err := fn(ctx, i); err != nil {
 			return err
 		}
