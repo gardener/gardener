@@ -16,6 +16,7 @@ import (
 	authenticationv1 "k8s.io/api/authentication/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -27,6 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/shootrestriction"
+	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -62,7 +65,11 @@ var _ = Describe("handler", func() {
 	)
 
 	BeforeEach(func() {
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		fakeClient = fakeclient.
+			NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithIndex(&gardencorev1beta1.Shoot{}, core.ShootStatusUID, indexer.ShootStatusUIDIndexerFunc).
+			Build()
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -420,6 +427,114 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						request.Namespace = shootNamespace
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+			})
+
+			Context("when requested for Secrets", func() {
+				var name, namespace string
+
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
+
+					request.Name = name
+					request.Namespace = namespace
+					request.UserInfo = gardenletUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    corev1.SchemeGroupVersion.Group,
+						Resource: "secrets",
+					}
+				})
+
+				DescribeTable("should not allow the request because no allowed verb",
+					func(operation admissionv1.Operation) {
+						request.Operation = operation
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected operation: %q", operation),
+								},
+							},
+						}))
+					},
+
+					Entry("update", admissionv1.Update),
+					Entry("delete", admissionv1.Delete),
+				)
+
+				Context("when operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					Context("BackupBucket secret", func() {
+						BeforeEach(func() {
+							request.Name = "generated-bucket-" + name
+						})
+
+						It("should return an error because the related BackupBucket was not found", func() {
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: fmt.Sprintf("backupbuckets.core.gardener.cloud %q not found", name),
+									},
+								},
+							}))
+						})
+
+						It("should return an error because the related Shoot could not be found", func() {
+							backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: name}}
+							Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: fmt.Sprintf("expected exactly one Shoot with .status.uid=%s but got 0", name),
+									},
+								},
+							}))
+						})
+
+						It("should forbid because the related Shoot does not belong to gardenlet's shoot", func() {
+							backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: name}}
+							Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
+
+							shoot := &gardencorev1beta1.Shoot{
+								ObjectMeta: metav1.ObjectMeta{Name: "some-other", Namespace: "shoot"},
+								Status:     gardencorev1beta1.ShootStatus{UID: types.UID(name)},
+							}
+							Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+									},
+								},
+							}))
+						})
+
+						It("should allow because the related BackupBucket does belong to gardenlet's seed", func() {
+							backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: name}}
+							Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
+
+							shoot := &gardencorev1beta1.Shoot{
+								ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
+								Status:     gardencorev1beta1.ShootStatus{UID: types.UID(name)},
+							}
+							Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
 					})
 				})
 			})

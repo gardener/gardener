@@ -128,6 +128,15 @@ func AddShootStatusUID(ctx context.Context, indexer client.FieldIndexer) error {
 	return nil
 }
 
+// ShootStatusUIDIndexerFunc extracts the .status.uid field of a Shoot.
+func ShootStatusUIDIndexerFunc(obj client.Object) []string {
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return []string{""}
+	}
+	return []string{string(shoot.Status.UID)}
+}
+
 // AddBackupBucketSeedName adds an index for core.BackupBucketSeedName to the given indexer.
 func AddBackupBucketSeedName(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupBucket{}, core.BackupBucketSeedName, BackupBucketSeedNameIndexerFunc); err != nil {
