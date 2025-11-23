@@ -17,6 +17,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
@@ -50,6 +51,8 @@ var _ = Describe("ShootSystem", func() {
 		kubernetesVersion = "1.31.1"
 		maintenanceBegin  = "123456+0100"
 		maintenanceEnd    = "134502+0100"
+		uid               = apitypes.UID("1234")
+		statusUID         = apitypes.UID("5678")
 		domain            = "my-shoot.example.com"
 		podCIDRs          = []net.IPNet{{IP: net.ParseIP("10.10.0.0"), Mask: net.CIDRMask(16, 32)}, {IP: net.ParseIP("2001:db8:1::"), Mask: net.CIDRMask(64, 128)}}
 		serviceCIDRs      = []net.IPNet{{IP: net.ParseIP("11.11.0.0"), Mask: net.CIDRMask(16, 32)}, {IP: net.ParseIP("2001:db8:2::"), Mask: net.CIDRMask(64, 128)}}
@@ -60,6 +63,7 @@ var _ = Describe("ShootSystem", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName,
 				Namespace: projectNamespace,
+				UID:       uid,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
@@ -75,6 +79,9 @@ var _ = Describe("ShootSystem", func() {
 					},
 				},
 				Region: region,
+			},
+			Status: gardencorev1beta1.ShootStatus{
+				UID: statusUID,
 			},
 		}
 
@@ -167,14 +174,15 @@ var _ = Describe("ShootSystem", func() {
 						"maintenanceEnd":    maintenanceEnd,
 						"nodeNetwork":       nodeCIDRs[0].String(),
 						"nodeNetworks":      nodeCIDRs[0].String() + "," + nodeCIDRs[1].String(),
-
-						"projectName":     projectName,
-						"provider":        providerType,
-						"region":          region,
-						"serviceNetwork":  serviceCIDRs[0].String(),
-						"serviceNetworks": serviceCIDRs[0].String() + "," + serviceCIDRs[1].String(),
-						"shootNamespace":  projectNamespace,
-						"shootName":       shootName,
+						"uid":               string(uid),
+						"statusUID":         string(statusUID),
+						"projectName":       projectName,
+						"provider":          providerType,
+						"region":            region,
+						"serviceNetwork":    serviceCIDRs[0].String(),
+						"serviceNetworks":   serviceCIDRs[0].String() + "," + serviceCIDRs[1].String(),
+						"shootNamespace":    projectNamespace,
+						"shootName":         shootName,
 					},
 				}
 			})
