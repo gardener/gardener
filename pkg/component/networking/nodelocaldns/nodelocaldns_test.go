@@ -652,7 +652,7 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: node-cache
       controlledValues: RequestsOnly
     - containerName: coredns-config-adapter
       mode: "Off"
@@ -1302,7 +1302,7 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: node-cache
       controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1
