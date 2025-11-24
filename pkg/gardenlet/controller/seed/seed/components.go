@@ -1086,11 +1086,16 @@ func (r *Reconciler) newClusterIdentity(seed *gardencorev1beta1.Seed) component.
 }
 
 func (r *Reconciler) newBackupBucket(log logr.Logger, seed *gardencorev1beta1.Seed) component.DeployWaiter {
+	bucketName := string(seed.UID)
+	if seed.Spec.Backup != nil && seed.Spec.Backup.BucketName != nil {
+		bucketName = *seed.Spec.Backup.BucketName
+	}
+
 	return corebackupbucket.New(
 		log,
 		r.GardenClient,
 		&corebackupbucket.Values{
-			Name:          string(seed.UID),
+			Name:          bucketName,
 			Config:        seed.Spec.Backup,
 			DefaultRegion: seed.Spec.Provider.Region,
 			Seed:          seed,
