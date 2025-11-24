@@ -1374,7 +1374,8 @@ ip6.arpa:53 {
 
 					Context("ForceTcpToClusterDNS : true and ForceTcpToUpstreamDNS : true", func() {
 						BeforeEach(func() {
-							values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
+							values.Config = &gardencorev1beta1.NodeLocalDNS{
+								Enabled:                     true,
 								ForceTCPToClusterDNS:        ptr.To(true),
 								ForceTCPToUpstreamDNS:       ptr.To(true),
 								DisableForwardToUpstreamDNS: ptr.To(false),
@@ -1417,7 +1418,8 @@ ip6.arpa:53 {
 					})
 					Context("ForceTcpToClusterDNS : true and ForceTcpToUpstreamDNS : false", func() {
 						BeforeEach(func() {
-							values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
+							values.Config = &gardencorev1beta1.NodeLocalDNS{
+								Enabled:                     true,
 								ForceTCPToClusterDNS:        ptr.To(true),
 								ForceTCPToUpstreamDNS:       ptr.To(false),
 								DisableForwardToUpstreamDNS: ptr.To(false),
@@ -1463,7 +1465,8 @@ ip6.arpa:53 {
 
 					Context("ForceTcpToClusterDNS : false and ForceTcpToUpstreamDNS : true", func() {
 						BeforeEach(func() {
-							values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
+							values.Config = &gardencorev1beta1.NodeLocalDNS{
+								Enabled:                     true,
 								ForceTCPToClusterDNS:        ptr.To(false),
 								ForceTCPToUpstreamDNS:       ptr.To(true),
 								DisableForwardToUpstreamDNS: ptr.To(false),
@@ -1509,7 +1512,8 @@ ip6.arpa:53 {
 
 					Context("ForceTcpToClusterDNS : false and ForceTcpToUpstreamDNS : false", func() {
 						BeforeEach(func() {
-							values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
+							values.Config = &gardencorev1beta1.NodeLocalDNS{
+								Enabled:                     true,
 								ForceTCPToClusterDNS:        ptr.To(false),
 								ForceTCPToUpstreamDNS:       ptr.To(false),
 								DisableForwardToUpstreamDNS: ptr.To(false),
@@ -1554,7 +1558,8 @@ ip6.arpa:53 {
 
 					Context("DisableForwardToUpstreamDNS true", func() {
 						BeforeEach(func() {
-							values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
+							values.Config = &gardencorev1beta1.NodeLocalDNS{
+								Enabled:                     true,
 								ForceTCPToClusterDNS:        ptr.To(true),
 								ForceTCPToUpstreamDNS:       ptr.To(true),
 								DisableForwardToUpstreamDNS: ptr.To(true),
