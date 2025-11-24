@@ -328,19 +328,16 @@ type Storage struct {
 // Backup contains the object store configuration for backups for the virtual garden etcd.
 type Backup struct {
 	// Provider is a provider name. This field is immutable.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Provider is immutable"
 	Provider string `json:"provider"`
 	// BucketName is the name of the backup bucket. If not provided, gardener-operator attempts to manage a new bucket.
 	// In this case, the cloud provider credentials provided in the SecretRef must have enough privileges for creating
 	// and deleting buckets.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="BucketName is immutable"
 	// +optional
 	BucketName *string `json:"bucketName,omitempty"`
 	// ProviderConfig is the provider-specific configuration passed to BackupBucket resource.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 	// Region is a region name. If undefined, the provider region is used. This field is immutable.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Region is immutable"
 	// +optional
 	Region *string `json:"region,omitempty"`
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
