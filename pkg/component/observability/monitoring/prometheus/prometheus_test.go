@@ -492,7 +492,7 @@ honor_labels: true`
 				Labels:    map[string]string{"foo": "bar"},
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				Scheme: ptr.To("baz"),
+				Scheme: ptr.To(monitoringv1.SchemeHTTPS),
 			},
 		}
 		additionalConfigMap = &corev1.ConfigMap{

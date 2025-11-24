@@ -104,7 +104,7 @@ func newScrapeConfigForFederation(federation federationConfig) *monitoringv1alph
 	}
 
 	if federation.isIngress {
-		config.Spec.Scheme = ptr.To("HTTPS")
+		config.Spec.Scheme = ptr.To(monitoringv1.SchemeHTTPS)
 		config.Spec.TLSConfig = &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}
 		config.Spec.BasicAuth = &monitoringv1.BasicAuth{
 			Username: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: federation.secret.Name}, Key: secretsutils.DataKeyUserName},

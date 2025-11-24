@@ -21,7 +21,7 @@ func (t *terminal) serviceMonitor() *monitoringv1.ServiceMonitor {
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port:      portNameMetrics,
-				Scheme:    "https",
+				Scheme:    ptr.To(monitoringv1.SchemeHTTPS),
 				TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},

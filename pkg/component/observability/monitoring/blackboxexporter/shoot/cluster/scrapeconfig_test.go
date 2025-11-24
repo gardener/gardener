@@ -30,7 +30,7 @@ var _ = Describe("ScrapeConfig", func() {
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						HonorLabels: ptr.To(false),
-						Scheme:      ptr.To("HTTPS"),
+						Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 						Params: map[string][]string{
 							"module": {"http_kubernetes_service"},
 							"target": {"https://kubernetes.default.svc.cluster.local/healthz"},
