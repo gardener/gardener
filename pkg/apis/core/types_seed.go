@@ -117,6 +117,10 @@ type Backup struct {
 	// Supported referenced resources are v1.Secrets and
 	// security.gardener.cloud/v1alpha1.WorkloadIdentity
 	CredentialsRef *corev1.ObjectReference
+
+	// The name of the backup bucket used at the provider. Defaults to the seed's UID.
+	// Through a subresource call this field can be altered in order to relocate a bucket location.
+	BucketName *string
 }
 
 // SeedDNS contains the external domain and configuration for the DNS provider

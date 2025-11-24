@@ -76,4 +76,8 @@ type BackupEntryStatus struct {
 	// MigrationStartTime is the time when a migration to a different seed was initiated.
 	// +optional
 	MigrationStartTime *metav1.Time `json:"migrationStartTime,omitempty" protobuf:"bytes,5,opt,name=migrationStartTime"`
+	// BucketName is the name of the bucket in which the backup entry is located. When relocating
+	// a bucket a full snapshot will be taken after this field changes to a new value.
+	// +optional
+	BucketName *string `json:"bucketName,omitempty" protobuf:"bytes,6,opt,name=bucketName"`
 }

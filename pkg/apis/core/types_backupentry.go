@@ -66,4 +66,7 @@ type BackupEntryStatus struct {
 	SeedName *string
 	// MigrationStartTime is the time when a migration to a different seed was initiated.
 	MigrationStartTime *metav1.Time
+	// BucketName is the name of the bucket in which the backup entry is located. When relocating
+	// a bucket a full snapshot will be taken after this field changes to a new value.
+	BucketName *string
 }

@@ -703,6 +703,19 @@ string
 </td>
 </tr>
 
+<tr>
+<td>
+<code>bucketName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The name of the backup bucket used at the provider. Defaults to the seed&rsquo;s UID.
+Through a subresource call this field can be altered in order to relocate a bucket location.</p>
+</td>
+</tr>
 </tbody>
 </table>
 
@@ -1181,6 +1194,19 @@ string
 </td>
 </tr>
 
+<tr>
+<td>
+<code>bucketName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>BucketName is the name of the bucket in which the backup entry is located. When relocating
+a bucket a full snapshot will be taken after this field changes to a new value.</p>
+</td>
+</tr>
 </tbody>
 </table>
 
