@@ -62,7 +62,7 @@ GO_APIDIFF_VERSION ?= v0.8.3
 # renovate: datasource=github-releases depName=google/addlicense
 GO_ADD_LICENSE_VERSION ?= v1.2.0
 # renovate: datasource=github-releases depName=incu6us/goimports-reviser
-GOIMPORTSREVISER_VERSION ?= v3.10.0
+GOIMPORTSREVISER_VERSION ?= v3.11.0
 GO_VULN_CHECK_VERSION ?= latest
 # renovate: datasource=github-releases depName=helm/helm
 HELM_VERSION ?= v3.19.2
