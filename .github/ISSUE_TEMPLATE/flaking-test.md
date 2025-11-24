@@ -5,6 +5,8 @@ title: "[Flaky Test] FLAKING TEST/SUITE"
 
 ---
 
+<!-- Please ensure that you do not include company internal information. -->
+
 <!-- Please only use this template for submitting reports about flaky tests or jobs (pass or fail with no underlying change in code) in Gardener CI -->
 
 **How to categorize this issue?**
