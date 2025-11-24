@@ -59,6 +59,8 @@ type Values struct {
 	ServerInCluster string
 	// ManagedResourceLabels are labels added to the ManagedResource.
 	ManagedResourceLabels map[string]string
+	// IsGardenCluster is specifying whether the component is deployed to a Garden cluster.
+	IsGardenCluster bool
 }
 
 type accessNameToServer struct {
@@ -157,8 +159,11 @@ func (g *gardener) computeResourcesData(serviceAccountNames ...string) (map[stri
 		})
 	}
 
-	resources := append(adminClusterRoleBindings(), viewerClusterRoleBindings()...)
-	resources = append(resources, gardenerSystemClusterRoleBinding)
+	resources := []client.Object{gardenerSystemClusterRoleBinding}
+	if !g.values.IsGardenCluster {
+		resources = append(resources, adminClusterRoleBindings()...)
+		resources = append(resources, viewerClusterRoleBindings()...)
+	}
 
 	return registry.AddAllAndSerialize(resources...)
 }

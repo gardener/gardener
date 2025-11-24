@@ -168,6 +168,7 @@ var _ = Describe("Access", func() {
 			ServerOutOfCluster:    serverOutOfCluster,
 			ServerInCluster:       serverInCluster,
 			ManagedResourceLabels: map[string]string{"foo": "bar"},
+			IsGardenCluster:       false,
 		})
 
 		expectedGardenerSecret = &corev1.Secret{
@@ -321,6 +322,26 @@ users:
 			reconciledGardenerInternalSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerInternalSecretName, Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerInternalSecret), reconciledGardenerInternalSecret)).To(Succeed())
 			Expect(reconciledGardenerInternalSecret).To(DeepEqual(expectedGardenerInternalSecret))
+		})
+
+		It("should not deploy shootAccess resource when configured so", func() {
+			access = New(fakeClient, namespace, sm, Values{
+				ServerOutOfCluster:    serverOutOfCluster,
+				ServerInCluster:       serverInCluster,
+				ManagedResourceLabels: map[string]string{"foo": "bar"},
+				IsGardenCluster:       true,
+			})
+			Expect(access.Deploy(ctx)).To(Succeed())
+
+			reconciledManagedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResource), reconciledManagedResource)).To(Succeed())
+			Expect(reconciledManagedResource).To(consistOf(gardenerSystemClusterRoleBinding))
+			Expect(reconciledManagedResource).ToNot(consistOf(
+				systemViewersClusterRoleBinding,
+				projectViewersClusterRoleBinding,
+				systemAdminClusterRoleBinding,
+				projectAdminClusterRoleBinding,
+			))
 		})
 	})
 
