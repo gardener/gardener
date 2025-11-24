@@ -19,7 +19,79 @@ import (
 func ValidateExtension(extension *operatorv1alpha1.Extension) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateControllerResources(extension.Spec.Resources, field.NewPath("spec").Child("resources"))...)
+	allErrs = append(allErrs, validateExtensionSpec(extension.Spec, field.NewPath("spec"))...)
+
+	return allErrs
+}
+
+func validateExtensionSpec(spec operatorv1alpha1.ExtensionSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateDeployment(spec.Deployment, fldPath.Child("deployment"))...)
+	allErrs = append(allErrs, validateControllerResources(spec.Resources, fldPath.Child("resources"))...)
+
+	return allErrs
+}
+
+func validateDeployment(deployment *operatorv1alpha1.Deployment, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if deployment == nil {
+		return append(allErrs, field.Required(fldPath, "deployment must be specified"))
+	}
+	if deployment.ExtensionDeployment == nil && deployment.AdmissionDeployment == nil {
+		return append(allErrs, field.Required(fldPath, "at least one of extension or admission must be specified"))
+	}
+
+	allErrs = append(allErrs, validateExtensionDeployment(deployment.ExtensionDeployment, fldPath.Child("extension"))...)
+	allErrs = append(allErrs, validateAdmissionDeployment(deployment.AdmissionDeployment, fldPath.Child("admission"))...)
+
+	return allErrs
+}
+
+func validateExtensionDeployment(deployment *operatorv1alpha1.ExtensionDeploymentSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if deployment == nil {
+		return allErrs
+	}
+
+	allErrs = append(allErrs, validateHelmDeployment(deployment.Helm, fldPath.Child("helm"))...)
+
+	return allErrs
+}
+
+func validateAdmissionDeployment(deployment *operatorv1alpha1.AdmissionDeploymentSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if deployment == nil {
+		return allErrs
+	}
+
+	if deployment.RuntimeCluster != nil {
+		allErrs = append(allErrs, validateHelmDeployment(deployment.RuntimeCluster.Helm, fldPath.Child("runtimeCluster", "helm"))...)
+	}
+
+	if deployment.VirtualCluster != nil {
+		allErrs = append(allErrs, validateHelmDeployment(deployment.VirtualCluster.Helm, fldPath.Child("virtualCluster", "helm"))...)
+	}
+
+	return allErrs
+}
+
+func validateHelmDeployment(helm *operatorv1alpha1.ExtensionHelm, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if helm == nil {
+		return append(allErrs, field.Required(fldPath, "helm deployment must be specified"))
+	}
+
+	coreOCIRepo := &gardencore.OCIRepository{}
+	if err := gardenCoreScheme.Convert(helm.OCIRepository, coreOCIRepo, nil); err != nil {
+		return append(allErrs, field.InternalError(fldPath.Child("ociRepository"), err))
+	}
+
+	allErrs = append(allErrs, gardencorevalidation.ValidateOCIRepository(coreOCIRepo, fldPath.Child("ociRepository"))...)
 
 	return allErrs
 }
@@ -49,6 +121,7 @@ func validateControllerResources(resources []gardencorev1beta1.ControllerResourc
 func ValidateExtensionUpdate(oldExtension, newExtension *operatorv1alpha1.Extension) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	allErrs = append(allErrs, validateExtensionSpec(newExtension.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, validateControllerResourcesUpdate(oldExtension.Spec.Resources, newExtension.Spec.Resources, field.NewPath("spec").Child("resources"))...)
 
 	return allErrs
