@@ -2272,7 +2272,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Detail": Equal(detail),
 					}))
 				},
-					Entry("should add error if issuerURL is nil ", 1, nil, "issuerURL must be set when oidcConfig is provided"),
+					Entry("should add error if issuerURL is nil", 1, nil, "issuerURL must be set when oidcConfig is provided"),
 					Entry("should add error if issuerURL is empty string", 1, ptr.To(""), "issuerURL cannot be empty"),
 				)
 
@@ -2298,7 +2298,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))
 				},
 					Entry("should add error if clientID is nil", 1, nil, "clientID must be set when oidcConfig is provided"),
-					Entry("should add error if clientID is empty string ", 1, ptr.To(""), "clientID cannot be empty"),
+					Entry("should add error if clientID is empty string", 1, ptr.To(""), "clientID cannot be empty"),
 				)
 
 				It("should forbid setting clientAuthentication from kubernetes version 1.31", func() {
