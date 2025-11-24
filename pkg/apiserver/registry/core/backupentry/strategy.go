@@ -63,6 +63,20 @@ func (backupEntryStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 }
 
 func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bool {
+	if v1beta1helper.HasOperationAnnotation(newBackupEntry.Annotations) {
+		// Remove the operation annotation if its value is not "restore"
+		// If it's "restore", it will be removed at the end of the reconciliation since it's needed
+		// to properly determine that the operation is "restore, and not "reconcile"
+		if newBackupEntry.Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.GardenerOperationRestore {
+			delete(newBackupEntry.Annotations, v1beta1constants.GardenerOperation)
+		} else if oldBackupEntry.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore {
+			// we don't want to cause duplicate reconciliations because this annotation is removed only at the end of operation
+			return false
+		}
+
+		return true
+	}
+
 	// The BackupEntry specification changes.
 	if !apiequality.Semantic.DeepEqual(oldBackupEntry.Spec, newBackupEntry.Spec) {
 		return true
@@ -76,20 +90,6 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 	oldPresent, _ := strconv.ParseBool(oldBackupEntry.Annotations[core.BackupEntryForceDeletion])
 	newPresent, _ := strconv.ParseBool(newBackupEntry.Annotations[core.BackupEntryForceDeletion])
 	if oldPresent != newPresent && newPresent {
-		return true
-	}
-
-	if v1beta1helper.HasOperationAnnotation(newBackupEntry.Annotations) {
-		// Remove the operation annotation if its value is not "restore"
-		// If it's "restore", it will be removed at the end of the reconciliation since it's needed
-		// to properly determine that the operation is "restore, and not "reconcile"
-		if newBackupEntry.Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.GardenerOperationRestore {
-			delete(newBackupEntry.Annotations, v1beta1constants.GardenerOperation)
-		} else if oldBackupEntry.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore {
-			// we don't want to cause duplicate reconciliations because this annotation is removed only at the end of operation
-			return false
-		}
-
 		return true
 	}
 
