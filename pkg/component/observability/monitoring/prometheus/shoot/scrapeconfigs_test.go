@@ -43,10 +43,10 @@ var _ = Describe("ScrapeConfigs", func() {
 						}},
 						Params: map[string][]string{
 							"match[]": {
-								`{job="cadvisor",namespace="` + namespace + `"}`,
-								`{job="kube-state-metrics",namespace="` + namespace + `"}`,
 								`{__name__=~"metering:.+",namespace="` + namespace + `"}`,
-								`{job="etcd-druid",etcd_namespace="` + namespace + `"}`,
+								`{__name__=~"container_.+",job="cadvisor",namespace="` + namespace + `"}`,
+								`{__name__=~"kube_.+",job="kube-state-metrics",namespace="` + namespace + `"}`,
+								`{__name__=~"etcddruid_.+",job="etcd-druid",etcd_namespace="` + namespace + `"}`,
 							},
 						},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
