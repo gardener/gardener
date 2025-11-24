@@ -11,7 +11,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -78,21 +77,8 @@ func ComputeRequiredExtensionsForSeed(seed *gardencorev1beta1.Seed, controllerRe
 		wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
 	}
 
-	disabledExtensionTypes := sets.New[string]()
-	for _, extension := range seed.Spec.Extensions {
-		if ptr.Deref(extension.Disabled, false) {
-			disabledExtensionTypes.Insert(extension.Type)
-		} else {
-			wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type))
-		}
-	}
-
-	for _, controllerRegistration := range controllerRegistrationList.Items {
-		for _, resource := range controllerRegistration.Spec.Resources {
-			if extensionEnabledForCluster(gardencorev1beta1.ClusterTypeSeed, resource, disabledExtensionTypes) {
-				wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type))
-			}
-		}
+	for enabledExtensionType := range ComputeEnabledTypesForKindExtensionSeed(seed, controllerRegistrationList) {
+		wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.ExtensionResource, enabledExtensionType))
 	}
 
 	// add extension combinations for seed provider type
