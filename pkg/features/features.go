@@ -77,7 +77,7 @@ const (
 
 	// CustomDNSServerInNodeLocalDNS enables custom server block support for NodeLocalDNS in the custom CoreDNS configuration of Shoot clusters.
 	// owner: @docktofuture
-	// beta: v1.133.0
+	// beta: v1.132.0
 	CustomDNSServerInNodeLocalDNS featuregate.Feature = "CustomDNSServerInNodeLocalDNS"
 )
 
