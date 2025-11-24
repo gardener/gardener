@@ -123,7 +123,7 @@ var _ = Describe("Fluent Bit", func() {
 					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
-						Regex:        `^(valitail_dropped_entries_total|fluentbit_vali_gardener_errors_total|fluentbit_vali_gardener_logs_without_metadata_total|fluentbit_vali_gardener_incoming_logs_total|fluentbit_vali_gardener_incoming_logs_with_endpoint_total|fluentbit_vali_gardener_forwarded_logs_total|fluentbit_vali_gardener_dropped_logs_total)$`,
+						Regex:        `^(valitail_sent_entries_total|valitail_sent_bytes_total|valitail_request_duration_seconds_sum|valitail_request_duration_seconds_count|valitail_dropped_entries_total|fluentbit_vali_gardener_errors_total|fluentbit_vali_gardener_logs_without_metadata_total|fluentbit_vali_gardener_incoming_logs_total|fluentbit_vali_gardener_forwarded_logs_total|fluentbit_vali_gardener_dropped_logs_total|fluentbit_vali_gardener_dque_size)$`,
 					}},
 				}},
 			},
