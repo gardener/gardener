@@ -41,11 +41,11 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 					"match[]": {
 						`{__name__=~"metering:.+", __name__!~"metering:.+(over_time|_seconds|:this_month)"}`,
 						`{__name__=~"seed:(.+):(.+)"}`,
-						`{job="kube-state-metrics",namespace=~"garden|extension-.+|istio-(.+)"}`,
-						`{job="kube-state-metrics",namespace=~"shoot-.+",pod=~"kube-apiserver-.+"}`,
-						`{job="kube-state-metrics",namespace=""}`,
-						`{job="cadvisor",namespace=~"garden|extension-.+|istio-(.+)"}`,
-						`{job="etcd-druid",namespace="garden"}`,
+						`{__name__=~"kube_.+",job="kube-state-metrics",namespace=~"garden|extension-.+|istio-(.+)"}`,
+						`{__name__=~"kube_.+",job="kube-state-metrics",namespace=~"shoot-.+",pod=~"kube-apiserver-.+"}`,
+						`{__name__=~"kube_.+",job="kube-state-metrics",namespace=""}`,
+						`{__name__=~"container_.+",job="cadvisor",namespace=~"garden|extension-.+|istio-(.+)"}`,
+						`{__name__=~"etcddruid_.+",job="etcd-druid",namespace="garden"}`,
 					},
 				},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
