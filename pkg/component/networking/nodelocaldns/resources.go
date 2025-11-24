@@ -422,7 +422,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
-								ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+								ContainerName:    containerName,
 								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							},
 						},
