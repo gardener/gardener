@@ -1201,6 +1201,257 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
+	Describe("#ComputeEnabledTypesForKindExtensionShoot", func() {
+		const (
+			extensionType1 = "extension1"
+			extensionType2 = "extension2"
+			extensionType3 = "extension3"
+			extensionType4 = "extension4"
+		)
+
+		var (
+			shoot                      *gardencorev1beta1.Shoot
+			controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name: "worker1",
+							},
+						},
+					},
+				},
+			}
+			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{}
+		})
+
+		It("should return empty set when no extensions are configured", func() {
+			Expect(ComputeEnabledTypesForKindExtensionShoot(shoot, controllerRegistrationList)).To(BeEmpty())
+		})
+
+		It("should return extensions explicitly enabled in shoot spec", func() {
+			shoot.Spec.Extensions = []gardencorev1beta1.Extension{
+				{Type: extensionType1},
+				{Type: extensionType2},
+			}
+
+			Expect(ComputeEnabledTypesForKindExtensionShoot(shoot, controllerRegistrationList)).To(Equal(sets.New(
+				extensionType1,
+				extensionType2,
+			)))
+		})
+
+		It("should return auto-enabled extensions from controller registrations", func() {
+			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
+				Items: []gardencorev1beta1.ControllerRegistration{
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType1,
+									AutoEnable: []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
+								},
+							},
+						},
+					},
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType2,
+									AutoEnable: []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeSeed},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(ComputeEnabledTypesForKindExtensionShoot(shoot, controllerRegistrationList)).To(Equal(sets.New(
+				extensionType1,
+			)))
+		})
+
+		It("should not return auto-enabled extensions that are explicitly disabled", func() {
+			shoot.Spec.Extensions = []gardencorev1beta1.Extension{
+				{Type: extensionType1, Disabled: ptr.To(true)},
+			}
+			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
+				Items: []gardencorev1beta1.ControllerRegistration{
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType1,
+									AutoEnable: []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
+								},
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType2,
+									AutoEnable: []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(ComputeEnabledTypesForKindExtensionShoot(shoot, controllerRegistrationList)).To(Equal(sets.New(
+				extensionType2,
+			)))
+		})
+
+		It("should combine explicitly enabled and auto-enabled extensions", func() {
+			shoot.Spec.Extensions = []gardencorev1beta1.Extension{
+				{Type: extensionType1},
+			}
+			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
+				Items: []gardencorev1beta1.ControllerRegistration{
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType2,
+									AutoEnable: []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(ComputeEnabledTypesForKindExtensionShoot(shoot, controllerRegistrationList)).To(Equal(sets.New(
+				extensionType1,
+				extensionType2,
+			)))
+		})
+
+		It("should exclude non-extension controller resources", func() {
+			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
+				Items: []gardencorev1beta1.ControllerRegistration{
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType1,
+									AutoEnable: []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
+								},
+								{
+									Kind: extensionsv1alpha1.WorkerResource,
+									Type: "some-worker",
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(ComputeEnabledTypesForKindExtensionShoot(shoot, controllerRegistrationList)).To(Equal(sets.New(
+				extensionType1,
+			)))
+		})
+
+		It("should handle multiple controller registrations with mixed settings", func() {
+			shoot.Spec.Extensions = []gardencorev1beta1.Extension{
+				{Type: extensionType1},
+				{Type: extensionType4, Disabled: ptr.To(true)},
+			}
+			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
+				Items: []gardencorev1beta1.ControllerRegistration{
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType2,
+									AutoEnable: []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
+								},
+							},
+						},
+					},
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType3,
+									AutoEnable: []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeSeed},
+								},
+							},
+						},
+					},
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType4,
+									AutoEnable: []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(ComputeEnabledTypesForKindExtensionShoot(shoot, controllerRegistrationList)).To(Equal(sets.New(
+				extensionType1,
+				extensionType2,
+			)))
+		})
+
+		Context("workerless shoot", func() {
+			BeforeEach(func() {
+				shoot.Spec.Provider.Workers = nil
+			})
+
+			It("should enable extensions with WorkerlessSupported=true and exclude those with false", func() {
+				controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
+					Items: []gardencorev1beta1.ControllerRegistration{
+						{
+							Spec: gardencorev1beta1.ControllerRegistrationSpec{
+								Resources: []gardencorev1beta1.ControllerResource{
+									{
+										Kind:                extensionsv1alpha1.ExtensionResource,
+										Type:                extensionType1,
+										AutoEnable:          []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
+										WorkerlessSupported: ptr.To(true),
+									},
+									{
+										Kind:                extensionsv1alpha1.ExtensionResource,
+										Type:                extensionType2,
+										AutoEnable:          []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
+										WorkerlessSupported: ptr.To(false),
+									},
+									{
+										Kind:                extensionsv1alpha1.ExtensionResource,
+										Type:                extensionType3,
+										AutoEnable:          []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
+										WorkerlessSupported: ptr.To(true),
+									},
+								},
+							},
+						},
+					},
+				}
+
+				Expect(ComputeEnabledTypesForKindExtensionShoot(shoot, controllerRegistrationList)).To(Equal(sets.New(
+					extensionType1,
+					extensionType3,
+				)))
+			})
+		})
+	})
+
 	Describe("#ComputeRequiredExtensionsForShoot", func() {
 		const (
 			backupProvider       = "backupprovider"

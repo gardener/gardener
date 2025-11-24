@@ -107,28 +107,12 @@ func ComputeRequiredExtensionsForSeed(seed *gardencorev1beta1.Seed, controllerRe
 // It considers extensions explicitly enabled or disabled in the Seed specification and those automatically enabled
 // based on the ControllerRegistration resources.
 func ComputeEnabledTypesForKindExtensionSeed(seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList) sets.Set[string] {
-	var (
-		enabledTypes  = sets.New[string]()
-		disabledTypes = sets.New[string]()
+	return computeEnabledTypesForKindExtension(
+		gardencorev1beta1.ClusterTypeSeed,
+		seed.Spec.Extensions,
+		controllerRegistrationList,
+		nil,
 	)
-
-	for _, extension := range seed.Spec.Extensions {
-		if ptr.Deref(extension.Disabled, false) {
-			disabledTypes.Insert(extension.Type)
-		} else {
-			enabledTypes.Insert(extension.Type)
-		}
-	}
-
-	for _, controllerRegistration := range controllerRegistrationList.Items {
-		for _, resource := range controllerRegistration.Spec.Resources {
-			if extensionEnabledForCluster(gardencorev1beta1.ClusterTypeSeed, resource, disabledTypes) {
-				enabledTypes.Insert(resource.Type)
-			}
-		}
-	}
-
-	return enabledTypes
 }
 
 // ExtensionKindAndTypeForID returns the extension's type and kind based on the given ID.

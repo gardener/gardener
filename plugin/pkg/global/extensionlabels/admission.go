@@ -295,7 +295,7 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*garden
 		}),
 	}
 
-	for extensionType := range gardenerutils.ComputeEnabledTypesForKindExtension(v1beta1Shoot, controllerRegistrationList) {
+	for extensionType := range gardenerutils.ComputeEnabledTypesForKindExtensionShoot(v1beta1Shoot, controllerRegistrationList) {
 		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionExtensionTypePrefix+extensionType, "true")
 	}
 
