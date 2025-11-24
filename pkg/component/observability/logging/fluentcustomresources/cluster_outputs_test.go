@@ -41,7 +41,7 @@ QueueName seed-journald
 LogLevel info
 Url http://logging.garden.svc:3100/vali/api/v1/push
 BatchWait 5s
-BatchSize 1048576
+BatchSize 2097152
 MaxRetries 5
 Timeout 10s
 MinBackoff 10s
@@ -53,7 +53,7 @@ AutoKubernetesLabels false
 HostnameKeyValue nodename ${NODE_NAME}
 Buffer true
 BufferType dque
-QueueSegmentSize 300
+QueueSegmentSize 10000
 QueueSync normal
 NumberOfBatchIDs 5
 `,
@@ -98,7 +98,7 @@ PreservedLabels origin,namespace_name,pod_name
 LogLevel info
 Url http://logging.garden.svc:3100/vali/api/v1/push
 BatchWait 5s
-BatchSize 1048576
+BatchSize 2097152
 MaxRetries 5
 Timeout 10s
 MinBackoff 10s
@@ -110,7 +110,7 @@ AutoKubernetesLabels false
 HostnameKeyValue nodename ${NODE_NAME}
 Buffer true
 BufferType dque
-QueueSegmentSize 300
+QueueSegmentSize 10000
 QueueSync normal
 NumberOfBatchIDs 5
 RemoveKeys kubernetes,stream,time,tag,gardenuser,job
@@ -150,7 +150,7 @@ QueueName gardener-operator-static
 LogLevel info
 Url http://logging.garden.svc:3100/vali/api/v1/push
 BatchWait 5s
-BatchSize 1048576
+BatchSize 2097152
 MaxRetries 5
 Timeout 10s
 MinBackoff 10s
@@ -162,7 +162,7 @@ AutoKubernetesLabels false
 HostnameKeyValue nodename ${NODE_NAME}
 Buffer true
 BufferType dque
-QueueSegmentSize 300
+QueueSegmentSize 10000
 QueueSync normal
 NumberOfBatchIDs 5
 RemoveKeys kubernetes,stream,time,tag,gardenuser,job
