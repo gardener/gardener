@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
@@ -56,7 +57,7 @@ func ValidateSeedUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newSeed.ObjectMeta, &oldSeed.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateSeedOperationUpdate(newSeed.Annotations[v1beta1constants.GardenerOperation], oldSeed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
-	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, newSeed.Annotations, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateSeed(newSeed)...)
 
 	return allErrs
@@ -77,7 +78,7 @@ func ValidateSeedTemplate(seedTemplate *core.SeedTemplate, fldPath *field.Path) 
 func ValidateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate *core.SeedTemplate, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeedTemplate.Spec, &oldSeedTemplate.Spec, fldPath.Child("spec"))...)
+	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeedTemplate.Spec, &oldSeedTemplate.Spec, nil, fldPath.Child("spec"))...)
 
 	return allErrs
 }
@@ -392,7 +393,7 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 }
 
 // ValidateSeedSpecUpdate validates the specification updates of a Seed object.
-func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *field.Path) field.ErrorList {
+func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, newSeedAnnotations map[string]string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateSeedNetworksUpdate(newSeedSpec.Networks, oldSeedSpec.Networks, fldPath.Child("networks"))...)
@@ -403,8 +404,11 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 
 	if oldSeedSpec.Backup != nil {
 		if newSeedSpec.Backup != nil {
-			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup.Provider, oldSeedSpec.Backup.Provider, fldPath.Child("backup", "provider"))...)
-			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup.Region, oldSeedSpec.Backup.Region, fldPath.Child("backup", "region"))...)
+			if !gardenerutils.CheckIfBackupChangeIsConfirmed(newSeedAnnotations) {
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup.BucketName, oldSeedSpec.Backup.BucketName, fldPath.Child("backup", "bucketName"))...)
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup.Provider, oldSeedSpec.Backup.Provider, fldPath.Child("backup", "provider"))...)
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup.Region, oldSeedSpec.Backup.Region, fldPath.Child("backup", "region"))...)
+			}
 		} else {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup, oldSeedSpec.Backup, fldPath.Child("backup"))...)
 		}

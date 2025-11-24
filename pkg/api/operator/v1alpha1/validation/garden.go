@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -188,7 +187,7 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil {
 		fldBackup := fldPath.Child("etcd", "main", "backup")
 		if newVirtualCluster.ETCD.Main.Backup != nil {
-			if !checkIfBackupChangeIsConfirmed(newGarden.Annotations) {
+			if !gardenerutils.CheckIfBackupChangeIsConfirmed(newGarden.Annotations) {
 				allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ETCD.Main.Backup.BucketName, newVirtualCluster.ETCD.Main.Backup.BucketName, fldBackup.Child("bucketName"))...)
 				allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ETCD.Main.Backup.Region, newVirtualCluster.ETCD.Main.Backup.Region, fldBackup.Child("region"))...)
 				allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ETCD.Main.Backup.Provider, newVirtualCluster.ETCD.Main.Backup.Provider, fldBackup.Child("provider"))...)
@@ -995,12 +994,4 @@ func validateExtensions(extensions []operatorv1alpha1.GardenExtension, registere
 		}
 	}
 	return allErrs
-}
-
-func checkIfBackupChangeIsConfirmed(annotations map[string]string) bool {
-	confirmed, err := strconv.ParseBool(annotations[v1beta1constants.ConfirmationBackupChange])
-	if err != nil {
-		return false
-	}
-	return confirmed
 }
