@@ -22,68 +22,72 @@ import (
 
 var _ = Describe("CRDs", func() {
 	var (
-		ctx         context.Context
-		c           client.Client
-		crdDeployer component.DeployWaiter
+		ctx          context.Context
+		c            client.Client
+		crdDeployer  component.DeployWaiter
+		expectedCRDs []string
 	)
 
 	BeforeEach(func() {
-		var err error
 		ctx = context.TODO()
 
 		s := runtime.NewScheme()
-		Expect(apiextensionsv1.AddToScheme(s)).NotTo(HaveOccurred())
+		Expect(apiextensionsv1.AddToScheme(s)).To(Succeed())
 
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 
+		var err error
 		crdDeployer, err = fluentoperator.NewCRDs(c)
 		Expect(err).NotTo(HaveOccurred())
+
+		expectedCRDs = []string{
+			"clusterfilters.fluentbit.fluent.io",
+			"clusterfluentbitconfigs.fluentbit.fluent.io",
+			"clusterinputs.fluentbit.fluent.io",
+			"clusteroutputs.fluentbit.fluent.io",
+			"clusterparsers.fluentbit.fluent.io",
+			"fluentbits.fluentbit.fluent.io",
+			"collectors.fluentbit.fluent.io",
+			"fluentbitconfigs.fluentbit.fluent.io",
+			"filters.fluentbit.fluent.io",
+			"parsers.fluentbit.fluent.io",
+			"outputs.fluentbit.fluent.io",
+			"clustermultilineparsers.fluentbit.fluent.io",
+			"multilineparsers.fluentbit.fluent.io",
+		}
 	})
 
 	JustBeforeEach(func() {
-		Expect(crdDeployer.Deploy(ctx)).ToNot(HaveOccurred(), "fluent operator crds deploy succeeds")
+		Expect(crdDeployer.Deploy(ctx)).To(Succeed(), "fluent operator crds deploy succeeds")
 	})
 
-	DescribeTable("CRD is deployed",
-		func(crdName string) {
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).ToNot(HaveOccurred())
-		},
+	Describe("#Deploy", func() {
+		It("should deploy CRDs", func() {
+			for _, crdName := range expectedCRDs {
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed(), crdName+" should get created")
+			}
+		})
 
-		Entry("ClusterFilter", "clusterfilters.fluentbit.fluent.io"),
-		Entry("ClusterFluentBitConfig", "clusterfluentbitconfigs.fluentbit.fluent.io"),
-		Entry("ClusterInput", "clusterinputs.fluentbit.fluent.io"),
-		Entry("ClusterOutput", "clusteroutputs.fluentbit.fluent.io"),
-		Entry("ClusterParser", "clusterparsers.fluentbit.fluent.io"),
-		Entry("FluentBit", "fluentbits.fluentbit.fluent.io"),
-		Entry("Collector", "collectors.fluentbit.fluent.io"),
-		Entry("FluentBitConfig", "fluentbitconfigs.fluentbit.fluent.io"),
-		Entry("Filter", "filters.fluentbit.fluent.io"),
-		Entry("Parser", "parsers.fluentbit.fluent.io"),
-		Entry("Output", "outputs.fluentbit.fluent.io"),
-		Entry("ClusterMultilineParser", "clustermultilineparsers.fluentbit.fluent.io"),
-		Entry("MultilineParser", "multilineparsers.fluentbit.fluent.io"),
-	)
+		It("should re-create CRDs if they are deleted", func() {
+			for _, crdName := range expectedCRDs {
+				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}})).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			}
 
-	DescribeTable("should re-create CRD if it is deleted",
-		func(crdName string) {
-			Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}})).ToNot(HaveOccurred())
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
-			Expect(crdDeployer.Deploy(ctx)).ToNot(HaveOccurred())
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).ToNot(HaveOccurred())
-		},
+			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 
-		Entry("ClusterFilter", "clusterfilters.fluentbit.fluent.io"),
-		Entry("ClusterFluentBitConfig", "clusterfluentbitconfigs.fluentbit.fluent.io"),
-		Entry("ClusterInput", "clusterinputs.fluentbit.fluent.io"),
-		Entry("ClusterOutput", "clusteroutputs.fluentbit.fluent.io"),
-		Entry("ClusterParser", "clusterparsers.fluentbit.fluent.io"),
-		Entry("FluentBit", "fluentbits.fluentbit.fluent.io"),
-		Entry("Collectors", "collectors.fluentbit.fluent.io"),
-		Entry("FluentBitConfig", "fluentbitconfigs.fluentbit.fluent.io"),
-		Entry("Filter", "filters.fluentbit.fluent.io"),
-		Entry("Parser", "parsers.fluentbit.fluent.io"),
-		Entry("Output", "outputs.fluentbit.fluent.io"),
-		Entry("ClusterMultilineParser", "clustermultilineparsers.fluentbit.fluent.io"),
-		Entry("MultilineParser", "multilineparsers.fluentbit.fluent.io"),
-	)
+			for _, crdName := range expectedCRDs {
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed(), crdName+" should get recreated")
+			}
+		})
+	})
+
+	Describe("#Destroy", func() {
+		It("should destroy CRDs", func() {
+			Expect(crdDeployer.Destroy(ctx)).To(Succeed())
+			for _, crdName := range expectedCRDs {
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError(), crdName+" should get deleted")
+			}
+		})
+	})
 })

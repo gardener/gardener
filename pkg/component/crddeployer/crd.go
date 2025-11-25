@@ -60,13 +60,24 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 				},
 			}
 
-			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, crd, func() error {
-				crd.Labels = desiredCRD.Labels
-				crd.Annotations = desiredCRD.Annotations
+			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, crd,
+				func() error {
+					crd.Labels = desiredCRD.Labels
+					crd.Annotations = desiredCRD.Annotations
 
-				crd.Spec = desiredCRD.Spec
-				return nil
-			})
+					crd.Spec = desiredCRD.Spec
+					return nil
+				},
+				// Not sending an empty patch goes against the recommendation in the Kubernetes Clients in Gardener guide.
+				// See https://github.com/gardener/gardener/blob/62ce73bd39cc2ff5ae8d711ce5d66f80cbbe2d00/docs/development/kubernetes-clients.md?plain=1#L352
+				//
+				// However, empty patches can be skipped here for the following reasons:
+				// - The fake client (`sigs.k8s.io/controller-runtime/pkg/client/fake`), used in unit tests, eats up a lot of CPU
+				//   when working with large resources during the handling of patch operations in the underlying `ObjectTracker` interface,
+				//   ref: https://github.com/kubernetes/client-go/blob/master/testing/fixture.go#L48-L80
+				// - Reduce the load on the kube-apiserver for CRDs that have already been deployed.
+				// - CRDs are not expected to be handled by any mutating webhooks.
+				controllerutils.SkipEmptyPatch{})
 			return err
 		})
 	}
