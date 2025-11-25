@@ -7,6 +7,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -33,8 +34,16 @@ func (m *manager) Generate(ctx context.Context, config secretsutils.ConfigInterf
 		bundleFor = ptr.To(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
 	}
 
+	namespace := m.namespaces[0]
+	if len(options.Namespace) > 0 {
+		namespace = options.Namespace
+		if !slices.Contains(m.namespaces, namespace) {
+			return nil, fmt.Errorf("namespace %q is not managed by this secrets manager", namespace)
+		}
+	}
+
 	objectMeta, err := ObjectMeta(
-		m.namespace,
+		namespace,
 		m.identity,
 		config,
 		options.IgnoreConfigChecksumForCASecretName,
@@ -72,7 +81,7 @@ func (m *manager) Generate(ctx context.Context, config secretsutils.ConfigInterf
 		if ignore, err := m.shouldIgnoreOldSecrets(desiredLabels[LabelKeyIssuedAtTime], options); err != nil {
 			return nil, fmt.Errorf("failed checking whether old secrets should be ignored for config %s: %w", config.GetName(), err)
 		} else if !ignore {
-			if err := m.storeOldSecrets(ctx, config.GetName(), secret.Name); err != nil {
+			if err := m.storeOldSecrets(ctx, config.GetName(), secret.Name, secret.Namespace); err != nil {
 				return nil, fmt.Errorf("failed adding old secrets for config %s to internal store: %w", config.GetName(), err)
 			}
 		}
@@ -100,7 +109,7 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretsutils.Con
 		return nil, fmt.Errorf("failed generating data: %w", err)
 	}
 
-	dataMap, err := m.keepExistingSecretsIfNeeded(ctx, config.GetName(), data.SecretData())
+	dataMap, err := m.keepExistingSecretsIfNeeded(ctx, config.GetName(), data.SecretData(), objectMeta.Namespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed taking over data from existing secret when needed: %w", err)
 	}
@@ -116,13 +125,13 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretsutils.Con
 		}
 	}
 
-	m.logger.Info("Generated new secret", "configName", config.GetName(), "secretName", secret.Name)
+	m.logger.Info("Generated new secret", "configName", config.GetName(), "secret", client.ObjectKeyFromObject(secret))
 	return secret, nil
 }
 
-func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName string, newData map[string][]byte) (map[string][]byte, error) {
+func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName string, newData map[string][]byte, namespace string) (map[string][]byte, error) {
 	existingSecrets := &corev1.SecretList{}
-	if err := m.client.List(ctx, existingSecrets, client.InNamespace(m.namespace), client.MatchingLabels{LabelKeyUseDataForName: configName}); err != nil {
+	if err := m.client.List(ctx, existingSecrets, client.InNamespace(namespace), client.MatchingLabels{LabelKeyUseDataForName: configName}); err != nil {
 		return nil, err
 	}
 
@@ -164,9 +173,9 @@ func (m *manager) shouldIgnoreOldSecrets(issuedAt string, options *GenerateOptio
 	return false, nil
 }
 
-func (m *manager) storeOldSecrets(ctx context.Context, name, currentSecretName string) error {
+func (m *manager) storeOldSecrets(ctx context.Context, name, currentSecretName, namespace string) error {
 	secretList := &corev1.SecretList{}
-	if err := m.client.List(ctx, secretList, client.InNamespace(m.namespace), client.MatchingLabels{
+	if err := m.client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 		LabelKeyName:            name,
 		LabelKeyManagedBy:       LabelValueSecretsManager,
 		LabelKeyManagerIdentity: m.identity,
@@ -380,6 +389,8 @@ type GenerateOptions struct {
 	// IgnoreConfigChecksumForCASecretName specifies whether the secret config checksum should be ignored when
 	// computing the secret name for CA secrets.
 	IgnoreConfigChecksumForCASecretName bool
+	// Namespace overwrites the namespace in which the secret should be created.
+	Namespace string
 
 	signingCAChecksum *string
 	isBundleSecret    bool
@@ -553,6 +564,14 @@ func IgnoreConfigChecksumForCASecretName() GenerateOption {
 func isBundleSecret() GenerateOption {
 	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
 		options.isBundleSecret = true
+		return nil
+	}
+}
+
+// Namespace returns a function which sets the 'Namespace' field.
+func Namespace(namespace string) GenerateOption {
+	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
+		options.Namespace = namespace
 		return nil
 	}
 }
