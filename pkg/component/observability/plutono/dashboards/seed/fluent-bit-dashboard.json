@@ -947,7 +947,7 @@
     },
     {
       "datasource": "prometheus-aggregate",
-      "description": "buffer sizes output plugin",
+      "description": "Buffer sizes of output plugin.",
       "fieldConfig": {
         "defaults": {
           "color": {
