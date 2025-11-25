@@ -236,6 +236,7 @@ var _ = Describe("NodeLocalDNS", func() {
 					Name: "worker-aaaa",
 				},
 			},
+			CustomDNSServerInNodeLocalDNS: true,
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -297,7 +298,10 @@ metadata:
   namespace: kube-system
 `
 			configMapYAMLFor = func() string {
-
+				serverBlockImport := ""
+				if values.CustomDNSServerInNodeLocalDNS {
+					serverBlockImport = "\n    import generated-config/custom-server-block.server"
+				}
 				out := `apiVersion: v1
 data:
   Corefile: |
@@ -350,8 +354,7 @@ data:
         errors
         cache 30
         reload
-        }
-    import generated-config/custom-server-block.server
+        }` + serverBlockImport + `
 immutable: true
 kind: ConfigMap
 metadata:
@@ -390,7 +393,7 @@ status:
 			maxUnavailable       = intstr.FromString("10%")
 			hostPathFileOrCreate = corev1.HostPathFileOrCreate
 			daemonSetYAMLFor     = func() *appsv1.DaemonSet {
-				daemonset := &appsv1.DaemonSet{
+				daemonSet := &appsv1.DaemonSet{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: appsv1.SchemeGroupVersion.String(),
 						Kind:       "DaemonSet",
@@ -451,41 +454,6 @@ status:
 								SecurityContext: &corev1.PodSecurityContext{
 									SeccompProfile: &corev1.SeccompProfile{
 										Type: corev1.SeccompProfileTypeRuntimeDefault,
-									},
-								},
-								InitContainers: []corev1.Container{
-									{
-										Name:  "coredns-config-adapter",
-										Image: values.CorednsConfigAdapterImage,
-										Resources: corev1.ResourceRequirements{
-											Requests: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("5m"),
-												corev1.ResourceMemory: resource.MustParse("10Mi"),
-											},
-										},
-										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
-											RunAsNonRoot:             ptr.To(true),
-											RunAsUser:                ptr.To[int64](65532),
-											RunAsGroup:               ptr.To[int64](65532),
-										},
-										Args: []string{
-											"-inputDir=/etc/custom",
-											"-outputDir=/etc/generated-config",
-											"-bind=bind " + bindIP(values),
-										},
-										VolumeMounts: []corev1.VolumeMount{
-											{
-												Name:      "custom-config-volume",
-												MountPath: "/etc/custom",
-												ReadOnly:  true,
-											},
-											{
-												MountPath: "/etc/generated-config",
-												Name:      "generated-config",
-											},
-										},
-										RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways),
 									},
 								},
 								Containers: []corev1.Container{
@@ -569,10 +537,6 @@ status:
 												MountPath: "/etc/custom",
 												ReadOnly:  true,
 											},
-											{
-												MountPath: "/etc/generated-config",
-												Name:      "generated-config",
-											},
 										},
 									},
 								},
@@ -625,18 +589,60 @@ status:
 											},
 										},
 									},
-									{
-										Name: "generated-config",
-										VolumeSource: corev1.VolumeSource{
-											EmptyDir: &corev1.EmptyDirVolumeSource{},
-										},
-									},
 								},
 							},
 						},
 					},
 				}
-				return daemonset
+
+				if values.CustomDNSServerInNodeLocalDNS {
+					daemonSet.Spec.Template.Spec.InitContainers = append(daemonSet.Spec.Template.Spec.InitContainers, corev1.Container{
+						Name:  "coredns-config-adapter",
+						Image: values.CorednsConfigAdapterImage,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("5m"),
+								corev1.ResourceMemory: resource.MustParse("10Mi"),
+							},
+						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
+							RunAsNonRoot:             ptr.To(true),
+							RunAsUser:                ptr.To[int64](65532),
+							RunAsGroup:               ptr.To[int64](65532),
+						},
+						Args: []string{
+							"-inputDir=/etc/custom",
+							"-outputDir=/etc/generated-config",
+							"-bind=bind " + bindIP(values),
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "custom-config-volume",
+								MountPath: "/etc/custom",
+								ReadOnly:  true,
+							},
+							{
+								MountPath: "/etc/generated-config",
+								Name:      "generated-config",
+							},
+						},
+						RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways),
+					})
+
+					daemonSet.Spec.Template.Spec.Volumes = append(daemonSet.Spec.Template.Spec.Volumes, corev1.Volume{
+						Name: "generated-config",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
+						},
+					})
+
+					daemonSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(daemonSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+						MountPath: "/etc/generated-config",
+						Name:      "generated-config",
+					})
+				}
+				return daemonSet
 			}
 			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -646,7 +652,7 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: node-cache
       controlledValues: RequestsOnly
     - containerName: coredns-config-adapter
       mode: "Off"
@@ -1269,6 +1275,303 @@ import generated-config/custom-server-block.server
 
 						It("should successfully deploy all resources", func() {
 							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+							Expect(manifests).To(ContainElements(expectedManifests))
+
+							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+							Expect(err).ToNot(HaveOccurred())
+							daemonset := daemonSetYAMLFor()
+							utilruntime.Must(references.InjectAnnotations(daemonset))
+							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+						})
+					})
+				})
+			})
+
+			Context("NodeLocalDNS with ipvsEnabled not enabled and featureGate CustomDNSServerInNodeLocalDNS disabled", func() {
+				BeforeEach(func() {
+					values.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}
+					ipvsAddress = "169.254.20.10"
+					values.ClusterDNS = []string{"__PILLAR__CLUSTER__DNS__"}
+					values.DNSServers = []string{"1.2.3.4", "2001:db8::1"}
+					values.CustomDNSServerInNodeLocalDNS = false
+					vpaYAML = `apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: node-local-dns-worker-aaaa
+  namespace: kube-system
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: node-cache
+      controlledValues: RequestsOnly
+  targetRef:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    name: node-local-dns-worker-aaaa
+  updatePolicy:
+    updateMode: Recreate
+status: {}
+`
+				})
+
+				Context("ConfigMap", func() {
+					JustBeforeEach(func() {
+						configMapData := map[string]string{
+							"Corefile": `cluster.local:53 {
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
+            ` + forceTcpToClusterDNS + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    health ` + healthAddress(values) + `:` + strconv.Itoa(livenessProbePort) + `
+    import custom/*.override
+    errors
+    cache {
+            success 9984 30
+            denial 9984 5
+    }
+    reload
+    }
+in-addr.arpa:53 {
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
+            ` + forceTcpToClusterDNS + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
+ip6.arpa:53 {
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
+            ` + forceTcpToClusterDNS + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
+.:53 {
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + strings.Join(upstreamDNSAddress, " ") + ` {
+            ` + forceTcpToUpstreamDNS + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    import custom/*.override
+    errors
+    cache 30
+    reload
+    }
+`,
+						}
+						configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
+					})
+
+					Context("ForceTcpToClusterDNS : true and ForceTcpToUpstreamDNS : true", func() {
+						BeforeEach(func() {
+							values.Config = &gardencorev1beta1.NodeLocalDNS{
+								Enabled:                     true,
+								ForceTCPToClusterDNS:        ptr.To(true),
+								ForceTCPToUpstreamDNS:       ptr.To(true),
+								DisableForwardToUpstreamDNS: ptr.To(false),
+							}
+						})
+
+						Context("w/o VPA", func() {
+							BeforeEach(func() {
+								values.VPAEnabled = false
+							})
+
+							It("should successfully deploy all resources", func() {
+								expectedManifests = append(expectedManifests, configMapYAMLFor())
+								Expect(manifests).To(ContainElements(expectedManifests))
+
+								managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+								Expect(err).ToNot(HaveOccurred())
+								daemonset := daemonSetYAMLFor()
+								utilruntime.Must(references.InjectAnnotations(daemonset))
+								Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							})
+						})
+
+						Context("w/ VPA", func() {
+							BeforeEach(func() {
+								values.VPAEnabled = true
+							})
+
+							It("should successfully deploy all resources", func() {
+								expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+								Expect(manifests).To(ContainElements(expectedManifests))
+
+								managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+								Expect(err).ToNot(HaveOccurred())
+								daemonset := daemonSetYAMLFor()
+								utilruntime.Must(references.InjectAnnotations(daemonset))
+								Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							})
+						})
+					})
+					Context("ForceTcpToClusterDNS : true and ForceTcpToUpstreamDNS : false", func() {
+						BeforeEach(func() {
+							values.Config = &gardencorev1beta1.NodeLocalDNS{
+								Enabled:                     true,
+								ForceTCPToClusterDNS:        ptr.To(true),
+								ForceTCPToUpstreamDNS:       ptr.To(false),
+								DisableForwardToUpstreamDNS: ptr.To(false),
+							}
+							forceTcpToClusterDNS = "force_tcp"
+							forceTcpToUpstreamDNS = "prefer_udp"
+						})
+
+						Context("w/o VPA", func() {
+							BeforeEach(func() {
+								values.VPAEnabled = false
+							})
+
+							It("should successfully deploy all resources", func() {
+								expectedManifests = append(expectedManifests, configMapYAMLFor())
+								Expect(manifests).To(ContainElements(expectedManifests))
+
+								managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+								Expect(err).ToNot(HaveOccurred())
+								daemonset := daemonSetYAMLFor()
+								utilruntime.Must(references.InjectAnnotations(daemonset))
+								Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							})
+						})
+
+						Context("w/ VPA", func() {
+							BeforeEach(func() {
+								values.VPAEnabled = true
+							})
+
+							It("should successfully deploy all resources", func() {
+								expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+								Expect(manifests).To(ContainElements(expectedManifests))
+
+								managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+								Expect(err).ToNot(HaveOccurred())
+								daemonset := daemonSetYAMLFor()
+								utilruntime.Must(references.InjectAnnotations(daemonset))
+								Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							})
+						})
+					})
+
+					Context("ForceTcpToClusterDNS : false and ForceTcpToUpstreamDNS : true", func() {
+						BeforeEach(func() {
+							values.Config = &gardencorev1beta1.NodeLocalDNS{
+								Enabled:                     true,
+								ForceTCPToClusterDNS:        ptr.To(false),
+								ForceTCPToUpstreamDNS:       ptr.To(true),
+								DisableForwardToUpstreamDNS: ptr.To(false),
+							}
+							forceTcpToClusterDNS = "prefer_udp"
+							forceTcpToUpstreamDNS = "force_tcp"
+						})
+
+						Context("w/o VPA", func() {
+							BeforeEach(func() {
+								values.VPAEnabled = false
+							})
+
+							It("should successfully deploy all resources", func() {
+								expectedManifests = append(expectedManifests, configMapYAMLFor())
+								Expect(manifests).To(ContainElements(expectedManifests))
+
+								managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+								Expect(err).ToNot(HaveOccurred())
+								daemonset := daemonSetYAMLFor()
+								utilruntime.Must(references.InjectAnnotations(daemonset))
+								Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							})
+						})
+
+						Context("w/ VPA", func() {
+							BeforeEach(func() {
+								values.VPAEnabled = true
+							})
+
+							It("should successfully deploy all resources", func() {
+								expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+								Expect(manifests).To(ContainElements(expectedManifests))
+
+								managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+								Expect(err).ToNot(HaveOccurred())
+								daemonset := daemonSetYAMLFor()
+								utilruntime.Must(references.InjectAnnotations(daemonset))
+								Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							})
+						})
+					})
+
+					Context("ForceTcpToClusterDNS : false and ForceTcpToUpstreamDNS : false", func() {
+						BeforeEach(func() {
+							values.Config = &gardencorev1beta1.NodeLocalDNS{
+								Enabled:                     true,
+								ForceTCPToClusterDNS:        ptr.To(false),
+								ForceTCPToUpstreamDNS:       ptr.To(false),
+								DisableForwardToUpstreamDNS: ptr.To(false),
+							}
+							forceTcpToClusterDNS = "prefer_udp"
+							forceTcpToUpstreamDNS = "prefer_udp"
+						})
+						Context("w/o VPA", func() {
+							BeforeEach(func() {
+								values.VPAEnabled = false
+							})
+
+							It("should successfully deploy all resources", func() {
+								expectedManifests = append(expectedManifests, configMapYAMLFor())
+								Expect(manifests).To(ContainElements(expectedManifests))
+
+								managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+								Expect(err).ToNot(HaveOccurred())
+								daemonset := daemonSetYAMLFor()
+								utilruntime.Must(references.InjectAnnotations(daemonset))
+								Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							})
+						})
+
+						Context("w/ VPA", func() {
+							BeforeEach(func() {
+								values.VPAEnabled = true
+							})
+
+							It("should successfully deploy all resources", func() {
+								expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+								Expect(manifests).To(ContainElements(expectedManifests))
+
+								managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+								Expect(err).ToNot(HaveOccurred())
+								daemonset := daemonSetYAMLFor()
+								utilruntime.Must(references.InjectAnnotations(daemonset))
+								Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							})
+						})
+					})
+
+					Context("DisableForwardToUpstreamDNS true", func() {
+						BeforeEach(func() {
+							values.Config = &gardencorev1beta1.NodeLocalDNS{
+								Enabled:                     true,
+								ForceTCPToClusterDNS:        ptr.To(true),
+								ForceTCPToUpstreamDNS:       ptr.To(true),
+								DisableForwardToUpstreamDNS: ptr.To(true),
+							}
+							values.VPAEnabled = true
+							upstreamDNSAddress = values.ClusterDNS
+							forceTcpToClusterDNS = "force_tcp"
+							forceTcpToUpstreamDNS = "force_tcp"
+						})
+
+						It("should successfully deploy all resources", func() {
+							expectedManifests = append(expectedManifests, configMapYAMLFor())
 							Expect(manifests).To(ContainElements(expectedManifests))
 
 							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
