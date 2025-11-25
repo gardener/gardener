@@ -14,9 +14,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/versioning"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 var scheme *runtime.Scheme
@@ -64,7 +64,7 @@ func EncodeGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfigur
 }
 
 // EncodeGardenletConfigurationToBytes encodes the given external GardenletConfiguration version into a byte slice.
-func EncodeGardenletConfigurationToBytes(cfg *gardenletconfigv1alpha1.GardenletConfiguration) ([]byte, error) {
+func EncodeGardenletConfigurationToBytes(cfg runtime.Object) ([]byte, error) {
 	encoder, err := getEncoder(gardenletconfigv1alpha1.SchemeGroupVersion, runtime.ContentTypeJSON)
 	if err != nil {
 		return nil, err
