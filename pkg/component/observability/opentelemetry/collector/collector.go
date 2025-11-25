@@ -382,7 +382,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 								},
 								map[string]any{
 									"key":    "loki.format",
-									"value":  "logfmt",
+									"value":  "raw",
 									"action": "insert",
 								},
 							},
