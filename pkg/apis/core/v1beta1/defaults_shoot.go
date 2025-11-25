@@ -14,7 +14,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils/timewindow"
+	"github.com/gardener/gardener/pkg/apis/utils/timewindow"
 )
 
 // SetDefaults_Shoot sets default values for Shoot objects.

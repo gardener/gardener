@@ -12,11 +12,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	seedmanagementinstall "github.com/gardener/gardener/pkg/api/seedmanagement/install"
 	authenticationinstall "github.com/gardener/gardener/pkg/apis/authentication/install"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	operationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
 	securityinstall "github.com/gardener/gardener/pkg/apis/security/install"
-	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 )
 
