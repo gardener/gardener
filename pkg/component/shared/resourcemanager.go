@@ -52,7 +52,7 @@ func runtimeGardenerResourceManagerDefaultValues() resourcemanager.Values {
 		VPAInPlaceUpdatesEnabled:            false,
 		Replicas:                            ptr.To[int32](2),
 		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
-		ResponsibilityMode:                  resourcemanager.ForSeedOrGardenRuntime,
+		ResponsibilityMode:                  resourcemanager.ForRuntime,
 	}
 }
 
@@ -112,50 +112,6 @@ func NewTargetGardenerResourceManager(
 
 	defaultValues := targetGardenerResourceManagerDefaultValues(&namespaceName)
 	defaultValues.Image = image.String()
-
-	applyDefaults(&values, defaultValues)
-	return resourcemanager.New(c, namespaceName, secretsManager, values), nil
-}
-
-func selfHostedShootResourceManager() resourcemanager.Values {
-	var (
-		values        = resourcemanager.Values{}
-		runtimeValues = runtimeGardenerResourceManagerDefaultValues()
-		targetValues  = targetGardenerResourceManagerDefaultValues(nil)
-	)
-
-	applyDefaults(&values, runtimeValues)
-	applyDefaults(&values, targetValues)
-
-	values.ResourceClass = ptr.To(resourcemanagerconfigv1alpha1.AllResourceClass)
-	values.ResponsibilityMode = resourcemanager.ForSelfHostedShoot
-
-	return values
-}
-
-// NewSelfHostedShootGardenerResourceManager instantiates a new `gardener-resource-manager` component configured to
-// reconcile objects in a self-hosted shoot cluster.
-func NewSelfHostedShootGardenerResourceManager(c client.Client,
-	namespaceName string,
-	secretsManager secretsmanager.Interface,
-	values resourcemanager.Values,
-) (
-	resourcemanager.Interface,
-	error,
-) {
-	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerResourceManager)
-	if err != nil {
-		return nil, err
-	}
-	image.WithOptionalTag(version.Get().GitVersion)
-
-	defaultValues := selfHostedShootResourceManager()
-	defaultValues.Image = image.String()
-
-	values.Replicas = ptr.To[int32](2)
-	if values.BootstrapControlPlaneNode {
-		values.Replicas = ptr.To[int32](1)
-	}
 
 	applyDefaults(&values, defaultValues)
 	return resourcemanager.New(c, namespaceName, secretsManager, values), nil
