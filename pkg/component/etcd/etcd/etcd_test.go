@@ -1532,11 +1532,12 @@ var _ = Describe("Etcd", func() {
 						logr.New(logf.NullLogSink{}),
 						testclock.NewFakeClock(time.Now()),
 						fakeClient,
-						testNamespace,
 						"",
 						secretsmanager.Config{
 							SecretNamesToTimes: secretNamesToTimes,
-						})
+						},
+						testNamespace,
+					)
 					Expect(err).ToNot(HaveOccurred())
 
 					// Create new etcd CA
@@ -1639,11 +1640,12 @@ var _ = Describe("Etcd", func() {
 					logr.New(logf.NullLogSink{}),
 					testclock.NewFakeClock(time.Now()),
 					fakeClient,
-					testNamespace,
 					"",
 					secretsmanager.Config{
 						SecretNamesToTimes: secretNamesToTimes,
-					})
+					},
+					testNamespace,
+				)
 				Expect(err).ToNot(HaveOccurred())
 
 				// Create new etcd CA
