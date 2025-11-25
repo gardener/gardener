@@ -438,10 +438,11 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 	}
 
 	if o.values.WithRBACProxy {
+		// TODO(rrhubenov): Remove the rbac-proxy container when the `OpenTelemetryCollector` feature gate is promoted to GA.
 		obj.Spec.Ports = append(obj.Spec.Ports, otelv1beta1.PortsSpec{
 			ServicePort: corev1.ServicePort{
 				Name: kubeRBACProxyName + "-vali",
-				Port: collectorconstants.KubeRBACProxyLokiReceiverPort,
+				Port: collectorconstants.KubeRBACProxyValiPort,
 			},
 		})
 		obj.Spec.Ports = append(obj.Spec.Ports, otelv1beta1.PortsSpec{
@@ -451,11 +452,12 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			},
 		})
 		obj.Spec.AdditionalContainers = []corev1.Container{
+			// TODO(rrhubenov): Remove the rbac-proxy container when the `OpenTelemetryCollector` feature gate is promoted to GA.
 			{
 				Name:  kubeRBACProxyName + "-vali",
 				Image: o.values.KubeRBACProxyImage,
 				Args: []string{
-					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", collectorconstants.KubeRBACProxyLokiReceiverPort),
+					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", collectorconstants.KubeRBACProxyValiPort),
 					fmt.Sprintf("--upstream=http://logging:%d/", valiconstants.ValiPort),
 					"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
 					"--logtostderr=true",
@@ -524,8 +526,9 @@ func (o *otelCollector) newLoggingAgentShootAccessSecret() *gardenerutils.Access
 func (o *otelCollector) getIngress(secretName string) *networkingv1.Ingress {
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "logging",
-			Namespace:   o.namespace,
+			Name:      "logging",
+			Namespace: o.namespace,
+			// TODO(rrrhubenov): Research whether this annotation is required before promoting the `OpenTelemetryCollector` feature gate to GA.
 			Annotations: map[string]string{"nginx.ingress.kubernetes.io/backend-protocol": "GRPC"},
 			Labels:      getLabels(),
 		},
@@ -561,7 +564,7 @@ func (o *otelCollector) getIngress(secretName string) *networkingv1.Ingress {
 								Backend: networkingv1.IngressBackend{
 									Service: &networkingv1.IngressServiceBackend{
 										Name: collectorconstants.ServiceName,
-										Port: networkingv1.ServiceBackendPort{Number: collectorconstants.KubeRBACProxyLokiReceiverPort},
+										Port: networkingv1.ServiceBackendPort{Number: collectorconstants.KubeRBACProxyValiPort},
 									},
 								},
 								Path:     valiconstants.PushEndpoint,

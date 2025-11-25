@@ -248,6 +248,7 @@ cat <<EOF | sudo tee -a /etc/hosts
 172.18.255.1 gu-local--local.ingress.local.seed.local.gardener.cloud
 172.18.255.1 p-local--local.ingress.local.seed.local.gardener.cloud
 172.18.255.1 v-local--local.ingress.local.seed.local.gardener.cloud
+172.18.255.1 otc-local--local.ingress.local.seed.local.gardener.cloud
 
 # E2E tests
 172.18.255.1 api.e2e-managedseed.garden.external.local.gardener.cloud
