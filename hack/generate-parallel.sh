@@ -156,7 +156,7 @@ should_generate_crds() {
   # Check if any group's package changed
   for group in $groups; do
     local package="$(get_group_package "$group" 2>/dev/null || echo "")"
-    
+
     # If we can't determine package, be safe and regenerate
     if [ -z "$package" ]; then
       return 0
@@ -235,14 +235,14 @@ echo "$ROOTS" | while IFS= read -r dir; do
   if [ -z "$dir" ]; then
     continue
   fi
-  
+
   # Check if directory has only skippable directives (mockgen, api-docs, or crds)
   has_only_skippable=true
   has_skippable=false
-  
+
   for file in "$dir"/*.go; do
     [ -f "$file" ] || continue
-    
+
     if grep -q '//go:generate' "$file"; then
       if grep -qE '//go:generate.*(mockgen|gen-crd-api-reference-docs|generate-crds\.sh)' "$file"; then
         has_skippable=true
@@ -256,13 +256,13 @@ echo "$ROOTS" | while IFS= read -r dir; do
       fi
     fi
   done
-  
+
   # If directory has only skippable directives, check if generation is needed
   if [ "$has_only_skippable" = true ] && [ "$has_skippable" = true ]; then
     needs_gen=false
     for file in "$dir"/*.go; do
       [ -f "$file" ] || continue
-      
+
       if grep -q '//go:generate.*mockgen' "$file" && should_generate_mocks "$dir" "$file"; then
         needs_gen=true
         break
@@ -276,7 +276,7 @@ echo "$ROOTS" | while IFS= read -r dir; do
         break
       fi
     done
-    
+
     if [ "$needs_gen" = true ]; then
       echo "github.com/gardener/gardener/$dir"
     else
