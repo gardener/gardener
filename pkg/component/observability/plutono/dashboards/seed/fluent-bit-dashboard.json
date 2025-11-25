@@ -218,7 +218,7 @@
     },
     {
       "datasource": "prometheus-aggregate",
-      "description": "Output plugin bytes processing rate of all fluent-bits.",
+      "description": "Average Output plugin bytes processing rate of all fluent-bits.",
       "fieldConfig": {
         "defaults": {
           "color": {
