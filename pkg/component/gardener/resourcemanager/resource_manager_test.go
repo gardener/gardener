@@ -78,7 +78,6 @@ var _ = Describe("ResourceManager", func() {
 		clusterIdentity                    = "foo"
 		secretNameServer                   = "gardener-resource-manager-server"
 		secretMountPathServer              = "/etc/gardener-resource-manager-tls"
-		secretMountPathRootCA              = "/etc/gardener-resource-manager-root-ca"
 		secretMountPathConfig              = "/etc/gardener-resource-manager-config"
 		secretMountPathAPIAccess           = "/var/run/secrets/kubernetes.io/serviceaccount"
 		secrets                            Secrets
@@ -150,7 +149,7 @@ var _ = Describe("ResourceManager", func() {
 		sm = fakesecretsmanager.New(fakeClient, deployNamespace)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
-		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: deployNamespace}})).To(Succeed())
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "server-ca", Namespace: deployNamespace}})).To(Succeed())
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: deployNamespace}})).To(Succeed())
 
 		secrets = Secrets{}
@@ -324,7 +323,7 @@ var _ = Describe("ResourceManager", func() {
 			PriorityClassName:                                priorityClassName,
 			Replicas:                                         &replicas,
 			ResourceClass:                                    &resourceClass,
-			SecretNameServerCA:                               "ca",
+			SecretNameServerCA:                               "server-ca",
 			SystemComponentTolerations: []corev1.Toleration{
 				{Key: "a"},
 				{Key: "b"},
@@ -744,21 +743,6 @@ var _ = Describe("ResourceManager", func() {
 				deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"}}
 				deployment.Spec.Template.Spec.HostNetwork = true
 				deployment.Spec.Template.Spec.PriorityClassName = "system-cluster-critical"
-			} else {
-				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-					MountPath: secretMountPathRootCA,
-					Name:      "root-ca",
-					ReadOnly:  true,
-				})
-				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-					Name: "root-ca",
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName:  "ca",
-							DefaultMode: ptr.To[int32](420),
-						},
-					},
-				})
 			}
 
 			if secretNameBootstrapKubeconfig != nil {
@@ -2519,8 +2503,8 @@ subjects:
 				configMap = configMapFor(&watchedNamespace, ForRuntime, false, false)
 				deployment = deploymentFor(configMap.Name, false, nil, false)
 
-				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
-				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-2]
+				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-1]
+				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-1]
 				deployment.Spec.Template.Labels["gardener.cloud/role"] = "seed"
 				pdb.Spec.Selector.MatchLabels["gardener.cloud/role"] = "seed"
 				for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {

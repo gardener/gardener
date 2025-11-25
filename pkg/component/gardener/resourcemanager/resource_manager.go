@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -74,7 +75,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	netutils "github.com/gardener/gardener/pkg/utils/net"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -129,8 +129,6 @@ const (
 	metricsPortName     = "metrics"
 	containerName       = v1beta1constants.DeploymentNameGardenerResourceManager
 
-	healthPort        = 8081
-	metricsPort       = 8080
 	serverServicePort = 443
 
 	configMapDataKey = "config.yaml"
@@ -138,12 +136,10 @@ const (
 	volumeNameBootstrapKubeconfig = "kubeconfig-bootstrap"
 	volumeNameCerts               = "tls"
 	volumeNameAPIServerAccess     = "kube-api-access-gardener"
-	volumeNameRootCA              = "root-ca"
 	volumeNameConfiguration       = "config"
 
 	volumeMountPathCerts           = "/etc/gardener-resource-manager-tls"
 	volumeMountPathAPIServerAccess = "/var/run/secrets/kubernetes.io/serviceaccount"
-	volumeMountPathRootCA          = "/etc/gardener-resource-manager-root-ca"
 	volumeMountPathConfiguration   = "/etc/gardener-resource-manager-config"
 )
 
@@ -235,7 +231,6 @@ type resourceManager struct {
 	secretsManager secretsmanager.Interface
 	values         Values
 	secrets        Secrets
-	port           int32
 }
 
 // Values holds the optional configuration options for the gardener resource manager
@@ -367,16 +362,12 @@ const (
 )
 
 func (r *resourceManager) Deploy(ctx context.Context) error {
-	if err := r.chooseServerPort(); err != nil {
-		return err
-	}
-
-	if r.values.ResponsibilityMode == ForShootOrVirtualGarden {
+	if r.responsibleForHostedShootOrVirtualGarden() {
 		r.secrets.shootAccess = r.newShootAccessSecret()
 		if err := r.secrets.shootAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
 			return err
 		}
-	} else {
+	} else if r.values.ResponsibilityMode == ForRuntime {
 		if err := r.ensureCustomResourceDefinition(ctx); err != nil {
 			return err
 		}
@@ -417,7 +408,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		r.emptyServiceMonitor(),
 	}
 
-	if r.values.ResponsibilityMode == ForShootOrVirtualGarden {
+	if r.responsibleForHostedShootOrVirtualGarden() {
 		if err := managedresources.DeleteForShoot(ctx, r.client, r.namespace, ManagedResourceName); err != nil {
 			return err
 		}
@@ -487,7 +478,7 @@ func (r *resourceManager) ensureCustomResourceDefinition(ctx context.Context) er
 }
 
 func (r *resourceManager) ensureRBAC(ctx context.Context) error {
-	if r.values.ResponsibilityMode == ForShootOrVirtualGarden {
+	if r.responsibleForHostedShootOrVirtualGarden() {
 		if r.values.WatchedNamespace == nil {
 			if err := r.ensureClusterRole(ctx, allowManagedResources(r.values.NamePrefix)); err != nil {
 				return err
@@ -548,7 +539,11 @@ func (r *resourceManager) ensureClusterRoleBinding(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + clusterRoleName}}
+	name := r.values.NamePrefix + clusterRoleName
+	if r.namespace == metav1.NamespaceSystem {
+		name = strings.ReplaceAll(name, "seed", "shoot")
+	}
+	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: name}}
 }
 
 func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
@@ -560,14 +555,14 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		},
 		Server: resourcemanagerconfigv1alpha1.ServerConfiguration{
 			HealthProbes: &resourcemanagerconfigv1alpha1.Server{
-				Port: healthPort,
+				Port: int(r.healthPort()),
 			},
 			Metrics: &resourcemanagerconfigv1alpha1.Server{
-				Port: metricsPort,
+				Port: int(r.metricsPort()),
 			},
 			Webhooks: resourcemanagerconfigv1alpha1.HTTPSServer{
 				Server: resourcemanagerconfigv1alpha1.Server{
-					Port: int(r.port),
+					Port: int(r.serverPort()),
 				},
 				TLS: resourcemanagerconfigv1alpha1.TLSServer{
 					ServerCertDir: volumeMountPathCerts,
@@ -630,11 +625,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	if r.values.ResponsibilityMode == ForShootOrVirtualGarden {
-		config.TargetClientConnection = &resourcemanagerconfigv1alpha1.ClientConnection{
-			ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-				Kubeconfig: gardenerutils.PathGenericKubeconfig,
-			},
-			Namespaces: r.values.TargetNamespaces,
+		config.TargetClientConnection = &resourcemanagerconfigv1alpha1.ClientConnection{Namespaces: r.values.TargetNamespaces}
+		if r.responsibleForHostedShootOrVirtualGarden() {
+			config.TargetClientConnection.Kubeconfig = gardenerutils.PathGenericKubeconfig
 		}
 	} else {
 		config.Controllers.NetworkPolicy = resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig{
@@ -768,17 +761,17 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		service.Labels = utils.MergeStringMaps(service.Labels, r.getLabels())
 
 		portMetrics := networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(metricsPort)),
+			Port:     ptr.To(intstr.FromInt32(r.metricsPort())),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}
 
 		if r.values.ResponsibilityMode != ForShootOrVirtualGarden {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
-			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, r.port))
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, r.serverPort()))
 		} else {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, portMetrics))
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
-				Port:     ptr.To(intstr.FromInt32(r.port)),
+				Port:     ptr.To(intstr.FromInt32(r.serverPort())),
 				Protocol: ptr.To(corev1.ProtocolTCP),
 			}))
 		}
@@ -793,18 +786,18 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 			{
 				Name:     metricsPortName,
 				Protocol: corev1.ProtocolTCP,
-				Port:     metricsPort,
+				Port:     r.metricsPort(),
 			},
 			{
 				Name:     healthPortName,
 				Protocol: corev1.ProtocolTCP,
-				Port:     healthPort,
+				Port:     r.healthPort(),
 			},
 			{
 				Name:       serverPortName,
 				Protocol:   corev1.ProtocolTCP,
 				Port:       serverServicePort,
-				TargetPort: intstr.FromInt32(r.port),
+				TargetPort: intstr.FromInt32(r.serverPort()),
 			},
 		}
 		service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
@@ -918,12 +911,12 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          "metrics",
-								ContainerPort: metricsPort,
+								ContainerPort: r.metricsPort(),
 								Protocol:      corev1.ProtocolTCP,
 							},
 							{
 								Name:          "health",
-								ContainerPort: healthPort,
+								ContainerPort: r.healthPort(),
 								Protocol:      corev1.ProtocolTCP,
 							},
 						},
@@ -939,7 +932,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/healthz",
 									Scheme: "HTTP",
-									Port:   intstr.FromInt32(healthPort),
+									Port:   intstr.FromInt32(r.healthPort()),
 								},
 							},
 							InitialDelaySeconds: 30,
@@ -953,7 +946,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/readyz",
 									Scheme: "HTTP",
-									Port:   intstr.FromInt32(healthPort),
+									Port:   intstr.FromInt32(r.healthPort()),
 								},
 							},
 							InitialDelaySeconds: 10,
@@ -1043,27 +1036,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 			},
 		}
 
-		if r.values.ResponsibilityMode == ForShootOrVirtualGarden {
-			clusterCASecret, found := r.secretsManager.Get(v1beta1constants.SecretNameCACluster)
-			if !found {
-				return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-			}
-
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-				Name: volumeNameRootCA,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName:  clusterCASecret.Name,
-						DefaultMode: ptr.To[int32](420),
-					},
-				},
-			})
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-				MountPath: volumeMountPathRootCA,
-				Name:      volumeNameRootCA,
-				ReadOnly:  true,
-			})
-
+		if r.responsibleForHostedShootOrVirtualGarden() {
 			if r.secrets.BootstrapKubeconfig != nil {
 				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 					Name: volumeNameBootstrapKubeconfig,
@@ -1157,28 +1130,6 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 		return nil
 	})
 	return err
-}
-
-// SuggestPort is an alias for netutils.SuggestPort.
-// Exposed for testing.
-var SuggestPort = netutils.SuggestPort
-
-func (r *resourceManager) chooseServerPort() error {
-	if !r.values.BootstrapControlPlaneNode {
-		r.port = 10250
-		return nil
-	}
-
-	if r.port != 0 {
-		return nil
-	}
-
-	p, _, err := SuggestPort("")
-	if err != nil {
-		return fmt.Errorf("failed to find a usable port: %w", err)
-	}
-	r.port = int32(p) // #nosec G115 -- Value is within [0,65535]
-	return nil
 }
 
 func (r *resourceManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
@@ -1308,12 +1259,10 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", r.values.SecretNameServerCA)
 	}
 
-	var (
-		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
-		mutatingWebhookConfiguration = r.emptyMutatingWebhookConfiguration()
-
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+	if r.namespace != metav1.NamespaceSystem {
+		if err := registry.Add(&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "gardener.cloud:target:resource-manager",
 				Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
@@ -1328,15 +1277,17 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 				Name:      r.secrets.shootAccess.ServiceAccountName,
 				Namespace: metav1.NamespaceSystem,
 			}},
+		}); err != nil {
+			return err
 		}
-	)
+	}
 
+	mutatingWebhookConfiguration := r.emptyMutatingWebhookConfiguration()
 	mutatingWebhookConfiguration.Labels = r.appLabel()
 	mutatingWebhookConfiguration.Webhooks = r.newMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
 
 	data, err := registry.AddAllAndSerialize(
 		mutatingWebhookConfiguration,
-		clusterRoleBinding,
 	)
 	if err != nil {
 		return err
@@ -2058,7 +2009,7 @@ func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector 
 func (r *resourceManager) buildWebhookClientConfig(secretServerCA *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
 	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: secretServerCA.Data[secrets.DataKeyCertificateBundle]}
 
-	if r.values.ResponsibilityMode == ForShootOrVirtualGarden {
+	if r.responsibleForHostedShootOrVirtualGarden() {
 		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s.%s:%d%s", r.values.NamePrefix+resourcemanagerconstants.ServiceName, r.namespace, serverServicePort, path))
 	} else {
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
@@ -2218,4 +2169,30 @@ func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerconf
 	config.Webhooks.HighAvailabilityConfig.Enabled = false
 	config.Webhooks.PodTopologySpreadConstraints.Enabled = false
 	config.Webhooks.KubernetesServiceHost.Enabled = false
+}
+
+func (r *resourceManager) healthPort() int32 {
+	return r.defaultPortOrBootstrapControlPlaneNodePort(8081, 8083)
+}
+
+func (r *resourceManager) metricsPort() int32 {
+	return r.defaultPortOrBootstrapControlPlaneNodePort(8080, 8082)
+}
+
+func (r *resourceManager) serverPort() int32 {
+	return r.defaultPortOrBootstrapControlPlaneNodePort(10250, 19250)
+}
+
+func (r *resourceManager) defaultPortOrBootstrapControlPlaneNodePort(defaultPort, otherPort int32) int32 {
+	if !r.values.BootstrapControlPlaneNode {
+		return defaultPort
+	}
+	if r.values.ResponsibilityMode == ForRuntime {
+		return defaultPort + 1337
+	}
+	return otherPort
+}
+
+func (r *resourceManager) responsibleForHostedShootOrVirtualGarden() bool {
+	return r.values.ResponsibilityMode == ForShootOrVirtualGarden && r.namespace != metav1.NamespaceSystem
 }
