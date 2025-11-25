@@ -345,7 +345,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 									},
 									map[string]any{
 										"key":    "loki.format",
-										"value":  "logfmt",
+										"value":  "raw",
 										"action": "insert",
 									},
 								},
