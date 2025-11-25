@@ -265,7 +265,7 @@ func run(ctx context.Context, opts *Options) error {
 					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
 				)(ctx)
 			},
-			SkipIf:       podNetworkAvailable,
+			SkipIf:       podNetworkAvailable || opts.UseHostNetwork,
 			Dependencies: flow.NewTaskIDs(waitUntilCoreDNSReady),
 		})
 		waitUntilGardenerResourceManagerInPodNetworkReady = g.Add(flow.Task{
@@ -280,7 +280,7 @@ func run(ctx context.Context, opts *Options) error {
 					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
 				)(ctx)
 			},
-			SkipIf:       podNetworkAvailable,
+			SkipIf:       podNetworkAvailable || opts.UseHostNetwork,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManagerIntoPodNetwork),
 		})
 		deployExtensionControllersIntoPodNetwork = g.Add(flow.Task{
@@ -288,13 +288,13 @@ func run(ctx context.Context, opts *Options) error {
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return b.ReconcileExtensionControllerInstallations(ctx, false)
 			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
-			SkipIf:       podNetworkAvailable,
+			SkipIf:       podNetworkAvailable || opts.UseHostNetwork,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
 		})
 		waitUntilExtensionControllersInPodNetworkReady = g.Add(flow.Task{
 			Name:         "Waiting until extension controllers (in pod network) report readiness",
 			Fn:           b.WaitUntilExtensionControllerInstallationsHealthy,
-			SkipIf:       podNetworkAvailable,
+			SkipIf:       podNetworkAvailable || opts.UseHostNetwork,
 			Dependencies: flow.NewTaskIDs(deployExtensionControllersIntoPodNetwork),
 		})
 		syncPointBootstrapped = flow.NewTaskIDs(

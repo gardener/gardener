@@ -21,8 +21,13 @@ type Options struct {
 	*cmd.Options
 	cmd.ManifestOptions
 
-	// UseBootstrapEtcd indicates whether to use the bootstrap etcd instead of transitioning to etcd-druid.
+	// UseBootstrapEtcd indicates whether to use the bootstrap etcd instead of transitioning to etcd-druid
+	// (default: false). This helps `gardenadm init` to run faster.
 	UseBootstrapEtcd bool
+	// UseHostNetwork indicates whether to run gardener-resource-manager and extensions in host network (instead of
+	// redeploying them into the pod network after bootstrapping) (default: false). This helps `gardenadm init` to run
+	// faster.
+	UseHostNetwork bool
 	// Zone is the availability zone in which the new node is being initialized.
 	// It is validated against the `.spec.provider.workers[].zones` field of the Shoot manifest.
 	// If the worker pool has multiple zones configured, this flag is required.
@@ -85,6 +90,7 @@ func (o *Options) Complete() error {
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	o.ManifestOptions.AddFlags(fs)
-	fs.BoolVar(&o.UseBootstrapEtcd, "use-bootstrap-etcd", false, "If set, the control plane continues using the bootstrap etcd instead of transitioning to etcd-druid. This is useful for testing purposes to save time.")
+	fs.BoolVar(&o.UseBootstrapEtcd, "use-bootstrap-etcd", false, "If set, the control plane continues using the bootstrap etcd instead of transitioning to etcd-druid. This can be useful for testing purposes to save time.")
+	fs.BoolVar(&o.UseHostNetwork, "use-host-network", false, "If set, gardener-resource-manager and extensions continue to run in host network instead of getting redeployed into the pod network after bootstrapping. This can be useful for testing purposes to save time.")
 	fs.StringVarP(&o.Zone, "zone", "z", "", "Availability zone for the new node. Required if the control plane worker pool in the Shoot has multiple zones configured. Optional if exactly one zone is configured (applied automatically). Must not be set if no zones are configured.")
 }
