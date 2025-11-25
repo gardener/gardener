@@ -36,7 +36,13 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	var (
 		b   = &Botanist{Operation: o}
 		err error
+
+		secretsManagerIdentity = v1beta1constants.SecretManagerIdentityGardenlet
 	)
+
+	if o.Shoot.IsSelfHosted() {
+		secretsManagerIdentity = v1beta1constants.SecretManagerIdentitySelfHostedShoot
+	}
 
 	o.SecretsManager, err = secretsmanager.New(
 		ctx,
@@ -44,7 +50,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		clock.RealClock{},
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
-		v1beta1constants.SecretManagerIdentityGardenlet,
+		secretsManagerIdentity,
 		secretsmanager.Config{
 			CASecretAutoRotation: false,
 			SecretNamesToTimes:   b.lastSecretRotationStartTimes(),
