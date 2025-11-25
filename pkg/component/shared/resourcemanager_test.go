@@ -74,7 +74,7 @@ var _ = Describe("ResourceManager", func() {
 				VPAInPlaceUpdatesEnabled:            false,
 				Replicas:                            ptr.To[int32](2),
 				ResourceClass:                       ptr.To("seed"),
-				ResponsibilityMode:                  resourcemanager.ForSource,
+				ResponsibilityMode:                  resourcemanager.ForSeedOrGardenRuntime,
 			}))
 		})
 
@@ -93,7 +93,7 @@ var _ = Describe("ResourceManager", func() {
 				MaxConcurrentCSRApproverWorkers:    ptr.To(5),
 				MaxConcurrentHealthWorkers:         ptr.To(10),
 				MaxConcurrentTokenRequestorWorkers: ptr.To(5),
-				ResponsibilityMode:                 resourcemanager.ForTarget,
+				ResponsibilityMode:                 resourcemanager.ForShootOrVirtualGarden,
 				TargetNamespaces:                   []string{},
 				WatchedNamespace:                   &namespace,
 			}))
