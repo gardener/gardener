@@ -30,7 +30,7 @@ var _ = Describe("validation", func() {
 					Name:            "extension",
 					ResourceVersion: "1",
 				},
-				SeedRef: corev1.ObjectReference{
+				SeedRef: &corev1.ObjectReference{
 					Name:            "aws",
 					ResourceVersion: "1",
 				},
@@ -43,9 +43,7 @@ var _ = Describe("validation", func() {
 			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
 				controllerInstallation.ObjectMeta = objectMeta
 
-				errorList := ValidateControllerInstallation(controllerInstallation)
-
-				Expect(errorList).To(matcher)
+				Expect(ValidateControllerInstallation(controllerInstallation)).To(matcher)
 			},
 
 			Entry("should forbid ControllerInstallation with empty metadata",
@@ -79,24 +77,31 @@ var _ = Describe("validation", func() {
 		)
 
 		It("should forbid empty ControllerInstallation resources", func() {
-			errorList := ValidateControllerInstallation(&core.ControllerInstallation{})
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Expect(ValidateControllerInstallation(&core.ControllerInstallation{})).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.registrationRef.name"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.seedRef.name"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec.seedRef"),
+				"Detail": Equal("either seedRef or shootRef must be set"),
+			}))))
+		})
+
+		It("should forbid specifying both seedRef and shootRef", func() {
+			controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "foo"}
+
+			Expect(ValidateControllerInstallation(controllerInstallation)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec.seedRef"),
+				"Detail": Equal("cannot set both seedRef and shootRef"),
 			}))))
 		})
 
 		It("should allow valid ControllerInstallation resources", func() {
-			errorList := ValidateControllerInstallation(controllerInstallation)
-
-			Expect(errorList).To(BeEmpty())
+			Expect(ValidateControllerInstallation(controllerInstallation)).To(BeEmpty())
 		})
 	})
 
@@ -109,9 +114,7 @@ var _ = Describe("validation", func() {
 			newControllerInstallation.DeletionTimestamp = &now
 			newControllerInstallation.Spec.RegistrationRef.APIVersion = "another-api-version"
 
-			errorList := ValidateControllerInstallationUpdate(newControllerInstallation, controllerInstallation)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Expect(ValidateControllerInstallationUpdate(newControllerInstallation, controllerInstallation)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec"),
 				"Detail": Equal("cannot update controller installation spec if deletion timestamp is set. Requested changes: RegistrationRef.APIVersion: another-api-version != "),
@@ -125,9 +128,7 @@ var _ = Describe("validation", func() {
 			newControllerInstallation.Spec.SeedRef.Name = "another-name"
 			newControllerInstallation.Spec.SeedRef.ResourceVersion = "2"
 
-			errorList := ValidateControllerInstallationUpdate(newControllerInstallation, controllerInstallation)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Expect(ValidateControllerInstallationUpdate(newControllerInstallation, controllerInstallation)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.registrationRef.name"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
