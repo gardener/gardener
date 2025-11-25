@@ -31,11 +31,11 @@ exported_pkg=(
   gardener/gardener/pkg/client/
   gardener/gardener/pkg/controllerutils/
   gardener/gardener/pkg/extensions/
-  gardener/gardener/pkg/gardenlet/apis/config/v1alpha1
+  gardener/gardener/pkg/apis/config/gardenlet/v1alpha1
   gardener/gardener/pkg/logger/
   gardener/gardener/third_party/mock/controller-runtime/client/
   gardener/gardener/pkg/component/extensions/operatingsystemconfig/
-  gardener/gardener/pkg/operator/apis/config/v1alpha1
+  gardener/gardener/pkg/apis/config/operator/v1alpha1
   gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references/
   gardener/gardener/pkg/scheduler/
   gardener/gardener/pkg/utils/

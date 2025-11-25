@@ -64,6 +64,7 @@ TOOLS_DIR := hack/tools
 include hack/tools.mk
 
 LOGCHECK_DIR := $(TOOLS_DIR)/logcheck
+PKG_APIS_DIR := $(REPO_ROOT)/pkg/apis
 
 #########################################
 # Rules for local development scenarios #
@@ -143,6 +144,7 @@ docker-push:
 tidy:
 	@GO111MODULE=on go mod tidy
 	@cd $(LOGCHECK_DIR); go mod tidy
+	@cd $(PKG_APIS_DIR); go mod tidy
 
 .PHONY: clean
 clean:
@@ -215,7 +217,8 @@ generate:
 else
 generate: tools-for-generate
 	@printf "\nFor more info on the generate command, Run 'make generate PRINT_HELP=y'\n"
-	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) hack/generate.sh --what "$(WHAT)" --codegen-groups "$(CODEGEN_GROUPS)" --manifests-dirs "$(MANIFESTS_DIRS)" --mode "$(MODE)" --max-parallel-workers "$(MAX_PARALLEL_WORKERS)"
+	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) hack/generate.sh --what "$(WHAT)" --codegen-groups "$(CODEGEN_GROUPS)" --manifests-dirs "$(MANIFESTS_DIRS)" --mode "$(MODE)"
+	@cd $(PKG_APIS_DIR); REPO_ROOT=$(REPO_ROOT) ../../hack/generate.sh --what "manifests" --manifests-dirs "./pkg/apis" --mode "$(MODE)"
 	$(MAKE) format
 endif
 

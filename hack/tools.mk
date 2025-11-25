@@ -9,7 +9,9 @@
 # as needed. If the required tool (version) is not built/installed yet, make will make sure to build/install it.
 # The *_VERSION variables in this file contain the "default" values, but can be overwritten in the top level make file.
 
-ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
+IS_GARDENER  := $(shell go list -f '{{.Main}}' -m github.com/gardener/gardener)
+
+ifeq ($(IS_GARDENER),true)
 TOOLS_PKG_PATH             := ./hack/tools
 else
 # dependency on github.com/gardener/gardener/hack/tools is optional and only needed if other projects want to reuse
@@ -119,7 +121,7 @@ export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 tool_version_file = $(TOOLS_BIN_DIR)/.version_$(subst $(TOOLS_BIN_DIR)/,,$(1))_$(2)
 
 # Use this function to get the version of a go module from go.mod
-version_gomod = $(shell go list -mod=mod -f '{{ .Version }}' -m $(1))
+version_gomod = $(shell go list -f '{{ .Version }}' -m $(1))
 
 # This target cleans up any previous version files for the given tool and creates the given version file.
 # This way, we can generically determine, which version was installed without calling each and every binary explicitly.
@@ -204,7 +206,7 @@ $(KUSTOMIZE): $(call tool_version_file,$(KUSTOMIZE),$(KUSTOMIZE_VERSION))
 	tar zxvf - -C $(abspath $(TOOLS_BIN_DIR))
 	touch $(KUSTOMIZE) && chmod +x $(KUSTOMIZE)
 
-ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
+ifeq ($(IS_GARDENER),true)
 $(LOGCHECK): $(TOOLS_PKG_PATH)/logcheck/go.* $(shell find $(TOOLS_PKG_PATH)/logcheck -type f -name '*.go')
 	cd $(TOOLS_PKG_PATH)/logcheck;GOTOOLCHAIN=auto CGO_ENABLED=1 go build -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
 else
@@ -230,7 +232,7 @@ $(TYPOS): $(call tool_version_file,$(TYPOS),$(TYPOS_VERSION))
 $(PROTOC_GEN_GOGO): $(call tool_version_file,$(PROTOC_GEN_GOGO),$(CODE_GENERATOR_VERSION))
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
 
-ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
+ifeq ($(IS_GARDENER),true)
 $(REPORT_COLLECTOR): $(TOOLS_PKG_PATH)/report-collector/*.go
 	go build -o $(REPORT_COLLECTOR) $(TOOLS_PKG_PATH)/report-collector
 else
@@ -238,7 +240,7 @@ $(REPORT_COLLECTOR): go.mod
 	go build -o $(REPORT_COLLECTOR) github.com/gardener/gardener/hack/tools/report-collector
 endif
 
-ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
+ifeq ($(IS_GARDENER),true)
 $(OIDC_METADATA): $(TOOLS_PKG_PATH)/oidcmeta/*.go
 	go build -o $(OIDC_METADATA) $(TOOLS_PKG_PATH)/oidcmeta
 else
@@ -246,7 +248,7 @@ $(OIDC_METADATA): go.mod
 	go build -o $(OIDC_METADATA) github.com/gardener/gardener/hack/tools/oidcmeta
 endif
 
-ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
+ifeq ($(IS_GARDENER),true)
 $(EXTENSION_GEN): $(TOOLS_PKG_PATH)/extension-generator/*.go
 	go build -o $(EXTENSION_GEN) $(TOOLS_PKG_PATH)/extension-generator
 else
