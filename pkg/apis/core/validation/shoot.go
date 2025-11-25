@@ -914,6 +914,45 @@ func validateWorkerGroupAndControlPlaneKubernetesVersion(controlPlaneVersion, wo
 	return allErrs
 }
 
+// validateDNSCredentialsRef validates the DNS provider credentials reference and secret name for backward compatibility.
+func validateDNSCredentialsRef(provider core.DNSProvider, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// How to achieve backward compatibility between secretName and credentialsRef?
+	// - if secretName is set, credentialsRef must be set and refer the same secret
+	// - if secretName is not set, then credentialsRef could be either unset or set but refer to a non-secret resource
+	//
+	// After the sync in the strategy, we can have the following cases:
+	// - both secretName and credentialsRef are unset, which we respect here
+	// - both can be set but refer to different resources, which we forbid here
+	// - secretName can be unset only when workloadIdentity is used, which we respect here
+
+	if provider.CredentialsRef == nil {
+		if provider.SecretName != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretName"), "must not be set when `credentialsRef` is not set"))
+		}
+	} else {
+		allErrs = append(allErrs, ValidateLocalCredentialsRef(*provider.CredentialsRef, fldPath.Child("credentialsRef"))...)
+
+		if provider.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() && provider.CredentialsRef.Kind == "Secret" {
+			if provider.SecretName == nil || *provider.SecretName != provider.CredentialsRef.Name {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretName"), "must refer to the same secret as `credentialsRef`"))
+			}
+		} else {
+			if provider.SecretName != nil && *provider.SecretName != "" {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretName"), "must not be set when `credentialsRef` does not refer to secret resource"))
+			}
+		}
+
+		// TODO(vpnachev): Allow workload identity credentials when the known controllers support it.
+		if provider.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && provider.CredentialsRef.Kind == "WorkloadIdentity" {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsRef"), "workload identity is not yet supported for DNS providers"))
+		}
+	}
+
+	return allErrs
+}
+
 func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -939,14 +978,16 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 	for i, provider := range dns.Providers {
 		idxPath := fldPath.Child("providers").Index(i)
 
-		if provider.SecretName != nil && provider.Type != nil {
-			providerName := gardenerutils.GenerateDNSProviderName(*provider.SecretName, *provider.Type)
+		allErrs = append(allErrs, validateDNSCredentialsRef(provider, idxPath)...)
+
+		if provider.CredentialsRef != nil && provider.Type != nil {
+			providerName := gardenerutils.GenerateDNSProviderName(provider.CredentialsRef, *provider.Type)
 			if names.Has(providerName) {
-				allErrs = append(allErrs, field.Invalid(idxPath, providerName, "combination of .secretName and .type must be unique across dns providers"))
+				allErrs = append(allErrs, field.Invalid(idxPath, providerName, "combination of .credentialsRef and .type must be unique across dns providers"))
 				continue
 			}
 			for _, err := range validation.IsDNS1123Subdomain(providerName) {
-				allErrs = append(allErrs, field.Invalid(idxPath, providerName, fmt.Sprintf("combination of .secretName and .type is invalid: %q", err)))
+				allErrs = append(allErrs, field.Invalid(idxPath, providerName, fmt.Sprintf("combination of .credentialsRef and .type is invalid: %q", err)))
 			}
 			names.Insert(providerName)
 		}
@@ -960,14 +1001,14 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 		}
 
 		if providerType := provider.Type; providerType != nil {
-			if *providerType == core.DNSUnmanaged && provider.SecretName != nil {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("secretName"), provider.SecretName, fmt.Sprintf("secretName must not be set when type is %q", core.DNSUnmanaged)))
+			if *providerType == core.DNSUnmanaged && provider.CredentialsRef != nil {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("credentialsRef"), provider.CredentialsRef, fmt.Sprintf("credentialsRef must not be set when type is %q", core.DNSUnmanaged)))
 				continue
 			}
 		}
 
-		if provider.SecretName != nil && provider.Type == nil {
-			allErrs = append(allErrs, field.Required(idxPath.Child("type"), "type must be set when secretName is set"))
+		if provider.CredentialsRef != nil && provider.Type == nil {
+			allErrs = append(allErrs, field.Required(idxPath.Child("type"), "type must be set when credentialsRef is set"))
 		}
 	}
 
