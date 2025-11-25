@@ -27,9 +27,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
-	admissioncontrollerhelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
+	admissioncontrollerhelper "github.com/gardener/gardener/pkg/api/config/admissioncontroller/v1alpha1/helper"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/admissioncontroller/v1alpha1"
 )
 
 const (

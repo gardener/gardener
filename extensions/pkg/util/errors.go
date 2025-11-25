@@ -9,8 +9,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // DetermineError determines the Gardener error codes for the given error and returns an ErrorWithCodes with the error and codes.

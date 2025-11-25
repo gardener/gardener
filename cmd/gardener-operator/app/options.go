@@ -14,9 +14,9 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
+	operatorvalidation "github.com/gardener/gardener/pkg/api/config/operator/v1alpha1/validation"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
-	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
-	operatorvalidation "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1/validation"
 )
 
 var configDecoder runtime.Decoder

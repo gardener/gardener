@@ -15,8 +15,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
-	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
-	controllermanagervalidation "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1/validation"
+	controllermanagervalidation "github.com/gardener/gardener/pkg/api/config/controllermanager/v1alpha1/validation"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 )
 

@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/afero"
 	"k8s.io/apimachinery/pkg/util/runtime"
 
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 )
 
 // Copy copies a source file to destination file and sets the given permissions.
