@@ -236,7 +236,9 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		}
 	}
 
-	if internalDNS := seedSpec.DNS.Internal; internalDNS != nil {
+	if internalDNS := seedSpec.DNS.Internal; internalDNS == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("dns", "internal"), "internal DNS configuration is required"))
+	} else {
 		allErrs = append(allErrs, validateSeedDNSProviderConfig(*internalDNS, fldPath.Child("dns", "internal"))...)
 	}
 
@@ -399,11 +401,7 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 		}
 	}
 
-	// TODO(dimityrmirchev): Remove these checks once the dns.internal and dns.defaults become required
-	if oldSeedSpec.DNS.Internal != nil && newSeedSpec.DNS.Internal == nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("dns", "internal"), "removing internal DNS configuration is not allowed"))
-	}
-
+	// TODO(dimityrmirchev): Remove this check once the dns.defaults become required
 	if len(oldSeedSpec.DNS.Defaults) > 0 && len(newSeedSpec.DNS.Defaults) == 0 {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("dns", "defaults"), "removing defaults DNS configuration is not allowed"))
 	}

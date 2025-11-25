@@ -53,6 +53,17 @@ var _ = Describe("Seed Validation Tests", func() {
 							Namespace: "some-namespace",
 						},
 					},
+					Internal: &core.SeedDNSProviderConfig{
+						Type:   "foo",
+						Domain: "internal.example.com",
+						Zone:   ptr.To("zone-1"),
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "internal-domain",
+							Namespace:  "garden",
+						},
+					},
 				},
 				Ingress: &core.Ingress{
 					Domain: "some-domain.example.com",
@@ -328,6 +339,16 @@ var _ = Describe("Seed Validation Tests", func() {
 		})
 
 		Context("internal DNS", func() {
+			It("should require internal DNS configuration", func() {
+				seed.Spec.DNS.Internal = nil
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.dns.internal"),
+					"Detail": Equal("internal DNS configuration is required"),
+				}))))
+			})
+
 			It("should require valid fields if internal DNS is set", func() {
 				seed.Spec.DNS.Internal = &core.SeedDNSProviderConfig{}
 				errorList := ValidateSeed(seed)
@@ -406,29 +427,6 @@ var _ = Describe("Seed Validation Tests", func() {
 				}
 				errorList := ValidateSeed(seed)
 				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should return an error if old seed has dns configured, but new one does not", func() {
-				seed.Spec.DNS.Internal = &core.SeedDNSProviderConfig{
-					Type:   "foo",
-					Domain: "foo.example.com",
-					Zone:   ptr.To("zone-1"),
-					CredentialsRef: corev1.ObjectReference{
-						APIVersion: "v1",
-						Kind:       "Secret",
-						Name:       "internal-domain",
-						Namespace:  "garden",
-					},
-				}
-				newSeed := seed.DeepCopy()
-				newSeed.Spec.DNS.Internal = nil
-
-				errorList := ValidateSeedUpdate(newSeed, seed)
-				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.dns.internal"),
-					"Detail": ContainSubstring("removing internal DNS configuration is not allowed"),
-				}))))
 			})
 		})
 
@@ -636,31 +634,6 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Detail": ContainSubstring("supported values: \"/v1, Kind=Secret\""),
 					})),
 				))
-			})
-
-			It("should return an error if old seed has dns configured, but new one does not", func() {
-				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
-					{
-						Type:   "foo",
-						Domain: "foo.example.com",
-						Zone:   ptr.To("zone-1"),
-						CredentialsRef: corev1.ObjectReference{
-							APIVersion: "v1",
-							Kind:       "Secret",
-							Name:       "internal-domain",
-							Namespace:  "garden",
-						},
-					},
-				}
-				newSeed := seed.DeepCopy()
-				newSeed.Spec.DNS.Defaults = nil
-
-				errorList := ValidateSeedUpdate(newSeed, seed)
-				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.dns.defaults"),
-					"Detail": ContainSubstring("removing defaults DNS configuration is not allowed"),
-				}))))
 			})
 		})
 
