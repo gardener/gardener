@@ -14,10 +14,12 @@ if [ "${PROJECT_ROOT#/}" == "${PROJECT_ROOT}" ]; then
   PROJECT_ROOT="./$PROJECT_ROOT"
 fi
 
+root_module=$(cd "$PROJECT_ROOT"; go list -m)
+
 pushd "$PROJECT_ROOT" > /dev/null
 ROOTS=${ROOTS:-$(git grep --files-with-matches -e '//go:generate' "$@" | \
 	xargs -n 1 dirname | \
-	sed 's,^,github.com/gardener/gardener/,;' | \
+	sed 's,^,'"$root_module"'/,;' | \
 	sort | uniq
 )}
 popd > /dev/null
