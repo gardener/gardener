@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	. "github.com/gardener/gardener/pkg/utils/timewindow"
+	. "github.com/gardener/gardener/pkg/apis/utils/timewindow"
 )
 
 var _ = Describe("Schedule", func() {
