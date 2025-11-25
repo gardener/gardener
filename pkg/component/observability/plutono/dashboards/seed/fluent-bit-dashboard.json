@@ -1593,7 +1593,7 @@
           "refId": "A"
         }
       ],
-      "title": "ValiTail Client Send Logs",
+      "title": "ValiTail Client Sent Logs",
       "type": "timeseries"
     },
     {
