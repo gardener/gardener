@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -37,13 +38,16 @@ var _ = Describe("Dns", func() {
 	)
 
 	DescribeTable("#GenerateDNSProviderName",
-		func(secretName, providerType, expectedName string) {
-			Expect(GenerateDNSProviderName(secretName, providerType)).To(Equal(expectedName))
+		func(ref *autoscalingv1.CrossVersionObjectReference, providerType, expectedName string) {
+			Expect(GenerateDNSProviderName(ref, providerType)).To(Equal(expectedName))
 		},
 
-		Entry("both empty", "", "", ""),
-		Entry("secretName empty", "", "provider-type", "provider-type"),
-		Entry("providerType empty", "secret-name", "", "secret-name"),
-		Entry("both set", "secret-name", "provider-type", "provider-type-secret-name"),
+		Entry("both empty", nil, "", ""),
+		Entry("credentialsRef nil", nil, "provider-type", "provider-type"),
+		Entry("Secret credentialsRef and providerType empty", &autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "name-secret1"}, "", "secret-name-secret1"),
+		Entry("WorkloadIdentity credentialsRef and providerType empty", &autoscalingv1.CrossVersionObjectReference{Kind: "WorkloadIdentity", Name: "name-workload-identity1"}, "", "workloadidentity-name-workload-identity1"),
+		Entry("Secret credentialsRef and providerType", &autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "name-secret1"}, "type-1", "type-1-secret-name-secret1"),
+		Entry("WorkloadIdentity credentialsRef and providerType", &autoscalingv1.CrossVersionObjectReference{Kind: "WorkloadIdentity", Name: "name-workload-identity1"}, "type-2", "type-2-workloadidentity-name-workload-identity1"),
+		Entry("only providerType", nil, "provider-type", "provider-type"),
 	)
 })
