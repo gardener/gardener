@@ -176,7 +176,7 @@ func (r *REST) ShortNames() []string {
 }
 
 // defaultOnRead ensures the shoot.status.credentials.encryptionAtRest.resources field is set on read requests.
-// TODO(AleksandarSavchev): Remove this function after v1.135 has been released.
+// TODO(vpnachev): Remove this function once support for Kubernetes 1.34 is dropped.
 func defaultOnRead(obj runtime.Object) {
 	switch s := obj.(type) {
 	case *core.Shoot:
@@ -188,7 +188,8 @@ func defaultOnRead(obj runtime.Object) {
 }
 
 func defaultOnReadShoot(s *core.Shoot) {
-	shoot.SyncEncryptedResourcesStatus(s)
+	shoot.SyncEncryptedResourcesStatus(s) // TODO(AleksandarSavchev): Remove this function after v1.135 has been released.
+	shoot.SyncDNSProviderCredentials(s)
 }
 
 func defaultOnReadShoots(shootList *core.ShootList) {
