@@ -21,8 +21,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | Feature                                  | Default | Stage   | Since   | Until   |
 |------------------------------------------|---------|---------|---------|---------|
 | DefaultSeccompProfile                    | `false` | `Alpha` | `1.54`  |         |
-| ShootCredentialsBinding                  | `false` | `Alpha` | `1.98`  | `1.106` |
-| ShootCredentialsBinding                  | `true`  | `Beta`  | `1.107` |         |
 | NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  | `1.125` |
 | NewWorkerPoolHash                        | `true`  | `Beta`  | `1.126` |         |
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
@@ -206,6 +204,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | CredentialsRotationWithoutWorkersRollout     | `true`  | `Beta`       | `1.121` | `1.126` |
 | CredentialsRotationWithoutWorkersRollout     | `true`  | `GA`         | `1.127` | `1.128` |
 | CredentialsRotationWithoutWorkersRollout     |         | `Removed`    | `1.129` |         |
+| ShootCredentialsBinding                      | `false` | `Alpha`      | `1.98`  | `1.106` |
+| ShootCredentialsBinding                      | `true`  | `Beta`       | `1.107` | `1.132` |
+| ShootCredentialsBinding                      | `true`  | `GA`         | `1.133` |         |
 
 ## Using a Feature
 
