@@ -13,7 +13,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 
-	. "github.com/gardener/gardener/pkg/utils/timewindow"
+	. "github.com/gardener/gardener/pkg/apis/utils/timewindow"
 )
 
 var _ = Describe("utils", func() {
