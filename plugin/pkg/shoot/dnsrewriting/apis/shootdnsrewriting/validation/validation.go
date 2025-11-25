@@ -7,7 +7,7 @@ package validation
 import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	"github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting"
 )
 

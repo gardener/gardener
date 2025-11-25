@@ -10,8 +10,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	. "github.com/gardener/gardener/pkg/api/resources/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	. "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 )
 
 var _ = Describe("Origin", func() {
