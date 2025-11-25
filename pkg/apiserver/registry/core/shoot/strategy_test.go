@@ -19,9 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apiserver/registry/core/shoot"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Strategy", func() {
@@ -126,24 +124,6 @@ var _ = Describe("Strategy", func() {
 					Name: "bar",
 				}))
 			})
-
-			It("should remove CredentialsBindingName field if ShootCredentialsBinding feature gate is disabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootCredentialsBinding, false))
-
-				shoot.Spec.CredentialsBindingName = ptr.To("binding")
-				strategy.PrepareForCreate(ctx, shoot)
-
-				Expect(shoot.Spec.CredentialsBindingName).To(BeNil())
-			})
-
-			It("should not remove CredentialsBindingName field if ShootCredentialsBinding feature gate is enabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootCredentialsBinding, true))
-
-				shoot.Spec.CredentialsBindingName = ptr.To("binding")
-				strategy.PrepareForCreate(ctx, shoot)
-
-				Expect(shoot.Spec.CredentialsBindingName).To(Equal(ptr.To("binding")))
-			})
 		})
 	})
 
@@ -212,35 +192,6 @@ var _ = Describe("Strategy", func() {
 					Kind: "NamespacedCloudProfile",
 					Name: "bar",
 				}))
-			})
-
-			It("should remove CredentialsBindingName field if ShootCredentialsBinding feature gate is disabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootCredentialsBinding, false))
-
-				newShoot.Spec.CredentialsBindingName = ptr.To("binding")
-				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
-
-				Expect(newShoot.Spec.CredentialsBindingName).To(BeNil())
-			})
-
-			It("should not remove CredentialsBindingName field if ShootCredentialsBinding feature gate is enabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootCredentialsBinding, true))
-
-				newShoot.Spec.CredentialsBindingName = ptr.To("binding")
-				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
-
-				Expect(newShoot.Spec.CredentialsBindingName).To(Equal(ptr.To("binding")))
-			})
-
-			It("should not remove CredentialsBindingName field if ShootCredentialsBinding feature gate is disabled but the CredentialsBindingName field is present in the old Shoot", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootCredentialsBinding, false))
-
-				bindingName := ptr.To("binding")
-				oldShoot.Spec.CredentialsBindingName = bindingName
-				newShoot.Spec.CredentialsBindingName = bindingName
-				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
-
-				Expect(newShoot.Spec.CredentialsBindingName).To(Equal(ptr.To("binding")))
 			})
 
 			It("should not mutate shoots being deleted (cloud profile sync)", func() {

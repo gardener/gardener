@@ -22,7 +22,6 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/api/core/shoot"
@@ -31,7 +30,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -62,10 +60,6 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	newShoot.Status = core.ShootStatus{}
 
 	gardenerutils.SyncCloudProfileFields(nil, newShoot)
-
-	if !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
-		newShoot.Spec.CredentialsBindingName = nil
-	}
 }
 
 func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -87,10 +81,6 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	}
 
 	gardenerutils.SyncCloudProfileFields(oldShoot, newShoot)
-
-	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
-		newShoot.Spec.CredentialsBindingName = nil
-	}
 
 	// Ensure that encrypted resources are synced from `.status.encryptedResources` to `status.credentials.encryptionAtRest.resources`.
 	SyncEncryptedResourcesStatus(newShoot)

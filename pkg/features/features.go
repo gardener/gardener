@@ -26,6 +26,7 @@ const (
 	// owner: @vpnachev @dimityrmirchev
 	// alpha: v1.98.0
 	// beta: v1.107.0
+	// GA: v1.133.0
 	ShootCredentialsBinding featuregate.Feature = "ShootCredentialsBinding"
 
 	// NewWorkerPoolHash enables a new calculation method for the worker pool hash. The new
@@ -113,7 +114,7 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DefaultSeccompProfile:         {Default: false, PreRelease: featuregate.Alpha},
-	ShootCredentialsBinding:       {Default: true, PreRelease: featuregate.Beta},
+	ShootCredentialsBinding:       {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	NewWorkerPoolHash:             {Default: true, PreRelease: featuregate.Beta},
 	InPlaceNodeUpdates:            {Default: false, PreRelease: featuregate.Alpha},
 	IstioTLSTermination:           {Default: false, PreRelease: featuregate.Alpha},
