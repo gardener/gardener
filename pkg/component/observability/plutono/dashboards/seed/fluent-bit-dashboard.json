@@ -1755,7 +1755,7 @@
           "refId": "A"
         }
       ],
-      "title": "ValiTail Send Bytes Rate",
+      "title": "ValiTail Sent Bytes Rate",
       "type": "timeseries"
     },
     {
