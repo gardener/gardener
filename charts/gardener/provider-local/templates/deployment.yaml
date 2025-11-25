@@ -75,6 +75,9 @@ spec:
         - --backupbucket-container-mount-path={{ .Values.controllers.backupbucket.containerMountPath }}
         - --heartbeat-namespace={{ .Release.Namespace }}
         - --heartbeat-renew-interval-seconds={{ .Values.controllers.heartbeat.renewIntervalSeconds }}
+        {{- if eq (include "coredns.enabled" .) "false" }}
+        - --disable-webhooks=dnsconfig
+        {{- end }}
         {{- if .Values.gardener.runtimeCluster.enabled }}
         - --disable-webhooks=controlplane,dnsconfig,networkpolicy,prometheus,shoot
         - --controllers=backupbucket,dnsrecord,local-ext-shoot
