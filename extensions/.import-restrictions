@@ -12,13 +12,13 @@ rules:
   - github.com/gardener/gardener/pkg/extensions
   # The seedmanagement API imports the gardenlet config in its conversion and defaulting code and this is imported by
   # the kubernetes client package, roughly like this:
-  # extensions/pkg -> pkg/client/kubernetes -> pkg/apis/seedmanagement/v1alpha1 -> pkg/gardenlet/apis/config
+  # extensions/pkg -> pkg/client/kubernetes -> pkg/api/seedmanagement/v1alpha1 -> pkg/apis/config/gardenlet
   # TODO: eliminate this dependency. Ideas:
   # - split up the pkg/client/kubernetes into a part which might be used in extensions and an internal part for gardener
   #   components and move seedmanagement specifis out of any other packages like utils, etc. in order to prevent pulling
   #   in the seedmanagement API dependency.
   # - sync out API packages without conversion and defaulting code (i.e. like k/k's staging mechanism)
-  - github.com/gardener/gardener/pkg/gardenlet/apis/config
+  - github.com/gardener/gardener/pkg/apis/config/gardenlet
   - github.com/gardener/gardener/pkg/logger
   - github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references
   - github.com/gardener/gardener/pkg/utils

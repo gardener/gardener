@@ -14,8 +14,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
-	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
-	resourcemanagervalidation "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1/validation"
+	resourcemanagervalidation "github.com/gardener/gardener/pkg/api/config/resourcemanager/v1alpha1/validation"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
 )
 
 var configDecoder runtime.Decoder

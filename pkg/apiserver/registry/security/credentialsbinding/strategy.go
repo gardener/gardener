@@ -12,8 +12,8 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/api/security/validation"
 	"github.com/gardener/gardener/pkg/apis/security"
-	"github.com/gardener/gardener/pkg/apis/security/validation"
 )
 
 type credentialsBindingStrategy struct {
