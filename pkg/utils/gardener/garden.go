@@ -487,6 +487,7 @@ func ReconcileGardenNamespace(ctx context.Context, client client.Client, namespa
 		if manageMetadata {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, api.EnforceLevelLabel, string(api.LevelPrivileged))
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleGarden)
 			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
 		}
 
