@@ -71,6 +71,8 @@ var _ = Describe("Bastion", func() {
 		b.WaitInterval = time.Millisecond
 		b.WaitSevereThreshold = 250 * time.Millisecond
 		b.WaitTimeout = 500 * time.Millisecond
+		b.ConnectRetryInterval = 5 * time.Millisecond
+		b.ConnectRetryTimeout = 50 * time.Millisecond
 
 		bastion = &extensionsv1alpha1.Bastion{
 			ObjectMeta: metav1.ObjectMeta{
@@ -198,6 +200,38 @@ systemctl start sshd || systemctl start ssh
 
 					Expect(b.Wait(ctx)).To(Succeed())
 					Expect(b.Connection).To(BeIdenticalTo(conn))
+				})
+
+				It("should retry on transient connection failures and eventually succeed", func() {
+					conn := &sshutils.Connection{}
+					callCount := 0
+					// Simulate three failures (connection refused), then a success
+					b.SSHDial = func(_ context.Context, addr string, _ ...sshutils.Option) (*sshutils.Connection, error) {
+						Expect(addr).To(Equal("1.1.1.1:22"))
+						callCount++
+						if callCount < 3 {
+							return nil, fmt.Errorf("connection refused")
+						}
+						return conn, nil
+					}
+
+					Expect(b.Wait(ctx)).To(Succeed())
+					Expect(b.Connection).To(BeIdenticalTo(conn))
+					Expect(callCount).To(Equal(3))
+				})
+
+				It("should exhaust retry timeout if connection keeps failing", func() {
+					callCount := 0
+					// Never return successful connection, run into timeout
+					b.SSHDial = func(_ context.Context, addr string, _ ...sshutils.Option) (*sshutils.Connection, error) {
+						Expect(addr).To(Equal("1.1.1.1:22"))
+						callCount++
+						return nil, fmt.Errorf("connection refused")
+					}
+
+					Expect(b.Wait(ctx)).To(MatchError(ContainSubstring("connection refused")))
+					// Should have retried multiple times (50ms timeout / 5ms interval = ~10 attempts - some buffer)
+					Expect(callCount).To(BeNumerically(">", 5))
 				})
 
 				When("the Bastion has an ingress hostname instead of IP", func() {

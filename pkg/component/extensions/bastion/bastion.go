@@ -21,6 +21,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	sshutils "github.com/gardener/gardener/pkg/utils/ssh"
@@ -35,11 +36,13 @@ type Bastion struct {
 	Values         *Values
 
 	// exposed for testing
-	Clock               clock.PassiveClock
-	WaitInterval        time.Duration
-	WaitSevereThreshold time.Duration
-	WaitTimeout         time.Duration
-	SSHDial             func(ctx context.Context, addr string, opts ...sshutils.Option) (*sshutils.Connection, error)
+	Clock                clock.PassiveClock
+	WaitInterval         time.Duration
+	WaitSevereThreshold  time.Duration
+	WaitTimeout          time.Duration
+	ConnectRetryInterval time.Duration
+	ConnectRetryTimeout  time.Duration
+	SSHDial              func(ctx context.Context, addr string, opts ...sshutils.Option) (*sshutils.Connection, error)
 
 	bastion          *extensionsv1alpha1.Bastion
 	sshKeypairSecret *corev1.Secret
@@ -74,11 +77,13 @@ func New(
 		secretsManager: secretsManager,
 		Values:         values,
 
-		Clock:               &clock.RealClock{},
-		WaitInterval:        10 * time.Second,
-		WaitSevereThreshold: 6 * time.Minute,
-		WaitTimeout:         15 * time.Minute,
-		SSHDial:             sshutils.Dial,
+		Clock:                &clock.RealClock{},
+		WaitInterval:         10 * time.Second,
+		WaitSevereThreshold:  6 * time.Minute,
+		WaitTimeout:          15 * time.Minute,
+		ConnectRetryInterval: 5 * time.Second,
+		ConnectRetryTimeout:  1 * time.Minute,
+		SSHDial:              sshutils.Dial,
 
 		bastion: &extensionsv1alpha1.Bastion{
 			ObjectMeta: metav1.ObjectMeta{
@@ -130,9 +135,30 @@ func (b *Bastion) Wait(ctx context.Context) error {
 		b.WaitSevereThreshold,
 		b.WaitTimeout,
 		func() error {
-			return b.connect(ctx)
+			// perform an inner retry loop (outer loop in WaitUntilExtensionObjectReady
+			// would return SevereError on connection failure).
+			return b.connectWithRetry(ctx)
 		},
 	)
+}
+
+// connectWithRetry wraps the connect call with retry logic to handle transient connectivity issues.
+func (b *Bastion) connectWithRetry(ctx context.Context) error {
+	var lastErr error
+	if err := retry.UntilTimeout(ctx, b.ConnectRetryInterval, b.ConnectRetryTimeout, func(ctx context.Context) (bool, error) {
+		if err := b.connect(ctx); err != nil {
+			lastErr = err
+			b.log.Info("Failed to connect to bastion, will retry", "error", err.Error())
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	}); err != nil {
+		if lastErr != nil {
+			return lastErr
+		}
+		return err
+	}
+	return nil
 }
 
 // Destroy deletes all resources related to the Bastion object.
