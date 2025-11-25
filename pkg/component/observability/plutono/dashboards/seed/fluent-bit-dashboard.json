@@ -1026,7 +1026,7 @@
     },
     {
       "datasource": "prometheus-aggregate",
-      "description": "Output plugin total logs",
+      "description": "Output plugin incoming logs rate",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1199,7 +1199,7 @@
       "panels": [
         {
           "datasource": "prometheus-aggregate",
-          "description": "Output plugin errors",
+          "description": "Output plugin errors logs rate",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1280,7 +1280,7 @@
         },
         {
           "datasource": "prometheus-aggregate",
-          "description": "Output plugin dropped logs",
+          "description": "Output plugin dropped logs rate",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1361,7 +1361,7 @@
         },
         {
           "datasource": "prometheus-aggregate",
-          "description": "",
+          "description": "Output plugin logs without metadata rate",
           "fieldConfig": {
             "defaults": {
               "color": {
