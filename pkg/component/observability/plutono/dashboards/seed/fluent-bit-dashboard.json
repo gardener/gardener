@@ -157,7 +157,7 @@
     },
     {
       "datasource": "prometheus-aggregate",
-      "description": "Average Input bytes processing rate of all fluent-bits.",
+      "description": "Average Input plugin bytes processing rate of all fluent-bits.",
       "fieldConfig": {
         "defaults": {
           "color": {
