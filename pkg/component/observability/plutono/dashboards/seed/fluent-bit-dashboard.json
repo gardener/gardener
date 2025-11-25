@@ -357,7 +357,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "[Fluentbit] Rate Input Plugin Records ",
+      "title": "[Fluentbit] Rate Input Plugin Records",
       "type": "timeseries"
     },
     {
