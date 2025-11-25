@@ -74,7 +74,7 @@ var _ = Describe("ResourceManager", func() {
 				VPAInPlaceUpdatesEnabled:            false,
 				Replicas:                            ptr.To[int32](2),
 				ResourceClass:                       ptr.To("seed"),
-				ResponsibilityMode:                  resourcemanager.ForSeedOrGardenRuntime,
+				ResponsibilityMode:                  resourcemanager.ForRuntime,
 			}))
 		})
 
