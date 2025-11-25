@@ -11,9 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,13 +42,11 @@ func SeedIsGarden(ctx context.Context, seedClient client.Reader) (bool, error) {
 
 // SeedIsSelfHostedShoot returns 'true' if the cluster is a self-hosted shoot cluster.
 func SeedIsSelfHostedShoot(ctx context.Context, seedClient client.Reader) (bool, error) {
-	if err := seedClient.Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenlet, Namespace: metav1.NamespaceSystem}, &appsv1.Deployment{}); err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, err
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}}
+	if err := seedClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+		return false, fmt.Errorf("failed reading %q namespace: %w", namespace.Name, err)
 	}
-	return true, nil
+	return namespace.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShoot, nil
 }
 
 // SetDefaultGardenClusterAddress sets the default garden cluster address in the given gardenlet configuration if it is not already set.
