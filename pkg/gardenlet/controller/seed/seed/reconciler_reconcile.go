@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
-	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -101,20 +100,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	// create + label garden namespace
-	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: r.GardenNamespace}}
-	log.Info("Labeling and annotating namespace", "namespaceName", gardenNamespace.Name)
-	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.SeedClientSet.Client(), gardenNamespace, func() error {
-		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, v1beta1constants.LabelRole, v1beta1constants.GardenNamespace)
-
-		// When the seed is the garden cluster then this information is managed by gardener-operator.
-		if !seedIsGarden {
-			metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, podsecurityadmissionapi.EnforceLevelLabel, string(podsecurityadmissionapi.LevelPrivileged))
-			metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
-			metav1.SetMetaDataAnnotation(&gardenNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(seed.GetInfo().Spec.Provider.Zones, ","))
-		}
-		return nil
+	log.Info("Labeling and annotating namespace", "namespaceName", r.GardenNamespace)
+	if err := gardenerutils.ReconcileGardenNamespace(ctx, r.SeedClientSet.Client(), r.GardenNamespace, seed.GetInfo().Spec.Provider.Zones, !seedIsGarden, func(namespace *corev1.Namespace) {
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelRole, v1beta1constants.GardenNamespace)
 	}); err != nil {
-		return err
+		return fmt.Errorf("failed to reconcile garden namespace %q: %w", r.GardenNamespace, err)
 	}
 
 	// label kube-system namespace
