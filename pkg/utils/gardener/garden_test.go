@@ -28,6 +28,9 @@ import (
 
 var _ = Describe("Garden", func() {
 	var (
+		ctx        = context.Background()
+		fakeClient client.Client
+
 		defaultDomainProvider   = "default-domain-provider"
 		defaultDomainSecretData = map[string][]byte{"default": []byte("domain")}
 		defaultDomain           = &Domain{
@@ -36,6 +39,10 @@ var _ = Describe("Garden", func() {
 			SecretData: defaultDomainSecretData,
 		}
 	)
+
+	BeforeEach(func() {
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+	})
 
 	DescribeTable("#DomainIsDefaultDomain",
 		func(domain string, defaultDomains []*Domain, expected gomegatypes.GomegaMatcher) {
@@ -245,15 +252,11 @@ var _ = Describe("Garden", func() {
 
 	Describe("#GetGardenWildcardCertificate", func() {
 		var (
-			ctx          = context.Background()
-			fakeClient   client.Client
 			namespace    string
 			gardenSecret *corev1.Secret
 		)
 
 		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-
 			namespace = "garden"
 			gardenSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -291,15 +294,11 @@ var _ = Describe("Garden", func() {
 
 	Describe("#GetRequiredGardenWildcardCertificate", func() {
 		var (
-			ctx          = context.Background()
-			fakeClient   client.Client
 			namespace    string
 			gardenSecret *corev1.Secret
 		)
 
 		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-
 			namespace = "garden"
 			gardenSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -337,8 +336,6 @@ var _ = Describe("Garden", func() {
 
 	Describe("#ReadGardenInternalDomain", func() {
 		var (
-			ctx             = context.Background()
-			client          client.Client
 			seedDNSProvider *gardencorev1beta1.SeedDNSProviderConfig
 			secret          *corev1.Secret
 			namespace       = "garden"
@@ -348,7 +345,7 @@ var _ = Describe("Garden", func() {
 		)
 
 		BeforeEach(func() {
-			client = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 			seedDNSProvider = &gardencorev1beta1.SeedDNSProviderConfig{
 				Type:   providerType,
 				Domain: domain,
@@ -370,9 +367,9 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should return domain information from SeedDNSProviderConf", func() {
-			Expect(client.Create(ctx, secret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ReadGardenInternalDomain(ctx, client, namespace, true, seedDNSProvider)
+			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, seedDNSProvider)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(&Domain{
 				Domain:     domain,
@@ -392,9 +389,9 @@ var _ = Describe("Garden", func() {
 				"dns.gardener.cloud/zone":     zone,
 			}
 
-			Expect(client.Create(ctx, secret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ReadGardenInternalDomain(ctx, client, namespace, true, nil)
+			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(&Domain{
 				Domain:     domain,
@@ -405,13 +402,13 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should return nil if no secret and enforceSecret is false", func() {
-			result, err := ReadGardenInternalDomain(ctx, client, namespace, false, nil)
+			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, false, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeNil())
 		})
 
 		It("should error if no secret and enforceSecret is true", func() {
-			result, err := ReadGardenInternalDomain(ctx, client, namespace, true, nil)
+			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, nil)
 			Expect(result).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("need an internal domain secret")))
 		})
@@ -429,10 +426,10 @@ var _ = Describe("Garden", func() {
 			secret2 := secret.DeepCopy()
 			secret2.Name = "internal-domain-2"
 
-			Expect(client.Create(ctx, secret)).To(Succeed())
-			Expect(client.Create(ctx, secret2)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
 
-			result, err := ReadGardenInternalDomain(ctx, client, namespace, true, nil)
+			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, nil)
 			Expect(result).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("more than one internal domain secret")))
 		})
@@ -446,9 +443,9 @@ var _ = Describe("Garden", func() {
 				// Missing domain annotation
 			}
 
-			Expect(client.Create(ctx, secret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ReadGardenInternalDomain(ctx, client, namespace, true, nil)
+			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, nil)
 			Expect(result).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("error constructing internal domain from secret")))
 		})
@@ -456,17 +453,15 @@ var _ = Describe("Garden", func() {
 
 	Describe("#ReadInternalDomainSecret", func() {
 		var (
-			ctx          = context.Background()
 			namespace    = "garden"
 			providerType = "route-53"
 			domain       = "internal.example.com"
 			zone         = "zone-1"
 			secret       *corev1.Secret
-			client       client.Client
 		)
 
 		BeforeEach(func() {
-			client = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "internal-domain",
@@ -485,30 +480,30 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should return the internal domain secret", func() {
-			Expect(client.Create(ctx, secret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ReadInternalDomainSecret(ctx, client, namespace, true)
+			result, err := ReadInternalDomainSecret(ctx, fakeClient, namespace, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).NotTo(BeNil())
 			Expect(result.Name).To(Equal("internal-domain"))
 		})
 
 		It("should return nil if no secret and enforceSecret is false and no secret is found", func() {
-			result, err := ReadInternalDomainSecret(ctx, client, namespace, false)
+			result, err := ReadInternalDomainSecret(ctx, fakeClient, namespace, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeNil())
 		})
 
 		It("should return the secret if enforceSecret is false but secret is found", func() {
-			Expect(client.Create(ctx, secret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ReadInternalDomainSecret(ctx, client, namespace, false)
+			result, err := ReadInternalDomainSecret(ctx, fakeClient, namespace, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).NotTo(BeNil())
 		})
 
 		It("should error if no secret and enforceSecret is true", func() {
-			result, err := ReadInternalDomainSecret(ctx, client, namespace, true)
+			result, err := ReadInternalDomainSecret(ctx, fakeClient, namespace, true)
 			Expect(result).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("need an internal domain secret")))
 		})
@@ -516,10 +511,10 @@ var _ = Describe("Garden", func() {
 		It("should error if more than one secret is found", func() {
 			secret2 := secret.DeepCopy()
 			secret2.Name = "internal-domain-2"
-			Expect(client.Create(ctx, secret)).To(Succeed())
-			Expect(client.Create(ctx, secret2)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
 
-			result, err := ReadInternalDomainSecret(ctx, client, namespace, true)
+			result, err := ReadInternalDomainSecret(ctx, fakeClient, namespace, true)
 			Expect(result).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("more than one internal domain secret")))
 		})
@@ -527,8 +522,6 @@ var _ = Describe("Garden", func() {
 
 	Describe("#ReadGardenDefaultDomains", func() {
 		var (
-			ctx           = context.Background()
-			client        client.Client
 			namespace     = "garden"
 			providerType1 = "route-53"
 			domain1       = "default1.example.com"
@@ -539,7 +532,7 @@ var _ = Describe("Garden", func() {
 		)
 
 		BeforeEach(func() {
-			client = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		})
 
 		It("should return domain information from SeedDNSProviderConfig array", func() {
@@ -558,8 +551,8 @@ var _ = Describe("Garden", func() {
 				Data: map[string][]byte{"baz": []byte("qux")},
 			}
 
-			Expect(client.Create(ctx, secret1)).To(Succeed())
-			Expect(client.Create(ctx, secret2)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
 
 			seedDNSDefaults := []gardencorev1beta1.SeedDNSProviderConfig{
 				{
@@ -586,7 +579,7 @@ var _ = Describe("Garden", func() {
 				},
 			}
 
-			result, err := ReadGardenDefaultDomains(ctx, client, namespace, seedDNSDefaults)
+			result, err := ReadGardenDefaultDomains(ctx, fakeClient, namespace, seedDNSDefaults)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal([]*Domain{
 				{
@@ -636,10 +629,10 @@ var _ = Describe("Garden", func() {
 				Data: map[string][]byte{"baz": []byte("qux")},
 			}
 
-			Expect(client.Create(ctx, secret1)).To(Succeed())
-			Expect(client.Create(ctx, secret2)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
 
-			result, err := ReadGardenDefaultDomains(ctx, client, namespace, nil)
+			result, err := ReadGardenDefaultDomains(ctx, fakeClient, namespace, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(result).To(ConsistOf(
@@ -659,13 +652,13 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should return empty slice when no default domains found", func() {
-			result, err := ReadGardenDefaultDomains(ctx, client, namespace, nil)
+			result, err := ReadGardenDefaultDomains(ctx, fakeClient, namespace, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeEmpty())
 		})
 
 		It("should return empty slice when empty seedDNSDefaults provided", func() {
-			result, err := ReadGardenDefaultDomains(ctx, client, namespace, []gardencorev1beta1.SeedDNSProviderConfig{})
+			result, err := ReadGardenDefaultDomains(ctx, fakeClient, namespace, []gardencorev1beta1.SeedDNSProviderConfig{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeEmpty())
 		})
@@ -685,7 +678,7 @@ var _ = Describe("Garden", func() {
 				},
 			}
 
-			result, err := ReadGardenDefaultDomains(ctx, client, namespace, seedDNSDefaults)
+			result, err := ReadGardenDefaultDomains(ctx, fakeClient, namespace, seedDNSDefaults)
 			Expect(result).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("cannot fetch default domain secret")))
 		})
@@ -706,9 +699,9 @@ var _ = Describe("Garden", func() {
 				Data: map[string][]byte{"foo": []byte("bar")},
 			}
 
-			Expect(client.Create(ctx, secret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-			result, err := ReadGardenDefaultDomains(ctx, client, namespace, nil)
+			result, err := ReadGardenDefaultDomains(ctx, fakeClient, namespace, nil)
 			Expect(result).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("error constructing default domain from secret")))
 		})
@@ -763,11 +756,11 @@ var _ = Describe("Garden", func() {
 				Data: map[string][]byte{"low": []byte("priority")},
 			}
 
-			Expect(client.Create(ctx, secretLowPriority)).To(Succeed())
-			Expect(client.Create(ctx, secretHighPriority)).To(Succeed())
-			Expect(client.Create(ctx, secretMediumPriority)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secretLowPriority)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secretHighPriority)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secretMediumPriority)).To(Succeed())
 
-			result, err := ReadGardenDefaultDomains(ctx, client, namespace, nil)
+			result, err := ReadGardenDefaultDomains(ctx, fakeClient, namespace, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(result).To(Equal([]*Domain{
@@ -794,18 +787,14 @@ var _ = Describe("Garden", func() {
 	})
 
 	Describe("#ReadGardenDefaultDomainsSecrets", func() {
-		var (
-			ctx       = context.Background()
-			client    client.Client
-			namespace = "garden"
-		)
+		var namespace = "garden"
 
 		BeforeEach(func() {
-			client = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		})
 
 		It("should return empty slice when no default domain secrets exist", func() {
-			result, err := ReadGardenDefaultDomainsSecrets(ctx, client, namespace)
+			result, err := ReadGardenDefaultDomainsSecrets(ctx, fakeClient, namespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeEmpty())
 		})
@@ -844,12 +833,12 @@ var _ = Describe("Garden", func() {
 				},
 			}
 
-			Expect(client.Create(ctx, medium)).To(Succeed())
-			Expect(client.Create(ctx, invalid)).To(Succeed())
-			Expect(client.Create(ctx, high)).To(Succeed())
-			Expect(client.Create(ctx, missing)).To(Succeed())
+			Expect(fakeClient.Create(ctx, medium)).To(Succeed())
+			Expect(fakeClient.Create(ctx, invalid)).To(Succeed())
+			Expect(fakeClient.Create(ctx, high)).To(Succeed())
+			Expect(fakeClient.Create(ctx, missing)).To(Succeed())
 
-			result, err := ReadGardenDefaultDomainsSecrets(ctx, client, namespace)
+			result, err := ReadGardenDefaultDomainsSecrets(ctx, fakeClient, namespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(HaveLen(4))
 			Expect([]string{result[0].Name, result[1].Name, result[2].Name, result[3].Name}).To(Equal([]string{"high", "medium", "invalid", "missing"}))
@@ -873,13 +862,88 @@ var _ = Describe("Garden", func() {
 				},
 			}
 
-			Expect(client.Create(ctx, second)).To(Succeed())
-			Expect(client.Create(ctx, first)).To(Succeed())
+			Expect(fakeClient.Create(ctx, second)).To(Succeed())
+			Expect(fakeClient.Create(ctx, first)).To(Succeed())
 
-			result, err := ReadGardenDefaultDomainsSecrets(ctx, client, namespace)
+			result, err := ReadGardenDefaultDomainsSecrets(ctx, fakeClient, namespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(HaveLen(2))
 			Expect([]string{result[0].Name, result[1].Name}).To(Equal([]string{"first", "second"}))
+		})
+	})
+
+	Describe("#ReconcileGardenNamespace", func() {
+		var (
+			namespaceName = "garden"
+			zones         = []string{"1,2"}
+		)
+
+		When("metadata should not be managed", func() {
+			It("should create the garden namespace with the expected metadata", func() {
+				Expect(ReconcileGardenNamespace(ctx, fakeClient, namespaceName, zones, false, nil)).To(Succeed())
+
+				namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "garden"}}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
+				Expect(namespace.Annotations).To(BeEmpty())
+				Expect(namespace.Labels).To(BeEmpty())
+			})
+
+			It("should reconcile the garden namespace with the expected metadata", func() {
+				namespace := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "garden",
+					},
+				}
+				Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
+
+				Expect(ReconcileGardenNamespace(ctx, fakeClient, namespaceName, zones, false, nil)).To(Succeed())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
+				Expect(namespace.Annotations).To(BeEmpty())
+				Expect(namespace.Labels).To(BeEmpty())
+			})
+		})
+
+		When("metadata should be managed", func() {
+			It("should create the garden namespace with the expected metadata", func() {
+				Expect(ReconcileGardenNamespace(ctx, fakeClient, namespaceName, zones, true, nil)).To(Succeed())
+
+				namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "garden"}}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
+				Expect(namespace.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "1,2"))
+				Expect(namespace.Labels).To(And(
+					HaveKeyWithValue("pod-security.kubernetes.io/enforce", "privileged"),
+					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+				))
+			})
+
+			It("should reconcile the garden namespace with the expected metadata", func() {
+				namespace := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "garden",
+						Annotations: map[string]string{
+							"high-availability-config.resources.gardener.cloud/zones": "none",
+						},
+						Labels: map[string]string{
+							"pod-security.kubernetes.io/enforce":                         "unprivileged",
+							"high-availability-config.resources.gardener.cloud/consider": "false",
+						},
+					},
+				}
+				Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
+
+				Expect(ReconcileGardenNamespace(ctx, fakeClient, namespaceName, zones, true, func(namespace *corev1.Namespace) {
+					metav1.SetMetaDataLabel(&namespace.ObjectMeta, "foo", "bar")
+				})).To(Succeed())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
+				Expect(namespace.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "1,2"))
+				Expect(namespace.Labels).To(And(
+					HaveKeyWithValue("pod-security.kubernetes.io/enforce", "privileged"),
+					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+					HaveKeyWithValue("foo", "bar"),
+				))
+			})
 		})
 	})
 })
