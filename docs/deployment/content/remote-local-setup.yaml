@@ -491,10 +491,17 @@ spec:
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             watch -c "k get -n garden-local shoot local -o yaml | yq -P -C '[.status.conditions[] | del(.lastTransitionTime, .lastUpdateTime)]' | grep --color=Always -E '\"False\"| Unknown| Progressing|$'"
           EOF
-          new_window "shoot lifecycle" "Create" <<"EOF"
-            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            if [[ "$IPFAMILY" == "ipv6" ]]; then k apply -f example/provider-local/shoot-ipv6.yaml; else k apply -f example/provider-local/shoot.yaml; fi
+          if [[ "$IPFAMILY" == "ipv6" ]]; then
+            new_window "shoot lifecycle" "Create" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/shoot-ipv6.yaml
           EOF
+          else
+            new_window "shoot lifecycle" "Create" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/shoot.yaml
+          EOF
+          fi
           new_pane "Reconcile" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             k annotate shoot local -n garden-local 'gardener.cloud/operation=reconcile'
@@ -507,14 +514,28 @@ spec:
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             watch k get -A seeds,shoots,managedseeds
           EOF
-          new_pane "create shoot" <<"EOF"
-            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            if [[ "$IPFAMILY" == "ipv6" ]]; then k apply -f example/provider-local/managedseeds/shoot-managedseed-ipv6.yaml; else k apply -f example/provider-local/managedseeds/shoot-managedseed.yaml; fi
+          if [[ "$IPFAMILY" == "ipv6" ]]; then
+            new_pane "create shoot" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/managedseeds/shoot-managedseed-ipv6.yaml
           EOF
-          new_pane "create managed seed" <<"EOF"
-            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
-            if [[ "$IPFAMILY" == "ipv6" ]]; then k apply -f example/provider-local/managedseeds/managedseed-ipv6.yaml; else k apply -f example/provider-local/managedseeds/managedseed.yaml; fi
+          else
+            new_pane "create shoot" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/managedseeds/shoot-managedseed.yaml
           EOF
+          fi
+          if [[ "$IPFAMILY" == "ipv6" ]]; then
+            new_pane "create managed seed" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/managedseeds/managedseed-ipv6.yaml
+          EOF
+          else
+            new_pane "create managed seed" <<"EOF"
+              export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+              k apply -f example/provider-local/managedseeds/managedseed.yaml
+          EOF
+          fi
           new_pane "managed seed pods" <<"EOF"
             export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             generate-admin-kubeconf.sh --namespace garden --shoot-name managedseed > /tmp/shoot.kubeconfig && while true; do clear; k --kubeconfig /tmp/shoot.kubeconfig get pods -A -o wide; sleep 10s; done
