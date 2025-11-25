@@ -14,9 +14,9 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
+	schedulervalidation "github.com/gardener/gardener/pkg/api/config/scheduler/v1alpha1/validation"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/scheduler/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
-	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
-	schedulervalidation "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1/validation"
 )
 
 var configDecoder runtime.Decoder

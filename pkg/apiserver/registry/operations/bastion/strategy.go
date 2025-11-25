@@ -20,9 +20,9 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"github.com/gardener/gardener/pkg/api"
+	operationsvalidation "github.com/gardener/gardener/pkg/api/operations/validation"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
-	operationsvalidation "github.com/gardener/gardener/pkg/apis/operations/validation"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 

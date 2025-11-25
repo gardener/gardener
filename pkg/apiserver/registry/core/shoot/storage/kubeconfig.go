@@ -23,8 +23,8 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	"github.com/gardener/gardener/pkg/api"
+	authenticationvalidation "github.com/gardener/gardener/pkg/api/authentication/validation"
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
-	authenticationvalidation "github.com/gardener/gardener/pkg/apis/authentication/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
