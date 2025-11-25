@@ -914,6 +914,7 @@ var _ = Describe("Garden", func() {
 				Expect(namespace.Labels).To(And(
 					HaveKeyWithValue("pod-security.kubernetes.io/enforce", "privileged"),
 					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+					HaveKeyWithValue("gardener.cloud/role", "garden"),
 				))
 			})
 
@@ -926,7 +927,7 @@ var _ = Describe("Garden", func() {
 						},
 						Labels: map[string]string{
 							"pod-security.kubernetes.io/enforce":                         "unprivileged",
-							"high-availability-config.resources.gardener.cloud/consider": "false",
+							"high-availability-config.resources.gardener.cloud/consider": "",
 						},
 					},
 				}
@@ -942,6 +943,7 @@ var _ = Describe("Garden", func() {
 					HaveKeyWithValue("pod-security.kubernetes.io/enforce", "privileged"),
 					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
 					HaveKeyWithValue("foo", "bar"),
+					HaveKeyWithValue("gardener.cloud/role", "garden"),
 				))
 			})
 		})
