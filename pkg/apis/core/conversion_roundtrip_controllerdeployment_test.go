@@ -18,7 +18,6 @@ import (
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ControllerDeployment roundtrip conversion", func() {
