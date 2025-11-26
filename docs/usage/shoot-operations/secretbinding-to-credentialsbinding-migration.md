@@ -8,7 +8,7 @@ With the introduction of the [`CredentialsBinding`](../../api-reference/security
 While `SecretBinding`s can only reference `Secret`s, `CredentialsBinding`s can also reference `WorkloadIdentity`s which provide an alternative authentication method.
 `WorkloadIdentity`s do not directly contain credentials but are rather a representation of the workload that is going to access the user's account.
 
-As `CredentialsBinding`s cover the functionality of `SecretBinding`s, the latter are considered legacy and will be deprecated in the future.
+As `CredentialsBinding`s cover the functionality of `SecretBinding`s, the latter are considered legacy and have been deprecated as of [Kubernetes `v1.34`](../shoot/shoot_kubernetes_versions.md#upgrading-to-kubernetes-v134).
 This incurs the need for migration from `SecretBinding` to `CredentialsBinding` resources.
 
 > [!NOTE]
