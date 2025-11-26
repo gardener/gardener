@@ -5,7 +5,6 @@ go 1.24.5
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/andybalholm/brotli v1.2.0
 	github.com/bramvdbogaerde/go-scp v1.5.0
 	github.com/containerd/containerd/v2 v2.2.0
@@ -28,7 +27,6 @@ require (
 	github.com/google/go-containerregistry v0.20.1
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/ironcore-dev/vgopath v0.1.5
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/onsi/ginkgo/v2 v2.27.1
@@ -56,7 +54,6 @@ require (
 	golang.org/x/exp v0.0.0-20251113190631-e25ba8c21ef6
 	golang.org/x/text v0.31.0
 	golang.org/x/time v0.14.0
-	golang.org/x/tools v0.39.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gonum.org/v1/gonum v0.16.0
 	google.golang.org/protobuf v1.36.10
@@ -71,7 +68,6 @@ require (
 	k8s.io/cli-runtime v0.34.2
 	k8s.io/client-go v0.34.2
 	k8s.io/cluster-bootstrap v0.34.2
-	k8s.io/code-generator v0.34.2
 	k8s.io/component-base v0.34.2
 	k8s.io/component-helpers v0.34.2
 	k8s.io/klog/v2 v2.130.1
@@ -84,8 +80,19 @@ require (
 	k8s.io/pod-security-admission v0.34.2
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	sigs.k8s.io/controller-runtime v0.22.4
-	sigs.k8s.io/controller-tools v0.19.0
 	sigs.k8s.io/yaml v1.6.0
+)
+
+tool (
+	github.com/ahmetb/gen-crd-api-reference-docs
+	github.com/ironcore-dev/vgopath
+	github.com/onsi/ginkgo/v2/ginkgo
+	go.uber.org/mock/mockgen
+	golang.org/x/tools/cmd/goimports
+	k8s.io/code-generator/cmd/go-to-protobuf
+	k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
+	k8s.io/kube-openapi/cmd/openapi-gen
+	sigs.k8s.io/controller-tools/cmd/controller-gen
 )
 
 require (
@@ -100,6 +107,7 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/PaesslerAG/gval v1.2.4 // indirect
 	github.com/PaesslerAG/jsonpath v0.1.2-0.20240726212847-3a740cf7976f // indirect
+	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0 // indirect
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -168,6 +176,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/ironcore-dev/vgopath v0.1.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.13-0.20220915233716-71ac16282d12 // indirect
@@ -269,6 +278,7 @@ require (
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/telemetry v0.0.0-20251111182119-bc8e575c7b54 // indirect
 	golang.org/x/term v0.37.0 // indirect
+	golang.org/x/tools v0.39.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
 	google.golang.org/grpc v1.76.0 // indirect
@@ -277,6 +287,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	k8s.io/code-generator v0.34.2 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	k8s.io/gengo/v2 v2.0.0-20250820003526-c297c0c1eb9d // indirect
 	k8s.io/klog v1.0.0 // indirect
@@ -284,6 +295,7 @@ require (
 	k8s.io/sample-controller v0.30.3 // indirect
 	oras.land/oras-go/v2 v2.6.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 // indirect
+	sigs.k8s.io/controller-tools v0.19.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
