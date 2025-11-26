@@ -101,6 +101,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	if controllerInstallation.Spec.SeedRef == nil {
+		return reconcile.Result{}, nil
+	}
+
 	if controllerInstallation.DeletionTimestamp != nil {
 		return r.delete(gardenCtx, seedCtx, log, controllerInstallation)
 	}

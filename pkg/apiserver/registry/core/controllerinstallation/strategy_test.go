@@ -92,7 +92,7 @@ func newControllerInstallation() *core.ControllerInstallation {
 			RegistrationRef: corev1.ObjectReference{
 				Name: "baz",
 			},
-			SeedRef: corev1.ObjectReference{
+			SeedRef: &corev1.ObjectReference{
 				Name: "qux",
 			},
 		},

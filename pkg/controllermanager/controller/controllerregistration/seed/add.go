@@ -303,7 +303,7 @@ func (r *Reconciler) MapShootToSeed(_ context.Context, obj client.Object) []reco
 // MapControllerInstallationToSeed returns a reconcile.Request object for the seed specified in the .spec.seedRef.name field.
 func (r *Reconciler) MapControllerInstallationToSeed(_ context.Context, obj client.Object) []reconcile.Request {
 	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-	if !ok {
+	if !ok || controllerInstallation.Spec.SeedRef == nil {
 		return nil
 	}
 

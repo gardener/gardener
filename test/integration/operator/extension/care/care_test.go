@@ -273,7 +273,7 @@ var _ = Describe("Extension Care controller tests", func() {
 						Name:            controllerRegistration.Name,
 						ResourceVersion: controllerRegistration.ResourceVersion,
 					},
-					SeedRef: corev1.ObjectReference{
+					SeedRef: &corev1.ObjectReference{
 						Name:            "foo",
 						ResourceVersion: "0",
 					},

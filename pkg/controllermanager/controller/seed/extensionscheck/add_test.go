@@ -27,7 +27,7 @@ var _ = Describe("Add", func() {
 		reconciler = &Reconciler{}
 		controllerInstallation = &gardencorev1beta1.ControllerInstallation{
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
-				SeedRef: corev1.ObjectReference{
+				SeedRef: &corev1.ObjectReference{
 					Name: "seed",
 				},
 			},
@@ -39,6 +39,11 @@ var _ = Describe("Add", func() {
 
 		It("should do nothing if the object is no ControllerInstallation", func() {
 			Expect(reconciler.MapControllerInstallationToSeed(ctx, &corev1.Secret{})).To(BeEmpty())
+		})
+
+		It("should do nothing if the seed ref is empty", func() {
+			controllerInstallation.Spec.SeedRef = nil
+			Expect(reconciler.MapControllerInstallationToSeed(ctx, controllerInstallation)).To(BeEmpty())
 		})
 
 		It("should map the ControllerInstallation to the Seed", func() {

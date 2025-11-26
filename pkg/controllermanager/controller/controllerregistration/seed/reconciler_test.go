@@ -374,7 +374,7 @@ var _ = Describe("Reconciler", func() {
 				Name: "ci1",
 			},
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
-				SeedRef: corev1.ObjectReference{
+				SeedRef: &corev1.ObjectReference{
 					Name: "another-seed",
 				},
 				RegistrationRef: corev1.ObjectReference{
@@ -387,7 +387,7 @@ var _ = Describe("Reconciler", func() {
 				Name: "ci2",
 			},
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
-				SeedRef: corev1.ObjectReference{
+				SeedRef: &corev1.ObjectReference{
 					Name: seedName,
 				},
 				DeploymentRef: &corev1.ObjectReference{
@@ -403,7 +403,7 @@ var _ = Describe("Reconciler", func() {
 				Name: "ci3",
 			},
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
-				SeedRef: corev1.ObjectReference{
+				SeedRef: &corev1.ObjectReference{
 					Name: seedName,
 				},
 				RegistrationRef: corev1.ObjectReference{
@@ -416,7 +416,7 @@ var _ = Describe("Reconciler", func() {
 				Name: "ci4",
 			},
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
-				SeedRef: corev1.ObjectReference{
+				SeedRef: &corev1.ObjectReference{
 					Name: seedName,
 				},
 				RegistrationRef: corev1.ObjectReference{
@@ -429,7 +429,7 @@ var _ = Describe("Reconciler", func() {
 				Name: "ci7",
 			},
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
-				SeedRef: corev1.ObjectReference{
+				SeedRef: &corev1.ObjectReference{
 					Name: seedName,
 				},
 				RegistrationRef: corev1.ObjectReference{

@@ -318,7 +318,7 @@ var _ = Describe("graph for seeds", func() {
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
 				DeploymentRef:   &corev1.ObjectReference{Name: "controllerdeployment1"},
 				RegistrationRef: corev1.ObjectReference{Name: "controllerregistration1"},
-				SeedRef:         corev1.ObjectReference{Name: seed1.Name},
+				SeedRef:         &corev1.ObjectReference{Name: seed1.Name},
 			},
 		}
 

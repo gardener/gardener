@@ -335,7 +335,7 @@ func computeWantedControllerRegistrationNames(
 func installedAndRequiredRegistrationNames(controllerInstallationList *gardencorev1beta1.ControllerInstallationList, seedName string) sets.Set[string] {
 	requiredControllerRegistrationNames := sets.New[string]()
 	for _, controllerInstallation := range controllerInstallationList.Items {
-		if controllerInstallation.Spec.SeedRef.Name != seedName {
+		if controllerInstallation.Spec.SeedRef != nil && controllerInstallation.Spec.SeedRef.Name != seedName {
 			continue
 		}
 		if !v1beta1helper.IsControllerInstallationRequired(controllerInstallation) {
@@ -359,7 +359,7 @@ func computeRegistrationNameToInstallationMap(
 	registrationNameToInstallationName := make(map[string]*gardencorev1beta1.ControllerInstallation)
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
-		if controllerInstallation.Spec.SeedRef.Name != seedName {
+		if controllerInstallation.Spec.SeedRef != nil && controllerInstallation.Spec.SeedRef.Name != seedName {
 			continue
 		}
 
@@ -436,7 +436,7 @@ func deployNeededInstallation(
 	existingControllerInstallation *gardencorev1beta1.ControllerInstallation,
 ) error {
 	installationSpec := gardencorev1beta1.ControllerInstallationSpec{
-		SeedRef: corev1.ObjectReference{
+		SeedRef: &corev1.ObjectReference{
 			Name:            seed.Name,
 			ResourceVersion: seed.ResourceVersion,
 		},

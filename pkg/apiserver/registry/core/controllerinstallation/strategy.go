@@ -122,7 +122,9 @@ func ToSelectableFields(controllerInstallation *core.ControllerInstallation) fie
 	// be adjusted.
 	controllerInstallationSpecificFieldsSet := make(fields.Set, 3)
 	controllerInstallationSpecificFieldsSet[core.RegistrationRefName] = controllerInstallation.Spec.RegistrationRef.Name
-	controllerInstallationSpecificFieldsSet[core.SeedRefName] = controllerInstallation.Spec.SeedRef.Name
+	if controllerInstallation.Spec.SeedRef != nil {
+		controllerInstallationSpecificFieldsSet[core.SeedRefName] = controllerInstallation.Spec.SeedRef.Name
+	}
 	return generic.AddObjectMetaFieldsSet(controllerInstallationSpecificFieldsSet, &controllerInstallation.ObjectMeta, false)
 }
 
@@ -151,7 +153,9 @@ func SeedRefNameIndexFunc(obj any) ([]string, error) {
 	if !ok {
 		return nil, fmt.Errorf("expected *core.ControllerInstallation but got %T", obj)
 	}
-
+	if controllerInstallation.Spec.SeedRef == nil {
+		return nil, nil
+	}
 	return []string{controllerInstallation.Spec.SeedRef.Name}, nil
 }
 

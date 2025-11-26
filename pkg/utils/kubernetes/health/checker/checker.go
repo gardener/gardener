@@ -500,6 +500,13 @@ func (h *HealthChecker) checkControllerInstallationConditions(
 		return &c, nil
 	}
 
+	var cluster string
+	if controllerInstallation.Spec.SeedRef != nil {
+		cluster = "Seed: " + controllerInstallation.Spec.SeedRef.Name
+	} else if controllerInstallation.Spec.ShootRef != nil {
+		cluster = "Shoot: " + controllerInstallation.Spec.ShootRef.Namespace + "/" + controllerInstallation.Spec.ShootRef.Name
+	}
+
 	for _, condType := range []gardencorev1beta1.ConditionType{
 		gardencorev1beta1.ControllerInstallationValid,
 		gardencorev1beta1.ControllerInstallationInstalled,
@@ -516,9 +523,9 @@ func (h *HealthChecker) checkControllerInstallationConditions(
 			continue
 		}
 		if !checkConditionStatus(*cond) {
-			c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, cond.Reason, fmt.Sprintf("Seed %s: %s", controllerInstallation.Spec.SeedRef.Name, cond.Message))
+			c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, cond.Reason, fmt.Sprintf("%s: %s", cluster, cond.Message))
 			if cond.Type == gardencorev1beta1.ControllerInstallationProgressing && controllerInstallationProgressingThreshold != nil {
-				c = v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "ProgressingRolloutStuck", fmt.Sprintf("Seed %s: ControllerInstallation %s is progressing for more than %s", controllerInstallation.Spec.SeedRef.Name, controllerInstallation.Name, controllerInstallationProgressingThreshold.Duration))
+				c = v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "ProgressingRolloutStuck", fmt.Sprintf("%s: ControllerInstallation %s is progressing for more than %s", cluster, controllerInstallation.Name, controllerInstallationProgressingThreshold.Duration))
 			}
 			return &c, nil
 		}
@@ -531,7 +538,7 @@ func (h *HealthChecker) checkControllerInstallationConditions(
 		for cond := range conditionsToCheck {
 			missing = append(missing, string(cond))
 		}
-		c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "MissingControllerInstallationCondition", fmt.Sprintf("Seed %s: ControllerInstallation %s is missing the following condition(s), %v", controllerInstallation.Spec.SeedRef.Name, controllerInstallation.Name, missing))
+		c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "MissingControllerInstallationCondition", fmt.Sprintf("%s: ControllerInstallation %s is missing the following condition(s), %v", cluster, controllerInstallation.Name, missing))
 		return &c, nil
 	}
 

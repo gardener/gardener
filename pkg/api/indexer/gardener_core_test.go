@@ -187,7 +187,7 @@ var _ = Describe("Core", func() {
 
 		Entry("no ControllerInstallation", &corev1.Secret{}, ConsistOf("")),
 		Entry("ControllerInstallation w/o seedRef", &gardencorev1beta1.ControllerInstallation{}, ConsistOf("")),
-		Entry("ControllerInstallation w/ seedRef", &gardencorev1beta1.ControllerInstallation{Spec: gardencorev1beta1.ControllerInstallationSpec{SeedRef: corev1.ObjectReference{Name: "seed"}}}, ConsistOf("seed")),
+		Entry("ControllerInstallation w/ seedRef", &gardencorev1beta1.ControllerInstallation{Spec: gardencorev1beta1.ControllerInstallationSpec{SeedRef: &corev1.ObjectReference{Name: "seed"}}}, ConsistOf("seed")),
 	)
 
 	DescribeTable("#AddControllerInstallationRegistrationRefName",

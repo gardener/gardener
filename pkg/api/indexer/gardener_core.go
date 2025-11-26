@@ -81,7 +81,7 @@ func BackupEntryShootRefNamespaceIndexerFunc(obj client.Object) []string {
 // ControllerInstallationSeedRefNameIndexerFunc extracts the .spec.seedRef.name field of a ControllerInstallation.
 func ControllerInstallationSeedRefNameIndexerFunc(obj client.Object) []string {
 	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-	if !ok {
+	if !ok || controllerInstallation.Spec.SeedRef == nil {
 		return []string{""}
 	}
 	return []string{controllerInstallation.Spec.SeedRef.Name}

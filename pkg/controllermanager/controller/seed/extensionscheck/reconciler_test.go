@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
@@ -106,11 +107,11 @@ var _ = Describe("Reconciler", func() {
 
 			c1 := &gardencorev1beta1.ControllerInstallation{}
 			c1.SetName("foo-1")
-			c1.Spec.SeedRef.Name = seedName
+			c1.Spec.SeedRef = &corev1.ObjectReference{Name: seedName}
 
 			c2 := c1.DeepCopy()
 			c2.SetName("foo-2")
-			c2.Spec.SeedRef.Name = "not-seed-2"
+			c2.Spec.SeedRef = &corev1.ObjectReference{Name: "not-seed-2"}
 
 			c3 := c1.DeepCopy()
 			c3.SetName("foo-3")
@@ -127,7 +128,7 @@ var _ = Describe("Reconciler", func() {
 		BeforeEach(func() {
 			c1 := &gardencorev1beta1.ControllerInstallation{}
 			c1.SetName("foo-1")
-			c1.Spec.SeedRef.Name = seedName
+			c1.Spec.SeedRef = &corev1.ObjectReference{Name: seedName}
 			c1.Status.Conditions = []gardencorev1beta1.Condition{
 				{Type: "Valid", Status: gardencorev1beta1.ConditionTrue},
 				{Type: "Installed", Status: gardencorev1beta1.ConditionTrue},
@@ -168,7 +169,7 @@ var _ = Describe("Reconciler", func() {
 			BeforeEach(func() {
 				c1 := &gardencorev1beta1.ControllerInstallation{}
 				c1.SetName("foo-1")
-				c1.Spec.SeedRef.Name = seedName
+				c1.Spec.SeedRef = &corev1.ObjectReference{Name: seedName}
 				c1.Status.Conditions = []gardencorev1beta1.Condition{
 					{Type: "Valid", Status: gardencorev1beta1.ConditionTrue},
 					{Type: "Installed", Status: gardencorev1beta1.ConditionTrue},

@@ -631,7 +631,7 @@ var _ = Describe("utils", func() {
 							RegistrationRef: corev1.ObjectReference{
 								Name: "foo",
 							},
-							SeedRef: corev1.ObjectReference{
+							SeedRef: &corev1.ObjectReference{
 								Name: seedName,
 							},
 						},
@@ -686,7 +686,7 @@ var _ = Describe("utils", func() {
 							RegistrationRef: corev1.ObjectReference{
 								Name: controllerRegistrations[0].Name,
 							},
-							SeedRef: corev1.ObjectReference{
+							SeedRef: &corev1.ObjectReference{
 								Name: seedName,
 							},
 						},
@@ -706,7 +706,7 @@ var _ = Describe("utils", func() {
 							RegistrationRef: corev1.ObjectReference{
 								Name: controllerRegistrations[1].Name,
 							},
-							SeedRef: corev1.ObjectReference{
+							SeedRef: &corev1.ObjectReference{
 								Name: seedName,
 							},
 						},

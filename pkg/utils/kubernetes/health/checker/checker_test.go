@@ -592,7 +592,7 @@ var _ = Describe("HealthChecker", func() {
 				},
 				true,
 				true,
-				PointTo(beConditionWithFalseStatusReasonAndMsg("ProgressingRolloutStuck", "Seed : ControllerInstallation  is progressing for more than 5m0s"))),
+				PointTo(beConditionWithFalseStatusReasonAndMsg("ProgressingRolloutStuck", ": ControllerInstallation  is progressing for more than 5m0s"))),
 			Entry("one false condition Valid",
 				[]gardencorev1beta1.Condition{
 					{

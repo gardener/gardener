@@ -316,7 +316,7 @@ var _ = Describe("Seed controller tests", func() {
 				RegistrationRef: corev1.ObjectReference{
 					Name: controllerRegistration.Name,
 				},
-				SeedRef: corev1.ObjectReference{
+				SeedRef: &corev1.ObjectReference{
 					Name: seedName,
 				},
 			},

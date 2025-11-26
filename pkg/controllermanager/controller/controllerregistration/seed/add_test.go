@@ -541,7 +541,7 @@ var _ = Describe("Add", func() {
 			)
 
 			BeforeEach(func() {
-				controllerInstallation = &gardencorev1beta1.ControllerInstallation{Spec: gardencorev1beta1.ControllerInstallationSpec{SeedRef: corev1.ObjectReference{Name: seedName}}}
+				controllerInstallation = &gardencorev1beta1.ControllerInstallation{Spec: gardencorev1beta1.ControllerInstallationSpec{SeedRef: &corev1.ObjectReference{Name: seedName}}}
 			})
 
 			It("should map to the seed", func() {

@@ -184,7 +184,7 @@ var _ = Describe("Associations", func() {
 					Name: "controllerinstallation",
 				},
 				Spec: gardencorev1beta1.ControllerInstallationSpec{
-					SeedRef: corev1.ObjectReference{Name: "test"},
+					SeedRef: &corev1.ObjectReference{Name: "test"},
 				},
 			}
 

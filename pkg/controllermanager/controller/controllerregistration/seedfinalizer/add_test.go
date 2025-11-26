@@ -34,7 +34,7 @@ var _ = Describe("Add", func() {
 			seedName = "seed-1"
 			controllerInstallation = &gardencorev1beta1.ControllerInstallation{
 				Spec: gardencorev1beta1.ControllerInstallationSpec{
-					SeedRef: corev1.ObjectReference{
+					SeedRef: &corev1.ObjectReference{
 						Name: seedName,
 					},
 				},
