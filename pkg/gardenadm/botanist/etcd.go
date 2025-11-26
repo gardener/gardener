@@ -50,7 +50,7 @@ func (b *GardenadmBotanist) DeployEtcdDruid(ctx context.Context) error {
 
 	deployer, err := sharedcomponent.NewEtcdDruid(
 		b.SeedClientSet.Client(),
-		b.Shoot.ControlPlaneNamespace,
+		v1beta1constants.GardenNamespace,
 		b.Shoot.KubernetesVersion,
 		componentImageVectors,
 		gardenletConfig.ETCDConfig,

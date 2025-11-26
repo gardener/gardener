@@ -121,13 +121,18 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", b.secretNameServerCA)
 	}
 
-	serverSecret, err := b.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        "etcd-druid-webhook",
-		CommonName:                  fmt.Sprintf("%s.%s.svc", druidServiceName, b.namespace),
-		DNSNames:                    kubernetesutils.DNSNamesForService(druidServiceName, b.namespace),
-		CertType:                    secretsutils.ServerCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(b.secretNameServerCA, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
+	serverSecret, err := b.secretsManager.Generate(ctx,
+		&secretsutils.CertificateSecretConfig{
+			Name:                        "etcd-druid-webhook",
+			CommonName:                  fmt.Sprintf("%s.%s.svc", druidServiceName, b.namespace),
+			DNSNames:                    kubernetesutils.DNSNamesForService(druidServiceName, b.namespace),
+			CertType:                    secretsutils.ServerCert,
+			SkipPublishingCACertificate: true,
+		},
+		secretsmanager.SignedByCA(b.secretNameServerCA, secretsmanager.UseCurrentCA),
+		secretsmanager.Rotate(secretsmanager.InPlace),
+		secretsmanager.Namespace(b.namespace),
+	)
 	if err != nil {
 		return err
 	}
@@ -447,6 +452,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						}),
 					},
 					Spec: corev1.PodSpec{
+						Tolerations:        []corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}},
 						PriorityClassName:  b.priorityClassName,
 						ServiceAccountName: druidServiceAccountName,
 						Containers: []corev1.Container{
