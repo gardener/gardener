@@ -351,6 +351,7 @@ var _ = Describe("Etcd", func() {
 									},
 								},
 							},
+							Tolerations:        []corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: "Exists"}},
 							PriorityClassName:  priorityClassName,
 							ServiceAccountName: "etcd-druid",
 							Volumes: []corev1.Volume{
@@ -461,6 +462,7 @@ var _ = Describe("Etcd", func() {
 									},
 								},
 							},
+							Tolerations:        []corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: "Exists"}},
 							PriorityClassName:  priorityClassName,
 							ServiceAccountName: "etcd-druid",
 							Volumes: []corev1.Volume{
