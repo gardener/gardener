@@ -18,10 +18,3 @@
   containerPath: /etc/gardener/local-backupbuckets
 {{- end -}}
 {{- end -}}
-
-{{- define "extraMounts.registry" -}}
-{{- if .Values.registry.deployed }}
-- hostPath: {{.Values.gardener.repositoryRoot}}/dev/local-registry
-  containerPath: /etc/gardener/local-registry
-{{- end }}
-{{- end -}}
