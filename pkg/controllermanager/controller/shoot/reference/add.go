@@ -104,10 +104,13 @@ func secretNamesForDNSProviders(shoot *gardencorev1beta1.Shoot) []string {
 
 	var names = make([]string, 0, len(shoot.Spec.DNS.Providers))
 	for _, provider := range shoot.Spec.DNS.Providers {
-		if provider.SecretName == nil {
+		if provider.CredentialsRef == nil {
 			continue
 		}
-		names = append(names, *provider.SecretName)
+		if provider.CredentialsRef.APIVersion != "v1" || provider.CredentialsRef.Kind != "Secret" {
+			continue
+		}
+		names = append(names, provider.CredentialsRef.Name)
 	}
 
 	return names
