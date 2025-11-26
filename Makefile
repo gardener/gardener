@@ -293,7 +293,6 @@ kind-multi-node-up kind-multi-node-down: export CLUSTER_VALUES = $(REPO_ROOT)/ex
 kind-multi-zone-up kind-multi-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-zone/values.yaml
 kind-multi-node2-up kind-multi-node2-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/multi-node2/values.yaml
 # ADDITIONAL_PARAMETERS
-kind2-up kind-multi-node2-up: export ADDITIONAL_PARAMETERS = --skip-registry
 kind2-down kind-multi-node2-down: export ADDITIONAL_PARAMETERS = --keep-backupbuckets-dir
 kind-multi-zone-up: export ADDITIONAL_PARAMETERS = --multi-zonal
 

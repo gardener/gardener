@@ -1,0 +1,64 @@
+services:
+  registry:
+    container_name: registry
+    image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../../dev/local-registry/localhost:/var/lib/registry
+      - ./config.yaml:/etc/distribution/config.yml
+    networks:
+      kind:
+        aliases:
+          - registry.local.gardener.cloud
+  registry-cache-gcr:
+    container_name: registry-cache-gcr
+    image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://gcr.io
+    volumes:
+      - ../../dev/local-registry/gcr:/var/lib/registry
+      - ./config.yaml:/etc/distribution/config.yml
+    networks:
+      kind:
+        aliases:
+          - gcr.registry-cache.local.gardener.cloud
+  registry-cache-k8s:
+    container_name: registry-cache-k8s
+    image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://registry.k8s.io
+    volumes:
+      - ../../dev/local-registry/k8s:/var/lib/registry
+      - ./config.yaml:/etc/distribution/config.yml
+    networks:
+      kind:
+        aliases:
+          - k8s.registry-cache.local.gardener.cloud
+  registry-cache-quay:
+    container_name: registry-cache-quay
+    image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://quay.io
+    volumes:
+      - ../../dev/local-registry/quay:/var/lib/registry
+      - ./config.yaml:/etc/distribution/config.yml
+    networks:
+      kind:
+        aliases:
+          - quay.registry-cache.local.gardener.cloud
+  registry-cache-europe-docker-pkg-dev:
+    container_name: registry-cache-europe-docker-pkg-dev
+    image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://europe-docker.pkg.dev
+    volumes:
+      - ../../dev/local-registry/europe-docker-pkg-dev:/var/lib/registry
+      - ./config.yaml:/etc/distribution/config.yml
+    networks:
+      kind:
+        aliases:
+          - europe-docker-pkg-dev.registry-cache.local.gardener.cloud
+networks:
+  kind:
+    external: true

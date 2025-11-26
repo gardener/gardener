@@ -9,14 +9,14 @@ set -o nounset
 set -o pipefail
 
 WITH_LPP_RESIZE_SUPPORT=${WITH_LPP_RESIZE_SUPPORT:-false}
-REGISTRY_CACHE=${CI:-false}
+USE_PROW_REGISTRY_CACHE=${CI:-false}
 CLUSTER_NAME=""
 PATH_CLUSTER_VALUES=""
 PATH_KUBECONFIG=""
-DEPLOY_REGISTRY=true
 MULTI_ZONAL=false
 CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
 ADDITIONAL_ARGS=""
+REGISTRY_COMPOSE_FILE="$(dirname "$0")/../dev-setup/registry/docker-compose.yaml"
 
 parse_flags() {
   while test $# -gt 0; do
@@ -32,9 +32,6 @@ parse_flags() {
       ;;
     --path-kubeconfig)
       shift; PATH_KUBECONFIG="$1"
-      ;;
-    --skip-registry)
-      DEPLOY_REGISTRY=false
       ;;
     --multi-zonal)
       MULTI_ZONAL=true
@@ -138,19 +135,39 @@ server = "${UPSTREAM_SERVER}"
 EOF
 }
 
-check_registry_cache_availability() {
-  local registry_cache_ip
-  local registry_cache_dns
-  if [[ "$REGISTRY_CACHE" != "true" ]]; then
+change_registry_upstream_urls_to_prow_caches() {
+  if [[ "$USE_PROW_REGISTRY_CACHE" != "true" ]]; then
     return
   fi
-  echo "Registry-cache enabled. Checking if registry-cache instances are deployed in prow cluster."
-  for registry_cache_dns in $(kubectl create -k "$(dirname "$0")/../example/gardener-local/registry-prow" --dry-run=client -o yaml | grep kube-system.svc.cluster.local | awk '{ print $2 }' | sed -e "s/^http:\/\///" -e "s/:5000$//"); do
+
+  local mutated_compose_file="${REGISTRY_COMPOSE_FILE%.yaml}-prow.yaml"
+  cp "$REGISTRY_COMPOSE_FILE" "$mutated_compose_file"
+  REGISTRY_COMPOSE_FILE="$mutated_compose_file"
+
+  declare -A prow_registry_cache_urls=(
+    [gcr]="http://registry-gcr-io.kube-system.svc.cluster.local:5000"
+    [k8s]="http://registry-registry-k8s-io.kube-system.svc.cluster.local:5000"
+    [quay]="http://registry-quay-io.kube-system.svc.cluster.local:5000"
+    [europe-docker-pkg-dev]="http://registry-europe-docker-pkg-dev.kube-system.svc.cluster.local:5000"
+  )
+
+  echo "Running in CI. Checking availability of registry-cache instances in prow cluster"
+
+  for key in "${!prow_registry_cache_urls[@]}"; do
+    registry_cache_url="${prow_registry_cache_urls[$key]}"
+
+    # Extract DNS from URL (remove http:// and :5000)
+    registry_cache_dns="${registry_cache_url#http://}"
+    registry_cache_dns="${registry_cache_dns%:5000}"
+
     registry_cache_ip=$(getent hosts "$registry_cache_dns" | awk '{ print $1 }' || true)
     if [[ "$registry_cache_ip" == "" ]]; then
-      echo "Unable to resolve IP of $registry_cache_dns in prow cluster. Disabling registry-cache."
-      REGISTRY_CACHE=false
+      echo "Unable to resolve IP of $key registry cache in prow cluster ($registry_cache_dns). Not using it as upstream."
+      continue
     fi
+
+    echo "Using $key registry cache in prow cluster ($registry_cache_dns) as upstream for local registry cache."
+    yq -i ".services.registry-cache-${key}.environment.REGISTRY_PROXY_REMOTEURL = \"${registry_cache_url}\"" "$REGISTRY_COMPOSE_FILE"
   done
 }
 
@@ -263,6 +280,10 @@ fi
 ./hack/kind-setup-loopback-devices.sh --cluster-name "${CLUSTER_NAME}" --ip-family "${IPFAMILY}" "${additional_params}"
 
 setup_kind_network
+
+change_registry_upstream_urls_to_prow_caches
+
+docker compose -f "$REGISTRY_COMPOSE_FILE" up -d
 
 if [[ "$IPFAMILY" == "ipv6" ]]; then
   ADDITIONAL_ARGS="$ADDITIONAL_ARGS --values $CHART/values-ipv6.yaml"
@@ -519,17 +540,6 @@ fi
 
 kubectl -n kube-system rollout restart deployment coredns
 
-if [[ "$DEPLOY_REGISTRY" == "true" ]]; then
-  check_registry_cache_availability
-  if [[ "$REGISTRY_CACHE" == "true" ]]; then
-    echo "Deploying local container registries in registry-cache configuration"
-    kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry-prow" --server-side
-  else
-    echo "Deploying local container registries in default configuration"
-    kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry" --server-side
-  fi
-  kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
-fi
 kubectl apply -k "$(dirname "$0")/../dev-setup/kind/calico/overlays/$IPFAMILY" --server-side
 kubectl apply -k "$(dirname "$0")/../dev-setup/kind/metrics-server"            --server-side
 kubectl apply -k "$(dirname "$0")/../dev-setup/kind/node-status-capacity"      --server-side
