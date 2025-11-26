@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
@@ -45,7 +44,11 @@ var _ = Describe("Add", func() {
 			oldShoot := shoot.DeepCopy()
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{
 				Providers: []gardencorev1beta1.DNSProvider{{
-					SecretName: ptr.To("secret"),
+					CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "secret",
+					},
 				}},
 			}
 			Expect(Predicate(oldShoot, shoot)).To(BeTrue())
