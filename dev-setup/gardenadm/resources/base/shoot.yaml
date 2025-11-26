@@ -38,6 +38,9 @@ spec:
       maximum: 2
       systemComponents:
         allow: true
+      kubernetes:
+        kubelet:
+          maxPods: 250
   kubernetes:
     version: 1.35.4
     kubelet:
