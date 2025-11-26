@@ -521,14 +521,14 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			if apierrors.IsNotFound(err) {
 				return nil, fmt.Errorf("credentials binding %s/%s not found", shoot.Namespace, *shoot.Spec.CredentialsBindingName)
 			}
-			return nil, apierrors.NewInternalError(fmt.Errorf("could not get secret binding %s/%s: %v", shoot.Namespace, *shoot.Spec.SecretBindingName, err))
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not get credentials binding %s/%s: %v", shoot.Namespace, *shoot.Spec.CredentialsBindingName, err))
 		}
 		secretRef = corev1.SecretReference{
 			Name:      credentialsBinding.CredentialsRef.Name,
 			Namespace: credentialsBinding.CredentialsRef.Namespace,
 		}
 	} else {
-		return nil, fmt.Errorf("cannot initialize a reference to the primary DNS provider secret of shoot %s", client.ObjectKeyFromObject(shoot))
+		return nil, fmt.Errorf("cannot initialize a reference to the primary DNS provider credentials of shoot %s", client.ObjectKeyFromObject(shoot))
 	}
 
 	return &gardencore.SeedDNSProvider{
