@@ -491,9 +491,9 @@ func FindPrimaryDNSProvider(providers []gardencorev1beta1.DNSProvider) *gardenco
 	return nil
 }
 
-// ShootDNSProviderSecretNamesEqual returns true when all the secretNames in the `.spec.dns.providers[]` list are the
+// ShootDNSProviderCredentialsRefsEqual returns true when all the credentialsRefs in the `.spec.dns.providers[]` list are the
 // same.
-func ShootDNSProviderSecretNamesEqual(oldDNS, newDNS *gardencorev1beta1.DNS) bool {
+func ShootDNSProviderCredentialsRefsEqual(oldDNS, newDNS *gardencorev1beta1.DNS) bool {
 	var (
 		oldNames = sets.New[string]()
 		newNames = sets.New[string]()
@@ -501,16 +501,16 @@ func ShootDNSProviderSecretNamesEqual(oldDNS, newDNS *gardencorev1beta1.DNS) boo
 
 	if oldDNS != nil {
 		for _, provider := range oldDNS.Providers {
-			if provider.SecretName != nil {
-				oldNames.Insert(*provider.SecretName)
+			if provider.CredentialsRef != nil {
+				oldNames.Insert(provider.CredentialsRef.String())
 			}
 		}
 	}
 
 	if newDNS != nil {
 		for _, provider := range newDNS.Providers {
-			if provider.SecretName != nil {
-				newNames.Insert(*provider.SecretName)
+			if provider.CredentialsRef != nil {
+				newNames.Insert(provider.CredentialsRef.String())
 			}
 		}
 	}
