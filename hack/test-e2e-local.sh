@@ -43,7 +43,7 @@ if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
   local_address_operator="::3"
 fi
 
-ensure_glgc_resolves_to_localhost
+ensure_local_gardener_cloud_hosts
 
 # If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
 case $TYPE in
