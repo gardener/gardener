@@ -476,7 +476,7 @@ var _ = Describe("Etcd", func() {
 					Endpoints: []monitoringv1.Endpoint{
 						{
 							Port:   "client",
-							Scheme: "https",
+							Scheme: ptr.To(monitoringv1.SchemeHTTPS),
 							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
 								InsecureSkipVerify: ptr.To(true),
 								Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
@@ -506,7 +506,7 @@ var _ = Describe("Etcd", func() {
 						},
 						{
 							Port:   "backuprestore",
-							Scheme: "https",
+							Scheme: ptr.To(monitoringv1.SchemeHTTPS),
 							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
 								InsecureSkipVerify: ptr.To(true),
 								Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{

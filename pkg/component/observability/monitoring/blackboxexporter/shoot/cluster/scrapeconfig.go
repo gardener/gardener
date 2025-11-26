@@ -26,7 +26,7 @@ func ScrapeConfig(namespace string) []*monitoringv1alpha1.ScrapeConfig {
 		ObjectMeta: monitoringutils.ConfigObjectMeta("blackbox-exporter-k8s-service-check", namespace, shootprometheus.Label),
 		Spec: monitoringv1alpha1.ScrapeConfigSpec{
 			HonorLabels: ptr.To(false),
-			Scheme:      ptr.To("HTTPS"),
+			Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 			Params: map[string][]string{
 				"module": {moduleName},
 				"target": {"https://kubernetes.default.svc.cluster.local/healthz"},

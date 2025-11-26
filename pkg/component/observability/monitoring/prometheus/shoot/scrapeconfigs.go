@@ -199,7 +199,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				Spec: monitoringv1alpha1.ScrapeConfigSpec{
 					HonorLabels:     ptr.To(false),
 					HonorTimestamps: ptr.To(false),
-					Scheme:          ptr.To("HTTPS"),
+					Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
 						Key:                  resourcesv1alpha1.DataKeyToken,
@@ -319,7 +319,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				},
 				Spec: monitoringv1alpha1.ScrapeConfigSpec{
 					HonorLabels: ptr.To(false),
-					Scheme:      ptr.To("HTTPS"),
+					Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
 						Key:                  resourcesv1alpha1.DataKeyToken,
@@ -402,7 +402,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				},
 				Spec: monitoringv1alpha1.ScrapeConfigSpec{
 					HonorLabels: ptr.To(false),
-					Scheme:      ptr.To("HTTPS"),
+					Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
 						Key:                  resourcesv1alpha1.DataKeyToken,

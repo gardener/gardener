@@ -141,7 +141,7 @@ metric_relabel_configs:
 							HonorLabels:     ptr.To(true),
 							HonorTimestamps: ptr.To(false),
 							MetricsPath:     ptr.To("/federate"),
-							Scheme:          ptr.To("HTTPS"),
+							Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
 							Params: map[string][]string{
 								"match[]": {
 									`{__name__=~"seed:(.+):count"}`,

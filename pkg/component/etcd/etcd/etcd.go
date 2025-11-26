@@ -452,7 +452,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Endpoints: []monitoringv1.Endpoint{
 				{
 					Port:   portNameClient,
-					Scheme: "https",
+					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
 					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
 						// This is needed because the etcd's certificates are not are generated for a specific pod IP.
 						InsecureSkipVerify: ptr.To(true),
@@ -483,7 +483,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 				{
 					Port:   portNameBackupRestore,
-					Scheme: "https",
+					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
 					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
 						// This is needed because the etcd's certificates are not are generated for a specific pod IP.
 						InsecureSkipVerify: ptr.To(true),

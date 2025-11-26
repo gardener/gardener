@@ -62,7 +62,7 @@ var _ = Describe("PodMonitors", func() {
 					},
 					Spec: monitoringv1.PodMonitorSpec{
 						PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
-							Scheme:     "https",
+							Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
 							HTTPConfig: monitoringv1.HTTPConfig{TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
 							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
