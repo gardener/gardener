@@ -11,9 +11,6 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 	"internal/v1alpha1": {
 		"storage-version-gc": {},
 	},
-	"admissionregistration/v1beta1": {
-		"validatingadmissionpolicy-status-controller": {AddedInVersion: "1.28", RemovedInVersion: "1.30"},
-	},
 	"admissionregistration/v1": {
 		"validatingadmissionpolicy-status-controller": {AddedInVersion: "1.30"},
 	},
@@ -123,7 +120,6 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"endpointslice":                        {},
 		"endpointslicemirroring":               {},
 		"ephemeral-volume":                     {},
-		"garbagecollector":                     {RemovedInVersion: "1.30"},
 		"horizontalpodautoscaling":             {},
 		"job":                                  {},
 		"legacy-service-account-token-cleaner": {AddedInVersion: "1.28"},

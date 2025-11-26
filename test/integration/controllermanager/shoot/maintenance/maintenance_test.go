@@ -33,7 +33,6 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 		cloudProfile *gardencorev1beta1.CloudProfile
 		shoot        *gardencorev1beta1.Shoot
-		shoot129     *gardencorev1beta1.Shoot
 		shoot130     *gardencorev1beta1.Shoot
 		shoot131     *gardencorev1beta1.Shoot
 		shoot132     *gardencorev1beta1.Shoot
@@ -119,9 +118,6 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				MachineCapabilities: capabilityDefinitions,
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{
-						{
-							Version: "1.29.0",
-						},
 						{
 							Version: "1.30.0",
 						},
@@ -423,7 +419,6 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			},
 		}
 
-		shoot129 = shoot.DeepCopy()
 		shoot130 = shoot.DeepCopy()
 		shoot131 = shoot.DeepCopy()
 		shoot132 = shoot.DeepCopy()
@@ -1321,138 +1316,6 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 		Context("Shoot with worker", func() {
 			test()
 
-			It("Kubernetes version should be updated: force update minor version (>= 1.30) and change swap behaviour", func() {
-				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.5", Classification: &deprecatedClassification}
-				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.5", Classification: &deprecatedClassification}
-
-				patch := client.MergeFrom(cloudProfile.DeepCopy())
-				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					testKubernetesVersionLowPatchLowMinor,
-					testKubernetesVersionHighestPatchLowMinor,
-					testKubernetesVersionLowPatchConsecutiveMinor,
-					testKubernetesVersionHighestPatchConsecutiveMinor,
-				}
-
-				Expect(testClient.Patch(ctx, cloudProfile, patch)).To(Succeed())
-
-				// set the shoots Kubernetes version to be the highest patch version of the minor version
-				shoot129.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
-					Version: testKubernetesVersionHighestPatchLowMinor.Version,
-					Kubelet: &gardencorev1beta1.KubeletConfig{
-						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
-							FeatureGates: map[string]bool{
-								"NodeSwap": true,
-							},
-						},
-						FailSwapOn: ptr.To(false),
-						MemorySwap: &gardencorev1beta1.MemorySwapConfiguration{
-							SwapBehavior: ptr.To(gardencorev1beta1.UnlimitedSwap),
-						},
-					},
-				}
-
-				By("Create k8s v1.29 Shoot")
-				Expect(testClient.Create(ctx, shoot129)).To(Succeed())
-				log.Info("Created shoot with k8s v1.29 for test", "shoot", client.ObjectKeyFromObject(shoot129))
-
-				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.29")
-					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot129))).To(Succeed())
-				})
-
-				By("Expire Shoot's kubernetes version in the CloudProfile")
-				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
-
-				By("Wait until manager has observed the CloudProfile update")
-				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
-
-				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot129, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
-
-				// expect shoot to have updated to latest patch version of next minor version
-				Eventually(func(g Gomega) string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot129), shoot129)).To(Succeed())
-					g.Expect(shoot129.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.29.5\" to \"1.30.5\". Reason: Kubernetes version expired - force update required"))
-					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("spec.kubernetes.kubelet.memorySwap.swapBehavior is set to 'LimitedSwap'. Reason: 'UnlimitedSwap' cannot be used for Kubernetes version 1.30 and higher."))
-
-					g.Expect(shoot129.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(Equal(ptr.To(gardencorev1beta1.LimitedSwap)))
-
-					g.Expect(shoot129.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
-					g.Expect(shoot129.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
-
-					return shoot129.Spec.Kubernetes.Version
-				}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
-			})
-
-			It("Kubernetes version should be updated: force update minor version (>= 1.30) and change swap behaviour for a worker pool", func() {
-				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.5", Classification: &deprecatedClassification}
-				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.5", Classification: &deprecatedClassification}
-
-				patch := client.MergeFrom(cloudProfile.DeepCopy())
-				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					testKubernetesVersionLowPatchLowMinor,
-					testKubernetesVersionHighestPatchLowMinor,
-					testKubernetesVersionLowPatchConsecutiveMinor,
-					testKubernetesVersionHighestPatchConsecutiveMinor,
-				}
-
-				Expect(testClient.Patch(ctx, cloudProfile, patch)).To(Succeed())
-
-				// set the shoots Kubernetes version to be the highest patch version of the minor version
-				shoot129.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
-					Version: testKubernetesVersionHighestPatchLowMinor.Version,
-				}
-				shoot129.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-					Kubelet: &gardencorev1beta1.KubeletConfig{
-						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
-							FeatureGates: map[string]bool{
-								"NodeSwap": true,
-							},
-						},
-						FailSwapOn: ptr.To(false),
-						MemorySwap: &gardencorev1beta1.MemorySwapConfiguration{
-							SwapBehavior: ptr.To(gardencorev1beta1.UnlimitedSwap),
-						},
-					},
-				}
-
-				By("Create k8s v1.29 Shoot")
-				Expect(testClient.Create(ctx, shoot129)).To(Succeed())
-				log.Info("Created shoot with k8s v1.29 for test", "shoot", client.ObjectKeyFromObject(shoot129))
-
-				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.29")
-					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot129))).To(Succeed())
-				})
-
-				By("Expire Shoot's kubernetes version in the CloudProfile")
-				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
-
-				By("Wait until manager has observed the CloudProfile update")
-				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
-
-				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot129, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
-
-				// expect shoot to have updated to latest patch version of next minor version
-				Eventually(func(g Gomega) string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot129), shoot129)).To(Succeed())
-					g.Expect(shoot129.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.29.5\" to \"1.30.5\". Reason: Kubernetes version expired - force update required"))
-					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("spec.provider.workers[0].kubernetes.kubelet.memorySwap.swapBehavior is set to 'LimitedSwap'. Reason: 'UnlimitedSwap' cannot be used for Kubernetes version 1.30 and higher."))
-
-					g.Expect(shoot129.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(Equal(ptr.To(gardencorev1beta1.LimitedSwap)))
-
-					g.Expect(shoot129.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
-					g.Expect(shoot129.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
-
-					return shoot129.Spec.Kubernetes.Version
-				}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
-			})
-
 			It("Kubernetes version should be updated: force update minor version (>= 1.31) and move systemReserved to kubeReserved", func() {
 				shoot130.Spec.Kubernetes.Version = "1.30.0"
 				shoot130.Spec.Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
@@ -1870,12 +1733,12 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					},
 				}
 
-				By("Create k8s v1.29 Shoot")
+				By("Create k8s v1.30 Shoot")
 				Expect(testClient.Create(ctx, shoot130)).To(Succeed())
-				log.Info("Created shoot with k8s v1.29 for test", "shoot", client.ObjectKeyFromObject(shoot130))
+				log.Info("Created shoot with k8s v1.30 for test", "shoot", client.ObjectKeyFromObject(shoot130))
 
 				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.29")
+					By("Delete Shoot with k8s v1.30")
 					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot130))).To(Succeed())
 				})
 
@@ -1909,89 +1772,6 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					g.Expect(updatedShoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					return *updatedShoot.Spec.Provider.Workers[0].Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionLowPatchConsecutiveMinor.Version))
-			})
-
-			It("Worker Pool Kubernetes version should be updated: force update minor version (>= 1.30) and set swap behavior", func() {
-				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.29.5", Classification: &deprecatedClassification}
-				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.5", Classification: &deprecatedClassification}
-
-				patch := client.MergeFrom(cloudProfile.DeepCopy())
-				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					testKubernetesVersionLowPatchLowMinor,
-					testKubernetesVersionHighestPatchLowMinor,
-					testKubernetesVersionLowPatchConsecutiveMinor,
-					testKubernetesVersionHighestPatchConsecutiveMinor,
-				}
-
-				Expect(testClient.Patch(ctx, cloudProfile, patch)).To(Succeed())
-
-				shoot129.Spec.Kubernetes.Version = testKubernetesVersionHighestPatchLowMinor.Version
-				shoot129.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-					Version: ptr.To(testKubernetesVersionHighestPatchLowMinor.Version),
-					Kubelet: &gardencorev1beta1.KubeletConfig{
-						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
-							FeatureGates: map[string]bool{
-								"NodeSwap": true,
-							},
-						},
-						FailSwapOn: ptr.To(false),
-						MemorySwap: &gardencorev1beta1.MemorySwapConfiguration{
-							SwapBehavior: ptr.To(gardencorev1beta1.UnlimitedSwap),
-						},
-					},
-				}
-				shoot129.Spec.Provider.Workers[1].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-					Kubelet: &gardencorev1beta1.KubeletConfig{
-						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
-							FeatureGates: map[string]bool{
-								"NodeSwap": true,
-							},
-						},
-						FailSwapOn: ptr.To(false),
-						MemorySwap: &gardencorev1beta1.MemorySwapConfiguration{
-							SwapBehavior: ptr.To(gardencorev1beta1.LimitedSwap),
-						},
-					},
-				}
-
-				By("Create k8s v1.29 Shoot")
-				Expect(testClient.Create(ctx, shoot129)).To(Succeed())
-				log.Info("Created shoot with k8s v1.29 for test", "shoot", client.ObjectKeyFromObject(shoot129))
-
-				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.29")
-					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot129))).To(Succeed())
-				})
-
-				By("Expire Shoot's kubernetes version in the CloudProfile")
-				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
-
-				By("Wait until manager has observed the CloudProfile update")
-				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot129.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
-
-				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot129, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
-
-				// expect worker pool to have updated to latest patch version of next minor version
-				Eventually(func(g Gomega) string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot129), shoot129)).To(Succeed())
-					g.Expect(shoot129.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.29.5\" to \"1.30.5\". Reason: Kubernetes version expired - force update required"))
-					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("Worker pool \"cpu-worker1\": Updated Kubernetes version from \"1.29.5\" to \"1.30.5\". Reason: Kubernetes version expired - force update required"))
-					g.Expect(shoot129.Status.LastMaintenance.Description).To(ContainSubstring("spec.provider.workers[0].kubernetes.kubelet.memorySwap.swapBehavior is set to 'LimitedSwap'. Reason: 'UnlimitedSwap' cannot be used for Kubernetes version 1.30 and higher."))
-					g.Expect(shoot129.Status.LastMaintenance.Description).NotTo(ContainSubstring("spec.provider.workers[1]"))
-
-					g.Expect(shoot129.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(Equal(ptr.To(gardencorev1beta1.LimitedSwap)))
-					g.Expect(shoot129.Spec.Provider.Workers[1].Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(Equal(ptr.To(gardencorev1beta1.LimitedSwap)))
-
-					g.Expect(shoot129.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
-					g.Expect(shoot129.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
-
-					g.Expect(shoot129.Spec.Kubernetes.Version).To(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
-
-					return *shoot129.Spec.Provider.Workers[0].Kubernetes.Version
-				}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 			})
 
 			It("Kubernetes version should be updated: force update minor version (>= 1.31) and move systemReserved to kubeReserved", func() {

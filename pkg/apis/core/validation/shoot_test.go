@@ -2345,21 +2345,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))
 				})
 
-				It("should forbid specifying the SecurityContextDeny admission plugin", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
-						{
-							Name: "SecurityContextDeny",
-						},
-					}
-
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0].name"),
-					}))))
-				})
-
 				It("should forbid disabling the required plugins", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 						{
@@ -3969,22 +3954,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("Authentication validation", func() {
-			It("should forbid for version < v1.30", func() {
-				shoot.Spec.Kubernetes.Version = "v1.29.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
-				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &core.StructuredAuthentication{
-					ConfigMapName: "foo",
-				}
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).ToNot(BeEmpty())
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.kubeAPIServer.structuredAuthentication"),
-					"Detail": Equal("is available for Kubernetes versions >= v1.30"),
-				}))))
-			})
-
 			It("should forbid empty name", func() {
 				shoot.Spec.Kubernetes.Version = "v1.30.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
@@ -4045,20 +4014,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("Authorization validation", func() {
-			It("should forbid for version < v1.30", func() {
-				shoot.Spec.Kubernetes.Version = "v1.29.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{
-					ConfigMapName: "foo",
-					Kubeconfigs:   []core.AuthorizerKubeconfigReference{{AuthorizerName: "foo", SecretName: "bar"}},
-				}
-
-				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.kubeAPIServer.structuredAuthorization"),
-					"Detail": Equal("is available for Kubernetes versions >= v1.30"),
-				}))))
-			})
-
 			It("should forbid empty name", func() {
 				shoot.Spec.Kubernetes.Version = "v1.30.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{}
@@ -8742,26 +8697,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("should allow empty memory swap", false, nil, "1.29", BeEmpty()),
-			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.29", BeEmpty()),
-			Entry("should allow LimitedSwap behavior", true, ptr.To("LimitedSwap"), "1.29", BeEmpty()),
-			Entry("should allow UnlimitedSwap behavior for Kubernetes versions < 1.30", true, ptr.To("UnlimitedSwap"), "1.29", BeEmpty()),
-			Entry("should forbid UnlimitedSwap behavior for Kubernetes versions >= 1.30", true, ptr.To("UnlimitedSwap"), "1.30", ConsistOf(
+			Entry("should allow empty memory swap", false, nil, "1.30", BeEmpty()),
+			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.30", BeEmpty()),
+			Entry("should allow LimitedSwap behavior", true, ptr.To("LimitedSwap"), "1.30", BeEmpty()),
+			Entry("should forbid random behavior", true, ptr.To("MagicSwap"), "1.30", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeNotSupported),
 					"Field":  Equal("memorySwap.swapBehavior"),
 					"Detail": Equal("supported values: \"NoSwap\", \"LimitedSwap\""),
 				})),
 			)),
-			Entry("should forbid NoSwap behavior for Kubernetes versions < 1.30", true, ptr.To("NoSwap"), "1.29", ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeNotSupported),
-					"Field":  Equal("memorySwap.swapBehavior"),
-					"Detail": Equal("supported values: \"LimitedSwap\", \"UnlimitedSwap\""),
-				})),
-			)),
-			Entry("should allow NoSwap behavior for Kubernetes versions >= 1.30", true, ptr.To("NoSwap"), "1.30", BeEmpty()),
-			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, ptr.To("LimitedSwap"), "1.29", ConsistOf(
+			Entry("should allow NoSwap behavior", true, ptr.To("NoSwap"), "1.30", BeEmpty()),
+			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, ptr.To("LimitedSwap"), "1.30", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("memorySwap"),

@@ -13,7 +13,6 @@ import (
 // SupportedVersions is the list of supported Kubernetes versions for all runtime and target clusters, i.e. all gardens,
 // seeds, and shoots.
 var SupportedVersions = []string{
-	"1.29",
 	"1.30",
 	"1.31",
 	"1.32",

@@ -129,9 +129,9 @@ spec:
     #     - RS256
     #     requiredClaims:
     #       key: value
-    #   structuredAuthentication: # requires Kubernetes version >= 1.30
+    #   structuredAuthentication:
     #     configMapName: name-of-configmap-containing-authentication-config
-    #   structuredAuthorization: # requires Kubernetes version >= 1.30
+    #   structuredAuthorization:
     #     configMapName: name-of-configmap-containing-authorization-config
     #     kubeconfigs:
     #     - authorizerName: name-of-authorizer-in-authorization-config
