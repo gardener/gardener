@@ -381,16 +381,21 @@ EOF"
   docker exec "$node" sh -c "systemctl enable gardener-local-kind-add-hosts.service"
 done
 
+local_address_operator="172.18.255.3"
+if [[ "$IPFAMILY" == "ipv6" ]]; then
+  local_address_operator="::3"
+fi
+
 # Inject garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
 kubectl -n kube-system get configmap coredns -ojson | \
   yq '.data.Corefile' | \
   sed '0,/ready.*$/s//&'"\n\
     hosts {\n\
       $garden_cluster_ip garden.local.gardener.cloud\n\
-      $garden_cluster_ip gardener.virtual-garden.local.gardener.cloud\n\
-      $garden_cluster_ip api.virtual-garden.local.gardener.cloud\n\
-      $garden_cluster_ip dashboard.ingress.runtime-garden.local.gardener.cloud\n\
-      $garden_cluster_ip discovery.ingress.runtime-garden.local.gardener.cloud\n\
+      $local_address_operator gardener.virtual-garden.local.gardener.cloud\n\
+      $local_address_operator api.virtual-garden.local.gardener.cloud\n\
+      $local_address_operator dashboard.ingress.runtime-garden.local.gardener.cloud\n\
+      $local_address_operator discovery.ingress.runtime-garden.local.gardener.cloud\n\
       fallthrough\n\
     }\
 "'/' | \
