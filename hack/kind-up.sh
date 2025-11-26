@@ -47,23 +47,23 @@ parse_flags() {
 }
 
 check_local_dns_records() {
-  local glgc_ip_address
-  glgc_ip_address=""
+  local local_registry_ip_address
+  local_registry_ip_address=""
 
   if [[ "$OSTYPE" == "darwin"* ]]; then
     # Suppress exit code using "|| true"
-    glgc_ip_address=$(dscacheutil -q host -a name garden.local.gardener.cloud | grep "ip_address" | head -n 1| cut -d' ' -f2 || true)
+    local_registry_ip_address=$(dscacheutil -q host -a name registry.local.gardener.cloud | grep "ip_address" | head -n 1| cut -d' ' -f2 || true)
   elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Suppress exit code using "|| true"
-    glgc_ip_address="$(getent ahosts garden.local.gardener.cloud || true)"
+    local_registry_ip_address="$(getent ahosts registry.local.gardener.cloud || true)"
   else
-    echo "Warning: Unknown OS. Make sure garden.local.gardener.cloud resolves to 127.0.0.1"
+    echo "Warning: Unknown OS. Make sure registry.local.gardener.cloud resolves to 127.0.0.1"
     return 0
   fi
 
-  if ! echo "$glgc_ip_address" | grep -q "127.0.0.1" ; then
-      echo "Error: garden.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
-      echo "Command output: $glgc_ip_address"
+  if ! echo "$local_registry_ip_address" | grep -q "127.0.0.1" ; then
+      echo "Error: registry.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
+      echo "Command output: $local_registry_ip_address"
       echo "Content of '/etc/hosts':\n$(cat /etc/hosts)"
       exit 1
   fi
@@ -106,14 +106,16 @@ setup_kind_network() {
 # - https://kind.sigs.k8s.io/docs/user/local-registry/
 setup_containerd_registry_mirrors() {
   NODES=("$@")
-  REGISTRY_HOSTNAME="garden.local.gardener.cloud"
 
   for NODE in "${NODES[@]}"; do
-    setup_containerd_registry_mirror $NODE "gcr.io" "https://gcr.io" "http://${REGISTRY_HOSTNAME}:5003"
-    setup_containerd_registry_mirror $NODE "registry.k8s.io" "https://registry.k8s.io" "http://${REGISTRY_HOSTNAME}:5006"
-    setup_containerd_registry_mirror $NODE "quay.io" "https://quay.io" "http://${REGISTRY_HOSTNAME}:5007"
-    setup_containerd_registry_mirror $NODE "europe-docker.pkg.dev" "https://europe-docker.pkg.dev" "http://${REGISTRY_HOSTNAME}:5008"
-    setup_containerd_registry_mirror $NODE "garden.local.gardener.cloud:5001" "http://garden.local.gardener.cloud:5001" "http://${REGISTRY_HOSTNAME}:5001"
+    # For the local registry, we don't need a mirror config for switching the URL, but only for configuring containerd
+    # to use HTTP instead of HTTPS. Probably, we could use the insecure registries config for this. However, configuring
+    # mirrors is supported by gardener-node-agent via the OSC, so we use the same approach everywhere.
+    setup_containerd_registry_mirror "$NODE" "registry.local.gardener.cloud:5000" "http://registry.local.gardener.cloud:5000" "http://registry.local.gardener.cloud:5000"
+    setup_containerd_registry_mirror "$NODE" "gcr.io" "https://gcr.io" "http://gcr.registry-cache.local.gardener.cloud:5000"
+    setup_containerd_registry_mirror "$NODE" "registry.k8s.io" "https://registry.k8s.io" "http://k8s.registry-cache.local.gardener.cloud:5000"
+    setup_containerd_registry_mirror "$NODE" "quay.io" "https://quay.io" "http://quay.registry-cache.local.gardener.cloud:5000"
+    setup_containerd_registry_mirror "$NODE" "europe-docker.pkg.dev" "https://europe-docker.pkg.dev" "http://europe-docker-pkg-dev.registry-cache.local.gardener.cloud:5000"
   done
 }
 

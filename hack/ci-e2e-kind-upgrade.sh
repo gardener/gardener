@@ -14,7 +14,7 @@ VERSION="$(cat VERSION)"
 CLUSTER_NAME=""
 SEED_NAME=""
 
-ensure_glgc_resolves_to_localhost
+ensure_local_gardener_cloud_hosts
 
 # copy_kubeconfig_from_kubeconfig_env_var copies the kubeconfig to appropriate location based on kind setup
 function copy_kubeconfig_from_kubeconfig_env_var() {
