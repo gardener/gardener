@@ -635,12 +635,19 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 		externalDomain.Zone = defaultDomain.Zone
 
 	case primaryProvider != nil:
-		if primaryProvider.SecretName != nil {
-			secret := &corev1.Secret{}
-			if err := c.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *primaryProvider.SecretName}, secret); err != nil {
-				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *primaryProvider.SecretName, err)
+		if primaryProvider.CredentialsRef != nil {
+			credentials, err := kubernetesutils.GetCredentialsByCrossVersionObjectReference(ctx, c, *primaryProvider.CredentialsRef, shoot.Namespace)
+			if err != nil {
+				return nil, fmt.Errorf("could not get dns provider credentials from reference %q: %w", primaryProvider.CredentialsRef.String(), err)
 			}
-			externalDomain.SecretData = secret.Data
+
+			switch typedCredentials := credentials.(type) {
+			case *corev1.Secret:
+				externalDomain.SecretData = typedCredentials.Data
+			case *securityv1alpha1.WorkloadIdentity:
+				// TODO(vpnachev): This code should handle dns provider credentials of type WorkloadIdentity
+				return nil, fmt.Errorf("dns provider credentials of type WorkloadIdentity are not yet supported")
+			}
 		} else {
 			if shootCredentials == nil {
 				return nil, fmt.Errorf("default domain is not present, secret for primary dns provider is required")
