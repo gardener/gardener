@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -130,8 +131,10 @@ var _ = Describe("ManagedSeed", func() {
 					Namespace: namespace,
 				},
 				CredentialsRef: corev1.ObjectReference{
-					Name:      dnsSecretName,
-					Namespace: namespace,
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Name:       dnsSecretName,
+					Namespace:  namespace,
 				},
 			}
 			secretBinding = &gardencorev1beta1.SecretBinding{
@@ -461,15 +464,19 @@ var _ = Describe("ManagedSeed", func() {
 				}))
 			})
 
-			It("should create the ManagedSeed and reuse the primary DNS provider from Shoot", func() {
+			It("should create the ManagedSeed and reuse the primary DNS provider with Secret credentials from Shoot", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(dnsSecret)).To(Succeed())
 
 				seedx.Spec.DNS.Provider = nil
 				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
 					{
-						Primary:    ptr.To(true),
-						Type:       ptr.To("type"),
-						SecretName: ptr.To(dnsSecretName),
+						Primary: ptr.To(true),
+						Type:    ptr.To("type"),
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       dnsSecretName,
+						},
 					},
 				}
 
@@ -508,6 +515,39 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 				}))
+			})
+
+			It("should forbid the ManagedSeed and reuse the primary DNS provider with WorkloadIdentity credentials from Shoot", func() {
+				seedx.Spec.DNS.Provider = nil
+				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
+					{
+						Primary: ptr.To(true),
+						Type:    ptr.To("type"),
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "security.gardener.cloud/v1alpha1",
+							Kind:       "WorkloadIdentity",
+							Name:       "workload-identity",
+						},
+					},
+				}
+
+				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
+					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: seedx.Spec,
+							},
+						},
+					},
+				}
+
+				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("dns provider credentials of type WorkloadIdentity are not yet supported")))
 			})
 
 			It("should create the ManagedSeed and reuse the DNS secret referenced by the SecretBindingName of Shoot", func() {
@@ -559,7 +599,7 @@ var _ = Describe("ManagedSeed", func() {
 				}))
 			})
 
-			It("should create the ManagedSeed and reuse the DNS secret referenced by the CredentialsBindingName of Shoot", func() {
+			It("should create the ManagedSeed and use secret referenced by the CredentialsBinding of the Shoot as DNS credentials", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(dnsSecret)).To(Succeed())
 				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(credentialsBinding)).To(Succeed())
 				seedx.Spec.DNS.Provider = nil
@@ -585,12 +625,11 @@ var _ = Describe("ManagedSeed", func() {
 					},
 				}
 
-				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
 
 				seedx.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
 					Type:      "type",
-					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
+					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"}, // This one
 				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
 					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
@@ -606,6 +645,56 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 				}))
+			})
+
+			It("should create the ManagedSeed and use secret referenced by the CredentialsBinding of the Shoot as DNS credentials", func() {
+				workloadIdentity := &securityv1alpha1.WorkloadIdentity{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "workload-identity",
+						Namespace: namespace,
+					},
+					Spec: securityv1alpha1.WorkloadIdentitySpec{
+						Audiences: []string{"test"},
+						TargetSystem: securityv1alpha1.TargetSystem{
+							Type: "test",
+						},
+					},
+				}
+				credentialsBinding.CredentialsRef = corev1.ObjectReference{
+					APIVersion: "security.gardener.cloud/v1alpha1",
+					Kind:       "WorkloadIdentity",
+					Name:       workloadIdentity.Name,
+					Namespace:  namespace,
+				}
+				Expect(securityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(workloadIdentity)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(credentialsBinding)).To(Succeed())
+
+				seedx.Spec.DNS.Provider = nil
+				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
+					{
+						Primary: ptr.To(true),
+						Type:    ptr.To("type"),
+					},
+				}
+				shoot.Spec.CredentialsBindingName = ptr.To(credentialsBinding.Name)
+
+				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
+					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: seedx.Spec,
+							},
+						},
+					},
+				}
+
+				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("shoot credentials of type WorkloadIdentity cannot be used as domain secret")))
 			})
 
 			It("should fail if config could not be converted to GardenletConfiguration", func() {
