@@ -9,6 +9,7 @@ spec:
         controllers:
           service:
             hostIP: "::1"
+            virtualGardenIP: "::3"
             zone0IP: "::10"
             zone1IP: "::11"
             zone2IP: "::12"

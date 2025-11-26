@@ -30,6 +30,8 @@ type AddOptions struct {
 	Controller controller.Options
 	// HostIP is the IP address of the host.
 	HostIP string
+	// VirtualGardenIP is the IP address of the virtual-garden istio ingress gateway.
+	VirtualGardenIP string
 	// Zone0IP is the IP address to be used for the zone 0 istio ingress gateway.
 	Zone0IP string
 	// Zone1IP is the IP address to be used for the zone 1 istio ingress gateway.
@@ -70,11 +72,12 @@ func AddToManagerWithOptions(_ context.Context, mgr manager.Manager, opts AddOpt
 	predicates = append(predicates, bastionPredicate)
 
 	return (&service.Reconciler{
-		HostIP:    opts.HostIP,
-		Zone0IP:   opts.Zone0IP,
-		Zone1IP:   opts.Zone1IP,
-		Zone2IP:   opts.Zone2IP,
-		BastionIP: opts.BastionIP,
+		HostIP:          opts.HostIP,
+		VirtualGardenIP: opts.VirtualGardenIP,
+		Zone0IP:         opts.Zone0IP,
+		Zone1IP:         opts.Zone1IP,
+		Zone2IP:         opts.Zone2IP,
+		BastionIP:       opts.BastionIP,
 	}).AddToManager(mgr, predicate.Or(predicates...))
 }
 
