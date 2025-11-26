@@ -26,9 +26,6 @@ gardener:
 backupBucket:
   deployed: true
 
-registry:
-  deployed: true
-
 networking:
   ipFamily: ipv4
   podSubnet: 10.0.0.0/15
