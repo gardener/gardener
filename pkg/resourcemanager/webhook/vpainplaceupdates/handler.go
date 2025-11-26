@@ -14,6 +14,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -45,6 +46,11 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 		log.Info("Mutating VerticalPodAutoscaler with InPlaceOrRecreate update mode")
 		vpa.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)
 	}
+
+	if vpa.Labels == nil {
+		vpa.Labels = make(map[string]string)
+	}
+	vpa.Labels[resourcesv1alpha1.VPAInPlaceUpdatesMutated] = "true"
 
 	return nil
 }
