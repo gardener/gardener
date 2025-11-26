@@ -202,7 +202,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(fluentbit_input_bytes_total{pod=~\"$pod\"}[$__rate_interval])) by (name) / 1024  ",
+          "expr": "sum(rate(fluentbit_input_bytes_total{pod=~\"$pod\"}[$__rate_interval])) by (name) / 1024",
           "format": "time_series",
           "hide": false,
           "interval": "",
