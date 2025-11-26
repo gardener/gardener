@@ -86,8 +86,8 @@ var _ = Describe("Shoot Reference controller tests", func() {
 				DNS: &gardencorev1beta1.DNS{
 					Domain: ptr.To("some-domain.example.com"),
 					Providers: []gardencorev1beta1.DNSProvider{
-						{Type: ptr.To("type"), SecretName: ptr.To(secret1.Name)},
-						{Type: ptr.To("type"), SecretName: ptr.To(secret2.Name)},
+						{Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secret1.Name}},
+						{Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secret2.Name}},
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
