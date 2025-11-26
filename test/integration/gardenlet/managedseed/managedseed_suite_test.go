@@ -70,6 +70,7 @@ var (
 	gardenNamespaceGarden *corev1.Namespace
 	gardenNamespaceSeed   *corev1.Namespace
 	seed                  *gardencorev1beta1.Seed
+	internalDomainSecret  *corev1.Secret
 	err                   error
 )
 
@@ -112,6 +113,24 @@ var _ = BeforeSuite(func() {
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
+	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "garden"}}
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
+	DeferCleanup(func() {
+		By("Delete garden namespace")
+		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	By("Create Internal Domain Secret")
+	internalDomainSecret = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "internal-domain-secret",
+			Namespace: gardenNamespace.Name,
+		},
+	}
+	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
+	log.Info("Created Internal Domain Secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
+
 	By("Create seed")
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
@@ -134,6 +153,16 @@ var _ = BeforeSuite(func() {
 					SecretRef: corev1.SecretReference{
 						Name:      "some-secret",
 						Namespace: "some-namespace",
+					},
+				},
+				Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+					Type:   "provider",
+					Domain: "internal.example.com",
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "internal-domain-secret",
+						Namespace:  gardenNamespace.Name,
 					},
 				},
 			},

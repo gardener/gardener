@@ -49,6 +49,16 @@ var _ = Describe("Seed Reference controller tests", func() {
 							Namespace: testNamespace.Name,
 						},
 					},
+					Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+						Type:   "local",
+						Domain: "internal.example.com",
+						CredentialsRef: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "internal-domain-secret",
+							Namespace:  testNamespace.Name,
+						},
+					},
 				},
 				Ingress: &gardencorev1beta1.Ingress{
 					Domain: "example.com",

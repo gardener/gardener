@@ -43,11 +43,12 @@ var (
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
 
-	testNamespace     *corev1.Namespace
-	cloudProfile      *gardencorev1beta1.CloudProfile
-	seed              *gardencorev1beta1.Seed
-	testSecret        *corev1.Secret
-	testSecretBinding *gardencorev1beta1.SecretBinding
+	testNamespace        *corev1.Namespace
+	cloudProfile         *gardencorev1beta1.CloudProfile
+	seed                 *gardencorev1beta1.Seed
+	testSecret           *corev1.Secret
+	testSecretBinding    *gardencorev1beta1.SecretBinding
+	internalDomainSecret *corev1.Secret
 
 	roleAdmin         *rbacv1.Role
 	roleBindingAdmin  *rbacv1.RoleBinding
@@ -290,6 +291,20 @@ var _ = BeforeSuite(func() {
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, testSecretBinding))).To(Succeed())
 	})
 
+	internalDomainSecret = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "internal-domain-secret",
+			Namespace: testNamespace.Name,
+		},
+	}
+	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
+	log.Info("Created Internal Domain Secret")
+
+	DeferCleanup(func() {
+		By("Delete Internal Domain Secret")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, internalDomainSecret))).To(Succeed())
+	})
+
 	By("Create Seed")
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
@@ -312,6 +327,16 @@ var _ = BeforeSuite(func() {
 					SecretRef: corev1.SecretReference{
 						Name:      "some-secret",
 						Namespace: "some-namespace",
+					},
+				},
+				Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+					Type:   "local",
+					Domain: "local.example.com",
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "internal-domain-secret",
+						Namespace:  testNamespace.Name,
 					},
 				},
 			},

@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -81,6 +82,30 @@ var _ = BeforeSuite(func() {
 	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
+
+	By("Create garden namespace")
+	gardenNamespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "garden"},
+	}
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+	log.Info("Created garden namespace")
+
+	By("Create Internal Domain Secret")
+	internalDomainSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "internal-domain-secret",
+			Namespace: "garden",
+		},
+	}
+	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
+	log.Info("Created Internal Domain Secret")
+
+	DeferCleanup(func() {
+		By("Delete Internal Domain Secret")
+		Expect(testClient.Delete(ctx, internalDomainSecret)).To(Succeed())
+		By("Delete garden namespace")
+		Expect(testClient.Delete(ctx, gardenNamespace)).To(Succeed())
+	})
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{

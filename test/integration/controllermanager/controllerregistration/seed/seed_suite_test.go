@@ -64,6 +64,7 @@ var (
 	seed                       *gardencorev1beta1.Seed
 	seedNamespace              *corev1.Namespace
 	seedSecret                 *corev1.Secret
+	internalDomainSecret       *corev1.Secret
 	seedControllerRegistration *gardencorev1beta1.ControllerRegistration
 )
 
@@ -202,6 +203,13 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
+	internalDomainSecret = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "internal-domain-secret",
+			Namespace: seedNamespace.Name,
+		},
+	}
+
 	By("Create Seed Namespace")
 	Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
 	log.Info("Created Seed Namespace for test", "namespace", client.ObjectKeyFromObject(seedNamespace))
@@ -210,7 +218,14 @@ var _ = BeforeSuite(func() {
 	Expect(testClient.Create(ctx, seedSecret)).To(Succeed())
 	log.Info("Created Seed Secret for test", "secret", client.ObjectKeyFromObject(seedSecret))
 
+	By("Create Internal Domain Secret")
+	Expect(testClient.Create(ctx, internalDomainSecret)).To(Succeed())
+	log.Info("Created Internal Domain Secret for test", "secret", client.ObjectKeyFromObject(internalDomainSecret))
+
 	DeferCleanup(func() {
+		By("Delete Internal Domain Secret")
+		Expect(testClient.Delete(ctx, internalDomainSecret)).To(Or(Succeed(), BeNotFoundError()))
+
 		By("Delete Seed Secret")
 		Expect(testClient.Delete(ctx, seedSecret)).To(Or(Succeed(), BeNotFoundError()))
 
@@ -240,6 +255,16 @@ var _ = BeforeSuite(func() {
 					SecretRef: corev1.SecretReference{
 						Name:      "some-secret",
 						Namespace: "some-namespace",
+					},
+				},
+				Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+					Type:   providerType,
+					Domain: "internal.example.com",
+					CredentialsRef: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "internal-domain-secret",
+						Namespace:  seedNamespace.Name,
 					},
 				},
 			},

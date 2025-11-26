@@ -441,6 +441,16 @@ var _ = Describe("BackupEntry controller tests", func() {
 								Namespace: "some-namespace",
 							},
 						},
+						Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+							Type:   "providerType",
+							Domain: "internal.example.com",
+							CredentialsRef: corev1.ObjectReference{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       "internal-domain-secret",
+								Namespace:  seedGardenNamespace.Name,
+							},
+						},
 					},
 					Networks: gardencorev1beta1.SeedNetworks{
 						Pods:     "10.0.0.0/16",
