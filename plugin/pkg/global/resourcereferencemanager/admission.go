@@ -983,11 +983,19 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 
 	if !apiequality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) && shoot.Spec.DNS != nil && shoot.DeletionTimestamp == nil {
 		for _, dnsProvider := range shoot.Spec.DNS.Providers {
-			if dnsProvider.SecretName == nil {
+			if dnsProvider.CredentialsRef == nil {
 				continue
 			}
-			if err := r.lookupSecret(ctx, shoot.Namespace, *dnsProvider.SecretName); err != nil {
-				return fmt.Errorf("failed to resolve DNS provider secret reference: %w", err)
+
+			switch apiVersion, kind := dnsProvider.CredentialsRef.APIVersion, dnsProvider.CredentialsRef.Kind; {
+			case apiVersion == corev1.SchemeGroupVersion.String() && kind == "Secret":
+				if err := r.lookupSecret(ctx, shoot.Namespace, dnsProvider.CredentialsRef.Name); err != nil {
+					return fmt.Errorf("failed to resolve credentials reference of type Secret: %w", err)
+				}
+			case apiVersion == securityv1alpha1.SchemeGroupVersion.String() && kind == "WorkloadIdentity":
+				if _, err := r.lookupWorkloadIdentity(ctx, shoot.Namespace, dnsProvider.CredentialsRef.Name); err != nil {
+					return fmt.Errorf("failed to resolve credentials reference of type WorkloadIdentity: %w", err)
+				}
 			}
 		}
 	}
