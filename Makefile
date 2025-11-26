@@ -253,8 +253,8 @@ test-cov-clean:
 	@./hack/test-cover-clean.sh
 
 .PHONY: check-apidiff
-check-apidiff: $(GO_APIDIFF)
-	@./hack/check-apidiff.sh
+check-apidiff:
+	@REPO_ROOT=$(REPO_ROOT) ./hack/check-apidiff.sh
 
 .PHONY: check-vulnerabilities
 check-vulnerabilities: $(GO_VULN_CHECK)

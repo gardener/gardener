@@ -19,23 +19,25 @@ temp=0
 
 # PULL_BASE_SHA env variable is set by default in prow presubmit jobs
 echo "invoking: go-apidiff ${PULL_BASE_SHA:-master} --repo-path=."
-go-apidiff ${PULL_BASE_SHA:-master} --repo-path=. >${tmpDir}/output.txt || true
+go tool -modfile="${REPO_ROOT}/go.mod" go-apidiff ${PULL_BASE_SHA:-master} --repo-path=. >${tmpDir}/output.txt || true
+pushd ./pkg/apis > /dev/null
+echo "invoking: go-apidiff for pkg/apis"
+go tool -modfile="${REPO_ROOT}/go.mod" go-apidiff ${PULL_BASE_SHA:-master} --repo-path=../.. >>${tmpDir}/output.txt || true
+popd > /dev/null
 
 exported_pkg=(
   gardener/gardener/extensions/
   gardener/gardener/pkg/api/
   gardener/gardener/pkg/apis/.*/v1alpha1
   gardener/gardener/pkg/apis/.*/v1beta1
-  gardener/gardener/pkg/apis/extensions/validation
+  gardener/gardener/pkg/apis/.*/v1
   gardener/gardener/pkg/chartrenderer/
   gardener/gardener/pkg/client/
   gardener/gardener/pkg/controllerutils/
   gardener/gardener/pkg/extensions/
-  gardener/gardener/pkg/apis/config/gardenlet/v1alpha1
   gardener/gardener/pkg/logger/
   gardener/gardener/third_party/mock/controller-runtime/client/
   gardener/gardener/pkg/component/extensions/operatingsystemconfig/
-  gardener/gardener/pkg/apis/config/operator/v1alpha1
   gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references/
   gardener/gardener/pkg/scheduler/
   gardener/gardener/pkg/utils/
