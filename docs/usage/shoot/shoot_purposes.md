@@ -5,6 +5,8 @@ description: Available Shoot cluster purposes and the behavioral differences bet
 
 # Shoot Cluster Purpose
 
+Test change for faster prow builds
+
 The `Shoot` resource contains a `.spec.purpose` field indicating how the shoot is used, whose allowed values are as follows:
 
 * `evaluation` (default): Indicates that the shoot cluster is for evaluation scenarios.
