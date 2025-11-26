@@ -438,7 +438,6 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 	}
 
 	if o.values.WithRBACProxy {
-		// TODO(rrhubenov): Remove the rbac-proxy container when the `OpenTelemetryCollector` feature gate is promoted to GA.
 		obj.Spec.Ports = append(obj.Spec.Ports, otelv1beta1.PortsSpec{
 			ServicePort: corev1.ServicePort{
 				Name: kubeRBACProxyName + "-vali",
@@ -452,7 +451,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			},
 		})
 		obj.Spec.AdditionalContainers = []corev1.Container{
-			// TODO(rrhubenov): Remove the rbac-proxy container when the `OpenTelemetryCollector` feature gate is promoted to GA.
+			// TODO(rrhubenov): Remove the rbac-proxy-vali container when the `OpenTelemetryCollector` feature gate is promoted to GA.
 			{
 				Name:  kubeRBACProxyName + "-vali",
 				Image: o.values.KubeRBACProxyImage,
@@ -556,6 +555,7 @@ func (o *otelCollector) getIngress(secretName string) *networkingv1.Ingress {
 						},
 					},
 				},
+				// TODO(rrhubenov): Clean up the vali Ingress rule when the `OpenTelemetryCollector` feature gate is promoted to GA.
 				{
 					Host: o.values.ValiHost,
 					IngressRuleValue: networkingv1.IngressRuleValue{
