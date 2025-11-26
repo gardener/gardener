@@ -76,6 +76,8 @@ brew install --cask docker
 
 For other OS please check the [docker installation documentation](https://docs.docker.com/get-docker/).
 
+Ensure you have the [`docker compose` plugin](https://docs.docker.com/compose/install/) installed as well.
+
 ## Installing iproute2
 
 `iproute2` provides a collection of utilities for network administration and configuration. On macOS run
