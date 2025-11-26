@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -81,7 +82,7 @@ func DeleteSecretByObjectReference(ctx context.Context, c client.Client, ref *co
 }
 
 // GetCredentialsByObjectReference returns the credentials, being Secret or WorkloadIdentity, referenced by the given object reference.
-func GetCredentialsByObjectReference(ctx context.Context, c client.Client, ref corev1.ObjectReference) (client.Object, error) {
+func GetCredentialsByObjectReference(ctx context.Context, c client.Reader, ref corev1.ObjectReference) (client.Object, error) {
 	var obj client.Object
 	switch ref.GroupVersionKind() {
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
@@ -96,4 +97,14 @@ func GetCredentialsByObjectReference(ctx context.Context, c client.Client, ref c
 		return nil, err
 	}
 	return obj, nil
+}
+
+// GetCredentialsByCrossVersionObjectReference returns the credentials, being Secret or WorkloadIdentity, referenced by the [autoscalingv1.CrossVersionObjectReference] parameter.
+func GetCredentialsByCrossVersionObjectReference(ctx context.Context, c client.Reader, ref autoscalingv1.CrossVersionObjectReference, namespace string) (client.Object, error) {
+	return GetCredentialsByObjectReference(ctx, c, corev1.ObjectReference{
+		APIVersion: ref.APIVersion,
+		Kind:       ref.Kind,
+		Name:       ref.Name,
+		Namespace:  namespace,
+	})
 }
