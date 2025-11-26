@@ -1828,7 +1828,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(valitail_request_duration_seconds_sum{pod=~\"$pod\",host=~\".+$host.+\"}[5m])) by (host)\n/\nsum(rate(valitail_request_duration_seconds_count{pod=~\"$pod\",host=~\".+$host.+\"}[5m])) by (host)\n* 1000",
+          "expr": "sum(rate(valitail_request_duration_seconds_sum{pod=~\"$pod\",host=~\".+$host.+\"}[$__rate_interval])) by (host)\n/\nsum(rate(valitail_request_duration_seconds_count{pod=~\"$pod\",host=~\".+$host.+\"}[$__rate_interval])) by (host)\n* 1000",
           "interval": "",
           "legendFormat": "{{host}}",
           "queryType": "randomWalk",
