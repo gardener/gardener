@@ -42,7 +42,7 @@ var _ = Describe("Utils", func() {
 					metric1, metric2,
 				)).To(Equal(monitoringv1alpha1.ScrapeConfigSpec{
 					HonorLabels: ptr.To(false),
-					Scheme:      ptr.To("HTTPS"),
+					Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 					TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -127,7 +127,7 @@ var _ = Describe("Utils", func() {
 					metric1, metric2,
 				)).To(Equal(monitoringv1alpha1.ScrapeConfigSpec{
 					HonorLabels: ptr.To(false),
-					Scheme:      ptr.To("HTTPS"),
+					Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 					TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},

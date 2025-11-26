@@ -180,7 +180,7 @@ var _ = Describe("ScrapeConfigs", func() {
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						HonorLabels:     ptr.To(false),
 						HonorTimestamps: ptr.To(false),
-						Scheme:          ptr.To("HTTPS"),
+						Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 							Key:                  "token",
@@ -286,7 +286,7 @@ var _ = Describe("ScrapeConfigs", func() {
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						HonorLabels: ptr.To(false),
-						Scheme:      ptr.To("HTTPS"),
+						Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 							Key:                  "token",
@@ -380,7 +380,7 @@ var _ = Describe("ScrapeConfigs", func() {
 						},
 						Spec: monitoringv1alpha1.ScrapeConfigSpec{
 							HonorLabels: ptr.To(false),
-							Scheme:      ptr.To("HTTPS"),
+							Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 								Key:                  "token",
