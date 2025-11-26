@@ -35,6 +35,8 @@ parse_flags "$@"
 kind delete cluster \
   --name "$CLUSTER_NAME"
 
+docker compose -f "$(dirname "$0")/../dev-setup/registry/docker-compose.yaml" down
+
 rm -f "$PATH_KUBECONFIG"
 if [[ "$PATH_KUBECONFIG" == *"dev-setup/gardenlet/components/kubeconfigs/seed-local2/kubeconfig" ]]; then
   rm -f "${PATH_KUBECONFIG}-gardener-operator"
