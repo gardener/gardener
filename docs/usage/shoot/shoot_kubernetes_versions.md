@@ -12,6 +12,7 @@ For Kubernetes specific upgrade notes the upstream Kubernetes release notes, [ch
 ## Upgrading to Kubernetes `v1.34`
 
 - The `Shoot`'s `.spec.cloudProfileName` field is forbidden. `Shoot` owners must migrate their `CloudProfile` reference to the new `spec.cloudProfile.name` field.
+- The `Shoot`'s annotation operations `rotate-etcd-encryption-key-(start|complete)` are forbidden.`Shoot` owners can use `rotate-etcd-encryption-key` operation instead, which performs a complete etcd encryption key rotation. `Shoot` clusters that are undergoing an etcd encryption key rotation and the rotation is in status `Prepared` will have the rotation progress to `Completing`.
 
 ## Upgrading to Kubernetes `v1.33`
 
