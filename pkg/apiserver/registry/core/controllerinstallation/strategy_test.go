@@ -25,15 +25,20 @@ func TestControllerInstallation(t *testing.T) {
 
 var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
-		result := controllerinstallation.ToSelectableFields(newControllerInstallation())
+		controllerInstallation := newControllerInstallation()
+		controllerInstallation.Spec.ShootRef = &corev1.ObjectReference{Name: "abc"}
 
-		Expect(result).To(HaveLen(3))
+		result := controllerinstallation.ToSelectableFields(controllerInstallation)
+
+		Expect(result).To(HaveLen(4))
 		Expect(result.Has("metadata.name")).To(BeTrue())
 		Expect(result.Get("metadata.name")).To(Equal("test"))
 		Expect(result.Has(core.RegistrationRefName)).To(BeTrue())
 		Expect(result.Get(core.RegistrationRefName)).To(Equal("baz"))
 		Expect(result.Has(core.SeedRefName)).To(BeTrue())
 		Expect(result.Get(core.SeedRefName)).To(Equal("qux"))
+		Expect(result.Has(core.ShootRefName)).To(BeTrue())
+		Expect(result.Get(core.ShootRefName)).To(Equal("abc"))
 	})
 })
 
@@ -69,6 +74,17 @@ var _ = Describe("MatchControllerInstallation", func() {
 var _ = Describe("#SeedRefNameIndexFunc", func() {
 	It("should return the seed name", func() {
 		result, err := controllerinstallation.SeedRefNameIndexFunc(newControllerInstallation())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf("qux"))
+	})
+})
+
+var _ = Describe("#ShootRefNameIndexFunc", func() {
+	It("should return the shoot name", func() {
+		controllerInstallation := newControllerInstallation()
+		controllerInstallation.Spec.ShootRef = controllerInstallation.Spec.SeedRef.DeepCopy()
+		controllerInstallation.Spec.SeedRef = nil
+		result, err := controllerinstallation.ShootRefNameIndexFunc(controllerInstallation)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(ConsistOf("qux"))
 	})

@@ -87,6 +87,15 @@ func ControllerInstallationSeedRefNameIndexerFunc(obj client.Object) []string {
 	return []string{controllerInstallation.Spec.SeedRef.Name}
 }
 
+// ControllerInstallationShootRefNameIndexerFunc extracts the .spec.shootRef.name field of a ControllerInstallation.
+func ControllerInstallationShootRefNameIndexerFunc(obj client.Object) []string {
+	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+	if !ok || controllerInstallation.Spec.ShootRef == nil {
+		return []string{""}
+	}
+	return []string{controllerInstallation.Spec.ShootRef.Name}
+}
+
 // ControllerInstallationRegistrationRefNameIndexerFunc extracts the .spec.registrationRef.name field of a ControllerInstallation.
 func ControllerInstallationRegistrationRefNameIndexerFunc(obj client.Object) []string {
 	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
@@ -216,6 +225,14 @@ func AddBackupEntryBucketName(ctx context.Context, indexer client.FieldIndexer) 
 func AddControllerInstallationSeedRefName(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, core.SeedRefName, ControllerInstallationSeedRefNameIndexerFunc); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to ControllerInstallation Informer: %w", core.SeedRefName, err)
+	}
+	return nil
+}
+
+// AddControllerInstallationShootRefName adds an index for core.ControllerInstallationShootRefName to the given indexer.
+func AddControllerInstallationShootRefName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, core.ShootRefName, ControllerInstallationShootRefNameIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to ControllerInstallation Informer: %w", core.ShootRefName, err)
 	}
 	return nil
 }

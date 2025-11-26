@@ -44,6 +44,9 @@ const (
 	// SeedRefName is the field selector path for finding
 	// the Seed name of a core.gardener.cloud/v1beta1.ControllerInstallation.
 	SeedRefName = "spec.seedRef.name"
+	// ShootRefName is the field selector path for finding
+	// the Shoot name of a core.gardener.cloud/v1beta1.ControllerInstallation.
+	ShootRefName = "spec.shootRef.name"
 
 	// ShootCloudProfileName is the field selector path for finding
 	// the CloudProfile name of a core.gardener.cloud/v1beta1.Shoot.
