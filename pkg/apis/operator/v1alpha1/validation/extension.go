@@ -68,6 +68,10 @@ func validateAdmissionDeployment(deployment *operatorv1alpha1.AdmissionDeploymen
 		return allErrs
 	}
 
+	if deployment.RuntimeCluster == nil && deployment.VirtualCluster == nil {
+		return append(allErrs, field.Required(fldPath, "at least one of runtimeCluster or virtualCluster must be specified"))
+	}
+
 	if deployment.RuntimeCluster != nil {
 		allErrs = append(allErrs, validateHelmDeployment(deployment.RuntimeCluster.Helm, fldPath.Child("runtimeCluster", "helm"))...)
 	}

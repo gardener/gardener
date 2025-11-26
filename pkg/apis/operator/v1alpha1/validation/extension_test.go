@@ -68,7 +68,15 @@ var _ = Describe("Validation Tests", func() {
 		Context("Extension Deployment", func() {
 			It("should return no errors when extension deployment is nil", func() {
 				extension.Spec.Deployment.ExtensionDeployment = nil
-				extension.Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{}
+				extension.Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{
+					RuntimeCluster: &operatorv1alpha1.DeploymentSpec{
+						Helm: &operatorv1alpha1.ExtensionHelm{
+							OCIRepository: &gardencorev1.OCIRepository{
+								Ref: ptr.To("example.com/admission:v1.0.0"),
+							},
+						},
+					},
+				}
 
 				Expect(ValidateExtension(extension)).To(BeEmpty())
 			})
@@ -154,6 +162,15 @@ var _ = Describe("Validation Tests", func() {
 				extension.Spec.Deployment.AdmissionDeployment = nil
 
 				Expect(ValidateExtension(extension)).To(BeEmpty())
+			})
+
+			It("should return an error when runtime or virtual cluster deployment is nil", func() {
+				extension.Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{}
+
+				Expect(ValidateExtension(extension)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.deployment.admission"),
+				}))))
 			})
 
 			It("should return an error when admission runtime cluster has invalid OCI repository", func() {
