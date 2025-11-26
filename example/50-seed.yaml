@@ -34,7 +34,7 @@ spec:
       credentialsRef:
         apiVersion: v1
         kind: Secret
-        name: internal-dns-secret
+        name: internal-domain-secret
         namespace: garden
       type: aws-route53
       domain: internal.dev.example.com
