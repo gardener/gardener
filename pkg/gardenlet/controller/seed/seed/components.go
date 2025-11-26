@@ -722,6 +722,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		metricsserver.CentralLoggingConfiguration,
 		// shoot addon components
 		kubernetesdashboard.CentralLoggingConfiguration,
+		istio.CentralLoggingConfiguration,
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {

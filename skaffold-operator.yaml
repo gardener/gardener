@@ -137,6 +137,9 @@ build:
             - pkg/component/networking/vpn/seedserver
             - pkg/component/observability/logging
             - pkg/component/observability/logging/fluentbit
+            - pkg/component/observability/logging/fluentbit/lua/add_kubernetes_namespace_name_to_record.lua
+            - pkg/component/observability/logging/fluentbit/lua/add_tag_to_record.lua
+            - pkg/component/observability/logging/fluentbit/lua/modify_severity.lua
             - pkg/component/observability/logging/fluentcustomresources
             - pkg/component/observability/logging/fluentoperator
             - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_clusterfilters.yaml
