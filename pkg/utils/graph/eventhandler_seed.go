@@ -116,7 +116,9 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 			seed.Spec.Backup.CredentialsRef.Kind == "Secret" {
 			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 		}
-		g.addEdge(vertex, seedVertex)
+		if vertex != nil {
+			g.addEdge(vertex, seedVertex)
+		}
 	}
 
 	if seed.Spec.DNS.Provider != nil {
