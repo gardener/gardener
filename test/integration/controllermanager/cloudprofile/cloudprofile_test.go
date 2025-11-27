@@ -108,7 +108,7 @@ var _ = DescribeTableSubtree("CloudProfile controller tests", func(isCapabilitie
 			shoot.Spec.CloudProfileName = &cloudProfile.Name
 			Eventually(func() error {
 				return testClient.Create(ctx, shoot)
-			}).To(Succeed())
+			}).Should(Succeed())
 			log.Info("Created shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
 			By("Wait until manager has observed Shoot")
