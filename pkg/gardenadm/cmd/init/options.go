@@ -15,6 +15,7 @@ type Options struct {
 	*cmd.Options
 	cmd.ManifestOptions
 
+	// UseBootstrapEtcd indicates whether to use the bootstrap etcd instead of transitioning to etcd-druid.
 	UseBootstrapEtcd bool
 }
 
