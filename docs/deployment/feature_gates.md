@@ -26,8 +26,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
 | IstioTLSTermination                      | `false` | `Alpha` | `1.114` |         |
 | CloudProfileCapabilities                 | `false` | `Alpha` | `1.117` |         |
-| DoNotCopyBackupCredentials               | `false` | `Alpha` | `1.121` | `1.122` |
-| DoNotCopyBackupCredentials               | `true`  | `Beta`  | `1.123` |         |
 | OpenTelemetryCollector                   | `false` | `Alpha` | `1.124` |         |
 | UseUnifiedHTTPProxyPort                  | `false` | `Alpha` | `1.130` |         |
 | VPAInPlaceUpdates                        | `false` | `Alpha` | `1.133` |         |
@@ -207,6 +205,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootCredentialsBinding                      | `false` | `Alpha`      | `1.98`  | `1.106` |
 | ShootCredentialsBinding                      | `true`  | `Beta`       | `1.107` | `1.132` |
 | ShootCredentialsBinding                      | `true`  | `GA`         | `1.133` |         |
+| DoNotCopyBackupCredentials                   | `false` | `Alpha`      | `1.121` | `1.122` |
+| DoNotCopyBackupCredentials                   | `true`  | `Beta`       | `1.123` | `1.133` |
+| DoNotCopyBackupCredentials                   | `true`  | `GA`         | `1.134` |         |
 
 ## Using a Feature
 

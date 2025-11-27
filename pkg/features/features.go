@@ -62,6 +62,7 @@ const (
 	// owner: @dimityrmirchev
 	// alpha: v1.121.0
 	// beta: v1.123.0
+	// GA: v1.134.0
 	DoNotCopyBackupCredentials featuregate.Feature = "DoNotCopyBackupCredentials"
 
 	// OpenTelemetryCollector enables the usage of an OpenTelemetry Collector instance in the Control Plane of Shoot clusters.
@@ -119,7 +120,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	InPlaceNodeUpdates:            {Default: false, PreRelease: featuregate.Alpha},
 	IstioTLSTermination:           {Default: false, PreRelease: featuregate.Alpha},
 	CloudProfileCapabilities:      {Default: false, PreRelease: featuregate.Alpha},
-	DoNotCopyBackupCredentials:    {Default: true, PreRelease: featuregate.Beta},
+	DoNotCopyBackupCredentials:    {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	OpenTelemetryCollector:        {Default: false, PreRelease: featuregate.Alpha},
 	UseUnifiedHTTPProxyPort:       {Default: false, PreRelease: featuregate.Alpha},
 	VPAInPlaceUpdates:             {Default: false, PreRelease: featuregate.Alpha},
