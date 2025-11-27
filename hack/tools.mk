@@ -264,5 +264,6 @@ $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
 	curl -L -o $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$(SYSTEM_NAME)_$(SYSTEM_ARCH)
 	chmod +x $(YQ)
 
+# TODO(LucaBernstein): Remove VGOPATH in a future release.
 $(VGOPATH): $(call tool_version_file,$(VGOPATH),$(VGOPATH_VERSION))
 	go build -o $(VGOPATH) github.com/ironcore-dev/vgopath
