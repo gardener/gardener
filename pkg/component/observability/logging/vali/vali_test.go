@@ -52,7 +52,7 @@ const (
 	managedResourceNameTarget                   = "vali-target"
 	managedResourceSecretNameTarget             = "managedresource-vali-target"
 	valiName                                    = "vali"
-	valiConfigMapName                           = "vali-config-e78955f0"
+	valiConfigMapName                           = "vali-config-53bcb8e9"
 	telegrafConfigMapName                       = "telegraf-config-b4c38756"
 	valiImage                                   = "vali:0.0.1"
 	curatorImage                                = "curator:0.0.1"
@@ -985,8 +985,8 @@ limits_config:
   enforce_metric_name: false
   reject_old_samples: true
   reject_old_samples_max_age: 168h
-  ingestion_rate_mb: 8
-  ingestion_burst_size_mb: 12
+  ingestion_rate_mb: 12
+  ingestion_burst_size_mb: 16
 schema_config:
   configs:
   - from: 2018-04-15
