@@ -453,8 +453,6 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/ionos-cloud/sdk-go/v6 v6.3.0 h1:/lTieTH9Mo/CWm3cTlFLnK10jgxjUGkAqRffGqvPteY=
 github.com/ionos-cloud/sdk-go/v6 v6.3.0/go.mod h1:SXrO9OGyWjd2rZhAhEpdYN6VUAODzzqRdqA9BCviQtI=
-github.com/ironcore-dev/vgopath v0.1.5 h1:+I46zEFfbmNIGIGylqedT2bMXw8V7yVP16GJkG64gAw=
-github.com/ironcore-dev/vgopath v0.1.5/go.mod h1:qbSUA7Eg0SO97OYfkG0DH+DxaPrH6XCiAQHqqs9R63Q=
 github.com/jmespath/go-jmespath v0.4.1-0.20220621161143-b0104c826a24 h1:liMMTbpW34dhU4az1GN0pTPADwNmvoRSeoZ6PItiqnY=
 github.com/jmespath/go-jmespath v0.4.1-0.20220621161143-b0104c826a24/go.mod h1:T8mJZnbsbmF+m6zOOFylbeCJqk5+pHWvzYPziyZiYoo=
 github.com/jonboulle/clockwork v0.5.0 h1:Hyh9A8u51kptdkR+cqRpT1EebBwTn1oK9YfGYbdFz6I=
