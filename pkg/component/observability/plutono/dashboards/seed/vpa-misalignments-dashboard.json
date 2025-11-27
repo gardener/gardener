@@ -19,12 +19,13 @@
   "iteration": 1,
   "links": [],
   "panels": [
-{
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "decimals": 0,
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -35,7 +36,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 0
       },
       "hiddenSeries": false,
       "id": 9,
@@ -50,7 +51,7 @@
       },
       "lines": true,
       "linewidth": 1,
-      "nullPointMode": "null",
+      "nullPointMode": "null as zero",
       "options": {
         "alertThreshold": true
       },
@@ -92,14 +93,17 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:76",
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
+          "$$hashKey": "object:77",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -129,7 +133,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 0
       },
       "hiddenSeries": false,
       "id": 11,
@@ -144,7 +148,7 @@
       },
       "lines": true,
       "linewidth": 1,
-      "nullPointMode": "null",
+      "nullPointMode": "null as zero",
       "options": {
         "alertThreshold": true
       },
@@ -186,14 +190,17 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:134",
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
+          "$$hashKey": "object:135",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -208,6 +215,7 @@
       }
     }
   ],
+  "refresh": false,
   "schemaVersion": 27,
   "style": "dark",
   "tags": [
@@ -218,7 +226,7 @@
       {
         "allValue": ".+",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -252,11 +260,6 @@
       },
       {
         "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "Deployment",
-          "value": "Deployment"
-        },
         "datasource": null,
         "definition": "label_values(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~\"$namespace\"}, target_kind)",
         "description": null,
@@ -283,11 +286,6 @@
       },
       {
         "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "blackbox-exporter",
-          "value": "blackbox-exporter"
-        },
         "datasource": null,
         "definition": "label_values(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\"}, target_name)",
         "description": null,
@@ -314,11 +312,6 @@
       },
       {
         "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "blackbox-exporter",
-          "value": "blackbox-exporter"
-        },
         "datasource": null,
         "definition": "label_values(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\",target_name=~\"$targetName\"}, container)",
         "description": null,
@@ -345,11 +338,6 @@
       },
       {
         "allValue": null,
-        "current": {
-          "selected": true,
-          "text": "30m",
-          "value": "30"
-        },
         "description": "",
         "error": null,
         "hide": 0,
@@ -359,7 +347,7 @@
         "name": "deviationDuration",
         "options": [
           {
-            "selected": false,
+            "selected": true,
             "text": "1m",
             "value": "1"
           },
@@ -416,11 +404,6 @@
       },
       {
         "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "0.2",
-          "value": "0.2"
-        },
         "description": null,
         "error": null,
         "hide": 0,
@@ -491,7 +474,7 @@
     ]
   },
   "timezone": "utc",
-  "title": "VPA Recommendations misalignments",
+  "title": "VPA Recommendations Misalignments",
   "uid": "vpa-recommendations-misalignments",
   "version": 1
 }
