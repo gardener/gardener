@@ -260,13 +260,13 @@ func run(ctx context.Context, opts *Options) error {
 		reconcileBackupBucket = g.Add(flow.Task{
 			Name:         "Deploying BackupBucket for ETCD data",
 			Fn:           b.ReconcileBackupBucket,
-			SkipIf:       !allowBackup,
+			SkipIf:       !allowBackup || opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
 		reconcileBackupEntry = g.Add(flow.Task{
 			Name:         "Deploying BackupEntry for ETCD data",
 			Fn:           b.ReconcileBackupEntry,
-			SkipIf:       !allowBackup,
+			SkipIf:       !allowBackup || opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(reconcileBackupBucket),
 		})
 		deployControlPlane = g.Add(flow.Task{
