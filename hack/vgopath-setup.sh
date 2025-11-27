@@ -3,6 +3,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+echo
+echo "DEPRECATED: hack/vgopath-setup.sh is deprecated and will be removed in a future release."
+echo "Please remove your usage of hack/vgopath-setup.sh from the gardener/gardener repository."
+echo
+
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 # Ensure that the GOPATH/{bin,pkg} directory exists. This seems to be not always
