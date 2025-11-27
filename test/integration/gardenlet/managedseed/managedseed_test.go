@@ -264,9 +264,6 @@ var _ = Describe("ManagedSeed controller test", func() {
 				APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "GardenletConfiguration",
 			},
-			FeatureGates: map[string]bool{
-				"DoNotCopyBackupCredentials": true,
-			},
 			GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
 				KubeconfigSecret: &corev1.SecretReference{
 					Name:      "gardenlet-kubeconfig",
