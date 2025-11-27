@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"maps"
 
 	corev1 "k8s.io/api/core/v1"
@@ -15,9 +16,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -208,4 +211,49 @@ func (s *Secret) Equal(other *corev1.Secret) bool {
 	copySecret := other.DeepCopy()
 	s.reconcileSecret(copySecret, false)
 	return apiequality.Semantic.DeepEqual(other, copySecret)
+}
+
+// Deploy creates and reconciles a workload identity secret in the target namespace.
+func Deploy(ctx context.Context, seedClient client.Client, workloadIdentity *securityv1alpha1.WorkloadIdentity, targetSecretName, targetNamespace string, targetSecretAnnotations, targetSecretLabels map[string]string, referringObj client.Object) error {
+	opts := []SecretOption{
+		For(workloadIdentity.GetName(), workloadIdentity.GetNamespace(), workloadIdentity.Spec.TargetSystem.Type),
+		WithProviderConfig(workloadIdentity.Spec.TargetSystem.ProviderConfig),
+	}
+
+	if referringObj != nil {
+		gvk, err := apiutil.GVKForObject(referringObj, kubernetes.GardenScheme)
+		if err != nil {
+			return fmt.Errorf("failed to parse the GVK of the referring object: %w", err)
+		}
+
+		contextObject := securityv1alpha1.ContextObject{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+			Name:       referringObj.GetName(),
+			UID:        referringObj.GetUID(),
+		}
+		if ns := referringObj.GetNamespace(); ns != "" {
+			contextObject.Namespace = &ns
+		}
+
+		opts = append(opts, WithContextObject(contextObject))
+	}
+
+	if targetSecretAnnotations != nil {
+		opts = append(opts, WithAnnotations(targetSecretAnnotations))
+	}
+
+	if targetSecretLabels != nil {
+		opts = append(opts, WithLabels(targetSecretLabels))
+	}
+
+	s, err := NewSecret(targetSecretName, targetNamespace, opts...)
+	if err != nil {
+		return fmt.Errorf("failed to create workload identity secret %s/%s: %w", targetNamespace, targetSecretName, err)
+	}
+	if err := s.Reconcile(ctx, seedClient); err != nil {
+		return fmt.Errorf("failed to reconcile workload identity secret %s/%s: %w", targetNamespace, targetSecretName, err)
+	}
+
+	return nil
 }

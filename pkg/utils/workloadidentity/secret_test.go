@@ -6,6 +6,7 @@ package workloadidentity_test
 
 import (
 	"context"
+	"encoding/json"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -19,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
@@ -320,5 +322,204 @@ var _ = Describe("#Secret", func() {
 		By("deleting workloadidentity relevant annotation should make secrets differ")
 		delete(existing.Annotations, "workloadidentity.security.gardener.cloud/name")
 		Expect(secret.Equal(existing)).To(BeFalse())
+	})
+
+	var _ = Describe("#Deploy", func() {
+		const (
+			secretName      = "target-secret"
+			secretNamespace = "target-namespace"
+			wiName          = "workload-identity"
+			wiNamespace     = "wi-namespace"
+			providerType    = "test-provider"
+		)
+
+		var (
+			fakeClient       client.Client
+			ctx              context.Context
+			workloadIdentity *securityv1alpha1.WorkloadIdentity
+			referringObj     *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			ctx = context.Background()
+
+			workloadIdentity = &securityv1alpha1.WorkloadIdentity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      wiName,
+					Namespace: wiNamespace,
+				},
+				Spec: securityv1alpha1.WorkloadIdentitySpec{
+					Audiences: []string{"aud1", "aud2"},
+					TargetSystem: securityv1alpha1.TargetSystem{
+						Type: providerType,
+						ProviderConfig: &runtime.RawExtension{
+							Raw: []byte(`{"key":"value"}`),
+						},
+					},
+				},
+			}
+
+			referringObj = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-shoot",
+					Namespace: "garden-test",
+					UID:       "shoot-uid-12345",
+				},
+			}
+		})
+
+		It("should successfully deploy a new secret", func() {
+			err := workloadidentity.Deploy(ctx, fakeClient, workloadIdentity, secretName, secretNamespace, nil, nil, referringObj)
+			Expect(err).ToNot(HaveOccurred())
+
+			secret := &corev1.Secret{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: secretName, Namespace: secretNamespace}, secret)).To(Succeed())
+
+			Expect(secret.Name).To(Equal(secretName))
+			Expect(secret.Namespace).To(Equal(secretNamespace))
+			Expect(secret.Type).To(Equal(corev1.SecretTypeOpaque))
+
+			// Verify annotations
+			Expect(secret.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/name", wiName))
+			Expect(secret.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/namespace", wiNamespace))
+			Expect(secret.Annotations).To(HaveKey("workloadidentity.security.gardener.cloud/context-object"))
+
+			// Verify labels
+			Expect(secret.Labels).To(HaveKeyWithValue("security.gardener.cloud/purpose", "workload-identity-token-requestor"))
+			Expect(secret.Labels).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/provider", providerType))
+
+			// Verify data
+			Expect(secret.Data).To(HaveKey("config"))
+		})
+
+		It("should deploy secret with custom annotations and labels", func() {
+			customAnnotations := map[string]string{
+				"custom-annotation": "custom-value",
+				"foo":               "bar",
+			}
+			customLabels := map[string]string{
+				"custom-label": "custom-value",
+				"env":          "production",
+			}
+
+			err := workloadidentity.Deploy(ctx, fakeClient, workloadIdentity, secretName, secretNamespace, customAnnotations, customLabels, referringObj)
+			Expect(err).ToNot(HaveOccurred())
+
+			secret := &corev1.Secret{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: secretName, Namespace: secretNamespace}, secret)).To(Succeed())
+
+			// Verify custom annotations are present along with workload identity annotations
+			Expect(secret.Annotations).To(HaveKeyWithValue("custom-annotation", "custom-value"))
+			Expect(secret.Annotations).To(HaveKeyWithValue("foo", "bar"))
+			Expect(secret.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/name", wiName))
+
+			// Verify custom labels are present along with workload identity labels
+			Expect(secret.Labels).To(HaveKeyWithValue("custom-label", "custom-value"))
+			Expect(secret.Labels).To(HaveKeyWithValue("env", "production"))
+			Expect(secret.Labels).To(HaveKeyWithValue("security.gardener.cloud/purpose", "workload-identity-token-requestor"))
+		})
+
+		It("should update an existing secret", func() {
+			// Create an initial secret
+			existing := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: secretNamespace,
+					Annotations: map[string]string{
+						"old-annotation": "old-value",
+					},
+					Labels: map[string]string{
+						"old-label": "old-value",
+					},
+				},
+				Data: map[string][]byte{
+					"old-key": []byte("old-data"),
+					"token":   []byte("existing-token"),
+				},
+			}
+			Expect(fakeClient.Create(ctx, existing)).To(Succeed())
+
+			// Deploy with new configuration
+			err := workloadidentity.Deploy(ctx, fakeClient, workloadIdentity, secretName, secretNamespace, nil, nil, referringObj)
+			Expect(err).ToNot(HaveOccurred())
+
+			secret := &corev1.Secret{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: secretName, Namespace: secretNamespace}, secret)).To(Succeed())
+
+			// Verify old annotations are replaced
+			Expect(secret.Annotations).ToNot(HaveKey("old-annotation"))
+			Expect(secret.Annotations).To(HaveKeyWithValue("workloadidentity.security.gardener.cloud/name", wiName))
+
+			// Verify old labels are replaced
+			Expect(secret.Labels).ToNot(HaveKey("old-label"))
+			Expect(secret.Labels).To(HaveKeyWithValue("security.gardener.cloud/purpose", "workload-identity-token-requestor"))
+
+			// Verify token is preserved but old data key is removed
+			Expect(secret.Data).To(HaveKeyWithValue("token", []byte("existing-token")))
+			Expect(secret.Data).ToNot(HaveKey("old-key"))
+			Expect(secret.Data).To(HaveKey("config"))
+		})
+
+		It("should handle workload identity without provider config", func() {
+			workloadIdentity.Spec.TargetSystem.ProviderConfig = nil
+
+			err := workloadidentity.Deploy(ctx, fakeClient, workloadIdentity, secretName, secretNamespace, nil, nil, referringObj)
+			Expect(err).ToNot(HaveOccurred())
+
+			secret := &corev1.Secret{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: secretName, Namespace: secretNamespace}, secret)).To(Succeed())
+
+			// Verify config key is not present when provider config is nil
+			Expect(secret.Data).ToNot(HaveKey("config"))
+		})
+
+		It("should include context object with namespace for namespaced referring object", func() {
+			err := workloadidentity.Deploy(ctx, fakeClient, workloadIdentity, secretName, secretNamespace, nil, nil, referringObj)
+			Expect(err).ToNot(HaveOccurred())
+
+			secret := &corev1.Secret{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: secretName, Namespace: secretNamespace}, secret)).To(Succeed())
+
+			contextObjJSON := secret.Annotations["workloadidentity.security.gardener.cloud/context-object"]
+			Expect(contextObjJSON).ToNot(BeEmpty())
+
+			var contextObj securityv1alpha1.ContextObject
+			Expect(json.Unmarshal([]byte(contextObjJSON), &contextObj)).To(Succeed())
+
+			Expect(contextObj.Kind).To(Equal("Shoot"))
+			Expect(contextObj.APIVersion).To(Equal(gardencorev1beta1.SchemeGroupVersion.String()))
+			Expect(contextObj.Name).To(Equal("test-shoot"))
+			Expect(contextObj.Namespace).To(Equal(ptr.To("garden-test")))
+			Expect(contextObj.UID).To(Equal(referringObj.UID))
+		})
+
+		It("should include context object without namespace for cluster-scoped referring object", func() {
+			clusterScopedObj := &gardencorev1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-seed",
+					UID:  "seed-uid-67890",
+				},
+			}
+
+			err := workloadidentity.Deploy(ctx, fakeClient, workloadIdentity, secretName, secretNamespace, nil, nil, clusterScopedObj)
+			Expect(err).ToNot(HaveOccurred())
+
+			secret := &corev1.Secret{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: secretName, Namespace: secretNamespace}, secret)).To(Succeed())
+
+			contextObjJSON := secret.Annotations["workloadidentity.security.gardener.cloud/context-object"]
+			Expect(contextObjJSON).ToNot(BeEmpty())
+
+			var contextObj securityv1alpha1.ContextObject
+			Expect(json.Unmarshal([]byte(contextObjJSON), &contextObj)).To(Succeed())
+
+			Expect(contextObj.Kind).To(Equal("Seed"))
+			Expect(contextObj.APIVersion).To(Equal(gardencorev1beta1.SchemeGroupVersion.String()))
+			Expect(contextObj.Name).To(Equal("test-seed"))
+			Expect(contextObj.Namespace).To(BeNil())
+			Expect(contextObj.UID).To(Equal(clusterScopedObj.UID))
+		})
+
 	})
 })
